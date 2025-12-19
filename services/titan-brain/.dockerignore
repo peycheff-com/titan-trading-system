@@ -1,0 +1,57 @@
+# ============================================================================
+# Titan Brain - Docker Ignore
+# ============================================================================
+
+# Dependencies
+node_modules/
+npm-debug.log*
+
+# Build output (we build inside Docker)
+dist/
+
+# Test files
+tests/
+*.test.ts
+*.test.js
+coverage/
+.nyc_output/
+jest.config.js
+
+# Development files
+.env
+.env.local
+.env.*.local
+*.log
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+
+# Docker files (not needed inside container)
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Documentation
+*.md
+!README.md
+
+# Config files (we copy specific ones)
+config.json
+*.local.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp

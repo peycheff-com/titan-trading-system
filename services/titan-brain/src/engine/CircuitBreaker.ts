@@ -1,0 +1,442 @@
+/**
+ * CircuitBreaker - Emergency halt system for Titan Brain
+ * Monitors for extreme conditions and triggers emergency halt when thresholds are breached
+ * 
+ * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.8
+ */
+
+import {
+  BreakerType,
+  BreakerStatus,
+  BreakerEvent,
+  CircuitBreakerConfig,
+  BreakerCheckInput,
+  Position,
+} from '../types/index.js';
+
+/**
+ * Interface for position closure callback
+ * Allows external systems to handle position closure
+ */
+export interface PositionClosureHandler {
+  closeAllPositions(): Promise<void>;
+}
+
+/**
+ * Interface for notification callback
+ * Allows external systems to send emergency notifications
+ */
+export interface NotificationHandler {
+  sendEmergencyNotification(reason: string, equity: number): Promise<void>;
+}
+
+/**
+ * Interface for event persistence
+ * Allows external systems to persist breaker events
+ */
+export interface BreakerEventPersistence {
+  persistEvent(event: BreakerEvent): Promise<void>;
+}
+
+/**
+ * CircuitBreaker monitors for extreme conditions and triggers
+ * emergency halt when thresholds are breached.
+ * 
+ * Trigger conditions:
+ * - Daily drawdown exceeds 15% (HARD)
+ * - Equity drops below $150 (HARD)
+ * - 3 consecutive losing trades within 1 hour (SOFT - 30 min cooldown)
+ */
+export class CircuitBreaker {
+  private readonly config: CircuitBreakerConfig;
+  
+  /** Current breaker state */
+  private active: boolean = false;
+  private breakerType?: BreakerType;
+  private triggerReason?: string;
+  private triggeredAt?: number;
+  private cooldownEndsAt?: number;
+  
+  /** Tracking state */
+  private dailyStartEquity: number = 0;
+  private recentLosses: Array<{ pnl: number; timestamp: number }> = [];
+  
+  /** External handlers */
+  private positionHandler?: PositionClosureHandler;
+  private notificationHandler?: NotificationHandler;
+  private eventPersistence?: BreakerEventPersistence;
+
+  constructor(config: CircuitBreakerConfig) {
+    this.config = config;
+  }
+
+  /**
+   * Set the position closure handler
+   */
+  setPositionHandler(handler: PositionClosureHandler): void {
+    this.positionHandler = handler;
+  }
+
+  /**
+   * Set the notification handler
+   */
+  setNotificationHandler(handler: NotificationHandler): void {
+    this.notificationHandler = handler;
+  }
+
+  /**
+   * Set the event persistence handler
+   */
+  setEventPersistence(persistence: BreakerEventPersistence): void {
+    this.eventPersistence = persistence;
+  }
+
+  /**
+   * Set daily start equity for drawdown calculation
+   * Should be called at the start of each trading day
+   */
+  setDailyStartEquity(equity: number): void {
+    this.dailyStartEquity = Math.max(0, equity);
+  }
+
+  /**
+   * Get daily start equity
+   */
+  getDailyStartEquity(): number {
+    return this.dailyStartEquity;
+  }
+
+  /**
+   * Check all breaker conditions
+   * 
+   * @param input - Breaker check input with equity, positions, and trade history
+   * @returns Current breaker status
+   */
+  checkConditions(input: BreakerCheckInput): BreakerStatus {
+    const { equity, positions, dailyStartEquity, recentTrades } = input;
+    
+    // Update daily start equity if provided
+    if (dailyStartEquity > 0) {
+      this.dailyStartEquity = dailyStartEquity;
+    }
+    
+    // Calculate daily drawdown
+    const dailyDrawdown = this.calculateDailyDrawdown(equity);
+    
+    // Count consecutive losses within the time window
+    const consecutiveLosses = this.countConsecutiveLosses(recentTrades);
+    
+    // Check for soft breaker cooldown expiry
+    this.checkCooldownExpiry();
+    
+    // If already active with HARD breaker, maintain state
+    if (this.active && this.breakerType === BreakerType.HARD) {
+      return this.getStatus();
+    }
+    
+    // Requirement 5.1: Daily drawdown exceeds 15%
+    if (dailyDrawdown >= this.config.maxDailyDrawdown) {
+      this.trigger(`Daily drawdown exceeded: ${(dailyDrawdown * 100).toFixed(2)}% >= ${(this.config.maxDailyDrawdown * 100).toFixed(0)}%`);
+      return this.getStatus();
+    }
+    
+    // Requirement 5.2: Equity drops below minimum
+    if (equity < this.config.minEquity) {
+      this.trigger(`Equity below minimum: $${equity.toFixed(2)} < $${this.config.minEquity}`);
+      return this.getStatus();
+    }
+    
+    // Requirement 5.3: Consecutive losses (soft pause)
+    if (consecutiveLosses >= this.config.consecutiveLossLimit && !this.active) {
+      this.triggerSoftPause(`${consecutiveLosses} consecutive losses within ${this.config.consecutiveLossWindow / 60000} minutes`);
+      return this.getStatus();
+    }
+    
+    return {
+      active: this.active,
+      type: this.breakerType,
+      reason: this.triggerReason,
+      triggeredAt: this.triggeredAt,
+      dailyDrawdown,
+      consecutiveLosses,
+      equityLevel: equity,
+      cooldownEndsAt: this.cooldownEndsAt,
+    };
+  }
+
+  /**
+   * Trigger the circuit breaker (HARD)
+   * Requirement 5.4: Close all positions immediately
+   * Requirement 5.5: Reject all new signals until manual reset
+   * 
+   * @param reason - Reason for triggering
+   */
+  async trigger(reason: string): Promise<void> {
+    // Requirement 5.4: Idempotence - don't create duplicate events
+    if (this.active && this.breakerType === BreakerType.HARD) {
+      return;
+    }
+    
+    const timestamp = Date.now();
+    
+    this.active = true;
+    this.breakerType = BreakerType.HARD;
+    this.triggerReason = reason;
+    this.triggeredAt = timestamp;
+    this.cooldownEndsAt = undefined;
+    
+    // Requirement 5.4: Close all open positions immediately
+    if (this.positionHandler) {
+      try {
+        await this.positionHandler.closeAllPositions();
+      } catch (error) {
+        // Log error but don't prevent breaker activation
+        console.error('Failed to close positions during circuit breaker trigger:', error);
+      }
+    }
+    
+    // Requirement 5.6: Send emergency notifications
+    if (this.notificationHandler) {
+      try {
+        await this.notificationHandler.sendEmergencyNotification(reason, this.dailyStartEquity);
+      } catch (error) {
+        console.error('Failed to send emergency notification:', error);
+      }
+    }
+    
+    // Requirement 5.7: Log the event
+    const event: BreakerEvent = {
+      timestamp,
+      eventType: 'TRIGGER',
+      breakerType: BreakerType.HARD,
+      reason,
+      equity: this.dailyStartEquity,
+      metadata: {
+        dailyDrawdown: this.calculateDailyDrawdown(this.dailyStartEquity),
+      },
+    };
+    
+    if (this.eventPersistence) {
+      try {
+        await this.eventPersistence.persistEvent(event);
+      } catch (error) {
+        console.error('Failed to persist breaker event:', error);
+      }
+    }
+  }
+
+  /**
+   * Trigger a soft pause (cooldown period)
+   * Requirement 5.3: 30 minute cooldown for consecutive losses
+   * 
+   * @param reason - Reason for soft pause
+   */
+  private async triggerSoftPause(reason: string): Promise<void> {
+    // Don't downgrade from HARD to SOFT
+    if (this.active && this.breakerType === BreakerType.HARD) {
+      return;
+    }
+    
+    // Idempotence for SOFT breaker
+    if (this.active && this.breakerType === BreakerType.SOFT) {
+      return;
+    }
+    
+    const timestamp = Date.now();
+    
+    this.active = true;
+    this.breakerType = BreakerType.SOFT;
+    this.triggerReason = reason;
+    this.triggeredAt = timestamp;
+    this.cooldownEndsAt = timestamp + (this.config.cooldownMinutes * 60 * 1000);
+    
+    // Log the event
+    const event: BreakerEvent = {
+      timestamp,
+      eventType: 'TRIGGER',
+      breakerType: BreakerType.SOFT,
+      reason,
+      equity: this.dailyStartEquity,
+      metadata: {
+        cooldownMinutes: this.config.cooldownMinutes,
+        cooldownEndsAt: this.cooldownEndsAt,
+      },
+    };
+    
+    if (this.eventPersistence) {
+      try {
+        await this.eventPersistence.persistEvent(event);
+      } catch (error) {
+        console.error('Failed to persist soft pause event:', error);
+      }
+    }
+  }
+
+  /**
+   * Reset the circuit breaker (manual reset)
+   * Requirement 5.8: Require confirmation and log operator identity
+   * 
+   * @param operatorId - ID of the operator performing the reset
+   */
+  async reset(operatorId: string): Promise<void> {
+    if (!this.active) {
+      return;
+    }
+    
+    if (!operatorId || operatorId.trim() === '') {
+      throw new Error('Operator ID is required for circuit breaker reset');
+    }
+    
+    const timestamp = Date.now();
+    const previousReason = this.triggerReason;
+    const previousType = this.breakerType;
+    
+    // Reset state
+    this.active = false;
+    this.breakerType = undefined;
+    this.triggerReason = undefined;
+    this.triggeredAt = undefined;
+    this.cooldownEndsAt = undefined;
+    
+    // Requirement 5.8: Log the reset with operator identity
+    const event: BreakerEvent = {
+      timestamp,
+      eventType: 'RESET',
+      reason: `Manual reset by operator: ${operatorId}`,
+      equity: this.dailyStartEquity,
+      operatorId,
+      metadata: {
+        previousReason,
+        previousType,
+      },
+    };
+    
+    if (this.eventPersistence) {
+      try {
+        await this.eventPersistence.persistEvent(event);
+      } catch (error) {
+        console.error('Failed to persist reset event:', error);
+      }
+    }
+  }
+
+  /**
+   * Check if circuit breaker is active
+   * Requirement 5.5: Reject all new signals until manual reset
+   */
+  isActive(): boolean {
+    // Check for soft breaker cooldown expiry
+    this.checkCooldownExpiry();
+    return this.active;
+  }
+
+  /**
+   * Get current breaker status
+   */
+  getStatus(): BreakerStatus {
+    // Check for soft breaker cooldown expiry
+    this.checkCooldownExpiry();
+    
+    return {
+      active: this.active,
+      type: this.breakerType,
+      reason: this.triggerReason,
+      triggeredAt: this.triggeredAt,
+      dailyDrawdown: this.calculateDailyDrawdown(this.dailyStartEquity),
+      consecutiveLosses: this.recentLosses.length,
+      equityLevel: this.dailyStartEquity,
+      cooldownEndsAt: this.cooldownEndsAt,
+    };
+  }
+
+  /**
+   * Record a trade result for consecutive loss tracking
+   * 
+   * @param pnl - Trade PnL (positive = profit, negative = loss)
+   * @param timestamp - Trade timestamp
+   */
+  recordTrade(pnl: number, timestamp?: number): void {
+    const tradeTime = timestamp ?? Date.now();
+    
+    // Add to recent losses tracking
+    this.recentLosses.push({ pnl, timestamp: tradeTime });
+    
+    // Clean up old trades outside the window
+    const windowStart = tradeTime - this.config.consecutiveLossWindow;
+    this.recentLosses = this.recentLosses.filter(t => t.timestamp >= windowStart);
+    
+    // If profitable trade, reset consecutive loss counter
+    if (pnl >= 0) {
+      this.recentLosses = this.recentLosses.filter(t => t.pnl < 0 && t.timestamp > tradeTime - this.config.consecutiveLossWindow);
+    }
+  }
+
+  /**
+   * Get configuration
+   */
+  getConfig(): CircuitBreakerConfig {
+    return { ...this.config };
+  }
+
+  // ============ Private Helper Methods ============
+
+  /**
+   * Calculate daily drawdown percentage
+   */
+  private calculateDailyDrawdown(currentEquity: number): number {
+    if (this.dailyStartEquity <= 0) {
+      return 0;
+    }
+    
+    const drawdown = (this.dailyStartEquity - currentEquity) / this.dailyStartEquity;
+    return Math.max(0, drawdown);
+  }
+
+  /**
+   * Count consecutive losses within the time window
+   */
+  private countConsecutiveLosses(recentTrades: Array<{ pnl: number; timestamp: number }>): number {
+    if (recentTrades.length === 0) {
+      return 0;
+    }
+    
+    const now = Date.now();
+    const windowStart = now - this.config.consecutiveLossWindow;
+    
+    // Filter trades within the window and sort by timestamp (most recent first)
+    const tradesInWindow = recentTrades
+      .filter(t => t.timestamp >= windowStart)
+      .sort((a, b) => b.timestamp - a.timestamp);
+    
+    // Count consecutive losses from most recent
+    let consecutiveLosses = 0;
+    for (const trade of tradesInWindow) {
+      if (trade.pnl < 0) {
+        consecutiveLosses++;
+      } else {
+        break; // Stop counting at first profitable trade
+      }
+    }
+    
+    return consecutiveLosses;
+  }
+
+  /**
+   * Check if soft breaker cooldown has expired
+   */
+  private checkCooldownExpiry(): void {
+    if (
+      this.active &&
+      this.breakerType === BreakerType.SOFT &&
+      this.cooldownEndsAt &&
+      Date.now() >= this.cooldownEndsAt
+    ) {
+      // Auto-reset soft breaker after cooldown
+      this.active = false;
+      this.breakerType = undefined;
+      this.triggerReason = undefined;
+      this.triggeredAt = undefined;
+      this.cooldownEndsAt = undefined;
+    }
+  }
+}

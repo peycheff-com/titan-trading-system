@@ -1,0 +1,44 @@
+{
+  "name": "titan-phase1-scavenger",
+  "version": "1.0.0",
+  "description": "Titan Phase 1 - Scavenger (Predestination Engine): Trap-based trading system for account building from $200 to $5,000",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "npm run build && node dist/index.js",
+    "start:headless": "npm run build && node dist/index.js --headless",
+    "dev": "tsc && node --watch dist/index.js",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "keywords": [
+    "trading",
+    "crypto",
+    "predestination",
+    "trap-system",
+    "bybit",
+    "binance",
+    "mexc"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "crypto": "^1.0.1",
+    "ink": "^4.4.1",
+    "node-fetch": "^3.3.2",
+    "react": "^18.2.0",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.11",
+    "@types/node": "^20.10.6",
+    "@types/react": "^19.2.7",
+    "@types/ws": "^8.5.10",
+    "fast-check": "^3.15.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.3.3"
+  }
+}

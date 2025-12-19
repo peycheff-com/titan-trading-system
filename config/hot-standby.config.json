@@ -1,0 +1,241 @@
+{
+  "enabled": true,
+  "components": [
+    {
+      "name": "redis-primary",
+      "type": "database",
+      "primary": {
+        "host": "localhost",
+        "port": 6379,
+        "protocol": "redis",
+        "credentials": {
+          "password": "${REDIS_PASSWORD}"
+        },
+        "healthEndpoint": "/ping"
+      },
+      "standby": {
+        "host": "standby-redis.internal",
+        "port": 6379,
+        "protocol": "redis",
+        "credentials": {
+          "password": "${REDIS_PASSWORD}"
+        },
+        "healthEndpoint": "/ping"
+      },
+      "healthCheck": {
+        "endpoint": "/ping",
+        "timeout": 5,
+        "retries": 3,
+        "interval": 10,
+        "expectedStatus": 200
+      },
+      "syncRequired": true,
+      "failoverPriority": 1,
+      "autoFailover": true
+    },
+    {
+      "name": "titan-brain",
+      "type": "service",
+      "primary": {
+        "host": "localhost",
+        "port": 3000,
+        "protocol": "http",
+        "healthEndpoint": "/health"
+      },
+      "standby": {
+        "host": "standby-brain.internal",
+        "port": 3000,
+        "protocol": "http",
+        "healthEndpoint": "/health"
+      },
+      "healthCheck": {
+        "endpoint": "/health",
+        "timeout": 10,
+        "retries": 3,
+        "interval": 15,
+        "expectedStatus": 200
+      },
+      "syncRequired": false,
+      "failoverPriority": 2,
+      "autoFailover": true
+    },
+    {
+      "name": "titan-shared",
+      "type": "service",
+      "primary": {
+        "host": "localhost",
+        "port": 3001,
+        "protocol": "http",
+        "healthEndpoint": "/health"
+      },
+      "standby": {
+        "host": "standby-shared.internal",
+        "port": 3001,
+        "protocol": "http",
+        "healthEndpoint": "/health"
+      },
+      "healthCheck": {
+        "endpoint": "/health",
+        "timeout": 10,
+        "retries": 3,
+        "interval": 15,
+        "expectedStatus": 200
+      },
+      "syncRequired": false,
+      "failoverPriority": 3,
+      "autoFailover": true
+    },
+    {
+      "name": "nginx-proxy",
+      "type": "infrastructure",
+      "primary": {
+        "host": "localhost",
+        "port": 80,
+        "protocol": "http",
+        "healthEndpoint": "/nginx-health"
+      },
+      "standby": {
+        "host": "standby-proxy.internal",
+        "port": 80,
+        "protocol": "http",
+        "healthEndpoint": "/nginx-health"
+      },
+      "healthCheck": {
+        "endpoint": "/nginx-health",
+        "timeout": 5,
+        "retries": 2,
+        "interval": 10,
+        "expectedStatus": 200
+      },
+      "syncRequired": false,
+      "failoverPriority": 4,
+      "autoFailover": false
+    }
+  ],
+  "failover": {
+    "enabled": true,
+    "maxFailoverTime": 300,
+    "cooldownPeriod": 600,
+    "requiresConfirmation": false,
+    "notificationChannels": [
+      "email",
+      "slack",
+      "webhook"
+    ],
+    "rollbackOnFailure": true
+  },
+  "monitoring": {
+    "healthCheckInterval": 10,
+    "failureThreshold": 3,
+    "responseTimeout": 10,
+    "syncCheckInterval": 30
+  },
+  "synchronization": {
+    "enabled": true,
+    "syncInterval": 60,
+    "maxSyncLag": 30,
+    "syncMethods": {
+      "redis-primary": "redis-replication",
+      "titan-brain": "rsync",
+      "titan-shared": "rsync",
+      "nginx-proxy": "rsync"
+    }
+  },
+  "rules": [
+    {
+      "id": "redis-health-failover",
+      "name": "Redis Health Check Failover",
+      "description": "Failover Redis when health checks fail consistently",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "health-check",
+          "component": "redis-primary",
+          "operator": "equals",
+          "value": "unhealthy",
+          "duration": 30
+        }
+      ],
+      "actions": [
+        {
+          "type": "failover-component",
+          "target": "redis-primary",
+          "parameters": {
+            "reason": "Primary Redis health check failures"
+          }
+        },
+        {
+          "type": "notify",
+          "target": "operations-team",
+          "parameters": {
+            "message": "Redis failover executed due to health check failures",
+            "severity": "critical"
+          }
+        }
+      ],
+      "priority": 9,
+      "cooldownSeconds": 300
+    },
+    {
+      "id": "brain-response-time-failover",
+      "name": "Brain Service Response Time Failover",
+      "description": "Failover Brain service when response times are too high",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "response-time",
+          "component": "titan-brain",
+          "operator": "greater-than",
+          "value": 5000,
+          "duration": 60
+        }
+      ],
+      "actions": [
+        {
+          "type": "failover-component",
+          "target": "titan-brain",
+          "parameters": {
+            "reason": "High response times detected"
+          }
+        },
+        {
+          "type": "notify",
+          "target": "operations-team",
+          "parameters": {
+            "message": "Brain service failover due to high response times",
+            "severity": "high"
+          }
+        }
+      ],
+      "priority": 7,
+      "cooldownSeconds": 180
+    },
+    {
+      "id": "sync-lag-alert",
+      "name": "Synchronization Lag Alert",
+      "description": "Alert when synchronization lag is too high",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "sync-lag",
+          "component": "redis-primary",
+          "operator": "greater-than",
+          "value": 60,
+          "duration": 120
+        }
+      ],
+      "actions": [
+        {
+          "type": "notify",
+          "target": "operations-team",
+          "parameters": {
+            "message": "High synchronization lag detected on Redis",
+            "severity": "medium"
+          }
+        }
+      ],
+      "priority": 5,
+      "cooldownSeconds": 300
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "maxTotalLeverage": 50,
+  "maxGlobalDrawdown": 0.15,
+  "emergencyFlattenThreshold": 0.15,
+  "phaseTransitionRules": {
+    "phase1ToPhase2": 5000,
+    "phase2ToPhase3": 50000
+  },
+  "overrides": {
+    "phase1": {
+      "maxLeverage": 20,
+      "maxDrawdown": 0.07
+    },
+    "phase2": {
+      "maxLeverage": 5,
+      "maxDrawdown": 0.05
+    }
+  },
+  "environments": {
+    "development": {
+      "maxTotalLeverage": 10,
+      "maxGlobalDrawdown": 0.05,
+      "emergencyFlattenThreshold": 0.05
+    },
+    "staging": {
+      "maxTotalLeverage": 25,
+      "maxGlobalDrawdown": 0.10,
+      "emergencyFlattenThreshold": 0.10
+    },
+    "production": {
+      "maxTotalLeverage": 50,
+      "maxGlobalDrawdown": 0.15,
+      "emergencyFlattenThreshold": 0.15
+    }
+  }
+}

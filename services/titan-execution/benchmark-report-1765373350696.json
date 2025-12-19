@@ -1,0 +1,16 @@
+{
+  "benchmark": "IPC Latency",
+  "timestamp": "2025-12-10T13:29:10.695Z",
+  "iterations": 10,
+  "success_rate": "100.00%",
+  "latency_ms": {
+    "average": "0.5423",
+    "min": "0.2055",
+    "max": "1.5365",
+    "p50": "0.4052",
+    "p95": "1.5365",
+    "p99": "1.5365"
+  },
+  "target_met": false,
+  "errors": 0
+}

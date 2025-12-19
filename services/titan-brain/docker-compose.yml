@@ -1,0 +1,153 @@
+# ============================================================================
+# Titan Brain - Docker Compose Configuration
+# ============================================================================
+# Usage:
+#   Development:  docker-compose up -d
+#   Production:   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#   Logs:         docker-compose logs -f titan-brain
+#   Stop:         docker-compose down
+#   Clean:        docker-compose down -v (removes volumes)
+# ============================================================================
+
+services:
+  # ==========================================================================
+  # Titan Brain Service
+  # ==========================================================================
+  titan-brain:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: titan-brain
+    restart: unless-stopped
+    ports:
+      - "${SERVER_PORT:-3100}:3100"
+    environment:
+      # Node environment
+      - NODE_ENV=${NODE_ENV:-production}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      
+      # Initial equity
+      - INITIAL_EQUITY=${INITIAL_EQUITY:-200}
+      
+      # Server configuration
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=3100
+      
+      # Database configuration (connects to postgres service)
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-titan_brain}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      
+      # Redis configuration (connects to redis service)
+      - REDIS_URL=redis://redis:6379
+      
+      # Webhook security
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET:-}
+      
+      # Integration services (optional)
+      - EXECUTION_ENGINE_URL=${EXECUTION_ENGINE_URL:-}
+      - PHASE1_WEBHOOK_URL=${PHASE1_WEBHOOK_URL:-}
+      - PHASE2_WEBHOOK_URL=${PHASE2_WEBHOOK_URL:-}
+      - PHASE3_WEBHOOK_URL=${PHASE3_WEBHOOK_URL:-}
+      
+      # Notifications (optional)
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3100/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - titan-network
+    volumes:
+      - titan-logs:/app/logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ==========================================================================
+  # PostgreSQL Database
+  # ==========================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: titan-brain-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${DB_NAME:-titan_brain}
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    ports:
+      - "${DB_EXTERNAL_PORT:-5433}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./src/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-titan_brain}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - titan-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ==========================================================================
+  # Redis (Signal Queue)
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: titan-brain-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "${REDIS_EXTERNAL_PORT:-6380}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - titan-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# ==========================================================================
+# Networks
+# ==========================================================================
+networks:
+  titan-network:
+    driver: bridge
+    name: titan-network
+
+# ==========================================================================
+# Volumes
+# ==========================================================================
+volumes:
+  postgres-data:
+    name: titan-brain-postgres-data
+  redis-data:
+    name: titan-brain-redis-data
+  titan-logs:
+    name: titan-brain-logs

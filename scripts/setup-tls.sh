@@ -1,0 +1,490 @@
+#!/bin/bash
+
+# TLS 1.3 Setup Script for Titan Production Deployment
+# Requirements: 4.1, 1.4
+
+set -euo pipefail
+
+# Configuration
+DOMAIN="${1:-}"
+EMAIL="${2:-admin@${DOMAIN}}"
+LOG_FILE="/var/log/titan/tls-setup.log"
+NGINX_AVAILABLE="/etc/nginx/sites-available"
+NGINX_ENABLED="/etc/nginx/sites-enabled"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Logging function
+log() {
+    local message="$1"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo "[$timestamp] $message" | tee -a "$LOG_FILE"
+}
+
+# Error handling
+error_exit() {
+    local message="$1"
+    echo -e "${RED}ERROR: $message${NC}" >&2
+    log "ERROR: $message"
+    exit 1
+}
+
+# Success message
+success() {
+    local message="$1"
+    echo -e "${GREEN}SUCCESS: $message${NC}"
+    log "SUCCESS: $message"
+}
+
+# Warning message
+warning() {
+    local message="$1"
+    echo -e "${YELLOW}WARNING: $message${NC}"
+    log "WARNING: $message"
+}
+
+# Check if running as root
+check_root() {
+    if [[ $EUID -ne 0 ]]; then
+        error_exit "This script must be run as root"
+    fi
+}
+
+# Validate domain parameter
+validate_domain() {
+    if [[ -z "$DOMAIN" ]]; then
+        error_exit "Domain parameter is required. Usage: $0 <domain> [email]"
+    fi
+    
+    # Basic domain validation
+    if [[ ! "$DOMAIN" =~ ^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$ ]]; then
+        error_exit "Invalid domain format: $DOMAIN"
+    fi
+}
+
+# Create necessary directories
+create_directories() {
+    log "Creating necessary directories..."
+    
+    mkdir -p /var/log/titan
+    mkdir -p /etc/nginx/sites-available
+    mkdir -p /etc/nginx/sites-enabled
+    
+    # Set proper permissions
+    chmod 755 /var/log/titan
+    chown root:root /var/log/titan
+}
+
+# Install required packages
+install_dependencies() {
+    log "Installing required packages..."
+    
+    # Update package list
+    apt-get update -qq
+    
+    # Install required packages
+    apt-get install -y \
+        nginx \
+        certbot \
+        python3-certbot-nginx \
+        openssl \
+        curl \
+        cron
+    
+    success "Dependencies installed successfully"
+}
+
+# Configure Nginx for initial setup
+configure_initial_nginx() {
+    log "Configuring initial Nginx setup for domain: $DOMAIN"
+    
+    # Create initial HTTP configuration for certificate validation
+    cat > "$NGINX_AVAILABLE/$DOMAIN-initial" << EOF
+# Initial HTTP configuration for $DOMAIN
+# Used for Let's Encrypt certificate validation
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name $DOMAIN;
+    
+    # Let's Encrypt validation
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+    
+    # Temporary health check
+    location /health {
+        access_log off;
+        return 200 "healthy\\n";
+        add_header Content-Type text/plain;
+    }
+    
+    # Redirect all other traffic to HTTPS (will be enabled after certificate)
+    location / {
+        return 301 https://\$server_name\$request_uri;
+    }
+}
+EOF
+
+    # Enable the initial configuration
+    ln -sf "$NGINX_AVAILABLE/$DOMAIN-initial" "$NGINX_ENABLED/$DOMAIN-initial"
+    
+    # Test and reload Nginx
+    nginx -t || error_exit "Nginx configuration test failed"
+    systemctl reload nginx || error_exit "Failed to reload Nginx"
+    
+    success "Initial Nginx configuration applied"
+}
+
+# Obtain SSL certificate
+obtain_certificate() {
+    log "Obtaining SSL certificate for domain: $DOMAIN"
+    
+    # Check if certificate already exists
+    if [[ -d "/etc/letsencrypt/live/$DOMAIN" ]]; then
+        warning "Certificate already exists for $DOMAIN"
+        
+        # Check if certificate is valid (not expiring in next 30 days)
+        local expiry_date=$(openssl x509 -enddate -noout -in "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" | cut -d= -f2)
+        local expiry_timestamp=$(date -d "$expiry_date" +%s)
+        local current_timestamp=$(date +%s)
+        local days_until_expiry=$(( (expiry_timestamp - current_timestamp) / 86400 ))
+        
+        if [[ $days_until_expiry -gt 30 ]]; then
+            success "Existing certificate is valid for $days_until_expiry more days"
+            return 0
+        else
+            warning "Certificate expires in $days_until_expiry days, obtaining new certificate"
+        fi
+    fi
+    
+    # Obtain certificate using certbot
+    certbot certonly \
+        --nginx \
+        --non-interactive \
+        --agree-tos \
+        --email "$EMAIL" \
+        -d "$DOMAIN" \
+        --expand || error_exit "Failed to obtain SSL certificate"
+    
+    success "SSL certificate obtained successfully"
+}
+
+# Configure TLS 1.3 with Nginx
+configure_tls13() {
+    log "Configuring TLS 1.3 for domain: $DOMAIN"
+    
+    # Generate TLS 1.3 configuration
+    cat > "$NGINX_AVAILABLE/$DOMAIN-tls" << EOF
+# TLS 1.3 Configuration for $DOMAIN
+# Generated by Titan Production Deployment System
+
+# Rate Limiting Zones
+limit_req_zone \$binary_remote_addr zone=api:10m rate=10r/s;
+limit_req_zone \$binary_remote_addr zone=general:10m rate=30r/s;
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name $DOMAIN;
+
+    # TLS 1.3 Configuration
+    ssl_certificate /etc/letsencrypt/live/$DOMAIN/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/$DOMAIN/privkey.pem;
+    ssl_trusted_certificate /etc/letsencrypt/live/$DOMAIN/chain.pem;
+
+    # Force TLS 1.3 only
+    ssl_protocols TLSv1.3;
+    ssl_ciphers TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256;
+    ssl_prefer_server_ciphers off;
+
+    # OCSP Stapling
+    ssl_stapling on;
+    ssl_stapling_verify on;
+    resolver 8.8.8.8 8.8.4.4 valid=300s;
+    resolver_timeout 5s;
+
+    # Security Headers
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+    add_header X-Frame-Options DENY always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' wss:;" always;
+
+    # Session Configuration
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
+
+    # General rate limiting
+    limit_req zone=general burst=50 nodelay;
+
+    # Titan Trading System Proxy Configuration
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+        
+        # Security
+        proxy_hide_header X-Powered-By;
+        proxy_set_header X-Forwarded-SSL on;
+        
+        # Timeouts
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+    # WebSocket Support for Titan Console
+    location /ws {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 86400;
+        proxy_send_timeout 86400;
+    }
+
+    # API Endpoints
+    location /api/ {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        
+        # API-specific rate limiting
+        limit_req zone=api burst=20 nodelay;
+        
+        # Security
+        proxy_hide_header X-Powered-By;
+        
+        # Timeouts
+        proxy_connect_timeout 30s;
+        proxy_send_timeout 30s;
+        proxy_read_timeout 30s;
+    }
+
+    # Health Check Endpoint
+    location /health {
+        access_log off;
+        return 200 "healthy\\n";
+        add_header Content-Type text/plain;
+    }
+
+    # Security: Block access to sensitive files
+    location ~ /\\.ht {
+        deny all;
+    }
+    
+    location ~ /\\.(git|svn) {
+        deny all;
+    }
+}
+
+# Redirect HTTP to HTTPS
+server {
+    listen 80;
+    listen [::]:80;
+    server_name $DOMAIN;
+    
+    # Let's Encrypt validation
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+    
+    # Redirect all other traffic to HTTPS
+    location / {
+        return 301 https://\$server_name\$request_uri;
+    }
+}
+EOF
+
+    # Remove initial configuration
+    rm -f "$NGINX_ENABLED/$DOMAIN-initial"
+    rm -f "$NGINX_AVAILABLE/$DOMAIN-initial"
+    
+    # Enable TLS configuration
+    ln -sf "$NGINX_AVAILABLE/$DOMAIN-tls" "$NGINX_ENABLED/$DOMAIN-tls"
+    
+    # Test and reload Nginx
+    nginx -t || error_exit "TLS Nginx configuration test failed"
+    systemctl reload nginx || error_exit "Failed to reload Nginx with TLS configuration"
+    
+    success "TLS 1.3 configuration applied successfully"
+}
+
+# Setup automatic certificate renewal
+setup_auto_renewal() {
+    log "Setting up automatic certificate renewal..."
+    
+    # Create renewal script
+    cat > "/etc/cron.daily/titan-cert-renewal-$DOMAIN" << EOF
+#!/bin/bash
+# Automatic certificate renewal script for $DOMAIN
+# Generated by Titan Production Deployment System
+
+LOG_FILE="/var/log/titan/cert-renewal-$DOMAIN.log"
+DATE=\$(date '+%Y-%m-%d %H:%M:%S')
+
+echo "[\$DATE] Starting certificate renewal check for $DOMAIN" >> "\$LOG_FILE"
+
+# Check certificate expiry
+EXPIRY_DATE=\$(openssl x509 -enddate -noout -in /etc/letsencrypt/live/$DOMAIN/fullchain.pem | cut -d= -f2)
+EXPIRY_TIMESTAMP=\$(date -d "\$EXPIRY_DATE" +%s)
+CURRENT_TIMESTAMP=\$(date +%s)
+DAYS_UNTIL_EXPIRY=\$(( (EXPIRY_TIMESTAMP - CURRENT_TIMESTAMP) / 86400 ))
+
+echo "[\$DATE] Certificate expires in \$DAYS_UNTIL_EXPIRY days" >> "\$LOG_FILE"
+
+# Renew if less than 30 days remaining
+if [ \$DAYS_UNTIL_EXPIRY -lt 30 ]; then
+    echo "[\$DATE] Certificate renewal required" >> "\$LOG_FILE"
+    
+    # Attempt renewal
+    if /usr/bin/certbot renew --quiet --cert-name $DOMAIN; then
+        echo "[\$DATE] Certificate renewed successfully" >> "\$LOG_FILE"
+        
+        # Reload Nginx
+        if systemctl reload nginx; then
+            echo "[\$DATE] Nginx reloaded successfully" >> "\$LOG_FILE"
+        else
+            echo "[\$DATE] ERROR: Failed to reload Nginx" >> "\$LOG_FILE"
+            exit 1
+        fi
+        
+        # Log security event
+        echo "[\$DATE] SECURITY_EVENT: Certificate renewed for $DOMAIN" >> /var/log/titan/security.log
+        
+    else
+        echo "[\$DATE] ERROR: Certificate renewal failed" >> "\$LOG_FILE"
+        exit 1
+    fi
+else
+    echo "[\$DATE] Certificate renewal not required" >> "\$LOG_FILE"
+fi
+
+echo "[\$DATE] Certificate renewal check completed" >> "\$LOG_FILE"
+EOF
+
+    # Make script executable
+    chmod +x "/etc/cron.daily/titan-cert-renewal-$DOMAIN"
+    
+    # Add to crontab for more frequent checks (twice daily)
+    local cron_entry="0 */12 * * * /usr/bin/certbot renew --quiet --deploy-hook \"systemctl reload nginx\" >> /var/log/titan/cert-renewal.log 2>&1"
+    
+    # Check if cron entry already exists
+    if ! crontab -l 2>/dev/null | grep -q "certbot renew"; then
+        (crontab -l 2>/dev/null; echo "$cron_entry") | crontab -
+        success "Cron job added for automatic certificate renewal"
+    else
+        warning "Cron job for certificate renewal already exists"
+    fi
+    
+    success "Automatic certificate renewal configured"
+}
+
+# Verify TLS configuration
+verify_tls() {
+    log "Verifying TLS 1.3 configuration..."
+    
+    # Wait for Nginx to fully reload
+    sleep 2
+    
+    # Test HTTPS connection
+    if curl -s --max-time 10 "https://$DOMAIN/health" > /dev/null; then
+        success "HTTPS connection test passed"
+    else
+        error_exit "HTTPS connection test failed"
+    fi
+    
+    # Test TLS version (requires OpenSSL 1.1.1+)
+    local tls_version=$(echo | openssl s_client -connect "$DOMAIN:443" -tls1_3 2>/dev/null | grep "Protocol" | awk '{print $3}')
+    
+    if [[ "$tls_version" == "TLSv1.3" ]]; then
+        success "TLS 1.3 verification passed"
+    else
+        warning "TLS version verification inconclusive (detected: $tls_version)"
+    fi
+    
+    # Check certificate validity
+    local cert_info=$(echo | openssl s_client -connect "$DOMAIN:443" -servername "$DOMAIN" 2>/dev/null | openssl x509 -noout -dates)
+    log "Certificate info: $cert_info"
+    
+    success "TLS configuration verification completed"
+}
+
+# Log security event
+log_security_event() {
+    local event_type="$1"
+    local details="$2"
+    local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%S.%3NZ")
+    
+    local log_entry=$(cat << EOF
+{
+  "timestamp": "$timestamp",
+  "type": "SECURITY_EVENT",
+  "eventType": "$event_type",
+  "component": "TLSSetup",
+  "domain": "$DOMAIN",
+  "details": $details
+}
+EOF
+)
+    
+    echo "$log_entry" >> /var/log/titan/security.log
+}
+
+# Main execution
+main() {
+    log "Starting TLS 1.3 setup for domain: $DOMAIN"
+    
+    check_root
+    validate_domain
+    create_directories
+    install_dependencies
+    configure_initial_nginx
+    obtain_certificate
+    configure_tls13
+    setup_auto_renewal
+    verify_tls
+    
+    # Log security event
+    log_security_event "TLS_CONFIGURED" '{"tlsVersion": "1.3", "autoRenewal": true}'
+    
+    success "TLS 1.3 setup completed successfully for domain: $DOMAIN"
+    
+    echo ""
+    echo "=== TLS 1.3 Setup Summary ==="
+    echo "Domain: $DOMAIN"
+    echo "TLS Version: 1.3"
+    echo "Certificate Path: /etc/letsencrypt/live/$DOMAIN/"
+    echo "Nginx Config: $NGINX_AVAILABLE/$DOMAIN-tls"
+    echo "Auto-renewal: Enabled (twice daily)"
+    echo "Log Files: /var/log/titan/"
+    echo ""
+    echo "Next steps:"
+    echo "1. Ensure your Titan services are running on ports 3000 and 3001"
+    echo "2. Configure firewall rules (run setup-firewall.sh)"
+    echo "3. Test the complete setup with your trading system"
+}
+
+# Execute main function
+main "$@"

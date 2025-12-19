@@ -1,0 +1,300 @@
+# Prometheus Alerting Rules for Titan Trading System
+# Requirements: 6.5 - Advanced alerting system with configurable thresholds
+
+groups:
+  - name: titan.critical
+    interval: 30s
+    rules:
+      # Circuit Breaker Alerts
+      - alert: CircuitBreakerTriggered
+        expr: titan_brain_circuit_breaker_active == 1
+        for: 0s
+        labels:
+          severity: critical
+          service: titan-brain
+          component: circuit-breaker
+        annotations:
+          summary: "Titan Circuit Breaker has been triggered"
+          description: "The Titan trading system circuit breaker is active, all trading has been halted."
+          runbook_url: "https://docs.titan.trading/runbooks/circuit-breaker"
+
+      # Equity and Drawdown Alerts
+      - alert: HighDrawdown
+        expr: titan_brain_daily_drawdown_percent > 5
+        for: 1m
+        labels:
+          severity: warning
+          service: titan-brain
+          component: risk-management
+        annotations:
+          summary: "High drawdown detected: {{ $value }}%"
+          description: "Daily drawdown has exceeded 5% (current: {{ $value }}%)"
+          runbook_url: "https://docs.titan.trading/runbooks/drawdown"
+
+      - alert: CriticalDrawdown
+        expr: titan_brain_daily_drawdown_percent > 10
+        for: 30s
+        labels:
+          severity: critical
+          service: titan-brain
+          component: risk-management
+        annotations:
+          summary: "Critical drawdown detected: {{ $value }}%"
+          description: "Daily drawdown has exceeded 10% (current: {{ $value }}%) - immediate attention required"
+          runbook_url: "https://docs.titan.trading/runbooks/drawdown"
+
+      # System Health Alerts
+      - alert: ServiceUnhealthy
+        expr: titan_brain_health_status{component!=""} == 0 or titan_health_status{component!=""} == 0 or titan_scavenger_health_status{component!=""} == 0
+        for: 2m
+        labels:
+          severity: warning
+          service: "{{ $labels.job }}"
+          component: "{{ $labels.component }}"
+        annotations:
+          summary: "Service component unhealthy: {{ $labels.component }}"
+          description: "Component {{ $labels.component }} in service {{ $labels.job }} has been unhealthy for 2 minutes"
+          runbook_url: "https://docs.titan.trading/runbooks/health-check"
+
+  - name: titan.performance
+    interval: 1m
+    rules:
+      # Latency Alerts
+      - alert: HighSignalProcessingLatency
+        expr: histogram_quantile(0.95, rate(titan_brain_signal_processing_latency_ms_bucket[5m])) > 100
+        for: 3m
+        labels:
+          severity: warning
+          service: titan-brain
+          component: signal-processing
+        annotations:
+          summary: "High signal processing latency: {{ $value }}ms"
+          description: "95th percentile signal processing latency is {{ $value }}ms (threshold: 100ms)"
+          runbook_url: "https://docs.titan.trading/runbooks/latency"
+
+      - alert: HighOrderExecutionLatency
+        expr: histogram_quantile(0.95, rate(titan_order_latency_seconds_bucket[5m])) > 1
+        for: 2m
+        labels:
+          severity: warning
+          service: titan-execution
+          component: order-execution
+        annotations:
+          summary: "High order execution latency: {{ $value }}s"
+          description: "95th percentile order execution latency is {{ $value }}s (threshold: 1s)"
+          runbook_url: "https://docs.titan.trading/runbooks/execution-latency"
+
+      - alert: HighIPCLatency
+        expr: histogram_quantile(0.95, rate(titan_scavenger_ipc_latency_ms_bucket[5m])) > 50
+        for: 2m
+        labels:
+          severity: warning
+          service: titan-scavenger
+          component: ipc
+        annotations:
+          summary: "High IPC communication latency: {{ $value }}ms"
+          description: "95th percentile IPC latency is {{ $value }}ms (threshold: 50ms)"
+          runbook_url: "https://docs.titan.trading/runbooks/ipc-latency"
+
+      # Database Performance
+      - alert: SlowDatabaseQueries
+        expr: histogram_quantile(0.95, rate(titan_brain_database_query_duration_ms_bucket[5m])) > 500
+        for: 5m
+        labels:
+          severity: warning
+          service: titan-brain
+          component: database
+        annotations:
+          summary: "Slow database queries detected: {{ $value }}ms"
+          description: "95th percentile database query time is {{ $value }}ms (threshold: 500ms)"
+          runbook_url: "https://docs.titan.trading/runbooks/database-performance"
+
+      # Cache Performance
+      - alert: LowCacheHitRate
+        expr: rate(titan_brain_cache_requests_total{result="hit"}[5m]) / rate(titan_brain_cache_requests_total[5m]) * 100 < 70
+        for: 10m
+        labels:
+          severity: warning
+          service: titan-brain
+          component: cache
+        annotations:
+          summary: "Low cache hit rate: {{ $value }}%"
+          description: "Cache hit rate for {{ $labels.cache_name }} is {{ $value }}% (threshold: 70%)"
+          runbook_url: "https://docs.titan.trading/runbooks/cache-performance"
+
+  - name: titan.trading
+    interval: 1m
+    rules:
+      # Trading Performance Alerts
+      - alert: LowApprovalRate
+        expr: rate(titan_brain_decisions_total{approved="true"}[10m]) / rate(titan_brain_decisions_total[10m]) * 100 < 30
+        for: 5m
+        labels:
+          severity: warning
+          service: titan-brain
+          component: decision-engine
+          phase: "{{ $labels.phase_id }}"
+        annotations:
+          summary: "Low signal approval rate for {{ $labels.phase_id }}: {{ $value }}%"
+          description: "Signal approval rate for {{ $labels.phase_id }} is {{ $value }}% over the last 10 minutes (threshold: 30%)"
+          runbook_url: "https://docs.titan.trading/runbooks/approval-rate"
+
+      - alert: NoSignalsGenerated
+        expr: rate(titan_scavenger_signals_generated_total[10m]) == 0
+        for: 15m
+        labels:
+          severity: warning
+          service: titan-scavenger
+          component: signal-generation
+        annotations:
+          summary: "No signals generated by Scavenger for 15 minutes"
+          description: "The Scavenger service has not generated any signals in the last 15 minutes"
+          runbook_url: "https://docs.titan.trading/runbooks/signal-generation"
+
+      - alert: NoTrapsDetected
+        expr: rate(titan_scavenger_traps_detected_total[30m]) == 0
+        for: 30m
+        labels:
+          severity: info
+          service: titan-scavenger
+          component: trap-detection
+        annotations:
+          summary: "No traps detected by Scavenger for 30 minutes"
+          description: "The Scavenger service has not detected any traps in the last 30 minutes - this may be normal during low volatility periods"
+          runbook_url: "https://docs.titan.trading/runbooks/trap-detection"
+
+      # Order Fill Rate
+      - alert: LowOrderFillRate
+        expr: titan_order_fill_rate < 80
+        for: 5m
+        labels:
+          severity: warning
+          service: titan-execution
+          component: order-execution
+        annotations:
+          summary: "Low order fill rate: {{ $value }}%"
+          description: "Order fill rate has dropped to {{ $value }}% (threshold: 80%)"
+          runbook_url: "https://docs.titan.trading/runbooks/fill-rate"
+
+  - name: titan.connectivity
+    interval: 30s
+    rules:
+      # Connection Alerts
+      - alert: BinanceConnectionDown
+        expr: titan_scavenger_binance_connection_status == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: titan-scavenger
+          component: binance-websocket
+        annotations:
+          summary: "Binance WebSocket connection is down"
+          description: "The Scavenger service has lost connection to Binance WebSocket"
+          runbook_url: "https://docs.titan.trading/runbooks/binance-connection"
+
+      - alert: IPCConnectionFailed
+        expr: titan_scavenger_health_status{component="ipc"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: titan-scavenger
+          component: ipc
+        annotations:
+          summary: "IPC connection to Execution Service failed"
+          description: "The Scavenger service cannot communicate with the Execution Service via IPC"
+          runbook_url: "https://docs.titan.trading/runbooks/ipc-connection"
+
+      # Message Flow Alerts
+      - alert: HighIPCMessageFailureRate
+        expr: rate(titan_scavenger_ipc_messages_total{result="failed"}[5m]) / rate(titan_scavenger_ipc_messages_total[5m]) * 100 > 10
+        for: 3m
+        labels:
+          severity: warning
+          service: titan-scavenger
+          component: ipc
+        annotations:
+          summary: "High IPC message failure rate: {{ $value }}%"
+          description: "IPC message failure rate is {{ $value }}% (threshold: 10%)"
+          runbook_url: "https://docs.titan.trading/runbooks/ipc-failures"
+
+  - name: titan.resources
+    interval: 1m
+    rules:
+      # Resource Usage Alerts
+      - alert: HighCPUUsage
+        expr: rate(titan_process_cpu_seconds_total[5m]) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: "{{ $labels.job }}"
+          component: system-resources
+        annotations:
+          summary: "High CPU usage: {{ $value }}%"
+          description: "CPU usage for {{ $labels.job }} is {{ $value }}% (threshold: 80%)"
+          runbook_url: "https://docs.titan.trading/runbooks/cpu-usage"
+
+      - alert: HighMemoryUsage
+        expr: titan_process_resident_memory_bytes / 1024 / 1024 > 500
+        for: 5m
+        labels:
+          severity: warning
+          service: "{{ $labels.job }}"
+          component: system-resources
+        annotations:
+          summary: "High memory usage: {{ $value }}MB"
+          description: "Memory usage for {{ $labels.job }} is {{ $value }}MB (threshold: 500MB)"
+          runbook_url: "https://docs.titan.trading/runbooks/memory-usage"
+
+      # Service Availability
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: "{{ $labels.job }}"
+          component: availability
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "Service {{ $labels.job }} on {{ $labels.instance }} has been down for 1 minute"
+          runbook_url: "https://docs.titan.trading/runbooks/service-down"
+
+  - name: titan.business
+    interval: 5m
+    rules:
+      # Business Logic Alerts
+      - alert: ExcessiveLeverage
+        expr: titan_total_leverage > 50 or titan_brain_current_leverage > 50
+        for: 1m
+        labels:
+          severity: critical
+          service: titan-brain
+          component: risk-management
+        annotations:
+          summary: "Excessive leverage detected: {{ $value }}x"
+          description: "Total system leverage is {{ $value }}x (limit: 50x)"
+          runbook_url: "https://docs.titan.trading/runbooks/leverage-limit"
+
+      - alert: TooManyActivePositions
+        expr: titan_active_positions > 20
+        for: 2m
+        labels:
+          severity: warning
+          service: titan-execution
+          component: position-management
+        annotations:
+          summary: "Too many active positions: {{ $value }}"
+          description: "Number of active positions is {{ $value }} (threshold: 20)"
+          runbook_url: "https://docs.titan.trading/runbooks/position-count"
+
+      # Configuration Alerts
+      - alert: ConfigurationReloadFailed
+        expr: increase(titan_scavenger_config_reload_total{result="failed"}[5m]) > 0
+        for: 0s
+        labels:
+          severity: warning
+          service: titan-scavenger
+          component: configuration
+        annotations:
+          summary: "Configuration reload failed"
+          description: "Failed to reload configuration in the last 5 minutes"
+          runbook_url: "https://docs.titan.trading/runbooks/config-reload"

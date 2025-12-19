@@ -1,0 +1,437 @@
+{
+  "enabled": true,
+  "schedule": "0 2 1 * *",
+  "testEnvironment": {
+    "name": "disaster-recovery-test",
+    "isolated": true,
+    "components": ["redis", "titan-brain", "titan-shared", "titan-phase1", "nginx"],
+    "dataSeeding": {
+      "enabled": true,
+      "seedData": [
+        {
+          "name": "test-trading-data",
+          "type": "redis",
+          "source": "/backups/test-data/trading-state.rdb",
+          "target": "redis://localhost:6379/1"
+        },
+        {
+          "name": "test-config-files",
+          "type": "file",
+          "source": "/backups/test-data/config",
+          "target": "/tmp/titan-test/config"
+        }
+      ],
+      "cleanupAfterTest": true
+    },
+    "mockServices": [
+      {
+        "name": "mock-binance",
+        "type": "exchange",
+        "endpoint": "http://localhost:9001",
+        "responses": [
+          {
+            "path": "/api/v3/ticker/price",
+            "method": "GET",
+            "response": { "symbol": "BTCUSDT", "price": "50000.00" },
+            "delay": 100
+          },
+          {
+            "path": "/ws/btcusdt@ticker",
+            "method": "WS",
+            "response": { "s": "BTCUSDT", "c": "50000.00", "P": "0.50" }
+          }
+        ]
+      },
+      {
+        "name": "mock-bybit",
+        "type": "exchange",
+        "endpoint": "http://localhost:9002",
+        "responses": [
+          {
+            "path": "/v2/public/tickers",
+            "method": "GET",
+            "response": { "result": [{ "symbol": "BTCUSDT", "last_price": "50000.00" }] },
+            "delay": 150
+          }
+        ]
+      }
+    ]
+  },
+  "testScenarios": [
+    {
+      "id": "redis-failure",
+      "name": "Redis Database Failure",
+      "description": "Test recovery from Redis database failure",
+      "type": "infrastructure-failure",
+      "severity": "high",
+      "components": ["redis"],
+      "failureSimulation": {
+        "type": "service-stop",
+        "parameters": {
+          "service": "redis"
+        },
+        "duration": 30
+      },
+      "expectedOutcome": {
+        "recoveryTime": 300,
+        "dataLoss": "minimal",
+        "serviceAvailability": 95,
+        "tradingResumption": true
+      },
+      "validationSteps": [
+        {
+          "id": "redis-connectivity",
+          "description": "Verify Redis connectivity",
+          "type": "service-health",
+          "criteria": {
+            "metric": "redis-ping",
+            "operator": "equals",
+            "expectedValue": true
+          },
+          "timeout": 30
+        },
+        {
+          "id": "data-integrity",
+          "description": "Verify data integrity after recovery",
+          "type": "data-integrity",
+          "criteria": {
+            "metric": "redis-key-count",
+            "operator": "greater-than",
+            "expectedValue": 0
+          },
+          "timeout": 60
+        }
+      ],
+      "timeout": 900
+    },
+    {
+      "id": "brain-service-failure",
+      "name": "Titan Brain Service Failure",
+      "description": "Test recovery from Brain service failure",
+      "type": "component-failure",
+      "severity": "critical",
+      "components": ["titan-brain"],
+      "failureSimulation": {
+        "type": "process-kill",
+        "parameters": {
+          "process": "titan-brain"
+        },
+        "duration": 60
+      },
+      "expectedOutcome": {
+        "recoveryTime": 180,
+        "dataLoss": "none",
+        "serviceAvailability": 90,
+        "tradingResumption": true
+      },
+      "validationSteps": [
+        {
+          "id": "brain-health",
+          "description": "Verify Brain service health",
+          "type": "service-health",
+          "criteria": {
+            "metric": "http://localhost:3000/health",
+            "operator": "equals",
+            "expectedValue": 200
+          },
+          "timeout": 30
+        },
+        {
+          "id": "trading-capability",
+          "description": "Verify trading capability",
+          "type": "trading-capability",
+          "criteria": {
+            "metric": "trading-status",
+            "operator": "equals",
+            "expectedValue": "operational"
+          },
+          "timeout": 60
+        }
+      ],
+      "timeout": 600
+    },
+    {
+      "id": "multiple-service-failure",
+      "name": "Multiple Service Failure",
+      "description": "Test recovery from multiple service failures",
+      "type": "component-failure",
+      "severity": "critical",
+      "components": ["titan-brain", "titan-shared", "redis"],
+      "failureSimulation": {
+        "type": "service-stop",
+        "parameters": {
+          "services": ["titan-brain", "titan-shared", "redis"]
+        },
+        "duration": 120
+      },
+      "expectedOutcome": {
+        "recoveryTime": 600,
+        "dataLoss": "minimal",
+        "serviceAvailability": 85,
+        "tradingResumption": true
+      },
+      "validationSteps": [
+        {
+          "id": "all-services-health",
+          "description": "Verify all services are healthy",
+          "type": "service-health",
+          "criteria": {
+            "metric": "all-services-status",
+            "operator": "equals",
+            "expectedValue": "healthy"
+          },
+          "timeout": 60
+        },
+        {
+          "id": "system-performance",
+          "description": "Verify system performance",
+          "type": "performance",
+          "criteria": {
+            "metric": "response-time",
+            "operator": "less-than",
+            "expectedValue": 1000
+          },
+          "timeout": 30
+        },
+        {
+          "id": "trading-resumption",
+          "description": "Verify trading can resume",
+          "type": "trading-capability",
+          "criteria": {
+            "metric": "trading-ready",
+            "operator": "equals",
+            "expectedValue": true
+          },
+          "timeout": 120
+        }
+      ],
+      "timeout": 1200
+    },
+    {
+      "id": "network-partition",
+      "name": "Network Partition Scenario",
+      "description": "Test recovery from network connectivity issues",
+      "type": "network-partition",
+      "severity": "high",
+      "components": ["titan-shared"],
+      "failureSimulation": {
+        "type": "network-disconnect",
+        "parameters": {
+          "target": "exchange-apis",
+          "duration": 180
+        },
+        "duration": 180
+      },
+      "expectedOutcome": {
+        "recoveryTime": 240,
+        "dataLoss": "none",
+        "serviceAvailability": 80,
+        "tradingResumption": true
+      },
+      "validationSteps": [
+        {
+          "id": "exchange-connectivity",
+          "description": "Verify exchange connectivity",
+          "type": "service-health",
+          "criteria": {
+            "metric": "exchange-connections",
+            "operator": "equals",
+            "expectedValue": "connected"
+          },
+          "timeout": 60
+        },
+        {
+          "id": "websocket-reconnection",
+          "description": "Verify WebSocket reconnection",
+          "type": "service-health",
+          "criteria": {
+            "metric": "websocket-status",
+            "operator": "equals",
+            "expectedValue": "connected"
+          },
+          "timeout": 30
+        }
+      ],
+      "timeout": 900
+    },
+    {
+      "id": "full-disaster",
+      "name": "Full System Disaster",
+      "description": "Test recovery from complete system failure",
+      "type": "full-disaster",
+      "severity": "critical",
+      "components": ["redis", "titan-brain", "titan-shared", "titan-phase1", "nginx"],
+      "failureSimulation": {
+        "type": "custom",
+        "parameters": {
+          "script": "full-disaster-simulation.sh"
+        },
+        "duration": 300,
+        "customScript": "/opt/titan/scripts/test-full-disaster.sh"
+      },
+      "expectedOutcome": {
+        "recoveryTime": 900,
+        "dataLoss": "minimal",
+        "serviceAvailability": 95,
+        "tradingResumption": true
+      },
+      "validationSteps": [
+        {
+          "id": "complete-system-health",
+          "description": "Verify complete system health",
+          "type": "service-health",
+          "criteria": {
+            "metric": "system-status",
+            "operator": "equals",
+            "expectedValue": "operational"
+          },
+          "timeout": 120
+        },
+        {
+          "id": "data-consistency",
+          "description": "Verify data consistency",
+          "type": "data-integrity",
+          "criteria": {
+            "metric": "data-checksum",
+            "operator": "equals",
+            "expectedValue": "valid"
+          },
+          "timeout": 180
+        },
+        {
+          "id": "trading-full-capability",
+          "description": "Verify full trading capability",
+          "type": "trading-capability",
+          "criteria": {
+            "metric": "full-trading-test",
+            "operator": "equals",
+            "expectedValue": true
+          },
+          "timeout": 300
+        },
+        {
+          "id": "performance-baseline",
+          "description": "Verify performance meets baseline",
+          "type": "performance",
+          "criteria": {
+            "metric": "performance-score",
+            "operator": "greater-than",
+            "expectedValue": 90,
+            "tolerance": 5
+          },
+          "timeout": 60
+        }
+      ],
+      "timeout": 1800
+    }
+  ],
+  "reporting": {
+    "enabled": true,
+    "outputDirectory": "/opt/titan/reports/disaster-recovery",
+    "formats": ["json", "html", "csv"],
+    "includeMetrics": true,
+    "includeLogs": true,
+    "retention": 365
+  },
+  "notifications": {
+    "channels": [
+      {
+        "type": "email",
+        "config": {
+          "smtp": {
+            "host": "smtp.gmail.com",
+            "port": 587,
+            "secure": false,
+            "auth": {
+              "user": "${EMAIL_USER}",
+              "pass": "${EMAIL_PASS}"
+            }
+          },
+          "from": "titan-dr-testing@company.com",
+          "to": ["ops-team@company.com", "engineering@company.com"]
+        },
+        "enabled": true,
+        "events": ["test-completed-success", "test-completed-failure", "test-scheduled-failed"]
+      },
+      {
+        "type": "slack",
+        "config": {
+          "webhookUrl": "${SLACK_WEBHOOK_URL}",
+          "channel": "#titan-ops",
+          "username": "Titan DR Test Bot",
+          "iconEmoji": ":test_tube:"
+        },
+        "enabled": true,
+        "events": ["test-completed-failure", "test-scheduled-failed"]
+      },
+      {
+        "type": "webhook",
+        "config": {
+          "url": "${DR_TEST_WEBHOOK_URL}",
+          "method": "POST",
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer ${DR_TEST_WEBHOOK_TOKEN}"
+          }
+        },
+        "enabled": false,
+        "events": ["test-completed-success", "test-completed-failure"]
+      }
+    ],
+    "templates": [
+      {
+        "event": "test-completed-success",
+        "subject": "Disaster Recovery Test Completed Successfully - {testId}",
+        "message": "Monthly disaster recovery test completed successfully.\n\nTest ID: {testId}\nEnvironment: {environment}\nSuccess Rate: {successRate}\nScenarios Passed: {passedCount}/{passedCount}\nTimestamp: {timestamp}\n\nAll disaster recovery procedures are functioning correctly.",
+        "severity": "info"
+      },
+      {
+        "event": "test-completed-failure",
+        "subject": "ATTENTION: Disaster Recovery Test Failed - {testId}",
+        "message": "Monthly disaster recovery test has failed.\n\nTest ID: {testId}\nEnvironment: {environment}\nSuccess Rate: {successRate}\nScenarios Passed: {passedCount}\nScenarios Failed: {failedCount}\nIssues Found: {issuesCount}\nTimestamp: {timestamp}\n\nPlease review the test results and address any issues to ensure disaster recovery capabilities.",
+        "severity": "warning"
+      },
+      {
+        "event": "test-scheduled-failed",
+        "subject": "CRITICAL: Scheduled Disaster Recovery Test Failed to Execute",
+        "message": "The scheduled disaster recovery test failed to execute.\n\nError: {error}\nTimestamp: {timestamp}\n\nImmediate attention required to ensure disaster recovery testing continues.",
+        "severity": "error"
+      }
+    ]
+  },
+  "cleanup": {
+    "enabled": true,
+    "cleanupTimeout": 300,
+    "preserveOnFailure": true,
+    "cleanupSteps": [
+      {
+        "id": "stop-mock-services",
+        "description": "Stop mock services",
+        "command": "pkill -f 'mock-.*-server'",
+        "timeout": 30,
+        "critical": false
+      },
+      {
+        "id": "cleanup-test-data",
+        "description": "Clean up test data",
+        "command": "rm -rf /tmp/titan-test/*",
+        "timeout": 60,
+        "critical": false
+      },
+      {
+        "id": "reset-test-database",
+        "description": "Reset test database",
+        "command": "redis-cli -n 1 FLUSHDB",
+        "timeout": 30,
+        "critical": false
+      },
+      {
+        "id": "restore-production-config",
+        "description": "Restore production configuration",
+        "command": "cp /opt/titan/config/*.json.backup /opt/titan/config/",
+        "timeout": 60,
+        "critical": true
+      }
+    ]
+  }
+}

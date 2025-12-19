@@ -1,0 +1,57 @@
+{
+  "enabled": true,
+  "maxLeverage": 20,
+  "maxDrawdown": 0.07,
+  "maxPositionSize": 0.5,
+  "riskPerTrade": 0.02,
+  "exchanges": {
+    "bybit": {
+      "enabled": true,
+      "executeOn": true,
+      "testnet": false,
+      "rateLimit": 10,
+      "timeout": 5000
+    },
+    "mexc": {
+      "enabled": false,
+      "executeOn": false,
+      "testnet": false,
+      "rateLimit": 10,
+      "timeout": 5000
+    }
+  },
+  "parameters": {
+    "trapSensitivity": 0.8,
+    "liquidationThreshold": 0.95,
+    "velocityMultiplier": 1.2
+  },
+  "environments": {
+    "development": {
+      "maxLeverage": 5,
+      "maxDrawdown": 0.03,
+      "exchanges": {
+        "bybit": {
+          "testnet": true
+        }
+      }
+    },
+    "staging": {
+      "maxLeverage": 10,
+      "maxDrawdown": 0.05,
+      "exchanges": {
+        "bybit": {
+          "testnet": true
+        }
+      }
+    },
+    "production": {
+      "maxLeverage": 20,
+      "maxDrawdown": 0.07,
+      "exchanges": {
+        "bybit": {
+          "testnet": false
+        }
+      }
+    }
+  }
+}

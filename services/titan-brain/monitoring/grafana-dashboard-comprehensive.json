@@ -1,0 +1,497 @@
+{
+  "dashboard": {
+    "title": "Titan Trading System - Comprehensive Monitoring",
+    "tags": ["titan", "trading", "production", "brain", "execution", "scavenger"],
+    "timezone": "browser",
+    "schemaVersion": 16,
+    "version": 2,
+    "refresh": "5s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "System Health Overview",
+        "type": "stat",
+        "gridPos": { "x": 0, "y": 0, "w": 24, "h": 4 },
+        "targets": [
+          {
+            "expr": "titan_brain_health_status{component=\"websocket\"}",
+            "legendFormat": "Brain WebSocket",
+            "refId": "A"
+          },
+          {
+            "expr": "titan_brain_health_status{component=\"database\"}",
+            "legendFormat": "Brain Database",
+            "refId": "B"
+          },
+          {
+            "expr": "titan_health_status{component=\"websocket\"}",
+            "legendFormat": "Execution WebSocket",
+            "refId": "C"
+          },
+          {
+            "expr": "titan_health_status{component=\"broker\"}",
+            "legendFormat": "Execution Broker",
+            "refId": "D"
+          },
+          {
+            "expr": "titan_scavenger_health_status{component=\"binance\"}",
+            "legendFormat": "Scavenger Binance",
+            "refId": "E"
+          },
+          {
+            "expr": "titan_scavenger_health_status{component=\"ipc\"}",
+            "legendFormat": "Scavenger IPC",
+            "refId": "F"
+          }
+        ],
+        "options": {
+          "graphMode": "none",
+          "colorMode": "background",
+          "justifyMode": "center"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "red" },
+                { "value": 1, "color": "green" }
+              ]
+            },
+            "mappings": [
+              { "value": 0, "text": "Unhealthy" },
+              { "value": 1, "text": "Healthy" }
+            ]
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Account Equity & Allocation",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 4, "w": 12, "h": 6 },
+        "targets": [
+          {
+            "expr": "titan_brain_current_equity",
+            "legendFormat": "Total Equity",
+            "refId": "A"
+          },
+          {
+            "expr": "titan_brain_current_equity * titan_brain_allocation_weight{phase_id=\"phase1\"}",
+            "legendFormat": "Phase 1 Equity",
+            "refId": "B"
+          },
+          {
+            "expr": "titan_brain_current_equity * titan_brain_allocation_weight{phase_id=\"phase2\"}",
+            "legendFormat": "Phase 2 Equity",
+            "refId": "C"
+          },
+          {
+            "expr": "titan_brain_current_equity * titan_brain_allocation_weight{phase_id=\"phase3\"}",
+            "legendFormat": "Phase 3 Equity",
+            "refId": "D"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "currencyUSD",
+            "label": "Equity"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Circuit Breaker & Drawdown",
+        "type": "stat",
+        "gridPos": { "x": 12, "y": 4, "w": 6, "h": 6 },
+        "targets": [
+          {
+            "expr": "titan_brain_circuit_breaker_active",
+            "legendFormat": "Circuit Breaker",
+            "refId": "A"
+          },
+          {
+            "expr": "titan_brain_daily_drawdown_percent",
+            "legendFormat": "Daily Drawdown %",
+            "refId": "B"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "background"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 3, "color": "yellow" },
+                { "value": 5, "color": "orange" },
+                { "value": 7, "color": "red" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Allocation Weights",
+        "type": "piechart",
+        "gridPos": { "x": 18, "y": 4, "w": 6, "h": 6 },
+        "targets": [
+          {
+            "expr": "titan_brain_allocation_weight",
+            "legendFormat": "{{phase_id}}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Signal Processing Latency (Brain)",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 10, "w": 12, "h": 6 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(titan_brain_signal_processing_latency_ms_bucket[5m]))",
+            "legendFormat": "P95 Latency",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(titan_brain_signal_processing_latency_ms_bucket[5m]))",
+            "legendFormat": "P99 Latency",
+            "refId": "B"
+          },
+          {
+            "expr": "rate(titan_brain_signal_processing_latency_ms_sum[5m]) / rate(titan_brain_signal_processing_latency_ms_count[5m])",
+            "legendFormat": "Average Latency",
+            "refId": "C"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "ms",
+            "label": "Latency"
+          }
+        ],
+        "alert": {
+          "name": "High Signal Processing Latency",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [100],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A", "5m", "now"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "avg"
+              },
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "frequency": "1m",
+          "handler": 1,
+          "message": "Brain signal processing latency exceeds 100ms",
+          "name": "Signal Latency > 100ms",
+          "noDataState": "no_data",
+          "notifications": []
+        }
+      },
+      {
+        "id": 6,
+        "title": "Decision Approval Rates",
+        "type": "graph",
+        "gridPos": { "x": 12, "y": 10, "w": 12, "h": 6 },
+        "targets": [
+          {
+            "expr": "rate(titan_brain_decisions_total{approved=\"true\"}[5m]) / rate(titan_brain_decisions_total[5m]) * 100",
+            "legendFormat": "{{phase_id}} Approval Rate",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "percent",
+            "label": "Approval Rate",
+            "min": 0,
+            "max": 100
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Order Execution Latency",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 16, "w": 12, "h": 6 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(titan_order_latency_seconds_bucket[5m]))",
+            "legendFormat": "P95 Order Latency",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(titan_order_latency_seconds_bucket[5m]))",
+            "legendFormat": "P99 Order Latency",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "s",
+            "label": "Latency"
+          }
+        ],
+        "alert": {
+          "name": "High Order Execution Latency",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [1],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A", "5m", "now"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "avg"
+              },
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "frequency": "1m",
+          "handler": 1,
+          "message": "Order execution latency exceeds 1 second",
+          "name": "Order Latency > 1s",
+          "noDataState": "no_data",
+          "notifications": []
+        }
+      },
+      {
+        "id": 8,
+        "title": "Signal Generation Rate (Scavenger)",
+        "type": "graph",
+        "gridPos": { "x": 12, "y": 16, "w": 12, "h": 6 },
+        "targets": [
+          {
+            "expr": "rate(titan_scavenger_signals_generated_total[5m]) * 60",
+            "legendFormat": "{{symbol}} {{direction}} - {{result}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "short",
+            "label": "Signals/min"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Trap Detection Rate",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 22, "w": 8, "h": 6 },
+        "targets": [
+          {
+            "expr": "rate(titan_scavenger_traps_detected_total[5m]) * 60",
+            "legendFormat": "{{trap_type}} - {{symbol}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "short",
+            "label": "Traps/min"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "IPC Communication Latency",
+        "type": "graph",
+        "gridPos": { "x": 8, "y": 22, "w": 8, "h": 6 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(titan_scavenger_ipc_latency_ms_bucket[5m]))",
+            "legendFormat": "P95 IPC Latency",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(titan_scavenger_ipc_latency_ms_sum[5m]) / rate(titan_scavenger_ipc_latency_ms_count[5m])",
+            "legendFormat": "Average IPC Latency",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "ms",
+            "label": "Latency"
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Active Positions & Leverage",
+        "type": "stat",
+        "gridPos": { "x": 16, "y": 22, "w": 8, "h": 6 },
+        "targets": [
+          {
+            "expr": "titan_active_positions",
+            "legendFormat": "Active Positions",
+            "refId": "A"
+          },
+          {
+            "expr": "titan_total_leverage",
+            "legendFormat": "Total Leverage",
+            "refId": "B"
+          },
+          {
+            "expr": "titan_brain_current_leverage",
+            "legendFormat": "Brain Leverage",
+            "refId": "C"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value"
+        }
+      },
+      {
+        "id": 12,
+        "title": "Database Query Performance",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 28, "w": 12, "h": 6 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(titan_brain_database_query_duration_ms_bucket[5m]))",
+            "legendFormat": "P95 {{operation}} - {{table}}",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(titan_brain_database_query_duration_ms_sum[5m]) / rate(titan_brain_database_query_duration_ms_count[5m])",
+            "legendFormat": "Avg {{operation}} - {{table}}",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "ms",
+            "label": "Query Time"
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "title": "Cache Hit Rates",
+        "type": "gauge",
+        "gridPos": { "x": 12, "y": 28, "w": 6, "h": 6 },
+        "targets": [
+          {
+            "expr": "rate(titan_brain_cache_requests_total{result=\"hit\"}[5m]) / rate(titan_brain_cache_requests_total[5m]) * 100",
+            "legendFormat": "{{cache_name}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "red" },
+                { "value": 70, "color": "yellow" },
+                { "value": 90, "color": "green" }
+              ]
+            },
+            "unit": "percent",
+            "min": 0,
+            "max": 100
+          }
+        }
+      },
+      {
+        "id": 14,
+        "title": "System Resource Usage",
+        "type": "graph",
+        "gridPos": { "x": 18, "y": 28, "w": 6, "h": 6 },
+        "targets": [
+          {
+            "expr": "rate(titan_process_cpu_seconds_total[5m]) * 100",
+            "legendFormat": "CPU %",
+            "refId": "A"
+          },
+          {
+            "expr": "titan_process_resident_memory_bytes / 1024 / 1024",
+            "legendFormat": "Memory (MB)",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "short",
+            "label": "Usage"
+          }
+        ]
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "instance",
+          "type": "query",
+          "query": "label_values(up, instance)",
+          "refresh": 1,
+          "includeAll": true,
+          "multi": true
+        },
+        {
+          "name": "phase",
+          "type": "custom",
+          "options": [
+            { "text": "All", "value": "$__all", "selected": true },
+            { "text": "Phase 1", "value": "phase1", "selected": false },
+            { "text": "Phase 2", "value": "phase2", "selected": false },
+            { "text": "Phase 3", "value": "phase3", "selected": false }
+          ],
+          "includeAll": true,
+          "multi": true
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Circuit Breaker Events",
+          "datasource": "prometheus",
+          "expr": "changes(titan_brain_circuit_breaker_active[1m]) > 0",
+          "titleFormat": "Circuit Breaker {{__value__}}",
+          "textFormat": "Circuit breaker status changed",
+          "iconColor": "red"
+        },
+        {
+          "name": "Configuration Reloads",
+          "datasource": "prometheus", 
+          "expr": "changes(titan_scavenger_config_reload_timestamp[1m]) > 0",
+          "titleFormat": "Config Reload",
+          "textFormat": "Configuration reloaded",
+          "iconColor": "blue"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,32 @@
+You are a trading system engineer proposing configuration changes.
+
+INSIGHT:
+{insightText}
+
+CURRENT CONFIG SCHEMA:
+{configSchema}
+
+CURRENT VALUES:
+{relevantConfigValues}
+
+TASK:
+Map this insight to specific config.json parameters. Propose ONE change.
+
+CONSTRAINTS:
+- max_leverage: 1-20
+- stop_loss: 0.001-0.05
+- risk_per_trade: 0.001-0.05
+- Only modify parameters that exist in the schema
+
+OUTPUT FORMAT (JSON):
+{
+  "targetKey": "traps.oi_wipeout.stop_loss",
+  "currentValue": 0.01,
+  "suggestedValue": 0.015,
+  "reasoning": "string",
+  "expectedImpact": {
+    "pnlImprovement": 5.0,
+    "riskChange": 2.0,
+    "confidenceScore": 0.75
+  }
+}

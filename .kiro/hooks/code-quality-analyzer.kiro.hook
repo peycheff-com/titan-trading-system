@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "name": "Code Quality Analyzer",
+  "description": "Monitors source code files for changes and provides intelligent suggestions for code improvements, including identifying code smells, recommending design patterns, and ensuring adherence to best practices. Focuses on enhancing readability, maintainability, and performance while preserving existing functionality.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "*.pine",
+      "*.js",
+      "src/**/*",
+      "tools/**/*"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Analyze the modified code in the changed file for potential improvements. Focus on:\n\n1. **Code Smells**: Identify any anti-patterns, duplicated code, overly complex functions, or unclear naming\n2. **Design Patterns**: Suggest applicable design patterns that could improve the code structure\n3. **Best Practices**: Check adherence to Pine Script v6 best practices (for .pine files) or JavaScript best practices (for .js files)\n4. **Readability**: Evaluate variable naming, function organization, and code clarity\n5. **Maintainability**: Assess modularity, coupling, and code organization\n6. **Performance**: Identify potential performance bottlenecks or optimization opportunities\n\nProvide specific, actionable suggestions with code examples where appropriate. Ensure all suggestions maintain the existing functionality and are compatible with the project's technical stack (Pine Script v6 for trading scripts, Node.js for tooling).\n\nConsider the project structure and naming conventions defined in the workspace rules when making recommendations."
+  }
+}

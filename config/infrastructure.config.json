@@ -1,0 +1,171 @@
+{
+  "infrastructure": {
+    "requirements": {
+      "minRAM": "8GB",
+      "minCPU": 4,
+      "minDisk": "50GB",
+      "operatingSystem": "Ubuntu 22.04 LTS"
+    },
+    "dependencies": {
+      "nodejs": {
+        "version": "18",
+        "globalPackages": ["pm2"]
+      },
+      "redis": {
+        "version": "latest",
+        "port": 6379,
+        "maxMemory": "2gb",
+        "maxMemoryPolicy": "allkeys-lru",
+        "bindAddress": "127.0.0.1"
+      },
+      "nginx": {
+        "version": "latest",
+        "enableGzip": true,
+        "clientMaxBodySize": "10M"
+      },
+      "certbot": {
+        "email": "",
+        "domains": [],
+        "autoRenewal": true
+      }
+    },
+    "security": {
+      "firewall": {
+        "defaultIncoming": "deny",
+        "defaultOutgoing": "allow",
+        "allowedPorts": [
+          {
+            "port": 22,
+            "protocol": "tcp",
+            "comment": "SSH"
+          },
+          {
+            "port": 80,
+            "protocol": "tcp",
+            "comment": "HTTP"
+          },
+          {
+            "port": 443,
+            "protocol": "tcp",
+            "comment": "HTTPS"
+          }
+        ],
+        "restrictedPorts": [
+          {
+            "port": 6379,
+            "protocol": "tcp",
+            "allowFrom": "127.0.0.1",
+            "comment": "Redis localhost only"
+          }
+        ]
+      },
+      "fail2ban": {
+        "enabled": true,
+        "banTime": 3600,
+        "findTime": 600,
+        "maxRetry": 3,
+        "jails": [
+          {
+            "name": "sshd",
+            "enabled": true,
+            "port": "ssh",
+            "filter": "sshd",
+            "logPath": "/var/log/auth.log",
+            "maxRetry": 3
+          },
+          {
+            "name": "nginx-http-auth",
+            "enabled": true,
+            "port": "http,https",
+            "filter": "nginx-http-auth",
+            "logPath": "/var/log/nginx/error.log"
+          }
+        ]
+      },
+      "automaticUpdates": {
+        "enabled": true,
+        "securityOnly": true,
+        "autoReboot": false,
+        "rebootTime": "02:00"
+      }
+    },
+    "systemLimits": {
+      "fileDescriptors": {
+        "soft": 65536,
+        "hard": 65536
+      },
+      "processes": {
+        "soft": 32768,
+        "hard": 32768
+      },
+      "networkBuffers": {
+        "rmemMax": 16777216,
+        "wmemMax": 16777216,
+        "tcpRmem": "4096 87380 16777216",
+        "tcpWmem": "4096 65536 16777216"
+      },
+      "kernel": {
+        "netdevMaxBacklog": 5000,
+        "vmSwappiness": 10
+      }
+    },
+    "directories": {
+      "titanUser": "titan",
+      "basePath": "/opt/titan",
+      "subdirectories": [
+        "services",
+        "config",
+        "logs",
+        "backups",
+        "ssl",
+        "monitoring"
+      ],
+      "permissions": "755"
+    },
+    "monitoring": {
+      "logRotation": {
+        "enabled": true,
+        "maxSize": "100M",
+        "rotateCount": 10,
+        "compress": true
+      },
+      "systemMetrics": {
+        "collectInterval": 30,
+        "retentionDays": 30
+      }
+    }
+  },
+  "deployment": {
+    "environment": "production",
+    "timezone": "UTC",
+    "locale": "en_US.UTF-8",
+    "swapFile": {
+      "enabled": true,
+      "size": "2G",
+      "swappiness": 10
+    }
+  },
+  "validation": {
+    "required": [
+      "system_specs",
+      "nodejs",
+      "redis",
+      "pm2",
+      "nginx",
+      "firewall"
+    ],
+    "recommended": [
+      "ssl",
+      "fail2ban",
+      "automatic_updates",
+      "system_limits",
+      "titan_setup"
+    ],
+    "thresholds": {
+      "ramGB": 8,
+      "cpuCores": 4,
+      "diskGB": 50,
+      "nodeVersion": 18
+    }
+  }
+}

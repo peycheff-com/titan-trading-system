@@ -1,0 +1,362 @@
+{
+  "enabled": true,
+  "maxRecoveryTime": 900,
+  "validationTimeout": 300,
+  "retryAttempts": 3,
+  "retryDelay": 10,
+  "components": [
+    {
+      "name": "redis",
+      "type": "database",
+      "priority": 1,
+      "dependencies": [],
+      "recoverySteps": [
+        {
+          "id": "stop-redis",
+          "description": "Stop Redis service",
+          "command": "sudo systemctl stop redis",
+          "timeout": 30,
+          "critical": false,
+          "retryable": true
+        },
+        {
+          "id": "restore-redis-data",
+          "description": "Restore Redis data from backup",
+          "command": "sudo cp /backups/redis/latest/dump.rdb /var/lib/redis/",
+          "timeout": 60,
+          "critical": true,
+          "retryable": true
+        },
+        {
+          "id": "fix-redis-permissions",
+          "description": "Fix Redis file permissions",
+          "command": "sudo chown redis:redis /var/lib/redis/dump.rdb",
+          "timeout": 10,
+          "critical": true,
+          "retryable": true
+        },
+        {
+          "id": "configure-redis-auth",
+          "description": "Configure Redis authentication",
+          "command": "sudo sed -i 's/# requirepass foobared/requirepass ${REDIS_PASSWORD}/' /etc/redis/redis.conf",
+          "timeout": 10,
+          "critical": true,
+          "retryable": true,
+          "environment": {
+            "REDIS_PASSWORD": "${REDIS_PASSWORD}"
+          }
+        },
+        {
+          "id": "start-redis",
+          "description": "Start Redis service",
+          "command": "sudo systemctl start redis",
+          "timeout": 30,
+          "critical": true,
+          "retryable": true
+        }
+      ],
+      "validationSteps": [
+        {
+          "id": "redis-ping",
+          "description": "Test Redis connectivity with authentication",
+          "type": "health-check",
+          "target": "redis://localhost:6379",
+          "criteria": {
+            "expectedValue": true,
+            "operator": "equals"
+          },
+          "timeout": 10
+        }
+      ],
+      "rollbackSteps": [
+        {
+          "id": "stop-redis-rollback",
+          "description": "Stop Redis service for rollback",
+          "command": "sudo systemctl stop redis",
+          "timeout": 30,
+          "critical": false,
+          "retryable": false
+        }
+      ]
+    },
+    {
+      "name": "titan-brain",
+      "type": "service",
+      "priority": 2,
+      "dependencies": ["redis"],
+      "recoverySteps": [
+        {
+          "id": "restore-brain-config",
+          "description": "Restore Brain service configuration",
+          "command": "cp /backups/config/brain.config.json /opt/titan/config/",
+          "timeout": 30,
+          "critical": true,
+          "retryable": true
+        },
+        {
+          "id": "start-brain-service",
+          "description": "Start Titan Brain service",
+          "command": "cd /opt/titan && pm2 start ecosystem.config.js --only titan-brain",
+          "timeout": 60,
+          "critical": true,
+          "retryable": true
+        }
+      ],
+      "validationSteps": [
+        {
+          "id": "brain-health",
+          "description": "Check Brain service health",
+          "type": "health-check",
+          "target": "http://localhost:3000/health",
+          "criteria": {
+            "expectedValue": 200,
+            "operator": "equals"
+          },
+          "timeout": 30
+        }
+      ]
+    },
+    {
+      "name": "titan-shared",
+      "type": "service",
+      "priority": 3,
+      "dependencies": ["redis", "titan-brain"],
+      "recoverySteps": [
+        {
+          "id": "restore-shared-config",
+          "description": "Restore Shared service configuration",
+          "command": "cp /backups/config/shared.config.json /opt/titan/config/",
+          "timeout": 30,
+          "critical": true,
+          "retryable": true
+        },
+        {
+          "id": "start-shared-service",
+          "description": "Start Titan Shared service",
+          "command": "cd /opt/titan && pm2 start ecosystem.config.js --only titan-shared",
+          "timeout": 60,
+          "critical": true,
+          "retryable": true
+        }
+      ],
+      "validationSteps": [
+        {
+          "id": "shared-health",
+          "description": "Check Shared service health",
+          "type": "health-check",
+          "target": "http://localhost:3001/health",
+          "criteria": {
+            "expectedValue": 200,
+            "operator": "equals"
+          },
+          "timeout": 30
+        }
+      ]
+    },
+    {
+      "name": "titan-phase1",
+      "type": "service",
+      "priority": 4,
+      "dependencies": ["titan-shared"],
+      "recoverySteps": [
+        {
+          "id": "restore-phase1-config",
+          "description": "Restore Phase 1 configuration",
+          "command": "cp /backups/config/phase1.config.json /opt/titan/config/",
+          "timeout": 30,
+          "critical": true,
+          "retryable": true
+        },
+        {
+          "id": "start-phase1-service",
+          "description": "Start Titan Phase 1 service",
+          "command": "cd /opt/titan && pm2 start ecosystem.config.js --only titan-phase1",
+          "timeout": 60,
+          "critical": false,
+          "retryable": true
+        }
+      ],
+      "validationSteps": [
+        {
+          "id": "phase1-health",
+          "description": "Check Phase 1 service health",
+          "type": "health-check",
+          "target": "http://localhost:3002/health",
+          "criteria": {
+            "expectedValue": 200,
+            "operator": "equals"
+          },
+          "timeout": 30
+        }
+      ]
+    },
+    {
+      "name": "nginx",
+      "type": "infrastructure",
+      "priority": 5,
+      "dependencies": [],
+      "recoverySteps": [
+        {
+          "id": "restore-nginx-config",
+          "description": "Restore Nginx configuration",
+          "command": "sudo cp /backups/nginx/nginx.conf /etc/nginx/",
+          "timeout": 30,
+          "critical": false,
+          "retryable": true
+        },
+        {
+          "id": "test-nginx-config",
+          "description": "Test Nginx configuration",
+          "command": "sudo nginx -t",
+          "timeout": 10,
+          "critical": true,
+          "retryable": false
+        },
+        {
+          "id": "start-nginx",
+          "description": "Start Nginx service",
+          "command": "sudo systemctl start nginx",
+          "timeout": 30,
+          "critical": false,
+          "retryable": true
+        }
+      ],
+      "validationSteps": [
+        {
+          "id": "nginx-health",
+          "description": "Check Nginx health",
+          "type": "health-check",
+          "target": "http://localhost/nginx-health",
+          "criteria": {
+            "expectedValue": 200,
+            "operator": "equals"
+          },
+          "timeout": 10
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "tradingSystemChecks": [
+      {
+        "name": "trading-system-status",
+        "endpoint": "http://localhost:3000/health/trading",
+        "expectedResponse": { "status": "operational", "trading": true },
+        "timeout": 30
+      },
+      {
+        "name": "websocket-connections",
+        "endpoint": "http://localhost:3000/health/websockets",
+        "expectedResponse": { "status": "connected" },
+        "timeout": 15
+      },
+      {
+        "name": "exchange-connectivity",
+        "endpoint": "http://localhost:3000/health/exchanges",
+        "expectedResponse": { "binance": "connected", "bybit": "connected" },
+        "timeout": 20
+      }
+    ],
+    "performanceThresholds": {
+      "maxResponseTime": 1000,
+      "minThroughput": 100,
+      "maxCpuUsage": 80,
+      "maxMemoryUsage": 85
+    },
+    "dataIntegrityChecks": [
+      {
+        "name": "redis-data-integrity",
+        "type": "database",
+        "target": "redis://localhost:6379",
+        "validation": "redis-cli -a ${REDIS_PASSWORD} dbsize | grep -E '^[0-9]+$'"
+      },
+      {
+        "name": "config-file-integrity",
+        "type": "file",
+        "target": "/opt/titan/config",
+        "validation": "find /opt/titan/config -name '*.json' -exec node -e 'JSON.parse(require(\"fs\").readFileSync(process.argv[1]))' {} \\;"
+      },
+      {
+        "name": "log-file-integrity",
+        "type": "file",
+        "target": "/opt/titan/logs",
+        "validation": "test -d /opt/titan/logs && test -w /opt/titan/logs"
+      }
+    ]
+  },
+  "notifications": {
+    "channels": [
+      {
+        "type": "email",
+        "config": {
+          "smtp": {
+            "host": "smtp.gmail.com",
+            "port": 587,
+            "secure": false,
+            "auth": {
+              "user": "${EMAIL_USER}",
+              "pass": "${EMAIL_PASS}"
+            }
+          },
+          "from": "titan-alerts@company.com",
+          "to": ["ops-team@company.com", "on-call@company.com"]
+        },
+        "enabled": true
+      },
+      {
+        "type": "slack",
+        "config": {
+          "webhookUrl": "${SLACK_WEBHOOK_URL}",
+          "channel": "#titan-alerts",
+          "username": "Titan DR Bot",
+          "iconEmoji": ":warning:"
+        },
+        "enabled": true
+      },
+      {
+        "type": "webhook",
+        "config": {
+          "url": "${WEBHOOK_URL}",
+          "method": "POST",
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer ${WEBHOOK_TOKEN}"
+          }
+        },
+        "enabled": false
+      }
+    ],
+    "templates": [
+      {
+        "event": "recovery-started",
+        "subject": "Disaster Recovery Started - {recoveryId}",
+        "message": "Disaster recovery process has been initiated.\n\nRecovery ID: {recoveryId}\nTrigger: {trigger}\nTimestamp: {timestamp}\n\nRecovery is in progress...",
+        "severity": "high"
+      },
+      {
+        "event": "recovery-completed",
+        "subject": "Disaster Recovery Completed Successfully - {recoveryId}",
+        "message": "Disaster recovery process has completed successfully.\n\nRecovery ID: {recoveryId}\nTrigger: {trigger}\nStatus: {status}\nDuration: {duration}\nTimestamp: {timestamp}\n\nAll systems are operational and trading has been resumed.",
+        "severity": "medium"
+      },
+      {
+        "event": "recovery-failed",
+        "subject": "CRITICAL: Disaster Recovery Failed - {recoveryId}",
+        "message": "CRITICAL: Disaster recovery process has failed.\n\nRecovery ID: {recoveryId}\nTrigger: {trigger}\nStatus: {status}\nDuration: {duration}\nTimestamp: {timestamp}\n\nImmediate manual intervention required!",
+        "severity": "critical"
+      },
+      {
+        "event": "recovery-rollback-completed",
+        "subject": "Disaster Recovery Rollback Completed - {recoveryId}",
+        "message": "Disaster recovery rollback has been completed.\n\nRecovery ID: {recoveryId}\nTrigger: {trigger}\nStatus: {status}\nTimestamp: {timestamp}\n\nSystem has been rolled back to previous state.",
+        "severity": "high"
+      },
+      {
+        "event": "recovery-rollback-failed",
+        "subject": "CRITICAL: Disaster Recovery Rollback Failed - {recoveryId}",
+        "message": "CRITICAL: Disaster recovery rollback has failed.\n\nRecovery ID: {recoveryId}\nTrigger: {trigger}\nStatus: {status}\nTimestamp: {timestamp}\n\nSystem may be in an inconsistent state. Immediate manual intervention required!",
+        "severity": "critical"
+      }
+    ]
+  }
+}

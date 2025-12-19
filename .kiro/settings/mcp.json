@@ -1,0 +1,75 @@
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest"
+      ],
+      "disabled": false
+    },
+    "Context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp",
+        "--api-key",
+        "ctx7sk-579d0b40-4d85-4e10-9915-0da28019f679"
+      ],
+      "disabled": false
+    },
+    "nano-banana": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "nano-banana-mcp@latest"
+      ],
+      "env": {
+        "GEMINI_API_KEY": "${GEMINI_API_KEY}"
+      },
+      "disabled": false
+    },
+    "shadcn": {
+      "command": "npx",
+      "args": [
+        "shadcn@latest",
+        "mcp"
+      ],
+      "disabled": false
+    },
+    "twitter": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@enescinar/twitter-mcp"
+      ],
+      "env": {
+        "API_KEY": "${TWITTER_API_KEY}",
+        "API_SECRET_KEY": "${TWITTER_API_SECRET_KEY}",
+        "ACCESS_TOKEN": "${TWITTER_ACCESS_TOKEN}",
+        "ACCESS_TOKEN_SECRET": "${TWITTER_ACCESS_TOKEN_SECRET}"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "post_tweet"
+      ]
+    },
+    "firecrawl": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "firecrawl-mcp@1.8.1"
+      ],
+      "env": {
+        "FIRECRAWL_API_KEY": "${FIRECRAWL_API_KEY}"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "firecrawl_search",
+        "firecrawl_search",
+        "firecrawl_search",
+        "firecrawl_map"
+      ]
+    }
+  }
+}

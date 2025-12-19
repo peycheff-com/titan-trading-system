@@ -1,0 +1,95 @@
+{
+  "$schema": "./config.schema.json",
+  "_comment": "Titan Brain Configuration - Copy to config.json and customize",
+  
+  "brain": {
+    "signalTimeout": 100,
+    "metricUpdateInterval": 60000,
+    "dashboardCacheTTL": 5000,
+    "maxQueueSize": 100
+  },
+
+  "allocationEngine": {
+    "transitionPoints": {
+      "startP2": 1500,
+      "fullP2": 5000,
+      "startP3": 25000
+    },
+    "leverageCaps": {
+      "MICRO": 20,
+      "SMALL": 10,
+      "MEDIUM": 5,
+      "LARGE": 3,
+      "INSTITUTIONAL": 2
+    }
+  },
+
+  "performanceTracker": {
+    "windowDays": 7,
+    "minTradeCount": 10,
+    "malusMultiplier": 0.5,
+    "bonusMultiplier": 1.2,
+    "malusThreshold": 0,
+    "bonusThreshold": 2.0
+  },
+
+  "riskGuardian": {
+    "maxCorrelation": 0.8,
+    "correlationPenalty": 0.5,
+    "betaUpdateInterval": 300000,
+    "correlationUpdateInterval": 300000
+  },
+
+  "capitalFlow": {
+    "sweepThreshold": 1.2,
+    "reserveLimit": 200,
+    "sweepSchedule": "0 0 * * *",
+    "maxRetries": 3,
+    "retryBaseDelay": 1000
+  },
+
+  "circuitBreaker": {
+    "maxDailyDrawdown": 0.15,
+    "minEquity": 150,
+    "consecutiveLossLimit": 3,
+    "consecutiveLossWindow": 3600000,
+    "cooldownMinutes": 30
+  },
+
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "database": "titan_brain",
+    "user": "postgres",
+    "password": "postgres",
+    "maxConnections": 20,
+    "idleTimeout": 30000
+  },
+
+  "redis": {
+    "url": "redis://localhost:6379",
+    "maxRetries": 3,
+    "retryDelay": 1000
+  },
+
+  "server": {
+    "host": "0.0.0.0",
+    "port": 3100,
+    "corsOrigins": ["http://localhost:3000"]
+  },
+
+  "notifications": {
+    "telegram": {
+      "enabled": false,
+      "botToken": "",
+      "chatId": ""
+    },
+    "email": {
+      "enabled": false,
+      "smtpHost": "",
+      "smtpPort": 587,
+      "from": "",
+      "to": []
+    }
+  }
+}

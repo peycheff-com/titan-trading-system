@@ -1,0 +1,318 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Titan Brain Configuration",
+  "description": "Configuration schema for Titan Brain orchestrator",
+  "type": "object",
+  "properties": {
+    "brain": {
+      "type": "object",
+      "description": "Core brain settings",
+      "properties": {
+        "signalTimeout": {
+          "type": "number",
+          "description": "Maximum signal processing latency in milliseconds",
+          "minimum": 10,
+          "maximum": 10000,
+          "default": 100
+        },
+        "metricUpdateInterval": {
+          "type": "number",
+          "description": "Metric update interval in milliseconds",
+          "minimum": 1000,
+          "maximum": 3600000,
+          "default": 60000
+        },
+        "dashboardCacheTTL": {
+          "type": "number",
+          "description": "Dashboard cache TTL in milliseconds",
+          "minimum": 100,
+          "maximum": 60000,
+          "default": 5000
+        },
+        "maxQueueSize": {
+          "type": "number",
+          "description": "Maximum signal queue size",
+          "minimum": 10,
+          "maximum": 10000,
+          "default": 100
+        }
+      },
+      "required": ["signalTimeout", "metricUpdateInterval", "dashboardCacheTTL", "maxQueueSize"]
+    },
+    "allocationEngine": {
+      "type": "object",
+      "description": "Capital allocation engine settings",
+      "properties": {
+        "transitionPoints": {
+          "type": "object",
+          "description": "Equity transition points for phase allocation",
+          "properties": {
+            "startP2": {
+              "type": "number",
+              "description": "Equity level where Phase 2 allocation begins",
+              "minimum": 100,
+              "maximum": 100000,
+              "default": 1500
+            },
+            "fullP2": {
+              "type": "number",
+              "description": "Equity level where Phase 2 reaches full allocation",
+              "minimum": 100,
+              "maximum": 100000,
+              "default": 5000
+            },
+            "startP3": {
+              "type": "number",
+              "description": "Equity level where Phase 3 allocation begins",
+              "minimum": 1000,
+              "maximum": 1000000,
+              "default": 25000
+            }
+          },
+          "required": ["startP2", "fullP2", "startP3"]
+        },
+        "leverageCaps": {
+          "type": "object",
+          "description": "Maximum leverage per equity tier",
+          "properties": {
+            "MICRO": { "type": "number", "minimum": 1, "maximum": 100, "default": 20 },
+            "SMALL": { "type": "number", "minimum": 1, "maximum": 50, "default": 10 },
+            "MEDIUM": { "type": "number", "minimum": 1, "maximum": 20, "default": 5 },
+            "LARGE": { "type": "number", "minimum": 1, "maximum": 10, "default": 3 },
+            "INSTITUTIONAL": { "type": "number", "minimum": 1, "maximum": 5, "default": 2 }
+          }
+        }
+      },
+      "required": ["transitionPoints", "leverageCaps"]
+    },
+    "performanceTracker": {
+      "type": "object",
+      "description": "Performance tracking and modifier settings",
+      "properties": {
+        "windowDays": {
+          "type": "number",
+          "description": "Rolling window for Sharpe ratio calculation (days)",
+          "minimum": 1,
+          "maximum": 365,
+          "default": 7
+        },
+        "minTradeCount": {
+          "type": "number",
+          "description": "Minimum trades before applying modifiers",
+          "minimum": 1,
+          "maximum": 1000,
+          "default": 10
+        },
+        "malusMultiplier": {
+          "type": "number",
+          "description": "Weight multiplier for underperforming phases",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.5
+        },
+        "bonusMultiplier": {
+          "type": "number",
+          "description": "Weight multiplier for outperforming phases",
+          "minimum": 1,
+          "maximum": 5,
+          "default": 1.2
+        },
+        "malusThreshold": {
+          "type": "number",
+          "description": "Sharpe ratio threshold for malus penalty",
+          "minimum": -10,
+          "maximum": 10,
+          "default": 0
+        },
+        "bonusThreshold": {
+          "type": "number",
+          "description": "Sharpe ratio threshold for bonus multiplier",
+          "minimum": 0,
+          "maximum": 10,
+          "default": 2.0
+        }
+      },
+      "required": ["windowDays", "minTradeCount", "malusMultiplier", "bonusMultiplier", "malusThreshold", "bonusThreshold"]
+    },
+    "riskGuardian": {
+      "type": "object",
+      "description": "Risk management settings",
+      "properties": {
+        "maxCorrelation": {
+          "type": "number",
+          "description": "Maximum correlation threshold for position veto",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.8
+        },
+        "correlationPenalty": {
+          "type": "number",
+          "description": "Position size reduction for high correlation",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.5
+        },
+        "betaUpdateInterval": {
+          "type": "number",
+          "description": "Portfolio beta update interval (ms)",
+          "minimum": 1000,
+          "maximum": 3600000,
+          "default": 300000
+        },
+        "correlationUpdateInterval": {
+          "type": "number",
+          "description": "Correlation matrix update interval (ms)",
+          "minimum": 1000,
+          "maximum": 3600000,
+          "default": 300000
+        }
+      },
+      "required": ["maxCorrelation", "correlationPenalty", "betaUpdateInterval", "correlationUpdateInterval"]
+    },
+    "capitalFlow": {
+      "type": "object",
+      "description": "Capital flow and profit sweep settings",
+      "properties": {
+        "sweepThreshold": {
+          "type": "number",
+          "description": "Threshold for triggering sweep (1.2 = 20% excess)",
+          "minimum": 1.01,
+          "maximum": 2,
+          "default": 1.2
+        },
+        "reserveLimit": {
+          "type": "number",
+          "description": "Minimum reserve that cannot be swept (USD)",
+          "minimum": 0,
+          "maximum": 10000,
+          "default": 200
+        },
+        "sweepSchedule": {
+          "type": "string",
+          "description": "Cron expression for scheduled sweeps",
+          "pattern": "^[\\d\\s\\*\\/\\-,]+$",
+          "default": "0 0 * * *"
+        },
+        "maxRetries": {
+          "type": "number",
+          "description": "Maximum retry attempts for failed sweeps",
+          "minimum": 0,
+          "maximum": 10,
+          "default": 3
+        },
+        "retryBaseDelay": {
+          "type": "number",
+          "description": "Base delay for retry backoff (ms)",
+          "minimum": 100,
+          "maximum": 60000,
+          "default": 1000
+        }
+      },
+      "required": ["sweepThreshold", "reserveLimit", "sweepSchedule", "maxRetries", "retryBaseDelay"]
+    },
+    "circuitBreaker": {
+      "type": "object",
+      "description": "Circuit breaker settings",
+      "properties": {
+        "maxDailyDrawdown": {
+          "type": "number",
+          "description": "Maximum daily drawdown before trigger (0-1)",
+          "minimum": 0.01,
+          "maximum": 1,
+          "default": 0.15
+        },
+        "minEquity": {
+          "type": "number",
+          "description": "Minimum equity before trigger (USD)",
+          "minimum": 0,
+          "maximum": 100000,
+          "default": 150
+        },
+        "consecutiveLossLimit": {
+          "type": "number",
+          "description": "Consecutive losses before soft pause",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 3
+        },
+        "consecutiveLossWindow": {
+          "type": "number",
+          "description": "Time window for consecutive loss detection (ms)",
+          "minimum": 60000,
+          "maximum": 86400000,
+          "default": 3600000
+        },
+        "cooldownMinutes": {
+          "type": "number",
+          "description": "Cooldown period after soft pause (minutes)",
+          "minimum": 1,
+          "maximum": 1440,
+          "default": 30
+        }
+      },
+      "required": ["maxDailyDrawdown", "minEquity", "consecutiveLossLimit", "consecutiveLossWindow", "cooldownMinutes"]
+    },
+    "database": {
+      "type": "object",
+      "description": "PostgreSQL database settings",
+      "properties": {
+        "host": { "type": "string", "default": "localhost" },
+        "port": { "type": "number", "minimum": 1, "maximum": 65535, "default": 5432 },
+        "database": { "type": "string", "default": "titan_brain" },
+        "user": { "type": "string", "default": "postgres" },
+        "password": { "type": "string", "default": "postgres" },
+        "maxConnections": { "type": "number", "minimum": 1, "maximum": 100, "default": 20 },
+        "idleTimeout": { "type": "number", "minimum": 1000, "maximum": 300000, "default": 30000 }
+      },
+      "required": ["host", "port", "database", "user", "password", "maxConnections", "idleTimeout"]
+    },
+    "redis": {
+      "type": "object",
+      "description": "Redis settings for signal queue",
+      "properties": {
+        "url": { "type": "string", "pattern": "^redis://", "default": "redis://localhost:6379" },
+        "maxRetries": { "type": "number", "minimum": 0, "maximum": 10, "default": 3 },
+        "retryDelay": { "type": "number", "minimum": 100, "maximum": 60000, "default": 1000 }
+      },
+      "required": ["url", "maxRetries", "retryDelay"]
+    },
+    "server": {
+      "type": "object",
+      "description": "HTTP server settings",
+      "properties": {
+        "host": { "type": "string", "default": "0.0.0.0" },
+        "port": { "type": "number", "minimum": 1, "maximum": 65535, "default": 3100 },
+        "corsOrigins": { "type": "array", "items": { "type": "string" }, "default": ["http://localhost:3000"] }
+      },
+      "required": ["host", "port", "corsOrigins"]
+    },
+    "notifications": {
+      "type": "object",
+      "description": "Notification channel settings",
+      "properties": {
+        "telegram": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": false },
+            "botToken": { "type": "string" },
+            "chatId": { "type": "string" }
+          },
+          "required": ["enabled"]
+        },
+        "email": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": false },
+            "smtpHost": { "type": "string" },
+            "smtpPort": { "type": "number" },
+            "from": { "type": "string" },
+            "to": { "type": "array", "items": { "type": "string" } }
+          },
+          "required": ["enabled"]
+        }
+      },
+      "required": ["telegram", "email"]
+    }
+  },
+  "required": ["brain", "allocationEngine", "performanceTracker", "riskGuardian", "capitalFlow", "circuitBreaker", "database", "redis", "server", "notifications"]
+}
