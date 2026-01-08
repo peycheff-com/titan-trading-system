@@ -1,18 +1,22 @@
 # Titan Trading System - Getting Started Deployment Guide
 
-This guide provides step-by-step instructions for deploying the Titan Trading System from scratch. Follow these procedures for both development and production environments.
+This guide provides step-by-step instructions for deploying the Titan Trading
+System from scratch. Follow these procedures for both development and production
+environments.
 
 ## Prerequisites
 
 ### System Requirements
 
 **Minimum Requirements** (Development):
+
 - CPU: 4 cores (2.5GHz+)
 - RAM: 8GB
 - Storage: 100GB SSD
 - Network: 100Mbps with low latency to exchanges
 
 **Recommended Requirements** (Production):
+
 - CPU: 8 cores (3.0GHz+)
 - RAM: 16GB
 - Storage: 500GB NVMe SSD
@@ -20,6 +24,7 @@ This guide provides step-by-step instructions for deploying the Titan Trading Sy
 - Redundancy: Load balancer and backup server
 
 **Operating System**:
+
 - Ubuntu 20.04 LTS or 22.04 LTS (recommended)
 - CentOS 8+ or RHEL 8+
 - Amazon Linux 2
@@ -27,6 +32,7 @@ This guide provides step-by-step instructions for deploying the Titan Trading Sy
 ### Software Dependencies
 
 **Core Dependencies**:
+
 ```bash
 # Node.js 18+ (LTS recommended)
 curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
@@ -49,6 +55,7 @@ sudo apt-get install -y git curl wget
 ```
 
 **Optional Dependencies**:
+
 ```bash
 # Docker (for containerized deployment)
 sudo apt-get install -y docker.io docker-compose
@@ -63,6 +70,7 @@ sudo apt-get install -y certbot python3-certbot-nginx
 ### Trading Account Setup
 
 **Required API Keys**:
+
 1. **Bybit API Keys** (Primary execution venue):
    - Create account at [bybit.com](https://www.bybit.com)
    - Generate API key with trading permissions
@@ -75,6 +83,7 @@ sudo apt-get install -y certbot python3-certbot-nginx
    - Configure as backup execution venue
 
 **Security Configuration**:
+
 - Enable IP whitelisting for all API keys
 - Use separate API keys for testnet and mainnet
 - Implement API key rotation schedule (monthly)
@@ -114,6 +123,7 @@ ls -la
 ### Step 3: Database Setup
 
 **PostgreSQL Configuration**:
+
 ```bash
 # Switch to postgres user
 sudo -u postgres psql
@@ -137,6 +147,7 @@ sudo systemctl enable postgresql
 ```
 
 **Redis Configuration**:
+
 ```bash
 # Configure Redis
 sudo nano /etc/redis/redis.conf
@@ -165,6 +176,7 @@ nano .env
 ```
 
 **Environment Configuration (.env)**:
+
 ```bash
 # Node Environment
 NODE_ENV=production
@@ -234,7 +246,7 @@ npm install
 cd ../..
 
 # Install Console service dependencies
-cd services/titan-console
+
 npm install
 npm run build
 cd ../..
@@ -291,6 +303,7 @@ psql -h localhost -U titan_user -d titan_brain -c "\dt"
 ### Step 8: Service Startup
 
 **PM2 Ecosystem Configuration**:
+
 ```bash
 # Review PM2 configuration
 cat ecosystem.config.js
@@ -307,7 +320,7 @@ pm2 status
 # ├─────┼────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
 # │ 0   │ titan-brain    │ default     │ 1.0.0   │ fork    │ 12345    │ 5s     │ 0    │ online    │ 0%       │ 45.2mb   │ titan    │ disabled │
 # │ 1   │ titan-execution│ default     │ 1.0.0   │ fork    │ 12346    │ 5s     │ 0    │ online    │ 0%       │ 52.1mb   │ titan    │ disabled │
-# │ 2   │ titan-console  │ default     │ 1.0.0   │ fork    │ 12347    │ 5s     │ 0    │ online    │ 0%       │ 38.7mb   │ titan    │ disabled │
+
 # │ 3   │ titan-scavenger│ default     │ 1.0.0   │ fork    │ 12348    │ 5s     │ 0    │ online    │ 0%       │ 41.3mb   │ titan    │ disabled │
 # └─────┴────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
 
@@ -368,6 +381,7 @@ sudo nano /etc/nginx/sites-available/titan-trading
 ```
 
 **Nginx Configuration**:
+
 ```nginx
 # Titan Trading System - Nginx Configuration
 
@@ -514,6 +528,7 @@ server {
 ```
 
 **Enable Nginx Configuration**:
+
 ```bash
 # Enable the site
 sudo ln -s /etc/nginx/sites-available/titan-trading /etc/nginx/sites-enabled/
@@ -565,6 +580,7 @@ sudo nano /etc/prometheus/prometheus.yml
 ```
 
 **Prometheus Configuration**:
+
 ```yaml
 global:
   scrape_interval: 15s
@@ -574,9 +590,9 @@ rule_files:
   - "titan_rules.yml"
 
 scrape_configs:
-  - job_name: 'titan-services'
+  - job_name: "titan-services"
     static_configs:
-      - targets: ['localhost:3100', 'localhost:3002']
+      - targets: ["localhost:3100", "localhost:3002"]
     scrape_interval: 5s
     metrics_path: /metrics
 
@@ -584,7 +600,7 @@ alerting:
   alertmanagers:
     - static_configs:
         - targets:
-          - alertmanager:9093
+            - alertmanager:9093
 ```
 
 ## Post-Deployment Verification
@@ -730,6 +746,7 @@ After successful deployment:
 5. **Documentation**: Document your specific configuration and procedures
 
 For detailed information on these topics, see:
+
 - [Monitoring Setup](../monitoring/prometheus-setup.md)
 - [Backup Procedures](../maintenance/backup-procedures.md)
 - [Security Hardening](../maintenance/security-hardening.md)
@@ -746,4 +763,5 @@ If you encounter issues during deployment:
 
 ---
 
-**Deployment completed successfully!** Your Titan Trading System is now ready for operation.
+**Deployment completed successfully!** Your Titan Trading System is now ready
+for operation.

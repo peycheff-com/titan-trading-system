@@ -181,11 +181,7 @@ scrape_configs:
     metrics_path: '/metrics'
     scrape_interval: 60s
 
-  - job_name: 'titan-console'
-    static_configs:
-      - targets: ['localhost:3006']
-    metrics_path: '/api/metrics'
-    scrape_interval: 30s
+
 
   # Redis metrics
   - job_name: 'redis'
@@ -780,7 +776,7 @@ async function collectServiceMetrics() {
       { name: 'titan-shared', port: 3001 },
       { name: 'titan-security', port: 3002 },
       { name: 'titan-scavenger', port: 3004 },
-      { name: 'titan-console', port: 3006 }
+
     ];
     
     for (const service of services) {

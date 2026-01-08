@@ -467,7 +467,7 @@ emergency_cleanup() {
     
     # Stop non-essential services temporarily
     local stopped_services=()
-    local non_essential_services=("titan-ai-quant" "titan-console")
+    local non_essential_services=("titan-ai-quant")
     
     for service in "${non_essential_services[@]}"; do
         if pm2 describe "$service" &> /dev/null; then

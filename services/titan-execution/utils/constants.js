@@ -10,6 +10,9 @@ export const CONSTANTS = {
   WS_STATUS_PATH: '/ws/status',
   WS_CONSOLE_PATH: '/ws/console',
   WS_SCAVENGER_PATH: '/ws/scavenger',
+
+  // CORS
+  CORS_ORIGINS: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:3001'],
   
   // Timing constants (milliseconds)
   METRICS_UPDATE_INTERVAL_MS: 5000,

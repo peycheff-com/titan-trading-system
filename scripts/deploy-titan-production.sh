@@ -36,7 +36,7 @@ declare -a SERVICES=(
     "titan-execution:3003:services/titan-execution"
     "titan-phase1-scavenger:3004:services/titan-phase1-scavenger"
     "titan-ai-quant:3005:services/titan-ai-quant"
-    "titan-console:3006:services/titan-console"
+
 )
 
 # Logging functions
@@ -280,7 +280,7 @@ deploy_service() {
         "titan-ai-quant")
             start_script="dist/index.js"
             ;;
-        "titan-console")
+
             start_script="server.js"
             ;;
         *)
@@ -362,7 +362,7 @@ validate_service_health() {
     local health_endpoints=(
         "titan-brain:/status"
         "titan-execution:/health"
-        "titan-console:/api/health"
+
         "shared:/health"
         "security:/health"
     )

@@ -219,7 +219,7 @@ configure_ufw() {
     
     # Allow internal communication for Titan services
     ufw allow from 127.0.0.1 to any port 3000 comment "Titan Console"
-    ufw allow from 127.0.0.1 to any port 3001 comment "Titan API"
+
     
     # Enable UFW
     ufw --force enable
@@ -309,18 +309,7 @@ failregex = ^<HOST> -.*"(GET|POST|PUT|DELETE) /api/.*" (401|403|429) .*$
 ignoreregex = ^<HOST> -.*"(GET|POST|PUT|DELETE) /api/health.*" 200 .*$
 EOF
 
-    # Create custom filter for Titan console
-    cat > /etc/fail2ban/filter.d/titan-console.conf << EOF
-# Titan Console Fail2Ban Filter
 
-[Definition]
-failregex = ^<HOST> -.*"(GET|POST) /.*" (404|403|401) .*$
-            ^<HOST> -.*".*" 400 .*$
-
-ignoreregex = ^<HOST> -.*"GET /health.*" 200 .*$
-              ^<HOST> -.*"GET /favicon.ico.*" 404 .*$
-              ^<HOST> -.*"GET /ws.*" 101 .*$
-EOF
 
     # Restart and enable Fail2Ban
     systemctl restart fail2ban

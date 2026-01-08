@@ -37,11 +37,11 @@
     - Implement `getTradeCount(phaseId, windowDays)` for history check
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.8_
 
-  - [ ]* 3.2 Write property test for performance modifier bounds
+  - [x]* 3.2 Write property test for performance modifier bounds
     - **Property 3: Performance Modifier Bounds**
     - **Validates: Requirements 2.3, 2.4**
 
-  - [ ]* 3.3 Write unit tests for PerformanceTracker
+  - [x]* 3.3 Write unit tests for PerformanceTracker
     - Test Sharpe ratio calculation with known data
     - Test malus penalty application (Sharpe < 0)
     - Test bonus multiplier application (Sharpe > 2.0)
@@ -57,15 +57,15 @@
     - Implement `getPortfolioBeta()` for BTC correlation
     - _Requirements: 3.1, 3.2, 3.3, 3.5, 3.6, 3.7_
 
-  - [ ]* 4.2 Write property test for leverage cap enforcement
+  - [x]* 4.2 Write property test for leverage cap enforcement
     - **Property 2: Leverage Cap Enforcement**
     - **Validates: Requirements 3.4**
 
-  - [ ]* 4.3 Write property test for correlation veto consistency
+  - [x]* 4.3 Write property test for correlation veto consistency
     - **Property 9: Correlation Veto Consistency**
     - **Validates: Requirements 3.7**
 
-  - [ ]* 4.4 Write unit tests for RiskGuardian
+  - [x]* 4.4 Write unit tests for RiskGuardian
     - Test leverage calculation with multiple positions
     - Test correlation calculation between assets
     - Test Phase 3 hedge auto-approval

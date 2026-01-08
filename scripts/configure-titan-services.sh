@@ -27,7 +27,7 @@ declare -A SERVICE_CONFIGS=(
     ["titan-execution"]="execution.config.json"
     ["titan-phase1-scavenger"]="phase1.config.json"
     ["titan-ai-quant"]="ai-quant.config.json"
-    ["titan-console"]="console.config.json"
+
 )
 
 # Environment variables for production
@@ -114,9 +114,7 @@ generate_service_config() {
         "titan-ai-quant")
             generate_ai_quant_config "$config_path"
             ;;
-        "titan-console")
-            generate_console_config "$config_path"
-            ;;
+
         *)
             warning "Unknown service: $service_name"
             return 1
@@ -488,53 +486,7 @@ generate_ai_quant_config() {
 EOF
 }
 
-# Generate console configuration
-generate_console_config() {
-    local config_path=$1
-    
-    cat > "$config_path" << 'EOF'
-{
-  "service": {
-    "name": "titan-console",
-    "version": "1.0.0",
-    "port": 3006,
-    "host": "0.0.0.0"
-  },
-  "dashboard": {
-    "refreshInterval": 1000,
-    "themes": ["dark", "light"],
-    "defaultTheme": "dark",
-    "components": ["equity", "positions", "signals", "performance"]
-  },
-  "api": {
-    "brainEndpoint": "http://localhost:3000",
-    "executionEndpoint": "http://localhost:3003",
-    "timeout": 5000,
-    "retries": 3
-  },
-  "websocket": {
-    "enabled": true,
-    "port": 3007,
-    "heartbeatInterval": 30000
-  },
-  "authentication": {
-    "enabled": true,
-    "sessionTimeout": 3600,
-    "maxSessions": 5
-  },
-  "logging": {
-    "level": "info",
-    "auditTrail": true,
-    "userActions": true
-  },
-  "health": {
-    "endpoint": "/api/health",
-    "timeout": 5000,
-    "checks": ["api", "websocket", "authentication"]
-  }
-}
-EOF
-}
+
 
 # Create PM2 ecosystem configuration
 create_pm2_ecosystem() {
@@ -653,24 +605,7 @@ module.exports = {
       out_file: '../../logs/ai-quant.log',
       error_file: '../../logs/ai-quant-error.log'
     },
-    {
-      name: 'titan-console',
-      script: './services/titan-console/server.js',
-      cwd: './services/titan-console',
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      max_memory_restart: '300M',
-      env: {
-        NODE_ENV: 'production',
-        PORT: 3006,
-        CONFIG_PATH: '../../config/console.config.json'
-      },
-      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
-      merge_logs: true,
-      out_file: '../../logs/console.log',
-      error_file: '../../logs/console-error.log'
-    }
+
   ]
 };
 EOF
@@ -740,7 +675,7 @@ BRAIN_PORT=3000
 EXECUTION_PORT=3003
 SCAVENGER_PORT=3004
 AI_QUANT_PORT=3005
-CONSOLE_PORT=3006
+
 EOF
     
     success "Environment configuration created: $env_file"

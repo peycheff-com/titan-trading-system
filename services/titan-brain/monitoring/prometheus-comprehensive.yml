@@ -4,15 +4,15 @@
 global:
   # How frequently to scrape targets
   scrape_interval: 5s
-  
+
   # How frequently to evaluate rules
   evaluation_interval: 5s
-  
+
   # Attach these labels to any time series or alerts
   external_labels:
-    monitor: 'titan-trading-system'
-    environment: 'production'
-    cluster: 'titan-main'
+    monitor: "titan-trading-system"
+    environment: "production"
+    cluster: "titan-main"
 
 # Rule files for alerting
 rule_files:
@@ -22,137 +22,120 @@ rule_files:
 alerting:
   alertmanagers:
     - static_configs:
-        - targets: ['localhost:9093']
+        - targets: ["localhost:9093"]
       timeout: 10s
       api_version: v2
 
 # Scrape configurations
 scrape_configs:
   # Titan Brain Service (Phase 5 - Orchestrator)
-  - job_name: 'titan-brain'
+  - job_name: "titan-brain"
     static_configs:
-      - targets: ['localhost:3100']
+      - targets: ["localhost:3100"]
         labels:
-          service: 'brain'
-          phase: 'phase5'
-          component: 'orchestrator'
-    
-    metrics_path: '/metrics'
+          service: "brain"
+          phase: "phase5"
+          component: "orchestrator"
+
+    metrics_path: "/metrics"
     scrape_interval: 5s
     scrape_timeout: 4s
-    
+
     relabel_configs:
       - source_labels: [__address__]
         target_label: instance
-        replacement: 'titan-brain'
+        replacement: "titan-brain"
 
   # Titan Execution Service
-  - job_name: 'titan-execution'
+  - job_name: "titan-execution"
     static_configs:
-      - targets: ['localhost:3002']
+      - targets: ["localhost:3002"]
         labels:
-          service: 'execution'
-          component: 'order-management'
-    
-    metrics_path: '/metrics'
+          service: "execution"
+          component: "order-management"
+
+    metrics_path: "/metrics"
     scrape_interval: 5s
     scrape_timeout: 4s
-    
-    relabel_configs:
-      - source_labels: [__address__]
-        target_label: instance
-        replacement: 'titan-execution'
 
-  # Titan Console (Web Dashboard)
-  - job_name: 'titan-console'
-    static_configs:
-      - targets: ['localhost:3001']
-        labels:
-          service: 'console'
-          component: 'dashboard'
-    
-    metrics_path: '/api/metrics'
-    scrape_interval: 10s
-    scrape_timeout: 8s
-    
     relabel_configs:
       - source_labels: [__address__]
         target_label: instance
-        replacement: 'titan-console'
+        replacement: "titan-execution"
 
   # Titan Phase 1 - Scavenger
-  - job_name: 'titan-scavenger'
+  - job_name: "titan-scavenger"
     static_configs:
-      - targets: ['localhost:8081']
+      - targets: ["localhost:8081"]
         labels:
-          service: 'scavenger'
-          phase: 'phase1'
-          component: 'trap-system'
-    
-    metrics_path: '/metrics'
+          service: "scavenger"
+          phase: "phase1"
+          component: "trap-system"
+
+    metrics_path: "/metrics"
     scrape_interval: 5s
     scrape_timeout: 4s
-    
+
     relabel_configs:
       - source_labels: [__address__]
         target_label: instance
-        replacement: 'titan-scavenger'
+        replacement: "titan-scavenger"
 
   # Titan Phase 2 - Hunter (when implemented)
-  - job_name: 'titan-hunter'
+  - job_name: "titan-hunter"
     static_configs:
-      - targets: ['localhost:8082']
+      - targets: ["localhost:8082"]
         labels:
-          service: 'hunter'
-          phase: 'phase2'
-          component: 'holographic-engine'
-    
-    metrics_path: '/metrics'
+          service: "hunter"
+          phase: "phase2"
+          component: "holographic-engine"
+
+    metrics_path: "/metrics"
     scrape_interval: 5s
     scrape_timeout: 4s
-    
+
     relabel_configs:
       - source_labels: [__address__]
         target_label: instance
-        replacement: 'titan-hunter'
+        replacement: "titan-hunter"
 
   # Titan Phase 3 - Sentinel (when implemented)
-  - job_name: 'titan-sentinel'
+  - job_name: "titan-sentinel"
     static_configs:
-      - targets: ['localhost:8083']
+      - targets: ["localhost:8083"]
         labels:
-          service: 'sentinel'
-          phase: 'phase3'
-          component: 'basis-arbitrage'
-    
-    metrics_path: '/metrics'
+          service: "sentinel"
+          phase: "phase3"
+          component: "basis-arbitrage"
+
+    metrics_path: "/metrics"
     scrape_interval: 5s
     scrape_timeout: 4s
-    
+
     relabel_configs:
       - source_labels: [__address__]
         target_label: instance
-        replacement: 'titan-sentinel'
+        replacement: "titan-sentinel"
 
   # Node Exporter for system metrics (optional)
-  - job_name: 'node-exporter'
+  - job_name: "node-exporter"
     static_configs:
-      - targets: ['localhost:9100']
+      - targets: ["localhost:9100"]
         labels:
-          service: 'node-exporter'
-          component: 'system-metrics'
-    
+          service: "node-exporter"
+          component: "system-metrics"
+
     scrape_interval: 15s
     scrape_timeout: 10s
 
   # Prometheus itself
-  - job_name: 'prometheus'
+  - job_name: "prometheus"
     static_configs:
-      - targets: ['localhost:9090']
+      - targets: ["localhost:9090"]
         labels:
-          service: 'prometheus'
-          component: 'monitoring'
-    
+          service: "prometheus"
+          component: "monitoring"
+
     scrape_interval: 15s
     scrape_timeout: 10s
 
@@ -161,10 +144,10 @@ storage:
   tsdb:
     # Retention time for metrics data
     retention.time: 30d
-    
+
     # Maximum size of storage
     retention.size: 10GB
-    
+
     # Compression settings
     wal-compression: true
 

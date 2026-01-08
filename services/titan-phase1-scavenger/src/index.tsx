@@ -664,7 +664,7 @@ function parseArgs(): { headless: boolean } {
  * Main entry point
  * 
  * Scavenger now runs headless by default.
- * The Console (titan-console) provides the monitoring UI.
+
  * Use --ui flag to enable legacy Ink terminal UI.
  */
 async function main() {

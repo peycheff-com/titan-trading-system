@@ -1,31 +1,30 @@
 # Titan Trading System - Daily Operations Runbook
 
-This runbook provides comprehensive daily operational procedures for the Titan Trading System, including morning startup checks, ongoing monitoring tasks, and end-of-day procedures.
+This runbook provides comprehensive daily operational procedures for the Titan
+Trading System, including morning startup checks, ongoing monitoring tasks, and
+end-of-day procedures.
 
 ## Daily Operations Schedule
 
 ### Pre-Market (30 minutes before market open)
 
-**Time**: 30 minutes before primary market open
-**Duration**: 15-20 minutes
+**Time**: 30 minutes before primary market open **Duration**: 15-20 minutes
 **Responsible**: Operations Team
 
 ### Market Hours (During active trading)
 
-**Frequency**: Continuous monitoring with hourly checks
-**Responsible**: Operations Team + On-call Engineer
+**Frequency**: Continuous monitoring with hourly checks **Responsible**:
+Operations Team + On-call Engineer
 
 ### Post-Market (After market close)
 
-**Time**: 30 minutes after market close
-**Duration**: 20-30 minutes
+**Time**: 30 minutes after market close **Duration**: 20-30 minutes
 **Responsible**: Operations Team
 
 ### End-of-Day (Daily wrap-up)
 
-**Time**: End of business day
-**Duration**: 15-20 minutes
-**Responsible**: Operations Manager
+**Time**: End of business day **Duration**: 15-20 minutes **Responsible**:
+Operations Manager
 
 ## Pre-Market Checklist
 
@@ -40,6 +39,7 @@ This runbook provides comprehensive daily operational procedures for the Titan T
 ```
 
 **Health Check Verification**:
+
 ```
 □ Brain Service: Status = "ok", Uptime > 0
 □ Execution Service: Status = "ok", Uptime > 0  
@@ -61,10 +61,11 @@ pm2 status
 ```
 
 **PM2 Status Verification**:
+
 ```
 □ titan-brain: Status = online, CPU < 50%, Memory < 200MB
 □ titan-execution: Status = online, CPU < 50%, Memory < 300MB
-□ titan-console: Status = online, CPU < 30%, Memory < 150MB
+
 □ titan-scavenger: Status = online, CPU < 40%, Memory < 200MB
 □ No services showing "errored" or "stopped" status
 □ Restart counts stable (no unexpected restarts overnight)
@@ -84,6 +85,7 @@ uptime
 ```
 
 **Resource Verification**:
+
 ```
 □ CPU Usage: Overall < 70%
 □ Memory Usage: < 80% of total RAM
@@ -113,6 +115,7 @@ redis-cli info memory | grep used_memory_human
 ```
 
 **Database Verification**:
+
 ```
 □ PostgreSQL: Connection successful
 □ Database size: Reasonable growth (< 10% daily increase)
@@ -135,6 +138,7 @@ curl -s http://localhost:3002/api/console/config | jq '.risk_tuner, .asset_white
 ```
 
 **Configuration Verification**:
+
 ```
 □ Master Arm: Enabled (unless maintenance mode)
 □ Circuit Breaker: Not active
@@ -159,6 +163,7 @@ curl -s http://localhost:3100/dashboard | jq '.nav, .phaseEquity'
 ```
 
 **Position Verification**:
+
 ```
 □ Position count matches expectations
 □ No orphaned positions (Shadow State vs Exchange)
@@ -180,6 +185,7 @@ curl -s "https://api.bybit.com/v5/market/funding/history?category=linear&symbol=
 ```
 
 **Market Assessment**:
+
 ```
 □ BTC volatility: Review 24h price range
 □ ETH volatility: Review 24h price range  
@@ -199,6 +205,7 @@ journalctl --since "yesterday" --until "now" -p err | tail -10
 ```
 
 **Log Verification**:
+
 ```
 □ No critical errors in application logs
 □ No system-level errors in journalctl
@@ -218,6 +225,7 @@ echo "$(date): Pre-market check completed successfully" >> /var/log/titan/daily-
 ```
 
 **Pre-Market Sign-off**:
+
 ```
 □ All health checks passed
 □ System ready for trading
@@ -252,6 +260,7 @@ curl -s http://localhost:3100/breaker | jq '.active'
 ```
 
 **Hourly Checklist**:
+
 ```
 □ All services responding (< 2 second response time)
 □ Equity tracking properly (no sudden unexplained changes)
@@ -264,6 +273,7 @@ curl -s http://localhost:3100/breaker | jq '.active'
 ### Real-Time Monitoring Alerts
 
 **Critical Alerts (Immediate Action Required)**:
+
 - Circuit breaker activation
 - Service health check failures
 - Position tracking discrepancies
@@ -271,6 +281,7 @@ curl -s http://localhost:3100/breaker | jq '.active'
 - Database connection failures
 
 **Warning Alerts (Monitor Closely)**:
+
 - High latency (>200ms signal processing)
 - Memory usage >80%
 - Unusual trading volume
@@ -301,6 +312,7 @@ psql -h localhost -U titan_user -d titan_brain -c "
 ### Trading Activity Review
 
 **Mid-Day Review (12:00 PM)**:
+
 ```bash
 # Review morning trading performance
 curl -s http://localhost:3100/dashboard | jq '.recentDecisions[-10:]'
@@ -313,6 +325,7 @@ curl -s http://localhost:3002/api/console/trades?limit=20
 ```
 
 **Mid-Day Checklist**:
+
 ```
 □ Signal approval rates within normal ranges (>70%)
 □ Trade execution success rate >95%
@@ -341,6 +354,7 @@ curl -s http://localhost:3100/breaker | jq '.'
 ```
 
 **Post-Market Verification**:
+
 ```
 □ All positions properly tracked
 □ No pending orders requiring attention
@@ -363,6 +377,7 @@ curl -s http://localhost:3004/api/proposals/pending 2>/dev/null || echo "AI Quan
 ```
 
 **Performance Review**:
+
 ```
 □ Daily return within expected ranges
 □ Sharpe ratio tracking appropriately
@@ -389,6 +404,7 @@ ls -la /var/log/titan/ | tail -5
 ```
 
 **Maintenance Verification**:
+
 ```
 □ No critical system updates pending
 □ Disk space usage stable
@@ -428,6 +444,7 @@ curl -s http://localhost:3002/api/state/reconciliation-status
 ```
 
 **Backup Verification**:
+
 ```
 □ Database backup completed successfully
 □ Configuration backup completed
@@ -451,6 +468,7 @@ grep "$(date +%Y-%m-%d)" /var/log/nginx/access.log | \
 ```
 
 **Security Verification**:
+
 ```
 □ No unusual authentication attempts
 □ API access patterns normal
@@ -475,6 +493,7 @@ echo "$(date): End-of-day procedures completed" >> /var/log/titan/daily-ops.log
 ### End-of-Day Sign-off
 
 **Daily Summary Checklist**:
+
 ```
 □ All trading sessions completed successfully
 □ Positions reconciled and verified
@@ -577,6 +596,7 @@ Operator: _________________ Time: _________ Date: _________
 ### Quick Emergency Actions
 
 **Emergency Flatten All Positions**:
+
 ```bash
 curl -X POST http://localhost:3002/api/console/flatten-all \
   -H "Content-Type: application/json" \
@@ -585,6 +605,7 @@ curl -X POST http://localhost:3002/api/console/flatten-all \
 ```
 
 **Disable Master Arm**:
+
 ```bash
 curl -X POST http://localhost:3002/api/console/master-arm \
   -H "Content-Type: application/json" \
@@ -593,6 +614,7 @@ curl -X POST http://localhost:3002/api/console/master-arm \
 ```
 
 **Cancel All Orders**:
+
 ```bash
 curl -X POST http://localhost:3002/api/console/cancel-all \
   -H "Content-Type: application/json" \
@@ -614,6 +636,7 @@ Escalation (CTO): +1-555-0400
 ### Common Issues and Solutions
 
 **Service Won't Start**:
+
 ```bash
 # Check logs
 pm2 logs titan-brain --lines 50
@@ -627,6 +650,7 @@ pm2 start ecosystem.config.js --only titan-brain
 ```
 
 **High Memory Usage**:
+
 ```bash
 # Identify memory-heavy processes
 ps aux --sort=-%mem | head -10
@@ -639,6 +663,7 @@ pm2 logs | grep -i "memory\|heap\|gc"
 ```
 
 **Database Connection Issues**:
+
 ```bash
 # Test connection
 psql -h localhost -U titan_user -d titan_brain -c "SELECT 1;"
@@ -651,6 +676,7 @@ sudo systemctl restart postgresql
 ```
 
 **WebSocket Connection Issues**:
+
 ```bash
 # Test WebSocket connectivity
 wscat -c ws://localhost:3002/ws/console
@@ -664,4 +690,6 @@ sudo systemctl restart nginx
 
 ---
 
-This daily operations runbook should be followed consistently to ensure reliable operation of the Titan Trading System. Any deviations or issues should be documented and reported to the operations team for continuous improvement.
+This daily operations runbook should be followed consistently to ensure reliable
+operation of the Titan Trading System. Any deviations or issues should be
+documented and reported to the operations team for continuous improvement.

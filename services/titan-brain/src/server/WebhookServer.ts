@@ -20,6 +20,12 @@ import { SignalQueue } from './SignalQueue';
 import { DashboardService } from './DashboardService.js';
 import { getMetrics } from '../monitoring/PrometheusMetrics.js';
 import { InputValidator, SecurityAuditLogger } from '../security/InputValidator.js';
+import { HealthManager, DatabaseHealthComponent, ConfigHealthComponent, MemoryHealthComponent, RedisHealthComponent } from '../health/HealthManager.js';
+import { HMACValidator, createHMACMiddleware } from '../security/HMACValidator.js';
+import { ServiceDiscovery, ServiceDiscoveryDefaults } from '../services/ServiceDiscovery.js';
+import { Logger } from '../logging/Logger.js';
+import { MetricsCollector } from '../metrics/MetricsCollector.js';
+import { MetricsMiddleware } from '../middleware/MetricsMiddleware.js';
 
 /**
  * Signal request body schema
@@ -102,6 +108,13 @@ export class WebhookServer {
   private readonly brain: TitanBrain;
   private readonly signalQueue: SignalQueue | null;
   private readonly dashboardService: DashboardService;
+  private readonly healthManager: HealthManager;
+  private readonly serviceDiscovery: ServiceDiscovery;
+  private readonly hmacValidator: HMACValidator | null;
+  private readonly logger: Logger;
+  private readonly cacheManager: CacheManager | null;
+  private readonly metricsCollector: MetricsCollector | null;
+  private readonly metricsMiddleware: MetricsMiddleware | null;
   private server: FastifyInstance | null = null;
   private hmacOptions: HmacOptions;
 
@@ -109,13 +122,68 @@ export class WebhookServer {
     config: WebhookServerConfig,
     brain: TitanBrain,
     signalQueue?: SignalQueue,
-    dashboardService?: DashboardService
+    dashboardService?: DashboardService,
+    serviceDiscovery?: ServiceDiscovery,
+    logger?: Logger,
+    cacheManager?: CacheManager,
+    metricsCollector?: MetricsCollector
   ) {
     this.config = config;
     this.brain = brain;
     this.signalQueue = signalQueue ?? null;
     this.dashboardService = dashboardService ?? new DashboardService(brain);
+    
+    // Initialize health manager with proper configuration
+    this.healthManager = new HealthManager({
+      checkInterval: 30000, // 30 seconds
+      componentTimeout: 5000, // 5 seconds
+      cacheHealthResults: true,
+      cacheTtl: 10000 // 10 seconds
+    });
+    
     this.hmacOptions = { ...DEFAULT_HMAC_OPTIONS, ...config.hmac };
+    this.logger = logger ?? Logger.getInstance('webhook-server');
+    this.cacheManager = cacheManager ?? null;
+    this.metricsCollector = metricsCollector ?? null;
+    
+    // Initialize metrics middleware if metrics collector is available
+    this.metricsMiddleware = this.metricsCollector 
+      ? MetricsMiddleware.createFromEnvironment(this.metricsCollector, this.logger)
+      : null;
+    
+    // Initialize service discovery
+    this.serviceDiscovery = serviceDiscovery ?? new ServiceDiscovery(ServiceDiscoveryDefaults);
+    
+    // Initialize HMAC validator if enabled
+    this.hmacValidator = this.hmacOptions.enabled && this.hmacOptions.secret 
+      ? HMACValidator.fromEnvironment() 
+      : null;
+  }
+
+  /**
+   * Initialize health components
+   */
+  private initializeHealthComponents(): void {
+    // Register database health component
+    const databaseComponent = new DatabaseHealthComponent(this.brain.getDatabaseManager?.());
+    this.healthManager.registerComponent(databaseComponent);
+
+    // Register configuration health component
+    const configComponent = new ConfigHealthComponent(this.config);
+    this.healthManager.registerComponent(configComponent);
+
+    // Register memory health component
+    const memoryComponent = new MemoryHealthComponent();
+    this.healthManager.registerComponent(memoryComponent);
+
+    // Register Redis health component if cache manager is available
+    if (this.cacheManager) {
+      const redisComponent = new RedisHealthComponent(this.cacheManager);
+      this.healthManager.registerComponent(redisComponent);
+    }
+
+    // Start periodic health checks
+    this.healthManager.startPeriodicChecks();
   }
 
   /**
@@ -134,6 +202,103 @@ export class WebhookServer {
       methods: ['GET', 'POST'],
     });
 
+    // Register raw body parser for HMAC validation
+    await this.server.register(require('fastify-raw-body'), {
+      field: 'rawBody',
+      global: false,
+      encoding: 'utf8',
+      runFirst: true
+    });
+
+    // Register correlation ID middleware
+    await this.server.register(correlationPlugin, {
+      logger: this.logger,
+      config: {
+        headerName: 'x-correlation-id',
+        generateIfMissing: true,
+        logRequests: true,
+        logResponses: true,
+        excludePaths: ['/health', '/status', '/metrics']
+      }
+    });
+
+    // Register metrics middleware if metrics collector is available
+    if (this.metricsMiddleware) {
+      this.server.addHook('onRequest', this.metricsMiddleware.getRequestStartHook());
+      this.server.addHook('onResponse', this.metricsMiddleware.getResponseHook());
+      this.server.addHook('onError', this.metricsMiddleware.getErrorHook());
+      
+      this.logger.info('Metrics collection middleware enabled');
+    } else {
+      this.logger.warn('Metrics collection disabled - no metrics collector available');
+    }
+
+    // Register rate limiting middleware if cache manager is available
+    if (this.cacheManager) {
+      await this.server.register(rateLimiterPlugin, {
+        cacheManager: this.cacheManager,
+        logger: this.logger,
+        defaultConfig: {
+          windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000'),
+          maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100')
+        }
+      });
+      
+      this.logger.info('Rate limiting enabled with cache-based storage');
+    } else {
+      this.logger.warn('Rate limiting disabled - no cache manager available');
+    }
+
+    // Register HMAC middleware if enabled
+    if (this.hmacValidator) {
+      this.server.addHook('preHandler', async (request, reply) => {
+        // Skip HMAC validation for health checks and metrics
+        if (request.url === '/health' || request.url === '/status' || request.url === '/metrics') {
+          return;
+        }
+
+        const correlationId = getCorrelationId(request);
+        const body = (request as any).rawBody || request.body || '';
+        const result = this.hmacValidator!.validateRequest(body, request.headers);
+        
+        if (!result.valid) {
+          this.logger.logSecurityEvent(
+            'HMAC validation failed',
+            'high',
+            correlationId,
+            {
+              ip: request.ip,
+              endpoint: request.url,
+              error: result.error,
+              userAgent: request.headers['user-agent']
+            }
+          );
+
+          reply.status(401).send({
+            error: 'Unauthorized',
+            message: result.error,
+            timestamp: new Date().toISOString()
+          });
+          return;
+        }
+
+        // Add validation result to request for logging
+        (request as any).hmacValidation = result;
+        
+        this.logger.debug('HMAC validation successful', correlationId, {
+          ip: request.ip,
+          endpoint: request.url
+        });
+      });
+    }
+
+    // Initialize service discovery
+    this.serviceDiscovery.registerServicesFromEnvironment();
+    this.serviceDiscovery.startHealthChecking();
+
+    // Initialize health components
+    this.initializeHealthComponents();
+
     // Register routes
     this.registerRoutes();
 
@@ -143,16 +308,34 @@ export class WebhookServer {
       port: this.config.port,
     });
 
+    this.logger.info(`Webhook server started`, undefined, {
+      host: this.config.host,
+      port: this.config.port,
+      hmacEnabled: !!this.hmacValidator,
+      rateLimitingEnabled: !!this.cacheManager,
+      servicesRegistered: this.serviceDiscovery.getAllServiceStatuses().length
+    });
+
     console.log(`🚀 Webhook server listening on ${this.config.host}:${this.config.port}`);
+    console.log(`🔐 HMAC validation: ${this.hmacValidator ? 'enabled' : 'disabled'}`);
+    console.log(`⚡ Rate limiting: ${this.cacheManager ? 'enabled' : 'disabled'}`);
+    console.log(`🔍 Service discovery: ${this.serviceDiscovery.getAllServiceStatuses().length} services registered`);
   }
 
   /**
    * Stop the webhook server
    */
   async stop(): Promise<void> {
+    // Stop service discovery
+    this.serviceDiscovery.stopHealthChecking();
+    
+    // Stop health manager
+    this.healthManager.shutdown();
+    
     if (this.server) {
       await this.server.close();
       this.server = null;
+      this.logger.info('Webhook server stopped');
       console.log('🛑 Webhook server stopped');
     }
   }
@@ -172,6 +355,7 @@ export class WebhookServer {
 
     // Health check endpoint
     this.server.get('/status', this.handleStatus.bind(this));
+    this.server.get('/health', this.handleStatus.bind(this));
 
     // Dashboard data endpoint
     this.server.get('/dashboard', this.handleDashboard.bind(this));
@@ -193,6 +377,12 @@ export class WebhookServer {
 
     // Circuit breaker reset (requires operator ID)
     this.server.post('/breaker/reset', this.handleBreakerReset.bind(this));
+
+    // Service discovery status
+    this.server.get('/services', this.handleServicesStatus.bind(this));
+
+    // Service health check
+    this.server.get('/services/:serviceName/health', this.handleServiceHealth.bind(this));
 
     // Phase approval rates
     this.server.get('/phases/approval-rates', this.handleApprovalRates.bind(this));
@@ -231,30 +421,50 @@ export class WebhookServer {
   }
 
   /**
-   * Handle GET /status - Health check endpoint
-   * Requirement 10.2: Display current NAV with real-time updates
+   * Mark startup as complete (called after successful initialization)
+   */
+  markStartupComplete(): void {
+    // The new HealthManager doesn't have this method, but we can emit an event
+    this.healthManager.emit('startup:complete');
+  }
+
+  /**
+   * Handle GET /status and /health - Enhanced health check endpoint
+   * Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8
    */
   private async handleStatus(
     _request: FastifyRequest,
     reply: FastifyReply
   ): Promise<void> {
     try {
-      const health = await this.brain.getHealthStatus();
-      const statusCode = health.healthy ? 200 : 503;
-
+      const healthStatus = await this.healthManager.checkHealth();
+      
+      // Determine HTTP status code based on health
+      let statusCode = 200;
+      if (healthStatus.status === 'unhealthy') {
+        statusCode = 503; // Service Unavailable
+      } else if (healthStatus.status === 'degraded') {
+        statusCode = 200; // OK but degraded
+      }
+      
       reply.status(statusCode).send({
-        status: health.healthy ? 'healthy' : 'unhealthy',
-        timestamp: Date.now(),
-        components: health.components,
-        errors: health.errors,
+        status: healthStatus.status,
+        timestamp: healthStatus.timestamp,
+        uptime: healthStatus.uptime,
+        duration: healthStatus.duration,
+        version: healthStatus.version,
+        components: healthStatus.components,
+        // Legacy fields for backward compatibility
+        healthy: healthStatus.status === 'healthy',
         equity: this.brain.getEquity(),
         circuitBreaker: this.brain.getCircuitBreakerStatus().active ? 'active' : 'inactive',
       });
     } catch (error) {
       reply.status(500).send({
         status: 'error',
+        timestamp: new Date().toISOString(),
         error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: Date.now(),
+        healthy: false,
       });
     }
   }
@@ -287,19 +497,17 @@ export class WebhookServer {
     reply: FastifyReply
   ): Promise<void> {
     const startTime = Date.now();
+    const correlationId = getCorrelationId(request);
+    const logger = createCorrelationLogger(this.logger, request);
 
     try {
-      // Verify HMAC signature if enabled
-      if (this.hmacOptions.enabled) {
-        const isValid = this.verifyHmacSignature(request);
-        if (!isValid) {
-          reply.status(401).send({
-            error: 'Invalid signature',
-            timestamp: Date.now(),
-          });
-          return;
-        }
-      }
+      logger.info('Signal request received', {
+        ip: request.ip,
+        userAgent: request.headers['user-agent'],
+        bodySize: JSON.stringify(request.body).length
+      });
+
+      // HMAC validation is now handled by middleware
 
       // Validate and sanitize request body
       const validationResult = InputValidator.validateSignalRequest(request.body);
@@ -312,6 +520,11 @@ export class WebhookServer {
           validationResult.errors,
           request.body
         );
+        
+        logger.warn('Signal validation failed', {
+          errors: validationResult.errors,
+          clientIp
+        });
         
         reply.status(400).send({
           error: 'Validation failed',
@@ -334,6 +547,14 @@ export class WebhookServer {
         leverage: body.leverage,
       };
 
+      logger.info('Processing signal', {
+        signalId: signal.signalId,
+        phaseId: signal.phaseId,
+        symbol: signal.symbol,
+        side: signal.side,
+        requestedSize: signal.requestedSize
+      });
+
       let decision: BrainDecision;
 
       // Use signal queue if available, otherwise process directly
@@ -341,6 +562,10 @@ export class WebhookServer {
         // Check idempotency
         const isDuplicate = await this.signalQueue.isDuplicate(signal.signalId);
         if (isDuplicate) {
+          logger.warn('Duplicate signal detected', {
+            signalId: signal.signalId
+          });
+
           reply.status(409).send({
             error: 'Duplicate signal ID',
             signalId: signal.signalId,
@@ -351,28 +576,45 @@ export class WebhookServer {
 
         // Enqueue signal
         await this.signalQueue.enqueue(signal);
+        logger.debug('Signal enqueued');
 
         // Process from queue
         const processedSignal = await this.signalQueue.dequeue();
         if (processedSignal) {
           decision = await this.brain.processSignal(processedSignal);
           await this.signalQueue.markProcessed(processedSignal.signalId);
+          logger.debug('Signal processed from queue');
         } else {
           // Should not happen, but handle gracefully
           decision = await this.brain.processSignal(signal);
+          logger.warn('Signal processed directly (queue empty)');
         }
       } else {
         // Process directly
         decision = await this.brain.processSignal(signal);
+        logger.debug('Signal processed directly');
       }
 
       const processingTime = Date.now() - startTime;
+
+      logger.info('Signal processing completed', {
+        signalId: signal.signalId,
+        approved: decision.approved,
+        processingTime,
+        reason: decision.reason
+      });
 
       reply.send({
         ...decision,
         processingTime,
       });
     } catch (error) {
+      const processingTime = Date.now() - startTime;
+      
+      logger.error('Signal processing failed', error instanceof Error ? error : new Error(String(error)), {
+        processingTime
+      });
+
       reply.status(500).send({
         error: error instanceof Error ? error.message : 'Unknown error',
         timestamp: Date.now(),
@@ -598,6 +840,88 @@ export class WebhookServer {
       reply.status(500).send({
         error: error instanceof Error ? error.message : 'Unknown error',
         timestamp: Date.now(),
+      });
+    }
+  }
+
+  /**
+   * Handle GET /services - Service discovery status
+   */
+  private async handleServicesStatus(
+    _request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<void> {
+    try {
+      const healthStatus = this.serviceDiscovery.getHealthStatus();
+      
+      reply.send({
+        status: 'success',
+        data: {
+          healthy: healthStatus.healthy,
+          totalServices: healthStatus.totalServices,
+          healthyServices: healthStatus.healthyServices,
+          requiredServicesHealthy: healthStatus.requiredServicesHealthy,
+          services: healthStatus.services.map(service => ({
+            name: service.name,
+            url: service.url,
+            healthy: service.healthy,
+            lastCheck: service.lastCheck,
+            responseTime: service.responseTime,
+            error: service.error,
+            consecutiveFailures: service.consecutiveFailures
+          }))
+        },
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      reply.status(500).send({
+        error: 'Failed to get services status',
+        message: error instanceof Error ? error.message : String(error),
+        timestamp: Date.now()
+      });
+    }
+  }
+
+  /**
+   * Handle GET /services/:serviceName/health - Individual service health check
+   */
+  private async handleServiceHealth(
+    request: FastifyRequest<{ Params: { serviceName: string } }>,
+    reply: FastifyReply
+  ): Promise<void> {
+    try {
+      const { serviceName } = request.params;
+      const isHealthy = await this.serviceDiscovery.checkServiceHealth(serviceName);
+      const status = this.serviceDiscovery.getServiceStatus(serviceName);
+      
+      if (!status) {
+        reply.status(404).send({
+          error: 'Service not found',
+          serviceName,
+          timestamp: Date.now()
+        });
+        return;
+      }
+
+      reply.send({
+        status: 'success',
+        data: {
+          serviceName: status.name,
+          url: status.url,
+          healthy: status.healthy,
+          lastCheck: status.lastCheck,
+          responseTime: status.responseTime,
+          error: status.error,
+          consecutiveFailures: status.consecutiveFailures,
+          justChecked: isHealthy
+        },
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      reply.status(500).send({
+        error: 'Failed to check service health',
+        message: error instanceof Error ? error.message : String(error),
+        timestamp: Date.now()
       });
     }
   }
@@ -1109,7 +1433,7 @@ export class WebhookServer {
    * Handle GET /phases/status - Get status of all phases
    * Requirements: 7.6 - Implement phase notification endpoints
    */
-  private async handlePhasesStatus(ync handlePhasesStatus(
+  private async handlePhasesStatus(
     _request: FastifyRequest,
     reply: FastifyReply
   ): Promise<void> {
@@ -1162,13 +1486,22 @@ export class WebhookServer {
     reply: FastifyReply
   ): Promise<void> {
     try {
-      const metrics = getMetrics();
-      const metricsText = metrics.export();
+      let metricsText = '';
+      
+      if (this.metricsCollector) {
+        // Use new MetricsCollector
+        metricsText = this.metricsCollector.getPrometheusMetrics();
+      } else {
+        // Fallback to legacy metrics
+        const metrics = getMetrics();
+        metricsText = metrics.export();
+      }
       
       reply
         .header('Content-Type', 'text/plain; version=0.0.4; charset=utf-8')
         .send(metricsText);
     } catch (error) {
+      this.logger.error('Failed to generate metrics', error as Error);
       reply.status(500).send({
         error: error instanceof Error ? error.message : 'Unknown error',
         timestamp: Date.now(),

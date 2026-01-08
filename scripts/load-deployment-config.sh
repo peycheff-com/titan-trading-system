@@ -7,7 +7,7 @@ set -e
 
 # Default environment
 ENVIRONMENT="${NODE_ENV:-development}"
-CONFIG_DIR="$(dirname "$0")/../config/deployment"
+CONFIG_DIR="./config/deployment"
 
 # Colors for output
 RED='\033[0;31m'

@@ -199,16 +199,133 @@ export function registerHealthRoutes(fastify, dependencies) {
   }, logger));
 }
 
+// Health check cache and circuit breaker state
+const healthCheckCache = new Map();
+const circuitBreakerState = new Map();
+const HEALTH_CHECK_CACHE_TTL = 5000; // 5 seconds
+const CIRCUIT_BREAKER_THRESHOLD = 5; // failures before opening circuit
+const CIRCUIT_BREAKER_TIMEOUT = 30000; // 30 seconds before trying again
+
+/**
+ * Circuit breaker for health checks
+ * Prevents excessive failed health checks from overwhelming the system
+ */
+function checkCircuitBreaker(key) {
+  const state = circuitBreakerState.get(key) || { 
+    failures: 0, 
+    state: 'closed', 
+    lastFailure: 0 
+  };
+  
+  if (state.state === 'open') {
+    // Check if timeout has passed
+    if (Date.now() - state.lastFailure > CIRCUIT_BREAKER_TIMEOUT) {
+      state.state = 'half-open';
+      circuitBreakerState.set(key, state);
+    } else {
+      return false; // Circuit is open, fail fast
+    }
+  }
+  
+  return true; // Circuit is closed or half-open, allow request
+}
+
+/**
+ * Record circuit breaker result
+ */
+function recordCircuitBreakerResult(key, success) {
+  const state = circuitBreakerState.get(key) || { 
+    failures: 0, 
+    state: 'closed', 
+    lastFailure: 0 
+  };
+  
+  if (success) {
+    // Reset on success
+    state.failures = 0;
+    state.state = 'closed';
+  } else {
+    // Increment failures
+    state.failures++;
+    state.lastFailure = Date.now();
+    
+    if (state.failures >= CIRCUIT_BREAKER_THRESHOLD) {
+      state.state = 'open';
+    }
+  }
+  
+  circuitBreakerState.set(key, state);
+}
+
 /**
  * Quick database health check
+ * Supports both SQLite (better-sqlite3) and Knex-based connections
+ * Includes caching and circuit breaker pattern to prevent excessive database queries
  */
 async function checkDatabaseHealth(databaseManager) {
+  const cacheKey = 'db_health';
+  const cached = healthCheckCache.get(cacheKey);
+  
+  // Return cached result if still valid
+  if (cached && (Date.now() - cached.timestamp) < HEALTH_CHECK_CACHE_TTL) {
+    return cached.result;
+  }
+  
+  // Check circuit breaker
+  if (!checkCircuitBreaker(cacheKey)) {
+    const result = false;
+    healthCheckCache.set(cacheKey, { result, timestamp: Date.now() });
+    return result;
+  }
+  
   try {
-    if (!databaseManager || !databaseManager.db) return false;
-    const result = databaseManager.db.prepare('SELECT 1 as health').get();
-    return result && result.health === 1;
-  } catch {
-    return false;
+    if (!databaseManager || !databaseManager.db) {
+      const result = false;
+      healthCheckCache.set(cacheKey, { result, timestamp: Date.now() });
+      recordCircuitBreakerResult(cacheKey, false);
+      return result;
+    }
+
+    const db = databaseManager.db;
+    let result = false;
+    
+    // Handle different database connection types
+    if (typeof db.prepare === 'function') {
+      // SQLite with better-sqlite3 (synchronous)
+      const queryResult = db.prepare('SELECT 1 as health').get();
+      result = queryResult && queryResult.health === 1;
+    } else if (typeof db.raw === 'function') {
+      // Knex-based connection (asynchronous)
+      const queryResult = await db.raw('SELECT 1 as health');
+      
+      // Handle different Knex adapter return formats
+      if (Array.isArray(queryResult)) {
+        result = queryResult.length > 0;
+      } else if (queryResult && Array.isArray(queryResult.rows)) {
+        result = queryResult.rows.length > 0;
+      } else if (queryResult && typeof queryResult === 'object') {
+        result = true; // Query executed successfully
+      }
+    }
+    
+    // Cache the result and record circuit breaker success/failure
+    healthCheckCache.set(cacheKey, { result, timestamp: Date.now() });
+    recordCircuitBreakerResult(cacheKey, result);
+    return result;
+    
+  } catch (error) {
+    // Log error for debugging but don't expose details in health check
+    if (databaseManager.logger) {
+      databaseManager.logger.warn('Database health check failed', { 
+        error: error.message,
+        stack: error.stack 
+      });
+    }
+    
+    const result = false;
+    healthCheckCache.set(cacheKey, { result, timestamp: Date.now() });
+    recordCircuitBreakerResult(cacheKey, false);
+    return result;
   }
 }
 
@@ -232,30 +349,66 @@ async function checkBrokerHealth(brokerGateway) {
 
 /**
  * Detailed database health information
+ * Provides comprehensive database status including connection details and performance metrics
  */
 async function getDetailedDatabaseHealth(databaseManager) {
   if (!databaseManager) {
-    return { status: 'not_initialized', healthy: false };
+    return { 
+      status: 'not_initialized', 
+      healthy: false,
+      type: 'unknown'
+    };
   }
   
   try {
     const healthy = await checkDatabaseHealth(databaseManager);
-    const stats = databaseManager.db ? {
-      open: databaseManager.db.open,
-      inTransaction: databaseManager.db.inTransaction,
-      memory: databaseManager.db.memory,
-    } : null;
+    const isConnected = databaseManager.isConnected ? databaseManager.isConnected() : healthy;
+    const db = databaseManager.db;
+    let stats = null;
+    let dbType = databaseManager.config?.type || 'unknown';
+    
+    if (db && healthy) {
+      // Gather database-specific statistics
+      if (typeof db.prepare === 'function') {
+        // SQLite with better-sqlite3
+        dbType = 'sqlite';
+        stats = {
+          open: db.open,
+          inTransaction: db.inTransaction,
+          memory: db.memory,
+          readonly: db.readonly,
+        };
+      } else if (typeof db.raw === 'function' && db.client?.pool) {
+        // Knex-based connection with pool
+        dbType = 'knex';
+        const pool = db.client.pool;
+        stats = {
+          client: db.client.constructor?.name || 'unknown',
+          poolSize: pool.size || 0,
+          poolUsed: pool.used || 0,
+          poolPending: pool.pending || 0,
+          poolFree: pool.free || 0,
+          poolMin: pool.min || 0,
+          poolMax: pool.max || 0,
+        };
+      }
+    }
     
     return {
       status: healthy ? 'connected' : 'error',
       healthy,
+      isConnected,
+      type: dbType,
       stats,
+      lastChecked: new Date().toISOString(),
     };
   } catch (error) {
     return {
       status: 'error',
       healthy: false,
+      type: 'unknown',
       error: error.message,
+      lastChecked: new Date().toISOString(),
     };
   }
 }

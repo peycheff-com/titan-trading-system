@@ -46,6 +46,7 @@ export async function registerLegacyRoutes(fastify, components, state, config, l
     registerStateRoutes,
     registerStatusRoutes,
     registerDatabaseRoutes,
+    registerScavengerRoutes,
   } = await import('../routes/index.js');
 
   const deps = buildLegacyDependencies(components, state, config, loggerAdapter);
@@ -55,6 +56,7 @@ export async function registerLegacyRoutes(fastify, components, state, config, l
   registerStateRoutes(fastify, deps);
   registerStatusRoutes(fastify, deps);
   registerDatabaseRoutes(fastify, deps);
+  registerScavengerRoutes(fastify, deps);
 }
 
 /**

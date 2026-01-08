@@ -192,10 +192,9 @@ export class CredentialManager {
     try {
       // Check if credentials file exists
       if (!fs.existsSync(this.credentialsPath)) {
-        throw new Error(
-          `Credentials file not found: ${this.credentialsPath}\n` +
-          'Please save credentials first using saveCredentials()'
-        );
+        // Fallback to environment variables for production deployment
+        console.log('🔄 Credentials file not found, falling back to environment variables...');
+        return this.loadCredentialsFromEnv();
       }
       
       // Read encrypted data from file
@@ -249,6 +248,55 @@ export class CredentialManager {
       console.error(`❌ Failed to load credentials: ${error instanceof Error ? error.message : 'Unknown error'}`);
       throw error;
     }
+  }
+  
+  /**
+   * Load credentials from environment variables (fallback for production)
+   * 
+   * @returns Exchange credentials from environment variables
+   * @throws Error if required environment variables are missing
+   */
+  private loadCredentialsFromEnv(): ExchangeCredentials {
+    const binanceApiKey = process.env.BINANCE_API_KEY;
+    const binanceApiSecret = process.env.BINANCE_API_SECRET;
+    const bybitApiKey = process.env.BYBIT_API_KEY;
+    const bybitApiSecret = process.env.BYBIT_API_SECRET;
+    const mexcApiKey = process.env.MEXC_API_KEY || '';
+    const mexcApiSecret = process.env.MEXC_API_SECRET || '';
+    
+    // Validate required credentials
+    if (!binanceApiKey || !binanceApiSecret) {
+      throw new Error(
+        'Missing Binance credentials in environment variables. ' +
+        'Please set BINANCE_API_KEY and BINANCE_API_SECRET.'
+      );
+    }
+    
+    if (!bybitApiKey || !bybitApiSecret) {
+      throw new Error(
+        'Missing Bybit credentials in environment variables. ' +
+        'Please set BYBIT_API_KEY and BYBIT_API_SECRET.'
+      );
+    }
+    
+    const credentials: ExchangeCredentials = {
+      binance: {
+        apiKey: binanceApiKey,
+        apiSecret: binanceApiSecret,
+      },
+      bybit: {
+        apiKey: bybitApiKey,
+        apiSecret: bybitApiSecret,
+      },
+      mexc: {
+        apiKey: mexcApiKey,
+        apiSecret: mexcApiSecret,
+      },
+    };
+    
+    console.log('✅ Credentials loaded from environment variables');
+    
+    return credentials;
   }
   
   /**

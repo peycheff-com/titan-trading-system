@@ -1,7 +1,7 @@
 /**
  * PM2 Ecosystem Configuration for Titan Trading System
  * 
- * Services start in order: titan-core → titan-brain → titan-scavenger → titan-console
+ * Services start in order: titan-core → titan-brain → titan-scavenger
  * 
  * Usage:
  *   pm2 start ecosystem.config.js
@@ -40,6 +40,7 @@ module.exports = {
         PORT: 8080,
         WS_PORT: 8081,
         DATABASE_PATH: '/data/titan.db',
+        CORS_ORIGINS: 'http://localhost:3000,http://localhost:5173,http://localhost:3001',
         LOG_LEVEL: 'info'
       },
       env_development: {
@@ -89,6 +90,7 @@ module.exports = {
         NODE_ENV: 'production',
         TITAN_CORE_URL: 'http://127.0.0.1:8080',
         TITAN_CORE_WS: 'ws://127.0.0.1:8081',
+        CORS_ORIGINS: 'http://localhost:3000,http://localhost:5173,http://localhost:3001',
         LOG_LEVEL: 'info'
       },
       env_development: {
@@ -193,51 +195,37 @@ module.exports = {
       merge_logs: true
     },
 
+
+
     // ============================================
-    // TITAN CONSOLE - Web Dashboard
+    // TITAN CONSOLE - Operator Frontend
     // ============================================
     {
       name: 'titan-console',
       script: 'npm',
-      args: 'start',
+      args: 'run dev',
       cwd: './services/titan-console',
       instances: 1,
       exec_mode: 'fork',
       
       // Startup behavior
-      wait_ready: false,
-      
-      // Ensure backend services are running first
-      depends_on: ['titan-core', 'titan-brain'],
-      
-      // Restart behavior
-      autorestart: true,
-      max_restarts: 10,
-      restart_delay: 2000,
-      max_memory_restart: '300M',
+      wait_ready: true,
       
       // Environment
       env: {
-        NODE_ENV: 'production',
-        PORT: 3001,
-        NEXT_PUBLIC_TITAN_CORE_URL: 'http://127.0.0.1:8080',
-        NEXT_PUBLIC_TITAN_CORE_WS: 'ws://127.0.0.1:8081'
-      },
-      env_development: {
         NODE_ENV: 'development',
-        PORT: 3000,
-        NEXT_PUBLIC_TITAN_CORE_URL: 'http://127.0.0.1:8080',
-        NEXT_PUBLIC_TITAN_CORE_WS: 'ws://127.0.0.1:8081'
+        port: 3001
+      },
+      env_production: {
+        NODE_ENV: 'production',
+        port: 3001
       },
       
       // Logging
       log_date_format: 'YYYY-MM-DD HH:mm:ss.SSS',
       error_file: './logs/titan-console-error.log',
       out_file: './logs/titan-console-out.log',
-      merge_logs: true,
-      
-      // Graceful shutdown
-      kill_timeout: 5000
+      merge_logs: true
     }
   ],
 

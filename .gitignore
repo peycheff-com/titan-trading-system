@@ -114,9 +114,12 @@ services/titan-execution/titan_execution.db*
 services/titan-brain/brain.db*
 *.backup-*
 .deployment-backup-*
+*.before-restore-*
+benchmark-report-*.json
 
 # PID files
 .*.pid
+*.pid
 
 # SSL certificates
 *.crt

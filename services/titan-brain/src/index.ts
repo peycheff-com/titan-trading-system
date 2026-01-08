@@ -3,11 +3,15 @@
  * 
  * Main entry point for the Titan Brain service.
  * Initializes all components and starts the webhook server.
+ * 
+ * Enhanced with StartupManager and ConfigManager for reliable Railway deployment.
  */
 
 // Load environment variables from .env file
 import 'dotenv/config';
 
+import { StartupManager, createStandardInitSteps } from './startup/StartupManager.js';
+import { ConfigManager } from './config/ConfigManager.js';
 import { loadConfig } from './config/index.js';
 import { DatabaseManager, runMigrations } from './db/index.js';
 import {
@@ -40,6 +44,8 @@ let databaseManager: DatabaseManager | null = null;
 let executionEngineClient: ExecutionEngineClient | null = null;
 let phaseIntegrationService: PhaseIntegrationService | null = null;
 let webSocketService: WebSocketService | null = null;
+let startupManager: StartupManager | null = null;
+let configManager: ConfigManager | null = null;
 
 /**
  * Main startup function
@@ -81,20 +87,25 @@ async function main(): Promise<void> {
 
     // Initialize Redis signal queue (optional)
     console.log('📬 Initializing signal queue...');
-    try {
-      signalQueue = new SignalQueue({
-        url: config.redis.url,
-        maxRetries: config.redis.maxRetries,
-        retryDelay: config.redis.retryDelay,
-        keyPrefix: 'titan:brain:signals',
-        idempotencyTTL: 3600,
-        maxQueueSize: config.brain.maxQueueSize,
-      });
-      await signalQueue.connect();
-      console.log('   ✅ Redis signal queue connected');
-    } catch (error) {
-      console.log('   ⚠️  Redis not available, using in-memory queue');
+    if (process.env.REDIS_DISABLED === 'true' || process.env.RAILWAY_ENVIRONMENT === 'true') {
+      console.log('   ⚠️  Redis disabled for Railway deployment, using in-memory queue');
       signalQueue = null;
+    } else {
+      try {
+        signalQueue = new SignalQueue({
+          url: config.redis.url,
+          maxRetries: config.redis.maxRetries,
+          retryDelay: config.redis.retryDelay,
+          keyPrefix: 'titan:brain:signals',
+          idempotencyTTL: 3600,
+          maxQueueSize: config.brain.maxQueueSize,
+        });
+        await signalQueue.connect();
+        console.log('   ✅ Redis signal queue connected');
+      } catch (error) {
+        console.log('   ⚠️  Redis not available, using in-memory queue');
+        signalQueue = null;
+      }
     }
 
     // Initialize core engines

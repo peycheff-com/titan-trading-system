@@ -1,10 +1,10 @@
 # Titan Trading System
 
-**Bio-Mimetic Trading Organism** - A 5-phase algorithmic trading system that evolves with capital growth.
+**Bio-Mimetic Trading Organism** - A 5-phase algorithmic trading system that
+evolves with capital growth.
 
 ## 🚀 Live Deployment
 
-- **Dashboard**: [https://titan-console-j5u5el4er-peycheff.vercel.app](https://titan-console-j5u5el4er-peycheff.vercel.app)
 - **API**: Railway deployment (auto-deployed from main branch)
 - **Database**: Supabase PostgreSQL (Seoul region)
 
@@ -21,30 +21,24 @@
 │                 TITAN EXECUTION (Microservice)                  │
 │  Webhook Receiver | Order Execution | Position Management       │
 └─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                  TITAN CONSOLE (Dashboard)                      │
-│  Next.js UI | Real-time Monitoring | Configuration              │
-└─────────────────────────────────────────────────────────────────┘
 ```
 
 ## 🎯 Trading Phases
 
-| Phase | Name | Capital Range | Strategy | Leverage |
-|-------|------|---------------|----------|----------|
-| 1 | Scavenger | $200 - $5K | Trap system | 15-20x |
-| 2 | Hunter | $2.5K - $50K | Holographic structure | 3-5x |
-| 3 | Sentinel | $50K+ | Market-neutral basis arbitrage | 1-3x |
-| 4 | AI Quant | N/A | Offline parameter optimization | N/A |
-| 5 | Brain | All | Master orchestrator | N/A |
+| Phase | Name      | Capital Range | Strategy                       | Leverage |
+| ----- | --------- | ------------- | ------------------------------ | -------- |
+| 1     | Scavenger | $200 - $5K    | Trap system                    | 15-20x   |
+| 2     | Hunter    | $2.5K - $50K  | Holographic structure          | 3-5x     |
+| 3     | Sentinel  | $50K+         | Market-neutral basis arbitrage | 1-3x     |
+| 4     | AI Quant  | N/A           | Offline parameter optimization | N/A      |
+| 5     | Brain     | All           | Master orchestrator            | N/A      |
 
 ## 🛠 Technology Stack
 
 - **Backend**: Node.js 18+, TypeScript, Fastify
-- **Frontend**: Next.js 14, React 19, TailwindCSS
+
 - **Database**: Supabase PostgreSQL
-- **Deployment**: Railway (backend), Vercel (frontend)
+- **Deployment**: Railway (backend)
 - **Monitoring**: Prometheus metrics, WebSocket status
 - **Security**: HMAC authentication, rate limiting, input validation
 
@@ -69,7 +63,6 @@
    # Install dependencies for all services
    cd services/titan-execution && npm install && cd ../..
    cd services/titan-brain && npm install && cd ../..
-   cd services/titan-console && npm install && cd ../..
    ```
 
 3. **Configure environment variables**
@@ -77,8 +70,8 @@
    # Copy example environment files
    cp services/titan-execution/.env.example services/titan-execution/.env
    cp services/titan-brain/.env.example services/titan-brain/.env
-   cp services/titan-console/.env.local.example services/titan-console/.env.local
-   
+
+
    # Edit the files with your configuration
    ```
 
@@ -86,15 +79,13 @@
    ```bash
    # Start all services
    ./start-titan.sh
-   
+
    # Or start individually
    cd services/titan-execution && npm run dev &
    cd services/titan-brain && npm run dev &
-   cd services/titan-console && npm run dev &
    ```
 
 5. **Access the dashboard**
-   - Open http://localhost:3001 for the dashboard
    - API available at http://localhost:3002
    - Brain API at http://localhost:3100
 
@@ -103,6 +94,7 @@
 ### Environment Variables
 
 #### Titan Execution Service
+
 ```bash
 NODE_ENV=production
 PORT=3002
@@ -113,6 +105,7 @@ BYBIT_API_SECRET=your_bybit_secret
 ```
 
 #### Titan Brain Service
+
 ```bash
 NODE_ENV=production
 PORT=3100
@@ -122,27 +115,24 @@ DB_PASSWORD=your_postgres_password
 DB_NAME=your_postgres_database
 ```
 
-#### Titan Console
-```bash
-NEXT_PUBLIC_EXECUTION_URL=https://your-execution-api.railway.app
-NEXT_PUBLIC_BRAIN_URL=https://your-brain-api.railway.app
-```
-
 ## 📈 Trading Features
 
 ### Phase 1 - Scavenger
+
 - **Strategy**: Predestination trap system
 - **Targets**: Liquidation clusters, funding squeezes, basis arbitrage
 - **Risk**: 2% per trade, 7% daily drawdown limit
 - **Execution**: Market/Aggressive Limit orders on Bybit
 
-### Phase 2 - Hunter  
+### Phase 2 - Hunter
+
 - **Strategy**: Holographic market structure
 - **Targets**: Multi-timeframe fractal analysis, POI detection
 - **Risk**: 1.5% per trade, 5% daily drawdown limit
 - **Execution**: Post-Only Limit orders for maker rebates
 
 ### Phase 3 - Sentinel
+
 - **Strategy**: Market-neutral basis arbitrage
 - **Targets**: Delta-neutral hedging, funding rate exploitation
 - **Risk**: 0.5% per trade, 3% daily drawdown limit
@@ -171,13 +161,13 @@ NEXT_PUBLIC_BRAIN_URL=https://your-brain-api.railway.app
 
 This repository is configured for automatic deployment:
 
-- **Frontend**: Vercel (connected to main branch)
 - **Backend**: Railway (connected to main branch)
 - **Database**: Supabase (managed PostgreSQL)
 
 ### Manual Deployment
 
 #### Deploy to Railway
+
 ```bash
 # Install Railway CLI
 npm install -g @railway/cli
@@ -185,16 +175,6 @@ npm install -g @railway/cli
 # Login and deploy
 railway login
 railway up
-```
-
-#### Deploy to Vercel
-```bash
-# Install Vercel CLI
-npm install -g vercel
-
-# Login and deploy
-vercel login
-vercel --prod
 ```
 
 ## 🧪 Testing
@@ -235,12 +215,16 @@ This project is proprietary software. All rights reserved.
 
 ## ⚠️ Disclaimer
 
-This software is for educational and research purposes only. Trading cryptocurrencies involves substantial risk of loss. Past performance does not guarantee future results. Use at your own risk.
+This software is for educational and research purposes only. Trading
+cryptocurrencies involves substantial risk of loss. Past performance does not
+guarantee future results. Use at your own risk.
 
 ## 🆘 Support
 
-- **Issues**: [GitHub Issues](https://github.com/peycheff-com/titan-trading-system/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/peycheff-com/titan-trading-system/discussions)
+- **Issues**:
+  [GitHub Issues](https://github.com/peycheff-com/titan-trading-system/issues)
+- **Discussions**:
+  [GitHub Discussions](https://github.com/peycheff-com/titan-trading-system/discussions)
 - **Email**: support@peycheff.com
 
 ---

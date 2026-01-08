@@ -470,44 +470,20 @@ export function registerConsoleRoutes(fastify, dependencies) {
   fastify.get('/api/console/trades', asyncHandler(async (request) => {
     const { limit = 50 } = request.query;
     
-    // Mock trades for now - replace with actual database query
-    const trades = [
-      {
-        id: 1,
-        signal_id: 'titan_BTCUSDT_12345_1',
-        symbol: 'BTCUSDT',
-        side: 'LONG',
-        size: 0.1,
-        entry_price: 43250.50,
-        exit_price: 43500.00,
-        pnl: 24.95,
-        pnl_pct: 0.58,
-        status: 'CLOSED',
-        regime_state: 1,
-        phase: 'PHASE_1_KICKSTARTER',
-        timestamp: new Date(Date.now() - 3600000).toISOString(),
-      },
-      {
-        id: 2,
-        signal_id: 'titan_ETHUSDT_12346_1',
-        symbol: 'ETHUSDT',
-        side: 'SHORT',
-        size: 2.5,
-        entry_price: 2280.00,
-        exit_price: 2260.00,
-        pnl: 50.00,
-        pnl_pct: 0.88,
-        status: 'CLOSED',
-        regime_state: -1,
-        phase: 'PHASE_2_TREND_RIDER',
-        timestamp: new Date(Date.now() - 7200000).toISOString(),
-      },
-    ];
-    
-    return ResponseFactory.success({ 
-      trades: trades.slice(0, parseInt(limit)),
-      total: trades.length,
-    });
+    try {
+      const trades = await databaseManager.getTrades({
+        limit: parseInt(limit),
+        symbol: request.query.symbol,
+      });
+
+      return ResponseFactory.success({ 
+        trades,
+        total: trades.length, // Pagination total count would require a separate count query, skipping for now
+      });
+    } catch (error) {
+      logger.error({ error: error.message }, 'Failed to fetch trades');
+      return ResponseFactory.error('Failed to fetch trades', 500);
+    }
   }, logger));
 
   /**

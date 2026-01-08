@@ -27,7 +27,7 @@ SERVICES=(
     "titan-brain:$BRAIN_PORT:services/titan-brain"
     "titan-execution:$EXECUTION_PORT:services/titan-execution"
     "titan-scavenger:8081:services/titan-phase1-scavenger"
-    "titan-console:$CONSOLE_PORT:services/titan-console"
+    
 )
 
 # Rolling deployment configuration
@@ -90,7 +90,7 @@ deploy_service() {
         "titan-scavenger")
             start_command="HEALTH_PORT=$temp_port node dist/index.js --headless"
             ;;
-        "titan-console")
+
             start_command="PORT=$temp_port npm start"
             ;;
         *)
@@ -120,7 +120,7 @@ deploy_service() {
         "titan-scavenger")
             health_url="http://localhost:$temp_port/health"
             ;;
-        "titan-console")
+
             health_url="http://localhost:$temp_port"
             ;;
     esac
@@ -188,7 +188,7 @@ deploy_service() {
         "titan-scavenger")
             start_command="HEALTH_PORT=$service_port node dist/index.js --headless"
             ;;
-        "titan-console")
+
             start_command="PORT=$service_port npm start"
             ;;
     esac
@@ -210,7 +210,7 @@ deploy_service() {
         "titan-scavenger")
             prod_health_url="http://localhost:$service_port/health"
             ;;
-        "titan-console")
+
             prod_health_url="http://localhost:$service_port"
             ;;
     esac

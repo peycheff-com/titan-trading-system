@@ -1,1 +1,0 @@
-describe('Monitoring Integration Tests', () => { it('should collect metrics', () => { expect(true).toBe(true); }); it('should deliver alerts', () => { expect(true).toBe(true); }); it('should persist data', () => { expect(true).toBe(true); }); });

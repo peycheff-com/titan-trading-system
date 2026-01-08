@@ -1,6 +1,8 @@
 # Titan System - AWS Tokyo Deployment Guide
 
-This guide provides step-by-step instructions for deploying the complete Titan Trading System to AWS Tokyo (ap-northeast-1) for optimal latency to Asian exchanges.
+This guide provides step-by-step instructions for deploying the complete Titan
+Trading System to AWS Tokyo (ap-northeast-1) for optimal latency to Asian
+exchanges.
 
 ## Table of Contents
 
@@ -21,18 +23,22 @@ This guide provides step-by-step instructions for deploying the complete Titan T
 
 ## Why AWS Tokyo?
 
-**The Bulgaria Problem**: Running execution from Bulgaria adds ~200ms latency to Bybit (Singapore) and ~250ms to Binance (Tokyo). This "Bulgaria Tax" costs real money on every trade.
+**The Bulgaria Problem**: Running execution from Bulgaria adds ~200ms latency to
+Bybit (Singapore) and ~250ms to Binance (Tokyo). This "Bulgaria Tax" costs real
+money on every trade.
 
 **The Solution**: Deploy the execution core to AWS Tokyo (ap-northeast-1):
+
 - **Bybit latency**: ~10ms (vs 200ms from Bulgaria)
 - **Binance latency**: ~5ms (vs 250ms from Bulgaria)
-- **Control**: You control from Bulgaria via secure WebSocket, but execution happens in Tokyo
+- **Control**: You control from Bulgaria via secure WebSocket, but execution
+  happens in Tokyo
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                    BULGARIA (Your Location)                          │
 │  ┌──────────────────────────────────────────────────────────────┐   │
-│  │ titan-console (Next.js)                                      │   │
+
 │  │ - Connects to Tokyo via WSS                                  │   │
 │  │ - ~150ms latency (acceptable for monitoring)                 │   │
 │  └──────────────────────────────────────────────────────────────┘   │
@@ -69,7 +75,7 @@ This guide provides step-by-step instructions for deploying the complete Titan T
    ```bash
    # macOS
    brew install awscli
-   
+
    # Linux
    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
    unzip awscliv2.zip
@@ -248,8 +254,7 @@ cd /opt/titan-system/services/titan-phase1-scavenger
 npm ci --production
 npm run build
 
-# Install titan-console dependencies (if running on same server)
-cd /opt/titan-system/services/titan-console
+
 npm ci --production
 npm run build
 ```
@@ -349,20 +354,7 @@ module.exports = {
       listen_timeout: 10000,
       kill_timeout: 5000
     },
-    {
-      name: 'titan-console',
-      script: 'npm',
-      args: 'start',
-      cwd: '/opt/titan-system/services/titan-console',
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      max_memory_restart: '300M',
-      env: {
-        NODE_ENV: 'production',
-        PORT: 3001
-      }
-    }
+
   ]
 };
 EOF
@@ -650,7 +642,7 @@ pm2 logs titan-core --lines 100
 ```bash
 # 1. Check PM2 status
 pm2 status
-# Expected: titan-core, titan-scavenger, titan-console all "online"
+# Expected: titan-core, titan-scavenger all "online"
 
 # 2. Check health endpoint
 curl https://titan-core.yourdomain.com/health
@@ -772,6 +764,7 @@ fi
 ```
 
 Add to crontab:
+
 ```bash
 # Run health check every minute
 * * * * * /opt/titan-system/scripts/health-check.sh
@@ -885,13 +878,13 @@ pm2 start all
 
 ## Cost Estimation
 
-| Resource | Specification | Monthly Cost (USD) |
-|----------|---------------|-------------------|
-| EC2 t3.medium | 2 vCPU, 4GB RAM | ~$30 |
-| EBS gp3 50GB | Storage | ~$4 |
-| Elastic IP | Static IP | ~$3.65 |
-| Data Transfer | ~100GB/month | ~$9 |
-| **Total** | | **~$47/month** |
+| Resource      | Specification   | Monthly Cost (USD) |
+| ------------- | --------------- | ------------------ |
+| EC2 t3.medium | 2 vCPU, 4GB RAM | ~$30               |
+| EBS gp3 50GB  | Storage         | ~$4                |
+| Elastic IP    | Static IP       | ~$3.65             |
+| Data Transfer | ~100GB/month    | ~$9                |
+| **Total**     |                 | **~$47/month**     |
 
 ---
 
@@ -906,4 +899,4 @@ After successful deployment:
 
 ---
 
-*Last updated: December 2024*
+_Last updated: December 2024_

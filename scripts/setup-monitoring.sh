@@ -130,7 +130,7 @@ scrape_configs:
     metrics_path: '/metrics'
     scrape_interval: 5s
 
-  - job_name: 'titan-console'
+
     static_configs:
       - targets: ['localhost:3001']
     metrics_path: '/api/metrics'
@@ -420,12 +420,12 @@ scrape_configs:
           service: execution
           __path__: ./logs/execution.log
 
-  - job_name: titan-console
+
     static_configs:
       - targets:
           - localhost
         labels:
-          job: titan-console
+
           service: console
           __path__: ./logs/console.log
 

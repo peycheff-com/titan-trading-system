@@ -1,6 +1,8 @@
 # Titan Trading System - Complete API Documentation
 
-This directory contains comprehensive API documentation for all Titan Trading System services, including REST APIs, WebSocket protocols, and interactive examples.
+This directory contains comprehensive API documentation for all Titan Trading
+System services, including REST APIs, WebSocket protocols, and interactive
+examples.
 
 ## Documentation Structure
 
@@ -10,7 +12,7 @@ docs/api/
 ├── openapi/                     # OpenAPI 3.0 specifications
 │   ├── titan-brain.yaml         # Brain orchestrator API
 │   ├── titan-execution.yaml     # Execution service API
-│   ├── titan-console.yaml       # Console dashboard API
+
 │   ├── titan-scavenger.yaml     # Phase 1 scavenger API
 │   ├── titan-ai-quant.yaml      # AI optimization API
 │   └── shared-services.yaml     # Shared infrastructure APIs
@@ -42,40 +44,42 @@ docs/api/
 The Titan Trading System consists of 5 main services with distinct APIs:
 
 ### 1. Titan Brain (Port 3100) - Master Orchestrator
+
 - **Purpose**: Capital allocation, risk management, phase coordination
 - **API Type**: REST + WebSocket notifications
 - **Key Endpoints**: Signal processing, dashboard data, circuit breaker control
 - **Documentation**: [openapi/titan-brain.yaml](openapi/titan-brain.yaml)
 
 ### 2. Titan Execution (Port 3002) - Order Execution Engine
+
 - **Purpose**: Order placement, position tracking, WebSocket communications
 - **API Type**: REST + WebSocket (Console, Scavenger, Status channels)
 - **Key Endpoints**: Webhook receiver, position management, emergency controls
-- **Documentation**: [openapi/titan-execution.yaml](openapi/titan-execution.yaml)
-
-### 3. Titan Console (Port 3001) - Web Dashboard
-- **Purpose**: Real-time monitoring and control interface
-- **API Type**: Next.js web app + WebSocket client
-- **Key Features**: Dashboard, position monitoring, configuration management
-- **Documentation**: [openapi/titan-console.yaml](openapi/titan-console.yaml)
+- **Documentation**:
+  [openapi/titan-execution.yaml](openapi/titan-execution.yaml)
 
 ### 4. Titan Scavenger (Port 8081) - Phase 1 Trading Engine
+
 - **Purpose**: Predestination trap system for account building ($200-$5K)
 - **API Type**: REST + WebSocket client
 - **Key Features**: Trap detection, signal generation, console integration
-- **Documentation**: [openapi/titan-scavenger.yaml](openapi/titan-scavenger.yaml)
+- **Documentation**:
+  [openapi/titan-scavenger.yaml](openapi/titan-scavenger.yaml)
 
 ### 5. Titan AI Quant (Cron Job) - Offline Optimizer
+
 - **Purpose**: Parameter optimization using Gemini AI
 - **API Type**: REST (proposal submission and approval)
 - **Key Features**: Backtesting, parameter optimization, approval workflow
 - **Documentation**: [openapi/titan-ai-quant.yaml](openapi/titan-ai-quant.yaml)
 
 ### 6. Shared Infrastructure - Centralized Services
+
 - **Purpose**: WebSocket management, execution service, telemetry
 - **API Type**: TypeScript modules with REST endpoints
 - **Key Features**: Connection pooling, centralized logging, configuration
-- **Documentation**: [openapi/shared-services.yaml](openapi/shared-services.yaml)
+- **Documentation**:
+  [openapi/shared-services.yaml](openapi/shared-services.yaml)
 
 ## Quick Start
 
@@ -85,7 +89,7 @@ The Titan Trading System consists of 5 main services with distinct APIs:
 # Check all services are running
 curl http://localhost:3100/health  # Brain
 curl http://localhost:3002/health  # Execution
-curl http://localhost:3001/health  # Console (if running)
+
 curl http://localhost:8081/health  # Scavenger
 ```
 
@@ -119,17 +123,6 @@ curl http://localhost:3002/positions
 curl http://localhost:3002/api/console/system-status
 ```
 
-### 4. WebSocket Connection
-
-```javascript
-// Connect to Console WebSocket
-const ws = new WebSocket('ws://localhost:3002/ws/console');
-ws.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  console.log('Console update:', data);
-};
-```
-
 ## Authentication
 
 ### HMAC Signature Verification
@@ -137,13 +130,13 @@ ws.onmessage = (event) => {
 All webhook endpoints require HMAC-SHA256 signature verification:
 
 ```javascript
-const crypto = require('crypto');
+const crypto = require("crypto");
 
 function signRequest(body, secret) {
   return crypto
-    .createHmac('sha256', secret)
+    .createHmac("sha256", secret)
     .update(JSON.stringify(body))
-    .digest('hex');
+    .digest("hex");
 }
 
 // Usage
@@ -164,22 +157,6 @@ curl -H "Authorization: Bearer your-api-key" http://localhost:3002/api/console/c
 ```
 
 ## WebSocket Protocols
-
-### Console WebSocket (ws://localhost:3002/ws/console)
-
-Real-time updates for dashboard components:
-
-```javascript
-{
-  "type": "EQUITY_UPDATE",
-  "data": {
-    "equity": 2450.00,
-    "daily_pnl": 125.50,
-    "daily_pnl_pct": 5.4,
-    "timestamp": "2024-12-18T10:30:00.000Z"
-  }
-}
-```
 
 ### Scavenger WebSocket (ws://localhost:3002/ws/scavenger)
 
@@ -230,27 +207,27 @@ System-wide status updates and alerts:
 
 ### HTTP Status Codes
 
-| Code | Description | Usage |
-|------|-------------|-------|
-| 200 | Success | Request completed successfully |
-| 400 | Bad Request | Invalid input parameters |
-| 401 | Unauthorized | Invalid signature or credentials |
-| 403 | Forbidden | Request blocked by safety gates |
-| 409 | Conflict | Duplicate signal ID or resource conflict |
-| 429 | Too Many Requests | Rate limit exceeded |
-| 500 | Internal Server Error | Unexpected server error |
-| 503 | Service Unavailable | Service unhealthy or maintenance |
+| Code | Description           | Usage                                    |
+| ---- | --------------------- | ---------------------------------------- |
+| 200  | Success               | Request completed successfully           |
+| 400  | Bad Request           | Invalid input parameters                 |
+| 401  | Unauthorized          | Invalid signature or credentials         |
+| 403  | Forbidden             | Request blocked by safety gates          |
+| 409  | Conflict              | Duplicate signal ID or resource conflict |
+| 429  | Too Many Requests     | Rate limit exceeded                      |
+| 500  | Internal Server Error | Unexpected server error                  |
+| 503  | Service Unavailable   | Service unhealthy or maintenance         |
 
 ## Rate Limiting
 
 ### Default Limits
 
-| Endpoint Category | Limit | Window |
-|------------------|-------|--------|
-| Webhook endpoints | 100 req/min | Per IP |
-| Dashboard APIs | 60 req/min | Per user |
-| Emergency controls | 10 req/min | Per operator |
-| Health checks | 300 req/min | Per IP |
+| Endpoint Category  | Limit       | Window       |
+| ------------------ | ----------- | ------------ |
+| Webhook endpoints  | 100 req/min | Per IP       |
+| Dashboard APIs     | 60 req/min  | Per user     |
+| Emergency controls | 10 req/min  | Per operator |
+| Health checks      | 300 req/min | Per IP       |
 
 ### Rate Limit Headers
 
@@ -264,7 +241,9 @@ X-RateLimit-Reset: 1640995200
 
 ### Complete Signal Flow
 
-See [examples/signal-flow-example.js](examples/signal-flow-example.js) for a complete demonstration of:
+See [examples/signal-flow-example.js](examples/signal-flow-example.js) for a
+complete demonstration of:
+
 1. Signal generation from Phase 1
 2. Brain approval/veto process
 3. Execution via Execution service
@@ -274,6 +253,7 @@ See [examples/signal-flow-example.js](examples/signal-flow-example.js) for a com
 ### Dashboard Integration
 
 See [examples/dashboard-client.js](examples/dashboard-client.js) for:
+
 1. Polling dashboard data
 2. WebSocket connection management
 3. Real-time chart updates
@@ -282,6 +262,7 @@ See [examples/dashboard-client.js](examples/dashboard-client.js) for:
 ### Webhook Testing
 
 See [examples/webhook-tester.js](examples/webhook-tester.js) for:
+
 1. HMAC signature generation
 2. Signal payload validation
 3. Response handling
@@ -292,13 +273,17 @@ See [examples/webhook-tester.js](examples/webhook-tester.js) for:
 Each service has a complete OpenAPI 3.0 specification:
 
 - **Titan Brain**: [openapi/titan-brain.yaml](openapi/titan-brain.yaml)
-- **Titan Execution**: [openapi/titan-execution.yaml](openapi/titan-execution.yaml)
-- **Titan Console**: [openapi/titan-console.yaml](openapi/titan-console.yaml)
-- **Titan Scavenger**: [openapi/titan-scavenger.yaml](openapi/titan-scavenger.yaml)
+- **Titan Execution**:
+  [openapi/titan-execution.yaml](openapi/titan-execution.yaml)
+
+- **Titan Scavenger**:
+  [openapi/titan-scavenger.yaml](openapi/titan-scavenger.yaml)
 - **Titan AI Quant**: [openapi/titan-ai-quant.yaml](openapi/titan-ai-quant.yaml)
-- **Shared Services**: [openapi/shared-services.yaml](openapi/shared-services.yaml)
+- **Shared Services**:
+  [openapi/shared-services.yaml](openapi/shared-services.yaml)
 
 These specifications can be used with:
+
 - **Swagger UI**: Interactive API documentation
 - **Postman**: API testing and collection generation
 - **Code Generation**: Client SDK generation
@@ -309,6 +294,7 @@ These specifications can be used with:
 ### Postman Collection
 
 Import [examples/postman/titan-api.json](examples/postman/titan-api.json) for:
+
 - Pre-configured requests for all endpoints
 - Environment variables for different deployments
 - Test scripts for response validation
@@ -317,6 +303,7 @@ Import [examples/postman/titan-api.json](examples/postman/titan-api.json) for:
 ### WebSocket Testing
 
 Use [examples/websocket-client.js](examples/websocket-client.js) for:
+
 - WebSocket connection testing
 - Message format validation
 - Reconnection logic testing
@@ -331,13 +318,6 @@ Use [examples/websocket-client.js](examples/websocket-client.js) for:
 3. **Signal Generation**: Send signals via webhook with HMAC signature
 4. **Position Monitoring**: Subscribe to position updates via WebSocket
 
-### Dashboard Integration
-
-1. **Authentication**: Implement operator authentication
-2. **Real-time Data**: Connect to Console WebSocket for live updates
-3. **Control Actions**: Use Console API for emergency controls
-4. **Configuration**: Implement configuration management UI
-
 ### External System Integration
 
 1. **Webhook Receiver**: Implement HMAC signature verification
@@ -349,8 +329,10 @@ Use [examples/websocket-client.js](examples/websocket-client.js) for:
 
 ### Common Issues
 
-1. **WebSocket Disconnections**: Implement automatic reconnection with exponential backoff
-2. **HMAC Signature Failures**: Ensure consistent JSON serialization and UTF-8 encoding
+1. **WebSocket Disconnections**: Implement automatic reconnection with
+   exponential backoff
+2. **HMAC Signature Failures**: Ensure consistent JSON serialization and UTF-8
+   encoding
 3. **Rate Limiting**: Implement proper backoff and retry logic
 4. **Position Mismatches**: Use reconciliation endpoints to sync state
 
@@ -386,6 +368,6 @@ pm2 logs titan-execution | grep "ERROR"
 
 ---
 
-For detailed endpoint documentation, see the OpenAPI specifications in the `openapi/` directory.
-For interactive examples, see the `examples/` directory.
+For detailed endpoint documentation, see the OpenAPI specifications in the
+`openapi/` directory. For interactive examples, see the `examples/` directory.
 For integration guides, see the `integration/` directory.
