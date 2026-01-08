@@ -1,36 +1,44 @@
 /**
  * TitanBrain - Master Orchestrator for Titan Trading System
  * Integrates all components: Allocation, Performance, Risk, Capital, and Circuit Breaker
- * 
+ *
  * Requirements: 1.1, 1.7, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6
  */
 
 import {
-  IntentSignal,
-  Position,
-  BrainDecision,
-  DashboardData,
-  HealthStatus,
-  QueuedSignal,
-  BrainConfig,
   AllocationVector,
+  BrainConfig,
+  BrainDecision,
+  BreakerStatus,
+  DashboardData,
+  DecisionRecord,
+  HealthStatus,
+  IntentSignal,
   PhaseId,
   PhasePerformance,
+  Position,
+  QueuedSignal,
   RiskDecision,
   RiskMetrics,
   TreasuryStatus,
-  BreakerStatus,
-  DecisionRecord,
-} from '../types/index.js';
-import { AllocationEngine } from './AllocationEngine.js';
-import { PerformanceTracker } from './PerformanceTracker.js';
-import { RiskGuardian, HighCorrelationNotifier } from './RiskGuardian.js';
-import { CapitalFlowManager, SweepNotifier } from './CapitalFlowManager.js';
-import { CircuitBreaker, PositionClosureHandler, NotificationHandler, BreakerEventPersistence } from './CircuitBreaker.js';
-import { StateRecoveryService, RecoveredState } from './StateRecoveryService.js';
-import { getMetrics } from '../monitoring/PrometheusMetrics.js';
-import { ManualOverrideService } from './ManualOverrideService.js';
-import { DatabaseManager } from '../db/DatabaseManager.js';
+} from "../types/index.js";
+import { AllocationEngine } from "./AllocationEngine.js";
+import { PerformanceTracker } from "./PerformanceTracker.js";
+import { HighCorrelationNotifier, RiskGuardian } from "./RiskGuardian.js";
+import { CapitalFlowManager, SweepNotifier } from "./CapitalFlowManager.js";
+import {
+  BreakerEventPersistence,
+  CircuitBreaker,
+  NotificationHandler,
+  PositionClosureHandler,
+} from "./CircuitBreaker.js";
+import {
+  RecoveredState,
+  StateRecoveryService,
+} from "./StateRecoveryService.js";
+import { getMetrics } from "../monitoring/PrometheusMetrics.js";
+import { ManualOverrideService } from "./ManualOverrideService.js";
+import { DatabaseManager } from "../db/DatabaseManager.js";
 
 /**
  * Phase priority for signal processing
@@ -61,7 +69,8 @@ export interface PhaseNotifier {
 /**
  * TitanBrain orchestrates all components and processes signals
  */
-export class TitanBrain implements PositionClosureHandler, BreakerEventPersistence {
+export class TitanBrain
+  implements PositionClosureHandler, BreakerEventPersistence {
   private readonly config: BrainConfig;
   private readonly allocationEngine: AllocationEngine;
   private readonly performanceTracker: PerformanceTracker;
@@ -110,7 +119,7 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
     circuitBreaker: CircuitBreaker,
     db?: DatabaseManager,
     stateRecoveryService?: StateRecoveryService,
-    manualOverrideService?: ManualOverrideService
+    manualOverrideService?: ManualOverrideService,
   ) {
     this.config = config;
     this.allocationEngine = allocationEngine;
@@ -132,52 +141,66 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
    * Requirement 9.4, 9.5: Load state and recalculate metrics on startup
    */
   async initialize(): Promise<void> {
-    console.log('🧠 Initializing Titan Brain...');
+    console.log("🧠 Initializing Titan Brain...");
 
     // Recover system state on startup
     if (this.stateRecoveryService) {
-      console.log('📊 Recovering system state...');
+      console.log("📊 Recovering system state...");
       const recoveredState = await this.stateRecoveryService.recoverState();
-      
+
       // Validate recovered state
       if (!this.stateRecoveryService.validateRecoveredState(recoveredState)) {
-        console.warn('⚠️ Recovered state validation failed, using defaults');
+        console.warn("⚠️ Recovered state validation failed, using defaults");
       } else {
-        console.log('✅ State recovery completed successfully');
-        
+        console.log("✅ State recovery completed successfully");
+
         // Apply recovered allocation if available
         if (recoveredState.allocation) {
-          console.log(`📈 Restored allocation: w1=${recoveredState.allocation.w1}, w2=${recoveredState.allocation.w2}, w3=${recoveredState.allocation.w3}`);
+          console.log(
+            `📈 Restored allocation: w1=${recoveredState.allocation.w1}, w2=${recoveredState.allocation.w2}, w3=${recoveredState.allocation.w3}`,
+          );
         }
-        
+
         // Apply recovered high watermark
         if (recoveredState.highWatermark > 0) {
-          await this.capitalFlowManager.setHighWatermark(recoveredState.highWatermark);
-          console.log(`💰 Restored high watermark: $${recoveredState.highWatermark}`);
+          await this.capitalFlowManager.setHighWatermark(
+            recoveredState.highWatermark,
+          );
+          console.log(
+            `💰 Restored high watermark: $${recoveredState.highWatermark}`,
+          );
         }
-        
+
         // Apply recovered performance metrics
-        for (const [phaseId, performance] of Object.entries(recoveredState.performance)) {
-          console.log(`📊 Restored performance for ${phaseId}: Sharpe=${performance.sharpeRatio.toFixed(2)}, Modifier=${performance.modifier.toFixed(2)}`);
+        for (
+          const [phaseId, performance] of Object.entries(
+            recoveredState.performance,
+          )
+        ) {
+          console.log(
+            `📊 Restored performance for ${phaseId}: Sharpe=${
+              performance.sharpeRatio.toFixed(2)
+            }, Modifier=${performance.modifier.toFixed(2)}`,
+          );
         }
       }
-      
+
       // Recalculate risk metrics with current positions
       // Requirement 9.5: Recalculate all risk metrics before accepting new signals
       if (this.currentPositions.length > 0) {
-        console.log('🔍 Recalculating risk metrics with current positions...');
+        console.log("🔍 Recalculating risk metrics with current positions...");
         const riskMetrics = this.stateRecoveryService.recalculateRiskMetrics(
           this.currentPositions,
-          this.currentEquity
+          this.currentEquity,
         );
-        console.log('✅ Risk metrics recalculated');
+        console.log("✅ Risk metrics recalculated");
       }
     }
 
     // Initialize manual override service
     if (this.manualOverrideService) {
       await this.manualOverrideService.initialize();
-      console.log('🔧 Manual override service initialized');
+      console.log("🔧 Manual override service initialized");
     }
 
     // Initialize capital flow manager
@@ -189,8 +212,8 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
 
     // Start periodic metric updates
     this.startMetricUpdates();
-    
-    console.log('🧠 Titan Brain initialization completed');
+
+    console.log("🧠 Titan Brain initialization completed");
   }
 
   /**
@@ -223,14 +246,14 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
   setNotificationHandler(handler: NotificationHandler): void {
     this.notificationHandler = handler;
     this.circuitBreaker.setNotificationHandler(handler);
-    
+
     // Set correlation notifier if handler supports it
-    if ('sendHighCorrelationWarning' in handler) {
+    if ("sendHighCorrelationWarning" in handler) {
       this.riskGuardian.setCorrelationNotifier(handler as any);
     }
-    
+
     // Set sweep notifier if handler supports it
-    if ('sendSweepNotification' in handler) {
+    if ("sendSweepNotification" in handler) {
       this.capitalFlowManager.setSweepNotifier(handler as any);
     }
   }
@@ -258,11 +281,10 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
     this.circuitBreaker.setDailyStartEquity(this.dailyStartEquity);
   }
 
-
   /**
    * Process an intent signal through the full pipeline
    * Requirement 7.5: Maximum latency of 100ms
-   * 
+   *
    * Pipeline:
    * 1. Check circuit breaker
    * 2. Get allocation weights
@@ -270,7 +292,7 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
    * 4. Check risk constraints
    * 5. Calculate authorized size
    * 6. Forward to execution or veto
-   * 
+   *
    * @param signal - Intent signal from a phase
    * @returns BrainDecision with approval status
    */
@@ -282,8 +304,8 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
     if (this.circuitBreaker.isActive()) {
       const decision = this.createVetoDecision(
         signal,
-        'Circuit breaker active: all signals rejected',
-        timestamp
+        "Circuit breaker active: all signals rejected",
+        timestamp,
       );
       await this.recordDecision(decision, signal);
       return decision;
@@ -301,7 +323,7 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
       const decision = this.createVetoDecision(
         signal,
         `Circuit breaker triggered: ${breakerStatus.reason}`,
-        timestamp
+        timestamp,
       );
       await this.recordDecision(decision, signal);
       return decision;
@@ -311,7 +333,9 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
     const allocation = this.getAllocation();
 
     // Get performance modifier for the phase
-    const performance = await this.performanceTracker.getPhasePerformance(signal.phaseId);
+    const performance = await this.performanceTracker.getPhasePerformance(
+      signal.phaseId,
+    );
 
     // Calculate base allocation for this phase
     const phaseWeight = this.getPhaseWeight(signal.phaseId, allocation);
@@ -322,7 +346,10 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
     const maxPositionSize = this.currentEquity * adjustedWeight;
 
     // Check risk constraints
-    const riskDecision = this.riskGuardian.checkSignal(signal, this.currentPositions);
+    const riskDecision = this.riskGuardian.checkSignal(
+      signal,
+      this.currentPositions,
+    );
 
     // Determine final authorized size
     let authorizedSize: number;
@@ -336,25 +363,26 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
       reason = riskDecision.reason;
     } else {
       // Apply all constraints
-      const riskAdjustedSize = riskDecision.adjustedSize ?? signal.requestedSize;
+      const riskAdjustedSize = riskDecision.adjustedSize ??
+        signal.requestedSize;
       authorizedSize = Math.min(
         signal.requestedSize,
         maxPositionSize,
-        riskAdjustedSize
+        riskAdjustedSize,
       );
 
       // Requirement 1.7: Position size consistency
       if (authorizedSize <= 0) {
         approved = false;
         authorizedSize = 0;
-        reason = 'Authorized size is zero after applying constraints';
+        reason = "Authorized size is zero after applying constraints";
       } else {
         approved = true;
         reason = this.buildApprovalReason(
           signal.requestedSize,
           authorizedSize,
           maxPositionSize,
-          riskDecision
+          riskDecision,
         );
       }
     }
@@ -382,21 +410,28 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
     } else if (!approved) {
       // Requirement 7.6: Notify originating phase of veto
       if (this.phaseNotifier) {
-        await this.phaseNotifier.notifyVeto(signal.phaseId, signal.signalId, reason);
+        await this.phaseNotifier.notifyVeto(
+          signal.phaseId,
+          signal.signalId,
+          reason,
+        );
       }
-      
+
       // Send veto notification via notification service
-      if (this.notificationHandler && 'sendVetoNotification' in this.notificationHandler) {
+      if (
+        this.notificationHandler &&
+        "sendVetoNotification" in this.notificationHandler
+      ) {
         try {
           await (this.notificationHandler as any).sendVetoNotification(
             signal.phaseId,
             signal.signalId,
             signal.symbol,
             reason,
-            signal.requestedSize
+            signal.requestedSize,
           );
         } catch (error) {
-          console.error('Failed to send veto notification:', error);
+          console.error("Failed to send veto notification:", error);
         }
       }
     }
@@ -404,7 +439,9 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
     // Check processing latency and record metrics
     const processingTime = Date.now() - startTime;
     if (processingTime > this.config.signalTimeout) {
-      console.warn(`Signal processing exceeded timeout: ${processingTime}ms > ${this.config.signalTimeout}ms`);
+      console.warn(
+        `Signal processing exceeded timeout: ${processingTime}ms > ${this.config.signalTimeout}ms`,
+      );
     }
 
     // Record metrics
@@ -417,7 +454,7 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
   /**
    * Process multiple signals with priority ordering
    * Requirement 7.1: Process in priority order (P3 > P2 > P1)
-   * 
+   *
    * @param signals - Array of intent signals
    * @returns Array of brain decisions
    */
@@ -445,7 +482,7 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
   /**
    * Enqueue a signal for processing
    * Requirement 7.4: Maintain signal queue with timestamps and phase source
-   * 
+   *
    * @param signal - Intent signal to enqueue
    */
   enqueueSignal(signal: IntentSignal): void {
@@ -468,7 +505,7 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
    * Process all queued signals
    */
   async processQueue(): Promise<BrainDecision[]> {
-    const signals = this.signalQueue.map(q => q.signal);
+    const signals = this.signalQueue.map((q) => q.signal);
     this.signalQueue = [];
     return this.processSignals(signals);
   }
@@ -482,7 +519,8 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
     const allocation = this.allocationEngine.getWeights(this.currentEquity);
 
     // Update capital flow target allocation
-    const futuresAllocation = this.currentEquity * (allocation.w1 + allocation.w2);
+    const futuresAllocation = this.currentEquity *
+      (allocation.w1 + allocation.w2);
     this.capitalFlowManager.setTargetAllocation(futuresAllocation);
 
     // Update high watermark
@@ -500,24 +538,31 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
     metrics.updateAllocation(allocation.w1, allocation.w2, allocation.w3);
     metrics.updateCircuitBreakerStatus(this.circuitBreaker.isActive());
     metrics.updateHighWatermark(this.capitalFlowManager.getHighWatermark());
-    
+
     // Update daily drawdown
-    const dailyDrawdown = this.dailyStartEquity > 0 
-      ? ((this.dailyStartEquity - this.currentEquity) / this.dailyStartEquity) * 100 
+    const dailyDrawdown = this.dailyStartEquity > 0
+      ? ((this.dailyStartEquity - this.currentEquity) / this.dailyStartEquity) *
+        100
       : 0;
     metrics.updateDailyDrawdown(Math.max(0, dailyDrawdown));
 
     // Update phase performance metrics
-    for (const phaseId of ['phase1', 'phase2', 'phase3'] as PhaseId[]) {
-      const performance = await this.performanceTracker.getPhasePerformance(phaseId);
-      metrics.updatePhasePerformance(phaseId, performance.sharpeRatio, performance.modifier);
+    for (const phaseId of ["phase1", "phase2", "phase3"] as PhaseId[]) {
+      const performance = await this.performanceTracker.getPhasePerformance(
+        phaseId,
+      );
+      metrics.updatePhasePerformance(
+        phaseId,
+        performance.sharpeRatio,
+        performance.modifier,
+      );
     }
   }
 
   /**
    * Record a trade result
    * Updates performance tracking and circuit breaker state
-   * 
+   *
    * @param phaseId - Phase that executed the trade
    * @param pnl - Trade PnL
    * @param symbol - Trading symbol
@@ -527,12 +572,18 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
     phaseId: PhaseId,
     pnl: number,
     symbol?: string,
-    side?: 'BUY' | 'SELL'
+    side?: "BUY" | "SELL",
   ): Promise<void> {
     const timestamp = Date.now();
 
     // Record in performance tracker
-    await this.performanceTracker.recordTrade(phaseId, pnl, timestamp, symbol, side);
+    await this.performanceTracker.recordTrade(
+      phaseId,
+      pnl,
+      timestamp,
+      symbol,
+      side,
+    );
 
     // Record for circuit breaker
     this.recentTrades.push({ pnl, timestamp });
@@ -540,17 +591,18 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
 
     // Clean up old trades (keep last hour)
     const oneHourAgo = timestamp - 3600000;
-    this.recentTrades = this.recentTrades.filter(t => t.timestamp >= oneHourAgo);
+    this.recentTrades = this.recentTrades.filter((t) =>
+      t.timestamp >= oneHourAgo
+    );
 
     // Update metrics after trade
     await this.updateMetrics();
   }
 
-
   /**
    * Get dashboard data for UI
    * Requirement 10.1-10.7: Dashboard visibility
-   * 
+   *
    * @returns DashboardData with all metrics
    */
   async getDashboardData(): Promise<DashboardData> {
@@ -602,13 +654,15 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
       circuitBreaker,
       recentDecisions,
       lastUpdated: Date.now(),
-      manualOverride: manualOverride ? {
-        active: true,
-        operatorId: manualOverride.operatorId,
-        reason: manualOverride.reason,
-        allocation: manualOverride.overrideAllocation,
-        expiresAt: manualOverride.expiresAt,
-      } : null,
+      manualOverride: manualOverride
+        ? {
+          active: true,
+          operatorId: manualOverride.operatorId,
+          reason: manualOverride.reason,
+          allocation: manualOverride.overrideAllocation,
+          expiresAt: manualOverride.expiresAt,
+        }
+        : null,
       warningBannerActive,
     };
 
@@ -621,7 +675,7 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
 
   /**
    * Get system health status
-   * 
+   *
    * @returns HealthStatus with component health
    */
   async getHealthStatus(): Promise<HealthStatus> {
@@ -640,10 +694,14 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
     // Check database
     if (this.db) {
       try {
-        await this.db.query('SELECT 1');
+        await this.db.query("SELECT 1");
         components.database = true;
       } catch (error) {
-        errors.push(`Database: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        errors.push(
+          `Database: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
+        );
       }
     } else {
       // For Railway deployment without database, consider it healthy
@@ -656,7 +714,11 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
         await this.executionEngine.getPositions();
         components.executionEngine = true;
       } catch (error) {
-        errors.push(`Execution Engine: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        errors.push(
+          `Execution Engine: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
+        );
       }
     } else {
       // For Railway deployment without execution engine, consider it healthy
@@ -665,13 +727,17 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
 
     // Check phase approval rates
     // Requirement 7.8: Flag for review if approval rate < 50%
-    for (const phaseId of ['phase1', 'phase2', 'phase3'] as PhaseId[]) {
+    for (const phaseId of ["phase1", "phase2", "phase3"] as PhaseId[]) {
       const stats = this.signalStats[phaseId];
       if (stats.total > 0) {
         const approvalRate = stats.approved / stats.total;
         components.phases[phaseId] = approvalRate >= 0.5;
         if (approvalRate < 0.5) {
-          errors.push(`${phaseId}: Approval rate ${(approvalRate * 100).toFixed(1)}% < 50%`);
+          errors.push(
+            `${phaseId}: Approval rate ${
+              (approvalRate * 100).toFixed(1)
+            }% < 50%`,
+          );
         }
       } else {
         components.phases[phaseId] = true; // No signals yet
@@ -679,11 +745,11 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
     }
 
     // For Railway deployment, be more lenient with health checks
-    const isRailwayDeployment = process.env.RAILWAY_ENVIRONMENT === 'true';
-    const healthy = isRailwayDeployment ? 
-      // Railway: Just check that the service is running (phases are healthy)
-      Object.values(components.phases).every(Boolean) :
-      // Local: Check all components
+    const isRailwayDeployment = process.env.RAILWAY_ENVIRONMENT === "true";
+    const healthy = isRailwayDeployment
+      ? // Railway: Just check that the service is running (phases are healthy)
+      Object.values(components.phases).every(Boolean)
+      : // Local: Check all components
       components.database &&
       components.executionEngine &&
       Object.values(components.phases).every(Boolean);
@@ -699,7 +765,7 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
   /**
    * Get signal approval rate for a phase
    * Requirement 7.7: Track signal approval rate per phase
-   * 
+   *
    * @param phaseId - Phase to check
    * @returns Approval rate (0-1)
    */
@@ -714,9 +780,9 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
    */
   getAllApprovalRates(): Record<PhaseId, number> {
     return {
-      phase1: this.getApprovalRate('phase1'),
-      phase2: this.getApprovalRate('phase2'),
-      phase3: this.getApprovalRate('phase3'),
+      phase1: this.getApprovalRate("phase1"),
+      phase2: this.getApprovalRate("phase2"),
+      phase3: this.getApprovalRate("phase3"),
     };
   }
 
@@ -736,13 +802,17 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
    * Requirement 9.7: Support manual override of allocation weights
    */
   getAllocation(): AllocationVector {
-    const normalAllocation = this.allocationEngine.getWeights(this.currentEquity);
-    
+    const normalAllocation = this.allocationEngine.getWeights(
+      this.currentEquity,
+    );
+
     // Apply manual override if active
     if (this.manualOverrideService) {
-      return this.manualOverrideService.getEffectiveAllocation(normalAllocation);
+      return this.manualOverrideService.getEffectiveAllocation(
+        normalAllocation,
+      );
     }
-    
+
     return normalAllocation;
   }
 
@@ -770,7 +840,7 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
   /**
    * Manually reset circuit breaker
    * Requirement 5.8: Require operator ID
-   * 
+   *
    * @param operatorId - ID of operator performing reset
    */
   async resetCircuitBreaker(operatorId: string): Promise<void> {
@@ -787,7 +857,7 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
   /**
    * Create a manual allocation override
    * Requirement 9.7: Create admin endpoint for allocation override
-   * 
+   *
    * @param operatorId - Operator creating the override
    * @param password - Operator password
    * @param allocation - New allocation vector
@@ -800,17 +870,22 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
     password: string,
     allocation: AllocationVector,
     reason: string,
-    durationHours?: number
+    durationHours?: number,
   ): Promise<boolean> {
     if (!this.manualOverrideService) {
-      console.error('Manual override service not available');
+      console.error("Manual override service not available");
       return false;
     }
 
     // Authenticate operator
-    const authenticated = await this.manualOverrideService.authenticateOperator(operatorId, password);
+    const authenticated = await this.manualOverrideService.authenticateOperator(
+      operatorId,
+      password,
+    );
     if (!authenticated) {
-      console.warn(`Manual override rejected: authentication failed for operator ${operatorId}`);
+      console.warn(
+        `Manual override rejected: authentication failed for operator ${operatorId}`,
+      );
       return false;
     }
 
@@ -824,12 +899,14 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
 
     if (override) {
       console.log(`✅ Manual override created by operator ${operatorId}`);
-      console.log(`   New allocation: w1=${allocation.w1}, w2=${allocation.w2}, w3=${allocation.w3}`);
+      console.log(
+        `   New allocation: w1=${allocation.w1}, w2=${allocation.w2}, w3=${allocation.w3}`,
+      );
       console.log(`   Reason: ${reason}`);
-      
+
       // Invalidate dashboard cache to show warning banner
       this.dashboardCache = null;
-      
+
       return true;
     }
 
@@ -838,39 +915,49 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
 
   /**
    * Deactivate the current manual override
-   * 
+   *
    * @param operatorId - Operator deactivating the override
    * @param password - Operator password
    * @returns True if successfully deactivated
    */
-  async deactivateManualOverride(operatorId: string, password: string): Promise<boolean> {
+  async deactivateManualOverride(
+    operatorId: string,
+    password: string,
+  ): Promise<boolean> {
     if (!this.manualOverrideService) {
-      console.error('Manual override service not available');
+      console.error("Manual override service not available");
       return false;
     }
 
     // Authenticate operator
-    const authenticated = await this.manualOverrideService.authenticateOperator(operatorId, password);
+    const authenticated = await this.manualOverrideService.authenticateOperator(
+      operatorId,
+      password,
+    );
     if (!authenticated) {
-      console.warn(`Manual override deactivation rejected: authentication failed for operator ${operatorId}`);
+      console.warn(
+        `Manual override deactivation rejected: authentication failed for operator ${operatorId}`,
+      );
       return false;
     }
 
-    const success = await this.manualOverrideService.deactivateOverride(operatorId);
-    
+    const success = await this.manualOverrideService.deactivateOverride(
+      operatorId,
+    );
+
     if (success) {
       console.log(`✅ Manual override deactivated by operator ${operatorId}`);
-      
+
       // Invalidate dashboard cache to hide warning banner
       this.dashboardCache = null;
     }
-    
+
     return success;
   }
 
   /**
    * Get current manual override status
-   * 
+   *
    * @returns Current override or null if none active
    */
   getCurrentManualOverride() {
@@ -881,7 +968,7 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
   /**
    * Check if warning banner should be displayed
    * Requirement 9.8: Implement warning banner flag
-   * 
+   *
    * @returns True if warning banner should be shown
    */
   isWarningBannerActive(): boolean {
@@ -891,7 +978,7 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
 
   /**
    * Get manual override history
-   * 
+   *
    * @param operatorId - Optional operator filter
    * @param limit - Maximum number of records
    * @returns Array of historical overrides
@@ -903,19 +990,27 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
 
   /**
    * Create a new operator account
-   * 
+   *
    * @param operatorId - Unique operator identifier
    * @param password - Operator password
    * @param permissions - Array of permissions
    * @returns True if created successfully
    */
-  async createOperator(operatorId: string, password: string, permissions: string[]): Promise<boolean> {
+  async createOperator(
+    operatorId: string,
+    password: string,
+    permissions: string[],
+  ): Promise<boolean> {
     if (!this.manualOverrideService) {
-      console.error('Manual override service not available');
+      console.error("Manual override service not available");
       return false;
     }
-    
-    return this.manualOverrideService.createOperator(operatorId, password, permissions);
+
+    return this.manualOverrideService.createOperator(
+      operatorId,
+      password,
+      permissions,
+    );
   }
 
   // ============ PositionClosureHandler Implementation ============
@@ -937,7 +1032,7 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
    */
   async persistEvent(event: {
     timestamp: number;
-    eventType: 'TRIGGER' | 'RESET';
+    eventType: "TRIGGER" | "RESET";
     breakerType?: string;
     reason: string;
     equity: number;
@@ -957,10 +1052,9 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
         event.equity,
         event.operatorId ?? null,
         event.metadata ? JSON.stringify(event.metadata) : null,
-      ]
+      ],
     );
   }
-
 
   // ============ Private Helper Methods ============
 
@@ -976,7 +1070,7 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
       try {
         await this.updateMetrics();
       } catch (error) {
-        console.error('Error updating metrics:', error);
+        console.error("Error updating metrics:", error);
       }
     }, this.config.metricUpdateInterval);
   }
@@ -984,13 +1078,16 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
   /**
    * Get phase weight from allocation vector
    */
-  private getPhaseWeight(phaseId: PhaseId, allocation: AllocationVector): number {
+  private getPhaseWeight(
+    phaseId: PhaseId,
+    allocation: AllocationVector,
+  ): number {
     switch (phaseId) {
-      case 'phase1':
+      case "phase1":
         return allocation.w1;
-      case 'phase2':
+      case "phase2":
         return allocation.w2;
-      case 'phase3':
+      case "phase3":
         return allocation.w3;
       default:
         return 0;
@@ -1003,7 +1100,7 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
   private createVetoDecision(
     signal: IntentSignal,
     reason: string,
-    timestamp: number
+    timestamp: number,
   ): BrainDecision {
     const allocation = this.allocationEngine.getWeights(this.currentEquity);
     const riskMetrics = this.riskGuardian.getRiskMetrics(this.currentPositions);
@@ -1040,27 +1137,31 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
     requestedSize: number,
     authorizedSize: number,
     maxPositionSize: number,
-    riskDecision: RiskDecision
+    riskDecision: RiskDecision,
   ): string {
-    const parts: string[] = ['Signal approved'];
+    const parts: string[] = ["Signal approved"];
 
     if (authorizedSize < requestedSize) {
       const reductions: string[] = [];
 
-      if (authorizedSize <= maxPositionSize && requestedSize > maxPositionSize) {
+      if (
+        authorizedSize <= maxPositionSize && requestedSize > maxPositionSize
+      ) {
         reductions.push(`allocation cap (${maxPositionSize.toFixed(2)})`);
       }
 
-      if (riskDecision.adjustedSize && riskDecision.adjustedSize < requestedSize) {
+      if (
+        riskDecision.adjustedSize && riskDecision.adjustedSize < requestedSize
+      ) {
         reductions.push(`risk adjustment`);
       }
 
       if (reductions.length > 0) {
-        parts.push(`with size reduction due to ${reductions.join(', ')}`);
+        parts.push(`with size reduction due to ${reductions.join(", ")}`);
       }
     }
 
-    return parts.join(' ');
+    return parts.join(" ");
   }
 
   /**
@@ -1068,7 +1169,7 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
    */
   private async recordDecision(
     decision: BrainDecision,
-    signal: IntentSignal
+    signal: IntentSignal,
   ): Promise<void> {
     // Add to recent decisions
     this.recentDecisions.push(decision);
@@ -1105,7 +1206,7 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
           record.authorizedSize,
           record.reason,
           record.riskMetrics ? JSON.stringify(record.riskMetrics) : null,
-        ]
+        ],
       );
     }
   }
@@ -1123,17 +1224,17 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
   /**
    * Calculate net position for opposite signals
    * Requirement 7.3: Calculate net position for opposite signals on same asset
-   * 
+   *
    * @param signals - Array of signals for the same asset
    * @returns Net position size and direction
    */
   calculateNetPosition(
-    signals: IntentSignal[]
-  ): { netSize: number; side: 'BUY' | 'SELL' | 'NEUTRAL' } {
+    signals: IntentSignal[],
+  ): { netSize: number; side: "BUY" | "SELL" | "NEUTRAL" } {
     let netSize = 0;
 
     for (const signal of signals) {
-      if (signal.side === 'BUY') {
+      if (signal.side === "BUY") {
         netSize += signal.requestedSize;
       } else {
         netSize -= signal.requestedSize;
@@ -1141,17 +1242,17 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
     }
 
     if (netSize > 0) {
-      return { netSize, side: 'BUY' };
+      return { netSize, side: "BUY" };
     } else if (netSize < 0) {
-      return { netSize: Math.abs(netSize), side: 'SELL' };
+      return { netSize: Math.abs(netSize), side: "SELL" };
     } else {
-      return { netSize: 0, side: 'NEUTRAL' };
+      return { netSize: 0, side: "NEUTRAL" };
     }
   }
 
   /**
    * Get recent decisions
-   * 
+   *
    * @param limit - Maximum number of decisions to return
    * @returns Array of recent decisions
    */
@@ -1162,7 +1263,7 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
   /**
    * Export dashboard data to JSON
    * Requirement 10.8: Support exporting dashboard data to JSON
-   * 
+   *
    * @returns JSON string of dashboard data
    */
   async exportDashboardJSON(): Promise<string> {
@@ -1207,11 +1308,17 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
 
   /**
    * Update price history for correlation calculations
-   * 
+   *
    * @param symbol - Asset symbol
    * @param price - Current price
    */
   updatePriceHistory(symbol: string, price: number): void {
     this.riskGuardian.updatePriceHistory(symbol, price);
+  }
+  /**
+   * Get database manager
+   */
+  getDatabaseManager(): DatabaseManager | null {
+    return this.db;
   }
 }

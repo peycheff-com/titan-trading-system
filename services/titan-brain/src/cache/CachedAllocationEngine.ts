@@ -1,13 +1,17 @@
 /**
  * CachedAllocationEngine - Wrapper that adds caching to AllocationEngine
  * Caches allocation vectors with 1 minute TTL
- * 
+ *
  * Requirements: 1.1
  */
 
-import { AllocationEngine } from '../engine/AllocationEngine.js';
-import { AllocationVector, EquityTier, AllocationEngineConfig } from '../types/index.js';
-import { CacheManager, CacheNamespace } from './CacheManager.js';
+import { AllocationEngine } from "../engine/AllocationEngine.js";
+import {
+  AllocationEngineConfig,
+  AllocationVector,
+  EquityTier,
+} from "../types/index.js";
+import { CacheManager, CacheNamespace } from "./CacheManager.js";
 
 /**
  * Rounds equity to nearest bucket for cache key generation
@@ -40,16 +44,19 @@ export class CachedAllocationEngine {
   /**
    * Get allocation weights with caching
    * Uses equity buckets to improve cache hit rate
-   * 
+   *
    * @param equity - Current account equity in USD
    * @returns AllocationVector with weights summing to 1.0
    */
-  getWeights(equity: number): AllocationVector {
+  async getWeights(equity: number): Promise<AllocationVector> {
     const bucket = getEquityBucket(equity);
     const cacheKey = `weights:${bucket}`;
 
     // Try to get from cache
-    const cached = this.cache.get<AllocationVector>(CacheNamespace.ALLOCATION, cacheKey);
+    const cached = await this.cache.get<AllocationVector>(
+      CacheNamespace.ALLOCATION,
+      cacheKey,
+    );
     if (cached) {
       // Update timestamp to current time
       return { ...cached, timestamp: Date.now() };
@@ -57,13 +64,13 @@ export class CachedAllocationEngine {
 
     // Calculate and cache
     const weights = this.engine.getWeights(equity);
-    this.cache.set(CacheNamespace.ALLOCATION, cacheKey, weights);
+    await this.cache.set(CacheNamespace.ALLOCATION, cacheKey, weights);
     return weights;
   }
 
   /**
    * Get equity tier (no caching needed - simple calculation)
-   * 
+   *
    * @param equity - Current account equity in USD
    * @returns EquityTier classification
    */
@@ -73,7 +80,7 @@ export class CachedAllocationEngine {
 
   /**
    * Get maximum leverage for equity tier (no caching needed - simple lookup)
-   * 
+   *
    * @param equity - Current account equity in USD
    * @returns Maximum leverage multiplier
    */

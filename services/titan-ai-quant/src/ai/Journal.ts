@@ -1,26 +1,30 @@
 /**
  * Journal - Trade Log Parser
- * 
+ *
  * Parses trade logs and correlates with regime snapshots
  * to create AI-readable narratives.
- * 
+ *
  * Requirements: 1.1, 1.2, 1.6
  */
 
-import * as fs from 'fs';
-import * as readline from 'readline';
-import * as path from 'path';
-import { Trade, RegimeSnapshot } from '../types';
+import * as fs from "fs";
+import * as readline from "readline";
+import * as path from "path";
+import { RegimeSnapshot, Trade } from "../types/index.js";
 
 /**
  * Maps trend state to human-readable string
  */
 function trendStateToString(state: -1 | 0 | 1): string {
   switch (state) {
-    case 1: return 'Bull';
-    case 0: return 'Range';
-    case -1: return 'Bear';
-    default: return 'Unknown';
+    case 1:
+      return "Bull";
+    case 0:
+      return "Range";
+    case -1:
+      return "Bear";
+    default:
+      return "Unknown";
   }
 }
 
@@ -29,10 +33,14 @@ function trendStateToString(state: -1 | 0 | 1): string {
  */
 function volStateToString(state: 0 | 1 | 2): string {
   switch (state) {
-    case 0: return 'Low-Vol';
-    case 1: return 'Normal-Vol';
-    case 2: return 'Extreme-Vol';
-    default: return 'Unknown-Vol';
+    case 0:
+      return "Low-Vol";
+    case 1:
+      return "Normal-Vol";
+    case 2:
+      return "Extreme-Vol";
+    default:
+      return "Unknown-Vol";
   }
 }
 
@@ -41,10 +49,14 @@ function volStateToString(state: 0 | 1 | 2): string {
  */
 function regimeStateToString(state: -1 | 0 | 1): string {
   switch (state) {
-    case 1: return 'Risk-On';
-    case 0: return 'Neutral';
-    case -1: return 'Risk-Off';
-    default: return 'Unknown';
+    case 1:
+      return "Risk-On";
+    case 0:
+      return "Neutral";
+    case -1:
+      return "Risk-Off";
+    default:
+      return "Unknown";
   }
 }
 
@@ -55,8 +67,12 @@ export class Journal {
   private regimeLoaded: boolean = false;
 
   constructor(
-    tradesFilePath: string = path.join(process.cwd(), 'logs', 'trades.jsonl'),
-    regimeFilePath: string = path.join(process.cwd(), 'logs', 'regime_snapshots.jsonl')
+    tradesFilePath: string = path.join(process.cwd(), "logs", "trades.jsonl"),
+    regimeFilePath: string = path.join(
+      process.cwd(),
+      "logs",
+      "regime_snapshots.jsonl",
+    ),
   ) {
     this.tradesFilePath = tradesFilePath;
     this.regimeFilePath = regimeFilePath;
@@ -79,7 +95,7 @@ export class Journal {
     const fileStream = fs.createReadStream(this.regimeFilePath);
     const rl = readline.createInterface({
       input: fileStream,
-      crlfDelay: Infinity
+      crlfDelay: Infinity,
     });
 
     for await (const line of rl) {
@@ -101,7 +117,7 @@ export class Journal {
   /**
    * Read trades efficiently using streaming
    * Uses Node.js readline for memory-efficient parsing of large files
-   * 
+   *
    * Requirement 1.1: Parse trades from trades.jsonl efficiently using streaming
    */
   async ingestTrades(limit?: number): Promise<Trade[]> {
@@ -116,7 +132,7 @@ export class Journal {
     const fileStream = fs.createReadStream(this.tradesFilePath);
     const rl = readline.createInterface({
       input: fileStream,
-      crlfDelay: Infinity
+      crlfDelay: Infinity,
     });
 
     for await (const line of rl) {
@@ -148,32 +164,34 @@ export class Journal {
    * Validate that a trade object has all required fields
    */
   private isValidTrade(trade: unknown): trade is Trade {
-    if (typeof trade !== 'object' || trade === null) return false;
-    
+    if (typeof trade !== "object" || trade === null) return false;
+
     const t = trade as Record<string, unknown>;
     return (
-      typeof t.timestamp === 'number' &&
-      typeof t.symbol === 'string' &&
-      typeof t.trapType === 'string' &&
-      typeof t.pnl === 'number' &&
-      typeof t.duration === 'number' &&
-      typeof t.slippage === 'number'
+      typeof t.timestamp === "number" &&
+      typeof t.symbol === "string" &&
+      typeof t.trapType === "string" &&
+      typeof t.pnl === "number" &&
+      typeof t.duration === "number" &&
+      typeof t.slippage === "number"
     );
   }
 
   /**
    * Convert trade to token-efficient narrative
    * Format: "Symbol: SOL, Type: OI_WIPEOUT, Result: -1.2%, Duration: 4s, Slippage: 0.1%, Regime: Risk-Off/Extreme-Vol"
-   * 
+   *
    * Requirement 1.2: Create token-efficient summaries containing symbol, trap type, result, duration, and slippage
    */
   summarizeTrade(trade: Trade, regime: RegimeSnapshot): string {
     const resultPercent = (trade.pnlPercent * 100).toFixed(2);
-    const resultSign = trade.pnlPercent >= 0 ? '+' : '';
+    const resultSign = trade.pnlPercent >= 0 ? "+" : "";
     const durationSec = Math.round(trade.duration / 1000);
     const slippagePercent = (trade.slippage * 100).toFixed(2);
-    
-    const regimeStr = `${regimeStateToString(regime.regimeState)}/${volStateToString(regime.volState)}`;
+
+    const regimeStr = `${regimeStateToString(regime.regimeState)}/${
+      volStateToString(regime.volState)
+    }`;
     const trendStr = trendStateToString(regime.trendState);
 
     return `Symbol: ${trade.symbol}, Type: ${trade.trapType.toUpperCase()}, Result: ${resultSign}${resultPercent}%, Duration: ${durationSec}s, Slippage: ${slippagePercent}%, Regime: ${regimeStr}, Trend: ${trendStr}`;
@@ -184,14 +202,14 @@ export class Journal {
    * Returns trades where PnL is negative
    */
   getFailedTrades(trades: Trade[]): Trade[] {
-    return trades.filter(trade => trade.pnl < 0);
+    return trades.filter((trade) => trade.pnl < 0);
   }
 
   /**
    * Correlate trade with regime at execution time
    * Uses binary search to find the closest regime snapshot
    * that is less than or equal to the trade timestamp
-   * 
+   *
    * Requirement 1.6: Correlate each trade with the regime snapshot from that timestamp
    */
   getRegimeContext(trade: Trade): RegimeSnapshot | null {
@@ -226,11 +244,11 @@ export class Journal {
    */
   getRegimeContextBatch(trades: Trade[]): Map<string, RegimeSnapshot | null> {
     const results = new Map<string, RegimeSnapshot | null>();
-    
+
     for (const trade of trades) {
       results.set(trade.id, this.getRegimeContext(trade));
     }
-    
+
     return results;
   }
 
@@ -253,7 +271,7 @@ export class Journal {
         const durationSec = Math.round(trade.duration / 1000);
         const slippagePercent = (trade.slippage * 100).toFixed(2);
         narratives.push(
-          `Symbol: ${trade.symbol}, Type: ${trade.trapType.toUpperCase()}, Result: ${resultPercent}%, Duration: ${durationSec}s, Slippage: ${slippagePercent}%, Regime: Unknown`
+          `Symbol: ${trade.symbol}, Type: ${trade.trapType.toUpperCase()}, Result: ${resultPercent}%, Duration: ${durationSec}s, Slippage: ${slippagePercent}%, Regime: Unknown`,
         );
       }
     }

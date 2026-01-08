@@ -1,3 +1,4 @@
+"use strict";
 /**
  * Distributed State Manager for Titan Trading System
  *
@@ -6,8 +7,12 @@
  *
  * Requirements: 10.1 - Distributed state management and synchronization
  */
-import { EventEmitter } from 'eventemitter3';
-import { createHash } from 'crypto';
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.DEFAULT_DISTRIBUTED_STATE_CONFIG = exports.DistributedStateManager = exports.MergeResolver = exports.HighestVersionResolver = exports.LastWriteWinsResolver = void 0;
+exports.getDistributedStateManager = getDistributedStateManager;
+exports.resetDistributedStateManager = resetDistributedStateManager;
+const eventemitter3_1 = require("eventemitter3");
+const crypto_1 = require("crypto");
 // Simple color logging utility
 const colors = {
     blue: (text) => `\x1b[34m${text}\x1b[0m`,
@@ -20,17 +25,19 @@ const colors = {
 /**
  * Default conflict resolvers
  */
-export class LastWriteWinsResolver {
+class LastWriteWinsResolver {
     resolve(local, remote) {
         return local.timestamp > remote.timestamp ? local : remote;
     }
 }
-export class HighestVersionResolver {
+exports.LastWriteWinsResolver = LastWriteWinsResolver;
+class HighestVersionResolver {
     resolve(local, remote) {
         return local.version > remote.version ? local : remote;
     }
 }
-export class MergeResolver {
+exports.HighestVersionResolver = HighestVersionResolver;
+class MergeResolver {
     resolve(local, remote) {
         // Simple merge strategy - combine objects or use latest for primitives
         if (typeof local.value === 'object' && typeof remote.value === 'object') {
@@ -46,10 +53,11 @@ export class MergeResolver {
         return local.timestamp > remote.timestamp ? local : remote;
     }
 }
+exports.MergeResolver = MergeResolver;
 /**
  * State synchronization manager
  */
-class StateSynchronizer extends EventEmitter {
+class StateSynchronizer extends eventemitter3_1.EventEmitter {
     config;
     stateStore;
     nodes;
@@ -329,7 +337,7 @@ class StateSynchronizer extends EventEmitter {
      */
     calculateChecksum(value) {
         const serialized = JSON.stringify(value);
-        return createHash('sha256').update(serialized).digest('hex').substring(0, 16);
+        return (0, crypto_1.createHash)('sha256').update(serialized).digest('hex').substring(0, 16);
     }
     /**
      * Generate unique message ID
@@ -341,7 +349,7 @@ class StateSynchronizer extends EventEmitter {
 /**
  * Distributed State Manager
  */
-export class DistributedStateManager extends EventEmitter {
+class DistributedStateManager extends eventemitter3_1.EventEmitter {
     config;
     stateStore = new Map();
     nodes = new Map();
@@ -583,7 +591,7 @@ export class DistributedStateManager extends EventEmitter {
      */
     calculateChecksum(value) {
         const serialized = JSON.stringify(value);
-        return createHash('sha256').update(serialized).digest('hex').substring(0, 16);
+        return (0, crypto_1.createHash)('sha256').update(serialized).digest('hex').substring(0, 16);
     }
     /**
      * Generate unique message ID
@@ -623,10 +631,11 @@ export class DistributedStateManager extends EventEmitter {
         this.removeAllListeners();
     }
 }
+exports.DistributedStateManager = DistributedStateManager;
 /**
  * Default distributed state configuration
  */
-export const DEFAULT_DISTRIBUTED_STATE_CONFIG = {
+exports.DEFAULT_DISTRIBUTED_STATE_CONFIG = {
     nodeId: `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     consistencyLevel: 'eventual',
     conflictResolution: 'last_write_wins',
@@ -648,16 +657,16 @@ let distributedStateInstance = null;
 /**
  * Get or create the global Distributed State Manager instance
  */
-export function getDistributedStateManager(config) {
+function getDistributedStateManager(config) {
     if (!distributedStateInstance) {
-        distributedStateInstance = new DistributedStateManager(config || DEFAULT_DISTRIBUTED_STATE_CONFIG);
+        distributedStateInstance = new DistributedStateManager(config || exports.DEFAULT_DISTRIBUTED_STATE_CONFIG);
     }
     return distributedStateInstance;
 }
 /**
  * Reset the global Distributed State Manager instance (for testing)
  */
-export function resetDistributedStateManager() {
+function resetDistributedStateManager() {
     if (distributedStateInstance) {
         distributedStateInstance.shutdown();
     }

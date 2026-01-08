@@ -7,8 +7,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Box, Text, Newline, Spacer } from 'ink';
-import { EnhancedAIIntegration, AIIntegrationStatus, StrategySelection, AdaptiveRiskConfig } from '../ai/EnhancedAIIntegration';
-import { MarketRegime } from '../ai/PredictiveAnalytics';
+import { EnhancedAIIntegration, AIIntegrationStatus, StrategySelection, AdaptiveRiskConfig } from '../ai/EnhancedAIIntegration.js';
+import { MarketRegime } from '../ai/PredictiveAnalytics.js';
 
 interface EnhancedAIConsoleProps {
   aiIntegration: EnhancedAIIntegration;
@@ -171,8 +171,8 @@ export const EnhancedAIConsole: React.FC<EnhancedAIConsoleProps> = ({ aiIntegrat
         {Object.entries(state.status.currentRegimes).length > 0 ? (
           Object.entries(state.status.currentRegimes).map(([symbol, regime]) => (
             <Box key={symbol} flexDirection="row">
-              <Text width={12}>{symbol}:</Text>
-              <Text color={getRegimeColor(regime)}>{regime.replace('_', ' ').toUpperCase()}</Text>
+              <Box width={12}><Text>{symbol}:</Text></Box>
+              <Text color={getRegimeColor(regime)}>{(regime as string).replace('_', ' ').toUpperCase()}</Text>
             </Box>
           ))
         ) : (
@@ -193,7 +193,7 @@ export const EnhancedAIConsole: React.FC<EnhancedAIConsoleProps> = ({ aiIntegrat
               <Text color="cyan">{symbol} ({selection.regime.replace('_', ' ')}):</Text>
               {selection.selectedStrategies.map((strategy, index) => (
                 <Box key={index} flexDirection="row" marginLeft={2}>
-                  <Text width={20}>{strategy.strategy}:</Text>
+                  <Box width={20}><Text>{strategy.strategy}:</Text></Box>
                   <Text color="green">{formatPercentage(strategy.allocation)}</Text>
                   <Text color="gray"> (conf: {(strategy.confidence * 100).toFixed(0)}%)</Text>
                 </Box>
@@ -202,9 +202,11 @@ export const EnhancedAIConsole: React.FC<EnhancedAIConsoleProps> = ({ aiIntegrat
                 <Box flexDirection="column" marginLeft={2}>
                   <Text color="red">Disabled:</Text>
                   {selection.disabledStrategies.map((disabled, index) => (
-                    <Text key={index} color="gray" marginLeft={2}>
-                      {disabled.strategy}: {disabled.reasoning}
-                    </Text>
+                    <Box key={index} marginLeft={2}>
+                      <Text color="gray">
+                        {disabled.strategy}: {disabled.reasoning}
+                      </Text>
+                    </Box>
                   ))}
                 </Box>
               )}
@@ -244,7 +246,7 @@ export const EnhancedAIConsole: React.FC<EnhancedAIConsoleProps> = ({ aiIntegrat
                   <Text> {adjustment.currentRisk.toFixed(3)} → {adjustment.recommendedRisk.toFixed(3)}</Text>
                   <Text color="gray"> ({adjustment.urgency})</Text>
                 </Box>
-                <Text color="gray" marginLeft={2}>{adjustment.reasoning}</Text>
+                <Box marginLeft={2}><Text color="gray">{adjustment.reasoning}</Text></Box>
               </Box>
             ))}
           </Box>

@@ -203,7 +203,12 @@ export declare class DistributedStateManager extends EventEmitter {
         onlineNodes: number;
         stateEntries: number;
         lastSyncTime: number;
-        metrics: typeof this.metrics;
+        metrics: {
+            totalOperations: number;
+            conflictsResolved: number;
+            syncOperations: number;
+            lastSyncTime: number;
+        };
     };
     /**
      * Update configuration

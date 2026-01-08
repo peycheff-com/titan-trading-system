@@ -1,16 +1,27 @@
 /**
  * Real-Time Parameter Optimizer
- * 
+ *
  * Integrates AI Quant with live trading data streams for continuous
  * parameter monitoring and adjustment with performance feedback loops.
- * 
+ *
  * Requirements: 10.5 - Real-time parameter optimization with live trading data
  */
 
-import { EventEmitter } from 'eventemitter3';
-import { TitanAnalyst } from './TitanAnalyst';
-import { getWebSocketManager, getTelemetryService, WebSocketMessage } from '../../../shared/src';
-import { Trade, RegimeSnapshot, Config, OptimizationProposal, ValidationReport, MetricData } from '../types';
+import { EventEmitter } from "eventemitter3";
+import { TitanAnalyst } from "./TitanAnalyst.js";
+import {
+  getTelemetryService,
+  getWebSocketManager,
+  WebSocketMessage,
+} from "../../../shared/src/index.js";
+import {
+  Config,
+  MetricData,
+  OptimizationProposal,
+  RegimeSnapshot,
+  Trade,
+  ValidationReport,
+} from "../types/index.js";
 
 /**
  * Real-time optimization configuration
@@ -33,7 +44,7 @@ export interface PerformanceFeedback {
   timestamp: number;
   phase: string;
   symbol: string;
-  metric: 'pnl' | 'winRate' | 'drawdown' | 'sharpeRatio';
+  metric: "pnl" | "winRate" | "drawdown" | "sharpeRatio";
   value: number;
   baseline: number;
   improvement: number;
@@ -52,7 +63,7 @@ export interface ABTestConfig {
   testConfig: Config;
   targetMetric: string;
   sampleSize: number;
-  status: 'running' | 'completed' | 'stopped';
+  status: "running" | "completed" | "stopped";
 }
 
 /**
@@ -73,7 +84,7 @@ export interface ABTestResult {
     drawdown: number;
   };
   statisticalSignificance: number;
-  recommendation: 'adopt' | 'reject' | 'continue';
+  recommendation: "adopt" | "reject" | "continue";
   confidence: number;
 }
 
@@ -104,14 +115,14 @@ export class RealTimeOptimizer extends EventEmitter {
 
   constructor(
     analyst?: TitanAnalyst,
-    config: Partial<RealTimeOptimizerConfig> = {}
+    config: Partial<RealTimeOptimizerConfig> = {},
   ) {
     super();
-    
+
     this.analyst = analyst || new TitanAnalyst();
     this.wsManager = getWebSocketManager();
     this.telemetry = getTelemetryService();
-    
+
     this.config = {
       optimizationInterval: config.optimizationInterval ?? 300000, // 5 minutes
       minTradesForOptimization: config.minTradesForOptimization ?? 10,
@@ -127,11 +138,11 @@ export class RealTimeOptimizer extends EventEmitter {
       trades: [],
       regimeSnapshots: [],
       performanceMetrics: [],
-      lastUpdate: Date.now()
+      lastUpdate: Date.now(),
     };
 
     this.setupDataStreams();
-    this.telemetry.info('RealTimeOptimizer', 'Real-time optimizer initialized');
+    this.telemetry.info("RealTimeOptimizer", "Real-time optimizer initialized");
   }
 
   /**
@@ -139,19 +150,23 @@ export class RealTimeOptimizer extends EventEmitter {
    */
   start(): void {
     if (this.optimizationTimer) {
-      this.telemetry.warn('RealTimeOptimizer', 'Optimizer already running');
+      this.telemetry.warn("RealTimeOptimizer", "Optimizer already running");
       return;
     }
 
-    this.telemetry.info('RealTimeOptimizer', 'Starting real-time optimization');
-    
+    this.telemetry.info("RealTimeOptimizer", "Starting real-time optimization");
+
     this.optimizationTimer = setInterval(() => {
-      this.runOptimizationCycle().catch(error => {
-        this.telemetry.error('RealTimeOptimizer', 'Optimization cycle failed', error);
+      this.runOptimizationCycle().catch((error) => {
+        this.telemetry.error(
+          "RealTimeOptimizer",
+          "Optimization cycle failed",
+          error,
+        );
       });
     }, this.config.optimizationInterval);
 
-    this.emit('started');
+    this.emit("started");
   }
 
   /**
@@ -165,11 +180,11 @@ export class RealTimeOptimizer extends EventEmitter {
 
     // Stop all active A/B tests
     for (const test of this.activeABTests.values()) {
-      test.status = 'stopped';
+      test.status = "stopped";
     }
 
-    this.telemetry.info('RealTimeOptimizer', 'Real-time optimization stopped');
-    this.emit('stopped');
+    this.telemetry.info("RealTimeOptimizer", "Real-time optimization stopped");
+    this.emit("stopped");
   }
 
   /**
@@ -177,24 +192,24 @@ export class RealTimeOptimizer extends EventEmitter {
    */
   private setupDataStreams(): void {
     // Subscribe to trading events from telemetry
-    this.telemetry.on('signal', (event) => {
+    this.telemetry.on("signal", (event) => {
       this.handleSignalEvent(event);
     });
 
-    this.telemetry.on('execution', (event) => {
+    this.telemetry.on("execution", (event) => {
       this.handleExecutionEvent(event);
     });
 
-    this.telemetry.on('metric', (metric) => {
+    this.telemetry.on("metric", (metric) => {
       this.handleMetricEvent(metric);
     });
 
     // Subscribe to WebSocket data for regime monitoring
-    this.wsManager.on('message', (message: WebSocketMessage) => {
+    this.wsManager.on("message", (message: WebSocketMessage) => {
       this.handleWebSocketMessage(message);
     });
 
-    this.telemetry.info('RealTimeOptimizer', 'Data streams configured');
+    this.telemetry.info("RealTimeOptimizer", "Data streams configured");
   }
 
   /**
@@ -204,7 +219,7 @@ export class RealTimeOptimizer extends EventEmitter {
     // Convert signal event to trade data structure
     // This would be enhanced based on actual signal structure
     this.liveDataStream.lastUpdate = Date.now();
-    this.emit('signalReceived', event);
+    this.emit("signalReceived", event);
   }
 
   /**
@@ -212,14 +227,14 @@ export class RealTimeOptimizer extends EventEmitter {
    */
   private handleExecutionEvent(event: any): void {
     const { phase, execution } = event;
-    
+
     // Convert execution to trade if it's a completed trade
-    if (execution.status === 'filled') {
+    if (execution.status === "filled") {
       const trade: Partial<Trade> = {
         id: execution.orderId,
         timestamp: Date.now(),
         symbol: execution.symbol,
-        side: execution.side.toLowerCase() as 'long' | 'short',
+        side: execution.side.toLowerCase() as "long" | "short",
         entryPrice: execution.price || 0,
         quantity: execution.qty,
         // Additional fields would be populated from position tracking
@@ -230,12 +245,17 @@ export class RealTimeOptimizer extends EventEmitter {
       this.liveDataStream.lastUpdate = Date.now();
 
       // Trim to keep only recent trades
-      if (this.liveDataStream.trades.length > this.config.performanceWindowSize * 2) {
-        this.liveDataStream.trades = this.liveDataStream.trades.slice(-this.config.performanceWindowSize);
+      if (
+        this.liveDataStream.trades.length >
+          this.config.performanceWindowSize * 2
+      ) {
+        this.liveDataStream.trades = this.liveDataStream.trades.slice(
+          -this.config.performanceWindowSize,
+        );
       }
     }
 
-    this.emit('executionReceived', event);
+    this.emit("executionReceived", event);
   }
 
   /**
@@ -247,10 +267,11 @@ export class RealTimeOptimizer extends EventEmitter {
 
     // Trim old metrics
     const cutoff = Date.now() - 3600000; // 1 hour
-    this.liveDataStream.performanceMetrics = this.liveDataStream.performanceMetrics
-      .filter(m => (m.timestamp || 0) > cutoff);
+    this.liveDataStream.performanceMetrics = this.liveDataStream
+      .performanceMetrics
+      .filter((m) => (m.timestamp || 0) > cutoff);
 
-    this.emit('metricReceived', metric);
+    this.emit("metricReceived", metric);
   }
 
   /**
@@ -258,14 +279,14 @@ export class RealTimeOptimizer extends EventEmitter {
    */
   private handleWebSocketMessage(message: WebSocketMessage): void {
     // Extract regime information from market data
-    if (message.type === 'ticker' && message.data) {
+    if (message.type === "ticker" && message.data) {
       const regimeSnapshot: RegimeSnapshot = {
         timestamp: message.timestamp,
         symbol: message.symbol,
         trendState: this.calculateTrendState(message.data),
         volState: this.calculateVolatilityState(message.data),
         liquidityState: this.calculateLiquidityState(message.data),
-        regimeState: 0 // Would be calculated from trend/vol/liquidity
+        regimeState: 0, // Would be calculated from trend/vol/liquidity
       };
 
       this.liveDataStream.regimeSnapshots.push(regimeSnapshot);
@@ -273,7 +294,8 @@ export class RealTimeOptimizer extends EventEmitter {
 
       // Trim old snapshots
       if (this.liveDataStream.regimeSnapshots.length > 1000) {
-        this.liveDataStream.regimeSnapshots = this.liveDataStream.regimeSnapshots.slice(-500);
+        this.liveDataStream.regimeSnapshots = this.liveDataStream
+          .regimeSnapshots.slice(-500);
       }
     }
   }
@@ -288,30 +310,46 @@ export class RealTimeOptimizer extends EventEmitter {
         return;
       }
 
-      this.telemetry.info('RealTimeOptimizer', 'Running optimization cycle');
+      this.telemetry.info("RealTimeOptimizer", "Running optimization cycle");
 
       // Check if we have enough data
-      if (this.liveDataStream.trades.length < this.config.minTradesForOptimization) {
-        this.telemetry.debug('RealTimeOptimizer', `Insufficient trades: ${this.liveDataStream.trades.length}/${this.config.minTradesForOptimization}`);
+      if (
+        this.liveDataStream.trades.length < this.config.minTradesForOptimization
+      ) {
+        this.telemetry.debug(
+          "RealTimeOptimizer",
+          `Insufficient trades: ${this.liveDataStream.trades.length}/${this.config.minTradesForOptimization}`,
+        );
         return;
       }
 
       // Analyze recent performance
       const performanceFeedback = this.analyzeRecentPerformance();
-      
+
       if (performanceFeedback.length === 0) {
-        this.telemetry.debug('RealTimeOptimizer', 'No performance issues detected');
+        this.telemetry.debug(
+          "RealTimeOptimizer",
+          "No performance issues detected",
+        );
         return;
       }
 
       // Generate insights from recent trades
-      const recentTrades = this.liveDataStream.trades.slice(-this.config.performanceWindowSize);
+      const recentTrades = this.liveDataStream.trades.slice(
+        -this.config.performanceWindowSize,
+      );
       const recentRegimes = this.liveDataStream.regimeSnapshots.slice(-100);
-      
-      const insights = await this.analyst.analyzeFailures(recentTrades, recentRegimes);
+
+      const insights = await this.analyst.analyzeFailures(
+        recentTrades,
+        recentRegimes,
+      );
 
       if (insights.length === 0) {
-        this.telemetry.debug('RealTimeOptimizer', 'No optimization insights generated');
+        this.telemetry.debug(
+          "RealTimeOptimizer",
+          "No optimization insights generated",
+        );
         return;
       }
 
@@ -321,10 +359,17 @@ export class RealTimeOptimizer extends EventEmitter {
 
       for (const insight of insights.slice(0, 2)) { // Limit to 2 proposals per cycle
         try {
-          const proposal = await this.analyst.proposeOptimization(insight, currentConfig);
+          const proposal = await this.analyst.proposeOptimization(
+            insight,
+            currentConfig,
+          );
           proposals.push(proposal);
         } catch (error) {
-          this.telemetry.error('RealTimeOptimizer', 'Failed to generate proposal', error as Error);
+          this.telemetry.error(
+            "RealTimeOptimizer",
+            "Failed to generate proposal",
+            error as Error,
+          );
         }
       }
 
@@ -336,15 +381,18 @@ export class RealTimeOptimizer extends EventEmitter {
       this.optimizationCount++;
       this.lastOptimizationTime = Date.now();
 
-      this.emit('optimizationCycleCompleted', {
+      this.emit("optimizationCycleCompleted", {
         insights: insights.length,
         proposals: proposals.length,
-        feedback: performanceFeedback.length
+        feedback: performanceFeedback.length,
       });
-
     } catch (error) {
-      this.telemetry.error('RealTimeOptimizer', 'Optimization cycle failed', error as Error);
-      this.emit('optimizationError', error);
+      this.telemetry.error(
+        "RealTimeOptimizer",
+        "Optimization cycle failed",
+        error as Error,
+      );
+      this.emit("optimizationError", error);
     }
   }
 
@@ -353,17 +401,19 @@ export class RealTimeOptimizer extends EventEmitter {
    */
   private analyzeRecentPerformance(): PerformanceFeedback[] {
     const feedback: PerformanceFeedback[] = [];
-    const recentTrades = this.liveDataStream.trades.slice(-this.config.performanceWindowSize);
-    
+    const recentTrades = this.liveDataStream.trades.slice(
+      -this.config.performanceWindowSize,
+    );
+
     if (recentTrades.length < 10) {
       return feedback;
     }
 
     // Calculate current performance metrics
     const totalPnL = recentTrades.reduce((sum, trade) => sum + trade.pnl, 0);
-    const winningTrades = recentTrades.filter(trade => trade.pnl > 0).length;
+    const winningTrades = recentTrades.filter((trade) => trade.pnl > 0).length;
     const winRate = winningTrades / recentTrades.length;
-    
+
     // Compare with historical baseline (simplified)
     const baselineWinRate = 0.6; // Would be calculated from historical data
     const baselinePnL = recentTrades.length * 50; // Average expected PnL per trade
@@ -372,26 +422,26 @@ export class RealTimeOptimizer extends EventEmitter {
     if (winRate < baselineWinRate * 0.9) {
       feedback.push({
         timestamp: Date.now(),
-        phase: 'phase1', // Would be determined from trade data
-        symbol: 'BTCUSDT', // Would be aggregated across symbols
-        metric: 'winRate',
+        phase: "phase1", // Would be determined from trade data
+        symbol: "BTCUSDT", // Would be aggregated across symbols
+        metric: "winRate",
         value: winRate,
         baseline: baselineWinRate,
         improvement: baselineWinRate - winRate,
-        confidence: 0.8
+        confidence: 0.8,
       });
     }
 
     if (totalPnL < baselinePnL * 0.8) {
       feedback.push({
         timestamp: Date.now(),
-        phase: 'phase1',
-        symbol: 'BTCUSDT',
-        metric: 'pnl',
+        phase: "phase1",
+        symbol: "BTCUSDT",
+        metric: "pnl",
         value: totalPnL,
         baseline: baselinePnL,
         improvement: baselinePnL - totalPnL,
-        confidence: 0.7
+        confidence: 0.7,
       });
     }
 
@@ -403,46 +453,67 @@ export class RealTimeOptimizer extends EventEmitter {
    */
   private async processOptimizationProposal(
     proposal: OptimizationProposal,
-    feedback: PerformanceFeedback[]
+    feedback: PerformanceFeedback[],
   ): Promise<void> {
     try {
       // Validate proposal
       const validation = await this.analyst.validateProposal(proposal);
-      
-      this.telemetry.info('RealTimeOptimizer', `Proposal validation: ${validation.recommendation}`, {
-        targetKey: proposal.targetKey,
-        confidence: validation.confidenceScore
-      });
+
+      this.telemetry.info(
+        "RealTimeOptimizer",
+        `Proposal validation: ${validation.recommendation}`,
+        {
+          targetKey: proposal.targetKey,
+          confidence: validation.confidenceScore,
+        },
+      );
 
       // Decide on action based on validation and A/B testing config
-      if (this.config.enableABTesting && validation.recommendation === 'approve') {
+      if (
+        this.config.enableABTesting && validation.recommendation === "approve"
+      ) {
         // Start A/B test for high-confidence proposals
         await this.startABTest(proposal, validation);
-      } else if (validation.recommendation === 'approve' && validation.confidenceScore >= this.config.autoApplyThreshold) {
+      } else if (
+        validation.recommendation === "approve" &&
+        validation.confidenceScore >= this.config.autoApplyThreshold
+      ) {
         // Auto-apply very high confidence proposals
         await this.applyProposal(proposal, validation);
       } else {
         // Log for manual review
-        this.telemetry.info('RealTimeOptimizer', 'Proposal requires manual review', {
-          targetKey: proposal.targetKey,
-          recommendation: validation.recommendation,
-          confidence: validation.confidenceScore
-        });
+        this.telemetry.info(
+          "RealTimeOptimizer",
+          "Proposal requires manual review",
+          {
+            targetKey: proposal.targetKey,
+            recommendation: validation.recommendation,
+            confidence: validation.confidenceScore,
+          },
+        );
       }
 
-      this.emit('proposalProcessed', { proposal, validation, feedback });
-
+      this.emit("proposalProcessed", { proposal, validation, feedback });
     } catch (error) {
-      this.telemetry.error('RealTimeOptimizer', 'Failed to process proposal', error as Error);
+      this.telemetry.error(
+        "RealTimeOptimizer",
+        "Failed to process proposal",
+        error as Error,
+      );
     }
   }
 
   /**
    * Start A/B test for proposal
    */
-  private async startABTest(proposal: OptimizationProposal, validation: ValidationReport): Promise<void> {
-    const testId = `ab_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-    
+  private async startABTest(
+    proposal: OptimizationProposal,
+    validation: ValidationReport,
+  ): Promise<void> {
+    const testId = `ab_${Date.now()}_${
+      Math.random().toString(36).substr(2, 6)
+    }`;
+
     const currentConfig = await this.loadCurrentConfig();
     const testConfig = this.applyProposalToConfig(currentConfig, proposal);
 
@@ -453,26 +524,30 @@ export class RealTimeOptimizer extends EventEmitter {
       endTime: Date.now() + this.config.abTestDuration,
       controlConfig: currentConfig,
       testConfig: testConfig,
-      targetMetric: 'pnl',
+      targetMetric: "pnl",
       sampleSize: this.config.abTestSampleSize,
-      status: 'running'
+      status: "running",
     };
 
     this.activeABTests.set(testId, abTest);
 
-    this.telemetry.info('RealTimeOptimizer', `Started A/B test: ${testId}`, {
+    this.telemetry.info("RealTimeOptimizer", `Started A/B test: ${testId}`, {
       targetKey: proposal.targetKey,
-      duration: this.config.abTestDuration
+      duration: this.config.abTestDuration,
     });
 
     // Schedule test completion
     setTimeout(() => {
-      this.completeABTest(testId).catch(error => {
-        this.telemetry.error('RealTimeOptimizer', 'A/B test completion failed', error);
+      this.completeABTest(testId).catch((error) => {
+        this.telemetry.error(
+          "RealTimeOptimizer",
+          "A/B test completion failed",
+          error,
+        );
       });
     }, this.config.abTestDuration);
 
-    this.emit('abTestStarted', abTest);
+    this.emit("abTestStarted", abTest);
   }
 
   /**
@@ -480,11 +555,11 @@ export class RealTimeOptimizer extends EventEmitter {
    */
   private async completeABTest(testId: string): Promise<void> {
     const test = this.activeABTests.get(testId);
-    if (!test || test.status !== 'running') {
+    if (!test || test.status !== "running") {
       return;
     }
 
-    test.status = 'completed';
+    test.status = "completed";
 
     // Analyze A/B test results (simplified)
     const result: ABTestResult = {
@@ -493,44 +568,64 @@ export class RealTimeOptimizer extends EventEmitter {
         trades: Math.floor(this.config.abTestSampleSize / 2),
         pnl: 1000, // Would be calculated from actual data
         winRate: 0.6,
-        drawdown: 0.05
+        drawdown: 0.05,
       },
       testMetrics: {
         trades: Math.floor(this.config.abTestSampleSize / 2),
         pnl: 1200, // Would be calculated from actual data
         winRate: 0.65,
-        drawdown: 0.04
+        drawdown: 0.04,
       },
       statisticalSignificance: 0.95,
-      recommendation: 'adopt',
-      confidence: 0.85
+      recommendation: "adopt",
+      confidence: 0.85,
     };
 
-    this.telemetry.info('RealTimeOptimizer', `A/B test completed: ${testId}`, result);
+    this.telemetry.info(
+      "RealTimeOptimizer",
+      `A/B test completed: ${testId}`,
+      result,
+    );
 
     // Apply test config if results are positive
-    if (result.recommendation === 'adopt' && result.confidence >= this.config.autoApplyThreshold) {
+    if (
+      result.recommendation === "adopt" &&
+      result.confidence >= this.config.autoApplyThreshold
+    ) {
       await this.applyConfig(test.testConfig);
-      this.telemetry.info('RealTimeOptimizer', `Applied A/B test config: ${testId}`);
+      this.telemetry.info(
+        "RealTimeOptimizer",
+        `Applied A/B test config: ${testId}`,
+      );
     }
 
     this.activeABTests.delete(testId);
-    this.emit('abTestCompleted', { test, result });
+    this.emit("abTestCompleted", { test, result });
   }
 
   /**
    * Apply optimization proposal
    */
-  private async applyProposal(proposal: OptimizationProposal, validation: ValidationReport): Promise<void> {
+  private async applyProposal(
+    proposal: OptimizationProposal,
+    validation: ValidationReport,
+  ): Promise<void> {
     const result = await this.analyst.applyProposal(proposal, validation);
-    
+
     if (result.success) {
-      this.telemetry.info('RealTimeOptimizer', `Applied optimization: ${proposal.targetKey}`, {
-        expectedImprovement: proposal.expectedImpact.pnlImprovement
-      });
-      this.emit('proposalApplied', { proposal, validation });
+      this.telemetry.info(
+        "RealTimeOptimizer",
+        `Applied optimization: ${proposal.targetKey}`,
+        {
+          expectedImprovement: proposal.expectedImpact.pnlImprovement,
+        },
+      );
+      this.emit("proposalApplied", { proposal, validation });
     } else {
-      this.telemetry.error('RealTimeOptimizer', `Failed to apply proposal: ${result.error}`);
+      this.telemetry.error(
+        "RealTimeOptimizer",
+        `Failed to apply proposal: ${result.error}`,
+      );
     }
   }
 
@@ -540,7 +635,7 @@ export class RealTimeOptimizer extends EventEmitter {
   private canRunOptimization(): boolean {
     const hourAgo = Date.now() - 3600000;
     const recentOptimizations = this.optimizationCount; // Simplified - would track per hour
-    
+
     if (recentOptimizations >= this.config.maxOptimizationsPerHour) {
       return false;
     }
@@ -563,36 +658,39 @@ export class RealTimeOptimizer extends EventEmitter {
           risk_per_trade: 0.01,
           max_leverage: 15,
           min_confidence: 0.7,
-          cooldown_period: 300
-        }
+          cooldown_period: 300,
+        },
       },
       risk: {
         max_daily_loss: 0.05,
         max_position_size: 0.5,
         max_open_positions: 3,
-        emergency_flatten_threshold: 0.1
+        emergency_flatten_threshold: 0.1,
       },
       execution: {
         latency_penalty: 200,
-        slippage_model: 'realistic',
+        slippage_model: "realistic",
         limit_chaser_enabled: true,
-        max_fill_time: 1000
-      }
+        max_fill_time: 1000,
+      },
     };
   }
 
   /**
    * Apply proposal to configuration
    */
-  private applyProposalToConfig(config: Config, proposal: OptimizationProposal): Config {
+  private applyProposalToConfig(
+    config: Config,
+    proposal: OptimizationProposal,
+  ): Config {
     const newConfig = JSON.parse(JSON.stringify(config));
-    const keyPath = proposal.targetKey.split('.');
-    
+    const keyPath = proposal.targetKey.split(".");
+
     let target = newConfig;
     for (let i = 0; i < keyPath.length - 1; i++) {
       target = target[keyPath[i]];
     }
-    
+
     target[keyPath[keyPath.length - 1]] = proposal.suggestedValue;
     return newConfig;
   }
@@ -602,7 +700,7 @@ export class RealTimeOptimizer extends EventEmitter {
    */
   private async applyConfig(config: Config): Promise<void> {
     // This would apply to the actual config system
-    this.telemetry.info('RealTimeOptimizer', 'Configuration applied');
+    this.telemetry.info("RealTimeOptimizer", "Configuration applied");
   }
 
   /**
@@ -652,9 +750,9 @@ export class RealTimeOptimizer extends EventEmitter {
         trades: this.liveDataStream.trades.length,
         regimeSnapshots: this.liveDataStream.regimeSnapshots.length,
         performanceMetrics: this.liveDataStream.performanceMetrics.length,
-        lastUpdate: this.liveDataStream.lastUpdate
+        lastUpdate: this.liveDataStream.lastUpdate,
       },
-      performanceHistory: this.performanceHistory.length
+      performanceHistory: this.performanceHistory.length,
     };
   }
 
@@ -678,6 +776,6 @@ export class RealTimeOptimizer extends EventEmitter {
   shutdown(): void {
     this.stop();
     this.removeAllListeners();
-    this.telemetry.info('RealTimeOptimizer', 'Real-time optimizer shutdown');
+    this.telemetry.info("RealTimeOptimizer", "Real-time optimizer shutdown");
   }
 }

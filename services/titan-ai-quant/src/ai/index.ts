@@ -2,14 +2,43 @@
  * AI Module Exports
  */
 
-export { GeminiClient } from './GeminiClient';
-export { RateLimiter } from './RateLimiter';
-export { Journal } from './Journal';
-export { StrategicMemory } from './StrategicMemory';
-export { TitanAnalyst } from './TitanAnalyst';
-export { Guardrails, PARAMETER_BOUNDS } from './Guardrails';
-export { ApprovalWorkflow, type ApprovalWorkflowOptions, type ApprovalResult, type RejectionResult } from './ApprovalWorkflow';
-export { OptimizationWorkflow, type WorkflowConfig, type WorkflowResult } from './OptimizationWorkflow';
-export { RealTimeOptimizer, type RealTimeOptimizerConfig, type PerformanceFeedback, type ABTestConfig, type ABTestResult } from './RealTimeOptimizer';
-export { PredictiveAnalytics, type PredictiveAnalyticsConfig, type MarketRegime, type VolatilityPrediction, type CorrelationAnalysis, type StrategyPrediction, type RiskAdjustment } from './PredictiveAnalytics';
-export { EnhancedAIIntegration, type EnhancedAIIntegrationConfig, type StrategySelection, type AdaptiveRiskConfig, type AIIntegrationStatus } from './EnhancedAIIntegration';
+export { GeminiClient } from "./GeminiClient.js";
+export { RateLimiter } from "./RateLimiter.js";
+export { Journal } from "./Journal.js";
+export { StrategicMemory } from "./StrategicMemory.js";
+export { TitanAnalyst } from "./TitanAnalyst.js";
+export { Guardrails, PARAMETER_BOUNDS } from "./Guardrails.js";
+export {
+    type ApprovalResult,
+    ApprovalWorkflow,
+    type ApprovalWorkflowOptions,
+    type RejectionResult,
+} from "./ApprovalWorkflow.js";
+export {
+    OptimizationWorkflow,
+    type WorkflowConfig,
+    type WorkflowResult,
+} from "./OptimizationWorkflow.js";
+export {
+    type ABTestConfig,
+    type ABTestResult,
+    type PerformanceFeedback,
+    RealTimeOptimizer,
+    type RealTimeOptimizerConfig,
+} from "./RealTimeOptimizer.js";
+export {
+    type CorrelationAnalysis,
+    type MarketRegime,
+    PredictiveAnalytics,
+    type PredictiveAnalyticsConfig,
+    type RiskAdjustment,
+    type StrategyPrediction,
+    type VolatilityPrediction,
+} from "./PredictiveAnalytics.js";
+export {
+    type AdaptiveRiskConfig,
+    type AIIntegrationStatus,
+    EnhancedAIIntegration,
+    type EnhancedAIIntegrationConfig,
+    type StrategySelection,
+} from "./EnhancedAIIntegration.js";

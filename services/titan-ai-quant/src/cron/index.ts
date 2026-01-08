@@ -2,4 +2,4 @@
  * Cron Module Exports
  */
 
-export { NightlyOptimize } from './NightlyOptimize';
+export { NightlyOptimize } from "./NightlyOptimize.js";

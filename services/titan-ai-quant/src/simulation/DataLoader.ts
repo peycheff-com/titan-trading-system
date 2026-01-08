@@ -1,20 +1,20 @@
 /**
  * DataLoader - Historical Data Ingestion
- * 
+ *
  * Handles loading and preprocessing of historical market data
  * for backtesting purposes. Supports multiple data sources and
  * formats with validation and error handling.
- * 
+ *
  * Requirements: 3.4
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-import { OHLCV, RegimeSnapshot, Trade } from '../types';
-import { TitanError, ErrorCode } from '../utils/ErrorHandler';
+import * as fs from "fs";
+import * as path from "path";
+import { OHLCV, RegimeSnapshot, Trade } from "../types/index.js";
+import { ErrorCode, TitanError } from "../utils/ErrorHandler.js";
 
 export interface DataSource {
-  type: 'file' | 'api' | 'database';
+  type: "file" | "api" | "database";
   path?: string;
   url?: string;
   credentials?: Record<string, string>;
@@ -36,7 +36,7 @@ export class DataLoader {
 
   constructor(config: DataLoaderConfig = {}) {
     this.config = {
-      dataDir: config.dataDir ?? path.join(process.cwd(), 'data'),
+      dataDir: config.dataDir ?? path.join(process.cwd(), "data"),
       cacheEnabled: config.cacheEnabled ?? true,
       cacheTTL: config.cacheTTL ?? 5 * 60 * 1000, // 5 minutes
       validateData: config.validateData ?? true,
@@ -45,9 +45,9 @@ export class DataLoader {
 
   /**
    * Load OHLCV data from file
-   * 
+   *
    * Supports JSON and CSV formats. Data should be sorted by timestamp.
-   * 
+   *
    * @param symbol - Trading symbol
    * @param startTime - Start timestamp (optional)
    * @param endTime - End timestamp (optional)
@@ -56,10 +56,10 @@ export class DataLoader {
   async loadOHLCVData(
     symbol: string,
     startTime?: number,
-    endTime?: number
+    endTime?: number,
   ): Promise<OHLCV[]> {
     const cacheKey = `ohlcv_${symbol}_${startTime}_${endTime}`;
-    
+
     // Check cache first
     if (this.config.cacheEnabled) {
       const cached = this.getCachedData(cacheKey);
@@ -70,14 +70,22 @@ export class DataLoader {
 
     try {
       // Try JSON format first
-      const jsonPath = path.join(this.config.dataDir, 'ohlcv', `${symbol}.json`);
+      const jsonPath = path.join(
+        this.config.dataDir,
+        "ohlcv",
+        `${symbol}.json`,
+      );
       let data: OHLCV[] = [];
 
       if (fs.existsSync(jsonPath)) {
         data = await this.loadOHLCVFromJSON(jsonPath);
       } else {
         // Try CSV format
-        const csvPath = path.join(this.config.dataDir, 'ohlcv', `${symbol}.csv`);
+        const csvPath = path.join(
+          this.config.dataDir,
+          "ohlcv",
+          `${symbol}.csv`,
+        );
         if (fs.existsSync(csvPath)) {
           data = await this.loadOHLCVFromCSV(csvPath);
         } else {
@@ -88,8 +96,10 @@ export class DataLoader {
 
       // Filter by time range if specified
       if (startTime !== undefined || endTime !== undefined) {
-        data = data.filter(candle => {
-          if (startTime !== undefined && candle.timestamp < startTime) return false;
+        data = data.filter((candle) => {
+          if (startTime !== undefined && candle.timestamp < startTime) {
+            return false;
+          }
           if (endTime !== undefined && candle.timestamp > endTime) return false;
           return true;
         });
@@ -110,14 +120,17 @@ export class DataLoader {
       throw new TitanError(
         ErrorCode.MISSING_OHLCV_DATA,
         `Failed to load OHLCV data for ${symbol}`,
-        { symbol, error: error instanceof Error ? error.message : 'Unknown error' }
+        {
+          symbol,
+          error: error instanceof Error ? error.message : "Unknown error",
+        },
       );
     }
   }
 
   /**
    * Load regime snapshots from file
-   * 
+   *
    * @param symbol - Trading symbol
    * @param startTime - Start timestamp (optional)
    * @param endTime - End timestamp (optional)
@@ -126,10 +139,10 @@ export class DataLoader {
   async loadRegimeData(
     symbol: string,
     startTime?: number,
-    endTime?: number
+    endTime?: number,
   ): Promise<RegimeSnapshot[]> {
     const cacheKey = `regime_${symbol}_${startTime}_${endTime}`;
-    
+
     // Check cache first
     if (this.config.cacheEnabled) {
       const cached = this.getCachedData(cacheKey);
@@ -139,11 +152,15 @@ export class DataLoader {
     }
 
     try {
-      const filePath = path.join(this.config.dataDir, 'regime', `${symbol}.json`);
+      const filePath = path.join(
+        this.config.dataDir,
+        "regime",
+        `${symbol}.json`,
+      );
       let data: RegimeSnapshot[] = [];
 
       if (fs.existsSync(filePath)) {
-        const fileContent = fs.readFileSync(filePath, 'utf-8');
+        const fileContent = fs.readFileSync(filePath, "utf-8");
         data = JSON.parse(fileContent);
       } else {
         // Generate synthetic regime data for testing
@@ -152,9 +169,13 @@ export class DataLoader {
 
       // Filter by time range if specified
       if (startTime !== undefined || endTime !== undefined) {
-        data = data.filter(snapshot => {
-          if (startTime !== undefined && snapshot.timestamp < startTime) return false;
-          if (endTime !== undefined && snapshot.timestamp > endTime) return false;
+        data = data.filter((snapshot) => {
+          if (startTime !== undefined && snapshot.timestamp < startTime) {
+            return false;
+          }
+          if (endTime !== undefined && snapshot.timestamp > endTime) {
+            return false;
+          }
           return true;
         });
       }
@@ -174,24 +195,27 @@ export class DataLoader {
       throw new TitanError(
         ErrorCode.MISSING_OHLCV_DATA,
         `Failed to load regime data for ${symbol}`,
-        { symbol, error: error instanceof Error ? error.message : 'Unknown error' }
+        {
+          symbol,
+          error: error instanceof Error ? error.message : "Unknown error",
+        },
       );
     }
   }
 
   /**
    * Load historical trades from file
-   * 
+   *
    * @param startTime - Start timestamp (optional)
    * @param endTime - End timestamp (optional)
    * @returns Array of historical trades
    */
   async loadTradeHistory(
     startTime?: number,
-    endTime?: number
+    endTime?: number,
   ): Promise<Trade[]> {
     const cacheKey = `trades_${startTime}_${endTime}`;
-    
+
     // Check cache first
     if (this.config.cacheEnabled) {
       const cached = this.getCachedData(cacheKey);
@@ -201,11 +225,11 @@ export class DataLoader {
     }
 
     try {
-      const filePath = path.join(this.config.dataDir, 'trades.json');
+      const filePath = path.join(this.config.dataDir, "trades.json");
       let data: Trade[] = [];
 
       if (fs.existsSync(filePath)) {
-        const fileContent = fs.readFileSync(filePath, 'utf-8');
+        const fileContent = fs.readFileSync(filePath, "utf-8");
         data = JSON.parse(fileContent);
       } else {
         // Generate synthetic trade data for testing
@@ -214,8 +238,10 @@ export class DataLoader {
 
       // Filter by time range if specified
       if (startTime !== undefined || endTime !== undefined) {
-        data = data.filter(trade => {
-          if (startTime !== undefined && trade.timestamp < startTime) return false;
+        data = data.filter((trade) => {
+          if (startTime !== undefined && trade.timestamp < startTime) {
+            return false;
+          }
           if (endTime !== undefined && trade.timestamp > endTime) return false;
           return true;
         });
@@ -236,7 +262,7 @@ export class DataLoader {
       throw new TitanError(
         ErrorCode.MISSING_OHLCV_DATA,
         `Failed to load trade history`,
-        { error: error instanceof Error ? error.message : 'Unknown error' }
+        { error: error instanceof Error ? error.message : "Unknown error" },
       );
     }
   }
@@ -262,11 +288,11 @@ export class DataLoader {
    * Load OHLCV data from JSON file
    */
   private async loadOHLCVFromJSON(filePath: string): Promise<OHLCV[]> {
-    const fileContent = fs.readFileSync(filePath, 'utf-8');
+    const fileContent = fs.readFileSync(filePath, "utf-8");
     const data = JSON.parse(fileContent);
-    
+
     if (!Array.isArray(data)) {
-      throw new Error('OHLCV data must be an array');
+      throw new Error("OHLCV data must be an array");
     }
 
     return data.map((item: any) => ({
@@ -283,16 +309,19 @@ export class DataLoader {
    * Load OHLCV data from CSV file
    */
   private async loadOHLCVFromCSV(filePath: string): Promise<OHLCV[]> {
-    const fileContent = fs.readFileSync(filePath, 'utf-8');
-    const lines = fileContent.trim().split('\n');
-    
-    // Skip header if present
-    const dataLines = lines[0].includes('timestamp') || lines[0].includes('time') 
-      ? lines.slice(1) 
-      : lines;
+    const fileContent = fs.readFileSync(filePath, "utf-8");
+    const lines = fileContent.trim().split("\n");
 
-    return dataLines.map(line => {
-      const [timestamp, open, high, low, close, volume] = line.split(',').map(Number);
+    // Skip header if present
+    const dataLines =
+      lines[0].includes("timestamp") || lines[0].includes("time")
+        ? lines.slice(1)
+        : lines;
+
+    return dataLines.map((line) => {
+      const [timestamp, open, high, low, close, volume] = line.split(",").map(
+        Number,
+      );
       return { timestamp, open, high, low, close, volume: volume || 0 };
     });
   }
@@ -303,24 +332,24 @@ export class DataLoader {
   private generateSyntheticOHLCV(
     symbol: string,
     startTime?: number,
-    endTime?: number
+    endTime?: number,
   ): OHLCV[] {
     const start = startTime || Date.now() - 30 * 24 * 60 * 60 * 1000; // 30 days ago
     const end = endTime || Date.now();
     const interval = 5 * 60 * 1000; // 5 minutes
-    
+
     const data: OHLCV[] = [];
     let price = 50000; // Starting price
-    
+
     for (let timestamp = start; timestamp <= end; timestamp += interval) {
       // Simple random walk with some volatility
       const change = (Math.random() - 0.5) * 0.02; // ±1% max change
       const newPrice = price * (1 + change);
-      
+
       const high = newPrice * (1 + Math.random() * 0.005); // Up to 0.5% higher
       const low = newPrice * (1 - Math.random() * 0.005); // Up to 0.5% lower
       const volume = Math.random() * 1000000; // Random volume
-      
+
       data.push({
         timestamp,
         open: price,
@@ -329,10 +358,10 @@ export class DataLoader {
         close: newPrice,
         volume,
       });
-      
+
       price = newPrice;
     }
-    
+
     return data;
   }
 
@@ -342,14 +371,14 @@ export class DataLoader {
   private generateSyntheticRegimeData(
     symbol: string,
     startTime?: number,
-    endTime?: number
+    endTime?: number,
   ): RegimeSnapshot[] {
     const start = startTime || Date.now() - 30 * 24 * 60 * 60 * 1000;
     const end = endTime || Date.now();
     const interval = 15 * 60 * 1000; // 15 minutes
-    
+
     const data: RegimeSnapshot[] = [];
-    
+
     for (let timestamp = start; timestamp <= end; timestamp += interval) {
       data.push({
         timestamp,
@@ -366,7 +395,7 @@ export class DataLoader {
         shannonEntropy: Math.random() * 2,
       });
     }
-    
+
     return data;
   }
 
@@ -375,41 +404,43 @@ export class DataLoader {
    */
   private generateSyntheticTrades(
     startTime?: number,
-    endTime?: number
+    endTime?: number,
   ): Trade[] {
     const start = startTime || Date.now() - 7 * 24 * 60 * 60 * 1000; // 7 days ago
     const end = endTime || Date.now();
-    
+
     const trades: Trade[] = [];
-    const trapTypes: Array<'oi_wipeout' | 'funding_spike' | 'liquidity_sweep' | 'volatility_spike'> = 
-      ['oi_wipeout', 'funding_spike', 'liquidity_sweep', 'volatility_spike'];
-    const symbols = ['BTCUSDT', 'ETHUSDT', 'ADAUSDT'];
-    
+    const trapTypes: Array<
+      "oi_wipeout" | "funding_spike" | "liquidity_sweep" | "volatility_spike"
+    > = ["oi_wipeout", "funding_spike", "liquidity_sweep", "volatility_spike"];
+    const symbols = ["BTCUSDT", "ETHUSDT", "ADAUSDT"];
+
     // Generate 50-200 trades
     const tradeCount = 50 + Math.floor(Math.random() * 150);
-    
+
     for (let i = 0; i < tradeCount; i++) {
       const timestamp = start + Math.random() * (end - start);
       const symbol = symbols[Math.floor(Math.random() * symbols.length)];
       const trapType = trapTypes[Math.floor(Math.random() * trapTypes.length)];
-      const side = Math.random() > 0.5 ? 'long' : 'short';
+      const side = Math.random() > 0.5 ? "long" : "short";
       const entryPrice = 30000 + Math.random() * 40000; // $30k-$70k range
       const leverage = 5 + Math.floor(Math.random() * 16); // 5-20x
       const quantity = 0.01 + Math.random() * 0.1; // 0.01-0.11 BTC
-      
+
       // Simulate trade outcome (60% win rate)
       const isWin = Math.random() > 0.4;
-      const priceChange = isWin 
+      const priceChange = isWin
         ? 0.01 + Math.random() * 0.04 // 1-5% gain
         : -(0.005 + Math.random() * 0.02); // 0.5-2.5% loss
-      
-      const exitPrice = side === 'long'
+
+      const exitPrice = side === "long"
         ? entryPrice * (1 + priceChange)
         : entryPrice * (1 - priceChange);
-      
-      const pnl = quantity * leverage * (side === 'long' ? exitPrice - entryPrice : entryPrice - exitPrice);
+
+      const pnl = quantity * leverage *
+        (side === "long" ? exitPrice - entryPrice : entryPrice - exitPrice);
       const pnlPercent = (pnl / (quantity * entryPrice * leverage)) * 100;
-      
+
       trades.push({
         id: `trade_${i + 1}`,
         timestamp,
@@ -425,10 +456,10 @@ export class DataLoader {
         duration: 5 * 60 * 1000 + Math.random() * 55 * 60 * 1000, // 5-60 minutes
         slippage: Math.random() * 10, // 0-10 USD slippage
         fees: quantity * entryPrice * 0.0006, // 0.06% fee
-        exitReason: isWin ? 'take_profit' : 'stop_loss',
+        exitReason: isWin ? "take_profit" : "stop_loss",
       });
     }
-    
+
     return trades.sort((a, b) => a.timestamp - b.timestamp);
   }
 
@@ -438,13 +469,13 @@ export class DataLoader {
   private getCachedData(key: string): any | null {
     const cached = this.cache.get(key);
     if (!cached) return null;
-    
+
     const now = Date.now();
     if (now - cached.timestamp > this.config.cacheTTL) {
       this.cache.delete(key);
       return null;
     }
-    
+
     return cached.data;
   }
 
@@ -464,7 +495,9 @@ export class DataLoader {
   private validateOHLCVData(data: OHLCV[]): void {
     for (const candle of data) {
       if (candle.high < candle.low) {
-        throw new Error(`Invalid OHLCV: high (${candle.high}) < low (${candle.low})`);
+        throw new Error(
+          `Invalid OHLCV: high (${candle.high}) < low (${candle.low})`,
+        );
       }
       if (candle.open < 0 || candle.close < 0) {
         throw new Error(`Invalid OHLCV: negative prices`);

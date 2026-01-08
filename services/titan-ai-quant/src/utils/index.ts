@@ -2,4 +2,4 @@
  * Utility exports for Titan AI Quant
  */
 
-export * from './ErrorHandler';
+export * from "./ErrorHandler.js";

@@ -1,3 +1,4 @@
+"use strict";
 /**
  * Load Balancer for Titan Trading System
  *
@@ -6,10 +7,15 @@
  *
  * Requirements: 10.1 - Horizontal scaling with load balancing
  */
-import { EventEmitter } from 'eventemitter3';
-import http from 'http';
-import https from 'https';
-import { URL } from 'url';
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.DEFAULT_LOAD_BALANCER_CONFIG = exports.LoadBalancer = void 0;
+const eventemitter3_1 = require("eventemitter3");
+const http_1 = __importDefault(require("http"));
+const https_1 = __importDefault(require("https"));
+const url_1 = require("url");
 // Simple color logging utility
 const colors = {
     blue: (text) => `\x1b[34m${text}\x1b[0m`,
@@ -72,7 +78,7 @@ class SessionManager {
 /**
  * Health checker for backend servers
  */
-class HealthChecker extends EventEmitter {
+class HealthChecker extends eventemitter3_1.EventEmitter {
     servers;
     config;
     healthStatus = new Map();
@@ -155,8 +161,8 @@ class HealthChecker extends EventEmitter {
      */
     makeHealthCheckRequest(url) {
         return new Promise((resolve, reject) => {
-            const urlObj = new URL(url);
-            const client = urlObj.protocol === 'https:' ? https : http;
+            const urlObj = new url_1.URL(url);
+            const client = urlObj.protocol === 'https:' ? https_1.default : http_1.default;
             const req = client.request({
                 hostname: urlObj.hostname,
                 port: urlObj.port,
@@ -203,7 +209,7 @@ class HealthChecker extends EventEmitter {
 /**
  * Load Balancer
  */
-export class LoadBalancer extends EventEmitter {
+class LoadBalancer extends eventemitter3_1.EventEmitter {
     config;
     servers = new Map();
     healthChecker;
@@ -523,10 +529,11 @@ export class LoadBalancer extends EventEmitter {
         this.removeAllListeners();
     }
 }
+exports.LoadBalancer = LoadBalancer;
 /**
  * Default load balancer configuration
  */
-export const DEFAULT_LOAD_BALANCER_CONFIG = {
+exports.DEFAULT_LOAD_BALANCER_CONFIG = {
     algorithm: 'least_connections',
     healthCheckInterval: 30000, // 30 seconds
     healthCheckTimeout: 5000, // 5 seconds

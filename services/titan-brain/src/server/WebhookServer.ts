@@ -1,31 +1,57 @@
 /**
  * WebhookServer - Fastify server for Titan Brain
  * Handles signal reception, health checks, and dashboard data
- * 
+ *
  * Requirements: 7.4, 7.5, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7
  */
 
-import Fastify, { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import cors from '@fastify/cors';
-import { createHmac, timingSafeEqual } from 'crypto';
+import Fastify, {
+  FastifyInstance,
+  FastifyReply,
+  FastifyRequest,
+} from "fastify";
+import cors from "@fastify/cors";
+import { createHmac, timingSafeEqual } from "crypto";
 import {
-  IntentSignal,
-  BrainDecision,
-  ServerConfig,
-  PhaseId,
   AllocationVector,
-} from '../types/index.js';
-import { TitanBrain } from '../engine/TitanBrain.js';
-import { SignalQueue } from './SignalQueue';
-import { DashboardService } from './DashboardService.js';
-import { getMetrics } from '../monitoring/PrometheusMetrics.js';
-import { InputValidator, SecurityAuditLogger } from '../security/InputValidator.js';
-import { HealthManager, DatabaseHealthComponent, ConfigHealthComponent, MemoryHealthComponent, RedisHealthComponent } from '../health/HealthManager.js';
-import { HMACValidator, createHMACMiddleware } from '../security/HMACValidator.js';
-import { ServiceDiscovery, ServiceDiscoveryDefaults } from '../services/ServiceDiscovery.js';
-import { Logger } from '../logging/Logger.js';
-import { MetricsCollector } from '../metrics/MetricsCollector.js';
-import { MetricsMiddleware } from '../middleware/MetricsMiddleware.js';
+  BrainDecision,
+  IntentSignal,
+  PhaseId,
+  ServerConfig,
+} from "../types/index.js";
+import { TitanBrain } from "../engine/TitanBrain.js";
+import { SignalQueue } from "./SignalQueue";
+import { DashboardService } from "./DashboardService.js";
+import { getMetrics } from "../monitoring/PrometheusMetrics.js";
+import {
+  InputValidator,
+  SecurityAuditLogger,
+} from "../security/InputValidator.js";
+import {
+  ConfigHealthComponent,
+  DatabaseHealthComponent,
+  HealthManager,
+  MemoryHealthComponent,
+  RedisHealthComponent,
+} from "../health/HealthManager.js";
+import {
+  createHMACMiddleware,
+  HMACValidator,
+} from "../security/HMACValidator.js";
+import {
+  ServiceDiscovery,
+  ServiceDiscoveryDefaults,
+} from "../services/ServiceDiscovery.js";
+import { Logger } from "../logging/Logger.js";
+import { MetricsCollector } from "../metrics/MetricsCollector.js";
+import { Action, MetricsMiddleware } from "../middleware/MetricsMiddleware.js";
+import { CacheManager } from "../cache/CacheManager.js";
+import {
+  correlationPlugin,
+  createCorrelationLogger,
+  getCorrelationId,
+} from "../middleware/CorrelationMiddleware.js";
+import { rateLimiterPlugin } from "../middleware/RateLimiter.js";
 
 /**
  * Signal request body schema
@@ -34,7 +60,7 @@ interface SignalRequestBody {
   signalId: string;
   phaseId: PhaseId;
   symbol: string;
-  side: 'BUY' | 'SELL';
+  side: "BUY" | "SELL";
   requestedSize: number;
   timestamp?: number;
   leverage?: number;
@@ -87,7 +113,7 @@ interface HmacOptions {
  */
 export interface WebhookServerConfig extends ServerConfig {
   hmac: HmacOptions;
-  logLevel: 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace';
+  logLevel: "fatal" | "error" | "warn" | "info" | "debug" | "trace";
 }
 
 /**
@@ -95,9 +121,9 @@ export interface WebhookServerConfig extends ServerConfig {
  */
 const DEFAULT_HMAC_OPTIONS: HmacOptions = {
   enabled: false,
-  secret: '',
-  headerName: 'x-signature',
-  algorithm: 'sha256',
+  secret: "",
+  headerName: "x-signature",
+  algorithm: "sha256",
 };
 
 /**
@@ -126,37 +152,41 @@ export class WebhookServer {
     serviceDiscovery?: ServiceDiscovery,
     logger?: Logger,
     cacheManager?: CacheManager,
-    metricsCollector?: MetricsCollector
+    metricsCollector?: MetricsCollector,
   ) {
     this.config = config;
     this.brain = brain;
     this.signalQueue = signalQueue ?? null;
     this.dashboardService = dashboardService ?? new DashboardService(brain);
-    
+
     // Initialize health manager with proper configuration
     this.healthManager = new HealthManager({
       checkInterval: 30000, // 30 seconds
       componentTimeout: 5000, // 5 seconds
       cacheHealthResults: true,
-      cacheTtl: 10000 // 10 seconds
+      cacheTtl: 10000, // 10 seconds
     });
-    
+
     this.hmacOptions = { ...DEFAULT_HMAC_OPTIONS, ...config.hmac };
-    this.logger = logger ?? Logger.getInstance('webhook-server');
+    this.logger = logger ?? Logger.getInstance("webhook-server");
     this.cacheManager = cacheManager ?? null;
     this.metricsCollector = metricsCollector ?? null;
-    
+
     // Initialize metrics middleware if metrics collector is available
-    this.metricsMiddleware = this.metricsCollector 
-      ? MetricsMiddleware.createFromEnvironment(this.metricsCollector, this.logger)
+    this.metricsMiddleware = this.metricsCollector
+      ? MetricsMiddleware.createFromEnvironment(
+        this.metricsCollector,
+        this.logger,
+      )
       : null;
-    
+
     // Initialize service discovery
-    this.serviceDiscovery = serviceDiscovery ?? new ServiceDiscovery(ServiceDiscoveryDefaults);
-    
+    this.serviceDiscovery = serviceDiscovery ??
+      new ServiceDiscovery(ServiceDiscoveryDefaults);
+
     // Initialize HMAC validator if enabled
-    this.hmacValidator = this.hmacOptions.enabled && this.hmacOptions.secret 
-      ? HMACValidator.fromEnvironment() 
+    this.hmacValidator = this.hmacOptions.enabled && this.hmacOptions.secret
+      ? HMACValidator.fromEnvironment()
       : null;
   }
 
@@ -165,7 +195,9 @@ export class WebhookServer {
    */
   private initializeHealthComponents(): void {
     // Register database health component
-    const databaseComponent = new DatabaseHealthComponent(this.brain.getDatabaseManager?.());
+    const databaseComponent = new DatabaseHealthComponent(
+      this.brain.getDatabaseManager(),
+    );
     this.healthManager.registerComponent(databaseComponent);
 
     // Register configuration health component
@@ -199,38 +231,46 @@ export class WebhookServer {
     // Register CORS
     await this.server.register(cors, {
       origin: this.config.corsOrigins,
-      methods: ['GET', 'POST'],
+      methods: ["GET", "POST"],
     });
 
     // Register raw body parser for HMAC validation
-    await this.server.register(require('fastify-raw-body'), {
-      field: 'rawBody',
+    await this.server.register(require("fastify-raw-body"), {
+      field: "rawBody",
       global: false,
-      encoding: 'utf8',
-      runFirst: true
+      encoding: "utf8",
+      runFirst: true,
     });
 
     // Register correlation ID middleware
     await this.server.register(correlationPlugin, {
       logger: this.logger,
       config: {
-        headerName: 'x-correlation-id',
+        headerName: "x-correlation-id",
         generateIfMissing: true,
         logRequests: true,
         logResponses: true,
-        excludePaths: ['/health', '/status', '/metrics']
-      }
+        excludePaths: ["/health", "/status", "/metrics"],
+      },
     });
 
     // Register metrics middleware if metrics collector is available
     if (this.metricsMiddleware) {
-      this.server.addHook('onRequest', this.metricsMiddleware.getRequestStartHook());
-      this.server.addHook('onResponse', this.metricsMiddleware.getResponseHook());
-      this.server.addHook('onError', this.metricsMiddleware.getErrorHook());
-      
-      this.logger.info('Metrics collection middleware enabled');
+      this.server.addHook(
+        "onRequest",
+        this.metricsMiddleware.getRequestStartHook(),
+      );
+      this.server.addHook(
+        "onResponse",
+        this.metricsMiddleware.getResponseHook(),
+      );
+      this.server.addHook("onError", this.metricsMiddleware.getErrorHook());
+
+      this.logger.info("Metrics collection middleware enabled");
     } else {
-      this.logger.warn('Metrics collection disabled - no metrics collector available');
+      this.logger.warn(
+        "Metrics collection disabled - no metrics collector available",
+      );
     }
 
     // Register rate limiting middleware if cache manager is available
@@ -239,55 +279,61 @@ export class WebhookServer {
         cacheManager: this.cacheManager,
         logger: this.logger,
         defaultConfig: {
-          windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000'),
-          maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100')
-        }
+          windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "60000"),
+          maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "100"),
+        },
       });
-      
-      this.logger.info('Rate limiting enabled with cache-based storage');
+
+      this.logger.info("Rate limiting enabled with cache-based storage");
     } else {
-      this.logger.warn('Rate limiting disabled - no cache manager available');
+      this.logger.warn("Rate limiting disabled - no cache manager available");
     }
 
     // Register HMAC middleware if enabled
     if (this.hmacValidator) {
-      this.server.addHook('preHandler', async (request, reply) => {
+      this.server.addHook("preHandler", async (request, reply) => {
         // Skip HMAC validation for health checks and metrics
-        if (request.url === '/health' || request.url === '/status' || request.url === '/metrics') {
+        if (
+          request.url === "/health" || request.url === "/status" ||
+          request.url === "/metrics"
+        ) {
           return;
         }
 
         const correlationId = getCorrelationId(request);
-        const body = (request as any).rawBody || request.body || '';
-        const result = this.hmacValidator!.validateRequest(body, request.headers);
-        
+        const body = (request as any).rawBody || request.body || "";
+        const result = this.hmacValidator!.validateRequest(
+          body,
+          request.headers,
+        );
+
         if (!result.valid) {
           this.logger.logSecurityEvent(
-            'HMAC validation failed',
-            'high',
+            "HMAC validation failed",
+            "high",
             correlationId,
             {
               ip: request.ip,
               endpoint: request.url,
               error: result.error,
-              userAgent: request.headers['user-agent']
-            }
+              userAgent: request.headers["user-agent"],
+            },
           );
 
           reply.status(401).send({
-            error: 'Unauthorized',
+            error: "Unauthorized",
             message: result.error,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
           });
           return;
         }
 
         // Add validation result to request for logging
         (request as any).hmacValidation = result;
-        
-        this.logger.debug('HMAC validation successful', correlationId, {
+
+        this.logger.debug("HMAC validation successful", correlationId, {
           ip: request.ip,
-          endpoint: request.url
+          endpoint: request.url,
         });
       });
     }
@@ -313,13 +359,21 @@ export class WebhookServer {
       port: this.config.port,
       hmacEnabled: !!this.hmacValidator,
       rateLimitingEnabled: !!this.cacheManager,
-      servicesRegistered: this.serviceDiscovery.getAllServiceStatuses().length
+      servicesRegistered: this.serviceDiscovery.getAllServiceStatuses().length,
     });
 
-    console.log(`🚀 Webhook server listening on ${this.config.host}:${this.config.port}`);
-    console.log(`🔐 HMAC validation: ${this.hmacValidator ? 'enabled' : 'disabled'}`);
-    console.log(`⚡ Rate limiting: ${this.cacheManager ? 'enabled' : 'disabled'}`);
-    console.log(`🔍 Service discovery: ${this.serviceDiscovery.getAllServiceStatuses().length} services registered`);
+    console.log(
+      `🚀 Webhook server listening on ${this.config.host}:${this.config.port}`,
+    );
+    console.log(
+      `🔐 HMAC validation: ${this.hmacValidator ? "enabled" : "disabled"}`,
+    );
+    console.log(
+      `⚡ Rate limiting: ${this.cacheManager ? "enabled" : "disabled"}`,
+    );
+    console.log(
+      `🔍 Service discovery: ${this.serviceDiscovery.getAllServiceStatuses().length} services registered`,
+    );
   }
 
   /**
@@ -328,15 +382,15 @@ export class WebhookServer {
   async stop(): Promise<void> {
     // Stop service discovery
     this.serviceDiscovery.stopHealthChecking();
-    
+
     // Stop health manager
     this.healthManager.shutdown();
-    
+
     if (this.server) {
       await this.server.close();
       this.server = null;
-      this.logger.info('Webhook server stopped');
-      console.log('🛑 Webhook server stopped');
+      this.logger.info("Webhook server stopped");
+      console.log("🛑 Webhook server stopped");
     }
   }
 
@@ -354,70 +408,106 @@ export class WebhookServer {
     if (!this.server) return;
 
     // Health check endpoint
-    this.server.get('/status', this.handleStatus.bind(this));
-    this.server.get('/health', this.handleStatus.bind(this));
+    this.server.get("/status", this.handleStatus.bind(this));
+    this.server.get("/health", this.handleStatus.bind(this));
 
     // Dashboard data endpoint
-    this.server.get('/dashboard', this.handleDashboard.bind(this));
+    this.server.get("/dashboard", this.handleDashboard.bind(this));
 
     // Enhanced dashboard data endpoint
-    this.server.get('/dashboard/extended', this.handleExtendedDashboard.bind(this));
+    this.server.get(
+      "/dashboard/extended",
+      this.handleExtendedDashboard.bind(this),
+    );
 
     // Signal endpoint
-    this.server.post('/signal', this.handleSignal.bind(this));
+    this.server.post("/signal", this.handleSignal.bind(this));
 
     // Export dashboard JSON
-    this.server.get('/dashboard/export', this.handleDashboardExport.bind(this));
+    this.server.get("/dashboard/export", this.handleDashboardExport.bind(this));
 
     // Export extended dashboard JSON
-    this.server.get('/dashboard/export/extended', this.handleExtendedDashboardExport.bind(this));
+    this.server.get(
+      "/dashboard/export/extended",
+      this.handleExtendedDashboardExport.bind(this),
+    );
 
     // Circuit breaker status
-    this.server.get('/breaker', this.handleBreakerStatus.bind(this));
+    this.server.get("/breaker", this.handleBreakerStatus.bind(this));
 
     // Circuit breaker reset (requires operator ID)
-    this.server.post('/breaker/reset', this.handleBreakerReset.bind(this));
+    this.server.post("/breaker/reset", this.handleBreakerReset.bind(this));
 
     // Service discovery status
-    this.server.get('/services', this.handleServicesStatus.bind(this));
+    this.server.get("/services", this.handleServicesStatus.bind(this));
 
     // Service health check
-    this.server.get('/services/:serviceName/health', this.handleServiceHealth.bind(this));
+    this.server.get(
+      "/services/:serviceName/health",
+      this.handleServiceHealth.bind(this),
+    );
 
     // Phase approval rates
-    this.server.get('/phases/approval-rates', this.handleApprovalRates.bind(this));
+    this.server.get(
+      "/phases/approval-rates",
+      this.handleApprovalRates.bind(this),
+    );
 
     // Recent decisions
-    this.server.get('/decisions', this.handleRecentDecisions.bind(this));
+    this.server.get("/decisions", this.handleRecentDecisions.bind(this));
 
     // Treasury status
-    this.server.get('/treasury', this.handleTreasuryStatus.bind(this));
+    this.server.get("/treasury", this.handleTreasuryStatus.bind(this));
 
     // Allocation vector
-    this.server.get('/allocation', this.handleAllocation.bind(this));
+    this.server.get("/allocation", this.handleAllocation.bind(this));
 
     // Manual override endpoints
-    this.server.post('/admin/override', this.handleCreateOverride.bind(this));
-    this.server.delete('/admin/override', this.handleDeactivateOverride.bind(this));
-    this.server.get('/admin/override', this.handleGetOverride.bind(this));
-    this.server.get('/admin/override/history', this.handleOverrideHistory.bind(this));
-    this.server.post('/admin/operator', this.handleCreateOperator.bind(this));
+    this.server.post("/admin/override", this.handleCreateOverride.bind(this));
+    this.server.delete(
+      "/admin/override",
+      this.handleDeactivateOverride.bind(this),
+    );
+    this.server.get("/admin/override", this.handleGetOverride.bind(this));
+    this.server.get(
+      "/admin/override/history",
+      this.handleOverrideHistory.bind(this),
+    );
+    this.server.post("/admin/operator", this.handleCreateOperator.bind(this));
 
     // Phase-specific webhook endpoints
     // Requirements: 7.4, 7.6 - Set up webhooks from Phase services
-    this.server.post('/webhook/phase1', this.handlePhaseSignal.bind(this, 'phase1'));
-    this.server.post('/webhook/phase2', this.handlePhaseSignal.bind(this, 'phase2'));
-    this.server.post('/webhook/phase3', this.handlePhaseSignal.bind(this, 'phase3'));
-    this.server.post('/webhook/scavenger', this.handlePhaseSignal.bind(this, 'phase1'));
-    this.server.post('/webhook/hunter', this.handlePhaseSignal.bind(this, 'phase2'));
-    this.server.post('/webhook/sentinel', this.handlePhaseSignal.bind(this, 'phase3'));
+    this.server.post(
+      "/webhook/phase1",
+      this.handlePhaseSignal.bind(this, "phase1"),
+    );
+    this.server.post(
+      "/webhook/phase2",
+      this.handlePhaseSignal.bind(this, "phase2"),
+    );
+    this.server.post(
+      "/webhook/phase3",
+      this.handlePhaseSignal.bind(this, "phase3"),
+    );
+    this.server.post(
+      "/webhook/scavenger",
+      this.handlePhaseSignal.bind(this, "phase1"),
+    );
+    this.server.post(
+      "/webhook/hunter",
+      this.handlePhaseSignal.bind(this, "phase2"),
+    );
+    this.server.post(
+      "/webhook/sentinel",
+      this.handlePhaseSignal.bind(this, "phase3"),
+    );
 
     // Phase notification endpoints (for phases to register/update)
-    this.server.post('/phases/register', this.handlePhaseRegister.bind(this));
-    this.server.get('/phases/status', this.handlePhasesStatus.bind(this));
+    this.server.post("/phases/register", this.handlePhaseRegister.bind(this));
+    this.server.get("/phases/status", this.handlePhasesStatus.bind(this));
 
     // Prometheus metrics endpoint
-    this.server.get('/metrics', this.handleMetrics.bind(this));
+    this.server.get("/metrics", this.handleMetrics.bind(this));
   }
 
   /**
@@ -425,7 +515,7 @@ export class WebhookServer {
    */
   markStartupComplete(): void {
     // The new HealthManager doesn't have this method, but we can emit an event
-    this.healthManager.emit('startup:complete');
+    this.healthManager.emit("startup:complete");
   }
 
   /**
@@ -434,19 +524,19 @@ export class WebhookServer {
    */
   private async handleStatus(
     _request: FastifyRequest,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<void> {
     try {
       const healthStatus = await this.healthManager.checkHealth();
-      
+
       // Determine HTTP status code based on health
       let statusCode = 200;
-      if (healthStatus.status === 'unhealthy') {
+      if (healthStatus.status === "unhealthy") {
         statusCode = 503; // Service Unavailable
-      } else if (healthStatus.status === 'degraded') {
+      } else if (healthStatus.status === "degraded") {
         statusCode = 200; // OK but degraded
       }
-      
+
       reply.status(statusCode).send({
         status: healthStatus.status,
         timestamp: healthStatus.timestamp,
@@ -455,15 +545,17 @@ export class WebhookServer {
         version: healthStatus.version,
         components: healthStatus.components,
         // Legacy fields for backward compatibility
-        healthy: healthStatus.status === 'healthy',
+        healthy: healthStatus.status === "healthy",
         equity: this.brain.getEquity(),
-        circuitBreaker: this.brain.getCircuitBreakerStatus().active ? 'active' : 'inactive',
+        circuitBreaker: this.brain.getCircuitBreakerStatus().active
+          ? "active"
+          : "inactive",
       });
     } catch (error) {
       reply.status(500).send({
-        status: 'error',
+        status: "error",
         timestamp: new Date().toISOString(),
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         healthy: false,
       });
     }
@@ -475,14 +567,14 @@ export class WebhookServer {
    */
   private async handleDashboard(
     _request: FastifyRequest,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<void> {
     try {
       const dashboardData = await this.brain.getDashboardData();
       reply.send(dashboardData);
     } catch (error) {
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
@@ -494,40 +586,42 @@ export class WebhookServer {
    */
   private async handleSignal(
     request: FastifyRequest<{ Body: SignalRequestBody }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<void> {
     const startTime = Date.now();
     const correlationId = getCorrelationId(request);
     const logger = createCorrelationLogger(this.logger, request);
 
     try {
-      logger.info('Signal request received', {
+      logger.info("Signal request received", {
         ip: request.ip,
-        userAgent: request.headers['user-agent'],
-        bodySize: JSON.stringify(request.body).length
+        userAgent: request.headers["user-agent"],
+        bodySize: JSON.stringify(request.body).length,
       });
 
       // HMAC validation is now handled by middleware
 
       // Validate and sanitize request body
-      const validationResult = InputValidator.validateSignalRequest(request.body);
+      const validationResult = InputValidator.validateSignalRequest(
+        request.body,
+      );
       if (!validationResult.isValid) {
         // Log security audit event
-        const clientIp = request.ip || 'unknown';
+        const clientIp = request.ip || "unknown";
         SecurityAuditLogger.logValidationFailure(
           clientIp,
-          '/signal',
+          "/signal",
           validationResult.errors,
-          request.body
+          request.body,
         );
-        
-        logger.warn('Signal validation failed', {
+
+        logger.warn("Signal validation failed", {
           errors: validationResult.errors,
-          clientIp
+          clientIp,
         });
-        
+
         reply.status(400).send({
-          error: 'Validation failed',
+          error: "Validation failed",
           details: validationResult.errors,
           timestamp: Date.now(),
         });
@@ -547,12 +641,12 @@ export class WebhookServer {
         leverage: body.leverage,
       };
 
-      logger.info('Processing signal', {
+      logger.info("Processing signal", {
         signalId: signal.signalId,
         phaseId: signal.phaseId,
         symbol: signal.symbol,
         side: signal.side,
-        requestedSize: signal.requestedSize
+        requestedSize: signal.requestedSize,
       });
 
       let decision: BrainDecision;
@@ -562,12 +656,12 @@ export class WebhookServer {
         // Check idempotency
         const isDuplicate = await this.signalQueue.isDuplicate(signal.signalId);
         if (isDuplicate) {
-          logger.warn('Duplicate signal detected', {
-            signalId: signal.signalId
+          logger.warn("Duplicate signal detected", {
+            signalId: signal.signalId,
           });
 
           reply.status(409).send({
-            error: 'Duplicate signal ID',
+            error: "Duplicate signal ID",
             signalId: signal.signalId,
             timestamp: Date.now(),
           });
@@ -576,32 +670,32 @@ export class WebhookServer {
 
         // Enqueue signal
         await this.signalQueue.enqueue(signal);
-        logger.debug('Signal enqueued');
+        logger.debug("Signal enqueued");
 
         // Process from queue
         const processedSignal = await this.signalQueue.dequeue();
         if (processedSignal) {
           decision = await this.brain.processSignal(processedSignal);
           await this.signalQueue.markProcessed(processedSignal.signalId);
-          logger.debug('Signal processed from queue');
+          logger.debug("Signal processed from queue");
         } else {
           // Should not happen, but handle gracefully
           decision = await this.brain.processSignal(signal);
-          logger.warn('Signal processed directly (queue empty)');
+          logger.warn("Signal processed directly (queue empty)");
         }
       } else {
         // Process directly
         decision = await this.brain.processSignal(signal);
-        logger.debug('Signal processed directly');
+        logger.debug("Signal processed directly");
       }
 
       const processingTime = Date.now() - startTime;
 
-      logger.info('Signal processing completed', {
+      logger.info("Signal processing completed", {
         signalId: signal.signalId,
         approved: decision.approved,
         processingTime,
-        reason: decision.reason
+        reason: decision.reason,
       });
 
       reply.send({
@@ -610,13 +704,17 @@ export class WebhookServer {
       });
     } catch (error) {
       const processingTime = Date.now() - startTime;
-      
-      logger.error('Signal processing failed', error instanceof Error ? error : new Error(String(error)), {
-        processingTime
-      });
+
+      logger.error(
+        "Signal processing failed",
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          processingTime,
+        },
+      );
 
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
@@ -628,14 +726,14 @@ export class WebhookServer {
    */
   private async handleExtendedDashboard(
     _request: FastifyRequest,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<void> {
     try {
       const extendedData = await this.dashboardService.getDashboardData();
       reply.send(extendedData);
     } catch (error) {
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
@@ -647,17 +745,20 @@ export class WebhookServer {
    */
   private async handleDashboardExport(
     _request: FastifyRequest,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<void> {
     try {
       const jsonData = await this.brain.exportDashboardJSON();
       reply
-        .header('Content-Type', 'application/json')
-        .header('Content-Disposition', `attachment; filename="titan-brain-dashboard-${Date.now()}.json"`)
+        .header("Content-Type", "application/json")
+        .header(
+          "Content-Disposition",
+          `attachment; filename="titan-brain-dashboard-${Date.now()}.json"`,
+        )
         .send(jsonData);
     } catch (error) {
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
@@ -669,18 +770,21 @@ export class WebhookServer {
    */
   private async handleExtendedDashboardExport(
     _request: FastifyRequest,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<void> {
     try {
       const jsonData = await this.dashboardService.exportDashboardJSON();
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
       reply
-        .header('Content-Type', 'application/json')
-        .header('Content-Disposition', `attachment; filename="titan-brain-extended-dashboard-${timestamp}.json"`)
+        .header("Content-Type", "application/json")
+        .header(
+          "Content-Disposition",
+          `attachment; filename="titan-brain-extended-dashboard-${timestamp}.json"`,
+        )
         .send(jsonData);
     } catch (error) {
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
@@ -691,14 +795,14 @@ export class WebhookServer {
    */
   private async handleBreakerStatus(
     _request: FastifyRequest,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<void> {
     try {
       const status = this.brain.getCircuitBreakerStatus();
       reply.send(status);
     } catch (error) {
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
@@ -710,14 +814,14 @@ export class WebhookServer {
    */
   private async handleBreakerReset(
     request: FastifyRequest<{ Body: { operatorId: string } }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<void> {
     try {
       const { operatorId } = request.body;
 
-      if (!operatorId || typeof operatorId !== 'string') {
+      if (!operatorId || typeof operatorId !== "string") {
         reply.status(400).send({
-          error: 'operatorId is required',
+          error: "operatorId is required",
           timestamp: Date.now(),
         });
         return;
@@ -727,13 +831,13 @@ export class WebhookServer {
 
       reply.send({
         success: true,
-        message: 'Circuit breaker reset',
+        message: "Circuit breaker reset",
         operatorId,
         timestamp: Date.now(),
       });
     } catch (error) {
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
@@ -745,7 +849,7 @@ export class WebhookServer {
    */
   private async handleApprovalRates(
     _request: FastifyRequest,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<void> {
     try {
       const rates = this.brain.getAllApprovalRates();
@@ -755,7 +859,7 @@ export class WebhookServer {
       });
     } catch (error) {
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
@@ -767,10 +871,10 @@ export class WebhookServer {
    */
   private async handleRecentDecisions(
     request: FastifyRequest<{ Querystring: { limit?: string } }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<void> {
     try {
-      const limit = parseInt(request.query.limit ?? '20', 10);
+      const limit = parseInt(request.query.limit ?? "20", 10);
       const decisions = this.brain.getRecentDecisions(Math.min(limit, 100));
       reply.send({
         decisions,
@@ -779,7 +883,7 @@ export class WebhookServer {
       });
     } catch (error) {
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
@@ -791,7 +895,7 @@ export class WebhookServer {
    */
   private async handleTreasuryStatus(
     _request: FastifyRequest,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<void> {
     try {
       const treasury = await this.brain.getTreasuryStatus();
@@ -808,7 +912,7 @@ export class WebhookServer {
       });
     } catch (error) {
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
@@ -820,7 +924,7 @@ export class WebhookServer {
    */
   private async handleAllocation(
     _request: FastifyRequest,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<void> {
     try {
       const allocation = this.brain.getAllocation();
@@ -838,7 +942,7 @@ export class WebhookServer {
       });
     } catch (error) {
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
@@ -849,35 +953,35 @@ export class WebhookServer {
    */
   private async handleServicesStatus(
     _request: FastifyRequest,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<void> {
     try {
       const healthStatus = this.serviceDiscovery.getHealthStatus();
-      
+
       reply.send({
-        status: 'success',
+        status: "success",
         data: {
           healthy: healthStatus.healthy,
           totalServices: healthStatus.totalServices,
           healthyServices: healthStatus.healthyServices,
           requiredServicesHealthy: healthStatus.requiredServicesHealthy,
-          services: healthStatus.services.map(service => ({
+          services: healthStatus.services.map((service) => ({
             name: service.name,
             url: service.url,
             healthy: service.healthy,
             lastCheck: service.lastCheck,
             responseTime: service.responseTime,
             error: service.error,
-            consecutiveFailures: service.consecutiveFailures
-          }))
+            consecutiveFailures: service.consecutiveFailures,
+          })),
         },
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     } catch (error) {
       reply.status(500).send({
-        error: 'Failed to get services status',
+        error: "Failed to get services status",
         message: error instanceof Error ? error.message : String(error),
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }
   }
@@ -887,24 +991,26 @@ export class WebhookServer {
    */
   private async handleServiceHealth(
     request: FastifyRequest<{ Params: { serviceName: string } }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<void> {
     try {
       const { serviceName } = request.params;
-      const isHealthy = await this.serviceDiscovery.checkServiceHealth(serviceName);
+      const isHealthy = await this.serviceDiscovery.checkServiceHealth(
+        serviceName,
+      );
       const status = this.serviceDiscovery.getServiceStatus(serviceName);
-      
+
       if (!status) {
         reply.status(404).send({
-          error: 'Service not found',
+          error: "Service not found",
           serviceName,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
         return;
       }
 
       reply.send({
-        status: 'success',
+        status: "success",
         data: {
           serviceName: status.name,
           url: status.url,
@@ -913,15 +1019,15 @@ export class WebhookServer {
           responseTime: status.responseTime,
           error: status.error,
           consecutiveFailures: status.consecutiveFailures,
-          justChecked: isHealthy
+          justChecked: isHealthy,
         },
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     } catch (error) {
       reply.status(500).send({
-        error: 'Failed to check service health',
+        error: "Failed to check service health",
         message: error instanceof Error ? error.message : String(error),
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }
   }
@@ -930,9 +1036,10 @@ export class WebhookServer {
    * Verify HMAC signature on request with enhanced timing attack protection
    */
   private verifyHmacSignature(request: FastifyRequest): boolean {
-    const signature = request.headers[this.hmacOptions.headerName.toLowerCase()];
-    
-    if (!signature || typeof signature !== 'string') {
+    const signature =
+      request.headers[this.hmacOptions.headerName.toLowerCase()];
+
+    if (!signature || typeof signature !== "string") {
       // Add constant-time delay to prevent timing attacks
       this.constantTimeDelay();
       return false;
@@ -945,9 +1052,12 @@ export class WebhookServer {
     }
 
     const body = JSON.stringify(request.body);
-    const expectedSignature = createHmac(this.hmacOptions.algorithm, this.hmacOptions.secret)
+    const expectedSignature = createHmac(
+      this.hmacOptions.algorithm,
+      this.hmacOptions.secret,
+    )
       .update(body)
-      .digest('hex');
+      .digest("hex");
 
     // Ensure both signatures are the same length to prevent length-based timing attacks
     if (signature.length !== expectedSignature.length) {
@@ -957,13 +1067,15 @@ export class WebhookServer {
 
     // Use timing-safe comparison to prevent timing attacks
     try {
-      const signatureBuffer = Buffer.from(signature, 'hex');
-      const expectedBuffer = Buffer.from(expectedSignature, 'hex');
-      
+      const signatureBuffer = Buffer.from(signature, "hex");
+      const expectedBuffer = Buffer.from(expectedSignature, "hex");
+
       return timingSafeEqual(signatureBuffer, expectedBuffer);
     } catch (error) {
       // Log security event without exposing details
-      console.warn('HMAC signature verification failed due to buffer conversion error');
+      console.warn(
+        "HMAC signature verification failed due to buffer conversion error",
+      );
       this.constantTimeDelay();
       return false;
     }
@@ -975,34 +1087,36 @@ export class WebhookServer {
    */
   private constantTimeDelay(): void {
     // Perform a dummy HMAC calculation to maintain constant time
-    const dummyData = 'dummy_data_for_timing_consistency';
+    const dummyData = "dummy_data_for_timing_consistency";
     createHmac(this.hmacOptions.algorithm, this.hmacOptions.secret)
       .update(dummyData)
-      .digest('hex');
+      .digest("hex");
   }
 
   /**
    * Validate signal request body
    */
   private validateSignalBody(body: SignalRequestBody): string | null {
-    if (!body.signalId || typeof body.signalId !== 'string') {
-      return 'signalId is required and must be a string';
+    if (!body.signalId || typeof body.signalId !== "string") {
+      return "signalId is required and must be a string";
     }
 
-    if (!body.phaseId || !['phase1', 'phase2', 'phase3'].includes(body.phaseId)) {
-      return 'phaseId must be one of: phase1, phase2, phase3';
+    if (
+      !body.phaseId || !["phase1", "phase2", "phase3"].includes(body.phaseId)
+    ) {
+      return "phaseId must be one of: phase1, phase2, phase3";
     }
 
-    if (!body.symbol || typeof body.symbol !== 'string') {
-      return 'symbol is required and must be a string';
+    if (!body.symbol || typeof body.symbol !== "string") {
+      return "symbol is required and must be a string";
     }
 
-    if (!body.side || !['BUY', 'SELL'].includes(body.side)) {
-      return 'side must be one of: BUY, SELL';
+    if (!body.side || !["BUY", "SELL"].includes(body.side)) {
+      return "side must be one of: BUY, SELL";
     }
 
-    if (typeof body.requestedSize !== 'number' || body.requestedSize <= 0) {
-      return 'requestedSize must be a positive number';
+    if (typeof body.requestedSize !== "number" || body.requestedSize <= 0) {
+      return "requestedSize must be a positive number";
     }
 
     return null;
@@ -1014,7 +1128,7 @@ export class WebhookServer {
    */
   private async handleCreateOverride(
     request: FastifyRequest<{ Body: OverrideRequestBody }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<void> {
     try {
       const body = request.body;
@@ -1043,13 +1157,13 @@ export class WebhookServer {
         body.password,
         allocation,
         body.reason,
-        body.durationHours
+        body.durationHours,
       );
 
       if (success) {
         reply.send({
           success: true,
-          message: 'Manual override created successfully',
+          message: "Manual override created successfully",
           allocation,
           operatorId: body.operatorId,
           reason: body.reason,
@@ -1057,13 +1171,14 @@ export class WebhookServer {
         });
       } else {
         reply.status(401).send({
-          error: 'Failed to create override - authentication failed or override already active',
+          error:
+            "Failed to create override - authentication failed or override already active",
           timestamp: Date.now(),
         });
       }
     } catch (error) {
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
@@ -1074,14 +1189,14 @@ export class WebhookServer {
    */
   private async handleDeactivateOverride(
     request: FastifyRequest<{ Body: DeactivateOverrideRequestBody }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<void> {
     try {
       const body = request.body;
 
       if (!body.operatorId || !body.password) {
         reply.status(400).send({
-          error: 'operatorId and password are required',
+          error: "operatorId and password are required",
           timestamp: Date.now(),
         });
         return;
@@ -1089,25 +1204,26 @@ export class WebhookServer {
 
       const success = await this.brain.deactivateManualOverride(
         body.operatorId,
-        body.password
+        body.password,
       );
 
       if (success) {
         reply.send({
           success: true,
-          message: 'Manual override deactivated successfully',
+          message: "Manual override deactivated successfully",
           operatorId: body.operatorId,
           timestamp: Date.now(),
         });
       } else {
         reply.status(401).send({
-          error: 'Failed to deactivate override - authentication failed or no active override',
+          error:
+            "Failed to deactivate override - authentication failed or no active override",
           timestamp: Date.now(),
         });
       }
     } catch (error) {
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
@@ -1118,7 +1234,7 @@ export class WebhookServer {
    */
   private async handleGetOverride(
     _request: FastifyRequest,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<void> {
     try {
       const override = this.brain.getCurrentManualOverride();
@@ -1131,7 +1247,7 @@ export class WebhookServer {
       });
     } catch (error) {
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
@@ -1141,16 +1257,18 @@ export class WebhookServer {
    * Handle GET /admin/override/history - Get manual override history
    */
   private async handleOverrideHistory(
-    request: FastifyRequest<{ Querystring: { operatorId?: string; limit?: string } }>,
-    reply: FastifyReply
+    request: FastifyRequest<
+      { Querystring: { operatorId?: string; limit?: string } }
+    >,
+    reply: FastifyReply,
   ): Promise<void> {
     try {
       const operatorId = request.query.operatorId;
-      const limit = parseInt(request.query.limit ?? '50', 10);
+      const limit = parseInt(request.query.limit ?? "50", 10);
 
       const history = await this.brain.getManualOverrideHistory(
         operatorId,
-        Math.min(limit, 100)
+        Math.min(limit, 100),
       );
 
       reply.send({
@@ -1160,7 +1278,7 @@ export class WebhookServer {
       });
     } catch (error) {
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
@@ -1171,15 +1289,17 @@ export class WebhookServer {
    */
   private async handleCreateOperator(
     request: FastifyRequest<{ Body: CreateOperatorRequestBody }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<void> {
     try {
       const body = request.body;
 
       // Validate request body
-      if (!body.operatorId || !body.password || !Array.isArray(body.permissions)) {
+      if (
+        !body.operatorId || !body.password || !Array.isArray(body.permissions)
+      ) {
         reply.status(400).send({
-          error: 'operatorId, password, and permissions array are required',
+          error: "operatorId, password, and permissions array are required",
           timestamp: Date.now(),
         });
         return;
@@ -1188,26 +1308,26 @@ export class WebhookServer {
       const success = await this.brain.createOperator(
         body.operatorId,
         body.password,
-        body.permissions
+        body.permissions,
       );
 
       if (success) {
         reply.send({
           success: true,
-          message: 'Operator created successfully',
+          message: "Operator created successfully",
           operatorId: body.operatorId,
           permissions: body.permissions,
           timestamp: Date.now(),
         });
       } else {
         reply.status(400).send({
-          error: 'Failed to create operator - operator may already exist',
+          error: "Failed to create operator - operator may already exist",
           timestamp: Date.now(),
         });
       }
     } catch (error) {
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
@@ -1217,22 +1337,24 @@ export class WebhookServer {
    * Validate override request body
    */
   private validateOverrideBody(body: OverrideRequestBody): string | null {
-    if (!body.operatorId || typeof body.operatorId !== 'string') {
-      return 'operatorId is required and must be a string';
+    if (!body.operatorId || typeof body.operatorId !== "string") {
+      return "operatorId is required and must be a string";
     }
 
-    if (!body.password || typeof body.password !== 'string') {
-      return 'password is required and must be a string';
+    if (!body.password || typeof body.password !== "string") {
+      return "password is required and must be a string";
     }
 
-    if (!body.allocation || typeof body.allocation !== 'object') {
-      return 'allocation is required and must be an object';
+    if (!body.allocation || typeof body.allocation !== "object") {
+      return "allocation is required and must be an object";
     }
 
-    if (typeof body.allocation.w1 !== 'number' || 
-        typeof body.allocation.w2 !== 'number' || 
-        typeof body.allocation.w3 !== 'number') {
-      return 'allocation.w1, allocation.w2, and allocation.w3 must be numbers';
+    if (
+      typeof body.allocation.w1 !== "number" ||
+      typeof body.allocation.w2 !== "number" ||
+      typeof body.allocation.w3 !== "number"
+    ) {
+      return "allocation.w1, allocation.w2, and allocation.w3 must be numbers";
     }
 
     // Validate allocation weights sum to 1.0
@@ -1242,17 +1364,21 @@ export class WebhookServer {
     }
 
     // Validate weights are non-negative
-    if (body.allocation.w1 < 0 || body.allocation.w2 < 0 || body.allocation.w3 < 0) {
-      return 'allocation weights must be non-negative';
+    if (
+      body.allocation.w1 < 0 || body.allocation.w2 < 0 || body.allocation.w3 < 0
+    ) {
+      return "allocation weights must be non-negative";
     }
 
-    if (!body.reason || typeof body.reason !== 'string') {
-      return 'reason is required and must be a string';
+    if (!body.reason || typeof body.reason !== "string") {
+      return "reason is required and must be a string";
     }
 
-    if (body.durationHours !== undefined && 
-        (typeof body.durationHours !== 'number' || body.durationHours <= 0)) {
-      return 'durationHours must be a positive number if provided';
+    if (
+      body.durationHours !== undefined &&
+      (typeof body.durationHours !== "number" || body.durationHours <= 0)
+    ) {
+      return "durationHours must be a positive number if provided";
     }
 
     return null;
@@ -1284,7 +1410,7 @@ export class WebhookServer {
   private async handlePhaseSignal(
     phaseId: PhaseId,
     request: FastifyRequest<{ Body: RawPhaseSignalBody }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<void> {
     const startTime = Date.now();
 
@@ -1294,7 +1420,7 @@ export class WebhookServer {
         const isValid = this.verifyHmacSignature(request);
         if (!isValid) {
           reply.status(401).send({
-            error: 'Invalid signature',
+            error: "Invalid signature",
             timestamp: Date.now(),
           });
           return;
@@ -1306,7 +1432,7 @@ export class WebhookServer {
       // Validate required fields
       if (!body.signal_id) {
         reply.status(400).send({
-          error: 'signal_id is required',
+          error: "signal_id is required",
           timestamp: Date.now(),
         });
         return;
@@ -1314,15 +1440,15 @@ export class WebhookServer {
 
       if (!body.symbol) {
         reply.status(400).send({
-          error: 'symbol is required',
+          error: "symbol is required",
           timestamp: Date.now(),
         });
         return;
       }
 
-      if (!body.direction || !['LONG', 'SHORT'].includes(body.direction)) {
+      if (!body.direction || !["LONG", "SHORT"].includes(body.direction)) {
         reply.status(400).send({
-          error: 'direction must be LONG or SHORT',
+          error: "direction must be LONG or SHORT",
           timestamp: Date.now(),
         });
         return;
@@ -1333,7 +1459,7 @@ export class WebhookServer {
         signalId: body.signal_id,
         phaseId,
         symbol: body.symbol,
-        side: body.direction === 'LONG' ? 'BUY' : 'SELL',
+        side: body.direction === "LONG" ? "BUY" : "SELL",
         requestedSize: body.size || 0,
         timestamp: body.timestamp || Date.now(),
         leverage: body.leverage,
@@ -1347,7 +1473,7 @@ export class WebhookServer {
         const isDuplicate = await this.signalQueue.isDuplicate(signal.signalId);
         if (isDuplicate) {
           reply.status(409).send({
-            error: 'Duplicate signal ID',
+            error: "Duplicate signal ID",
             signalId: signal.signalId,
             timestamp: Date.now(),
           });
@@ -1378,7 +1504,7 @@ export class WebhookServer {
       });
     } catch (error) {
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
@@ -1390,14 +1516,16 @@ export class WebhookServer {
    */
   private async handlePhaseRegister(
     request: FastifyRequest<{ Body: PhaseRegisterBody }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<void> {
     try {
       const body = request.body;
 
-      if (!body.phaseId || !['phase1', 'phase2', 'phase3'].includes(body.phaseId)) {
+      if (
+        !body.phaseId || !["phase1", "phase2", "phase3"].includes(body.phaseId)
+      ) {
         reply.status(400).send({
-          error: 'phaseId must be one of: phase1, phase2, phase3',
+          error: "phaseId must be one of: phase1, phase2, phase3",
           timestamp: Date.now(),
         });
         return;
@@ -1405,14 +1533,16 @@ export class WebhookServer {
 
       if (!body.webhookUrl) {
         reply.status(400).send({
-          error: 'webhookUrl is required',
+          error: "webhookUrl is required",
           timestamp: Date.now(),
         });
         return;
       }
 
       // Store the webhook URL (in a real implementation, this would be persisted)
-      console.log(`📝 Phase ${body.phaseId} registered webhook: ${body.webhookUrl}`);
+      console.log(
+        `📝 Phase ${body.phaseId} registered webhook: ${body.webhookUrl}`,
+      );
 
       reply.send({
         success: true,
@@ -1423,7 +1553,7 @@ export class WebhookServer {
       });
     } catch (error) {
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
@@ -1435,7 +1565,7 @@ export class WebhookServer {
    */
   private async handlePhasesStatus(
     _request: FastifyRequest,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<void> {
     try {
       const approvalRates = this.brain.getAllApprovalRates();
@@ -1445,25 +1575,25 @@ export class WebhookServer {
       reply.send({
         phases: {
           phase1: {
-            name: 'Scavenger',
+            name: "Scavenger",
             allocation: allocation.w1,
             equity: equity * allocation.w1,
             approvalRate: approvalRates.phase1,
-            status: allocation.w1 > 0 ? 'active' : 'inactive',
+            status: allocation.w1 > 0 ? "active" : "inactive",
           },
           phase2: {
-            name: 'Hunter',
+            name: "Hunter",
             allocation: allocation.w2,
             equity: equity * allocation.w2,
             approvalRate: approvalRates.phase2,
-            status: allocation.w2 > 0 ? 'active' : 'inactive',
+            status: allocation.w2 > 0 ? "active" : "inactive",
           },
           phase3: {
-            name: 'Sentinel',
+            name: "Sentinel",
             allocation: allocation.w3,
             equity: equity * allocation.w3,
             approvalRate: approvalRates.phase3,
-            status: allocation.w3 > 0 ? 'active' : 'inactive',
+            status: allocation.w3 > 0 ? "active" : "inactive",
           },
         },
         totalEquity: equity,
@@ -1471,7 +1601,7 @@ export class WebhookServer {
       });
     } catch (error) {
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
@@ -1483,11 +1613,11 @@ export class WebhookServer {
    */
   private async handleMetrics(
     _request: FastifyRequest,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<void> {
     try {
-      let metricsText = '';
-      
+      let metricsText = "";
+
       if (this.metricsCollector) {
         // Use new MetricsCollector
         metricsText = this.metricsCollector.getPrometheusMetrics();
@@ -1496,14 +1626,14 @@ export class WebhookServer {
         const metrics = getMetrics();
         metricsText = metrics.export();
       }
-      
+
       reply
-        .header('Content-Type', 'text/plain; version=0.0.4; charset=utf-8')
+        .header("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
         .send(metricsText);
     } catch (error) {
-      this.logger.error('Failed to generate metrics', error as Error);
+      this.logger.error("Failed to generate metrics", error as Error);
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
@@ -1516,7 +1646,7 @@ export class WebhookServer {
 interface RawPhaseSignalBody {
   signal_id: string;
   symbol: string;
-  direction: 'LONG' | 'SHORT';
+  direction: "LONG" | "SHORT";
   size?: number;
   entry_price?: number;
   stop_loss?: number;

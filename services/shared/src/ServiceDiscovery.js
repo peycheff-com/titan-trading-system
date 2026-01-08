@@ -1,3 +1,4 @@
+"use strict";
 /**
  * Service Discovery for Titan Trading System
  *
@@ -6,8 +7,12 @@
  *
  * Requirements: 10.1 - Service discovery and registration
  */
-import { EventEmitter } from 'eventemitter3';
-import { createHash } from 'crypto';
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.DEFAULT_SERVICE_DISCOVERY_CONFIG = exports.ServiceDiscovery = void 0;
+exports.getServiceDiscovery = getServiceDiscovery;
+exports.resetServiceDiscovery = resetServiceDiscovery;
+const eventemitter3_1 = require("eventemitter3");
+const crypto_1 = require("crypto");
 // Simple color logging utility
 const colors = {
     blue: (text) => `\x1b[34m${text}\x1b[0m`,
@@ -71,7 +76,7 @@ class ServiceCircuitBreaker {
 /**
  * Service registry for managing service instances
  */
-class ServiceRegistry extends EventEmitter {
+class ServiceRegistry extends eventemitter3_1.EventEmitter {
     config;
     services = new Map();
     servicesByName = new Map();
@@ -235,7 +240,7 @@ class ServiceRegistry extends EventEmitter {
      */
     generateServiceId(service) {
         const data = `${service.name}:${service.host}:${service.port}:${Date.now()}`;
-        return createHash('sha256').update(data).digest('hex').substring(0, 16);
+        return (0, crypto_1.createHash)('sha256').update(data).digest('hex').substring(0, 16);
     }
     /**
      * Start heartbeat monitoring for a service
@@ -324,7 +329,7 @@ class ServiceRegistry extends EventEmitter {
 /**
  * Service Discovery Manager
  */
-export class ServiceDiscovery extends EventEmitter {
+class ServiceDiscovery extends eventemitter3_1.EventEmitter {
     config;
     registry;
     circuitBreakers = new Map();
@@ -537,10 +542,11 @@ export class ServiceDiscovery extends EventEmitter {
         this.removeAllListeners();
     }
 }
+exports.ServiceDiscovery = ServiceDiscovery;
 /**
  * Default service discovery configuration
  */
-export const DEFAULT_SERVICE_DISCOVERY_CONFIG = {
+exports.DEFAULT_SERVICE_DISCOVERY_CONFIG = {
     heartbeatInterval: 30000, // 30 seconds
     heartbeatTimeout: 5000, // 5 seconds
     serviceTimeout: 90000, // 90 seconds
@@ -566,16 +572,16 @@ let serviceDiscoveryInstance = null;
 /**
  * Get or create the global Service Discovery instance
  */
-export function getServiceDiscovery(config) {
+function getServiceDiscovery(config) {
     if (!serviceDiscoveryInstance) {
-        serviceDiscoveryInstance = new ServiceDiscovery(config || DEFAULT_SERVICE_DISCOVERY_CONFIG);
+        serviceDiscoveryInstance = new ServiceDiscovery(config || exports.DEFAULT_SERVICE_DISCOVERY_CONFIG);
     }
     return serviceDiscoveryInstance;
 }
 /**
  * Reset the global Service Discovery instance (for testing)
  */
-export function resetServiceDiscovery() {
+function resetServiceDiscovery() {
     if (serviceDiscoveryInstance) {
         serviceDiscoveryInstance.shutdown();
     }
