@@ -14,6 +14,7 @@ import React from 'react';
 import { render } from 'ink';
 import { TitanTrap } from './engine/TitanTrap.js';
 import { BinanceSpotClient } from './exchanges/BinanceSpotClient.js';
+import { BybitPerpsClient } from './exchanges/BybitPerpsClient.js';
 import { ConfigManager } from './config/ConfigManager.js';
 import { CredentialManager } from './config/CredentialManager.js';
 import { TripwireCalculators } from './calculators/TripwireCalculators.js';
@@ -51,6 +52,7 @@ class TitanScavengerApp {
   // Core components
   private titanTrap!: TitanTrap;
   private binanceClient!: BinanceSpotClient;
+  private bybitClient!: BybitPerpsClient;
   private configManager!: ConfigManager;
   private credentialManager!: CredentialManager;
   private logger!: Logger;
@@ -160,7 +162,13 @@ class TitanScavengerApp {
       // Note: Trade callbacks will be set up after trap map is initialized
       console.log('✅ Binance Spot client initialized');
       
-      // NOTE: Bybit/MEXC execution is now handled by titan-execution service via Fast Path IPC
+      // NOTE: Bybit/MEXC execution is now handled by titan-execution service via Fast Path IPC,
+      // but TitanTrap still needs BybitPerpsClient for read-only market data and equity checks.
+      this.bybitClient = new BybitPerpsClient(
+        credentials.bybit.apiKey,
+        credentials.bybit.apiSecret
+      );
+      console.log('✅ Bybit Perps client initialized (Read-Only Mode)');
       console.log('✅ Execution will be handled by titan-execution service');
       
       // 6. Initialize calculators
@@ -175,11 +183,11 @@ class TitanScavengerApp {
       // 7. Initialize detectors
       this.addLiveEvent('INFO', 'Initializing structural flaw detectors...');
       // NOTE: Detectors now use null for bybitClient since execution is handled by titan-execution
-      this.oiDetector = new OIWipeoutDetector(null, this.cvdCalculator);
-      this.fundingDetector = new FundingSqueezeDetector(null, this.cvdCalculator);
-      this.basisDetector = new BasisArbDetector(this.binanceClient, null);
+      this.oiDetector = new OIWipeoutDetector(this.bybitClient, this.cvdCalculator);
+      this.fundingDetector = new FundingSqueezeDetector(this.bybitClient, this.cvdCalculator);
+      this.basisDetector = new BasisArbDetector(this.binanceClient, this.bybitClient);
       this.ultimateProtocol = new UltimateBulgariaProtocol(
-        null,
+        this.bybitClient,
         this.binanceClient,
         this.oiDetector
       );
@@ -189,7 +197,7 @@ class TitanScavengerApp {
       this.addLiveEvent('INFO', 'Initializing TitanTrap engine...');
       this.titanTrap = new TitanTrap({
         binanceClient: this.binanceClient,
-        bybitClient: null, // Execution handled by titan-execution service
+        bybitClient: this.bybitClient, // Execution handled by titan-execution service
         logger: this.logger,
         config: this.configManager,
         eventEmitter: this.eventEmitter,

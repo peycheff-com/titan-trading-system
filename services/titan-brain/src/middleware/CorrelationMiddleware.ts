@@ -48,11 +48,11 @@ export function createCorrelationMiddleware(
 ) {
   const finalConfig = { ...DEFAULT_CORRELATION_CONFIG, ...config };
 
-  return async function correlationMiddleware(
+  return function correlationMiddleware(
     request: FastifyRequest,
     reply: FastifyReply,
     done: HookHandlerDoneFunction,
-  ): Promise<void> {
+  ): void {
     const startTime = Date.now();
 
     // Skip excluded paths

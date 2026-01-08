@@ -13,6 +13,8 @@ import {
   TitanError,
   withRetry,
 } from "../utils/ErrorHandler.js";
+import * as fs from "fs";
+import * as path from "path";
 
 export interface PerformanceMetrics {
   totalTrades: number;
@@ -72,6 +74,15 @@ export class StrategicMemory {
 
   constructor(dbPath: string = ":memory:") {
     this.dbPath = dbPath;
+
+    // Ensure directory exists if not using memory database
+    if (dbPath !== ":memory:") {
+      const dir = path.dirname(dbPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+    }
+
     this.db = new Database(dbPath);
     this.db.pragma("journal_mode = WAL"); // Enable WAL for better concurrency
     this.db.pragma("busy_timeout = 5000"); // Wait up to 5s if database is locked

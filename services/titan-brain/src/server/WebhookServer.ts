@@ -11,6 +11,7 @@ import Fastify, {
   FastifyRequest,
 } from "fastify";
 import cors from "@fastify/cors";
+import fastifyRawBody from "fastify-raw-body";
 import { createHmac, timingSafeEqual } from "crypto";
 import {
   AllocationVector,
@@ -235,7 +236,7 @@ export class WebhookServer {
     });
 
     // Register raw body parser for HMAC validation
-    await this.server.register(require("fastify-raw-body"), {
+    await this.server.register(fastifyRawBody, {
       field: "rawBody",
       global: false,
       encoding: "utf8",

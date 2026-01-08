@@ -2,11 +2,15 @@
   "name": "titan-trading-system",
   "private": true,
   "description": "Titan Trading System Monorepo",
+  "workspaces": [
+    "services/*"
+  ],
   "scripts": {
-    "start": "echo 'Use service specific start command'",
+    "start": "cd services/titan-console && npx vite preview --host 0.0.0.0 --port ${PORT:-8080}",
+    "build": "npm run build --workspaces --if-present",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   }
 }

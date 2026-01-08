@@ -222,7 +222,6 @@ export class RateLimiter {
     return async (
       request: FastifyRequest,
       reply: FastifyReply,
-      done: HookHandlerDoneFunction,
     ): Promise<void> => {
       const startTime = Date.now();
 
@@ -291,7 +290,7 @@ export class RateLimiter {
           },
         );
 
-        done();
+        // done();
       } catch (error) {
         this.logger.error(
           "Rate limit middleware error",
@@ -304,7 +303,6 @@ export class RateLimiter {
         );
 
         // On error, allow the request (fail open)
-        done();
       }
     };
   }
@@ -318,7 +316,6 @@ export class RateLimiter {
     return async (
       request: FastifyRequest,
       reply: FastifyReply,
-      done: HookHandlerDoneFunction,
     ): Promise<void> => {
       const endpoint = request.url.split("?")[0]; // Remove query parameters
       const config = endpointConfigs[endpoint];
@@ -326,11 +323,11 @@ export class RateLimiter {
       if (!config) {
         // No specific config for this endpoint, use default
         const defaultMiddleware = this.createMiddleware();
-        return defaultMiddleware(request, reply, done);
+        return defaultMiddleware(request, reply);
       }
 
       const endpointMiddleware = this.createMiddleware(config);
-      return endpointMiddleware(request, reply, done);
+      return endpointMiddleware(request, reply);
     };
   }
 

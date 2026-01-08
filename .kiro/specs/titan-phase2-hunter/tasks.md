@@ -4,7 +4,7 @@
 
 ## Phase 1: Foundation & Core Engines
 
-- [ ] 1. Project Setup
+- [x] 1. Project Setup
   - Create directory structure at `titan/services/titan-phase2-hunter/`
   - Initialize package.json with dependencies: ws, node-fetch, chalk, ink, react, crypto, fast-check
   - Create .env.example with API key templates (Binance, Bybit)
@@ -12,7 +12,7 @@
   - Create README.md with Holographic Market Structure philosophy
   - _Requirements: All requirements (Project foundation)_
 
-- [ ] 2. FractalMath Engine (Pure Calculation)
+- [x] 2. FractalMath Engine (Pure Calculation)
   - Create `src/engine/FractalMath.ts` with pure math functions
   - Implement detectFractals() using Bill Williams definition (5-candle pattern)
   - Implement detectBOS() for Break of Structure detection
@@ -22,7 +22,7 @@
   - Use Float64Array for all calculations (performance optimization)
   - _Requirements: 5.1-5.7 (The Cartographer)_
 
-- [ ] 3. Configuration Manager
+- [x] 3. Configuration Manager
   - Create `src/config/ConfigManager.ts`
   - Implement loadConfig() with defaults for alignment weights, RS thresholds, risk settings
   - Implement saveConfig() with immediate file write
@@ -30,7 +30,7 @@
   - Add portfolio settings (max concurrent positions, max portfolio heat, correlation threshold)
   - _Requirements: 18.1-18.8 (Runtime Configuration)_
 
-- [ ] 4. Credential Manager (AES-256-GCM)
+- [x] 4. Credential Manager (AES-256-GCM)
   - Create `src/config/CredentialManager.ts`
   - Implement saveCredentials() with AES-256-GCM encryption
   - Implement loadCredentials() with master password decryption
@@ -40,7 +40,7 @@
 
 ## Phase 2: Exchange Clients (Binance + Bybit)
 
-- [ ] 5. Binance Spot Client (CVD Data Source)
+- [x] 5. Binance Spot Client (CVD Data Source)
   - Create `src/exchanges/BinanceSpotClient.ts`
   - Implement subscribeAggTrades() WebSocket method for tick-level data
   - Implement getSpotPrice() REST method
@@ -48,7 +48,7 @@
   - Add callback system for trade events
   - _Requirements: 4.1 (CVD Monitoring)_
 
-- [ ] 6. Bybit Perps Client (Execution Target)
+- [x] 6. Bybit Perps Client (Execution Target)
   - Create `src/exchanges/BybitPerpsClient.ts`
   - Implement fetchTopSymbols() REST method (top 100 by volume)
   - Implement fetchOHLCV() REST method with caching (5-minute TTL)
@@ -62,7 +62,7 @@
 
 ## Phase 3: Holographic State Engine
 
-- [ ] 7. HologramEngine (Multi-Timeframe State Machine)
+- [x] 7. HologramEngine (Multi-Timeframe State Machine)
   - Create `src/engine/HologramEngine.ts`
   - Implement analyze() method that fetches Daily, 4H, 15m data
   - Implement analyzeTimeframe() private method for single timeframe analysis
@@ -72,7 +72,7 @@
   - Implement calcRelativeStrength() vs BTC over 4 hours
   - _Requirements: 1.1-1.7 (Holographic State Engine), 2.1-2.7 (Alignment Logic), 6.1-6.7 (RS Filtering)_
 
-- [ ] 8. Hologram Scanner
+- [x] 8. Hologram Scanner
   - Create `src/engine/HologramScanner.ts`
   - Implement scan() method for top 100 symbols
   - Implement rankByAlignment() to sort by alignment score
@@ -83,7 +83,7 @@
 
 ## Phase 4: Session Profiler & Time Logic
 
-- [ ] 9. SessionProfiler (Time & Price Dynamics)
+- [x] 9. SessionProfiler (Time & Price Dynamics)
   - Create `src/engine/SessionProfiler.ts`
   - Implement getSessionState() for ASIAN/LONDON/NY/DEAD_ZONE detection
   - Implement storeAsianRange() to save reference levels
@@ -94,7 +94,7 @@
 
 ## Phase 5: Inefficiency Mapper (POI Detection)
 
-- [ ] 10. InefficiencyMapper (FVG, OB, Liquidity Pools)
+- [x] 10. InefficiencyMapper (FVG, OB, Liquidity Pools)
   - Create `src/engine/InefficiencyMapper.ts`
   - Implement detectFVG() for 3-candle imbalance detection
   - Implement detectOrderBlock() for last opposite candle before BOS
@@ -105,7 +105,7 @@
 
 ## Phase 6: CVD Validator (Order Flow X-Ray)
 
-- [ ] 11. CVDValidator (Absorption Detection)
+- [x] 11. CVDValidator (Absorption Detection)
   - Create `src/engine/CVDValidator.ts`
   - Implement calcCVD() for Cumulative Volume Delta calculation
   - Implement detectAbsorption() for price LL + CVD HL pattern
@@ -116,7 +116,7 @@
 
 ## Phase 7: Position Management & Risk
 
-- [ ] 12. Position Manager
+- [x] 12. Position Manager
   - Create `src/risk/PositionManager.ts`
   - Implement moveStopToBreakeven() at 1.5 R profit
   - Implement takePartialProfit() at 2 R profit (50% close)
@@ -125,7 +125,7 @@
   - Implement closePosition() for stop/target hits
   - _Requirements: 12.1-12.7 (Position Management)_
 
-- [ ] 13. Correlation Manager
+- [x] 13. Correlation Manager
   - Create `src/risk/CorrelationManager.ts`
   - Implement calcCorrelation() for 24-hour rolling correlation
   - Implement checkCorrelationLimit() to enforce 0.7 threshold
@@ -134,7 +134,7 @@
   - Implement generateCorrelationMatrix() for UI display
   - _Requirements: 14.1-14.7 (Correlation-Based Position Limits)_
 
-- [ ] 14. Drawdown Protector
+- [x] 14. Drawdown Protector
   - Create `src/risk/DrawdownProtector.ts`
   - Implement checkDailyDrawdown() with 3%, 5%, 7% thresholds
   - Implement checkWeeklyDrawdown() with 10% threshold
@@ -143,7 +143,7 @@
   - Implement emergencyFlatten() for 7% drawdown
   - _Requirements: 15.1-15.7 (Drawdown Protection)_
 
-- [ ] 15. Portfolio Manager
+- [x] 15. Portfolio Manager
   - Create `src/risk/PortfolioManager.ts`
   - Implement calcTotalExposure() capped at 200% equity (5x max)
   - Implement enforceMaxPositions() with 5 concurrent trades limit
@@ -152,10 +152,14 @@
   - Implement checkPortfolioHeat() capped at 15%
   - Implement adjustForDirectionalBias() with 20% reduction
   - _Requirements: 16.1-16.7 (Multi-Symbol Portfolio Management)_
+  - Implement rankSignals() by alignment score and RS score
+  - Implement checkPortfolioHeat() capped at 15%
+  - Implement adjustForDirectionalBias() with 20% reduction
+  - _Requirements: 16.1-16.7 (Multi-Symbol Portfolio Management)_
 
 ## Phase 8: Execution Layer
 
-- [ ] 16. Limit Order Executor (The Sniper)
+- [x] 16. Limit Order Executor (The Sniper)
   - Create `src/execution/LimitOrderExecutor.ts`
   - Implement placePostOnlyOrder() at Order Block top/bottom
   - Implement monitorOrder() with 60-second timeout
@@ -165,7 +169,7 @@
   - Implement setStopAndTarget() with 1.5% stop, 4.5% target (3:1 R:R)
   - _Requirements: 7.1-7.7 (Execution)_
 
-- [ ] 17. Signal Generator
+- [x] 17. Signal Generator
   - Create `src/execution/SignalGenerator.ts`
   - Implement checkHologramStatus() for A+ or B alignment
   - Implement checkSession() for Killzone requirement
@@ -177,7 +181,7 @@
 
 ## Phase 9: Console UI (Hunter HUD)
 
-- [ ] 18. Main Dashboard Component
+- [x] 18. Main Dashboard Component
   - Create `src/console/HunterHUD.tsx` (Ink + React)
   - Implement header with phase, equity, P&L
   - Implement keyboard shortcuts bar ([F1] CONFIG [F2] VIEW [SPACE] PAUSE [Q] QUIT)

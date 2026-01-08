@@ -1,0 +1,100 @@
+    at async Promise.all (index 328)
+    at file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:240:70
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async Promise.all (index 327)
+    at async TitanTrap.updateTrapMap (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:233:35)
+    at async Timeout._onTimeout (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:161:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async Promise.all (index 329)
+    at async TitanTrap.updateTrapMap (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:233:35)
+   ⚠️ Failed to calculate traps for FWOGUSDT: TypeError: this.tripwireCalculators.calcLiquidationCluster is not a function
+    at file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:240:70
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async TitanTrap.updateTrapMap (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:233:35)
+    at async Timeout._onTimeout (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:161:13)
+    at async Timeout._onTimeout (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:161:13)
+   ⚠️ Failed to calculate traps for KAIAUSDT: TypeError: this.tripwireCalculators.calcLiquidationCluster is not a function
+    at file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:240:70
+    at async Promise.all (index 331)
+    at async TitanTrap.updateTrapMap (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:233:35)
+    at async Timeout._onTimeout (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:161:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async Promise.all (index 330)
+   ⚠️ Failed to calculate traps for ZETAUSDT: TypeError: this.tripwireCalculators.calcLiquidationCluster is not a function
+    at file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:240:70
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async Promise.all (index 332)
+    at async TitanTrap.updateTrapMap (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:233:35)
+    at async Timeout._onTimeout (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:161:13)
+   ⚠️ Failed to calculate traps for SUSHIUSDT: TypeError: this.tripwireCalculators.calcLiquidationCluster is not a function
+    at file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:240:70
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async Promise.all (index 333)
+    at async TitanTrap.updateTrapMap (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:233:35)
+    at async Timeout._onTimeout (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:161:13)
+   ⚠️ Failed to calculate traps for XVGUSDT: TypeError: this.tripwireCalculators.calcLiquidationCluster is not a function
+    at file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:240:70
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async Promise.all (index 334)
+    at async TitanTrap.updateTrapMap (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:233:35)
+    at async Timeout._onTimeout (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:161:13)
+   ⚠️ Failed to calculate traps for XAIUSDT: TypeError: this.tripwireCalculators.calcLiquidationCluster is not a function
+    at file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:240:70
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async Promise.all (index 335)
+    at async TitanTrap.updateTrapMap (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:233:35)
+    at async Timeout._onTimeout (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:161:13)
+   ⚠️ Failed to calculate traps for ORDERUSDT: TypeError: this.tripwireCalculators.calcLiquidationCluster is not a function
+    at file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:240:70
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async Promise.all (index 336)
+    at async TitanTrap.updateTrapMap (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:233:35)
+    at async Timeout._onTimeout (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:161:13)
+   ⚠️ Failed to calculate traps for HANAUSDT: TypeError: this.tripwireCalculators.calcLiquidationCluster is not a function
+    at file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:240:70
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async Promise.all (index 337)
+    at async TitanTrap.updateTrapMap (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:233:35)
+    at async Timeout._onTimeout (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:161:13)
+   ⚠️ Failed to calculate traps for SWARMSUSDT: TypeError: this.tripwireCalculators.calcLiquidationCluster is not a function
+    at file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:240:70
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async Promise.all (index 338)
+    at async TitanTrap.updateTrapMap (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:233:35)
+    at async Timeout._onTimeout (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:161:13)
+   ⚠️ Failed to calculate traps for XPINUSDT: TypeError: this.tripwireCalculators.calcLiquidationCluster is not a function
+    at file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:240:70
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async Promise.all (index 339)
+    at async TitanTrap.updateTrapMap (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:233:35)
+    at async Timeout._onTimeout (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:161:13)
+   ⚠️ Failed to calculate traps for MIRAUSDT: TypeError: this.tripwireCalculators.calcLiquidationCluster is not a function
+    at file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:240:70
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async Promise.all (index 340)
+    at async TitanTrap.updateTrapMap (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:233:35)
+    at async Timeout._onTimeout (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:161:13)
+   ⚠️ Failed to calculate traps for MAVUSDT: TypeError: this.tripwireCalculators.calcLiquidationCluster is not a function
+    at file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:240:70
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async Promise.all (index 341)
+    at async TitanTrap.updateTrapMap (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:233:35)
+    at async Timeout._onTimeout (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:161:13)
+   ⚠️ Failed to calculate traps for KSMUSDT: TypeError: this.tripwireCalculators.calcLiquidationCluster is not a function
+    at file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:240:70
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async Promise.all (index 342)
+    at async TitanTrap.updateTrapMap (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:233:35)
+    at async Timeout._onTimeout (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:161:13)
+   ⚠️ Failed to calculate traps for ARIAUSDT: TypeError: this.tripwireCalculators.calcLiquidationCluster is not a function
+    at file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:240:70
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async Promise.all (index 343)
+    at async TitanTrap.updateTrapMap (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:233:35)
+    at async Timeout._onTimeout (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:161:13)
+   ⚠️ Failed to calculate traps for HOMEUSDT: TypeError: this.tripwireCalculators.calcLiquidationCluster is not a function
+    at file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:240:70
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async Promise.all (index 344)
+    at async TitanTrap.updateTrapMap (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:233:35)
+    at async Timeout._onTimeout (file:///app/services/titan-phase1-scavenger/dist/engine/TitanTrap.js:161:13)

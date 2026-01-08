@@ -231,7 +231,7 @@ class ConfigManager {
 
 export class ProductionServer {
   constructor(options = {}) {
-    this.port = options.port || 3000;
+    this.port = process.env.PORT || options.port || 3000;
     this.logger = options.logger || console;
     this.configManager = new ConfigManager();
     this.bybitAdapter = null;

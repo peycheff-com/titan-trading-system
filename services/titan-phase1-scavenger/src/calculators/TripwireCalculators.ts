@@ -1,6 +1,6 @@
 /**
  * Tripwire Calculators - Structural Level Detection
- * 
+ *
  * Pure math functions for calculating tripwire levels using TypedArrays
  * for optimal performance. These calculators identify structural breakout
  * levels (liquidation clusters, daily levels, Bollinger breakouts).
@@ -18,13 +18,13 @@ export interface OHLCV {
 export interface Tripwire {
   symbol: string;
   triggerPrice: number;
-  direction: 'LONG' | 'SHORT';
-  trapType: 'LIQUIDATION' | 'DAILY_LEVEL' | 'BOLLINGER' | 'SIGMA_FADE';
-  confidence: number;  // 80-95
-  leverage: number;    // 10x-20x
-  estimatedCascadeSize: number;  // Expected move in %
+  direction: "LONG" | "SHORT";
+  trapType: "LIQUIDATION" | "DAILY_LEVEL" | "BOLLINGER" | "SIGMA_FADE";
+  confidence: number; // 80-95
+  leverage: number; // 10x-20x
+  estimatedCascadeSize: number; // Expected move in %
   activated: boolean;
-  activatedAt?: number;  // Timestamp
+  activatedAt?: number; // Timestamp
 }
 
 interface VolumeProfileNode {
@@ -35,103 +35,107 @@ interface VolumeProfileNode {
 export class TripwireCalculators {
   /**
    * Calculate liquidation cluster tripwire using volume profile analysis
-   * 
+   *
    * Finds high-volume nodes (liquidation clusters) and sets triggers
    * at cluster price ± 0.2%
-   * 
+   *
    * @param ohlcv - OHLCV data (minimum 50 bars recommended)
    * @returns Tripwire or null if no valid cluster found
    */
-  static calcLiquidationCluster(ohlcv: OHLCV[]): Tripwire | null {
+  calcLiquidationCluster(ohlcv: OHLCV[]): Tripwire | null {
     if (ohlcv.length < 50) {
-      return null;  // Insufficient data
+      return null; // Insufficient data
     }
 
     // Build volume profile with 50 bins
     const volumeProfile = this.buildVolumeProfile(ohlcv, 50);
-    
+
     // Find top 3 volume peaks (liquidation clusters)
     const peaks = volumeProfile
       .map((node, idx) => ({ price: node.price, volume: node.volume, idx }))
       .sort((a, b) => b.volume - a.volume)
-      .slice(0, 3);  // Top 3 clusters
-    
+      .slice(0, 3); // Top 3 clusters
+
     if (peaks.length === 0) {
       return null;
     }
-    
+
     // Select cluster above current price for LONG, below for SHORT
     const currentPrice = ohlcv[ohlcv.length - 1].close;
-    const longCluster = peaks.find(p => p.price > currentPrice);
-    const shortCluster = peaks.find(p => p.price < currentPrice);
-    
+    const longCluster = peaks.find((p) => p.price > currentPrice);
+    const shortCluster = peaks.find((p) => p.price < currentPrice);
+
     if (!longCluster && !shortCluster) {
       return null;
     }
-    
+
     // Prefer direction with stronger cluster
-    const trap = longCluster && (!shortCluster || longCluster.volume > shortCluster.volume)
-      ? {
-          symbol: '',  // Set by caller
-          triggerPrice: longCluster.price * 1.002,  // +0.2% above cluster
-          direction: 'LONG' as const,
-          trapType: 'LIQUIDATION' as const,
+    const trap =
+      longCluster && (!shortCluster || longCluster.volume > shortCluster.volume)
+        ? {
+          symbol: "", // Set by caller
+          triggerPrice: longCluster.price * 1.002, // +0.2% above cluster
+          direction: "LONG" as const,
+          trapType: "LIQUIDATION" as const,
           confidence: 95,
           leverage: 20,
-          estimatedCascadeSize: 0.05,  // 5% expected move
-          activated: false
+          estimatedCascadeSize: 0.05, // 5% expected move
+          activated: false,
         }
-      : {
-          symbol: '',
-          triggerPrice: shortCluster!.price * 0.998,  // -0.2% below cluster
-          direction: 'SHORT' as const,
-          trapType: 'LIQUIDATION' as const,
+        : {
+          symbol: "",
+          triggerPrice: shortCluster!.price * 0.998, // -0.2% below cluster
+          direction: "SHORT" as const,
+          trapType: "LIQUIDATION" as const,
           confidence: 95,
           leverage: 20,
           estimatedCascadeSize: 0.05,
-          activated: false
+          activated: false,
         };
-    
+
     return trap;
   }
 
   /**
    * Build volume profile by distributing volume across price bins
-   * 
+   *
    * Creates a histogram of volume at different price levels to identify
    * high-volume nodes (potential liquidation clusters)
-   * 
+   *
    * @param ohlcv - OHLCV data
    * @param bins - Number of price bins (default 50)
    * @returns Array of price/volume nodes
    */
-  static buildVolumeProfile(ohlcv: OHLCV[], bins: number): VolumeProfileNode[] {
+  buildVolumeProfile(ohlcv: OHLCV[], bins: number): VolumeProfileNode[] {
     if (ohlcv.length === 0 || bins <= 0) {
       return [];
     }
 
     // Find price range
-    const highs = ohlcv.map(bar => bar.high);
-    const lows = ohlcv.map(bar => bar.low);
+    const highs = ohlcv.map((bar) => bar.high);
+    const lows = ohlcv.map((bar) => bar.low);
     const maxPrice = Math.max(...highs);
     const minPrice = Math.min(...lows);
-    
+
     // Handle no price range - put all volume in single bin
     if (maxPrice === minPrice) {
       return [{
         price: maxPrice,
-        volume: ohlcv.reduce((sum, bar) => sum + bar.volume, 0)
+        volume: ohlcv.reduce((sum, bar) => sum + bar.volume, 0),
       }];
     }
-    
+
     const priceStep = (maxPrice - minPrice) / bins;
-    
+
     // Initialize bins
-    const profile: VolumeProfileNode[] = Array.from({ length: bins }, (_, i) => ({
-      price: minPrice + (i * priceStep) + (priceStep / 2),  // Center of bin
-      volume: 0
-    }));
-    
+    const profile: VolumeProfileNode[] = Array.from(
+      { length: bins },
+      (_, i) => ({
+        price: minPrice + (i * priceStep) + (priceStep / 2), // Center of bin
+        volume: 0,
+      }),
+    );
+
     // Accumulate volume in bins
     for (const bar of ohlcv) {
       const binIdx = Math.floor((bar.close - minPrice) / priceStep);
@@ -141,100 +145,100 @@ export class TripwireCalculators {
         profile[safeBinIdx].volume += bar.volume;
       }
     }
-    
+
     return profile;
   }
 
   /**
    * Calculate daily level tripwire (PDH/PDL breakout)
-   * 
+   *
    * Identifies Previous Day High (PDH) and Previous Day Low (PDL)
    * and sets breakout triggers at these key psychological levels
-   * 
+   *
    * @param ohlcv - OHLCV data (1h bars, minimum 48 bars)
    * @returns Tripwire or null if not close to any daily level
    */
-  static calcDailyLevel(ohlcv: OHLCV[]): Tripwire | null {
+  calcDailyLevel(ohlcv: OHLCV[]): Tripwire | null {
     // Need at least 48 bars (2 days of 1h data)
     if (ohlcv.length < 48) {
       return null;
     }
 
     // Get previous day high/low (assuming 1h bars, last 24 bars = 1 day)
-    const previousDay = ohlcv.slice(-48, -24);  // 24 bars before last 24
-    
+    const previousDay = ohlcv.slice(-48, -24); // 24 bars before last 24
+
     if (previousDay.length < 24) {
       return null;
     }
-    
-    const pdh = Math.max(...previousDay.map(bar => bar.high));
-    const pdl = Math.min(...previousDay.map(bar => bar.low));
+
+    const pdh = Math.max(...previousDay.map((bar) => bar.high));
+    const pdl = Math.min(...previousDay.map((bar) => bar.low));
     const currentPrice = ohlcv[ohlcv.length - 1].close;
-    
+
     // Determine which level is closer
     const distanceToHigh = Math.abs(currentPrice - pdh) / currentPrice;
     const distanceToLow = Math.abs(currentPrice - pdl) / currentPrice;
-    
+
     // Only set trap if within 2% of a level
     if (distanceToHigh < 0.02 && distanceToHigh < distanceToLow) {
       // Close to PDH, set breakout trap
       return {
-        symbol: '',
-        triggerPrice: pdh * 1.001,  // +0.1% above PDH
-        direction: 'LONG',
-        trapType: 'DAILY_LEVEL',
+        symbol: "",
+        triggerPrice: pdh * 1.001, // +0.1% above PDH
+        direction: "LONG",
+        trapType: "DAILY_LEVEL",
         confidence: 85,
         leverage: 12,
         estimatedCascadeSize: 0.03,
-        activated: false
+        activated: false,
       };
     } else if (distanceToLow < 0.02) {
       // Close to PDL, set breakdown trap
       return {
-        symbol: '',
-        triggerPrice: pdl * 0.999,  // -0.1% below PDL
-        direction: 'SHORT',
-        trapType: 'DAILY_LEVEL',
+        symbol: "",
+        triggerPrice: pdl * 0.999, // -0.1% below PDL
+        direction: "SHORT",
+        trapType: "DAILY_LEVEL",
         confidence: 85,
         leverage: 12,
         estimatedCascadeSize: 0.03,
-        activated: false
+        activated: false,
       };
     }
-    
-    return null;  // Not close to any daily level
+
+    return null; // Not close to any daily level
   }
 
   /**
    * Calculate Bollinger Breakout tripwire
-   * 
+   *
    * Identifies Bollinger Band squeeze (compression) and sets breakout
    * triggers at upper/lower bands
-   * 
+   *
    * @param ohlcv - OHLCV data (minimum 92 bars for 72-hour history)
    * @returns Tripwire or null if no squeeze detected
    */
-  static calcBollingerBreakout(ohlcv: OHLCV[]): Tripwire | null {
+  calcBollingerBreakout(ohlcv: OHLCV[]): Tripwire | null {
     const period = 20;
-    
+
     // Need at least 92 bars (20 for calculation + 72 for historical comparison)
     if (ohlcv.length < 92) {
       return null;
     }
 
-    const closes = new Float64Array(ohlcv.map(bar => bar.close));
-    
+    const closes = new Float64Array(ohlcv.map((bar) => bar.close));
+
     // Calculate current SMA and standard deviation
     const sma = this.calcSMA(closes, period);
     const stdDev = this.calcStdDev(closes, period);
-    
+
     // Calculate Bollinger Bands
     const upperBand = sma + (stdDev * 2);
     const lowerBand = sma - (stdDev * 2);
-    
+
     // Calculate BB width
     const bbWidth = (upperBand - lowerBand) / sma;
-    
+
     // Calculate historical BB widths (72 hours = 72 bars for 1h)
     const historicalWidths = new Float64Array(72);
     for (let i = 0; i < 72; i++) {
@@ -244,39 +248,41 @@ export class TripwireCalculators {
       const sliceStdDev = this.calcStdDev(slice, period);
       historicalWidths[i] = (sliceStdDev * 2 * 2) / sliceSMA;
     }
-    
+
     // Check if current BB width is in bottom 10%
     const sortedWidths = Array.from(historicalWidths).sort((a, b) => a - b);
     const bottom10Pct = sortedWidths[Math.floor(sortedWidths.length * 0.1)];
-    
+
     if (bbWidth > bottom10Pct) {
-      return null;  // Not compressed enough
+      return null; // Not compressed enough
     }
-    
+
     // Determine direction based on price position relative to SMA
     const currentPrice = closes[closes.length - 1];
-    const direction = currentPrice > sma ? 'LONG' : 'SHORT';
-    
+    const direction = currentPrice > sma ? "LONG" : "SHORT";
+
     return {
-      symbol: '',
-      triggerPrice: direction === 'LONG' ? upperBand * 1.001 : lowerBand * 0.999,
+      symbol: "",
+      triggerPrice: direction === "LONG"
+        ? upperBand * 1.001
+        : lowerBand * 0.999,
       direction,
-      trapType: 'BOLLINGER',
+      trapType: "BOLLINGER",
       confidence: 90,
       leverage: 15,
       estimatedCascadeSize: 0.04,
-      activated: false
+      activated: false,
     };
   }
 
   /**
    * Calculate Simple Moving Average using Float64Array
-   * 
+   *
    * @param data - Price data as Float64Array
    * @param period - SMA period
    * @returns SMA value
    */
-  static calcSMA(data: Float64Array, period: number): number {
+  calcSMA(data: Float64Array, period: number): number {
     if (data.length < period) {
       return 0;
     }
@@ -291,25 +297,25 @@ export class TripwireCalculators {
 
   /**
    * Calculate Standard Deviation using Float64Array
-   * 
+   *
    * @param data - Price data as Float64Array
    * @param period - Period for calculation
    * @returns Standard deviation value
    */
-  static calcStdDev(data: Float64Array, period: number): number {
+  calcStdDev(data: Float64Array, period: number): number {
     if (data.length < period) {
       return 0;
     }
 
     const slice = data.slice(-period);
     const mean = this.calcSMA(data, period);
-    
+
     let sumSquaredDiffs = 0;
     for (let i = 0; i < slice.length; i++) {
       const diff = slice[i] - mean;
       sumSquaredDiffs += diff * diff;
     }
-    
+
     const variance = sumSquaredDiffs / period;
     return Math.sqrt(variance);
   }

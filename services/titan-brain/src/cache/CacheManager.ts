@@ -103,8 +103,9 @@ export class CacheManager extends EventEmitter {
   static createConfigFromEnv(): CacheConfig {
     const redisUrl = process.env.REDIS_URL;
     let redisConfig: CacheConfig["redis"] = undefined;
+    const redisDisabled = process.env.REDIS_DISABLED === "true";
 
-    if (redisUrl) {
+    if (redisUrl && !redisDisabled) {
       redisConfig = { url: redisUrl };
     } else if (process.env.REDIS_HOST) {
       redisConfig = {

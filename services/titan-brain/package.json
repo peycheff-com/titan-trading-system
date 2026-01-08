@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "start": "npm run build && node dist/index.js",
+    "start": "echo '[DEBUG] STARTING_BUILD' && npm run build && echo '[DEBUG] BUILD_COMPLETE' && node dist/index.js",
     "dev": "tsc && node --watch dist/index.js",
     "test": "npm run test:unit",
     "test:unit": "jest --config jest.config.cjs",
@@ -33,11 +33,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@fastify/cors": "^8.5.0",
+    "@fastify/cors": "^11.2.0",
     "@fastify/websocket": "^11.2.0",
     "better-sqlite3": "^9.2.2",
     "dotenv": "^17.2.3",
-    "fastify": "^4.25.0",
+    "fastify": "^5.6.2",
     "fastify-raw-body": "^5.0.0",
     "pg": "^8.11.3",
     "pino": "^8.17.0",
