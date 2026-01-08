@@ -1,0 +1,256 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Titan Dark Theme - Terminal Grade */
+    --background: 222 47% 6%;
+    --foreground: 210 20% 92%;
+
+    --card: 222 44% 8%;
+    --card-foreground: 210 20% 92%;
+
+    --popover: 222 47% 7%;
+    --popover-foreground: 210 20% 92%;
+
+    --primary: 192 91% 52%;
+    --primary-foreground: 222 47% 6%;
+
+    --secondary: 222 30% 14%;
+    --secondary-foreground: 210 20% 85%;
+
+    --muted: 222 30% 12%;
+    --muted-foreground: 215 20% 55%;
+
+    --accent: 222 35% 16%;
+    --accent-foreground: 210 20% 92%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 38 92% 10%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 142 71% 10%;
+
+    --border: 222 30% 16%;
+    --input: 222 30% 14%;
+    --ring: 192 91% 52%;
+
+    --radius: 0.375rem;
+
+    /* Titan-specific tokens */
+    --titan-glow: 192 91% 52%;
+    --titan-surface: 222 44% 10%;
+    --titan-surface-elevated: 222 40% 12%;
+    --titan-border-subtle: 222 30% 18%;
+    --titan-text-primary: 210 20% 92%;
+    --titan-text-secondary: 215 20% 65%;
+    --titan-text-muted: 215 15% 45%;
+
+    /* Status colors */
+    --status-healthy: 142 71% 45%;
+    --status-degraded: 38 92% 50%;
+    --status-critical: 0 72% 51%;
+    --status-offline: 222 20% 35%;
+    --status-pending: 192 91% 52%;
+
+    /* Phase colors */
+    --phase-scavenger: 280 65% 60%;
+    --phase-hunter: 38 92% 50%;
+    --phase-sentinel: 192 91% 52%;
+
+    /* PnL colors */
+    --pnl-positive: 142 71% 45%;
+    --pnl-negative: 0 72% 51%;
+
+    /* Sidebar */
+    --sidebar-background: 222 47% 5%;
+    --sidebar-foreground: 210 20% 75%;
+    --sidebar-primary: 192 91% 52%;
+    --sidebar-primary-foreground: 222 47% 6%;
+    --sidebar-accent: 222 35% 12%;
+    --sidebar-accent-foreground: 210 20% 92%;
+    --sidebar-border: 222 30% 14%;
+    --sidebar-ring: 192 91% 52%;
+  }
+
+  .dark {
+    /* Same as root - dark mode is default */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  /* Tabular numerals for data */
+  .font-mono, .tabular-nums, [data-numeric] {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-feature-settings: 'tnum';
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  /* Titan glow effects */
+  .titan-glow {
+    box-shadow: 0 0 20px -5px hsl(var(--titan-glow) / 0.3);
+  }
+
+  .titan-glow-sm {
+    box-shadow: 0 0 10px -3px hsl(var(--titan-glow) / 0.25);
+  }
+
+  /* Status indicator animations */
+  .pulse-healthy {
+    animation: pulse-healthy 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse-healthy {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
+  }
+
+  .pulse-warning {
+    animation: pulse-warning 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse-warning {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  .pulse-critical {
+    animation: pulse-critical 0.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse-critical {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.7;
+      transform: scale(1.05);
+    }
+  }
+
+  /* Smooth transitions */
+  .transition-titan {
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Scrollbar styling */
+  .scrollbar-titan {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+
+  .scrollbar-titan::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-titan::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-titan::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+  }
+
+  .scrollbar-titan::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  /* Dense table utilities */
+  .table-dense th,
+  .table-dense td {
+    @apply px-2 py-1.5 text-xs;
+  }
+
+  /* Focus states for accessibility */
+  .focus-titan:focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+  }
+
+  /* Glass effect */
+  .glass-titan {
+    background: hsl(var(--card) / 0.8);
+    backdrop-filter: blur(8px);
+  }
+
+  /* Gradient borders */
+  .border-gradient-titan {
+    border: 1px solid transparent;
+    background: linear-gradient(hsl(var(--card)), hsl(var(--card))) padding-box,
+                linear-gradient(135deg, hsl(var(--primary) / 0.3), transparent 50%, hsl(var(--primary) / 0.1)) border-box;
+  }
+}
+
+/* Custom animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.2s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.15s ease-out;
+}
