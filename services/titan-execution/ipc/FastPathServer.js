@@ -157,6 +157,33 @@ class FastPathServer {
   }
 
   /**
+   * Broadcast message to all connected clients
+   * @param {Object} message - Message to broadcast
+   */
+  broadcast(message) {
+    if (this.connections.size === 0) return;
+
+    const payload = JSON.stringify(message) + this.MESSAGE_DELIMITER;
+    let successCount = 0;
+
+    for (const socket of this.connections) {
+      try {
+        if (socket.write(payload)) {
+          successCount++;
+        }
+      } catch (error) {
+        console.error(`❌ Failed to broadcast to socket: ${error.message}`);
+      }
+    }
+
+    /*
+    console.log(`📡 Broadcast sent to ${successCount}/${this.connections.size} clients`, {
+        type: message.type
+    });
+    */
+  }
+
+  /**
    * Send reply with backpressure handling
    * @param {net.Socket} socket - Client socket
    * @param {Object} data - Data to send

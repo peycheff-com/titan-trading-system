@@ -16,7 +16,11 @@
         "--api-key",
         "ctx7sk-579d0b40-4d85-4e10-9915-0da28019f679"
       ],
-      "disabled": false
+      "disabled": false,
+      "autoApprove": [
+        "resolve-library-id",
+        "query-docs"
+      ]
     },
     "nano-banana": {
       "command": "npx",

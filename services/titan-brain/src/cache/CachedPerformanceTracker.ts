@@ -44,13 +44,13 @@ export class CachedPerformanceTracker {
   async getSharpeRatio(phaseId: PhaseId, windowDays?: number): Promise<number> {
     const cacheKey = `sharpe:${phaseId}:${windowDays ?? 'default'}`;
 
-    const cached = this.cache.get<number>(CacheNamespace.PERFORMANCE, cacheKey);
-    if (cached !== undefined) {
-      return cached;
+    const cached = await this.cache.get<number>(CacheNamespace.PERFORMANCE, cacheKey);
+    if (cached.success && cached.value !== undefined) {
+      return cached.value;
     }
 
     const sharpe = await this.tracker.getSharpeRatio(phaseId, windowDays);
-    this.cache.set(CacheNamespace.PERFORMANCE, cacheKey, sharpe);
+    await this.cache.set(CacheNamespace.PERFORMANCE, cacheKey, sharpe);
     return sharpe;
   }
 
@@ -60,13 +60,13 @@ export class CachedPerformanceTracker {
   async getPerformanceModifier(phaseId: PhaseId): Promise<number> {
     const cacheKey = `modifier:${phaseId}`;
 
-    const cached = this.cache.get<number>(CacheNamespace.PERFORMANCE, cacheKey);
-    if (cached !== undefined) {
-      return cached;
+    const cached = await this.cache.get<number>(CacheNamespace.PERFORMANCE, cacheKey);
+    if (cached.success && cached.value !== undefined) {
+      return cached.value;
     }
 
     const modifier = await this.tracker.getPerformanceModifier(phaseId);
-    this.cache.set(CacheNamespace.PERFORMANCE, cacheKey, modifier);
+    await this.cache.set(CacheNamespace.PERFORMANCE, cacheKey, modifier);
     return modifier;
   }
 
@@ -76,13 +76,13 @@ export class CachedPerformanceTracker {
   async getTradeCount(phaseId: PhaseId, windowDays: number): Promise<number> {
     const cacheKey = `tradeCount:${phaseId}:${windowDays}`;
 
-    const cached = this.cache.get<number>(CacheNamespace.PERFORMANCE, cacheKey);
-    if (cached !== undefined) {
-      return cached;
+    const cached = await this.cache.get<number>(CacheNamespace.PERFORMANCE, cacheKey);
+    if (cached.success && cached.value !== undefined) {
+      return cached.value;
     }
 
     const count = await this.tracker.getTradeCount(phaseId, windowDays);
-    this.cache.set(CacheNamespace.PERFORMANCE, cacheKey, count);
+    await this.cache.set(CacheNamespace.PERFORMANCE, cacheKey, count);
     return count;
   }
 
@@ -92,13 +92,13 @@ export class CachedPerformanceTracker {
   async getPhasePerformance(phaseId: PhaseId): Promise<PhasePerformance> {
     const cacheKey = `performance:${phaseId}`;
 
-    const cached = this.cache.get<PhasePerformance>(CacheNamespace.PERFORMANCE, cacheKey);
-    if (cached) {
-      return cached;
+    const cached = await this.cache.get<PhasePerformance>(CacheNamespace.PERFORMANCE, cacheKey);
+    if (cached.success && cached.value) {
+      return cached.value;
     }
 
     const performance = await this.tracker.getPhasePerformance(phaseId);
-    this.cache.set(CacheNamespace.PERFORMANCE, cacheKey, performance);
+    await this.cache.set(CacheNamespace.PERFORMANCE, cacheKey, performance);
     return performance;
   }
 
@@ -108,13 +108,13 @@ export class CachedPerformanceTracker {
   async getAllPhasePerformance(): Promise<PhasePerformance[]> {
     const cacheKey = 'allPerformance';
 
-    const cached = this.cache.get<PhasePerformance[]>(CacheNamespace.PERFORMANCE, cacheKey);
-    if (cached) {
-      return cached;
+    const cached = await this.cache.get<PhasePerformance[]>(CacheNamespace.PERFORMANCE, cacheKey);
+    if (cached.success && cached.value) {
+      return cached.value;
     }
 
     const performance = await this.tracker.getAllPhasePerformance();
-    this.cache.set(CacheNamespace.PERFORMANCE, cacheKey, performance);
+    await this.cache.set(CacheNamespace.PERFORMANCE, cacheKey, performance);
     return performance;
   }
 

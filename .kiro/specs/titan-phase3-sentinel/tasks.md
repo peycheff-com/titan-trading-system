@@ -2,18 +2,49 @@
 
 ## Overview
 
-This implementation plan breaks down the Sentinel system into discrete, manageable tasks that build incrementally. Each task focuses on implementing specific functionality with corresponding tests. The plan follows a bottom-up approach, starting with core statistical and execution primitives, then building up to the complete portfolio management system.
+This implementation plan breaks down the Sentinel system into discrete,
+manageable tasks that build incrementally. Each task focuses on implementing
+specific functionality with corresponding tests. The plan follows a bottom-up
+approach, starting with core statistical and execution primitives, then building
+up to the complete portfolio management system.
 
 ## Task List
 
-- [ ] 1. Set up project structure and core types
+-
+  1. [ ] Set up project structure and core types
   - Create TypeScript project structure for Sentinel service
   - Define core TypeScript interfaces and types from design document
   - Set up testing framework (Jest) with fast-check for property-based testing
   - Configure build and development scripts
-  - _Requirements: All_
+- [ ] 1.5 Implement Polymarket Arbitrage Engine (Phase 0 Priority)
+  - _Requirements: 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7_
+  - [ ] 1.5.1 Set up Web3/EVM Dependencies
+    - Install `ethers`, `viem`, `@polymarket/clob-client`
+    - Configure Polygon RPC endpoints
+    - _Requirements: 0.6_
+  - [ ] 1.5.2 Implement Market Discovery
+    - Create `MarketLookup` service to query Gamma API
+    - Filter for active BTC 15m/Hourly markets
+    - _Requirements: 0.2_
+  - [ ] 1.5.3 Implement Binance Feed (Leading)
+    - Subscribe to Binance BookTicker/AggTrade
+    - Implement velocity calculation (price change / time)
+    - _Requirements: 0.1, 0.3_
+  - [ ] 1.5.4 Implement Polymarket Feed (Lagging)
+    - Subscribe to Polymarket Orderbook
+    - _Requirements: 0.4_
+  - [ ] 1.5.5 Implement ArbEngine Core
+    - Implement trigger logic (velocity > threshold)
+    - Implement lag detection (Polymarket probability mismatch)
+    - Implement execution (Limit Buy on cheap side)
+    - _Requirements: 0.3, 0.4, 0.5, 0.7_
+  - [ ]* 1.5.6 Write simulation test for latency arb
+    - Simulate Binance move vs Poly standstill
+    - Verify trigger fires
+    - _Requirements: 0.5, 0.7_
 
-- [ ] 2. Implement Statistical Engine core
+-
+  2. [ ] Implement Statistical Engine core
   - _Requirements: 1.1, 7.1, 7.2, 7.3, 7.5, 7.6_
 
 - [ ] 2.1 Implement CircularBuffer class
@@ -55,7 +86,8 @@ This implementation plan breaks down the Sentinel system into discrete, manageab
   - **Property 16: Statistical Model Isolation**
   - **Validates: Requirements 7.5**
 
-- [ ] 3. Implement Execution Engine primitives
+-
+  3. [ ] Implement Execution Engine primitives
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 6.1, 6.2, 6.3, 6.5_
 
 - [ ] 3.1 Implement TwapExecutor class
@@ -102,7 +134,8 @@ This implementation plan breaks down the Sentinel system into discrete, manageab
   - **Property 11: Atomic Execution Delta Neutrality**
   - **Validates: Requirements 5.5**
 
-- [ ] 4. Implement Exchange Gateway abstraction
+-
+  4. [ ] Implement Exchange Gateway abstraction
   - _Requirements: 3.1, 3.2, 3.7_
 
 - [ ] 4.1 Define ExchangeGateway interface
@@ -129,7 +162,8 @@ This implementation plan breaks down the Sentinel system into discrete, manageab
   - Test balance queries and transfer operations
   - _Requirements: 3.1, 3.2_
 
-- [ ] 5. Implement Cross-Exchange Router
+-
+  5. [ ] Implement Cross-Exchange Router
   - _Requirements: 3.3, 3.4, 3.5, 3.6_
 
 - [ ] 5.1 Implement PriceMonitor class
@@ -158,7 +192,8 @@ This implementation plan breaks down the Sentinel system into discrete, manageab
   - **Property 7: Cost-Benefit Routing Decision**
   - **Validates: Requirements 3.5, 3.6**
 
-- [ ] 6. Implement Vacuum Arbitrage Engine
+-
+  6. [ ] Implement Vacuum Arbitrage Engine
   - _Requirements: 2.2, 2.3, 2.4, 2.5, 2.6_
 
 - [ ] 6.1 Integrate Phase 1 liquidation detection
@@ -187,7 +222,8 @@ This implementation plan breaks down the Sentinel system into discrete, manageab
   - **Property 5: Vacuum Position Lifecycle**
   - **Validates: Requirements 2.5, 2.6**
 
-- [ ] 7. Implement Portfolio Manager core
+-
+  7. [ ] Implement Portfolio Manager core
   - _Requirements: 1.6, 1.7, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7_
 
 - [ ] 7.1 Implement Position tracking
@@ -225,7 +261,8 @@ This implementation plan breaks down the Sentinel system into discrete, manageab
   - Integrate Rebalancer for automated rebalancing
   - _Requirements: 4.2, 4.6, 8.7_
 
-- [ ] 8. Implement Risk Management system
+-
+  8. [ ] Implement Risk Management system
   - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.8_
 
 - [ ] 8.1 Implement RiskManager class
@@ -249,7 +286,8 @@ This implementation plan breaks down the Sentinel system into discrete, manageab
   - Add alert generation for risk violations
   - _Requirements: 8.2, 8.3, 8.4_
 
-- [ ] 9. Implement Performance Tracking system
+-
+  9. [ ] Implement Performance Tracking system
   - _Requirements: 9.2, 9.3, 9.4, 9.5, 9.6, 9.7_
 
 - [ ] 9.1 Implement PerformanceTracker class
@@ -289,7 +327,8 @@ This implementation plan breaks down the Sentinel system into discrete, manageab
   - **Property 22: Export Format Validity**
   - **Validates: Requirements 9.7**
 
-- [ ] 10. Implement Dashboard interface
+-
+  10. [ ] Implement Dashboard interface
   - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.6, 10.7_
 
 - [ ] 10.1 Set up Ink React terminal UI framework
@@ -338,11 +377,13 @@ This implementation plan breaks down the Sentinel system into discrete, manageab
   - Test keyboard navigation
   - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.6, 10.7_
 
-- [ ] 11. Implement main Sentinel orchestrator
+-
+  11. [ ] Implement main Sentinel orchestrator
   - _Requirements: All_
 
 - [ ] 11.1 Create SentinelCore class
-  - Integrate all major components (StatEngine, AtomicExecutor, VacuumEngine, etc.)
+  - Integrate all major components (StatEngine, AtomicExecutor, VacuumEngine,
+    etc.)
   - Implement main event loop
   - Add component initialization and shutdown
   - Create configuration loading from environment
@@ -392,10 +433,12 @@ This implementation plan breaks down the Sentinel system into discrete, manageab
   - Test risk limit enforcement
   - _Requirements: All_
 
-- [ ] 12. Checkpoint - Ensure all tests pass
+-
+  12. [ ] Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 13. Create production deployment configuration
+-
+  13. [ ] Create production deployment configuration
   - _Requirements: All_
 
 - [ ] 13.1 Create environment configuration template
@@ -418,5 +461,6 @@ This implementation plan breaks down the Sentinel system into discrete, manageab
   - Create operational runbook
   - _Requirements: All_
 
-- [ ] 14. Final Checkpoint - Ensure all tests pass
+-
+  14. [ ] Final Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.

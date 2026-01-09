@@ -1,0 +1,52 @@
+# Artillery.js load test configuration for Titan Brain
+config:
+  target: 'http://localhost:3000'
+  phases:
+    - duration: 30
+      arrivalRate: 10
+      name: "Warm up"
+    - duration: 60
+      arrivalRate: 50
+      name: "Load test"
+    - duration: 30
+      arrivalRate: 100
+      name: "Stress test"
+  processor: "./load-test-processor.js"
+
+scenarios:
+  - name: "Health Check Load Test"
+    weight: 40
+    flow:
+      - get:
+          url: "/health"
+          expect:
+            - statusCode: 200
+            - contentType: json
+            - hasProperty: "status"
+            - hasProperty: "timestamp"
+
+  - name: "Metrics Endpoint Load Test"
+    weight: 30
+    flow:
+      - get:
+          url: "/metrics"
+          expect:
+            - statusCode: 200
+
+  - name: "Webhook Load Test"
+    weight: 30
+    flow:
+      - post:
+          url: "/webhook/signal"
+          headers:
+            Content-Type: "application/json"
+            X-Signature: "{{ generateHMAC }}"
+          json:
+            phase: "phase1"
+            signal: "BUY_SETUP"
+            symbol: "BTCUSDT"
+            price: 50000
+            confidence: 0.85
+            timestamp: "{{ $timestamp }}"
+          expect:
+            - statusCode: [200, 400, 429] # Accept rate limiting

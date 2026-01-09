@@ -57,9 +57,9 @@ export class CachedAllocationEngine {
       CacheNamespace.ALLOCATION,
       cacheKey,
     );
-    if (cached) {
+    if (cached.success && cached.value) {
       // Update timestamp to current time
-      return { ...cached, timestamp: Date.now() };
+      return { ...cached.value, timestamp: Date.now() };
     }
 
     // Calculate and cache

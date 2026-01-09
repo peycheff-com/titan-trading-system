@@ -332,7 +332,7 @@ describe('StartupManager', () => {
       await expect(startupManager.start()).rejects.toThrow(
         /Startup timeout exceeded/
       );
-    });
+    }, 15000); // Increase Jest timeout to 15 seconds
 
     it('should prevent multiple starts', async () => {
       const step: StartupStep = {

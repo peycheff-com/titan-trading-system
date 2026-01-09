@@ -79,6 +79,7 @@ export class StartupManager extends EventEmitter {
   private isStarted: boolean = false;
   private isShuttingDown: boolean = false;
   private shutdownHandlers: Array<() => Promise<void>> = [];
+  private signalHandlers: Map<string, (...args: any[]) => void> = new Map();
 
   constructor(config: Partial<StartupManagerConfig> = {}, logger?: Logger) {
     super();
@@ -431,29 +432,42 @@ export class StartupManager extends EventEmitter {
    * Setup process signal handlers for graceful shutdown
    */
   private setupSignalHandlers(): void {
+    // Increase max listeners to prevent warnings in tests
+    process.setMaxListeners(20);
+    
     const signals = ['SIGTERM', 'SIGINT', 'SIGUSR2'] as const;
     
+    // Store handlers for cleanup
+    this.signalHandlers = new Map();
+    
     for (const signal of signals) {
-      process.on(signal, async () => {
+      const handler = async () => {
         this.logger.info(`Received ${signal}, initiating graceful shutdown`);
         await this.shutdown();
         process.exit(0);
-      });
+      };
+      
+      this.signalHandlers.set(signal, handler);
+      process.on(signal, handler);
     }
     
     // Handle uncaught exceptions
-    process.on('uncaughtException', (error) => {
+    const uncaughtHandler = (error: Error) => {
       this.logger.error('Uncaught exception, shutting down', error);
       this.shutdown().finally(() => process.exit(1));
-    });
+    };
+    this.signalHandlers.set('uncaughtException', uncaughtHandler);
+    process.on('uncaughtException', uncaughtHandler);
     
     // Handle unhandled promise rejections
-    process.on('unhandledRejection', (reason, promise) => {
+    const rejectionHandler = (reason: any, promise: Promise<any>) => {
       this.logger.error('Unhandled promise rejection, shutting down', new Error(String(reason)), undefined, {
         promise: promise.toString()
       });
       this.shutdown().finally(() => process.exit(1));
-    });
+    };
+    this.signalHandlers.set('unhandledRejection', rejectionHandler);
+    process.on('unhandledRejection', rejectionHandler);
   }
 
   /**
@@ -476,6 +490,9 @@ export class StartupManager extends EventEmitter {
     this.emit('shutdown:started');
     
     try {
+      // Clean up signal handlers first
+      this.cleanupSignalHandlers();
+      
       // Execute shutdown handlers with timeout
       await Promise.race([
         this.executeShutdownHandlers(),
@@ -499,6 +516,20 @@ export class StartupManager extends EventEmitter {
       this.emit('shutdown:failed', { error, duration });
       throw error;
     }
+  }
+
+  /**
+   * Clean up signal handlers
+   */
+  private cleanupSignalHandlers(): void {
+    for (const [event, handler] of this.signalHandlers) {
+      try {
+        process.removeListener(event as any, handler);
+      } catch (error) {
+        // Ignore cleanup errors
+      }
+    }
+    this.signalHandlers.clear();
   }
 
   /**

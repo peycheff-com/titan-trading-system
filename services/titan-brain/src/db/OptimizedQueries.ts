@@ -83,9 +83,9 @@ export class OptimizedQueries {
   ): Promise<number> {
     const cacheKey = `sharpe_opt:${phaseId}:${windowDays}`;
     
-    const cached = this.cache.get<number>(CacheNamespace.QUERY, cacheKey);
-    if (cached !== undefined) {
-      return cached;
+    const cached = await this.cache.get<number>(CacheNamespace.QUERY, cacheKey);
+    if (cached.success && cached.value !== undefined) {
+      return cached.value;
     }
 
     const windowStart = Date.now() - windowDays * MS_PER_DAY;
@@ -130,9 +130,9 @@ export class OptimizedQueries {
   ): Promise<number> {
     const cacheKey = `trade_count:${phaseId}:${windowDays}`;
     
-    const cached = this.cache.get<number>(CacheNamespace.QUERY, cacheKey);
-    if (cached !== undefined) {
-      return cached;
+    const cached = await this.cache.get<number>(CacheNamespace.QUERY, cacheKey);
+    if (cached.success && cached.value !== undefined) {
+      return cached.value;
     }
 
     const windowStart = Date.now() - windowDays * MS_PER_DAY;
@@ -154,9 +154,9 @@ export class OptimizedQueries {
   async getRecentDecisions(limit: number = 10): Promise<BrainDecision[]> {
     const cacheKey = `recent_decisions:${limit}`;
     
-    const cached = this.cache.get<BrainDecision[]>(CacheNamespace.QUERY, cacheKey);
-    if (cached) {
-      return cached;
+    const cached = await this.cache.get<BrainDecision[]>(CacheNamespace.QUERY, cacheKey);
+    if (cached.success && cached.value !== undefined) {
+      return cached.value;
     }
 
     const rows = await this.db.queryAll<RecentDecisionRow>(`
@@ -207,9 +207,9 @@ export class OptimizedQueries {
   async getLatestRiskSnapshot(): Promise<RiskSnapshot | null> {
     const cacheKey = 'latest_risk_snapshot';
     
-    const cached = this.cache.get<RiskSnapshot | null>(CacheNamespace.QUERY, cacheKey);
-    if (cached !== undefined) {
-      return cached;
+    const cached = await this.cache.get<RiskSnapshot | null>(CacheNamespace.QUERY, cacheKey);
+    if (cached.success && cached.value !== undefined) {
+      return cached.value;
     }
 
     const row = await this.db.queryOne<RiskSnapshotRow>(`
@@ -247,9 +247,9 @@ export class OptimizedQueries {
   ): Promise<PhasePerformance> {
     const cacheKey = `perf_summary:${phaseId}:${windowDays}`;
     
-    const cached = this.cache.get<PhasePerformance>(CacheNamespace.QUERY, cacheKey);
-    if (cached) {
-      return cached;
+    const cached = await this.cache.get<PhasePerformance>(CacheNamespace.QUERY, cacheKey);
+    if (cached.success && cached.value !== undefined) {
+      return cached.value;
     }
 
     const windowStart = Date.now() - windowDays * MS_PER_DAY;

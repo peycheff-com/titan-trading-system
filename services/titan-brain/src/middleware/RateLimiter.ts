@@ -97,12 +97,12 @@ export class RateLimiter {
 
     try {
       // Get current hit count from cache
-      const value = await this.cacheManager.get<string>(key);
+      const cacheResult = await this.cacheManager.get<string>(key);
       let hits: Array<{ timestamp: number; success?: boolean }> = [];
 
-      if (value) {
+      if (cacheResult.success && cacheResult.value) {
         try {
-          hits = JSON.parse(value);
+          hits = JSON.parse(cacheResult.value);
           if (!Array.isArray(hits)) {
             hits = [];
           }
@@ -196,11 +196,11 @@ export class RateLimiter {
     const key = keyGenerator(request);
 
     try {
-      const value = await this.cacheManager.get<string>(key);
-      if (!value) return;
+      const cacheResult = await this.cacheManager.get<string>(key);
+      if (!cacheResult.success || !cacheResult.value) return;
 
       let hits: Array<{ timestamp: number; success?: boolean }> = JSON.parse(
-        value,
+        cacheResult.value,
       );
 
       // Update the most recent hit with success status
@@ -359,8 +359,8 @@ export class RateLimiter {
     } | null
   > {
     try {
-      const hitResult = await this.cacheManager.get<string>(key);
-      if (!hitResult) {
+      const cacheResult = await this.cacheManager.get<string>(key);
+      if (!cacheResult.success || !cacheResult.value) {
         return {
           hits: 0,
           remaining: this.defaultConfig.maxRequests,
@@ -368,7 +368,7 @@ export class RateLimiter {
         };
       }
 
-      const hits: Array<{ timestamp: number }> = JSON.parse(hitResult);
+      const hits: Array<{ timestamp: number }> = JSON.parse(cacheResult.value);
       const now = Date.now();
       const windowStart = now - this.defaultConfig.windowMs;
       const validHits = hits.filter((hit) => hit.timestamp > windowStart);

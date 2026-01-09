@@ -200,7 +200,7 @@ export class InefficiencyMapper {
    * Validate POI (check if mitigated)
    * 
    * Determines if a Point of Interest is still valid or has been mitigated
-   * by price action.
+   * by price action. Once mitigated, POI remains invalid permanently.
    * 
    * @param poi Point of Interest to validate
    * @param currentPrice Current market price
@@ -217,11 +217,13 @@ export class InefficiencyMapper {
       
       // Bullish FVG is mitigated if price fills the gap (goes below bottom)
       if (fvg.type === 'BULLISH' && currentPrice <= fvg.bottom) {
+        (fvg as any).mitigated = true;
         return false;
       }
       
       // Bearish FVG is mitigated if price fills the gap (goes above top)
       if (fvg.type === 'BEARISH' && currentPrice >= fvg.top) {
+        (fvg as any).mitigated = true;
         return false;
       }
       
@@ -245,11 +247,13 @@ export class InefficiencyMapper {
       
       // Bullish OB is mitigated if price closes below the low
       if (ob.type === 'BULLISH' && currentPrice < ob.low) {
+        (ob as any).mitigated = true;
         return false;
       }
       
       // Bearish OB is mitigated if price closes above the high
       if (ob.type === 'BEARISH' && currentPrice > ob.high) {
+        (ob as any).mitigated = true;
         return false;
       }
       
@@ -268,10 +272,12 @@ export class InefficiencyMapper {
       const sweepThreshold = 0.001; // 0.1% threshold
       
       if (pool.type === 'HIGH' && currentPrice > pool.price * (1 + sweepThreshold)) {
+        (pool as any).swept = true;
         return false;
       }
       
       if (pool.type === 'LOW' && currentPrice < pool.price * (1 - sweepThreshold)) {
+        (pool as any).swept = true;
         return false;
       }
       

@@ -95,8 +95,8 @@ export class CachedRiskGuardian {
       CacheNamespace.CORRELATION,
       cacheKey,
     );
-    if (cached !== undefined) {
-      return cached;
+    if (cached.success && cached.value !== undefined) {
+      return cached.value;
     }
 
     const correlation = this.guardian.calculateCorrelation(assetA, assetB);
@@ -119,8 +119,8 @@ export class CachedRiskGuardian {
       CacheNamespace.CORRELATION,
       cacheKey,
     );
-    if (cached !== undefined) {
-      return cached;
+    if (cached.success && cached.value !== undefined) {
+      return cached.value;
     }
 
     const beta = this.guardian.getPortfolioBeta(positions);
@@ -171,8 +171,8 @@ export class CachedRiskGuardian {
       CacheNamespace.RISK,
       cacheKey,
     );
-    if (cached) {
-      return cached;
+    if (cached.success && cached.value !== undefined) {
+      return cached.value;
     }
 
     const metrics = this.guardian.getRiskMetrics(positions);

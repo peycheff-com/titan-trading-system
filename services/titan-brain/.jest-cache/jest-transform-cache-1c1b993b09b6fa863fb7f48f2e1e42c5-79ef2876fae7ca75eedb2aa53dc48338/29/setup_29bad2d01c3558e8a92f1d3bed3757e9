@@ -1,0 +1,35 @@
+611313981adec0b1cad360aea5627bbd
+/**
+ * Jest test setup file
+ * Configures global test environment and suppresses expected console output
+ */
+// Suppress expected console.error messages in tests
+const originalConsoleError = console.error;
+console.error = (...args) => {
+    const message = args[0];
+    // Suppress expected error messages from tests
+    const suppressedMessages = [
+        'Redis set error:',
+        'Redis delete error:',
+        'Redis clear error:',
+        'Redis disconnect error:',
+        'Failed to close positions during circuit breaker trigger:',
+        'Failed to send emergency notification:',
+        'Failed to persist breaker event:',
+        'Error fetching balances from',
+        'Telegram test failed:'
+    ];
+    // Only suppress if it's an expected test error
+    if (typeof message === 'string' && suppressedMessages.some(msg => message.includes(msg))) {
+        return; // Suppress this error
+    }
+    // Otherwise, log normally
+    originalConsoleError.apply(console, args);
+};
+// Increase max listeners for tests to prevent warnings
+process.setMaxListeners(20);
+// Clean up after each test
+afterEach(() => {
+    // Reset any global state if needed
+});
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJmaWxlIjoiL1VzZXJzL2l2YW4vQ29kZS90cmFkaW5nL3RpdGFuL3NlcnZpY2VzL3RpdGFuLWJyYWluL3Rlc3RzL3NldHVwLnRzIiwibWFwcGluZ3MiOiJBQUFBOzs7R0FHRztBQUVILG9EQUFvRDtBQUNwRCxNQUFNLG9CQUFvQixHQUFHLE9BQU8sQ0FBQyxLQUFLLENBQUM7QUFDM0MsT0FBTyxDQUFDLEtBQUssR0FBRyxDQUFDLEdBQUcsSUFBVyxFQUFFLEVBQUU7SUFDakMsTUFBTSxPQUFPLEdBQUcsSUFBSSxDQUFDLENBQUMsQ0FBQyxDQUFDO0lBRXhCLDhDQUE4QztJQUM5QyxNQUFNLGtCQUFrQixHQUFHO1FBQ3pCLGtCQUFrQjtRQUNsQixxQkFBcUI7UUFDckIsb0JBQW9CO1FBQ3BCLHlCQUF5QjtRQUN6QiwyREFBMkQ7UUFDM0Qsd0NBQXdDO1FBQ3hDLGtDQUFrQztRQUNsQyw4QkFBOEI7UUFDOUIsdUJBQXVCO0tBQ3hCLENBQUM7SUFFRiwrQ0FBK0M7SUFDL0MsSUFBSSxPQUFPLE9BQU8sS0FBSyxRQUFRLElBQUksa0JBQWtCLENBQUMsSUFBSSxDQUFDLEdBQUcsQ0FBQyxFQUFFLENBQUMsT0FBTyxDQUFDLFFBQVEsQ0FBQyxHQUFHLENBQUMsQ0FBQyxFQUFFLENBQUM7UUFDekYsT0FBTyxDQUFDLHNCQUFzQjtJQUNoQyxDQUFDO0lBRUQsMEJBQTBCO0lBQzFCLG9CQUFvQixDQUFDLEtBQUssQ0FBQyxPQUFPLEVBQUUsSUFBSSxDQUFDLENBQUM7QUFDNUMsQ0FBQyxDQUFDO0FBRUYsdURBQXVEO0FBQ3ZELE9BQU8sQ0FBQyxlQUFlLENBQUMsRUFBRSxDQUFDLENBQUM7QUFFNUIsMkJBQTJCO0FBQzNCLFNBQVMsQ0FBQyxHQUFHLEVBQUU7SUFDYixtQ0FBbUM7QUFDckMsQ0FBQyxDQUFDLENBQUMiLCJuYW1lcyI6W10sInNvdXJjZXMiOlsiL1VzZXJzL2l2YW4vQ29kZS90cmFkaW5nL3RpdGFuL3NlcnZpY2VzL3RpdGFuLWJyYWluL3Rlc3RzL3NldHVwLnRzIl0sInNvdXJjZXNDb250ZW50IjpbIi8qKlxuICogSmVzdCB0ZXN0IHNldHVwIGZpbGVcbiAqIENvbmZpZ3VyZXMgZ2xvYmFsIHRlc3QgZW52aXJvbm1lbnQgYW5kIHN1cHByZXNzZXMgZXhwZWN0ZWQgY29uc29sZSBvdXRwdXRcbiAqL1xuXG4vLyBTdXBwcmVzcyBleHBlY3RlZCBjb25zb2xlLmVycm9yIG1lc3NhZ2VzIGluIHRlc3RzXG5jb25zdCBvcmlnaW5hbENvbnNvbGVFcnJvciA9IGNvbnNvbGUuZXJyb3I7XG5jb25zb2xlLmVycm9yID0gKC4uLmFyZ3M6IGFueVtdKSA9PiB7XG4gIGNvbnN0IG1lc3NhZ2UgPSBhcmdzWzBdO1xuICBcbiAgLy8gU3VwcHJlc3MgZXhwZWN0ZWQgZXJyb3IgbWVzc2FnZXMgZnJvbSB0ZXN0c1xuICBjb25zdCBzdXBwcmVzc2VkTWVzc2FnZXMgPSBbXG4gICAgJ1JlZGlzIHNldCBlcnJvcjonLFxuICAgICdSZWRpcyBkZWxldGUgZXJyb3I6JyxcbiAgICAnUmVkaXMgY2xlYXIgZXJyb3I6JyxcbiAgICAnUmVkaXMgZGlzY29ubmVjdCBlcnJvcjonLFxuICAgICdGYWlsZWQgdG8gY2xvc2UgcG9zaXRpb25zIGR1cmluZyBjaXJjdWl0IGJyZWFrZXIgdHJpZ2dlcjonLFxuICAgICdGYWlsZWQgdG8gc2VuZCBlbWVyZ2VuY3kgbm90aWZpY2F0aW9uOicsXG4gICAgJ0ZhaWxlZCB0byBwZXJzaXN0IGJyZWFrZXIgZXZlbnQ6JyxcbiAgICAnRXJyb3IgZmV0Y2hpbmcgYmFsYW5jZXMgZnJvbScsXG4gICAgJ1RlbGVncmFtIHRlc3QgZmFpbGVkOidcbiAgXTtcbiAgXG4gIC8vIE9ubHkgc3VwcHJlc3MgaWYgaXQncyBhbiBleHBlY3RlZCB0ZXN0IGVycm9yXG4gIGlmICh0eXBlb2YgbWVzc2FnZSA9PT0gJ3N0cmluZycgJiYgc3VwcHJlc3NlZE1lc3NhZ2VzLnNvbWUobXNnID0+IG1lc3NhZ2UuaW5jbHVkZXMobXNnKSkpIHtcbiAgICByZXR1cm47IC8vIFN1cHByZXNzIHRoaXMgZXJyb3JcbiAgfVxuICBcbiAgLy8gT3RoZXJ3aXNlLCBsb2cgbm9ybWFsbHlcbiAgb3JpZ2luYWxDb25zb2xlRXJyb3IuYXBwbHkoY29uc29sZSwgYXJncyk7XG59O1xuXG4vLyBJbmNyZWFzZSBtYXggbGlzdGVuZXJzIGZvciB0ZXN0cyB0byBwcmV2ZW50IHdhcm5pbmdzXG5wcm9jZXNzLnNldE1heExpc3RlbmVycygyMCk7XG5cbi8vIENsZWFuIHVwIGFmdGVyIGVhY2ggdGVzdFxuYWZ0ZXJFYWNoKCgpID0+IHtcbiAgLy8gUmVzZXQgYW55IGdsb2JhbCBzdGF0ZSBpZiBuZWVkZWRcbn0pOyJdLCJ2ZXJzaW9uIjozfQ==

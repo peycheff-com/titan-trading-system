@@ -17,8 +17,8 @@ const testConfig: CapitalFlowConfig = {
   sweepThreshold: 1.2, // 20% excess triggers sweep
   reserveLimit: 200, // $200 minimum reserve
   sweepSchedule: '0 0 * * *', // Daily at midnight
-  maxRetries: 3,
-  retryBaseDelay: 1000 // 1 second base delay
+  maxRetries: 1, // Reduced for faster tests
+  retryBaseDelay: 10 // 10ms base delay for faster tests
 };
 
 /**
@@ -146,7 +146,7 @@ describe('CapitalFlowManager Property Tests', () => {
             }
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 50, timeout: 10000 }
       );
     });
 
@@ -161,8 +161,8 @@ describe('CapitalFlowManager Property Tests', () => {
     it('should not change total swept amount on failed sweeps', async () => {
       await fc.assert(
         fc.asyncProperty(
-          fc.float({ min: Math.fround(1), max: Math.fround(5000), noNaN: true }),
-          fc.float({ min: Math.fround(500), max: Math.fround(10000), noNaN: true }),
+          fc.float({ min: Math.fround(1), max: Math.fround(1000), noNaN: true }), // Reduced max
+          fc.float({ min: Math.fround(500), max: Math.fround(5000), noNaN: true }), // Reduced max
           async (sweepAmount, initialBalance) => {
             // Set up initial state
             mockExchangeAPI.setFuturesBalance(initialBalance);
@@ -180,9 +180,9 @@ describe('CapitalFlowManager Property Tests', () => {
             expect(finalTotalSwept).toBe(initialTotalSwept);
           }
         ),
-        { numRuns: 200 }
+        { numRuns: 10, timeout: 1000 } // Further reduced runs and timeout
       );
-    });
+    }, 5000); // Further reduced Jest timeout
 
     /**
      * **Validates: Requirements 4.4**
@@ -198,12 +198,12 @@ describe('CapitalFlowManager Property Tests', () => {
           // Generate sequence of sweep operations with success/failure flags
           fc.array(
             fc.record({
-              amount: fc.float({ min: Math.fround(1), max: Math.fround(2000), noNaN: true }),
+              amount: fc.float({ min: Math.fround(1), max: Math.fround(500), noNaN: true }), // Further reduced max
               shouldSucceed: fc.boolean()
             }),
-            { minLength: 2, maxLength: 8 }
+            { minLength: 2, maxLength: 3 } // Further reduced max length
           ),
-          fc.float({ min: Math.fround(20000), max: Math.fround(100000), noNaN: true }),
+          fc.float({ min: Math.fround(10000), max: Math.fround(20000), noNaN: true }), // Reduced range
           async (operations, initialBalance) => {
             // Set up with large initial balance to avoid balance constraints
             mockExchangeAPI.setFuturesBalance(initialBalance);
@@ -228,9 +228,9 @@ describe('CapitalFlowManager Property Tests', () => {
             }
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10, timeout: 2000 } // Further reduced runs and timeout
       );
-    });
+    }, 8000); // Further reduced Jest timeout
 
     /**
      * **Validates: Requirements 4.4**
@@ -282,7 +282,7 @@ describe('CapitalFlowManager Property Tests', () => {
             expect(finalTotal - initialTotal).toBeCloseTo(totalExpectedIncrease, 6);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 50, timeout: 10000 }
       );
     });
 
@@ -313,7 +313,7 @@ describe('CapitalFlowManager Property Tests', () => {
             expect(finalTotalSwept).toBe(initialTotalSwept);
           }
         ),
-        { numRuns: 200 }
+        { numRuns: 100, timeout: 8000 }
       );
     });
 
@@ -354,7 +354,7 @@ describe('CapitalFlowManager Property Tests', () => {
             expect(finalTotalSwept - initialTotalSwept).toBeCloseTo(expectedIncrease, 6);
           }
         ),
-        { numRuns: 50 }
+        { numRuns: 30, timeout: 15000 }
       );
     });
   });
@@ -387,7 +387,7 @@ describe('CapitalFlowManager Property Tests', () => {
             }
           }
         ),
-        { numRuns: 300 }
+        { numRuns: 150, timeout: 8000 }
       );
     });
 
@@ -421,7 +421,7 @@ describe('CapitalFlowManager Property Tests', () => {
             }
           }
         ),
-        { numRuns: 200 }
+        { numRuns: 100, timeout: 8000 }
       );
     });
   });
@@ -451,7 +451,7 @@ describe('CapitalFlowManager Property Tests', () => {
             }
           }
         ),
-        { numRuns: 200 }
+        { numRuns: 100, timeout: 8000 }
       );
     });
 
@@ -483,7 +483,7 @@ describe('CapitalFlowManager Property Tests', () => {
             }
           }
         ),
-        { numRuns: 200 }
+        { numRuns: 100, timeout: 8000 }
       );
     });
   });

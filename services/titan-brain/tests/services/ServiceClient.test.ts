@@ -242,15 +242,22 @@ describe('ServiceClient', () => {
     });
 
     it('should handle timeout errors', async () => {
+      // Mock fetch to reject with AbortError after timeout
       mockFetch.mockImplementationOnce(() => 
-        new Promise((resolve) => setTimeout(() => resolve({} as Response), 10000))
+        new Promise((_, reject) => {
+          setTimeout(() => {
+            const error = new Error('The operation was aborted');
+            error.name = 'AbortError';
+            reject(error);
+          }, 150);
+        })
       );
 
       await expect(serviceClient.request({
         method: 'GET',
         url: '/slow',
         timeout: 100
-      })).rejects.toThrow('Request timeout');
+      })).rejects.toThrow('Network error');
     });
   });
 

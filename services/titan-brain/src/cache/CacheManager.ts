@@ -74,15 +74,52 @@ export interface CacheStats {
 }
 
 /**
+ * Cache operation result
+ */
+export interface CacheResult<T = any> {
+  success: boolean;
+  value?: T;
+  source: 'redis' | 'memory' | 'none';
+  error?: string;
+}
+
+/**
+ * Cache status
+ */
+export interface CacheStatus {
+  redisConnected: boolean;
+  fallbackActive: boolean;
+  totalOperations: number;
+  hitRate: number;
+  averageResponseTime: number;
+}
+
+/**
+ * Cache metrics
+ */
+export interface CacheMetrics {
+  redisConnected: boolean;
+  fallbackActive: boolean;
+  totalOperations: number;
+  redisHits: number;
+  redisMisses: number;
+  memoryHits: number;
+  memoryMisses: number;
+  errors: number;
+}
+
+/**
  * Cache manager with Redis primary and in-memory fallback
  */
 export class CacheManager extends EventEmitter {
   private redisClient: RedisClientType | null = null;
   private inMemoryCache: InMemoryCache;
   private config: CacheConfig;
-  private metrics: any; // Simplified metrics
+  private metrics: CacheMetrics;
   private healthCheckInterval: NodeJS.Timeout | null = null;
   private isShuttingDown: boolean = false;
+  private operationCount: number = 0;
+  private totalResponseTime: number = 0;
 
   constructor(config: CacheConfig = DEFAULT_CACHE_CONFIG) {
     super();
@@ -94,6 +131,12 @@ export class CacheManager extends EventEmitter {
     this.metrics = {
       redisConnected: false,
       fallbackActive: false,
+      totalOperations: 0,
+      redisHits: 0,
+      redisMisses: 0,
+      memoryHits: 0,
+      memoryMisses: 0,
+      errors: 0,
     };
   }
 
@@ -147,6 +190,12 @@ export class CacheManager extends EventEmitter {
       console.log("Redis not configured, using in-memory cache only");
       this.metrics.fallbackActive = true;
     }
+
+    // Emit initialized event
+    this.emit('initialized', {
+      redisEnabled: !!this.config.redis,
+      fallbackActive: this.metrics.fallbackActive
+    });
   }
 
   private async initializeRedis(): Promise<void> {
@@ -195,7 +244,8 @@ export class CacheManager extends EventEmitter {
   async get<T>(
     arg1: string | CacheNamespace,
     arg2?: string,
-  ): Promise<T | null> {
+  ): Promise<CacheResult<T>> {
+    const startTime = Date.now();
     let key: string;
 
     if (arg2) {
@@ -204,29 +254,72 @@ export class CacheManager extends EventEmitter {
       key = arg1 as string;
     }
 
-    // specific handling for "key" only calls if needed, but assuming namespace usage mostly
+    this.metrics.totalOperations++;
 
-    // Try Redis
+    // Try Redis first
     if (this.redisClient && this.metrics.redisConnected) {
       try {
         const value = await this.redisClient.get(key);
+        const duration = Date.now() - startTime;
+        this.totalResponseTime += duration;
+        
         if (value) {
-          return JSON.parse(value) as T;
+          this.metrics.redisHits++;
+          this.emit('cache:hit', { source: 'redis', key, duration });
+          return {
+            success: true,
+            value: JSON.parse(value) as T,
+            source: 'redis'
+          };
+        } else {
+          this.metrics.redisMisses++;
+          this.emit('cache:miss', { source: 'redis', key, duration });
+          return {
+            success: false,
+            source: 'redis'
+          };
         }
-        return null; // Redis miss
       } catch (err) {
-        console.error("Redis get error:", err);
-        // Fallback
+        this.metrics.errors++;
+        const duration = Date.now() - startTime;
+        this.emit('cache:error', { 
+          source: 'redis', 
+          key, 
+          error: err instanceof Error ? err.message : 'Unknown error',
+          duration 
+        });
+        // Fall through to memory cache
       }
     }
 
     // Fallback to memory
     if (this.config.enableInMemoryFallback) {
       const value = this.inMemoryCache.get<T>(key);
-      return value !== undefined ? value : null;
+      const duration = Date.now() - startTime;
+      this.totalResponseTime += duration;
+      
+      if (value !== undefined) {
+        this.metrics.memoryHits++;
+        this.emit('cache:hit', { source: 'memory', key, duration });
+        return {
+          success: true,
+          value,
+          source: 'memory'
+        };
+      } else {
+        this.metrics.memoryMisses++;
+        this.emit('cache:miss', { source: 'memory', key, duration });
+        return {
+          success: false,
+          source: 'memory'
+        };
+      }
     }
 
-    return null;
+    return {
+      success: false,
+      source: 'none'
+    };
   }
 
   /**
@@ -238,14 +331,15 @@ export class CacheManager extends EventEmitter {
     arg2: string | T,
     arg3?: T | number,
     arg4?: number,
-  ): Promise<void> {
+  ): Promise<CacheResult<void>> {
     let key: string;
     let value: T;
     let ttl: number | undefined;
 
-    if (typeof arg2 === "string" && arg3 !== undefined) {
+    // Check if first argument is a namespace enum
+    if (typeof arg1 === "string" && Object.values(CacheNamespace).includes(arg1 as CacheNamespace)) {
       // set(namespace, key, value, ttl?)
-      key = this.getKey(arg1, arg2);
+      key = this.getKey(arg1 as CacheNamespace, arg2 as string);
       value = arg3 as T;
       ttl = arg4;
     } else {
@@ -256,8 +350,9 @@ export class CacheManager extends EventEmitter {
     }
 
     const stringValue = JSON.stringify(value);
+    this.metrics.totalOperations++;
 
-    // Try Redis
+    // Try Redis first
     if (this.redisClient && this.metrics.redisConnected) {
       try {
         if (ttl) {
@@ -265,9 +360,14 @@ export class CacheManager extends EventEmitter {
         } else {
           await this.redisClient.set(key, stringValue);
         }
+        return {
+          success: true,
+          source: 'redis'
+        };
       } catch (err) {
+        this.metrics.errors++;
         console.error("Redis set error:", err);
-        // Fallback
+        // Fall through to memory cache
       }
     }
 
@@ -278,14 +378,24 @@ export class CacheManager extends EventEmitter {
         value,
         ttl ? ttl * 1000 : this.config.inMemoryTtlMs,
       );
+      return {
+        success: true,
+        source: 'memory'
+      };
     }
+
+    return {
+      success: false,
+      source: 'none',
+      error: 'No cache backend available'
+    };
   }
 
   /**
    * Delete value from cache
    * Supports delete(key) and delete(namespace, key)
    */
-  async delete(arg1: string | CacheNamespace, arg2?: string): Promise<void> {
+  async delete(arg1: string | CacheNamespace, arg2?: string): Promise<CacheResult<void>> {
     let key: string;
     if (arg2) {
       key = this.getKey(arg1, arg2);
@@ -293,16 +403,31 @@ export class CacheManager extends EventEmitter {
       key = arg1 as string;
     }
 
+    this.metrics.totalOperations++;
+    let redisSuccess = false;
+    let memorySuccess = false;
+
     if (this.redisClient && this.metrics.redisConnected) {
       try {
         await this.redisClient.del(key);
+        redisSuccess = true;
       } catch (err) {
+        this.metrics.errors++;
         console.error("Redis delete error:", err);
       }
     }
 
     if (this.config.enableInMemoryFallback) {
       this.inMemoryCache.delete(key);
+      memorySuccess = true;
+    }
+
+    if (redisSuccess) {
+      return { success: true, source: 'redis' };
+    } else if (memorySuccess) {
+      return { success: true, source: 'memory' };
+    } else {
+      return { success: false, source: 'none' };
     }
   }
 
@@ -338,17 +463,81 @@ export class CacheManager extends EventEmitter {
     await this.invalidatePattern(namespace, "*");
   }
 
-  async clear(): Promise<void> {
+  async clear(): Promise<CacheResult<void>> {
+    this.metrics.totalOperations++;
+    let redisSuccess = false;
+    let memorySuccess = false;
+
     if (this.redisClient && this.metrics.redisConnected) {
-      await this.redisClient.flushDb();
+      try {
+        await this.redisClient.flushDb();
+        redisSuccess = true;
+      } catch (err) {
+        this.metrics.errors++;
+        console.error("Redis clear error:", err);
+      }
     }
-    this.inMemoryCache.clear();
+
+    if (this.config.enableInMemoryFallback) {
+      this.inMemoryCache.clear();
+      memorySuccess = true;
+    }
+
+    if (redisSuccess) {
+      return { success: true, source: 'redis' };
+    } else if (memorySuccess) {
+      return { success: true, source: 'memory' };
+    } else {
+      return { success: false, source: 'none' };
+    }
+  }
+
+  /**
+   * Check if cache is healthy
+   */
+  isHealthy(): boolean {
+    return this.metrics.redisConnected || this.config.enableInMemoryFallback;
+  }
+
+  /**
+   * Get cache status
+   */
+  getStatus(): CacheStatus {
+    const hitRate = this.metrics.totalOperations > 0 
+      ? (this.metrics.redisHits + this.metrics.memoryHits) / this.metrics.totalOperations 
+      : 0;
+    
+    const averageResponseTime = this.metrics.totalOperations > 0 
+      ? this.totalResponseTime / this.metrics.totalOperations 
+      : 0;
+
+    return {
+      redisConnected: this.metrics.redisConnected,
+      fallbackActive: this.metrics.fallbackActive,
+      totalOperations: this.metrics.totalOperations,
+      hitRate,
+      averageResponseTime
+    };
+  }
+
+  /**
+   * Get cache metrics
+   */
+  getMetrics(): CacheMetrics {
+    return { ...this.metrics };
   }
 
   async shutdown(): Promise<void> {
     this.isShuttingDown = true;
+    if (this.healthCheckInterval) {
+      clearInterval(this.healthCheckInterval);
+    }
     if (this.redisClient) {
-      await this.redisClient.disconnect();
+      try {
+        await this.redisClient.disconnect();
+      } catch (err) {
+        console.error("Redis disconnect error:", err);
+      }
     }
     this.inMemoryCache.clear();
   }

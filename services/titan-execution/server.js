@@ -419,6 +419,15 @@ configManager.on('config:changed', (event) => {
         loggerAdapter.error({ error: err.message }, 'Failed to re-initialize BybitAdapter');
       });
     }
+  } else if (event.type === 'scavenger' && event.scavenger) {
+    // Broadcast config update to Scavenger microservice via IPC
+    // Requirements: Forward config to Scavenger service
+    loggerAdapter.info({ type: 'scavenger' }, 'Broadcasting Scavenger config update via IPC');
+    fastPathServer.broadcast({
+      type: 'CONFIG_UPDATE',
+      config: event.scavenger,
+      timestamp: Date.now()
+    });
   }
 });
 

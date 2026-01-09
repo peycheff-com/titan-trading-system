@@ -551,6 +551,11 @@ export class ConfigManager extends EventEmitter {
       results.strategic_memory = this.updateStrategicMemory(updates.strategic_memory);
     }
 
+    // Update scavenger config
+    if (updates.scavenger) {
+      results.scavenger = this.updateScavenger(updates.scavenger);
+    }
+
     });
     
     // Update api_keys
@@ -763,6 +768,25 @@ export class ConfigManager extends EventEmitter {
     });
 
     return this.config.strategic_memory;
+  }
+
+  /**
+   * Update Scavenger configuration
+   * @param {Object} config - Scavenger configuration updates
+   * @returns {Object} Updated scavenger configuration
+   */
+  updateScavenger(config) {
+    // Requirements: Forward config to Scavenger service via IPC
+    // This method mainly triggers the event that server.js listens to
+    
+    this.logger.info({ type: 'scavenger' }, 'Scavenger configuration update requested');
+
+    this.emit('config:changed', {
+      type: 'scavenger',
+      scavenger: config,
+    });
+
+    return config;
   }
 
   /**

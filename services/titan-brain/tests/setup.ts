@@ -1,50 +1,39 @@
 /**
- * Jest Test Setup for Titan Brain
+ * Jest test setup file
+ * Configures global test environment and suppresses expected console output
  */
 
-// Set test environment
-process.env.NODE_ENV = 'test';
-
-// Increase timeout for integration tests
-jest.setTimeout(30000);
-
-// Mock console methods to reduce noise in tests
-const originalConsole = { ...console };
-
-beforeAll(() => {
-  // Suppress console output during tests unless DEBUG is set
-  if (!process.env.DEBUG) {
-    console.log = jest.fn();
-    console.info = jest.fn();
-    console.warn = jest.fn();
-    // Keep console.error for debugging
+// Suppress expected console.error messages in tests
+const originalConsoleError = console.error;
+console.error = (...args: any[]) => {
+  const message = args[0];
+  
+  // Suppress expected error messages from tests
+  const suppressedMessages = [
+    'Redis set error:',
+    'Redis delete error:',
+    'Redis clear error:',
+    'Redis disconnect error:',
+    'Failed to close positions during circuit breaker trigger:',
+    'Failed to send emergency notification:',
+    'Failed to persist breaker event:',
+    'Error fetching balances from',
+    'Telegram test failed:'
+  ];
+  
+  // Only suppress if it's an expected test error
+  if (typeof message === 'string' && suppressedMessages.some(msg => message.includes(msg))) {
+    return; // Suppress this error
   }
-});
-
-afterAll(() => {
-  // Restore console
-  console.log = originalConsole.log;
-  console.info = originalConsole.info;
-  console.warn = originalConsole.warn;
-});
-
-// Global test utilities
-export const testUtils = {
-  /**
-   * Wait for a specified duration
-   */
-  wait: (ms: number): Promise<void> =>
-    new Promise(resolve => setTimeout(resolve, ms)),
-
-  /**
-   * Generate a random signal ID
-   */
-  randomSignalId: (): string =>
-    `sig_${Date.now()}_${Math.random().toString(36).substring(7)}`,
-
-  /**
-   * Generate a random equity value within a range
-   */
-  randomEquity: (min: number = 200, max: number = 100000): number =>
-    Math.random() * (max - min) + min,
+  
+  // Otherwise, log normally
+  originalConsoleError.apply(console, args);
 };
+
+// Increase max listeners for tests to prevent warnings
+process.setMaxListeners(20);
+
+// Clean up after each test
+afterEach(() => {
+  // Reset any global state if needed
+});

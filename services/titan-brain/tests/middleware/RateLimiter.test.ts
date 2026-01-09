@@ -267,12 +267,11 @@ describe('RateLimiter', () => {
       mockCacheManager.set.mockResolvedValue({ success: true });
 
       const middleware = rateLimiter.createMiddleware();
-      await middleware(mockRequest, mockReply, mockDone);
+      await middleware(mockRequest, mockReply);
 
       expect(mockReply.header).toHaveBeenCalledWith('X-RateLimit-Limit', '10');
       expect(mockReply.header).toHaveBeenCalledWith('X-RateLimit-Remaining', '9');
       expect(mockReply.header).toHaveBeenCalledWith('X-RateLimit-Reset', expect.any(String));
-      expect(mockDone).toHaveBeenCalled();
       expect(mockReply.status).not.toHaveBeenCalled();
     });
 
@@ -283,14 +282,13 @@ describe('RateLimiter', () => {
       mockCacheManager.get.mockResolvedValue({ success: true, value: JSON.stringify(existingHits) });
 
       const middleware = rateLimiter.createMiddleware();
-      await middleware(mockRequest, mockReply, mockDone);
+      await middleware(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(429);
       expect(mockReply.send).toHaveBeenCalledWith(expect.objectContaining({
         error: 'Too Many Requests'
       }));
       expect(mockLogger.logSecurityEvent).toHaveBeenCalled();
-      expect(mockDone).not.toHaveBeenCalled();
     });
 
     it('should call custom onLimitReached handler', async () => {
@@ -305,7 +303,7 @@ describe('RateLimiter', () => {
       mockCacheManager.get.mockResolvedValue({ success: true, value: JSON.stringify(existingHits) });
 
       const middleware = rateLimiter.createMiddleware(config);
-      await middleware(mockRequest, mockReply, mockDone);
+      await middleware(mockRequest, mockReply);
 
       expect(onLimitReached).toHaveBeenCalledWith(mockRequest, mockReply);
       expect(mockReply.status).not.toHaveBeenCalled(); // Custom handler should handle response
@@ -320,21 +318,19 @@ describe('RateLimiter', () => {
       mockCacheManager.set.mockResolvedValue({ success: true });
 
       const middleware = rateLimiter.createMiddleware(config);
-      await middleware(mockRequest, mockReply, mockDone);
+      await middleware(mockRequest, mockReply);
 
       // Note: The actual addHook functionality is not implemented in this version
       // This test just ensures the middleware doesn't crash with conditional counting config
-      expect(mockDone).toHaveBeenCalled();
     });
 
     it('should handle middleware errors gracefully', async () => {
       mockCacheManager.get.mockRejectedValue(new Error('Cache error'));
 
       const middleware = rateLimiter.createMiddleware();
-      await middleware(mockRequest, mockReply, mockDone);
+      await middleware(mockRequest, mockReply);
 
       expect(mockLogger.error).toHaveBeenCalled();
-      expect(mockDone).toHaveBeenCalled(); // Should allow request on error
     });
   });
 
@@ -351,7 +347,7 @@ describe('RateLimiter', () => {
       mockCacheManager.set.mockResolvedValue({ success: true });
 
       const middleware = rateLimiter.createEndpointMiddleware(endpointConfigs);
-      await middleware(mockRequest, mockReply, mockDone);
+      await middleware(mockRequest, mockReply);
 
       expect(mockReply.header).toHaveBeenCalledWith('X-RateLimit-Limit', '5');
     });
@@ -367,7 +363,7 @@ describe('RateLimiter', () => {
       mockCacheManager.set.mockResolvedValue({ success: true });
 
       const middleware = rateLimiter.createEndpointMiddleware(endpointConfigs);
-      await middleware(mockRequest, mockReply, mockDone);
+      await middleware(mockRequest, mockReply);
 
       expect(mockReply.header).toHaveBeenCalledWith('X-RateLimit-Limit', '10'); // Default
     });
@@ -385,7 +381,7 @@ describe('RateLimiter', () => {
       mockCacheManager.set.mockResolvedValue({ success: true });
 
       const middleware = rateLimiter.createEndpointMiddleware(endpointConfigs);
-      await middleware(mockRequest, mockReply, mockDone);
+      await middleware(mockRequest, mockReply);
 
       expect(mockReply.header).toHaveBeenCalledWith('X-RateLimit-Limit', '5');
     });

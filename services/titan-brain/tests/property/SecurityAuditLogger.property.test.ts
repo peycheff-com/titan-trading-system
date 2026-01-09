@@ -15,8 +15,13 @@ import { join } from 'path';
 describe('SecurityAuditLogger Property Tests', () => {
   const testLogDir = './test-logs/security';
   let auditLogger: SecurityAuditLogger;
+  let originalConsoleError: typeof console.error;
 
   beforeEach(() => {
+    // Mock console.error to suppress security alert spam during tests
+    originalConsoleError = console.error;
+    console.error = jest.fn();
+
     // Clean up test directory
     if (existsSync(testLogDir)) {
       rmSync(testLogDir, { recursive: true, force: true });
@@ -38,6 +43,9 @@ describe('SecurityAuditLogger Property Tests', () => {
   });
 
   afterEach(() => {
+    // Restore console.error
+    console.error = originalConsoleError;
+
     // Clean up test directory
     if (existsSync(testLogDir)) {
       rmSync(testLogDir, { recursive: true, force: true });
