@@ -15,7 +15,7 @@ import {
   PatternPrecision,
   FlowValidation,
   TradeOutcome
-} from '../types/enhanced-2026';
+} from '../types';
 import { FVG, OrderBlock, LiquidityPool, POI, OHLCV } from '../types';
 import {
   PatternPrecisionAnalyzer,

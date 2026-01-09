@@ -8,7 +8,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { ExchangeFlow, ManipulationAnalysis, ConnectionStatus } from '../types/enhanced-2026';
+import { ExchangeFlow, ManipulationAnalysis, ConnectionStatus } from '../types';
 
 /**
  * Manipulation detection configuration

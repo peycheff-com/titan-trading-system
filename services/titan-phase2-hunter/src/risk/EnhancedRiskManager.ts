@@ -21,7 +21,7 @@ import {
   EmergencyType,
   EmergencyState,
   ConnectionStatus
-} from '../types/enhanced-2026';
+} from '../types';
 
 // ============================================================================
 // INTERFACES

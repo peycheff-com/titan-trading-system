@@ -18,7 +18,7 @@ import {
   ConnectionStatus, 
   GlobalCVDData,
   EnhancedErrorType 
-} from '../types/enhanced-2026';
+} from '../types';
 import { Logger } from '../logging/Logger';
 
 /**

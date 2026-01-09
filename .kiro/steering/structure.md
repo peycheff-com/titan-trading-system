@@ -6,68 +6,129 @@
 titan/
 ├── services/
 │   ├── shared/                           # Shared infrastructure
-│   │   ├── WebSocketManager.ts
-│   │   ├── ExecutionService.ts
-│   │   ├── TelemetryService.ts
-│   │   ├── ConfigManager.ts
-│   │   └── RateLimiter.ts
-│   ├── titan-brain/                      # Phase 5 - Orchestrator
-│   │   ├── BrainOrchestrator.ts
-│   │   ├── CapitalAllocator.ts
-│   │   ├── GlobalRiskManager.ts
-│   │   └── PhaseTransitioner.ts
-│   ├── titan-phase1-scavenger/           # Phase 1 - Trap system
 │   │   ├── src/
-│   │   │   ├── engine/
-│   │   │   ├── calculators/
-│   │   │   ├── detectors/
-│   │   │   └── console/
+│   │   │   ├── WebSocketManager.ts       # Centralized WebSocket connections
+│   │   │   ├── ExecutionService.ts       # Unified order execution
+│   │   │   ├── TelemetryService.ts       # Centralized logging
+│   │   │   ├── ConfigManager.ts          # Hierarchical configuration
+│   │   │   ├── AdvancedOrderRouter.ts    # Smart order routing
+│   │   │   ├── DistributedStateManager.ts # Distributed state management
+│   │   │   ├── HighFrequencyProcessor.ts # High-frequency data processing
+│   │   │   ├── LoadBalancer.ts           # Load balancing across services
+│   │   │   ├── NetworkOptimizer.ts       # Network optimization
+│   │   │   ├── PerformanceMonitor.ts     # Performance monitoring
+│   │   │   ├── ResourceOptimizer.ts      # Resource optimization
+│   │   │   ├── ServiceDiscovery.ts       # Service discovery
+│   │   │   └── index.ts                  # Module exports
 │   │   ├── tests/
-│   │   └── package.json
-│   ├── titan-phase2-hunter/              # Phase 2 - Holographic
+│   │   ├── package.json
+│   │   └── tsconfig.json
+│   ├── titan-brain/                      # Phase 5 - Master Orchestrator
 │   │   ├── src/
-│   │   │   ├── engine/
-│   │   │   ├── calculators/
-│   │   │   └── console/
+│   │   │   ├── engine/                   # Core orchestration logic
+│   │   │   ├── server/                   # Fastify HTTP server
+│   │   │   ├── db/                       # PostgreSQL database layer
+│   │   │   └── cache/                    # In-memory caching
 │   │   ├── tests/
-│   │   └── package.json
-│   ├── titan-phase3-sentinel/            # Phase 3 - Basis arb
-│   │   └── [To be implemented]
-│   └── titan-phase4-ai-quant/            # Phase 4 - Optimizer
-│       └── [Python implementation]
+│   │   ├── monitoring/                   # Prometheus/Grafana configs
+│   │   ├── scripts/                      # Utility scripts
+│   │   ├── Dockerfile
+│   │   ├── railway.json
+│   │   └── README.md
+│   ├── titan-execution/                  # Execution Microservice
+│   │   ├── src/
+│   │   │   ├── adapters/                 # Exchange adapters (Bybit, MEXC, Binance)
+│   │   │   ├── handlers/                 # Request handlers
+│   │   │   └── routes/                   # API routes
+│   │   ├── tests/
+│   │   ├── migrations/                   # Database migrations
+│   │   ├── docs/                         # API documentation
+│   │   ├── Dockerfile
+│   │   ├── railway.json
+│   │   └── README.md
+│   ├── titan-console/                    # Web Dashboard
+│   │   ├── src/
+│   │   │   ├── components/               # React components
+│   │   │   ├── pages/                    # Page components
+│   │   │   ├── hooks/                    # Custom React hooks
+│   │   │   └── lib/                      # Utility functions
+│   │   ├── public/                       # Static assets
+│   │   ├── index.html
+│   │   ├── vite.config.ts
+│   │   ├── tailwind.config.ts
+│   │   ├── railway.json
+│   │   └── README.md
+│   ├── titan-ai-quant/                   # Phase 4 - AI Optimizer
+│   │   ├── src/
+│   │   │   ├── engine/                   # AI analysis engine
+│   │   │   ├── memory/                   # Strategic memory (SQLite)
+│   │   │   ├── backtester/               # Proposal validation
+│   │   │   └── guardrails/               # Safety validation
+│   │   ├── tests/
+│   │   ├── railway.json
+│   │   └── README.md
+│   ├── titan-phase1-scavenger/           # Phase 1 - Trap System
+│   │   ├── src/
+│   │   │   ├── engine/                   # TitanTrap core engine
+│   │   │   ├── calculators/              # Tripwire calculations
+│   │   │   ├── detectors/                # OI Wipeout, Funding Squeeze, Basis Arb
+│   │   │   └── console/                  # Ink terminal UI
+│   │   ├── tests/
+│   │   ├── railway.json
+│   │   └── README.md
+│   ├── titan-phase2-hunter/              # Phase 2 - Holographic Structure
+│   │   ├── src/
+│   │   │   ├── engine/                   # HologramEngine
+│   │   │   ├── calculators/              # FractalMath, CVD
+│   │   │   ├── detectors/                # POI, Session, Bot Trap
+│   │   │   └── console/                  # Ink terminal UI
+│   │   ├── tests/
+│   │   ├── config/                       # Phase-specific configs
+│   │   ├── railway.json
+│   │   └── README.md
+│   └── titan-phase3-sentinel/            # Phase 3 - Basis Arbitrage
+│       ├── src/
+│       │   ├── engine/                   # SentinelCore
+│       │   ├── executors/                # Atomic, TWAP executors
+│       │   ├── portfolio/                # Portfolio management
+│       │   └── monitors/                 # Vacuum, rebalancing
+│       ├── tests/
+│       └── README.md
 ├── config/
-│   ├── brain.config.json                 # Global config
-│   ├── phase1.config.json
-│   ├── phase2.config.json
-│   └── phase3.config.json
-├── logs/
-│   └── trades.jsonl                      # Centralized logging
+│   ├── brain.config.json                 # Brain global config
+│   ├── phase1.config.json                # Phase 1 config
+│   ├── infrastructure.config.json        # Infrastructure config
+│   ├── disaster-recovery.config.json     # DR config
+│   ├── hot-standby.config.json           # Hot standby config
+│   └── redis-secure.conf                 # Redis configuration
+├── monitoring/                           # Monitoring stack
+│   ├── prometheus/
+│   ├── grafana/
+│   └── alertmanager/
+├── scripts/                              # Utility scripts
+├── logs/                                 # Centralized logs
+├── backups/                              # Backup storage
+│   ├── development/
+│   └── disaster-recovery/
+├── docs/                                 # Documentation
 ├── .kiro/                                # Kiro configuration
 │   ├── steering/                         # Steering rules
 │   │   ├── titan-architecture.md
-│   │   ├── titan-integration-fixes.md
 │   │   ├── workflow.md
 │   │   ├── structure.md
 │   │   ├── tech.md
 │   │   └── product.md
 │   └── specs/                            # Feature specifications
-│       ├── titan-phase1-scavenger/
-│       ├── titan-phase2-hunter/
-│       ├── titan-phase3-sentinel/
-│       ├── titan-phase4-ai-quant/
-│       ├── titan-phase5-brain/
-│       └── titan-system-integration/
-├── archive/                              # Archived projects
-│   └── pine-script-studio/              # Pine Script validator (archived)
+├── ecosystem.config.js                   # PM2 configuration
+├── start-titan.sh                        # Start all services
+├── stop-titan.sh                         # Stop all services
 ├── package.json
 └── README.md
 ```
 
-## Phase Structure
+## Service Structure Patterns
 
-Each Titan phase follows this pattern:
-
-### Standard Phase Structure (TypeScript)
+### Trading Phase Structure (TypeScript)
 ```
 services/titan-phaseX-name/
 ├── src/
@@ -75,38 +136,145 @@ services/titan-phaseX-name/
 │   ├── calculators/         # Pure math functions
 │   ├── detectors/           # Signal detection
 │   ├── validators/          # Validation logic
-│   ├── exchanges/           # Exchange clients
-│   ├── config/              # Configuration
-│   ├── console/             # UI components (Ink + React)
-│   ├── events/              # Event emitters
-│   └── logging/             # Logging utilities
+│   ├── console/             # Ink terminal UI (React)
+│   └── index.ts             # Entry point
 ├── tests/
 │   ├── unit/                # Unit tests
 │   ├── property/            # Property-based tests
 │   └── integration/         # Integration tests
+├── dist/                    # Compiled output
 ├── package.json
 ├── tsconfig.json
+├── jest.config.js
+├── railway.json             # Railway deployment config
 └── README.md
 ```
 
 ### Shared Infrastructure
 ```
 services/shared/
-├── WebSocketManager.ts      # Centralized WebSocket connections
-├── ExecutionService.ts      # Unified order execution
-├── TelemetryService.ts      # Centralized logging
-├── ConfigManager.ts         # Hierarchical configuration
-└── RateLimiter.ts          # Global rate limiting
+├── src/
+│   ├── WebSocketManager.ts      # Centralized WebSocket connections
+│   ├── ExecutionService.ts      # Unified order execution
+│   ├── TelemetryService.ts      # Centralized logging
+│   ├── ConfigManager.ts         # Hierarchical configuration
+│   ├── AdvancedOrderRouter.ts   # Smart order routing
+│   ├── DistributedStateManager.ts # Distributed state
+│   ├── HighFrequencyProcessor.ts # HFT data processing
+│   ├── LoadBalancer.ts          # Service load balancing
+│   ├── NetworkOptimizer.ts      # Network optimization
+│   ├── PerformanceMonitor.ts    # Performance metrics
+│   ├── ResourceOptimizer.ts     # Resource management
+│   ├── ServiceDiscovery.ts      # Service discovery
+│   └── index.ts                 # Module exports
+├── tests/
+├── package.json
+└── tsconfig.json
 ```
 
 ### Brain Orchestrator
 ```
 services/titan-brain/
-├── BrainOrchestrator.ts     # Master state machine
-├── CapitalAllocator.ts      # Phase-based allocation
-├── GlobalRiskManager.ts     # System-wide risk
-├── PhaseTransitioner.ts     # Automatic phase switching
-└── TelemetryAggregator.ts   # Unified metrics
+├── src/
+│   ├── engine/
+│   │   ├── TitanBrain.ts        # Master orchestrator
+│   │   ├── AllocationEngine.ts  # Sigmoid-based allocation
+│   │   ├── PerformanceTracker.ts # Rolling Sharpe ratios
+│   │   ├── RiskGuardian.ts      # Correlation & leverage
+│   │   ├── CapitalFlowManager.ts # Profit sweeper
+│   │   ├── CircuitBreaker.ts    # Emergency halt
+│   │   └── SignalQueue.ts       # Priority processing
+│   ├── server/
+│   │   └── WebhookServer.ts     # Fastify HTTP server
+│   ├── db/
+│   │   └── DatabaseManager.ts   # PostgreSQL persistence
+│   └── cache/
+│       └── CacheManager.ts      # In-memory caching
+├── monitoring/
+│   ├── prometheus/
+│   └── grafana/
+├── tests/
+├── Dockerfile
+├── railway.json
+└── README.md
+```
+
+### Execution Microservice
+```
+services/titan-execution/
+├── src/
+│   ├── adapters/
+│   │   ├── BybitAdapter.js      # Bybit USDT Perpetuals
+│   │   ├── MexcAdapter.js       # MEXC Futures
+│   │   └── BinanceAdapter.js    # Binance integration
+│   ├── handlers/
+│   │   ├── ShadowState.js       # Position state tracker
+│   │   ├── L2Validator.js       # Order book validation
+│   │   ├── BrokerGateway.js     # Order execution
+│   │   ├── Reconciliation.js    # Broker state sync
+│   │   ├── Heartbeat.js         # Dead man's switch
+│   │   ├── LimitChaser.js       # Aggressive limit algorithm
+│   │   ├── WebSocketCache.js    # L2 order book cache
+│   │   ├── GlobalRateLimiter.js # API rate limiting
+│   │   ├── SignalRouter.js      # Signal routing
+│   │   └── PhaseManager.js      # Phase coordination
+│   └── routes/
+│       └── api.js               # REST API routes
+├── migrations/                  # Database migrations
+├── tests/
+├── Dockerfile
+├── railway.json
+└── README.md
+```
+
+### Web Dashboard (Console)
+```
+services/titan-console/
+├── src/
+│   ├── components/
+│   │   ├── ui/                  # shadcn/ui components
+│   │   ├── Overview.tsx         # System overview
+│   │   ├── LiveOps.tsx          # Live operations
+│   │   └── Settings.tsx         # Configuration
+│   ├── pages/
+│   ├── hooks/
+│   │   ├── useTitanData.ts      # Data hooks
+│   │   └── useWebSocket.ts      # WebSocket connection
+│   ├── lib/
+│   │   └── utils.ts             # Utility functions
+│   ├── App.tsx                  # Main application
+│   └── main.tsx                 # Entry point
+├── public/                      # Static assets
+├── index.html
+├── vite.config.ts
+├── tailwind.config.ts
+├── postcss.config.js
+├── components.json              # shadcn/ui config
+├── railway.json
+└── README.md
+```
+
+### AI Quant (Phase 4)
+```
+services/titan-ai-quant/
+├── src/
+│   ├── engine/
+│   │   ├── TitanAnalyst.ts      # AI analysis engine
+│   │   ├── GeminiClient.ts      # Gemini API client
+│   │   └── RealTimeOptimizer.ts # Real-time optimization
+│   ├── memory/
+│   │   └── StrategicMemory.ts   # SQLite-based learning
+│   ├── backtester/
+│   │   └── Backtester.ts        # Proposal validation
+│   ├── guardrails/
+│   │   ├── Guardrails.ts        # Safety validation
+│   │   └── ApprovalWorkflow.ts  # Human-in-the-loop
+│   └── analytics/
+│       ├── Journal.ts           # Trade log parser
+│       └── PredictiveAnalytics.ts # Predictive analysis
+├── tests/
+├── railway.json
+└── README.md
 ```
 
 ## Naming Conventions
@@ -149,7 +317,7 @@ services/titan-brain/
 - Manages all WebSocket connections
 - Single connection per exchange
 - Message routing to subscribers
-- Automatic reconnection
+- Automatic reconnection with exponential backoff
 
 **ExecutionService**:
 - Unified order execution
@@ -168,6 +336,46 @@ services/titan-brain/
 - Hot-reload support
 - Config validation
 - Merge logic with precedence
+
+**AdvancedOrderRouter**:
+- Smart order routing across exchanges
+- Best execution logic
+- Slippage optimization
+
+**DistributedStateManager**:
+- Distributed state management
+- Cross-service state synchronization
+- Conflict resolution
+
+**HighFrequencyProcessor**:
+- High-frequency data processing
+- Low-latency message handling
+- Buffer management
+
+**LoadBalancer**:
+- Load balancing across services
+- Health check integration
+- Failover handling
+
+**NetworkOptimizer**:
+- Network optimization
+- Connection pooling
+- Latency reduction
+
+**PerformanceMonitor**:
+- Performance metrics collection
+- Latency tracking
+- Resource utilization
+
+**ResourceOptimizer**:
+- Resource management
+- Memory optimization
+- CPU utilization
+
+**ServiceDiscovery**:
+- Service discovery
+- Health monitoring
+- Dynamic routing
 
 ### Phase Components
 
@@ -195,52 +403,19 @@ services/titan-brain/
 - Risk validation
 - CVD validation
 
-**Exchanges** (Exchange Clients):
-- REST API clients
-- WebSocket clients (deprecated - use WebSocketManager)
-- HMAC signature generation
-- Rate limiting (deprecated - use ExecutionService)
-
 **Console** (UI Components):
-- Ink + React components
-- Terminal dashboard
-- Keyboard input handling
+- Ink + React components (terminal phases)
+- React + Vite + Tailwind (web dashboard)
 - Real-time updates
+- Keyboard input handling
 
 ## File Organization Rules
 
-### All Titan components go in titan/
+### All Titan components go in services/
 - NEVER create Titan files in the root directory
 - Each phase gets its own subdirectory under `services/`
 - Shared infrastructure goes in `services/shared/`
 - Brain goes in `services/titan-brain/`
-
-### Standard file structure
-```
-services/titan-phaseX-name/
-├── src/
-│   ├── engine/
-│   │   └── MainEngine.ts
-│   ├── calculators/
-│   │   ├── Calculator1.ts
-│   │   └── Calculator2.ts
-│   ├── detectors/
-│   │   ├── Detector1.ts
-│   │   └── Detector2.ts
-│   └── console/
-│       └── Dashboard.tsx
-├── tests/
-│   ├── unit/
-│   │   ├── Calculator1.test.ts
-│   │   └── Calculator2.test.ts
-│   ├── property/
-│   │   └── Calculator1.property.test.ts
-│   └── integration/
-│       └── EndToEnd.integration.test.ts
-├── package.json
-├── tsconfig.json
-└── README.md
-```
 
 ### Directory naming
 - Use kebab-case: `titan-phase1-scavenger`

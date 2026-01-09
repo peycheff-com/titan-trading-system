@@ -6,14 +6,14 @@ This is a comprehensive algorithmic trading system with 5 operational phases orc
 
 ## Languages
 
-- **TypeScript (Node.js v18+)**: All trading phases, Brain orchestrator, and shared infrastructure
-- **Python (3.10+)**: Phase 4 AI Quant (ML optimization)
+- **TypeScript (Node.js v20+)**: All trading phases, Brain orchestrator, shared infrastructure, and AI Quant
+- **JavaScript (Node.js)**: Titan Execution microservice
 
 ## Development Commands
 
 ```bash
-# Install dependencies for a phase
-cd titan/services/titan-phaseX-name
+# Install dependencies for a service
+cd services/titan-<service-name>
 npm install
 
 # Run tests
@@ -24,6 +24,9 @@ npm run test:coverage    # Coverage report
 # Build TypeScript
 npm run build            # Compile to JavaScript
 
+# Development mode
+npm run dev              # Start with auto-reload
+
 # Lint and format
 npm run lint:check       # Check linting
 npm run lint:fix         # Fix linting
@@ -31,32 +34,86 @@ npm run format:check     # Check formatting
 npm run format:write     # Fix formatting
 ```
 
-## Dependencies
+## Core Dependencies
 
 ### Production (TypeScript/Node.js)
-- `ws` (^8.14.0): WebSocket client
-- `node-fetch` (^3.3.0): HTTP client
-- `chalk` (^5.3.0): Colored terminal output
-- `ink` (^4.4.0): Terminal UI framework
-- `react` (^18.2.0): UI components for Ink
-- `crypto` (built-in): HMAC signature generation
-- `redis` (^4.6.0): Inter-process communication
+- `ws` (^8.x): WebSocket client
+- `fastify` (^4.x): HTTP server framework
+- `chalk` (^5.x): Colored terminal output
+- `ink` (^4.x): Terminal UI framework (Phase 1, 2, 3)
+- `react` (^18.x): UI components
+- `redis` (^4.x): Inter-process communication
+- `pg` (^8.x): PostgreSQL client (Brain)
+- `better-sqlite3`: SQLite client (AI Quant, Execution)
 
-### Development (TypeScript/Node.js)
-- `typescript` (^5.3.0): TypeScript compiler
-- `@types/node` (^20.10.0): Node.js type definitions
-- `@types/react` (^18.2.0): React type definitions
-- `jest` (^29.7.0): Testing framework
-- `ts-jest` (^29.1.0): TypeScript support for Jest
-- `fast-check` (^3.15.0): Property-based testing
-- `eslint` (^8.54.0): Linting
-- `prettier` (^3.1.0): Formatting
+### AI Integration (Phase 4)
+- `@google/generative-ai`: Gemini AI client
+- Custom rate limiting and guardrails
 
-### Production (Python)
-- `scikit-learn` (^1.3.0): Machine learning
-- `optuna` (^3.4.0): Hyperparameter optimization
-- `pandas` (^2.1.0): Data manipulation
-- `numpy` (^1.26.0): Numerical computing
+### Web Dashboard (Console)
+- `react` (^18.x): UI framework
+- `vite` (^5.x): Build tool
+- `tailwindcss` (^3.x): CSS framework
+- `@radix-ui/*`: UI primitives
+- `shadcn/ui`: Component library
+
+### Development
+- `typescript` (^5.x): TypeScript compiler
+- `@types/node` (^20.x): Node.js type definitions
+- `jest` (^29.x): Testing framework
+- `ts-jest` (^29.x): TypeScript support for Jest
+- `fast-check` (^3.x): Property-based testing
+- `eslint` (^8.x): Linting
+- `prettier` (^3.x): Formatting
+
+## Service-Specific Tech Stacks
+
+### Titan Brain (Phase 5)
+```
+TypeScript + Node.js + Fastify
+├── Database: PostgreSQL (Supabase)
+├── Cache: In-memory + Redis
+├── Metrics: Prometheus
+├── Logging: Structured JSON
+└── API: REST + WebSocket
+```
+
+### Titan Execution
+```
+JavaScript + Node.js + Fastify
+├── Database: SQLite / PostgreSQL
+├── Cache: Redis (idempotency)
+├── WebSocket: Exchange connections
+├── Adapters: Bybit, MEXC, Binance
+└── API: REST webhooks
+```
+
+### Titan Console
+```
+TypeScript + React + Vite
+├── UI: Tailwind CSS + shadcn/ui
+├── State: React hooks
+├── Real-time: WebSocket
+└── Build: Vite
+```
+
+### Titan AI Quant (Phase 4)
+```
+TypeScript + Node.js
+├── AI: Gemini 1.5 Flash
+├── Database: SQLite (Strategic Memory)
+├── Backtesting: Custom engine
+└── UI: Ink + React (terminal)
+```
+
+### Trading Phases (1, 2, 3)
+```
+TypeScript + Node.js
+├── UI: Ink + React (terminal)
+├── WebSocket: Exchange streams
+├── Execution: Via shared infrastructure
+└── Config: JSON + hot-reload
+```
 
 ## TypeScript Configuration
 
@@ -65,7 +122,8 @@ npm run format:write     # Fix formatting
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "commonjs",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "lib": ["ES2022"],
     "outDir": "./dist",
     "rootDir": "./src",
@@ -111,13 +169,8 @@ module.exports = {
 ### WebSocket Manager
 ```typescript
 class WebSocketManager {
-  // Subscribe to symbol updates
   subscribe(exchange: 'binance' | 'bybit', symbol: string, callback: (data: any) => void): void
-  
-  // Unsubscribe from symbol updates
   unsubscribe(exchange: 'binance' | 'bybit', symbol: string, callback: (data: any) => void): void
-  
-  // Get connection status
   getStatus(exchange: 'binance' | 'bybit'): 'connected' | 'disconnected' | 'reconnecting'
 }
 ```
@@ -125,7 +178,6 @@ class WebSocketManager {
 ### Execution Service
 ```typescript
 class ExecutionService {
-  // Place order with Brain approval
   async placeOrder(params: {
     phase: 'phase1' | 'phase2' | 'phase3';
     symbol: string;
@@ -138,10 +190,7 @@ class ExecutionService {
     takeProfit?: number;
   }): Promise<OrderResult>
   
-  // Cancel order
   async cancelOrder(orderId: string, exchange: 'bybit' | 'mexc'): Promise<void>
-  
-  // Get order status
   async getOrderStatus(orderId: string, exchange: 'bybit' | 'mexc'): Promise<OrderStatus>
 }
 ```
@@ -149,13 +198,8 @@ class ExecutionService {
 ### Telemetry Service
 ```typescript
 class TelemetryService {
-  // Log signal with phase tag
   logSignal(phase: 'phase1' | 'phase2' | 'phase3', signal: SignalData): void
-  
-  // Log execution with phase tag
   logExecution(phase: 'phase1' | 'phase2' | 'phase3', execution: ExecutionData): void
-  
-  // Aggregate metrics for Brain
   getMetrics(phase: 'phase1' | 'phase2' | 'phase3', timeRange: TimeRange): Metrics
 }
 ```
@@ -163,13 +207,8 @@ class TelemetryService {
 ### Config Manager
 ```typescript
 class ConfigManager {
-  // Load config with Brain hierarchy
   loadConfig(phase: 'phase1' | 'phase2' | 'phase3'): PhaseConfig
-  
-  // Save config
   saveConfig(phase: 'phase1' | 'phase2' | 'phase3', config: PhaseConfig): void
-  
-  // Hot-reload config
   async reloadConfig(phase: 'phase1' | 'phase2' | 'phase3'): Promise<void>
 }
 ```
@@ -205,7 +244,7 @@ class ConfigManager {
 - Use environment variables for sensitive data
 - Encrypt credentials with AES-256-GCM
 - Validate all user inputs
-- Use HMAC signatures for exchange APIs
+- Use HMAC signatures for exchange APIs and webhooks
 
 ### Error Handling
 - Always use try-catch for async operations
@@ -216,7 +255,18 @@ class ConfigManager {
 
 ## Deployment
 
-### Production Setup (PM2)
+### Railway Deployment (Production)
+```bash
+# Services auto-deploy from main branch
+# Configure via railway.json in each service
+
+# Manual deployment
+npm install -g @railway/cli
+railway login
+railway up
+```
+
+### PM2 Process Management (Local/VPS)
 ```bash
 # Install PM2
 npm install -g pm2
@@ -232,9 +282,6 @@ pm2 logs
 
 # Restart services
 pm2 restart all
-
-# Stop services
-pm2 stop all
 ```
 
 ### ecosystem.config.js
@@ -246,23 +293,20 @@ module.exports = {
       script: './services/titan-brain/dist/index.js',
       instances: 1,
       autorestart: true,
-      watch: false,
       max_memory_restart: '500M'
     },
     {
-      name: 'titan-shared',
-      script: './services/shared/dist/index.js',
+      name: 'titan-execution',
+      script: './services/titan-execution/src/server.js',
       instances: 1,
       autorestart: true,
-      watch: false,
-      max_memory_restart: '300M'
+      max_memory_restart: '400M'
     },
     {
       name: 'titan-phase1',
       script: './services/titan-phase1-scavenger/dist/index.js',
       instances: 1,
       autorestart: true,
-      watch: false,
       max_memory_restart: '400M'
     },
     {
@@ -270,92 +314,54 @@ module.exports = {
       script: './services/titan-phase2-hunter/dist/index.js',
       instances: 1,
       autorestart: true,
-      watch: false,
       max_memory_restart: '400M'
     }
   ]
 };
 ```
 
-### Redis Setup
-```bash
-# Install Redis
-sudo apt-get install redis-server
-
-# Start Redis
-sudo systemctl start redis
-
-# Enable Redis on boot
-sudo systemctl enable redis
-
-# Test Redis
-redis-cli ping
-```
-
 ### Environment Variables
 ```bash
 # .env file
+NODE_ENV=production
+
+# Database
+DB_HOST=your_postgres_host
+DB_USER=your_postgres_user
+DB_PASSWORD=your_postgres_password
+DB_NAME=your_postgres_database
+
+# Exchange APIs
 BINANCE_API_KEY=your_binance_key
 BINANCE_API_SECRET=your_binance_secret
 BYBIT_API_KEY=your_bybit_key
 BYBIT_API_SECRET=your_bybit_secret
 MEXC_API_KEY=your_mexc_key
 MEXC_API_SECRET=your_mexc_secret
+
+# Security
 TITAN_MASTER_PASSWORD=your_master_password
+HMAC_SECRET=your_webhook_secret
+
+# AI (Phase 4)
+GEMINI_API_KEY=your_gemini_api_key
+
+# Redis (optional)
 REDIS_URL=redis://localhost:6379
-NODE_ENV=production
 ```
-
-## MCP Servers Available
-
-The following MCP servers are configured and can be used during development:
-
-### Context7 (Documentation Lookup)
-Use for looking up library documentation and API references:
-```
-mcp_Context7_resolve_library_id - Find library IDs
-mcp_Context7_get_library_docs - Get documentation for a library
-```
-**When to use**: When you need to look up TypeScript, Node.js, or framework documentation.
-
-### Chrome DevTools (Browser Testing)
-Use for testing web UIs or debugging WebSocket connections:
-```
-mcp_chrome_devtools_navigate_page - Navigate to URL
-mcp_chrome_devtools_take_snapshot - Get page state
-mcp_chrome_devtools_list_console_messages - Check for errors
-```
-**When to use**: When testing exchange websites, monitoring WebSocket traffic, or debugging API responses.
-
-### Firecrawl (Web Research)
-Use for researching trading concepts or market structure:
-```
-mcp_firecrawl_firecrawl_search - Search the web
-mcp_firecrawl_firecrawl_scrape - Scrape a webpage
-```
-**When to use**: When researching trading strategies, market structure concepts, or looking up exchange API documentation.
-
-### Shadcn (UI Components)
-Use for building terminal dashboards or web UIs:
-```
-mcp_shadcn_search_items_in_registries - Find UI components
-mcp_shadcn_view_items_in_registries - View component details
-```
-**When to use**: When building the Ink terminal dashboard for phases.
 
 ## Technology Stack Summary
 
-| Component | Language | Framework | Purpose |
-|-----------|----------|-----------|---------|
-| Phase 1 - Scavenger | TypeScript | Node.js | Trap system |
-| Phase 2 - Hunter | TypeScript | Node.js | Holographic engine |
-| Phase 3 - Sentinel | TypeScript | Node.js | Basis arbitrage |
-| Phase 4 - AI Quant | Python | scikit-learn, optuna | Parameter optimization |
-| Phase 5 - Brain | TypeScript | Node.js | Orchestration |
-| Shared Infrastructure | TypeScript | Node.js | WebSocket, Execution, Telemetry |
-| Console UI | TypeScript | Ink + React | Terminal dashboard |
-| Inter-Process Comm | Redis | Pub/Sub | Phase coordination |
-| Process Management | PM2 | - | Production deployment |
+| Component | Language | Framework | Database |
+|-----------|----------|-----------|----------|
+| Phase 1 - Scavenger | TypeScript | Node.js + Ink | - |
+| Phase 2 - Hunter | TypeScript | Node.js + Ink | - |
+| Phase 3 - Sentinel | TypeScript | Node.js + Ink | - |
+| Phase 4 - AI Quant | TypeScript | Node.js + Gemini | SQLite |
+| Phase 5 - Brain | TypeScript | Node.js + Fastify | PostgreSQL |
+| Titan Execution | JavaScript | Node.js + Fastify | SQLite/PostgreSQL |
+| Titan Console | TypeScript | React + Vite | - |
+| Shared Infrastructure | TypeScript | Node.js | Redis |
 
 ## Performance Benchmarks
 

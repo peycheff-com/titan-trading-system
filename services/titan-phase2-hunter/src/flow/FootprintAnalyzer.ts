@@ -16,7 +16,7 @@ import { EventEmitter } from 'events';
 import {
   FootprintData,
   TradeFootprint
-} from '../types/enhanced-2026';
+} from '../types';
 import { OHLCV, CVDTrade } from '../types';
 
 // ============================================================================

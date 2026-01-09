@@ -19,7 +19,7 @@ import {
   FootprintData,
   SweepPattern,
   IcebergAnalysis
-} from '../types/enhanced-2026';
+} from '../types';
 import { CVDTrade, OHLCV, POI, FVG, OrderBlock, LiquidityPool, Absorption, Distribution } from '../types';
 import { FootprintAnalyzer, CandleFootprint, FootprintAnalysisResult } from './FootprintAnalyzer';
 import { SweepDetector, SweepDetectionResult } from './SweepDetector';

@@ -13,7 +13,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { SweepPattern } from '../types/enhanced-2026';
+import { SweepPattern } from '../types';
 import { CVDTrade } from '../types';
 
 // ============================================================================

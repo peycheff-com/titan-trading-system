@@ -1,10 +1,10 @@
 /**
  * EnhancedHolographicEngine - Main Integration Component
- * 
+ *
  * Integrates all 2026 enhancement layers (Oracle, Flow, BotTrap, Global CVD)
  * with the existing Phase 2 Holographic Engine to create a unified
  * institutional-grade trading system.
- * 
+ *
  * Requirements:
  * - 5.1: Enhanced scoring formula with Oracle, Flow, BotTrap, and Global CVD
  * - 5.2: Alignment classification with enhanced criteria
@@ -16,26 +16,32 @@
  * - 7.1-7.7: Conviction-based position sizing
  */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from "events";
 import {
-  EnhancedHolographicState,
-  ConvictionSizing,
-  TechnicalSignal,
-  OracleScore,
-  FlowValidation,
   BotTrapAnalysis,
-  GlobalCVDData
-} from '../types/enhanced-2026';
-import { HologramState } from '../types';
-import { HologramEngine } from '../engine/HologramEngine';
-import { Oracle } from '../oracle';
-import { AdvancedFlowValidator } from '../flow';
-import { BotTrapDetector } from '../bottrap';
-import { GlobalLiquidityAggregator } from '../global-liquidity';
-import { EnhancedScoringEngine, ScoringBreakdown } from './EnhancedScoringEngine';
-import { ConvictionSizingEngine } from './ConvictionSizingEngine';
-import { EnhancedSignalValidator, EnhancedValidationResult } from './EnhancedSignalValidator';
-import { Logger } from '../logging/Logger';
+  ConvictionSizing,
+  EnhancedHolographicState,
+  FlowValidation,
+  GlobalCVDData,
+  OracleScore,
+  TechnicalSignal,
+} from "../../types";
+import { HologramState } from "../../types";
+import { HologramEngine } from "../HologramEngine";
+import { Oracle } from "../../oracle";
+import { AdvancedFlowValidator } from "../../flow";
+import { BotTrapDetector } from "../../bottrap";
+import { GlobalLiquidityAggregator } from "../../global-liquidity";
+import {
+  EnhancedScoringEngine,
+  ScoringBreakdown,
+} from "./EnhancedScoringEngine";
+import { ConvictionSizingEngine } from "./ConvictionSizingEngine";
+import {
+  EnhancedSignalValidator,
+  EnhancedValidationResult,
+} from "./EnhancedSignalValidator";
+import { Logger } from "../../logging/Logger";
 
 /**
  * Enhanced Holographic Engine configuration
@@ -48,7 +54,7 @@ export interface EnhancedHolographicEngineConfig {
   enableGlobalCVD: boolean;
   fallbackToClassic: boolean;
   basePositionSize: number;
-  logLevel: 'debug' | 'info' | 'warn' | 'error';
+  logLevel: "debug" | "info" | "warn" | "error";
 }
 
 /**
@@ -73,19 +79,19 @@ export const DEFAULT_ENHANCED_ENGINE_CONFIG: EnhancedHolographicEngineConfig = {
   enableGlobalCVD: true,
   fallbackToClassic: true,
   basePositionSize: 1000,
-  logLevel: 'info'
+  logLevel: "info",
 };
 
 /**
  * EnhancedHolographicEngine - Unified 2026 Enhancement Integration
- * 
+ *
  * This is the main integration component that combines:
  * - Classic Phase 2 Holographic Engine
  * - Oracle (Prediction Market Integration)
  * - Advanced Flow Validator
  * - Bot Trap Detector
  * - Global Liquidity Aggregator
- * 
+ *
  * Into a single, cohesive trading analysis system.
  */
 export class EnhancedHolographicEngine extends EventEmitter {
@@ -110,7 +116,7 @@ export class EnhancedHolographicEngine extends EventEmitter {
 
   constructor(
     config: Partial<EnhancedHolographicEngineConfig> = {},
-    logger?: Logger
+    logger?: Logger,
   ) {
     super();
     this.config = { ...DEFAULT_ENHANCED_ENGINE_CONFIG, ...config };
@@ -119,7 +125,7 @@ export class EnhancedHolographicEngine extends EventEmitter {
     // Initialize enhancement engines
     this.scoringEngine = new EnhancedScoringEngine();
     this.sizingEngine = new ConvictionSizingEngine({
-      basePositionSize: this.config.basePositionSize
+      basePositionSize: this.config.basePositionSize,
     });
     this.signalValidator = new EnhancedSignalValidator();
 
@@ -170,40 +176,42 @@ export class EnhancedHolographicEngine extends EventEmitter {
    */
   async initialize(): Promise<boolean> {
     if (!this.config.enabled) {
-      this.logInfo('Enhanced Holographic Engine is disabled');
+      this.logInfo("Enhanced Holographic Engine is disabled");
       return false;
     }
 
-    this.logInfo('Initializing Enhanced Holographic Engine...');
+    this.logInfo("Initializing Enhanced Holographic Engine...");
 
     try {
       // Initialize Oracle if enabled
       if (this.config.enableOracle && this.oracle) {
         await this.oracle.initialize();
-        this.logInfo('Oracle initialized');
+        this.logInfo("Oracle initialized");
       }
 
       // Initialize Global Aggregator if enabled
       if (this.config.enableGlobalCVD && this.globalAggregator) {
         await this.globalAggregator.initialize();
-        this.logInfo('Global Liquidity Aggregator initialized');
+        this.logInfo("Global Liquidity Aggregator initialized");
       }
 
       this.isInitialized = true;
-      this.emit('initialized');
-      this.logInfo('Enhanced Holographic Engine initialized successfully');
+      this.emit("initialized");
+      this.logInfo("Enhanced Holographic Engine initialized successfully");
       return true;
-
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      this.logError('Failed to initialize Enhanced Holographic Engine', errorMsg);
-      
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      this.logError(
+        "Failed to initialize Enhanced Holographic Engine",
+        errorMsg,
+      );
+
       if (this.config.fallbackToClassic) {
-        this.logInfo('Falling back to classic Phase 2 mode');
+        this.logInfo("Falling back to classic Phase 2 mode");
         this.isInitialized = true;
         return true;
       }
-      
+
       return false;
     }
   }
@@ -212,14 +220,19 @@ export class EnhancedHolographicEngine extends EventEmitter {
    * Calculate Enhanced Holographic State for a symbol
    * Requirement 5.3: Extend existing holographic state with 2026 enhancement data
    */
-  async calculateEnhancedState(symbol: string): Promise<EnhancedHolographicState> {
+  async calculateEnhancedState(
+    symbol: string,
+  ): Promise<EnhancedHolographicState> {
     // Get classic hologram state
     let classicHologram: HologramState | null = null;
     if (this.hologramEngine) {
       try {
         classicHologram = await this.hologramEngine.analyze(symbol);
       } catch (error) {
-        this.logError('Failed to get classic hologram', (error as Error).message);
+        this.logError(
+          "Failed to get classic hologram",
+          (error as Error).message,
+        );
       }
     }
 
@@ -235,7 +248,7 @@ export class EnhancedHolographicEngine extends EventEmitter {
       oracleScore,
       flowValidation,
       botTrapAnalysis,
-      globalCVD
+      globalCVD,
     );
 
     // Determine alignment and conviction
@@ -244,21 +257,26 @@ export class EnhancedHolographicEngine extends EventEmitter {
       oracleScore,
       botTrapAnalysis,
       globalCVD,
-      flowValidation
+      flowValidation,
     );
 
     const convictionLevel = this.scoringEngine.determineConvictionLevel(
       scoring.adjustedScore,
       oracleScore,
-      globalCVD
+      globalCVD,
     );
 
     // Build enhanced state
     const enhancedState: EnhancedHolographicState = {
+      classicState: classicHologram,
       symbol,
-      dailyBias: this.mapTrendToBias(classicHologram?.daily.trend || 'RANGE'),
-      fourHourLocation: this.mapLocation(classicHologram?.h4.location || 'EQUILIBRIUM'),
-      fifteenMinTrigger: this.mapTrendToTrigger(classicHologram?.m15.trend || 'RANGE'),
+      dailyBias: this.mapTrendToBias(classicHologram?.daily.trend || "RANGE"),
+      fourHourLocation: this.mapLocation(
+        classicHologram?.h4.location || "EQUILIBRIUM",
+      ),
+      fifteenMinTrigger: this.mapTrendToTrigger(
+        classicHologram?.m15.trend || "RANGE",
+      ),
       oracleScore,
       flowValidation,
       botTrapAnalysis,
@@ -267,15 +285,16 @@ export class EnhancedHolographicEngine extends EventEmitter {
       enhancedScore: scoring.adjustedScore,
       convictionLevel,
       alignment,
+      rsScore: classicHologram?.rsScore || 0,
       timestamp: new Date(),
-      enhancementsActive: this.areEnhancementsActive()
+      enhancementsActive: this.areEnhancementsActive(),
     };
 
     // Log enhanced state
     this.logEnhancedState(enhancedState, scoring);
 
     // Emit event
-    this.emit('enhancedStateCalculated', enhancedState);
+    this.emit("enhancedStateCalculated", enhancedState);
 
     return enhancedState;
   }
@@ -284,7 +303,9 @@ export class EnhancedHolographicEngine extends EventEmitter {
    * Validate a trading signal with all enhancement layers
    * Requirement 5.4: Integrate all enhancement layers into signal validation
    */
-  async validateSignal(signal: TechnicalSignal): Promise<EnhancedValidationResult> {
+  async validateSignal(
+    signal: TechnicalSignal,
+  ): Promise<EnhancedValidationResult> {
     // Get enhancement data
     const oracleScore = await this.getOracleScore(signal.symbol);
     const flowValidation = await this.getFlowValidation(signal.symbol);
@@ -297,14 +318,14 @@ export class EnhancedHolographicEngine extends EventEmitter {
       oracleScore,
       flowValidation,
       botTrapAnalysis,
-      globalCVD
+      globalCVD,
     );
 
     // Log validation result
     this.logValidationResult(signal, validation);
 
     // Emit event
-    this.emit('signalValidated', { signal, validation });
+    this.emit("signalValidated", { signal, validation });
 
     return validation;
   }
@@ -315,7 +336,7 @@ export class EnhancedHolographicEngine extends EventEmitter {
    */
   async calculatePositionSize(
     baseSize: number,
-    symbol: string
+    symbol: string,
   ): Promise<ConvictionSizing> {
     // Get enhancement data
     const oracleScore = await this.getOracleScore(symbol);
@@ -329,14 +350,14 @@ export class EnhancedHolographicEngine extends EventEmitter {
       oracleScore,
       flowValidation,
       botTrapAnalysis,
-      globalCVD
+      globalCVD,
     );
 
     // Log to JSONL file (Requirement 7.7)
     this.logger.logConvictionSizing(symbol, sizing);
 
     // Emit event
-    this.emit('positionSizeCalculated', { symbol, sizing });
+    this.emit("positionSizeCalculated", { symbol, sizing });
 
     return sizing;
   }
@@ -346,7 +367,7 @@ export class EnhancedHolographicEngine extends EventEmitter {
    */
   async analyzeComplete(
     symbol: string,
-    signal?: TechnicalSignal
+    signal?: TechnicalSignal,
   ): Promise<EnhancedAnalysisResult> {
     // Calculate enhanced state
     const state = await this.calculateEnhancedState(symbol);
@@ -372,7 +393,7 @@ export class EnhancedHolographicEngine extends EventEmitter {
       oracleScore,
       flowValidation,
       botTrapAnalysis,
-      globalCVD
+      globalCVD,
     );
 
     // Validate signal if provided
@@ -384,7 +405,7 @@ export class EnhancedHolographicEngine extends EventEmitter {
     // Calculate position sizing
     const sizing = await this.calculatePositionSize(
       this.config.basePositionSize,
-      symbol
+      symbol,
     );
 
     const result: EnhancedAnalysisResult = {
@@ -392,14 +413,14 @@ export class EnhancedHolographicEngine extends EventEmitter {
       scoring,
       validation,
       sizing,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
     // Cache result
     this.lastAnalysis.set(symbol, result);
 
     // Emit comprehensive event
-    this.emit('analysisComplete', result);
+    this.emit("analysisComplete", result);
 
     return result;
   }
@@ -420,18 +441,18 @@ export class EnhancedHolographicEngine extends EventEmitter {
       // Create a dummy signal for Oracle evaluation
       const dummySignal: TechnicalSignal = {
         symbol,
-        direction: 'LONG', // Will be evaluated for both directions
+        direction: "LONG", // Will be evaluated for both directions
         confidence: 50,
         entryPrice: 0,
         stopLoss: 0,
         takeProfit: 0,
         timestamp: new Date(),
-        source: 'hologram'
+        source: "hologram",
       };
 
       return await this.oracle.evaluateSignal(dummySignal);
     } catch (error) {
-      this.logError('Failed to get Oracle score', (error as Error).message);
+      this.logError("Failed to get Oracle score", (error as Error).message);
       return null;
     }
   }
@@ -439,7 +460,9 @@ export class EnhancedHolographicEngine extends EventEmitter {
   /**
    * Get Flow validation for a symbol
    */
-  private async getFlowValidation(_symbol: string): Promise<FlowValidation | null> {
+  private async getFlowValidation(
+    _symbol: string,
+  ): Promise<FlowValidation | null> {
     if (!this.config.enableFlowValidator || !this.flowValidator) {
       return null;
     }
@@ -451,16 +474,16 @@ export class EnhancedHolographicEngine extends EventEmitter {
         return {
           isValid: true,
           confidence: state.avgConfidence,
-          flowType: 'neutral',
+          flowType: "neutral",
           sweepCount: 0,
           icebergDensity: 0,
           institutionalProbability: 0,
-          timestamp: state.lastValidation
+          timestamp: state.lastValidation,
         };
       }
       return null;
     } catch (error) {
-      this.logError('Failed to get Flow validation', (error as Error).message);
+      this.logError("Failed to get Flow validation", (error as Error).message);
       return null;
     }
   }
@@ -468,7 +491,9 @@ export class EnhancedHolographicEngine extends EventEmitter {
   /**
    * Get Bot Trap analysis for a symbol
    */
-  private async getBotTrapAnalysis(_symbol: string): Promise<BotTrapAnalysis | null> {
+  private async getBotTrapAnalysis(
+    _symbol: string,
+  ): Promise<BotTrapAnalysis | null> {
     if (!this.config.enableBotTrapDetector || !this.botTrapDetector) {
       return null;
     }
@@ -477,16 +502,19 @@ export class EnhancedHolographicEngine extends EventEmitter {
       // Get learning statistics to build analysis
       const stats = this.botTrapDetector.getLearningStatistics();
       const detectionRate = this.botTrapDetector.getTrapDetectionRate();
-      
+
       return {
         isSuspect: detectionRate > 0.5,
         suspicionScore: detectionRate * 100,
         patterns: [],
         recommendations: [],
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     } catch (error) {
-      this.logError('Failed to get Bot Trap analysis', (error as Error).message);
+      this.logError(
+        "Failed to get Bot Trap analysis",
+        (error as Error).message,
+      );
       return null;
     }
   }
@@ -502,7 +530,7 @@ export class EnhancedHolographicEngine extends EventEmitter {
     try {
       return this.globalAggregator.getGlobalCVD(symbol);
     } catch (error) {
-      this.logError('Failed to get Global CVD', (error as Error).message);
+      this.logError("Failed to get Global CVD", (error as Error).message);
       return null;
     }
   }
@@ -522,28 +550,30 @@ export class EnhancedHolographicEngine extends EventEmitter {
   /**
    * Map trend to bias
    */
-  private mapTrendToBias(trend: string): 'BULL' | 'BEAR' | 'RANGE' {
-    if (trend === 'BULL') return 'BULL';
-    if (trend === 'BEAR') return 'BEAR';
-    return 'RANGE';
+  private mapTrendToBias(trend: string): "BULL" | "BEAR" | "RANGE" {
+    if (trend === "BULL") return "BULL";
+    if (trend === "BEAR") return "BEAR";
+    return "RANGE";
   }
 
   /**
    * Map location
    */
-  private mapLocation(location: string): 'PREMIUM' | 'DISCOUNT' | 'EQUILIBRIUM' {
-    if (location === 'PREMIUM') return 'PREMIUM';
-    if (location === 'DISCOUNT') return 'DISCOUNT';
-    return 'EQUILIBRIUM';
+  private mapLocation(
+    location: string,
+  ): "PREMIUM" | "DISCOUNT" | "EQUILIBRIUM" {
+    if (location === "PREMIUM") return "PREMIUM";
+    if (location === "DISCOUNT") return "DISCOUNT";
+    return "EQUILIBRIUM";
   }
 
   /**
    * Map trend to trigger
    */
-  private mapTrendToTrigger(trend: string): 'BULLISH' | 'BEARISH' | 'NEUTRAL' {
-    if (trend === 'BULL') return 'BULLISH';
-    if (trend === 'BEAR') return 'BEARISH';
-    return 'NEUTRAL';
+  private mapTrendToTrigger(trend: string): "BULLISH" | "BEARISH" | "NEUTRAL" {
+    if (trend === "BULL") return "BULLISH";
+    if (trend === "BEAR") return "BEARISH";
+    return "NEUTRAL";
   }
 
   // ============================================================================
@@ -551,57 +581,63 @@ export class EnhancedHolographicEngine extends EventEmitter {
   // ============================================================================
 
   private setupEventForwarding(): void {
-    this.scoringEngine.on('configUpdated', (config) => {
-      this.emit('scoringConfigUpdated', config);
+    this.scoringEngine.on("configUpdated", (config) => {
+      this.emit("scoringConfigUpdated", config);
     });
 
-    this.sizingEngine.on('sizingCalculated', (sizing) => {
-      this.emit('sizingCalculated', sizing);
+    this.sizingEngine.on("sizingCalculated", (sizing) => {
+      this.emit("sizingCalculated", sizing);
     });
 
-    this.signalValidator.on('signalValidated', (result) => {
-      this.emit('validationComplete', result);
+    this.signalValidator.on("signalValidated", (result) => {
+      this.emit("validationComplete", result);
     });
   }
 
   private setupOracleEvents(): void {
     if (!this.oracle) return;
 
-    this.oracle.on('signalEvaluated', (data: { signal: TechnicalSignal; score: OracleScore }) => {
-      this.emit('oracleEvaluation', data);
-    });
+    this.oracle.on(
+      "signalEvaluated",
+      (data: { signal: TechnicalSignal; score: OracleScore }) => {
+        this.emit("oracleEvaluation", data);
+      },
+    );
 
-    this.oracle.on('connectionError', (error: Error) => {
-      this.logError('Oracle connection error', error.message);
+    this.oracle.on("connectionError", (error: Error) => {
+      this.logError("Oracle connection error", error.message);
     });
   }
 
   private setupFlowValidatorEvents(): void {
     if (!this.flowValidator) return;
 
-    this.flowValidator.on('flowValidated', (data: FlowValidation) => {
-      this.emit('flowValidation', data);
+    this.flowValidator.on("flowValidated", (data: FlowValidation) => {
+      this.emit("flowValidation", data);
     });
   }
 
   private setupBotTrapEvents(): void {
     if (!this.botTrapDetector) return;
 
-    this.botTrapDetector.on('trapDetected', (data: BotTrapAnalysis) => {
-      this.emit('botTrapDetected', data);
+    this.botTrapDetector.on("trapDetected", (data: BotTrapAnalysis) => {
+      this.emit("botTrapDetected", data);
     });
   }
 
   private setupGlobalAggregatorEvents(): void {
     if (!this.globalAggregator) return;
 
-    this.globalAggregator.on('globalCVDUpdate', (data: GlobalCVDData) => {
-      this.emit('globalCVDUpdate', data);
+    this.globalAggregator.on("globalCVDUpdate", (data: GlobalCVDData) => {
+      this.emit("globalCVDUpdate", data);
     });
 
-    this.globalAggregator.on('manipulationDetected', (data: { symbol: string; analysis: GlobalCVDData['manipulation'] }) => {
-      this.emit('manipulationDetected', data);
-    });
+    this.globalAggregator.on(
+      "manipulationDetected",
+      (data: { symbol: string; analysis: GlobalCVDData["manipulation"] }) => {
+        this.emit("manipulationDetected", data);
+      },
+    );
   }
 
   // ============================================================================
@@ -612,7 +648,10 @@ export class EnhancedHolographicEngine extends EventEmitter {
    * Log enhanced state
    * Requirement 5.7: Enhanced logging and event emission
    */
-  private logEnhancedState(state: EnhancedHolographicState, scoring: ScoringBreakdown): void {
+  private logEnhancedState(
+    state: EnhancedHolographicState,
+    scoring: ScoringBreakdown,
+  ): void {
     // Log to JSONL file
     this.logger.logEnhancedHologram(state.symbol, {
       classicScore: state.classicScore,
@@ -620,44 +659,69 @@ export class EnhancedHolographicEngine extends EventEmitter {
       alignment: state.alignment,
       convictionLevel: state.convictionLevel,
       oracleScore: state.oracleScore,
-      flowValidation: state.flowValidation ? {
-        flowType: state.flowValidation.flowType,
-        confidence: state.flowValidation.confidence,
-        institutionalProbability: state.flowValidation.institutionalProbability
-      } : null,
-      botTrapAnalysis: state.botTrapAnalysis ? {
-        isSuspect: state.botTrapAnalysis.isSuspect,
-        suspicionScore: state.botTrapAnalysis.suspicionScore
-      } : null,
-      globalCVD: state.globalCVD ? {
-        consensus: state.globalCVD.consensus,
-        confidence: state.globalCVD.confidence,
-        manipulation: state.globalCVD.manipulation
-      } : null,
-      enhancementsActive: state.enhancementsActive
+      flowValidation: state.flowValidation
+        ? {
+          flowType: state.flowValidation.flowType,
+          confidence: state.flowValidation.confidence,
+          institutionalProbability:
+            state.flowValidation.institutionalProbability,
+        }
+        : null,
+      botTrapAnalysis: state.botTrapAnalysis
+        ? {
+          isSuspect: state.botTrapAnalysis.isSuspect,
+          suspicionScore: state.botTrapAnalysis.suspicionScore,
+        }
+        : null,
+      globalCVD: state.globalCVD
+        ? {
+          consensus: state.globalCVD.consensus,
+          confidence: state.globalCVD.confidence,
+          manipulation: state.globalCVD.manipulation,
+        }
+        : null,
+      enhancementsActive: state.enhancementsActive,
     });
 
-    if (this.config.logLevel === 'error') return;
+    if (this.config.logLevel === "error") return;
 
-    console.log('🔮 Enhanced Holographic State:');
+    console.log("🔮 Enhanced Holographic State:");
     console.log(`   Symbol: ${state.symbol}`);
-    console.log(`   Alignment: ${state.alignment} | Conviction: ${state.convictionLevel}`);
-    console.log(`   Classic Score: ${state.classicScore} | Enhanced Score: ${state.enhancedScore.toFixed(1)}`);
-    console.log(`   Daily: ${state.dailyBias} | 4H: ${state.fourHourLocation} | 15m: ${state.fifteenMinTrigger}`);
-    
+    console.log(
+      `   Alignment: ${state.alignment} | Conviction: ${state.convictionLevel}`,
+    );
+    console.log(
+      `   Classic Score: ${state.classicScore} | Enhanced Score: ${
+        state.enhancedScore.toFixed(1)
+      }`,
+    );
+    console.log(
+      `   Daily: ${state.dailyBias} | 4H: ${state.fourHourLocation} | 15m: ${state.fifteenMinTrigger}`,
+    );
+
     if (state.oracleScore) {
-      console.log(`   Oracle: sentiment=${state.oracleScore.sentiment}, veto=${state.oracleScore.veto}`);
-    }
-    
-    if (state.globalCVD) {
-      console.log(`   Global CVD: ${state.globalCVD.consensus} (${state.globalCVD.confidence.toFixed(0)}%)`);
-    }
-    
-    if (state.botTrapAnalysis?.isSuspect) {
-      console.log(`   ⚠️ Bot Trap: ${state.botTrapAnalysis.suspicionScore.toFixed(0)}% suspicion`);
+      console.log(
+        `   Oracle: sentiment=${state.oracleScore.sentiment}, veto=${state.oracleScore.veto}`,
+      );
     }
 
-    console.log('   Scoring Breakdown:');
+    if (state.globalCVD) {
+      console.log(
+        `   Global CVD: ${state.globalCVD.consensus} (${
+          state.globalCVD.confidence.toFixed(0)
+        }%)`,
+      );
+    }
+
+    if (state.botTrapAnalysis?.isSuspect) {
+      console.log(
+        `   ⚠️ Bot Trap: ${
+          state.botTrapAnalysis.suspicionScore.toFixed(0)
+        }% suspicion`,
+      );
+    }
+
+    console.log("   Scoring Breakdown:");
     for (const reason of scoring.reasoning) {
       console.log(`     - ${reason}`);
     }
@@ -666,29 +730,44 @@ export class EnhancedHolographicEngine extends EventEmitter {
   /**
    * Log validation result
    */
-  private logValidationResult(signal: TechnicalSignal, validation: EnhancedValidationResult): void {
-    if (this.config.logLevel === 'error') return;
+  private logValidationResult(
+    signal: TechnicalSignal,
+    validation: EnhancedValidationResult,
+  ): void {
+    if (this.config.logLevel === "error") return;
 
-    const emoji = validation.isValid ? '✅' : '❌';
-    console.log(`${emoji} Signal Validation: ${signal.symbol} ${signal.direction}`);
-    console.log(`   Original Confidence: ${signal.confidence} | Adjusted: ${validation.adjustedConfidence.toFixed(1)}`);
+    const emoji = validation.isValid ? "✅" : "❌";
+    console.log(
+      `${emoji} Signal Validation: ${signal.symbol} ${signal.direction}`,
+    );
+    console.log(
+      `   Original Confidence: ${signal.confidence} | Adjusted: ${
+        validation.adjustedConfidence.toFixed(1)
+      }`,
+    );
     console.log(`   Recommendation: ${validation.recommendation}`);
-    
+
     for (const layer of validation.layerValidations) {
-      const layerEmoji = layer.recommendation === 'proceed' ? '✓' : layer.recommendation === 'veto' ? '✗' : '⚠';
+      const layerEmoji = layer.recommendation === "proceed"
+        ? "✓"
+        : layer.recommendation === "veto"
+        ? "✗"
+        : "⚠";
       console.log(`   ${layerEmoji} ${layer.layer}: ${layer.reasoning}`);
     }
   }
 
   private logInfo(message: string): void {
-    if (this.config.logLevel === 'error' || this.config.logLevel === 'warn') return;
+    if (this.config.logLevel === "error" || this.config.logLevel === "warn") {
+      return;
+    }
     console.log(`ℹ️ [EnhancedHologram] ${message}`);
   }
 
   private logError(message: string, details: string): void {
     console.error(`❌ [EnhancedHologram] ${message}: ${details}`);
-    this.logger.logError('ERROR', `${message}: ${details}`, {
-      component: 'EnhancedHolographicEngine'
+    this.logger.logError("ERROR", `${message}: ${details}`, {
+      component: "EnhancedHolographicEngine",
     });
   }
 
@@ -701,12 +780,14 @@ export class EnhancedHolographicEngine extends EventEmitter {
    */
   updateConfig(config: Partial<EnhancedHolographicEngineConfig>): void {
     this.config = { ...this.config, ...config };
-    
+
     if (config.basePositionSize !== undefined) {
-      this.sizingEngine.updateConfig({ basePositionSize: config.basePositionSize });
+      this.sizingEngine.updateConfig({
+        basePositionSize: config.basePositionSize,
+      });
     }
-    
-    this.emit('configUpdated', this.config);
+
+    this.emit("configUpdated", this.config);
   }
 
   /**
@@ -734,7 +815,7 @@ export class EnhancedHolographicEngine extends EventEmitter {
    * Shutdown the engine
    */
   async shutdown(): Promise<void> {
-    this.logInfo('Shutting down Enhanced Holographic Engine...');
+    this.logInfo("Shutting down Enhanced Holographic Engine...");
 
     if (this.oracle) {
       this.oracle.stopPeriodicUpdates();
@@ -745,6 +826,6 @@ export class EnhancedHolographicEngine extends EventEmitter {
     }
 
     this.isInitialized = false;
-    this.emit('shutdown');
+    this.emit("shutdown");
   }
 }

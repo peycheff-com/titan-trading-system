@@ -9,8 +9,18 @@ Titan is a **Bio-Mimetic Trading Organism** that evolves its behavior based on a
 │                    TITAN BRAIN (Phase 5)                                │
 │  ┌──────────────────────────────────────────────────────────────────┐   │
 │  │ Capital Allocation | Risk Management | Phase Transitions         │   │
-│  │ Global Config | Telemetry Aggregation | Emergency Controls       │   │
+│  │ Signal Queue | Circuit Breaker | Performance Tracking            │   │
 │  └──────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    TITAN EXECUTION (Microservice)                       │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────────┐  │
+│  │ Shadow State │  │ L2 Validator │  │   Exchange Adapters          │  │
+│  │ (Position    │  │ (Order Book  │  │   (Bybit/MEXC/Binance)       │  │
+│  │  Tracking)   │  │  Validation) │  │                              │  │
+│  └──────────────┘  └──────────────┘  └──────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -19,8 +29,10 @@ Titan is a **Bio-Mimetic Trading Organism** that evolves its behavior based on a
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────────┐  │
 │  │ WebSocket    │  │ Execution    │  │   Telemetry & Logging        │  │
 │  │ Manager      │  │ Service      │  │   (Centralized)              │  │
-│  │ (Binance/    │  │ (Bybit/MEXC) │  │                              │  │
-│  │  Bybit)      │  │              │  │                              │  │
+│  └──────────────┘  └──────────────┘  └──────────────────────────────┘  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────────┐  │
+│  │ Load         │  │ Service      │  │   Performance Monitor        │  │
+│  │ Balancer     │  │ Discovery    │  │   & Resource Optimizer       │  │
 │  └──────────────┘  └──────────────┘  └──────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────────┘
                               │
@@ -31,9 +43,18 @@ Titan is a **Bio-Mimetic Trading Organism** that evolves its behavior based on a
 │  Scavenger   │    │  Hunter      │    │  Sentinel    │    │  AI Quant    │
 │              │    │              │    │              │    │              │
 │ $200-$5K     │    │ $2.5K-$50K   │    │ $50K+        │    │ Optimizer    │
-│ 15-20x Lev   │    │ 3-5x Lev     │    │ Market-Neut  │    │ (Offline)    │
+│ 15-20x Lev   │    │ 3-5x Lev     │    │ Market-Neut  │    │ (Gemini AI)  │
 │ Trap System  │    │ Holographic  │    │ Basis Arb    │    │ Param Tuning │
 └──────────────┘    └──────────────┘    └──────────────┘    └──────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    TITAN CONSOLE (Web Dashboard)                        │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │ React + Vite + Tailwind + shadcn/ui                              │   │
+│  │ Real-time WebSocket Updates | Phase Monitoring | Settings        │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Phase Breakdown
@@ -56,8 +77,10 @@ Titan is a **Bio-Mimetic Trading Organism** that evolves its behavior based on a
 - `TitanTrap.ts`: Core trap engine
 - `TripwireCalculators.ts`: Structural level detection
 - `BinanceSpotClient.ts`: Signal validation
-- `BybitPerpsClient.ts` + `MEXCPerpsClient.ts`: Execution
-- `ExchangeGateway.ts`: Multi-exchange orchestration
+- `BybitPerpsClient.ts`: Execution
+- `OIWipeoutDetector.ts`, `FundingSqueezeDetector.ts`, `BasisArbDetector.ts`: Strategy detectors
+- `UltimateBulgariaProtocol.ts`: Combined strategy
+- `TrapMonitor.tsx`: Ink React dashboard
 
 ### Phase 2: The Hunter ($2,500 → $50,000)
 **Capital Range**: $2,500 - $50,000  
@@ -82,6 +105,9 @@ Titan is a **Bio-Mimetic Trading Organism** that evolves its behavior based on a
 - `InefficiencyMapper.ts`: POI detection
 - `CVDValidator.ts`: Order flow confirmation
 - `LimitOrderExecutor.ts`: Passive execution
+- `BotTrapDetector.ts`: Bot manipulation detection
+- `GlobalLiquidityAggregator.ts`: Multi-exchange liquidity
+- `EnhancedRiskManager.ts`: Advanced risk management
 
 ### Phase 3: The Sentinel ($50,000+)
 **Capital Range**: $50,000+  
@@ -95,134 +121,160 @@ Titan is a **Bio-Mimetic Trading Organism** that evolves its behavior based on a
 - Delta-neutral hedging (Spot + Perps)
 - Basis expansion/contraction scalping
 - Funding rate arbitrage
+- Vacuum arbitrage during liquidation events
 - Systematic position sizing
 - Portfolio management
 
 **Key Components**:
-- `BasisScalper.ts`: Basis trading engine
-- `DeltaHedger.ts`: Neutrality maintenance
-- `FundingArbitrage.ts`: Funding rate exploitation
+- `SentinelCore.ts`: Core engine
+- `StatEngine.ts`: Statistical analysis with Welford's algorithm
+- `AtomicExecutor.ts`: Atomic spot/perpetual execution
+- `TwapExecutor.ts`: TWAP order slicing
 - `PortfolioManager.ts`: Multi-asset management
+- `PositionTracker.ts`: Position tracking (CORE, SATELLITE, VACUUM)
+- `Rebalancer.ts`: Automated rebalancing
+- `VacuumMonitor.ts`: Liquidation event detection
+- `ExchangeRouter.ts`: Multi-exchange routing
 
 ### Phase 4: The AI Quant (Offline Optimizer)
 **Capital Range**: N/A (advises Phase 1 & 2)  
-**Strategy**: Parameter Optimization Engine  
-**Technology**: Python (scikit-learn, optuna)
+**Strategy**: AI-Powered Parameter Optimization  
+**Technology**: TypeScript (Node.js) + Gemini AI
 
 **Core Logic**:
 - Analyzes last 24 hours of market microstructure
+- Uses Gemini 1.5 Flash for pattern recognition
 - Predicts optimal parameter configurations
 - Runs offline (zero latency impact)
 - Advises Phase 1 & 2 on parameter adjustments
+- Backtests proposals before applying
 
 **Key Components**:
-- `ParameterOptimizer.py`: ML-based optimization
-- `MicrostructureAnalyzer.py`: Market feature extraction
-- `BacktestValidator.py`: Configuration validation
+- `TitanAnalyst.ts`: AI analysis engine (Gemini API)
+- `GeminiClient.ts`: Gemini API client
+- `Guardrails.ts`: Safety validation for AI proposals
+- `Journal.ts`: Trade log parser
+- `StrategicMemory.ts`: SQLite-based learning system
+- `Backtester.ts`: Proposal validation
+- `ApprovalWorkflow.ts`: Human-in-the-loop approval
+- `RealTimeOptimizer.ts`: Real-time optimization
+- `PredictiveAnalytics.ts`: Predictive analysis
 
 ### Phase 5: The Brain (Master Orchestrator)
 **Capital Range**: All phases  
-**Strategy**: Hierarchical State Machine  
-**Technology**: TypeScript (Node.js)
+**Strategy**: Hierarchical Decision-Making  
+**Technology**: TypeScript (Node.js) + PostgreSQL
 
 **Core Logic**:
-- Capital allocation across phases
-- Global risk management
-- Phase transition logic
+- Capital allocation across phases (sigmoid transitions)
+- Global risk management with circuit breakers
+- Phase transition logic based on equity tiers
 - Emergency controls (panic button)
-- Telemetry aggregation
+- Performance tracking with Sharpe-based modifiers
+- Signal queue with idempotency
 
 **Key Components**:
-- `BrainOrchestrator.ts`: Master state machine
-- `CapitalAllocator.ts`: Phase-based allocation
-- `GlobalRiskManager.ts`: System-wide risk
-- `PhaseTransitioner.ts`: Automatic phase switching
-- `TelemetryAggregator.ts`: Unified logging
+- `TitanBrain.ts`: Master orchestrator
+- `AllocationEngine.ts`: Sigmoid-based phase allocation
+- `PerformanceTracker.ts`: Rolling Sharpe ratios
+- `RiskGuardian.ts`: Correlation & leverage monitoring
+- `CapitalFlowManager.ts`: Profit sweeper
+- `CircuitBreaker.ts`: Emergency halt system
+- `WebhookServer.ts`: Signal reception
+- `SignalQueue.ts`: Priority-based processing
+- `DatabaseManager.ts`: PostgreSQL persistence
+- `CacheManager.ts`: In-memory caching layer
+
+## Titan Execution Microservice
+
+The Execution service is a critical component that handles all order execution:
+
+**Key Features**:
+- HMAC webhook authentication
+- Shadow State position tracking (Master of Truth)
+- L2 order book validation via WebSocket cache
+- Client-side triggering for low-latency execution
+- Multi-exchange adapters (Bybit, MEXC, Binance)
+- Idempotency via Redis
+- Reconciliation with broker state
+
+**Key Components**:
+- `ShadowState.js`: Position state tracker
+- `L2Validator.js`: Order book validation
+- `BrokerGateway.js`: Order execution
+- `Reconciliation.js`: Broker state sync
+- `Heartbeat.js`: Dead man's switch
+- `LimitChaser.js`: Aggressive limit order algorithm
+- `WebSocketCache.js`: L2 order book cache
+- `GlobalRateLimiter.js`: API rate limiting
+- `SignalRouter.js`: Signal routing
+- `PhaseManager.js`: Phase coordination
+
+**Exchange Adapters**:
+- `BybitAdapter.js`: Bybit USDT Perpetuals
+- `MexcAdapter.js`: MEXC Futures
+- `BinanceAdapter.js`: Binance integration
+
+## Titan Console (Web Dashboard)
+
+Modern web-based dashboard for monitoring and control:
+
+**Technology Stack**:
+- React 18 + TypeScript
+- Vite (build tool)
+- Tailwind CSS + shadcn/ui
+- Real-time WebSocket updates
+
+**Key Features**:
+- Live operations monitoring
+- Phase status and metrics
+- Settings management
+- Scavenger-specific views
+- Responsive design
+
+**Key Components**:
+- `App.tsx`: Main application
+- `Overview.tsx`: System overview
+- `LiveOps.tsx`: Live operations
+- `Settings.tsx`: Configuration
+- `useTitanData.ts`: Data hooks
+- `useWebSocket.ts`: WebSocket connection
 
 ## Shared Infrastructure
 
-### 1. WebSocket Manager (Centralized)
-**Purpose**: Manage all WebSocket connections to avoid duplicate streams
+### Implemented Components
 
-**Responsibilities**:
-- Single Binance Spot WebSocket connection (shared by Phase 1 & 2)
-- Single Bybit WebSocket connection (shared by all phases)
-- Reconnection logic with exponential backoff
-- Message routing to phase-specific handlers
+**WebSocketManager.ts**:
+- Centralized WebSocket connections
+- Multi-exchange support (Binance, Bybit)
+- Automatic reconnection with exponential backoff
+- Message routing to subscribers
 
-**Implementation**:
-```typescript
-// services/shared/WebSocketManager.ts
-class WebSocketManager {
-  private binanceWS: WebSocket;
-  private bybitWS: WebSocket;
-  private subscribers: Map<string, Set<(data: any) => void>>;
-  
-  // Subscribe to symbol updates
-  subscribe(exchange: 'binance' | 'bybit', symbol: string, callback: (data: any) => void): void
-  
-  // Unsubscribe from symbol updates
-  unsubscribe(exchange: 'binance' | 'bybit', symbol: string, callback: (data: any) => void): void
-  
-  // Reconnection logic
-  private reconnect(exchange: 'binance' | 'bybit'): void
-}
-```
-
-### 2. Execution Service (Unified)
-**Purpose**: Centralized order execution with rate limiting and error handling
-
-**Responsibilities**:
-- Order placement on Bybit/MEXC
-- Rate limiting (10 req/s per exchange)
-- Order status tracking
-- Fill confirmation
+**ExecutionService.ts**:
+- Unified order execution
+- Rate limiting
 - Retry logic with exponential backoff
+- Fill confirmation
 
-**Implementation**:
-```typescript
-// services/shared/ExecutionService.ts
-class ExecutionService {
-  private bybitClient: BybitPerpsClient;
-  private mexcClient: MEXCPerpsClient;
-  private rateLimiter: RateLimiter;
-  
-  // Place order with automatic exchange selection
-  async placeOrder(params: OrderParams): Promise<OrderResult>
-  
-  // Cancel order
-  async cancelOrder(orderId: string, exchange: 'bybit' | 'mexc'): Promise<void>
-  
-  // Get order status
-  async getOrderStatus(orderId: string, exchange: 'bybit' | 'mexc'): Promise<OrderStatus>
-}
-```
-
-### 3. Telemetry & Logging (Centralized)
-**Purpose**: Unified logging and metrics aggregation
-
-**Responsibilities**:
-- Centralized `trades.jsonl` logging
+**TelemetryService.ts**:
+- Centralized logging
 - Phase-specific log tagging
-- Metrics aggregation for Brain
-- Log rotation and compression
+- Metrics aggregation
 
-**Implementation**:
-```typescript
-// services/shared/TelemetryService.ts
-class TelemetryService {
-  private logStream: WriteStream;
-  
-  // Log signal with phase tag
-  logSignal(phase: 'phase1' | 'phase2' | 'phase3', signal: SignalData): void
-  
-  // Log execution with phase tag
-  logExecution(phase: 'phase1' | 'phase2' | 'phase3', execution: ExecutionData): void
-  
-  // Aggregate metrics for Brain
-  getMetrics(phase: 'phase1' | 'phase2' | 'phase3', timeRange: TimeRange): Metrics
-}
-```
+**ConfigManager.ts**:
+- Hierarchical configuration (Brain → Phase)
+- Hot-reload support
+- Config validation
+
+**Additional Components**:
+- `AdvancedOrderRouter.ts`: Smart order routing
+- `DistributedStateManager.ts`: Distributed state management
+- `HighFrequencyProcessor.ts`: High-frequency data processing
+- `LoadBalancer.ts`: Load balancing across services
+- `NetworkOptimizer.ts`: Network optimization
+- `PerformanceMonitor.ts`: Performance monitoring
+- `ResourceOptimizer.ts`: Resource optimization
+- `ServiceDiscovery.ts`: Service discovery
 
 ## Configuration Hierarchy
 
@@ -230,9 +282,10 @@ class TelemetryService {
 ┌─────────────────────────────────────────────────────────────────┐
 │                    Brain Global Config                          │
 │  - Max total leverage across all phases                        │
-│  - Global drawdown limits                                       │
+│  - Global drawdown limits (15% emergency flatten)              │
 │  - Emergency flatten thresholds                                 │
-│  - Phase transition rules                                       │
+│  - Phase transition rules (equity-based)                        │
+│  - Correlation limits (0.8 max between phases)                  │
 └─────────────────────────────────────────────────────────────────┘
                               │
         ┌─────────────────────┼─────────────────────┐
@@ -244,18 +297,21 @@ class TelemetryService {
 │ - Trap       │    │ - Alignment  │    │ - Basis      │
 │   params     │    │   weights    │    │   thresholds │
 │ - Leverage   │    │ - RS thresh  │    │ - Funding    │
-│ - Targets    │    │ - Risk mgmt  │    │   targets    │
+│   (20x max)  │    │ - Risk mgmt  │    │   targets    │
+│ - Targets    │    │ - Session    │    │ - Delta      │
+│              │    │   filters    │    │   limits     │
 └──────────────┘    └──────────────┘    └──────────────┘
 ```
 
-**Config Precedence**:
-1. Brain Global Config (highest priority)
-2. Phase-Specific Config
-3. Strategy-Specific Config (lowest priority)
+## Equity Tiers & Allocation
 
-**Example**:
-- If Brain sets `maxTotalLeverage: 50x`, Phase 1 cannot exceed this even if its config says `maxLeverage: 20x`
-- If Brain triggers emergency flatten, all phases must comply immediately
+| Tier | Equity Range | Phase 1 | Phase 2 | Phase 3 | Max Leverage |
+|------|--------------|---------|---------|---------|--------------|
+| MICRO | < $1,500 | 100% | 0% | 0% | 20x |
+| SMALL | $1,500 - $5,000 | 80% → 20% | 20% → 80% | 0% | 10x |
+| MEDIUM | $5,000 - $25,000 | 20% | 80% | 0% | 5x |
+| LARGE | $25,000 - $50,000 | 20% | 60% → 40% | 20% → 40% | 3x |
+| INSTITUTIONAL | > $50,000 | 10% | 40% | 50% | 2x |
 
 ## Risk Management Hierarchy
 
@@ -265,6 +321,7 @@ class TelemetryService {
 │  - Total portfolio drawdown: 15% → Emergency Flatten            │
 │  - Total leverage: 50x max across all phases                    │
 │  - Correlation limits: 0.8 max between phases                   │
+│  - Circuit Breaker: HARD (15% DD) / SOFT (3 losses)            │
 └─────────────────────────────────────────────────────────────────┘
                               │
         ┌─────────────────────┼─────────────────────┐
@@ -275,170 +332,131 @@ class TelemetryService {
 │              │    │              │    │              │
 │ - Daily DD:  │    │ - Daily DD:  │    │ - Daily DD:  │
 │   3%/5%/7%   │    │   3%/5%/7%   │    │   2%/4%/6%   │
-│ - Max pos:   │    │ - Max pos:   │    │ - Max pos:   │
-│   50% equity │    │   25% equity │    │   100% equity│
+│ - Max pos:   │    │ - Max pos:   │    │ - Max delta: │
+│   50% equity │    │   25% equity │    │   2%/5%      │
 └──────────────┘    └──────────────┘    └──────────────┘
-```
-
-**Risk Escalation**:
-1. Phase-level risk manager detects issue → Reduces position sizes
-2. If issue persists → Halts new entries
-3. If issue escalates → Reports to Brain
-4. Brain evaluates global impact → May trigger emergency flatten
-
-## Data Flow
-
-### Signal Generation Flow
-```
-1. Phase detects opportunity
-2. Phase validates with local rules
-3. Phase requests execution from ExecutionService
-4. ExecutionService checks Brain approval
-5. Brain validates against global limits
-6. If approved, ExecutionService places order
-7. Fill confirmation sent to Phase and Brain
-8. TelemetryService logs execution
-```
-
-### WebSocket Data Flow
-```
-1. WebSocketManager receives tick from Binance/Bybit
-2. WebSocketManager routes to subscribed phases
-3. Phase 1 uses for trap detection
-4. Phase 2 uses for CVD calculation
-5. Phase 3 uses for basis monitoring
-```
-
-### Configuration Update Flow
-```
-1. User updates config via Brain UI
-2. Brain validates config against global limits
-3. Brain pushes config to affected phases
-4. Phases apply config hot-reload
-5. TelemetryService logs config change
 ```
 
 ## Technology Stack
 
-| Component | Language | Framework | Purpose |
-|-----------|----------|-----------|---------|
-| Phase 1 - Scavenger | TypeScript | Node.js | Trap system |
-| Phase 2 - Hunter | TypeScript | Node.js | Holographic engine |
-| Phase 3 - Sentinel | TypeScript | Node.js | Basis arbitrage |
-| Phase 4 - AI Quant | Python | scikit-learn, optuna | Parameter optimization |
-| Phase 5 - Brain | TypeScript | Node.js | Orchestration |
-| Shared Infrastructure | TypeScript | Node.js | WebSocket, Execution, Telemetry |
-| Console UI | TypeScript | Ink + React | Terminal dashboard |
+| Component | Language | Framework | Database |
+|-----------|----------|-----------|----------|
+| Phase 1 - Scavenger | TypeScript | Node.js + Ink | - |
+| Phase 2 - Hunter | TypeScript | Node.js + Ink | - |
+| Phase 3 - Sentinel | TypeScript | Node.js + Ink | - |
+| Phase 4 - AI Quant | TypeScript | Node.js + Gemini AI | SQLite |
+| Phase 5 - Brain | TypeScript | Node.js + Fastify | PostgreSQL |
+| Titan Execution | JavaScript | Node.js + Fastify | SQLite/PostgreSQL |
+| Titan Console | TypeScript | React + Vite | - |
+| Shared Infrastructure | TypeScript | Node.js | Redis |
 
 ## Deployment Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Production Server (VPS)                      │
+│                    Production (Railway)                         │
 │  ┌──────────────────────────────────────────────────────────┐   │
-│  │ PM2 Process Manager                                      │   │
-│  │  - titan-brain (master)                                  │   │
-│  │  - titan-phase1 (child)                                  │   │
-│  │  - titan-phase2 (child)                                  │   │
-│  │  - titan-phase3 (child)                                  │   │
-│  │  - titan-shared (WebSocket, Execution, Telemetry)       │   │
+│  │ Services (Auto-deployed from main branch)                │   │
+│  │  - titan-brain (API: 3100)                               │   │
+│  │  - titan-execution (API: 3002)                           │   │
+│  │  - titan-console (Web: 8080)                             │   │
+│  │  - titan-ai-quant (API: 3200)                            │   │
+│  │  - titan-phase1-scavenger                                │   │
+│  │  - titan-phase2-hunter                                   │   │
+│  │  - titan-phase3-sentinel                                 │   │
 │  └──────────────────────────────────────────────────────────┘   │
 │                                                                  │
 │  ┌──────────────────────────────────────────────────────────┐   │
-│  │ Offline Optimizer (Cron Job)                             │   │
-│  │  - titan-ai-quant (runs every 6 hours)                   │   │
+│  │ Database (Supabase PostgreSQL - Seoul region)            │   │
 │  └──────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## Inter-Process Communication
+## Monitoring & Alerting
 
-**Method**: Redis Pub/Sub + Shared Memory
+**Prometheus Metrics** (available at `/metrics`):
+- `titan_brain_signals_total`: Total signals processed
+- `titan_brain_signals_approved`: Approved signals
+- `titan_brain_signals_vetoed`: Vetoed signals
+- `titan_brain_signal_latency_ms`: Processing latency
+- `titan_brain_equity_usd`: Current equity
+- `titan_brain_allocation_w1/w2/w3`: Phase weights
+- `titan_brain_circuit_breaker_active`: Breaker status
 
-**Channels**:
-- `titan:signals` - Signal generation events
-- `titan:executions` - Order execution events
-- `titan:risk` - Risk management events
-- `titan:config` - Configuration updates
-- `titan:telemetry` - Metrics and logging
+**Grafana Dashboards**:
+- Comprehensive system dashboard
+- Per-phase performance metrics
+- Risk monitoring
 
-**Shared Memory**:
-- `titan:equity` - Current equity (updated every 5s)
-- `titan:positions` - Open positions across all phases
-- `titan:risk_state` - Current risk state (drawdown, leverage, etc.)
+**Alertmanager**:
+- Drawdown alerts (10% warning, 15% critical)
+- Win rate alerts (< 40% over 20 trades)
+- Exchange API error alerts
+- WebSocket disconnection alerts
 
 ## Emergency Controls
 
-**Panic Button** (Triggered by Brain):
+**Circuit Breaker Types**:
+- **HARD Trigger**: 15% daily drawdown OR equity < $150 → Immediate halt + close all
+- **SOFT Trigger**: 3 consecutive losses → 30-minute cooldown
+
+**Panic Button** (Brain-triggered):
 1. Halt all new entries across all phases
 2. Close all open positions with Market Orders
 3. Disable all phases
 4. Send alert to user
 5. Log emergency event
 
-**Triggers**:
-- Total portfolio drawdown > 15%
-- Unexpected API errors (exchange downtime)
-- User manual trigger (keyboard shortcut)
-
-## Monitoring & Alerting
-
-**Metrics Tracked**:
-- Equity curve (real-time)
-- Drawdown (current, max)
-- Win rate (per phase, global)
-- Profit factor (per phase, global)
-- Sharpe ratio (rolling 30-day)
-- Open positions (count, notional)
-- Leverage (per phase, global)
-- Correlation (between phases)
-
-**Alerts**:
-- Drawdown > 10% (warning)
-- Drawdown > 15% (critical)
-- Win rate < 40% over 20 trades (warning)
-- Exchange API errors (critical)
-- WebSocket disconnections (warning)
-
 ## File Structure
 
 ```
 titan/
 ├── services/
-│   ├── shared/
-│   │   ├── WebSocketManager.ts
-│   │   ├── ExecutionService.ts
-│   │   ├── TelemetryService.ts
-│   │   └── RateLimiter.ts
-│   ├── titan-brain/
-│   │   ├── BrainOrchestrator.ts
-│   │   ├── CapitalAllocator.ts
-│   │   ├── GlobalRiskManager.ts
-│   │   └── PhaseTransitioner.ts
-│   ├── titan-phase1-scavenger/
-│   │   └── [Phase 1 implementation]
-│   ├── titan-phase2-hunter/
-│   │   └── [Phase 2 implementation]
-│   ├── titan-phase3-sentinel/
-│   │   └── [Phase 3 implementation]
-│   └── titan-phase4-ai-quant/
-│       └── [Phase 4 implementation]
+│   ├── shared/                    # Shared infrastructure
+│   │   ├── src/
+│   │   │   ├── WebSocketManager.ts
+│   │   │   ├── ExecutionService.ts
+│   │   │   ├── TelemetryService.ts
+│   │   │   ├── ConfigManager.ts
+│   │   │   ├── LoadBalancer.ts
+│   │   │   ├── ServiceDiscovery.ts
+│   │   │   └── ...
+│   │   └── tests/
+│   ├── titan-brain/               # Phase 5 - Orchestrator
+│   │   ├── src/
+│   │   │   ├── engine/
+│   │   │   ├── server/
+│   │   │   ├── db/
+│   │   │   ├── cache/
+│   │   │   └── ...
+│   │   └── tests/
+│   ├── titan-execution/           # Execution Microservice
+│   │   ├── src/
+│   │   │   ├── adapters/
+│   │   │   ├── handlers/
+│   │   │   ├── routes/
+│   │   │   └── ...
+│   │   └── tests/
+│   ├── titan-console/             # Web Dashboard
+│   │   ├── src/
+│   │   │   ├── components/
+│   │   │   ├── pages/
+│   │   │   ├── hooks/
+│   │   │   └── ...
+│   ├── titan-phase1-scavenger/    # Phase 1
+│   ├── titan-phase2-hunter/       # Phase 2
+│   ├── titan-phase3-sentinel/     # Phase 3
+│   └── titan-ai-quant/            # Phase 4
 ├── config/
 │   ├── brain.config.json
 │   ├── phase1.config.json
-│   ├── phase2.config.json
-│   └── phase3.config.json
+│   └── ...
+├── monitoring/
+│   ├── prometheus/
+│   ├── grafana/
+│   ├── alertmanager/
+│   └── ...
 ├── logs/
-│   └── trades.jsonl (centralized)
+├── docs/
 └── README.md
 ```
-
-## Next Steps
-
-1. **Implement Shared Infrastructure** (WebSocketManager, ExecutionService, TelemetryService)
-2. **Refactor Phase 1 & 2** to use shared infrastructure
-3. **Implement Brain Orchestrator** with capital allocation logic
-4. **Implement Phase 3 (Sentinel)** for market-neutral strategies
-5. **Implement Phase 4 (AI Quant)** for parameter optimization
-6. **Integration Testing** across all phases
-7. **Production Deployment** with PM2 process management

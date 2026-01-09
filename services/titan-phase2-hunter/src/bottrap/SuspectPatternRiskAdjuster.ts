@@ -12,7 +12,7 @@ import {
   TrapRecommendation,
   PatternPrecision,
   FlowValidation
-} from '../types/enhanced-2026';
+} from '../types';
 import { PrecisionAnalysisResult } from './PatternPrecisionAnalyzer';
 
 /**

@@ -9,7 +9,7 @@
 
 import { EventEmitter } from 'events';
 import WebSocket = require('ws');
-import { ConnectionStatus, ExchangeFlow } from '../types/enhanced-2026';
+import { ConnectionStatus, ExchangeFlow } from '../types';
 
 /**
  * Trade data from exchange WebSocket

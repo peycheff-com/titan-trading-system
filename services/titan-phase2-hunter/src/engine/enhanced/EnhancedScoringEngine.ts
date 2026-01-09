@@ -1,33 +1,33 @@
 /**
  * EnhancedScoringEngine - Enhanced Holographic Scoring with 2026 Enhancements
- * 
+ *
  * Implements the enhanced scoring formula that combines classic Phase 2 scoring
  * with Oracle, Flow, BotTrap, and Global CVD enhancement layers.
- * 
+ *
  * Requirements:
  * - 5.1: Enhanced scoring formula: Daily_Bias × 0.4 + 4H_Location × 0.25 + 15m_Flow × 0.15 + Oracle_Score × 0.2
  * - 5.2: Alignment classification with enhanced criteria
  * - 5.3: Extend existing holographic state with 2026 enhancement data
  */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from "events";
 import {
-  EnhancedHolographicState,
-  OracleScore,
-  FlowValidation,
   BotTrapAnalysis,
-  GlobalCVDData
-} from '../types/enhanced-2026';
-import { HologramState, HologramStatus } from '../types';
+  EnhancedHolographicState,
+  FlowValidation,
+  GlobalCVDData,
+  OracleScore,
+} from "../../types";
+import { HologramState, HologramStatus } from "../../types";
 
 /**
  * Scoring weights configuration
  */
 export interface ScoringWeights {
-  dailyBias: number;      // Default: 0.40
+  dailyBias: number; // Default: 0.40
   fourHourLocation: number; // Default: 0.25
-  fifteenMinFlow: number;  // Default: 0.15
-  oracleScore: number;     // Default: 0.20
+  fifteenMinFlow: number; // Default: 0.15
+  oracleScore: number; // Default: 0.20
 }
 
 /**
@@ -36,10 +36,10 @@ export interface ScoringWeights {
 export interface EnhancedScoringConfig {
   weights: ScoringWeights;
   alignmentThresholds: {
-    aPlus: number;  // Default: 80
-    a: number;      // Default: 70
-    b: number;      // Default: 60
-    c: number;      // Default: 50
+    aPlus: number; // Default: 80
+    a: number; // Default: 70
+    b: number; // Default: 60
+    c: number; // Default: 50
   };
   vetoConditions: {
     oracleVetoEnabled: boolean;
@@ -73,25 +73,25 @@ export const DEFAULT_SCORING_CONFIG: EnhancedScoringConfig = {
     dailyBias: 0.40,
     fourHourLocation: 0.25,
     fifteenMinFlow: 0.15,
-    oracleScore: 0.20
+    oracleScore: 0.20,
   },
   alignmentThresholds: {
     aPlus: 80,
     a: 70,
     b: 60,
-    c: 50
+    c: 50,
   },
   vetoConditions: {
     oracleVetoEnabled: true,
     botTrapVetoEnabled: true,
     globalCVDVetoEnabled: true,
-    flowVetoEnabled: true
-  }
+    flowVetoEnabled: true,
+  },
 };
 
 /**
  * EnhancedScoringEngine - Calculates enhanced holographic scores
- * 
+ *
  * Requirement 5.1: Enhanced scoring formula with Oracle, Flow, BotTrap, and Global CVD
  */
 export class EnhancedScoringEngine extends EventEmitter {
@@ -103,8 +103,14 @@ export class EnhancedScoringEngine extends EventEmitter {
       ...DEFAULT_SCORING_CONFIG,
       ...config,
       weights: { ...DEFAULT_SCORING_CONFIG.weights, ...config.weights },
-      alignmentThresholds: { ...DEFAULT_SCORING_CONFIG.alignmentThresholds, ...config.alignmentThresholds },
-      vetoConditions: { ...DEFAULT_SCORING_CONFIG.vetoConditions, ...config.vetoConditions }
+      alignmentThresholds: {
+        ...DEFAULT_SCORING_CONFIG.alignmentThresholds,
+        ...config.alignmentThresholds,
+      },
+      vetoConditions: {
+        ...DEFAULT_SCORING_CONFIG.vetoConditions,
+        ...config.vetoConditions,
+      },
     };
   }
 
@@ -117,14 +123,18 @@ export class EnhancedScoringEngine extends EventEmitter {
     oracleScore: OracleScore | null,
     flowValidation: FlowValidation | null,
     botTrapAnalysis: BotTrapAnalysis | null,
-    globalCVD: GlobalCVDData | null
+    globalCVD: GlobalCVDData | null,
   ): ScoringBreakdown {
     const reasoning: string[] = [];
 
     // Calculate classic component scores (0-100 scale)
     const dailyBiasScore = this.calculateDailyBiasScore(classicHologram);
-    const fourHourLocationScore = this.calculateFourHourLocationScore(classicHologram);
-    const fifteenMinFlowScore = this.calculateFifteenMinFlowScore(classicHologram);
+    const fourHourLocationScore = this.calculateFourHourLocationScore(
+      classicHologram,
+    );
+    const fifteenMinFlowScore = this.calculateFifteenMinFlowScore(
+      classicHologram,
+    );
 
     // Calculate Oracle contribution (0-100 scale, can be negative for conflicts)
     const oracleContribution = this.calculateOracleContribution(oracleScore);
@@ -136,19 +146,26 @@ export class EnhancedScoringEngine extends EventEmitter {
     const botTrapPenalty = this.calculateBotTrapPenalty(botTrapAnalysis);
 
     // Calculate Global CVD contribution (0-100 scale)
-    const globalCVDContribution = this.calculateGlobalCVDContribution(globalCVD);
+    const globalCVDContribution = this.calculateGlobalCVDContribution(
+      globalCVD,
+    );
 
     // Apply weighted formula (Requirement 5.1)
     // Enhanced Score = Daily_Bias × 0.4 + 4H_Location × 0.25 + 15m_Flow × 0.15 + Oracle_Score × 0.2
     const { weights } = this.config;
-    
-    let rawScore = 
-      dailyBiasScore * weights.dailyBias +
+
+    let rawScore = dailyBiasScore * weights.dailyBias +
       fourHourLocationScore * weights.fourHourLocation +
       fifteenMinFlowScore * weights.fifteenMinFlow +
       oracleContribution * weights.oracleScore;
 
-    reasoning.push(`Base score: ${rawScore.toFixed(1)} (Daily: ${dailyBiasScore.toFixed(0)}, 4H: ${fourHourLocationScore.toFixed(0)}, 15m: ${fifteenMinFlowScore.toFixed(0)}, Oracle: ${oracleContribution.toFixed(0)})`);
+    reasoning.push(
+      `Base score: ${rawScore.toFixed(1)} (Daily: ${
+        dailyBiasScore.toFixed(0)
+      }, 4H: ${fourHourLocationScore.toFixed(0)}, 15m: ${
+        fifteenMinFlowScore.toFixed(0)
+      }, Oracle: ${oracleContribution.toFixed(0)})`,
+    );
 
     // Apply enhancement adjustments
     let adjustedScore = rawScore;
@@ -158,7 +175,11 @@ export class EnhancedScoringEngine extends EventEmitter {
       const flowAdjustment = (flowContribution - 50) * 0.1; // ±5 points max
       adjustedScore += flowAdjustment;
       if (flowAdjustment !== 0) {
-        reasoning.push(`Flow adjustment: ${flowAdjustment > 0 ? '+' : ''}${flowAdjustment.toFixed(1)} (${flowValidation.flowType})`);
+        reasoning.push(
+          `Flow adjustment: ${flowAdjustment > 0 ? "+" : ""}${
+            flowAdjustment.toFixed(1)
+          } (${flowValidation.flowType})`,
+        );
       }
     }
 
@@ -173,7 +194,11 @@ export class EnhancedScoringEngine extends EventEmitter {
       const cvdAdjustment = (globalCVDContribution - 50) * 0.1; // ±5 points max
       adjustedScore += cvdAdjustment;
       if (cvdAdjustment !== 0) {
-        reasoning.push(`Global CVD adjustment: ${cvdAdjustment > 0 ? '+' : ''}${cvdAdjustment.toFixed(1)} (${globalCVD.consensus})`);
+        reasoning.push(
+          `Global CVD adjustment: ${cvdAdjustment > 0 ? "+" : ""}${
+            cvdAdjustment.toFixed(1)
+          } (${globalCVD.consensus})`,
+        );
       }
     }
 
@@ -190,7 +215,7 @@ export class EnhancedScoringEngine extends EventEmitter {
       globalCVDContribution,
       rawScore,
       adjustedScore,
-      reasoning
+      reasoning,
     };
   }
 
@@ -199,9 +224,9 @@ export class EnhancedScoringEngine extends EventEmitter {
    */
   private calculateDailyBiasScore(hologram: HologramState): number {
     const { daily } = hologram;
-    
+
     // Strong trend = 100, Range = 50
-    if (daily.trend === 'BULL' || daily.trend === 'BEAR') {
+    if (daily.trend === "BULL" || daily.trend === "BEAR") {
       return 100;
     }
     return 50; // RANGE
@@ -212,22 +237,22 @@ export class EnhancedScoringEngine extends EventEmitter {
    */
   private calculateFourHourLocationScore(hologram: HologramState): number {
     const { h4, daily } = hologram;
-    
+
     // Score based on alignment with daily bias
-    if (daily.trend === 'BULL') {
+    if (daily.trend === "BULL") {
       // For bullish bias, DISCOUNT is best (100), EQUILIBRIUM is okay (70), PREMIUM is bad (30)
-      if (h4.location === 'DISCOUNT') return 100;
-      if (h4.location === 'EQUILIBRIUM') return 70;
+      if (h4.location === "DISCOUNT") return 100;
+      if (h4.location === "EQUILIBRIUM") return 70;
       return 30; // PREMIUM
-    } else if (daily.trend === 'BEAR') {
+    } else if (daily.trend === "BEAR") {
       // For bearish bias, PREMIUM is best (100), EQUILIBRIUM is okay (70), DISCOUNT is bad (30)
-      if (h4.location === 'PREMIUM') return 100;
-      if (h4.location === 'EQUILIBRIUM') return 70;
+      if (h4.location === "PREMIUM") return 100;
+      if (h4.location === "EQUILIBRIUM") return 70;
       return 30; // DISCOUNT
     }
-    
+
     // RANGE - equilibrium is best
-    if (h4.location === 'EQUILIBRIUM') return 80;
+    if (h4.location === "EQUILIBRIUM") return 80;
     return 50;
   }
 
@@ -236,7 +261,7 @@ export class EnhancedScoringEngine extends EventEmitter {
    */
   private calculateFifteenMinFlowScore(hologram: HologramState): number {
     const { m15, daily } = hologram;
-    
+
     // MSS confirmation is key
     let score = 50; // Base score
 
@@ -246,7 +271,7 @@ export class EnhancedScoringEngine extends EventEmitter {
     }
 
     // Trend alignment adds 20 points
-    if (m15.trend === daily.trend && daily.trend !== 'RANGE') {
+    if (m15.trend === daily.trend && daily.trend !== "RANGE") {
       score += 20;
     }
 
@@ -275,15 +300,17 @@ export class EnhancedScoringEngine extends EventEmitter {
   /**
    * Calculate Flow contribution (0-100)
    */
-  private calculateFlowContribution(flowValidation: FlowValidation | null): number {
+  private calculateFlowContribution(
+    flowValidation: FlowValidation | null,
+  ): number {
     if (!flowValidation) return 50; // Neutral if no flow data
 
     let score = 50;
 
     // Flow type contribution
-    if (flowValidation.flowType === 'passive_absorption') {
+    if (flowValidation.flowType === "passive_absorption") {
       score += 25; // Bullish institutional flow
-    } else if (flowValidation.flowType === 'aggressive_pushing') {
+    } else if (flowValidation.flowType === "aggressive_pushing") {
       score -= 15; // Potentially bearish
     }
 
@@ -300,7 +327,9 @@ export class EnhancedScoringEngine extends EventEmitter {
   /**
    * Calculate Bot Trap penalty (0-50)
    */
-  private calculateBotTrapPenalty(botTrapAnalysis: BotTrapAnalysis | null): number {
+  private calculateBotTrapPenalty(
+    botTrapAnalysis: BotTrapAnalysis | null,
+  ): number {
     if (!botTrapAnalysis || !botTrapAnalysis.isSuspect) return 0;
 
     // Penalty based on suspicion score
@@ -311,23 +340,25 @@ export class EnhancedScoringEngine extends EventEmitter {
   /**
    * Calculate Global CVD contribution (0-100)
    */
-  private calculateGlobalCVDContribution(globalCVD: GlobalCVDData | null): number {
+  private calculateGlobalCVDContribution(
+    globalCVD: GlobalCVDData | null,
+  ): number {
     if (!globalCVD) return 50; // Neutral if no Global CVD data
 
     let score = 50;
 
     // Consensus contribution
     switch (globalCVD.consensus) {
-      case 'bullish':
+      case "bullish":
         score += 25;
         break;
-      case 'bearish':
+      case "bearish":
         score -= 25;
         break;
-      case 'conflicted':
+      case "conflicted":
         score -= 10; // Slight penalty for conflicting signals
         break;
-      // 'neutral' stays at 50
+        // 'neutral' stays at 50
     }
 
     // Manipulation detection penalty
@@ -351,34 +382,43 @@ export class EnhancedScoringEngine extends EventEmitter {
     oracleScore: OracleScore | null,
     botTrapAnalysis: BotTrapAnalysis | null,
     globalCVD: GlobalCVDData | null,
-    flowValidation: FlowValidation | null
-  ): 'A+' | 'A' | 'B' | 'C' | 'VETO' {
+    flowValidation: FlowValidation | null,
+  ): "A+" | "A" | "B" | "C" | "VETO" {
     const { alignmentThresholds, vetoConditions } = this.config;
 
     // Check veto conditions first
     if (vetoConditions.oracleVetoEnabled && oracleScore?.veto) {
-      return 'VETO';
+      return "VETO";
     }
 
-    if (vetoConditions.botTrapVetoEnabled && botTrapAnalysis?.isSuspect && botTrapAnalysis.suspicionScore >= 80) {
-      return 'VETO';
+    if (
+      vetoConditions.botTrapVetoEnabled && botTrapAnalysis?.isSuspect &&
+      botTrapAnalysis.suspicionScore >= 80
+    ) {
+      return "VETO";
     }
 
-    if (vetoConditions.globalCVDVetoEnabled && globalCVD?.manipulation.detected && globalCVD.manipulation.divergenceScore >= 80) {
-      return 'VETO';
+    if (
+      vetoConditions.globalCVDVetoEnabled && globalCVD?.manipulation.detected &&
+      globalCVD.manipulation.divergenceScore >= 80
+    ) {
+      return "VETO";
     }
 
-    if (vetoConditions.flowVetoEnabled && flowValidation && !flowValidation.isValid && flowValidation.confidence >= 80) {
-      return 'VETO';
+    if (
+      vetoConditions.flowVetoEnabled && flowValidation &&
+      !flowValidation.isValid && flowValidation.confidence >= 80
+    ) {
+      return "VETO";
     }
 
     // Determine alignment based on score
-    if (score >= alignmentThresholds.aPlus) return 'A+';
-    if (score >= alignmentThresholds.a) return 'A';
-    if (score >= alignmentThresholds.b) return 'B';
-    if (score >= alignmentThresholds.c) return 'C';
-    
-    return 'VETO'; // Score too low
+    if (score >= alignmentThresholds.aPlus) return "A+";
+    if (score >= alignmentThresholds.a) return "A";
+    if (score >= alignmentThresholds.b) return "B";
+    if (score >= alignmentThresholds.c) return "C";
+
+    return "VETO"; // Score too low
   }
 
   /**
@@ -387,8 +427,8 @@ export class EnhancedScoringEngine extends EventEmitter {
   determineConvictionLevel(
     score: number,
     oracleScore: OracleScore | null,
-    globalCVD: GlobalCVDData | null
-  ): 'low' | 'medium' | 'high' | 'extreme' {
+    globalCVD: GlobalCVDData | null,
+  ): "low" | "medium" | "high" | "extreme" {
     // Base conviction from score
     let convictionPoints = 0;
 
@@ -397,20 +437,28 @@ export class EnhancedScoringEngine extends EventEmitter {
     else if (score >= 70) convictionPoints += 1;
 
     // Oracle alignment bonus
-    if (oracleScore && Math.abs(oracleScore.sentiment) >= 60 && oracleScore.confidence >= 70) {
+    if (
+      oracleScore && Math.abs(oracleScore.sentiment) >= 60 &&
+      oracleScore.confidence >= 70
+    ) {
       convictionPoints += 1;
     }
 
     // Global CVD consensus bonus
-    if (globalCVD && (globalCVD.consensus === 'bullish' || globalCVD.consensus === 'bearish') && globalCVD.confidence >= 70) {
+    if (
+      globalCVD &&
+      (globalCVD.consensus === "bullish" ||
+        globalCVD.consensus === "bearish") &&
+      globalCVD.confidence >= 70
+    ) {
       convictionPoints += 1;
     }
 
     // Map points to conviction level
-    if (convictionPoints >= 4) return 'extreme';
-    if (convictionPoints >= 3) return 'high';
-    if (convictionPoints >= 2) return 'medium';
-    return 'low';
+    if (convictionPoints >= 4) return "extreme";
+    if (convictionPoints >= 3) return "high";
+    if (convictionPoints >= 2) return "medium";
+    return "low";
   }
 
   /**
@@ -421,10 +469,16 @@ export class EnhancedScoringEngine extends EventEmitter {
       ...this.config,
       ...config,
       weights: { ...this.config.weights, ...config.weights },
-      alignmentThresholds: { ...this.config.alignmentThresholds, ...config.alignmentThresholds },
-      vetoConditions: { ...this.config.vetoConditions, ...config.vetoConditions }
+      alignmentThresholds: {
+        ...this.config.alignmentThresholds,
+        ...config.alignmentThresholds,
+      },
+      vetoConditions: {
+        ...this.config.vetoConditions,
+        ...config.vetoConditions,
+      },
     };
-    this.emit('configUpdated', this.config);
+    this.emit("configUpdated", this.config);
   }
 
   /**

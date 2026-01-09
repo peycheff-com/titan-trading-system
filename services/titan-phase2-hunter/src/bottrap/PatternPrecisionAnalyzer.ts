@@ -11,7 +11,7 @@ import {
   PatternPrecision,
   PatternCharacteristics,
   TrapIndicators
-} from '../types/enhanced-2026';
+} from '../types';
 import { FVG, OrderBlock, LiquidityPool, OHLCV } from '../types';
 
 /**

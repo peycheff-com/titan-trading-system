@@ -3,24 +3,25 @@
  * Defines the complete configuration schema
  */
 
-import { AllocationEngineConfig } from './allocation.js';
-import { PerformanceTrackerConfig } from './performance.js';
-import { RiskGuardianConfig } from './risk.js';
-import { CapitalFlowConfig } from './capital.js';
-import { CircuitBreakerConfig } from './breaker.js';
-import { BrainConfig } from './brain.js';
+import { AllocationEngineConfig } from "./allocation.js";
+import { PerformanceTrackerConfig } from "./performance.js";
+import { RiskGuardianConfig } from "./risk.js";
+import { CapitalFlowConfig } from "./capital.js";
+import { CircuitBreakerConfig } from "./breaker.js";
+import { BrainConfig } from "./brain.js";
 
 /**
  * Database configuration
  */
 export interface DatabaseConfig {
-  host: string;
-  port: number;
-  database: string;
-  user: string;
-  password: string;
-  maxConnections: number;
-  idleTimeout: number;
+  url?: string;
+  host?: string;
+  port?: number;
+  database?: string;
+  user?: string;
+  password?: string;
+  maxConnections?: number;
+  idleTimeout?: number;
 }
 
 /**
@@ -89,7 +90,7 @@ export interface TitanBrainConfig {
  * Environment variables schema
  */
 export interface EnvConfig {
-  NODE_ENV: 'development' | 'production' | 'test';
+  NODE_ENV: "development" | "production" | "test";
   DB_HOST: string;
   DB_PORT: string;
   DB_NAME: string;

@@ -820,7 +820,7 @@ export class WebhookServer {
   ): Promise<void> {
     try {
       const report = request.body;
-      this.logger.info("Execution Report Processing", {
+      this.logger.info("Execution Report Processing", undefined, {
         phaseId: report.phaseId,
         symbol: report.symbol,
         side: report.side,

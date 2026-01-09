@@ -14,7 +14,7 @@ import {
   ExchangeFlow, 
   GlobalCVDData,
   ManipulationAnalysis 
-} from '../types/enhanced-2026';
+} from '../types';
 
 /**
  * CVD calculation window configuration

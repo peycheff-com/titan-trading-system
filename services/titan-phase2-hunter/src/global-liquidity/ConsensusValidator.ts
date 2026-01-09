@@ -8,7 +8,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { ExchangeFlow, ConnectionStatus, GlobalCVDData } from '../types/enhanced-2026';
+import { ExchangeFlow, ConnectionStatus, GlobalCVDData } from '../types';
 
 /**
  * Consensus validation configuration

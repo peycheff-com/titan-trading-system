@@ -11,7 +11,7 @@
 import {
   TradeOutcome,
   PatternPrecision
-} from '../types/enhanced-2026';
+} from '../types';
 import { PrecisionAnalysisResult, TechnicalPattern } from './PatternPrecisionAnalyzer';
 
 /**

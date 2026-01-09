@@ -13,7 +13,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { FlowValidation, TradeFootprint, IcebergAnalysis } from '../types/enhanced-2026';
+import { FlowValidation, TradeFootprint, IcebergAnalysis } from '../types';
 import { CVDTrade, Absorption, Distribution } from '../types';
 import { FootprintAnalyzer, CandleFootprint, FootprintAnalysisResult } from './FootprintAnalyzer';
 import { SweepDetector, SweepDetectionResult } from './SweepDetector';

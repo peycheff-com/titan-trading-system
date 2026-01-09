@@ -72,8 +72,8 @@ Now implement following the validated workflow:
 
 #### Step 1: Create Directory Structure
 ```bash
-mkdir -p titan/services/<phase-name>
-cd titan/services/<phase-name>
+mkdir -p services/<phase-name>
+cd services/<phase-name>
 npm init -y
 ```
 
@@ -106,6 +106,11 @@ npm install --save-dev @types/node @types/react typescript jest ts-jest
 - Document configuration options
 - Create troubleshooting guide
 
+#### Step 7: Railway Deployment Config
+- Create `railway.json` for deployment
+- Configure environment variables
+- Test deployment
+
 ---
 
 ## Quick Mode (Skip Specs)
@@ -126,26 +131,21 @@ When the user asks to create a new phase or component:
 3. **Implementation Phase** - Build with testing at each step
 4. **Documentation** - Create README.md
 5. **Integration Testing** - Ensure it works with shared infrastructure
+6. **Deployment Config** - Create railway.json
 
 ## File Organization Rules
 
-### All Titan components go in titan/
+### All Titan components go in services/
 ```
-titan/
-├── services/
-│   ├── shared/                    # Shared infrastructure
-│   ├── titan-brain/               # Phase 5 - Orchestrator
-│   ├── titan-phase1-scavenger/    # Phase 1
-│   ├── titan-phase2-hunter/       # Phase 2
-│   ├── titan-phase3-sentinel/     # Phase 3
-│   └── titan-phase4-ai-quant/     # Phase 4
-├── config/
-│   ├── brain.config.json
-│   ├── phase1.config.json
-│   ├── phase2.config.json
-│   └── phase3.config.json
-└── logs/
-    └── trades.jsonl
+services/
+├── shared/                    # Shared infrastructure
+├── titan-brain/               # Phase 5 - Orchestrator
+├── titan-execution/           # Execution Microservice
+├── titan-console/             # Web Dashboard
+├── titan-ai-quant/            # Phase 4 - AI Optimizer
+├── titan-phase1-scavenger/    # Phase 1
+├── titan-phase2-hunter/       # Phase 2
+└── titan-phase3-sentinel/     # Phase 3
 ```
 
 ### Standard file structure for each phase
@@ -156,14 +156,17 @@ services/titan-phaseX-name/
 │   ├── calculators/     # Pure math functions
 │   ├── detectors/       # Signal detection
 │   ├── validators/      # Validation logic
-│   ├── config/          # Configuration
-│   └── console/         # UI components (Ink + React)
+│   ├── console/         # UI components (Ink + React for terminal)
+│   └── index.ts         # Entry point
 ├── tests/
 │   ├── unit/            # Unit tests
 │   ├── property/        # Property-based tests
 │   └── integration/     # Integration tests
+├── dist/                # Compiled output
 ├── package.json
 ├── tsconfig.json
+├── jest.config.js
+├── railway.json         # Railway deployment config
 └── README.md
 ```
 
@@ -186,6 +189,7 @@ services/titan-phaseX-name/
 import { WebSocketManager } from '../shared/WebSocketManager';
 import { ExecutionService } from '../shared/ExecutionService';
 import { TelemetryService } from '../shared/TelemetryService';
+import { ConfigManager } from '../shared/ConfigManager';
 
 // Phase-specific
 import { TitanTrap } from './engine/TitanTrap';
@@ -270,21 +274,22 @@ User: "Create Phase 3 - The Sentinel (basis arbitrage system)"
 5. **Ask user: "Do these requirements look good?"**
 
 ### Phase 2: Design
-1. Design BasisScalper.ts: basis calculation and trade logic
-2. Design DeltaHedger.ts: neutrality maintenance
-3. Design FundingArbitrage.ts: funding rate monitoring
+1. Design SentinelCore.ts: core engine
+2. Design AtomicExecutor.ts: atomic spot/perp execution
+3. Design TwapExecutor.ts: TWAP order slicing
 4. Design PortfolioManager.ts: multi-asset management
 5. **Ask user: "Does this design look good?"**
 
 ### Phase 3: Implementation
 1. Create directory: `services/titan-phase3-sentinel/`
-2. Create `BasisScalper.ts` → **Test**
-3. Create `DeltaHedger.ts` → **Test**
-4. Create `FundingArbitrage.ts` → **Test**
+2. Create `SentinelCore.ts` → **Test**
+3. Create `AtomicExecutor.ts` → **Test**
+4. Create `TwapExecutor.ts` → **Test**
 5. Create `PortfolioManager.ts` → **Test**
 6. Create `README.md`
-7. **Integration testing with shared infrastructure**
-8. Report completion to user
+7. Create `railway.json`
+8. **Integration testing with shared infrastructure**
+9. Report completion to user
 
 ---
 
@@ -302,55 +307,41 @@ This allows tracking progress and maintaining documentation for sophisticated sy
 
 ---
 
-## Institutional-Grade Trading Systems (Titan-style)
+## Service-Specific Development Patterns
 
-For systems requiring execution microservices, follow this extended workflow:
+### Trading Phases (1, 2, 3)
+- TypeScript + Node.js
+- Ink + React for terminal UI
+- Integration with shared infrastructure
+- Railway deployment
 
-### Phase 1-3: Same as Standard (Requirements → Design → Implementation)
+### AI Quant (Phase 4)
+- TypeScript + Node.js + Gemini AI
+- SQLite for Strategic Memory
+- Human-in-the-loop approval workflow
+- Runs offline (no real-time latency impact)
 
-### Phase 4: Integration with Shared Infrastructure
+### Brain (Phase 5)
+- TypeScript + Fastify + PostgreSQL
+- Prometheus metrics
+- WebSocket status monitoring
+- Signal queue with idempotency
 
-When the design includes integration with shared services:
+### Execution Microservice
+- JavaScript + Fastify
+- Shadow State position tracking
+- L2 order book validation
+- Multi-exchange adapters
 
-#### Step 1: Connect to WebSocketManager
-```typescript
-// Subscribe to real-time data
-this.wsManager.subscribe('binance', symbol, (data) => {
-  this.onBinanceTick(symbol, data.price, data.trades);
-});
-```
+### Console (Web Dashboard)
+- React + TypeScript + Vite
+- Tailwind CSS + shadcn/ui
+- Real-time WebSocket updates
+- Responsive design
 
-#### Step 2: Connect to ExecutionService
-```typescript
-// Place orders through unified service
-const result = await this.executionService.placeOrder({
-  phase: 'phase1',
-  symbol,
-  side: 'Buy',
-  type: 'MARKET',
-  qty: positionSize,
-  leverage: 20
-});
-```
+---
 
-#### Step 3: Connect to TelemetryService
-```typescript
-// Log all signals and executions
-this.telemetry.logSignal('phase1', {
-  symbol,
-  trapType: 'LIQUIDATION',
-  confidence: 95,
-  entry: triggerPrice
-});
-```
-
-#### Step 4: Connect to ConfigManager
-```typescript
-// Load configuration with Brain hierarchy
-const config = this.configManager.loadConfig('phase1');
-```
-
-### Key Safety Patterns
+## Key Safety Patterns
 
 1. **Intent Signals**: Phases send signals, ExecutionService handles execution
 2. **Shadow State**: Brain maintains global position state
@@ -367,7 +358,7 @@ Use these MCP servers during development:
 ### Context7 - Documentation Lookup
 **When**: Looking up TypeScript, Node.js, or framework docs
 ```
-mcp_Context7_resolve_library_id → mcp_Context7_get_library_docs
+mcp_Context7_resolve_library_id → mcp_Context7_query_docs
 ```
 
 ### Chrome DevTools - Browser Testing
@@ -384,7 +375,51 @@ mcp_firecrawl_firecrawl_scrape - Deep page scrape
 ```
 
 ### Shadcn - UI Components
-**When**: Building terminal dashboards (Ink) or web UIs
+**When**: Building web dashboards with shadcn/ui components
+
+---
+
+## Deployment Workflow
+
+### Railway Deployment (Production)
+
+1. **Create railway.json** in service directory:
+```json
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS"
+  },
+  "deploy": {
+    "startCommand": "npm start",
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 30
+  }
+}
+```
+
+2. **Configure environment variables** in Railway dashboard
+
+3. **Auto-deploy** from main branch
+
+### Local Development
+
+1. **Start services** with PM2:
+```bash
+./start-titan.sh
+```
+
+2. **Or start individually**:
+```bash
+cd services/titan-brain && npm run dev
+cd services/titan-execution && npm run dev
+```
+
+3. **Monitor with PM2**:
+```bash
+pm2 monit
+pm2 logs
+```
 
 ---
 
@@ -393,6 +428,6 @@ mcp_firecrawl_firecrawl_scrape - Deep page scrape
 When discovering new patterns or improvements:
 
 1. **Update Architecture Docs**: Add to `.kiro/steering/titan-architecture.md`
-2. **Update Integration Fixes**: Add to `.kiro/steering/titan-integration-fixes.md`
-3. **Update Workflow**: Add to this file
-4. **Document in README**: Add to phase-specific README.md
+2. **Update Workflow**: Add to this file
+3. **Update Tech Stack**: Add to `.kiro/steering/tech.md`
+4. **Document in README**: Add to service-specific README.md

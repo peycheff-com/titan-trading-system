@@ -9,7 +9,7 @@
 
 import { EventEmitter } from 'events';
 import { ExchangeWebSocketClient, ExchangeTrade, ConnectionHealth } from './ExchangeWebSocketClient';
-import { ConnectionStatus, ExchangeFlow } from '../types/enhanced-2026';
+import { ConnectionStatus, ExchangeFlow } from '../types';
 
 /**
  * Multi-exchange manager configuration

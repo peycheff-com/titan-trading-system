@@ -20,7 +20,7 @@ import {
   BotTrapAnalysis,
   ConnectionStatus,
   ImpactLevel
-} from '../types/enhanced-2026';
+} from '../types';
 
 // ============================================================================
 // INTERFACES

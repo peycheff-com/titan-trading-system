@@ -13,7 +13,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { IcebergAnalysis } from '../types/enhanced-2026';
+import { IcebergAnalysis } from '../types';
 import { CVDTrade } from '../types';
 
 // ============================================================================
