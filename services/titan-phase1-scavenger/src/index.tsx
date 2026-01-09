@@ -207,7 +207,7 @@ class TitanScavengerApp {
         oiDetector: this.oiDetector,
         fundingDetector: this.fundingDetector,
         basisDetector: this.basisDetector,
-        ultimateProtocol: this.ultimateProtocol
+        ultimateProtocol: this.ultimateProtocol // Replaced logic
       });
       console.log('✅ TitanTrap engine initialized');
       

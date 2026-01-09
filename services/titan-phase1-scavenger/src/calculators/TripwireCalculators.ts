@@ -25,6 +25,10 @@ export interface Tripwire {
   estimatedCascadeSize: number; // Expected move in %
   activated: boolean;
   activatedAt?: number; // Timestamp
+
+  // Alpha Logic
+  adx?: number; // Trend Strength (0-100)
+  trend?: "UP" | "DOWN" | "RANGING";
 }
 
 interface VolumeProfileNode {
@@ -318,5 +322,91 @@ export class TripwireCalculators {
 
     const variance = sumSquaredDiffs / period;
     return Math.sqrt(variance);
+  }
+
+  /**
+   * Calculate ADX (Average Directional Index)
+   *
+   * Used to filter counter-trend trades.
+   * If ADX > 25, the trend is strong.
+   * Counter-trend traps should be VETOED in high ADX regimes.
+   *
+   * @param ohlcv - OHLCV data (need at least 2x period history)
+   * @param period - ADX period (default 14)
+   * @returns ADX value (0-100)
+   */
+  calcADX(ohlcv: OHLCV[], period: number = 14): number {
+    if (ohlcv.length < period * 2) return 0;
+
+    const tr = new Float64Array(ohlcv.length);
+    const plusDM = new Float64Array(ohlcv.length);
+    const minusDM = new Float64Array(ohlcv.length);
+
+    // 1. Calculate TR, +DM, -DM for each bar
+    for (let i = 1; i < ohlcv.length; i++) {
+      const high = ohlcv[i].high;
+      const low = ohlcv[i].low;
+      const prevClose = ohlcv[i - 1].close;
+      const prevHigh = ohlcv[i - 1].high;
+      const prevLow = ohlcv[i - 1].low;
+
+      // True Range
+      tr[i] = Math.max(
+        high - low,
+        Math.abs(high - prevClose),
+        Math.abs(low - prevClose),
+      );
+
+      // Directional Movement
+      const upMove = high - prevHigh;
+      const downMove = prevLow - low;
+
+      plusDM[i] = (upMove > downMove && upMove > 0) ? upMove : 0;
+      minusDM[i] = (downMove > upMove && downMove > 0) ? downMove : 0;
+    }
+
+    // 2. Smoothed TR, +DM, -DM (Wilder's Smoothing)
+    // First value is simple sum
+    let smoothTR = 0;
+    let smoothPlusDM = 0;
+    let smoothMinusDM = 0;
+
+    for (let i = 1; i <= period; i++) {
+      smoothTR += tr[i];
+      smoothPlusDM += plusDM[i];
+      smoothMinusDM += minusDM[i];
+    }
+
+    // Subsequent values
+    const dxValues: number[] = [];
+
+    for (let i = period + 1; i < ohlcv.length; i++) {
+      smoothTR = smoothTR - (smoothTR / period) + tr[i];
+      smoothPlusDM = smoothPlusDM - (smoothPlusDM / period) + plusDM[i];
+      smoothMinusDM = smoothMinusDM - (smoothMinusDM / period) + minusDM[i];
+
+      // 3. Calculate +DI and -DI
+      const plusDI = (smoothPlusDM / smoothTR) * 100;
+      const minusDI = (smoothMinusDM / smoothTR) * 100;
+
+      // 4. Calculate DX
+      const diSum = plusDI + minusDI;
+      const dx = diSum === 0 ? 0 : (Math.abs(plusDI - minusDI) / diSum) * 100;
+      dxValues.push(dx);
+    }
+
+    // 5. Calculate ADX (SMA of DX)
+    if (dxValues.length < period) return 0;
+
+    // First ADX is simple average of first 'period' DX values
+    // But standard ADX is often Wilder's smoothed too.
+    // For simplicity and standard usage, simple average of last 'period' DX is often sufficient proxy
+    // or we can do wilder's smoothing on DX too. Let's do simple SMA of last 14 DX for stability.
+
+    let sumDX = 0;
+    const recentDX = dxValues.slice(-period);
+    for (const val of recentDX) sumDX += val;
+
+    return sumDX / recentDX.length;
   }
 }
