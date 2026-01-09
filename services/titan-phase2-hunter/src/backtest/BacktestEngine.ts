@@ -1,31 +1,33 @@
 /**
  * Backtest Engine for Titan Phase 2 - The Hunter
- * 
+ *
  * Validates the Holographic Market Structure strategy on historical data with realistic
  * execution simulation including slippage, fees, and market conditions analysis.
- * 
+ *
  * Requirements: 17.1-17.7 (Backtesting & Forward Testing)
  */
 
-import { 
-  OHLCV, 
-  SignalData, 
-  HologramState, 
-  SessionType, 
-  Metrics, 
-  TimeRange,
-  Position,
+import {
+  HologramState,
+  Metrics,
+  OHLCV,
   OrderParams,
   OrderResult,
-  OrderStatus
-} from '../types';
-import { BybitPerpsClient } from '../exchanges/BybitPerpsClient';
-import { HologramEngine } from '../engine/HologramEngine';
-import { SessionProfiler } from '../engine/SessionProfiler';
-import { InefficiencyMapper } from '../engine/InefficiencyMapper';
-import { CVDValidator } from '../engine/CVDValidator';
-import { SignalGenerator } from '../execution/SignalGenerator';
-import { logError } from '../logging/Logger';
+  OrderStatus,
+  Position,
+  SessionType,
+  SignalData,
+  TimeRange,
+} from "../types";
+import { BybitPerpsClient } from "../exchanges/BybitPerpsClient";
+import { HologramEngine } from "../engine/HologramEngine";
+import { SessionProfiler } from "../engine/SessionProfiler";
+import { InefficiencyMapper } from "../engine/InefficiencyMapper";
+import { CVDValidator } from "../engine/CVDValidator";
+import { SignalGenerator } from "../execution/SignalGenerator";
+import { Oracle } from "../oracle/Oracle";
+import { GlobalLiquidityAggregator } from "../global-liquidity/GlobalLiquidityAggregator";
+import { logError } from "../logging/Logger";
 
 export interface BacktestConfig {
   startDate: number; // Unix timestamp
@@ -54,7 +56,7 @@ export interface FeeModel {
 export interface BacktestTrade {
   id: string;
   symbol: string;
-  direction: 'LONG' | 'SHORT';
+  direction: "LONG" | "SHORT";
   entryTime: number;
   exitTime: number;
   entryPrice: number;
@@ -66,7 +68,7 @@ export interface BacktestTrade {
   fees: number;
   slippage: number;
   holdTime: number; // milliseconds
-  exitReason: 'STOP_LOSS' | 'TAKE_PROFIT' | 'TIMEOUT' | 'MANUAL';
+  exitReason: "STOP_LOSS" | "TAKE_PROFIT" | "TIMEOUT" | "MANUAL";
   signal: SignalData;
   rValue: number; // R multiple (profit/loss in R units)
 }
@@ -131,7 +133,7 @@ export interface LosingPeriod {
   maxDrawdown: number;
   marketConditions: {
     volatility: number;
-    trend: 'BULL' | 'BEAR' | 'RANGE';
+    trend: "BULL" | "BEAR" | "RANGE";
     session: SessionType;
     btcCorrelation: number;
   };
@@ -145,7 +147,11 @@ export interface MarketConditionAnalysis {
     high: { winRate: number; profitFactor: number; trades: number };
   };
   sessionPerformance: {
-    [K in SessionType]: { winRate: number; profitFactor: number; trades: number };
+    [K in SessionType]: {
+      winRate: number;
+      profitFactor: number;
+      trades: number;
+    };
   };
   trendPerformance: {
     BULL: { winRate: number; profitFactor: number; trades: number };
@@ -165,6 +171,8 @@ export class BacktestEngine {
   private inefficiencyMapper: InefficiencyMapper;
   private cvdValidator: CVDValidator;
   private signalGenerator: SignalGenerator;
+  private oracle?: Oracle;
+  private globalLiquidity?: GlobalLiquidityAggregator;
   private config: BacktestConfig;
   private isRunning = false;
 
@@ -174,7 +182,9 @@ export class BacktestEngine {
     sessionProfiler: SessionProfiler,
     inefficiencyMapper: InefficiencyMapper,
     cvdValidator: CVDValidator,
-    signalGenerator: SignalGenerator
+    signalGenerator: SignalGenerator,
+    oracle?: Oracle,
+    globalLiquidity?: GlobalLiquidityAggregator,
   ) {
     this.bybitClient = bybitClient;
     this.hologramEngine = hologramEngine;
@@ -182,12 +192,14 @@ export class BacktestEngine {
     this.inefficiencyMapper = inefficiencyMapper;
     this.cvdValidator = cvdValidator;
     this.signalGenerator = signalGenerator;
+    this.oracle = oracle;
+    this.globalLiquidity = globalLiquidity;
 
     // Default configuration
     this.config = {
       startDate: Date.now() - (30 * 24 * 60 * 60 * 1000), // 30 days ago
       endDate: Date.now(),
-      symbols: ['BTCUSDT', 'ETHUSDT'],
+      symbols: ["BTCUSDT", "ETHUSDT"],
       initialEquity: 10000,
       riskPerTrade: 0.02,
       maxLeverage: 3,
@@ -195,13 +207,13 @@ export class BacktestEngine {
       slippageModel: {
         postOnlySlippage: 0.001, // 0.1%
         iocSlippage: 0.002, // 0.2%
-        marketSlippage: 0.003 // 0.3%
+        marketSlippage: 0.003, // 0.3%
       },
       feeModel: {
         makerFee: -0.0001, // -0.01% (rebate)
-        takerFee: 0.0005 // 0.05%
+        takerFee: 0.0005, // 0.05%
       },
-      timeframe: '15m'
+      timeframe: "15m",
     };
   }
 
@@ -213,12 +225,16 @@ export class BacktestEngine {
     symbols: string[],
     timeframe: string,
     startDate: number,
-    endDate: number
+    endDate: number,
   ): Promise<Map<string, OHLCV[]>> {
     const historicalData = new Map<string, OHLCV[]>();
 
     try {
-      console.log(`📊 Fetching historical data for ${symbols.length} symbols from ${new Date(startDate).toISOString()} to ${new Date(endDate).toISOString()}`);
+      console.log(
+        `📊 Fetching historical data for ${symbols.length} symbols from ${
+          new Date(startDate).toISOString()
+        } to ${new Date(endDate).toISOString()}`,
+      );
 
       for (const symbol of symbols) {
         try {
@@ -230,53 +246,70 @@ export class BacktestEngine {
           // Fetch data in chunks if needed (Bybit limit is 1000 candles per request)
           const allCandles: OHLCV[] = [];
           let currentEndTime = endDate;
-          
-          while (currentEndTime > startDate && allCandles.length < requiredCandles) {
-            const chunkSize = Math.min(1000, requiredCandles - allCandles.length);
-            
-            const candles = await this.bybitClient.fetchOHLCV(symbol, timeframe, chunkSize);
-            
+
+          while (
+            currentEndTime > startDate && allCandles.length < requiredCandles
+          ) {
+            const chunkSize = Math.min(
+              1000,
+              requiredCandles - allCandles.length,
+            );
+
+            const candles = await this.bybitClient.fetchOHLCV(
+              symbol,
+              timeframe,
+              chunkSize,
+            );
+
             if (candles.length === 0) break;
-            
+
             // Filter candles within date range
             const filteredCandles = candles.filter(
-              candle => candle.timestamp >= startDate && candle.timestamp <= endDate
+              (candle) =>
+                candle.timestamp >= startDate && candle.timestamp <= endDate,
             );
-            
+
             allCandles.unshift(...filteredCandles);
-            
+
             // Update currentEndTime for next chunk
             currentEndTime = candles[0].timestamp - timeframeMs;
-            
+
             // Add delay to respect rate limits
             await this.sleep(100);
           }
 
           // Sort by timestamp and remove duplicates
           const uniqueCandles = Array.from(
-            new Map(allCandles.map(candle => [candle.timestamp, candle])).values()
+            new Map(allCandles.map((candle) => [candle.timestamp, candle]))
+              .values(),
           ).sort((a, b) => a.timestamp - b.timestamp);
 
           historicalData.set(symbol, uniqueCandles);
-          console.log(`✅ Fetched ${uniqueCandles.length} candles for ${symbol}`);
-
+          console.log(
+            `✅ Fetched ${uniqueCandles.length} candles for ${symbol}`,
+          );
         } catch (error) {
           console.error(`❌ Failed to fetch data for ${symbol}:`, error);
-          logError('ERROR', `Failed to fetch historical data for ${symbol}`, {
+          logError("ERROR", `Failed to fetch historical data for ${symbol}`, {
             symbol,
-            component: 'BacktestEngine',
-            function: 'fetchHistoricalData',
-            stack: (error as Error).stack
+            component: "BacktestEngine",
+            function: "fetchHistoricalData",
+            stack: (error as Error).stack,
           });
         }
       }
 
-      console.log(`✅ Historical data fetch complete: ${historicalData.size} symbols`);
+      console.log(
+        `✅ Historical data fetch complete: ${historicalData.size} symbols`,
+      );
       return historicalData;
-
     } catch (error) {
-      console.error('❌ Error fetching historical data:', error);
-      throw new Error(`Failed to fetch historical data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error("❌ Error fetching historical data:", error);
+      throw new Error(
+        `Failed to fetch historical data: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+      );
     }
   }
 
@@ -286,25 +319,25 @@ export class BacktestEngine {
    */
   public simulateTrade(
     signal: SignalData,
-    orderType: 'POST_ONLY' | 'IOC' | 'MARKET',
-    currentPrice: number
+    orderType: "POST_ONLY" | "IOC" | "MARKET",
+    currentPrice: number,
   ): { fillPrice: number; slippage: number; filled: boolean } {
     let slippagePercent: number;
     let filled = true;
 
     // Apply slippage based on order type
     switch (orderType) {
-      case 'POST_ONLY':
+      case "POST_ONLY":
         slippagePercent = this.config.slippageModel.postOnlySlippage;
         // Post-Only orders have a chance of not filling if price moves away
         if (Math.random() < 0.1) { // 10% chance of no fill
           filled = false;
         }
         break;
-      case 'IOC':
+      case "IOC":
         slippagePercent = this.config.slippageModel.iocSlippage;
         break;
-      case 'MARKET':
+      case "MARKET":
         slippagePercent = this.config.slippageModel.marketSlippage;
         break;
       default:
@@ -316,7 +349,7 @@ export class BacktestEngine {
     }
 
     // Calculate slippage direction based on trade direction
-    const slippageDirection = signal.direction === 'LONG' ? 1 : -1;
+    const slippageDirection = signal.direction === "LONG" ? 1 : -1;
     const slippageAmount = currentPrice * slippagePercent * slippageDirection;
     const fillPrice = currentPrice + slippageAmount;
     const slippage = Math.abs(slippageAmount);
@@ -330,17 +363,17 @@ export class BacktestEngine {
    */
   public applyFees(
     notionalValue: number,
-    orderType: 'POST_ONLY' | 'IOC' | 'MARKET'
+    orderType: "POST_ONLY" | "IOC" | "MARKET",
   ): number {
     let feeRate: number;
 
     // Apply fees based on order type
     switch (orderType) {
-      case 'POST_ONLY':
+      case "POST_ONLY":
         feeRate = this.config.feeModel.makerFee; // Negative = rebate
         break;
-      case 'IOC':
-      case 'MARKET':
+      case "IOC":
+      case "MARKET":
         feeRate = this.config.feeModel.takerFee;
         break;
       default:
@@ -354,7 +387,10 @@ export class BacktestEngine {
    * Calculate comprehensive backtest results
    * Requirements: 17.4
    */
-  public calcBacktestResults(trades: BacktestTrade[], config: BacktestConfig): BacktestMetrics {
+  public calcBacktestResults(
+    trades: BacktestTrade[],
+    config: BacktestConfig,
+  ): BacktestMetrics {
     if (trades.length === 0) {
       return this.getEmptyMetrics(config);
     }
@@ -363,8 +399,8 @@ export class BacktestEngine {
     const durationYears = duration / (365.25 * 24 * 60 * 60 * 1000);
 
     // Basic trade statistics
-    const winningTrades = trades.filter(t => t.pnl > 0);
-    const losingTrades = trades.filter(t => t.pnl < 0);
+    const winningTrades = trades.filter((t) => t.pnl > 0);
+    const losingTrades = trades.filter((t) => t.pnl < 0);
     const totalPnl = trades.reduce((sum, t) => sum + t.pnl, 0);
     const totalFees = trades.reduce((sum, t) => sum + t.fees, 0);
     const totalSlippage = trades.reduce((sum, t) => sum + t.slippage, 0);
@@ -378,7 +414,7 @@ export class BacktestEngine {
 
     for (const trade of trades) {
       runningEquity += trade.pnl;
-      
+
       if (runningEquity > maxEquity) {
         maxEquity = runningEquity;
         currentDrawdownStart = 0;
@@ -387,7 +423,7 @@ export class BacktestEngine {
         if (drawdown > maxDrawdown) {
           maxDrawdown = drawdown;
         }
-        
+
         if (currentDrawdownStart === 0) {
           currentDrawdownStart = trade.exitTime;
         } else {
@@ -400,47 +436,61 @@ export class BacktestEngine {
     }
 
     const finalEquity = config.initialEquity + totalPnl;
-    const totalReturn = (finalEquity - config.initialEquity) / config.initialEquity;
+    const totalReturn = (finalEquity - config.initialEquity) /
+      config.initialEquity;
     const annualizedReturn = Math.pow(1 + totalReturn, 1 / durationYears) - 1;
 
     // Risk metrics
-    const returns = trades.map(t => t.pnlPercent);
+    const returns = trades.map((t) => t.pnlPercent);
     const avgReturn = returns.reduce((sum, r) => sum + r, 0) / returns.length;
     const returnStdDev = Math.sqrt(
-      returns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / returns.length
+      returns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) /
+        returns.length,
     );
-    
-    const sharpeRatio = returnStdDev > 0 ? (avgReturn / returnStdDev) * Math.sqrt(252) : 0;
-    
-    const negativeReturns = returns.filter(r => r < 0);
-    const downsideStdDev = negativeReturns.length > 0 
-      ? Math.sqrt(negativeReturns.reduce((sum, r) => sum + Math.pow(r, 2), 0) / negativeReturns.length)
+
+    const sharpeRatio = returnStdDev > 0
+      ? (avgReturn / returnStdDev) * Math.sqrt(252)
       : 0;
-    const sortinoRatio = downsideStdDev > 0 ? (avgReturn / downsideStdDev) * Math.sqrt(252) : 0;
-    
+
+    const negativeReturns = returns.filter((r) => r < 0);
+    const downsideStdDev = negativeReturns.length > 0
+      ? Math.sqrt(
+        negativeReturns.reduce((sum, r) => sum + Math.pow(r, 2), 0) /
+          negativeReturns.length,
+      )
+      : 0;
+    const sortinoRatio = downsideStdDev > 0
+      ? (avgReturn / downsideStdDev) * Math.sqrt(252)
+      : 0;
+
     const calmarRatio = maxDrawdown > 0 ? annualizedReturn / maxDrawdown : 0;
 
     // Trade statistics
     const winRate = winningTrades.length / trades.length;
     const grossProfit = winningTrades.reduce((sum, t) => sum + t.pnl, 0);
     const grossLoss = Math.abs(losingTrades.reduce((sum, t) => sum + t.pnl, 0));
-    const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0;
-
-    const averageWin = winningTrades.length > 0 
-      ? winningTrades.reduce((sum, t) => sum + t.pnl, 0) / winningTrades.length 
-      : 0;
-    const averageLoss = losingTrades.length > 0 
-      ? losingTrades.reduce((sum, t) => sum + t.pnl, 0) / losingTrades.length 
+    const profitFactor = grossLoss > 0
+      ? grossProfit / grossLoss
+      : grossProfit > 0
+      ? Infinity
       : 0;
 
-    const largestWin = winningTrades.length > 0 
-      ? Math.max(...winningTrades.map(t => t.pnl)) 
+    const averageWin = winningTrades.length > 0
+      ? winningTrades.reduce((sum, t) => sum + t.pnl, 0) / winningTrades.length
       : 0;
-    const largestLoss = losingTrades.length > 0 
-      ? Math.min(...losingTrades.map(t => t.pnl)) 
+    const averageLoss = losingTrades.length > 0
+      ? losingTrades.reduce((sum, t) => sum + t.pnl, 0) / losingTrades.length
       : 0;
 
-    const averageHoldTime = trades.reduce((sum, t) => sum + t.holdTime, 0) / trades.length;
+    const largestWin = winningTrades.length > 0
+      ? Math.max(...winningTrades.map((t) => t.pnl))
+      : 0;
+    const largestLoss = losingTrades.length > 0
+      ? Math.min(...losingTrades.map((t) => t.pnl))
+      : 0;
+
+    const averageHoldTime = trades.reduce((sum, t) => sum + t.holdTime, 0) /
+      trades.length;
 
     // Consecutive wins/losses
     let maxConsecutiveWins = 0;
@@ -456,14 +506,18 @@ export class BacktestEngine {
       } else {
         currentLossStreak++;
         currentWinStreak = 0;
-        maxConsecutiveLosses = Math.max(maxConsecutiveLosses, currentLossStreak);
+        maxConsecutiveLosses = Math.max(
+          maxConsecutiveLosses,
+          currentLossStreak,
+        );
       }
     }
 
     // Position statistics
-    const positionCounts = trades.map(t => 1); // Simplified - would need actual concurrent position tracking
+    const positionCounts = trades.map((t) => 1); // Simplified - would need actual concurrent position tracking
     const maxConcurrentPositions = Math.max(...positionCounts);
-    const averagePositionsOpen = positionCounts.reduce((sum, c) => sum + c, 0) / positionCounts.length;
+    const averagePositionsOpen = positionCounts.reduce((sum, c) => sum + c, 0) /
+      positionCounts.length;
 
     return {
       startDate: config.startDate,
@@ -491,7 +545,7 @@ export class BacktestEngine {
       totalFees,
       totalSlippage,
       maxConcurrentPositions,
-      averagePositionsOpen
+      averagePositionsOpen,
     };
   }
 
@@ -499,7 +553,10 @@ export class BacktestEngine {
    * Generate equity curve chart data
    * Requirements: 17.5
    */
-  public generateEquityCurve(trades: BacktestTrade[], initialEquity: number): EquityPoint[] {
+  public generateEquityCurve(
+    trades: BacktestTrade[],
+    initialEquity: number,
+  ): EquityPoint[] {
     const equityCurve: EquityPoint[] = [];
     let runningEquity = initialEquity;
     let maxEquity = initialEquity;
@@ -510,7 +567,7 @@ export class BacktestEngine {
       timestamp: trades.length > 0 ? trades[0].entryTime : Date.now(),
       equity: initialEquity,
       drawdown: 0,
-      openPositions: 0
+      openPositions: 0,
     });
 
     for (const trade of trades) {
@@ -520,13 +577,13 @@ export class BacktestEngine {
         timestamp: trade.entryTime,
         equity: runningEquity,
         drawdown: maxEquity > 0 ? (maxEquity - runningEquity) / maxEquity : 0,
-        openPositions
+        openPositions,
       });
 
       // Exit point
       runningEquity += trade.pnl;
       openPositions--;
-      
+
       if (runningEquity > maxEquity) {
         maxEquity = runningEquity;
       }
@@ -535,7 +592,7 @@ export class BacktestEngine {
         timestamp: trade.exitTime,
         equity: runningEquity,
         drawdown: maxEquity > 0 ? (maxEquity - runningEquity) / maxEquity : 0,
-        openPositions
+        openPositions,
       });
     }
 
@@ -548,7 +605,7 @@ export class BacktestEngine {
    */
   public analyzeLosingPeriods(
     trades: BacktestTrade[],
-    historicalData: Map<string, OHLCV[]>
+    historicalData: Map<string, OHLCV[]>,
   ): LosingPeriod[] {
     const losingPeriods: LosingPeriod[] = [];
     let currentPeriod: Partial<LosingPeriod> | null = null;
@@ -557,14 +614,14 @@ export class BacktestEngine {
     for (const trade of trades) {
       if (trade.pnl < 0) {
         consecutiveLosses++;
-        
+
         if (!currentPeriod) {
           // Start new losing period
           currentPeriod = {
             startTime: trade.entryTime,
             consecutiveLosses: 1,
             totalLoss: trade.pnl,
-            maxDrawdown: Math.abs(trade.pnl)
+            maxDrawdown: Math.abs(trade.pnl),
           };
         } else {
           // Continue losing period
@@ -572,30 +629,32 @@ export class BacktestEngine {
           currentPeriod.totalLoss! += trade.pnl;
           currentPeriod.maxDrawdown = Math.max(
             currentPeriod.maxDrawdown!,
-            Math.abs(currentPeriod.totalLoss!)
+            Math.abs(currentPeriod.totalLoss!),
           );
         }
       } else {
         // End losing period if it exists
         if (currentPeriod && consecutiveLosses >= 3) {
           currentPeriod.endTime = trade.entryTime;
-          currentPeriod.duration = currentPeriod.endTime - currentPeriod.startTime!;
-          
+          currentPeriod.duration = currentPeriod.endTime -
+            currentPeriod.startTime!;
+
           // Analyze market conditions during this period
           currentPeriod.marketConditions = this.analyzeMarketConditions(
             currentPeriod.startTime!,
             currentPeriod.endTime,
-            historicalData
+            historicalData,
           );
-          
+
           // Generate suggested adjustments
-          currentPeriod.suggestedAdjustments = this.generateAdjustmentSuggestions(
-            currentPeriod as LosingPeriod
-          );
-          
+          currentPeriod.suggestedAdjustments = this
+            .generateAdjustmentSuggestions(
+              currentPeriod as LosingPeriod,
+            );
+
           losingPeriods.push(currentPeriod as LosingPeriod);
         }
-        
+
         currentPeriod = null;
         consecutiveLosses = 0;
       }
@@ -609,10 +668,10 @@ export class BacktestEngine {
       currentPeriod.marketConditions = this.analyzeMarketConditions(
         currentPeriod.startTime!,
         currentPeriod.endTime,
-        historicalData
+        historicalData,
       );
       currentPeriod.suggestedAdjustments = this.generateAdjustmentSuggestions(
-        currentPeriod as LosingPeriod
+        currentPeriod as LosingPeriod,
       );
       losingPeriods.push(currentPeriod as LosingPeriod);
     }
@@ -623,26 +682,34 @@ export class BacktestEngine {
   /**
    * Run complete backtest
    */
-  public async runBacktest(config: Partial<BacktestConfig> = {}): Promise<BacktestResults> {
+  public async runBacktest(
+    config: Partial<BacktestConfig> = {},
+  ): Promise<BacktestResults> {
     if (this.isRunning) {
-      throw new Error('Backtest is already running');
+      throw new Error("Backtest is already running");
     }
 
     this.isRunning = true;
     this.config = { ...this.config, ...config };
 
     try {
-      console.log('🚀 Starting backtest...');
-      console.log(`📅 Period: ${new Date(this.config.startDate).toISOString()} to ${new Date(this.config.endDate).toISOString()}`);
-      console.log(`💰 Initial Equity: $${this.config.initialEquity.toLocaleString()}`);
-      console.log(`📊 Symbols: ${this.config.symbols.join(', ')}`);
+      console.log("🚀 Starting backtest...");
+      console.log(
+        `📅 Period: ${new Date(this.config.startDate).toISOString()} to ${
+          new Date(this.config.endDate).toISOString()
+        }`,
+      );
+      console.log(
+        `💰 Initial Equity: $${this.config.initialEquity.toLocaleString()}`,
+      );
+      console.log(`📊 Symbols: ${this.config.symbols.join(", ")}`);
 
       // Fetch historical data
       const historicalData = await this.fetchHistoricalData(
         this.config.symbols,
         this.config.timeframe,
         this.config.startDate,
-        this.config.endDate
+        this.config.endDate,
       );
 
       // Simulate trading
@@ -650,10 +717,16 @@ export class BacktestEngine {
 
       // Calculate results
       const metrics = this.calcBacktestResults(trades, this.config);
-      const equityCurve = this.generateEquityCurve(trades, this.config.initialEquity);
+      const equityCurve = this.generateEquityCurve(
+        trades,
+        this.config.initialEquity,
+      );
       const drawdownCurve = this.generateDrawdownCurve(equityCurve);
       const losingPeriods = this.analyzeLosingPeriods(trades, historicalData);
-      const marketConditionAnalysis = this.analyzeMarketConditionPerformance(trades, historicalData);
+      const marketConditionAnalysis = this.analyzeMarketConditionPerformance(
+        trades,
+        historicalData,
+      );
 
       const results: BacktestResults = {
         config: this.config,
@@ -662,19 +735,22 @@ export class BacktestEngine {
         equityCurve,
         drawdownCurve,
         losingPeriods,
-        marketConditionAnalysis
+        marketConditionAnalysis,
       };
 
-      console.log('✅ Backtest completed successfully');
-      console.log(`📈 Total Return: ${(metrics.totalReturn * 100).toFixed(2)}%`);
+      console.log("✅ Backtest completed successfully");
+      console.log(
+        `📈 Total Return: ${(metrics.totalReturn * 100).toFixed(2)}%`,
+      );
       console.log(`🎯 Win Rate: ${(metrics.winRate * 100).toFixed(1)}%`);
       console.log(`💹 Profit Factor: ${metrics.profitFactor.toFixed(2)}`);
-      console.log(`📉 Max Drawdown: ${(metrics.maxDrawdown * 100).toFixed(2)}%`);
+      console.log(
+        `📉 Max Drawdown: ${(metrics.maxDrawdown * 100).toFixed(2)}%`,
+      );
 
       return results;
-
     } catch (error) {
-      console.error('❌ Backtest failed:', error);
+      console.error("❌ Backtest failed:", error);
       throw error;
     } finally {
       this.isRunning = false;
@@ -684,7 +760,9 @@ export class BacktestEngine {
   /**
    * Simulate trading over historical data
    */
-  private async simulateTrading(historicalData: Map<string, OHLCV[]>): Promise<BacktestTrade[]> {
+  private async simulateTrading(
+    historicalData: Map<string, OHLCV[]>,
+  ): Promise<BacktestTrade[]> {
     const trades: BacktestTrade[] = [];
     const openPositions = new Map<string, BacktestTrade>();
     let currentEquity = this.config.initialEquity;
@@ -692,21 +770,23 @@ export class BacktestEngine {
     // Get all timestamps across all symbols
     const allTimestamps = new Set<number>();
     for (const candles of Array.from(historicalData.values())) {
-      candles.forEach(candle => allTimestamps.add(candle.timestamp));
+      candles.forEach((candle) => allTimestamps.add(candle.timestamp));
     }
     const sortedTimestamps = Array.from(allTimestamps).sort((a, b) => a - b);
 
-    console.log(`🔄 Simulating trading across ${sortedTimestamps.length} time periods...`);
+    console.log(
+      `🔄 Simulating trading across ${sortedTimestamps.length} time periods...`,
+    );
 
     for (let i = 0; i < sortedTimestamps.length; i++) {
       const timestamp = sortedTimestamps[i];
-      
+
       // Check for exits first
       for (const [symbol, position] of Array.from(openPositions.entries())) {
         const candles = historicalData.get(symbol);
         if (!candles) continue;
 
-        const currentCandle = candles.find(c => c.timestamp === timestamp);
+        const currentCandle = candles.find((c) => c.timestamp === timestamp);
         if (!currentCandle) continue;
 
         const exitResult = this.checkExit(position, currentCandle);
@@ -716,21 +796,28 @@ export class BacktestEngine {
           position.exitPrice = exitResult.exitPrice;
           position.exitReason = exitResult.reason;
           position.holdTime = position.exitTime - position.entryTime;
-          
+
           // Calculate PnL
-          const pnlMultiplier = position.direction === 'LONG' 
+          const pnlMultiplier = position.direction === "LONG"
             ? (position.exitPrice - position.entryPrice) / position.entryPrice
             : (position.entryPrice - position.exitPrice) / position.entryPrice;
-          
-          position.pnl = position.quantity * position.entryPrice * pnlMultiplier * position.leverage;
+
+          position.pnl = position.quantity * position.entryPrice *
+            pnlMultiplier * position.leverage;
           position.pnlPercent = pnlMultiplier * position.leverage;
-          position.rValue = position.pnl / (Math.abs(position.entryPrice - position.signal.stopLoss) * position.quantity);
+          position.rValue = position.pnl /
+            (Math.abs(position.entryPrice - position.signal.stopLoss) *
+              position.quantity);
 
           // Apply fees and slippage
           const notionalValue = position.quantity * position.exitPrice;
-          position.fees += this.applyFees(notionalValue, 'IOC'); // Assume IOC for exits
-          
-          const slippageResult = this.simulateTrade(position.signal, 'IOC', position.exitPrice);
+          position.fees += this.applyFees(notionalValue, "IOC"); // Assume IOC for exits
+
+          const slippageResult = this.simulateTrade(
+            position.signal,
+            "IOC",
+            position.exitPrice,
+          );
           position.slippage += slippageResult.slippage;
 
           currentEquity += position.pnl - position.fees - position.slippage;
@@ -747,17 +834,48 @@ export class BacktestEngine {
           const candles = historicalData.get(symbol);
           if (!candles) continue;
 
-          const currentCandle = candles.find(c => c.timestamp === timestamp);
+          const currentCandle = candles.find((c) => c.timestamp === timestamp);
           if (!currentCandle) continue;
 
-          // Generate signal (simplified - would need full market structure analysis)
-          const signal = await this.generateBacktestSignal(symbol, candles, i, currentEquity);
+          // Update Mocks if present to simulate time passing
+          if (this.oracle && "updateState" in this.oracle) {
+            (this.oracle as any).updateState(timestamp);
+          }
+          if (this.globalLiquidity && "updateState" in this.globalLiquidity) {
+            (this.globalLiquidity as any).updateState(timestamp);
+          }
+
+          // Generate signal using enhanced SignalGenerator
+          // Try LONG
+          let signal = await this.signalGenerator.generateSignal(
+            symbol,
+            "LONG",
+            currentEquity,
+            this.config.riskPerTrade,
+            this.config.maxLeverage,
+          );
+
+          if (!signal) {
+            // Try SHORT
+            signal = await this.signalGenerator.generateSignal(
+              symbol,
+              "SHORT",
+              currentEquity,
+              this.config.riskPerTrade,
+              this.config.maxLeverage,
+            );
+          }
+
           if (!signal) continue;
 
           // Simulate order execution
-          const orderType = 'POST_ONLY'; // Hunter uses Post-Only orders
-          const executionResult = this.simulateTrade(signal, orderType, currentCandle.close);
-          
+          const orderType = "POST_ONLY"; // Hunter uses Post-Only orders
+          const executionResult = this.simulateTrade(
+            signal,
+            orderType,
+            currentCandle.close,
+          );
+
           if (executionResult.filled) {
             // Create new position
             const position: BacktestTrade = {
@@ -772,12 +890,15 @@ export class BacktestEngine {
               leverage: signal.leverage,
               pnl: 0,
               pnlPercent: 0,
-              fees: this.applyFees(signal.positionSize * executionResult.fillPrice, orderType),
+              fees: this.applyFees(
+                signal.positionSize * executionResult.fillPrice,
+                orderType,
+              ),
               slippage: executionResult.slippage,
               holdTime: 0,
-              exitReason: 'MANUAL',
+              exitReason: "MANUAL",
               signal,
-              rValue: 0
+              rValue: 0,
             };
 
             openPositions.set(symbol, position);
@@ -788,7 +909,9 @@ export class BacktestEngine {
       // Progress logging
       if (i % 1000 === 0) {
         const progress = (i / sortedTimestamps.length * 100).toFixed(1);
-        console.log(`📊 Progress: ${progress}% - Open positions: ${openPositions.size} - Completed trades: ${trades.length}`);
+        console.log(
+          `📊 Progress: ${progress}% - Open positions: ${openPositions.size} - Completed trades: ${trades.length}`,
+        );
       }
     }
 
@@ -798,16 +921,19 @@ export class BacktestEngine {
       if (lastCandle) {
         position.exitTime = lastCandle.timestamp;
         position.exitPrice = lastCandle.close;
-        position.exitReason = 'MANUAL';
+        position.exitReason = "MANUAL";
         position.holdTime = position.exitTime - position.entryTime;
-        
-        const pnlMultiplier = position.direction === 'LONG' 
+
+        const pnlMultiplier = position.direction === "LONG"
           ? (position.exitPrice - position.entryPrice) / position.entryPrice
           : (position.entryPrice - position.exitPrice) / position.entryPrice;
-        
-        position.pnl = position.quantity * position.entryPrice * pnlMultiplier * position.leverage;
+
+        position.pnl = position.quantity * position.entryPrice * pnlMultiplier *
+          position.leverage;
         position.pnlPercent = pnlMultiplier * position.leverage;
-        position.rValue = position.pnl / (Math.abs(position.entryPrice - position.signal.stopLoss) * position.quantity);
+        position.rValue = position.pnl /
+          (Math.abs(position.entryPrice - position.signal.stopLoss) *
+            position.quantity);
 
         trades.push(position);
       }
@@ -817,90 +943,67 @@ export class BacktestEngine {
   }
 
   /**
-   * Generate simplified backtest signal
-   */
-  private async generateBacktestSignal(
-    symbol: string,
-    candles: OHLCV[],
-    currentIndex: number,
-    currentEquity: number
-  ): Promise<SignalData | null> {
-    // Simplified signal generation for backtesting
-    // In a real implementation, this would use the full HologramEngine
-    
-    if (currentIndex < 50) return null; // Need enough history
-    
-    const currentCandle = candles[currentIndex];
-    const recentCandles = candles.slice(Math.max(0, currentIndex - 50), currentIndex + 1);
-    
-    // Simple trend detection
-    const sma20 = this.calculateSMA(recentCandles.slice(-20), 'close');
-    const sma50 = this.calculateSMA(recentCandles.slice(-50), 'close');
-    
-    if (sma20 <= sma50) return null; // Only long signals in uptrend
-    
-    // Random signal generation for demo (replace with real logic)
-    if (Math.random() < 0.05) { // 5% chance of signal
-      const direction = 'LONG';
-      const entryPrice = currentCandle.close;
-      const stopLoss = entryPrice * 0.985; // 1.5% stop
-      const takeProfit = entryPrice * 1.045; // 4.5% target
-      const positionSize = (currentEquity * this.config.riskPerTrade) / (entryPrice - stopLoss);
-      
-      return {
-        symbol,
-        direction,
-        hologramStatus: 'B',
-        alignmentScore: 70,
-        rsScore: 0.02,
-        sessionType: 'LONDON',
-        poiType: 'ORDER_BLOCK',
-        cvdConfirmation: true,
-        confidence: 75,
-        entryPrice,
-        stopLoss,
-        takeProfit,
-        positionSize,
-        leverage: this.config.maxLeverage,
-        timestamp: currentCandle.timestamp
-      };
-    }
-    
-    return null;
-  }
-
-  /**
    * Check if position should be exited
    */
   private checkExit(
     position: BacktestTrade,
-    currentCandle: OHLCV
-  ): { shouldExit: boolean; exitPrice: number; reason: 'STOP_LOSS' | 'TAKE_PROFIT' | 'TIMEOUT' | 'MANUAL' } {
+    currentCandle: OHLCV,
+  ): {
+    shouldExit: boolean;
+    exitPrice: number;
+    reason: "STOP_LOSS" | "TAKE_PROFIT" | "TIMEOUT" | "MANUAL";
+  } {
     const signal = position.signal;
-    
+
     // Check stop loss
-    if (position.direction === 'LONG' && currentCandle.low <= signal.stopLoss) {
-      return { shouldExit: true, exitPrice: signal.stopLoss, reason: 'STOP_LOSS' };
+    if (position.direction === "LONG" && currentCandle.low <= signal.stopLoss) {
+      return {
+        shouldExit: true,
+        exitPrice: signal.stopLoss,
+        reason: "STOP_LOSS",
+      };
     }
-    if (position.direction === 'SHORT' && currentCandle.high >= signal.stopLoss) {
-      return { shouldExit: true, exitPrice: signal.stopLoss, reason: 'STOP_LOSS' };
+    if (
+      position.direction === "SHORT" && currentCandle.high >= signal.stopLoss
+    ) {
+      return {
+        shouldExit: true,
+        exitPrice: signal.stopLoss,
+        reason: "STOP_LOSS",
+      };
     }
-    
+
     // Check take profit
-    if (position.direction === 'LONG' && currentCandle.high >= signal.takeProfit) {
-      return { shouldExit: true, exitPrice: signal.takeProfit, reason: 'TAKE_PROFIT' };
+    if (
+      position.direction === "LONG" && currentCandle.high >= signal.takeProfit
+    ) {
+      return {
+        shouldExit: true,
+        exitPrice: signal.takeProfit,
+        reason: "TAKE_PROFIT",
+      };
     }
-    if (position.direction === 'SHORT' && currentCandle.low <= signal.takeProfit) {
-      return { shouldExit: true, exitPrice: signal.takeProfit, reason: 'TAKE_PROFIT' };
+    if (
+      position.direction === "SHORT" && currentCandle.low <= signal.takeProfit
+    ) {
+      return {
+        shouldExit: true,
+        exitPrice: signal.takeProfit,
+        reason: "TAKE_PROFIT",
+      };
     }
-    
+
     // Check timeout (72 hours max hold)
     const maxHoldTime = 72 * 60 * 60 * 1000; // 72 hours
     if (currentCandle.timestamp - position.entryTime > maxHoldTime) {
-      return { shouldExit: true, exitPrice: currentCandle.close, reason: 'TIMEOUT' };
+      return {
+        shouldExit: true,
+        exitPrice: currentCandle.close,
+        reason: "TIMEOUT",
+      };
     }
-    
-    return { shouldExit: false, exitPrice: 0, reason: 'MANUAL' };
+
+    return { shouldExit: false, exitPrice: 0, reason: "MANUAL" };
   }
 
   /**
@@ -908,19 +1011,22 @@ export class BacktestEngine {
    */
   private getTimeframeMs(timeframe: string): number {
     const timeframeMap: { [key: string]: number } = {
-      '1m': 60 * 1000,
-      '5m': 5 * 60 * 1000,
-      '15m': 15 * 60 * 1000,
-      '30m': 30 * 60 * 1000,
-      '1h': 60 * 60 * 1000,
-      '4h': 4 * 60 * 60 * 1000,
-      '1d': 24 * 60 * 60 * 1000
+      "1m": 60 * 1000,
+      "5m": 5 * 60 * 1000,
+      "15m": 15 * 60 * 1000,
+      "30m": 30 * 60 * 1000,
+      "1h": 60 * 60 * 1000,
+      "4h": 4 * 60 * 60 * 1000,
+      "1d": 24 * 60 * 60 * 1000,
     };
     return timeframeMap[timeframe] || 15 * 60 * 1000;
   }
 
   private calculateSMA(candles: OHLCV[], field: keyof OHLCV): number {
-    const sum = candles.reduce((acc, candle) => acc + (candle[field] as number), 0);
+    const sum = candles.reduce(
+      (acc, candle) => acc + (candle[field] as number),
+      0,
+    );
     return sum / candles.length;
   }
 
@@ -935,8 +1041,10 @@ export class BacktestEngine {
         drawdownStart = 0;
       }
 
-      const drawdown = maxEquity > 0 ? (maxEquity - point.equity) / maxEquity : 0;
-      
+      const drawdown = maxEquity > 0
+        ? (maxEquity - point.equity) / maxEquity
+        : 0;
+
       if (drawdown > 0 && drawdownStart === 0) {
         drawdownStart = point.timestamp;
       }
@@ -946,7 +1054,7 @@ export class BacktestEngine {
         drawdown,
         duration: drawdownStart > 0 ? point.timestamp - drawdownStart : 0,
         peak: maxEquity,
-        trough: point.equity
+        trough: point.equity,
       });
     }
 
@@ -956,65 +1064,65 @@ export class BacktestEngine {
   private analyzeMarketConditions(
     startTime: number,
     endTime: number,
-    historicalData: Map<string, OHLCV[]>
-  ): LosingPeriod['marketConditions'] {
+    historicalData: Map<string, OHLCV[]>,
+  ): LosingPeriod["marketConditions"] {
     // Simplified market condition analysis
     // In a real implementation, this would be more sophisticated
-    
+
     return {
       volatility: 0.02, // Placeholder
-      trend: 'RANGE',
-      session: 'LONDON',
-      btcCorrelation: 0.8
+      trend: "RANGE",
+      session: "LONDON",
+      btcCorrelation: 0.8,
     };
   }
 
   private generateAdjustmentSuggestions(period: LosingPeriod): string[] {
     const suggestions: string[] = [];
-    
+
     if (period.marketConditions.volatility > 0.03) {
-      suggestions.push('Reduce position sizes during high volatility periods');
+      suggestions.push("Reduce position sizes during high volatility periods");
     }
-    
+
     if (period.marketConditions.btcCorrelation > 0.9) {
-      suggestions.push('Avoid trading during high BTC correlation periods');
+      suggestions.push("Avoid trading during high BTC correlation periods");
     }
-    
+
     if (period.consecutiveLosses > 5) {
-      suggestions.push('Implement circuit breaker after 3 consecutive losses');
+      suggestions.push("Implement circuit breaker after 3 consecutive losses");
     }
-    
+
     return suggestions;
   }
 
   private analyzeMarketConditionPerformance(
     trades: BacktestTrade[],
-    historicalData: Map<string, OHLCV[]>
+    historicalData: Map<string, OHLCV[]>,
   ): MarketConditionAnalysis {
     // Simplified analysis - would be more detailed in real implementation
     const defaultPerf = { winRate: 0.5, profitFactor: 1.0, trades: 0 };
-    
+
     return {
       volatilityRegimes: {
         low: defaultPerf,
         medium: defaultPerf,
-        high: defaultPerf
+        high: defaultPerf,
       },
       sessionPerformance: {
         ASIAN: defaultPerf,
         LONDON: defaultPerf,
         NY: defaultPerf,
-        DEAD_ZONE: defaultPerf
+        DEAD_ZONE: defaultPerf,
       },
       trendPerformance: {
         BULL: defaultPerf,
         BEAR: defaultPerf,
-        RANGE: defaultPerf
+        RANGE: defaultPerf,
       },
       correlationImpact: {
         lowCorrelation: defaultPerf,
-        highCorrelation: defaultPerf
-      }
+        highCorrelation: defaultPerf,
+      },
     };
   }
 
@@ -1045,12 +1153,12 @@ export class BacktestEngine {
       totalFees: 0,
       totalSlippage: 0,
       maxConcurrentPositions: 0,
-      averagePositionsOpen: 0
+      averagePositionsOpen: 0,
     };
   }
 
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
@@ -1058,7 +1166,7 @@ export class BacktestEngine {
    */
   public updateConfig(newConfig: Partial<BacktestConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    console.log('📝 BacktestEngine configuration updated');
+    console.log("📝 BacktestEngine configuration updated");
   }
 
   /**

@@ -649,4 +649,109 @@ export function registerConsoleRoutes(fastify, dependencies) {
       );
     }
   }, logger));
+
+  /**
+   * Get Hunter Holograms (Enhanced Phase 2)
+   * Requirements: Task 13 - Enhanced HUD
+   */
+  fastify.get('/api/console/hunter/holograms', asyncHandler(async () => {
+    // Mock Enhanced Hologram Data
+    const holograms = [
+        {
+            symbol: 'BTCUSDT',
+            status: 'A+', // Classic Status
+            alignment: 'A+', // Enhanced Alignment
+            timeframe_states: {
+                daily: { trend: 'UP', location: 'DISCOUNT', structure: 'HH_HL' },
+                h4: { trend: 'UP', location: 'EQ', structure: 'HH_HL' },
+                m15: { trend: 'UP', location: 'PREMIUM', structure: 'BOS' }
+            },
+            score: 0.92, // Enhanced Score
+            oracleScore: {
+                sentiment: 0.75,
+                confidence: 0.88,
+                veto: false,
+                convictionMultiplier: 1.5
+            },
+            globalCVD: {
+                consensus: 'BULLISH',
+                confidence: 0.85,
+                manipulation: { detected: false }
+            },
+            botTrap: {
+                isSuspect: false,
+                suspicionScore: 0.12
+            },
+            flowValidation: {
+                 flowType: 'INSTITUTIONAL_BUYING',
+                 confidence: 0.90
+            },
+            timestamp: new Date().toISOString()
+        },
+        {
+            symbol: 'ETHUSDT',
+            status: 'B',
+            alignment: 'B',
+            timeframe_states: {
+                daily: { trend: 'UP', location: 'PREMIUM', structure: 'HH_HL' },
+                h4: { trend: 'SIDEWAYS', location: 'EQ', structure: 'CHOCH' },
+                m15: { trend: 'DOWN', location: 'PREMIUM', structure: 'BOS' }
+            },
+            score: 0.65,
+            oracleScore: {
+                sentiment: 0.45,
+                confidence: 0.60,
+                veto: false,
+                convictionMultiplier: 1.0
+            },
+            globalCVD: {
+                consensus: 'MIXED',
+                confidence: 0.40,
+                manipulation: { detected: false }
+            },
+            botTrap: {
+                isSuspect: true,
+                suspicionScore: 0.78 // High suspicion
+            },
+             flowValidation: {
+                 flowType: 'RETAIL_FOMO',
+                 confidence: 0.75
+            },
+            timestamp: new Date().toISOString()
+        },
+        {
+            symbol: 'SOLUSDT',
+            status: 'C',
+            alignment: 'VETO', // Vetoed by Oracle/Logic
+            timeframe_states: {
+                daily: { trend: 'DOWN', location: 'PREMIUM', structure: 'LL_LH' },
+                h4: { trend: 'DOWN', location: 'DISCOUNT', structure: 'LL_LH' },
+                m15: { trend: 'UP', location: 'DISCOUNT', structure: 'CHOCH' }
+            },
+            score: 0.32,
+            oracleScore: {
+                sentiment: -0.85, // Negative sentiment
+                confidence: 0.92,
+                veto: true, // VETOED
+                convictionMultiplier: 0.0
+            },
+            globalCVD: {
+                consensus: 'BEARISH',
+                confidence: 0.88,
+                manipulation: { detected: true } // Manipulation detected
+            },
+            botTrap: {
+                isSuspect: false,
+                suspicionScore: 0.05
+            },
+            flowValidation: {
+                 flowType: 'NONE',
+                 confidence: 0.0
+            },
+            timestamp: new Date().toISOString()
+        }
+    ];
+
+    return ResponseFactory.success({ holograms });
+  }, logger));
 }

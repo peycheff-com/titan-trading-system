@@ -1,23 +1,23 @@
 /**
  * Logger for Titan Phase 2 - The Hunter
- * 
+ *
  * Implements JSONL (JSON Lines) logging for signals, executions, and errors
  * with automatic log rotation and compression.
- * 
+ *
  * Requirements: 16.1-16.7 (Signal Execution Logging)
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-import * as zlib from 'zlib';
-import { promisify } from 'util';
-import { 
-  SignalData, 
-  ExecutionData, 
-  HologramState, 
-  SessionType, 
-  OrderResult 
-} from '../types';
+import * as fs from "fs";
+import * as path from "path";
+import * as zlib from "zlib";
+import { promisify } from "util";
+import {
+  ExecutionData,
+  HologramState,
+  OrderResult,
+  SessionType,
+  SignalData,
+} from "../types";
 
 const gzip = promisify(zlib.gzip);
 const writeFile = promisify(fs.writeFile);
@@ -29,9 +29,9 @@ const readdir = promisify(fs.readdir);
  */
 export interface SignalLogEntry {
   timestamp: number;
-  type: 'signal';
+  type: "signal";
   symbol: string;
-  strategyType: 'holographic';
+  strategyType: "holographic";
   confidence: number;
   leverage: number;
   entryPrice: number;
@@ -46,9 +46,9 @@ export interface SignalLogEntry {
   };
   rsScore: number;
   sessionType: SessionType;
-  poiType: 'FVG' | 'ORDER_BLOCK' | 'LIQUIDITY_POOL';
+  poiType: "FVG" | "ORDER_BLOCK" | "LIQUIDITY_POOL";
   cvdStatus: boolean;
-  direction: 'LONG' | 'SHORT';
+  direction: "LONG" | "SHORT";
   positionSize: number;
 }
 
@@ -57,15 +57,15 @@ export interface SignalLogEntry {
  */
 export interface ExecutionLogEntry {
   timestamp: number;
-  type: 'execution';
+  type: "execution";
   signalId?: string;
   orderId: string;
   symbol: string;
-  side: 'Buy' | 'Sell';
+  side: "Buy" | "Sell";
   qty: number;
   fillPrice: number;
   fillTimestamp: number;
-  orderType: 'MARKET' | 'LIMIT' | 'POST_ONLY';
+  orderType: "MARKET" | "LIMIT" | "POST_ONLY";
   slippage: number;
   fees?: number;
 }
@@ -75,14 +75,19 @@ export interface ExecutionLogEntry {
  */
 export interface CloseLogEntry {
   timestamp: number;
-  type: 'close';
+  type: "close";
   positionId: string;
   symbol: string;
-  side: 'LONG' | 'SHORT';
+  side: "LONG" | "SHORT";
   exitPrice: number;
   exitTimestamp: number;
   profitPercentage: number;
-  closeReason: 'STOP_LOSS' | 'TAKE_PROFIT' | 'TRAILING_STOP' | 'MANUAL' | 'EMERGENCY';
+  closeReason:
+    | "STOP_LOSS"
+    | "TAKE_PROFIT"
+    | "TRAILING_STOP"
+    | "MANUAL"
+    | "EMERGENCY";
   holdTime: number; // milliseconds
   entryPrice: number;
   rValue: number; // R multiple
@@ -93,12 +98,12 @@ export interface CloseLogEntry {
  */
 export interface ErrorLogEntry {
   timestamp: number;
-  type: 'error';
-  level: 'WARNING' | 'ERROR' | 'CRITICAL';
+  type: "error";
+  level: "WARNING" | "ERROR" | "CRITICAL";
   message: string;
   context: {
     symbol?: string;
-    phase: 'phase2';
+    phase: "phase2";
     component?: string;
     function?: string;
     stack?: string;
@@ -106,7 +111,21 @@ export interface ErrorLogEntry {
   };
 }
 
-export type LogEntry = SignalLogEntry | ExecutionLogEntry | CloseLogEntry | ErrorLogEntry | EnhancedHologramLogEntry | ConvictionSizingLogEntry;
+export interface GenericLogEntry {
+  timestamp: number;
+  type: "info" | "debug" | "warn";
+  message: string;
+  data?: any;
+}
+
+export type LogEntry =
+  | SignalLogEntry
+  | ExecutionLogEntry
+  | CloseLogEntry
+  | ErrorLogEntry
+  | EnhancedHologramLogEntry
+  | ConvictionSizingLogEntry
+  | GenericLogEntry;
 
 /**
  * Enhanced Hologram log entry structure
@@ -114,12 +133,12 @@ export type LogEntry = SignalLogEntry | ExecutionLogEntry | CloseLogEntry | Erro
  */
 export interface EnhancedHologramLogEntry {
   timestamp: number;
-  type: 'enhanced_hologram';
+  type: "enhanced_hologram";
   symbol: string;
   classicScore: number;
   enhancedScore: number;
-  alignment: 'A+' | 'A' | 'B' | 'C' | 'VETO';
-  convictionLevel: 'low' | 'medium' | 'high' | 'extreme';
+  alignment: "A+" | "A" | "B" | "C" | "VETO";
+  convictionLevel: "low" | "medium" | "high" | "extreme";
   oracle: {
     sentiment: number;
     confidence: number;
@@ -149,7 +168,7 @@ export interface EnhancedHologramLogEntry {
  */
 export interface ConvictionSizingLogEntry {
   timestamp: number;
-  type: 'conviction_sizing';
+  type: "conviction_sizing";
   symbol: string;
   baseSize: number;
   oracleMultiplier: number;
@@ -174,7 +193,7 @@ export interface LoggerConfig {
 
 /**
  * JSONL Logger for Titan Phase 2
- * 
+ *
  * Logs all signals, executions, and errors to trades.jsonl file
  * with automatic rotation and compression.
  */
@@ -185,12 +204,12 @@ export class Logger {
 
   constructor(config?: Partial<LoggerConfig>) {
     this.config = {
-      logDir: path.join(process.cwd(), 'logs'),
-      logFileName: 'trades.jsonl',
+      logDir: path.join(process.cwd(), "logs"),
+      logFileName: "trades.jsonl",
       maxFileSizeBytes: 10 * 1024 * 1024, // 10MB
       compressionAgeMs: 30 * 24 * 60 * 60 * 1000, // 30 days
       enableConsoleOutput: false,
-      ...config
+      ...config,
     };
 
     this.logFilePath = path.join(this.config.logDir, this.config.logFileName);
@@ -211,32 +230,32 @@ export class Logger {
    * Initialize write stream for log file
    */
   private initializeWriteStream(): void {
-    this.writeStream = fs.createWriteStream(this.logFilePath, { flags: 'a' });
-    
-    this.writeStream.on('error', (error) => {
-      console.error('Logger write stream error:', error);
+    this.writeStream = fs.createWriteStream(this.logFilePath, { flags: "a" });
+
+    this.writeStream.on("error", (error) => {
+      console.error("Logger write stream error:", error);
     });
   }
 
   /**
    * Log a signal with comprehensive hologram state
-   * 
-   * Requirement 16.2: Include timestamp, symbol, strategy type, confidence, 
-   * leverage, entry price, stop price, target price, alignment state, 
+   *
+   * Requirement 16.2: Include timestamp, symbol, strategy type, confidence,
+   * leverage, entry price, stop price, target price, alignment state,
    * RS score, session type, POI type, and CVD status
    */
   public logSignal(
     signal: SignalData,
     hologramState: HologramState,
     sessionType: SessionType,
-    poiType: 'FVG' | 'ORDER_BLOCK' | 'LIQUIDITY_POOL',
-    cvdConfirmation: boolean
+    poiType: "FVG" | "ORDER_BLOCK" | "LIQUIDITY_POOL",
+    cvdConfirmation: boolean,
   ): void {
     const logEntry: SignalLogEntry = {
       timestamp: Date.now(),
-      type: 'signal',
+      type: "signal",
       symbol: signal.symbol,
-      strategyType: 'holographic',
+      strategyType: "holographic",
       confidence: signal.confidence,
       leverage: signal.leverage,
       entryPrice: signal.entryPrice,
@@ -247,37 +266,43 @@ export class Logger {
         score: hologramState.alignmentScore,
         daily: `${hologramState.daily.trend}_${hologramState.daily.location}`,
         h4: `${hologramState.h4.trend}_${hologramState.h4.location}`,
-        m15: `${hologramState.m15.trend}_${hologramState.m15.mss ? 'MSS' : 'NO_MSS'}`
+        m15: `${hologramState.m15.trend}_${
+          hologramState.m15.mss ? "MSS" : "NO_MSS"
+        }`,
       },
       rsScore: hologramState.rsScore,
       sessionType,
       poiType,
       cvdStatus: cvdConfirmation,
       direction: signal.direction,
-      positionSize: signal.positionSize
+      positionSize: signal.positionSize,
     };
 
     this.writeLogEntry(logEntry);
 
     if (this.config.enableConsoleOutput) {
-      console.log(`📊 SIGNAL: ${signal.symbol} ${signal.direction} @ ${signal.entryPrice} (${hologramState.status}, RS:${hologramState.rsScore.toFixed(3)})`);
+      console.log(
+        `📊 SIGNAL: ${signal.symbol} ${signal.direction} @ ${signal.entryPrice} (${hologramState.status}, RS:${
+          hologramState.rsScore.toFixed(3)
+        })`,
+      );
     }
   }
 
   /**
    * Log order execution with fill details
-   * 
+   *
    * Requirement 16.3: Include fill price, fill timestamp, order type, and slippage
    */
   public logExecution(
     orderResult: OrderResult,
     slippage: number,
     signalId?: string,
-    fees?: number
+    fees?: number,
   ): void {
     const logEntry: ExecutionLogEntry = {
       timestamp: Date.now(),
-      type: 'execution',
+      type: "execution",
       signalId,
       orderId: orderResult.orderId,
       symbol: orderResult.symbol,
@@ -285,38 +310,47 @@ export class Logger {
       qty: orderResult.qty,
       fillPrice: orderResult.price,
       fillTimestamp: orderResult.timestamp,
-      orderType: 'LIMIT', // Phase 2 uses Post-Only Limit Orders
+      orderType: "LIMIT", // Phase 2 uses Post-Only Limit Orders
       slippage,
-      fees
+      fees,
     };
 
     this.writeLogEntry(logEntry);
 
     if (this.config.enableConsoleOutput) {
-      console.log(`✅ FILL: ${orderResult.symbol} ${orderResult.side} ${orderResult.qty} @ ${orderResult.price} (slippage: ${(slippage * 100).toFixed(3)}%)`);
+      console.log(
+        `✅ FILL: ${orderResult.symbol} ${orderResult.side} ${orderResult.qty} @ ${orderResult.price} (slippage: ${
+          (slippage * 100).toFixed(3)
+        }%)`,
+      );
     }
   }
 
   /**
    * Log position close with P&L details
-   * 
-   * Requirement 16.4: Include exit price, exit timestamp, profit percentage, 
+   *
+   * Requirement 16.4: Include exit price, exit timestamp, profit percentage,
    * close reason, and hold time
    */
   public logPositionClose(
     positionId: string,
     symbol: string,
-    side: 'LONG' | 'SHORT',
+    side: "LONG" | "SHORT",
     entryPrice: number,
     exitPrice: number,
     profitPercentage: number,
-    closeReason: 'STOP_LOSS' | 'TAKE_PROFIT' | 'TRAILING_STOP' | 'MANUAL' | 'EMERGENCY',
+    closeReason:
+      | "STOP_LOSS"
+      | "TAKE_PROFIT"
+      | "TRAILING_STOP"
+      | "MANUAL"
+      | "EMERGENCY",
     holdTime: number,
-    rValue: number
+    rValue: number,
   ): void {
     const logEntry: CloseLogEntry = {
       timestamp: Date.now(),
-      type: 'close',
+      type: "close",
       positionId,
       symbol,
       side,
@@ -326,14 +360,18 @@ export class Logger {
       closeReason,
       holdTime,
       entryPrice,
-      rValue
+      rValue,
     };
 
     this.writeLogEntry(logEntry);
 
     if (this.config.enableConsoleOutput) {
-      const pnlColor = profitPercentage >= 0 ? '\x1b[32m' : '\x1b[31m';
-      console.log(`${pnlColor}💰 CLOSE: ${symbol} ${side} ${profitPercentage.toFixed(2)}% (${rValue.toFixed(2)}R) - ${closeReason}\x1b[0m`);
+      const pnlColor = profitPercentage >= 0 ? "\x1b[32m" : "\x1b[31m";
+      console.log(
+        `${pnlColor}💰 CLOSE: ${symbol} ${side} ${
+          profitPercentage.toFixed(2)
+        }% (${rValue.toFixed(2)}R) - ${closeReason}\x1b[0m`,
+      );
     }
   }
 
@@ -341,7 +379,7 @@ export class Logger {
    * Log error with context
    */
   public logError(
-    level: 'WARNING' | 'ERROR' | 'CRITICAL',
+    level: "WARNING" | "ERROR" | "CRITICAL",
     message: string,
     context: {
       symbol?: string;
@@ -349,23 +387,27 @@ export class Logger {
       function?: string;
       stack?: string;
       data?: any;
-    } = {}
+    } = {},
   ): void {
     const logEntry: ErrorLogEntry = {
       timestamp: Date.now(),
-      type: 'error',
+      type: "error",
       level,
       message,
       context: {
         ...context,
-        phase: 'phase2'
-      }
+        phase: "phase2",
+      },
     };
 
     this.writeLogEntry(logEntry);
 
     if (this.config.enableConsoleOutput) {
-      const levelColor = level === 'CRITICAL' ? '\x1b[31m' : level === 'ERROR' ? '\x1b[33m' : '\x1b[36m';
+      const levelColor = level === "CRITICAL"
+        ? "\x1b[31m"
+        : level === "ERROR"
+        ? "\x1b[33m"
+        : "\x1b[36m";
       console.log(`${levelColor}❌ ${level}: ${message}\x1b[0m`);
     }
   }
@@ -379,8 +421,8 @@ export class Logger {
     state: {
       classicScore: number;
       enhancedScore: number;
-      alignment: 'A+' | 'A' | 'B' | 'C' | 'VETO';
-      convictionLevel: 'low' | 'medium' | 'high' | 'extreme';
+      alignment: "A+" | "A" | "B" | "C" | "VETO";
+      convictionLevel: "low" | "medium" | "high" | "extreme";
       oracleScore: {
         sentiment: number;
         confidence: number;
@@ -402,43 +444,56 @@ export class Logger {
         manipulation: { detected: boolean };
       } | null;
       enhancementsActive: boolean;
-    }
+    },
   ): void {
     const logEntry: EnhancedHologramLogEntry = {
       timestamp: Date.now(),
-      type: 'enhanced_hologram',
+      type: "enhanced_hologram",
       symbol,
       classicScore: state.classicScore,
       enhancedScore: state.enhancedScore,
       alignment: state.alignment,
       convictionLevel: state.convictionLevel,
-      oracle: state.oracleScore ? {
-        sentiment: state.oracleScore.sentiment,
-        confidence: state.oracleScore.confidence,
-        veto: state.oracleScore.veto,
-        convictionMultiplier: state.oracleScore.convictionMultiplier
-      } : null,
-      flow: state.flowValidation ? {
-        flowType: state.flowValidation.flowType,
-        confidence: state.flowValidation.confidence,
-        institutionalProbability: state.flowValidation.institutionalProbability
-      } : null,
-      botTrap: state.botTrapAnalysis ? {
-        isSuspect: state.botTrapAnalysis.isSuspect,
-        suspicionScore: state.botTrapAnalysis.suspicionScore
-      } : null,
-      globalCVD: state.globalCVD ? {
-        consensus: state.globalCVD.consensus,
-        confidence: state.globalCVD.confidence,
-        manipulationDetected: state.globalCVD.manipulation.detected
-      } : null,
-      enhancementsActive: state.enhancementsActive
+      oracle: state.oracleScore
+        ? {
+          sentiment: state.oracleScore.sentiment,
+          confidence: state.oracleScore.confidence,
+          veto: state.oracleScore.veto,
+          convictionMultiplier: state.oracleScore.convictionMultiplier,
+        }
+        : null,
+      flow: state.flowValidation
+        ? {
+          flowType: state.flowValidation.flowType,
+          confidence: state.flowValidation.confidence,
+          institutionalProbability:
+            state.flowValidation.institutionalProbability,
+        }
+        : null,
+      botTrap: state.botTrapAnalysis
+        ? {
+          isSuspect: state.botTrapAnalysis.isSuspect,
+          suspicionScore: state.botTrapAnalysis.suspicionScore,
+        }
+        : null,
+      globalCVD: state.globalCVD
+        ? {
+          consensus: state.globalCVD.consensus,
+          confidence: state.globalCVD.confidence,
+          manipulationDetected: state.globalCVD.manipulation.detected,
+        }
+        : null,
+      enhancementsActive: state.enhancementsActive,
     };
 
     this.writeLogEntry(logEntry);
 
     if (this.config.enableConsoleOutput) {
-      console.log(`🔮 ENHANCED HOLOGRAM: ${symbol} ${state.alignment} (${state.enhancedScore.toFixed(1)}) - ${state.convictionLevel} conviction`);
+      console.log(
+        `🔮 ENHANCED HOLOGRAM: ${symbol} ${state.alignment} (${
+          state.enhancedScore.toFixed(1)
+        }) - ${state.convictionLevel} conviction`,
+      );
     }
   }
 
@@ -457,11 +512,11 @@ export class Logger {
       finalSize: number;
       cappedAt: number;
       reasoning: string[];
-    }
+    },
   ): void {
     const logEntry: ConvictionSizingLogEntry = {
       timestamp: Date.now(),
-      type: 'conviction_sizing',
+      type: "conviction_sizing",
       symbol,
       baseSize: sizing.baseSize,
       oracleMultiplier: sizing.oracleMultiplier,
@@ -470,25 +525,31 @@ export class Logger {
       globalCVDMultiplier: sizing.globalCVDMultiplier,
       finalSize: sizing.finalSize,
       cappedAt: sizing.cappedAt,
-      reasoning: sizing.reasoning
+      reasoning: sizing.reasoning,
     };
 
     this.writeLogEntry(logEntry);
 
     if (this.config.enableConsoleOutput) {
-      console.log(`📊 CONVICTION SIZING: ${symbol} base=${sizing.baseSize.toFixed(2)} → final=${sizing.finalSize.toFixed(2)} (capped at ${sizing.cappedAt}x)`);
+      console.log(
+        `📊 CONVICTION SIZING: ${symbol} base=${
+          sizing.baseSize.toFixed(2)
+        } → final=${
+          sizing.finalSize.toFixed(2)
+        } (capped at ${sizing.cappedAt}x)`,
+      );
     }
   }
 
   /**
    * Write log entry to JSONL file
-   * 
+   *
    * Requirement 16.1: Append signal data to trades.jsonl file as single JSON object per line
    */
   private writeLogEntry(entry: LogEntry): void {
     try {
-      const jsonLine = JSON.stringify(entry) + '\n';
-      
+      const jsonLine = JSON.stringify(entry) + "\n";
+
       if (this.writeStream) {
         this.writeStream.write(jsonLine);
       } else {
@@ -499,19 +560,19 @@ export class Logger {
       // Check if log rotation is needed
       this.checkLogRotation();
     } catch (error) {
-      console.error('Failed to write log entry:', error);
+      console.error("Failed to write log entry:", error);
     }
   }
 
   /**
    * Check if log file needs rotation
-   * 
+   *
    * Requirement 16.5: Rotate log file when size exceeds 10MB
    */
   private async checkLogRotation(): Promise<void> {
     try {
       const stats = await stat(this.logFilePath);
-      
+
       if (stats.size >= this.config.maxFileSizeBytes) {
         await this.rotateLogFile();
       }
@@ -522,7 +583,7 @@ export class Logger {
 
   /**
    * Rotate log file with timestamp suffix
-   * 
+   *
    * Requirement 16.5: Rotate log file with timestamp suffix
    */
   private async rotateLogFile(): Promise<void> {
@@ -534,8 +595,11 @@ export class Logger {
       }
 
       // Create rotated filename with timestamp
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const rotatedFileName = this.config.logFileName.replace('.jsonl', `-${timestamp}.jsonl`);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const rotatedFileName = this.config.logFileName.replace(
+        ".jsonl",
+        `-${timestamp}.jsonl`,
+      );
       const rotatedFilePath = path.join(this.config.logDir, rotatedFileName);
 
       // Rename current log file
@@ -549,7 +613,7 @@ export class Logger {
       // Schedule compression check
       this.scheduleCompressionCheck();
     } catch (error) {
-      console.error('Failed to rotate log file:', error);
+      console.error("Failed to rotate log file:", error);
       // Reinitialize write stream on error
       this.initializeWriteStream();
     }
@@ -557,21 +621,21 @@ export class Logger {
 
   /**
    * Schedule compression check for old log files
-   * 
+   *
    * Requirement 16.6: Compress log files older than 30 days
    */
   private scheduleCompressionCheck(): void {
     // Run compression check asynchronously
     setImmediate(() => {
-      this.compressOldLogs().catch(error => {
-        console.error('Failed to compress old logs:', error);
+      this.compressOldLogs().catch((error) => {
+        console.error("Failed to compress old logs:", error);
       });
     });
   }
 
   /**
    * Compress log files older than configured age
-   * 
+   *
    * Requirement 16.6: Compress log file to gzip format when age exceeds 30 days
    */
   private async compressOldLogs(): Promise<void> {
@@ -581,12 +645,12 @@ export class Logger {
 
       for (const file of files) {
         // Skip current log file and already compressed files
-        if (file === this.config.logFileName || file.endsWith('.gz')) {
+        if (file === this.config.logFileName || file.endsWith(".gz")) {
           continue;
         }
 
         // Only process .jsonl files
-        if (!file.endsWith('.jsonl')) {
+        if (!file.endsWith(".jsonl")) {
           continue;
         }
 
@@ -600,7 +664,7 @@ export class Logger {
         }
       }
     } catch (error) {
-      console.error('Failed to check old logs for compression:', error);
+      console.error("Failed to check old logs for compression:", error);
     }
   }
 
@@ -611,12 +675,16 @@ export class Logger {
     try {
       const fileContent = fs.readFileSync(filePath);
       const compressed = await gzip(fileContent);
-      const compressedPath = filePath + '.gz';
+      const compressedPath = filePath + ".gz";
 
       await writeFile(compressedPath, compressed);
       fs.unlinkSync(filePath); // Remove original file
 
-      console.log(`🗜️ Compressed: ${path.basename(filePath)} → ${path.basename(compressedPath)}`);
+      console.log(
+        `🗜️ Compressed: ${path.basename(filePath)} → ${
+          path.basename(compressedPath)
+        }`,
+      );
     } catch (error) {
       console.error(`Failed to compress ${filePath}:`, error);
     }
@@ -634,8 +702,10 @@ export class Logger {
   }> {
     try {
       const files = await readdir(this.config.logDir);
-      const logFiles = files.filter(f => f.endsWith('.jsonl') || f.endsWith('.jsonl.gz'));
-      
+      const logFiles = files.filter((f) =>
+        f.endsWith(".jsonl") || f.endsWith(".jsonl.gz")
+      );
+
       let currentSize = 0;
       let oldestFile: string | null = null;
       let newestFile: string | null = null;
@@ -654,12 +724,12 @@ export class Logger {
       for (const file of logFiles) {
         const filePath = path.join(this.config.logDir, file);
         const stats = await stat(filePath);
-        
+
         if (stats.mtime.getTime() < oldestTime) {
           oldestTime = stats.mtime.getTime();
           oldestFile = file;
         }
-        
+
         if (stats.mtime.getTime() > newestTime) {
           newestTime = stats.mtime.getTime();
           newestFile = file;
@@ -669,18 +739,18 @@ export class Logger {
       return {
         currentSize,
         totalFiles: logFiles.length,
-        compressedFiles: files.filter(f => f.endsWith('.gz')).length,
+        compressedFiles: files.filter((f) => f.endsWith(".gz")).length,
         oldestFile,
-        newestFile
+        newestFile,
       };
     } catch (error) {
-      console.error('Failed to get log stats:', error);
+      console.error("Failed to get log stats:", error);
       return {
         currentSize: 0,
         totalFiles: 0,
         compressedFiles: 0,
         oldestFile: null,
-        newestFile: null
+        newestFile: null,
       };
     }
   }
@@ -704,7 +774,39 @@ export class Logger {
    */
   public updateConfig(newConfig: Partial<LoggerConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    console.log('📊 Logger: Configuration updated');
+    console.log("📊 Logger: Configuration updated");
+  }
+
+  /**
+   * Generic info log
+   */
+  public info(message: string, data?: any): void {
+    const logEntry: GenericLogEntry = {
+      timestamp: Date.now(),
+      type: "info",
+      message,
+      data,
+    };
+    this.writeLogEntry(logEntry);
+    if (this.config.enableConsoleOutput) {
+      console.log(`ℹ️ INFO: ${message}`, data ? data : "");
+    }
+  }
+
+  /**
+   * Generic debug log
+   */
+  public debug(message: string, data?: any): void {
+    const logEntry: GenericLogEntry = {
+      timestamp: Date.now(),
+      type: "debug",
+      message,
+      data,
+    };
+    this.writeLogEntry(logEntry);
+    if (this.config.enableConsoleOutput) {
+      console.debug(`🐞 DEBUG: ${message}`, data ? data : "");
+    }
   }
 }
 
@@ -717,7 +819,7 @@ let _logger: Logger | null = null;
 export const getLogger = (): Logger => {
   if (!_logger) {
     _logger = new Logger({
-      enableConsoleOutput: process.env.NODE_ENV !== 'production'
+      enableConsoleOutput: process.env.NODE_ENV !== "production",
     });
   }
   return _logger;
@@ -730,31 +832,54 @@ export const logSignal = (
   signal: SignalData,
   hologramState: HologramState,
   sessionType: SessionType,
-  poiType: 'FVG' | 'ORDER_BLOCK' | 'LIQUIDITY_POOL',
-  cvdConfirmation: boolean
-) => getLogger().logSignal(signal, hologramState, sessionType, poiType, cvdConfirmation);
+  poiType: "FVG" | "ORDER_BLOCK" | "LIQUIDITY_POOL",
+  cvdConfirmation: boolean,
+) =>
+  getLogger().logSignal(
+    signal,
+    hologramState,
+    sessionType,
+    poiType,
+    cvdConfirmation,
+  );
 
 export const logExecution = (
   orderResult: OrderResult,
   slippage: number,
   signalId?: string,
-  fees?: number
+  fees?: number,
 ) => getLogger().logExecution(orderResult, slippage, signalId, fees);
 
 export const logPositionClose = (
   positionId: string,
   symbol: string,
-  side: 'LONG' | 'SHORT',
+  side: "LONG" | "SHORT",
   entryPrice: number,
   exitPrice: number,
   profitPercentage: number,
-  closeReason: 'STOP_LOSS' | 'TAKE_PROFIT' | 'TRAILING_STOP' | 'MANUAL' | 'EMERGENCY',
+  closeReason:
+    | "STOP_LOSS"
+    | "TAKE_PROFIT"
+    | "TRAILING_STOP"
+    | "MANUAL"
+    | "EMERGENCY",
   holdTime: number,
-  rValue: number
-) => getLogger().logPositionClose(positionId, symbol, side, entryPrice, exitPrice, profitPercentage, closeReason, holdTime, rValue);
+  rValue: number,
+) =>
+  getLogger().logPositionClose(
+    positionId,
+    symbol,
+    side,
+    entryPrice,
+    exitPrice,
+    profitPercentage,
+    closeReason,
+    holdTime,
+    rValue,
+  );
 
 export const logError = (
-  level: 'WARNING' | 'ERROR' | 'CRITICAL',
+  level: "WARNING" | "ERROR" | "CRITICAL",
   message: string,
   context?: {
     symbol?: string;
@@ -762,15 +887,15 @@ export const logError = (
     function?: string;
     stack?: string;
     data?: any;
-  }
+  },
 ) => getLogger().logError(level, message, context);
 
 export const logEnhancedHologram = (
   symbol: string,
-  state: Parameters<Logger['logEnhancedHologram']>[1]
+  state: Parameters<Logger["logEnhancedHologram"]>[1],
 ) => getLogger().logEnhancedHologram(symbol, state);
 
 export const logConvictionSizing = (
   symbol: string,
-  sizing: Parameters<Logger['logConvictionSizing']>[1]
+  sizing: Parameters<Logger["logConvictionSizing"]>[1],
 ) => getLogger().logConvictionSizing(symbol, sizing);

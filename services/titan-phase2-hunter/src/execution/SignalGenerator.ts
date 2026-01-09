@@ -1,6 +1,6 @@
 /**
  * Signal Generator for Titan Phase 2 - The Hunter
- * 
+ *
  * Generates trading signals by combining all validation layers:
  * - Hologram alignment (A+ or B status)
  * - Session timing (Killzone requirement)
@@ -9,24 +9,28 @@
  * - CVD absorption confirmation
  */
 
-import { 
-  HologramState, 
-  HologramStatus, 
-  SessionState, 
-  SessionType, 
-  POI, 
-  FVG, 
-  OrderBlock, 
-  LiquidityPool,
+import {
   Absorption,
+  FVG,
+  HologramState,
+  HologramStatus,
+  LiquidityPool,
+  OracleScore,
+  OrderBlock,
+  POI,
+  SessionState,
+  SessionType,
   SignalData,
-  TrendState
-} from '../types';
-import { HologramEngine } from '../engine/HologramEngine';
-import { SessionProfiler } from '../engine/SessionProfiler';
-import { InefficiencyMapper } from '../engine/InefficiencyMapper';
-import { CVDValidator } from '../engine/CVDValidator';
-import { logSignal, logError } from '../logging/Logger';
+  SignalValidationResponse,
+  TrendState,
+} from "../types";
+import { HologramEngine } from "../engine/HologramEngine";
+import { SessionProfiler } from "../engine/SessionProfiler";
+import { InefficiencyMapper } from "../engine/InefficiencyMapper";
+import { CVDValidator } from "../engine/CVDValidator";
+import { Oracle } from "../oracle/Oracle";
+import { GlobalLiquidityAggregator } from "../global-liquidity/GlobalLiquidityAggregator";
+import { logError, logSignal } from "../logging/Logger";
 
 export interface SignalGeneratorConfig {
   minAlignmentScore: number; // Minimum alignment score for B signals (default: 60)
@@ -34,6 +38,8 @@ export interface SignalGeneratorConfig {
   poiProximityPercent: number; // Max distance from POI (default: 0.5%)
   minCVDConfidence: number; // Minimum CVD absorption confidence (default: 70)
   requireCVDConfirmation: boolean; // Whether CVD confirmation is mandatory (default: true)
+  useOracle: boolean; // Whether to use Oracle for validation (default: false)
+  useGlobalCVD: boolean; // Whether to use Global CVD for validation (default: false)
 }
 
 export interface SignalValidationResult {
@@ -44,6 +50,8 @@ export interface SignalValidationResult {
   rsValid: boolean;
   poiValid: boolean;
   cvdValid: boolean;
+  oracleValid: boolean;
+  globalCVDValid: boolean;
 }
 
 export interface SignalContext {
@@ -53,6 +61,8 @@ export interface SignalContext {
   nearbyPOIs: POI[];
   absorption: Absorption | null;
   atr: number; // For position sizing and stop calculation
+  oracleScore?: OracleScore;
+  globalCVDValidation?: SignalValidationResponse;
 }
 
 export class SignalGenerator {
@@ -61,19 +71,25 @@ export class SignalGenerator {
   private sessionProfiler: SessionProfiler;
   private inefficiencyMapper: InefficiencyMapper;
   private cvdValidator: CVDValidator;
+  private oracle?: Oracle;
+  private globalLiquidity?: GlobalLiquidityAggregator;
 
   constructor(
     hologramEngine: HologramEngine,
     sessionProfiler: SessionProfiler,
     inefficiencyMapper: InefficiencyMapper,
     cvdValidator: CVDValidator,
-    config: Partial<SignalGeneratorConfig> = {}
+    oracle?: Oracle,
+    globalLiquidity?: GlobalLiquidityAggregator,
+    config: Partial<SignalGeneratorConfig> = {},
   ) {
     this.hologramEngine = hologramEngine;
     this.sessionProfiler = sessionProfiler;
     this.inefficiencyMapper = inefficiencyMapper;
     this.cvdValidator = cvdValidator;
-    
+    this.oracle = oracle;
+    this.globalLiquidity = globalLiquidity;
+
     // Set default configuration
     this.config = {
       minAlignmentScore: 60,
@@ -81,7 +97,9 @@ export class SignalGenerator {
       poiProximityPercent: 0.5,
       minCVDConfidence: 70,
       requireCVDConfirmation: true,
-      ...config
+      useOracle: !!oracle, // Default to using if provided
+      useGlobalCVD: !!globalLiquidity, // Default to using if provided
+      ...config,
     };
   }
 
@@ -91,12 +109,15 @@ export class SignalGenerator {
    */
   checkHologramStatus(hologram: HologramState): boolean {
     // Check if status is A+ or B
-    if (hologram.status !== 'A+' && hologram.status !== 'B') {
+    if (hologram.status !== "A+" && hologram.status !== "B") {
       return false;
     }
 
     // Additional check: alignment score must meet minimum threshold
-    if (hologram.status === 'B' && hologram.alignmentScore < this.config.minAlignmentScore) {
+    if (
+      hologram.status === "B" &&
+      hologram.alignmentScore < this.config.minAlignmentScore
+    ) {
       return false;
     }
 
@@ -120,8 +141,8 @@ export class SignalGenerator {
    * Check if RS score meets directional filter requirements
    * Requirements: Long signals need RS > threshold, Short signals need RS < -threshold
    */
-  checkRSScore(rsScore: number, direction: 'LONG' | 'SHORT'): boolean {
-    if (direction === 'LONG') {
+  checkRSScore(rsScore: number, direction: "LONG" | "SHORT"): boolean {
+    if (direction === "LONG") {
       return rsScore > this.config.rsThreshold;
     } else {
       return rsScore < -this.config.rsThreshold;
@@ -132,45 +153,49 @@ export class SignalGenerator {
    * Check if current price is within proximity of relevant POIs
    * Requirements: Price must be within 0.5% of Order Block or FVG
    */
-  checkPOIProximity(currentPrice: number, pois: POI[], direction: 'LONG' | 'SHORT'): { valid: boolean; poi: POI | null } {
+  checkPOIProximity(
+    currentPrice: number,
+    pois: POI[],
+    direction: "LONG" | "SHORT",
+  ): { valid: boolean; poi: POI | null } {
     const proximityThreshold = this.config.poiProximityPercent / 100;
 
     for (const poi of pois) {
       // Skip mitigated POIs
-      if ('mitigated' in poi && poi.mitigated) continue;
-      if ('swept' in poi && poi.swept) continue;
+      if ("mitigated" in poi && poi.mitigated) continue;
+      if ("swept" in poi && poi.swept) continue;
 
       let targetPrice: number;
       let poiValid = false;
 
       // Check POI type and direction compatibility
-      if ('midpoint' in poi) {
+      if ("midpoint" in poi) {
         // FVG
         const fvg = poi as FVG;
-        if (direction === 'LONG' && fvg.type === 'BULLISH') {
+        if (direction === "LONG" && fvg.type === "BULLISH") {
           targetPrice = fvg.midpoint;
           poiValid = true;
-        } else if (direction === 'SHORT' && fvg.type === 'BEARISH') {
+        } else if (direction === "SHORT" && fvg.type === "BEARISH") {
           targetPrice = fvg.midpoint;
           poiValid = true;
         }
-      } else if ('high' in poi && 'low' in poi && !('strength' in poi)) {
+      } else if ("high" in poi && "low" in poi && !("strength" in poi)) {
         // Order Block
         const ob = poi as OrderBlock;
-        if (direction === 'LONG' && ob.type === 'BULLISH') {
+        if (direction === "LONG" && ob.type === "BULLISH") {
           targetPrice = ob.low; // Enter at bottom of bullish OB
           poiValid = true;
-        } else if (direction === 'SHORT' && ob.type === 'BEARISH') {
+        } else if (direction === "SHORT" && ob.type === "BEARISH") {
           targetPrice = ob.high; // Enter at top of bearish OB
           poiValid = true;
         }
-      } else if ('strength' in poi) {
+      } else if ("strength" in poi) {
         // Liquidity Pool - less precise, use for confluence only
         const pool = poi as LiquidityPool;
-        if (direction === 'LONG' && pool.type === 'LOW') {
+        if (direction === "LONG" && pool.type === "LOW") {
           targetPrice = pool.price;
           poiValid = true;
-        } else if (direction === 'SHORT' && pool.type === 'HIGH') {
+        } else if (direction === "SHORT" && pool.type === "HIGH") {
           targetPrice = pool.price;
           poiValid = true;
         }
@@ -191,7 +216,10 @@ export class SignalGenerator {
    * Check if CVD absorption provides required confirmation
    * Requirements: Must have absorption signal with sufficient confidence
    */
-  checkCVDAbsorption(absorption: Absorption | null, direction: 'LONG' | 'SHORT'): boolean {
+  checkCVDAbsorption(
+    absorption: Absorption | null,
+    direction: "LONG" | "SHORT",
+  ): boolean {
     if (!this.config.requireCVDConfirmation) {
       return true; // CVD confirmation not required
     }
@@ -209,8 +237,8 @@ export class SignalGenerator {
     // For SHORT signals, we need distribution (selling pressure at highs)
     // Note: The current absorption interface only handles absorption
     // Distribution would need to be handled separately or the interface extended
-    
-    if (direction === 'LONG') {
+
+    if (direction === "LONG") {
       return true; // Absorption supports long entry
     } else {
       // For short signals, we would need distribution detection
@@ -222,24 +250,54 @@ export class SignalGenerator {
   /**
    * Validate all signal conditions
    */
-  validateSignal(context: SignalContext, direction: 'LONG' | 'SHORT'): SignalValidationResult {
+  validateSignal(
+    context: SignalContext,
+    direction: "LONG" | "SHORT",
+  ): SignalValidationResult {
     const hologramValid = this.checkHologramStatus(context.hologram);
     const sessionValid = this.checkSession(context.session);
     const rsValid = this.checkRSScore(context.hologram.rsScore, direction);
-    const poiResult = this.checkPOIProximity(context.currentPrice, context.nearbyPOIs, direction);
+    const poiResult = this.checkPOIProximity(
+      context.currentPrice,
+      context.nearbyPOIs,
+      direction,
+    );
     const cvdValid = this.checkCVDAbsorption(context.absorption, direction);
 
-    const valid = hologramValid && sessionValid && rsValid && poiResult.valid && cvdValid;
+    // Enhanced Validations
+    let oracleValid = true;
+    let globalCVDValid = true;
+    let reason = "";
 
-    let reason = '';
-    if (!hologramValid) reason += 'Hologram status invalid. ';
-    if (!sessionValid) reason += 'Not in Killzone. ';
-    if (!rsValid) reason += 'RS score insufficient. ';
-    if (!poiResult.valid) reason += 'No POI proximity. ';
-    if (!cvdValid) reason += 'CVD confirmation missing. ';
+    if (this.config.useOracle && context.oracleScore) {
+      if (context.oracleScore.veto) {
+        oracleValid = false;
+        reason += `Oracle VETO: ${context.oracleScore.vetoReason}. `;
+      }
+    }
+
+    if (this.config.useGlobalCVD && context.globalCVDValidation) {
+      if (context.globalCVDValidation.recommendation === "veto") {
+        globalCVDValid = false;
+        reason += `Global CVD VETO: ${
+          context.globalCVDValidation.reasoning.join(", ")
+        }. `;
+      }
+    }
+
+    const valid = hologramValid && sessionValid && rsValid && poiResult.valid &&
+      cvdValid && oracleValid && globalCVDValid;
+
+    if (!valid && reason === "") {
+      if (!hologramValid) reason += "Hologram status invalid. ";
+      if (!sessionValid) reason += "Not in Killzone. ";
+      if (!rsValid) reason += "RS score insufficient. ";
+      if (!poiResult.valid) reason += "No POI proximity. ";
+      if (!cvdValid) reason += "CVD confirmation missing. ";
+    }
 
     if (valid) {
-      reason = 'All conditions met';
+      reason = "All conditions met";
     }
 
     return {
@@ -249,7 +307,9 @@ export class SignalGenerator {
       sessionValid,
       rsValid,
       poiValid: poiResult.valid,
-      cvdValid
+      cvdValid,
+      oracleValid,
+      globalCVDValid,
     };
   }
 
@@ -263,16 +323,20 @@ export class SignalGenerator {
     atr: number,
     stopDistancePercent: number,
     currentPrice: number,
-    leverage: number
+    leverage: number,
+    convictionMultiplier: number = 1.0,
   ): number {
-    const riskDollars = equity * riskPerTrade;
+    // Adjust risk based on conviction
+    const adjustedRisk = riskPerTrade * convictionMultiplier;
+
+    const riskDollars = equity * adjustedRisk;
     const stopDistance = currentPrice * (stopDistancePercent / 100);
     const positionSize = riskDollars / stopDistance;
-    
+
     // Apply leverage constraint
     const maxPositionValue = equity * leverage;
     const maxPositionSize = maxPositionValue / currentPrice;
-    
+
     return Math.min(positionSize, maxPositionSize);
   }
 
@@ -281,30 +345,56 @@ export class SignalGenerator {
    */
   async generateSignal(
     symbol: string,
-    direction: 'LONG' | 'SHORT',
+    direction: "LONG" | "SHORT",
     equity: number,
     riskPerTrade: number = 0.02,
-    leverage: number = 3
+    leverage: number = 3,
   ): Promise<SignalData | null> {
     try {
       // Get hologram state
       const hologram = await this.hologramEngine.analyze(symbol);
-      
+
       // Get session state
       const session = this.sessionProfiler.getSessionState();
-      
+
       // Get current price from hologram
       const currentPrice = hologram.m15.currentPrice;
-      
+
       // Get nearby POIs
       const nearbyPOIs = await this.getNearbyPOIs(symbol, currentPrice);
-      
+
       // Get CVD absorption
       const absorption = await this.getCVDAbsorption(symbol);
-      
+
       // Get ATR for position sizing (using 15m timeframe)
-      const atr = await this.calculateATR(symbol, '15m');
-      
+      const atr = await this.calculateATR(symbol, "15m");
+
+      // 2026 Enhancements: Oracle & Global CVD
+      let oracleScore: OracleScore | undefined;
+      let globalCVDValidation: SignalValidationResponse | undefined;
+
+      if (this.config.useOracle && this.oracle) {
+        // Evaluate signal with Oracle
+        oracleScore = await this.oracle.evaluateSignal({
+          symbol,
+          direction,
+          confidence: hologram.alignmentScore, // Base confidence
+          entryPrice: currentPrice,
+          stopLoss: 0, // Not calculated yet
+          takeProfit: 0,
+          timestamp: new Date(),
+          source: "hologram",
+        });
+      }
+
+      if (this.config.useGlobalCVD && this.globalLiquidity) {
+        globalCVDValidation = this.globalLiquidity.validateSignal(
+          symbol,
+          direction,
+          hologram.alignmentScore,
+        ) || undefined;
+      }
+
       // Create signal context
       const context: SignalContext = {
         hologram,
@@ -312,14 +402,18 @@ export class SignalGenerator {
         currentPrice,
         nearbyPOIs,
         absorption,
-        atr
+        atr,
+        oracleScore,
+        globalCVDValidation,
       };
 
       // Validate signal
       const validation = this.validateSignal(context, direction);
-      
+
       if (!validation.valid) {
-        console.log(`❌ Signal validation failed for ${symbol} ${direction}: ${validation.reason}`);
+        console.log(
+          `❌ Signal validation failed for ${symbol} ${direction}: ${validation.reason}`,
+        );
         return null;
       }
 
@@ -328,22 +422,36 @@ export class SignalGenerator {
         currentPrice,
         direction,
         context.nearbyPOIs,
-        atr
+        atr,
       );
 
+      // Determine conviction multiplier
+      let convictionMultiplier = 1.0;
+      if (oracleScore) {
+        convictionMultiplier = oracleScore.convictionMultiplier;
+      }
+
       // Calculate position size
-      const stopDistancePercent = Math.abs(entryPrice - stopLoss) / entryPrice * 100;
+      const stopDistancePercent = Math.abs(entryPrice - stopLoss) / entryPrice *
+        100;
       const positionSize = this.calculatePositionSize(
         equity,
         riskPerTrade,
         atr,
         stopDistancePercent,
         entryPrice,
-        leverage
+        leverage,
+        convictionMultiplier,
       );
 
       // Calculate confidence score
-      const confidence = this.calculateConfidence(hologram, validation, absorption);
+      const confidence = this.calculateConfidence(
+        hologram,
+        validation,
+        absorption,
+        oracleScore,
+        globalCVDValidation,
+      );
 
       // Create signal data
       const signal: SignalData = {
@@ -361,30 +469,38 @@ export class SignalGenerator {
         takeProfit,
         positionSize,
         leverage,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
-      console.log(`✅ Signal generated for ${symbol} ${direction}: ${hologram.status} alignment, ${confidence}% confidence`);
-      
+      console.log(
+        `✅ Signal generated for ${symbol} ${direction}: ${hologram.status} alignment, ${confidence}% confidence`,
+      );
+      if (convictionMultiplier !== 1.0) {
+        console.log(
+          `   ⚖️ Conviction Multiplier Applied: ${
+            convictionMultiplier.toFixed(2)
+          }x`,
+        );
+      }
+
       // Log signal to structured logger
       logSignal(
         signal,
         hologram,
         session.type,
         this.getPOIType(context.nearbyPOIs[0]),
-        validation.cvdValid
+        validation.cvdValid,
       );
-      
-      return signal;
 
+      return signal;
     } catch (error) {
       console.error(`❌ Error generating signal for ${symbol}:`, error);
-      logError('ERROR', `Error generating signal for ${symbol}`, {
+      logError("ERROR", `Error generating signal for ${symbol}`, {
         symbol,
-        component: 'SignalGenerator',
-        function: 'generateSignal',
+        component: "SignalGenerator",
+        function: "generateSignal",
         stack: (error as Error).stack,
-        data: { direction }
+        data: { direction },
       });
       return null;
     }
@@ -393,7 +509,10 @@ export class SignalGenerator {
   /**
    * Get nearby POIs for the symbol
    */
-  private async getNearbyPOIs(symbol: string, currentPrice: number): Promise<POI[]> {
+  private async getNearbyPOIs(
+    symbol: string,
+    currentPrice: number,
+  ): Promise<POI[]> {
     // This would typically fetch from a POI cache or calculate on demand
     // For now, we'll return an empty array as a placeholder
     // In a real implementation, this would integrate with InefficiencyMapper
@@ -413,7 +532,11 @@ export class SignalGenerator {
   /**
    * Calculate ATR for position sizing
    */
-  private async calculateATR(symbol: string, timeframe: string, period: number = 14): Promise<number> {
+  private async calculateATR(
+    symbol: string,
+    timeframe: string,
+    period: number = 14,
+  ): Promise<number> {
     // This would typically fetch OHLCV data and calculate ATR
     // For now, we'll return a placeholder value
     // In a real implementation, this would fetch data and calculate true ATR
@@ -425,22 +548,22 @@ export class SignalGenerator {
    */
   private calculatePrices(
     currentPrice: number,
-    direction: 'LONG' | 'SHORT',
+    direction: "LONG" | "SHORT",
     pois: POI[],
-    atr: number
+    atr: number,
   ): { entryPrice: number; stopLoss: number; takeProfit: number } {
     // Default to current price if no POI
     let entryPrice = currentPrice;
-    
+
     // Use POI price if available
     if (pois.length > 0) {
       const poi = pois[0];
-      if ('midpoint' in poi) {
+      if ("midpoint" in poi) {
         entryPrice = (poi as FVG).midpoint;
-      } else if ('high' in poi && 'low' in poi && !('strength' in poi)) {
+      } else if ("high" in poi && "low" in poi && !("strength" in poi)) {
         const ob = poi as OrderBlock;
-        entryPrice = direction === 'LONG' ? ob.low : ob.high;
-      } else if ('price' in poi) {
+        entryPrice = direction === "LONG" ? ob.low : ob.high;
+      } else if ("price" in poi) {
         entryPrice = (poi as LiquidityPool).price;
       }
     }
@@ -452,7 +575,7 @@ export class SignalGenerator {
     let stopLoss: number;
     let takeProfit: number;
 
-    if (direction === 'LONG') {
+    if (direction === "LONG") {
       stopLoss = entryPrice - stopDistance;
       takeProfit = entryPrice + targetDistance;
     } else {
@@ -469,12 +592,14 @@ export class SignalGenerator {
   private calculateConfidence(
     hologram: HologramState,
     validation: SignalValidationResult,
-    absorption: Absorption | null
+    absorption: Absorption | null,
+    oracleScore?: OracleScore,
+    globalCVDValidation?: SignalValidationResponse,
   ): number {
     let confidence = hologram.alignmentScore; // Base confidence from alignment
 
     // Bonus for A+ status
-    if (hologram.status === 'A+') {
+    if (hologram.status === "A+") {
       confidence += 10;
     }
 
@@ -488,18 +613,36 @@ export class SignalGenerator {
       confidence += 10;
     }
 
+    // Oracle Confidence Integration
+    if (oracleScore) {
+      if (oracleScore.confidence > 70) {
+        confidence += 5;
+      }
+    }
+
+    // Global CVD Confidence Integration
+    if (globalCVDValidation) {
+      if (globalCVDValidation.consensusResult.hasConsensus) {
+        confidence += 5;
+      }
+    }
+
     return Math.min(100, confidence);
   }
 
   /**
    * Get POI type for logging
    */
-  private getPOIType(poi: POI | undefined): 'FVG' | 'ORDER_BLOCK' | 'LIQUIDITY_POOL' {
-    if (!poi) return 'ORDER_BLOCK'; // Default
+  private getPOIType(
+    poi: POI | undefined,
+  ): "FVG" | "ORDER_BLOCK" | "LIQUIDITY_POOL" {
+    if (!poi) return "ORDER_BLOCK"; // Default
 
-    if ('midpoint' in poi) return 'FVG';
-    if ('high' in poi && 'low' in poi && !('strength' in poi)) return 'ORDER_BLOCK';
-    return 'LIQUIDITY_POOL';
+    if ("midpoint" in poi) return "FVG";
+    if ("high" in poi && "low" in poi && !("strength" in poi)) {
+      return "ORDER_BLOCK";
+    }
+    return "LIQUIDITY_POOL";
   }
 
   /**
@@ -507,7 +650,7 @@ export class SignalGenerator {
    */
   updateConfig(newConfig: Partial<SignalGeneratorConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    console.log('📝 SignalGenerator configuration updated');
+    console.log("📝 SignalGenerator configuration updated");
   }
 
   /**

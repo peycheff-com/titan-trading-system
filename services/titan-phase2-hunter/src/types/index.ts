@@ -305,20 +305,20 @@ export interface PartialProfitConfig {
   percentage: number; // Percentage to close
 }
 // Event Types (re-exported from events module)
-export type {
-  CVDAbsorptionEvent,
-  CVDDistributionEvent,
-  ErrorEvent,
-  EventMap,
-  ExecutionCompleteEvent,
-  HologramUpdatedEvent,
-  JudasSwingEvent,
-  POIDetectedEvent,
-  RiskWarningEvent,
-  ScanCompleteEvent,
-  SessionChangeEvent,
-  SignalGeneratedEvent,
-} from "../events";
+// export type {
+//   CVDAbsorptionEvent,
+//   CVDDistributionEvent,
+//   ErrorEvent,
+//   EventMap,
+//   ExecutionCompleteEvent,
+//   HologramUpdatedEvent,
+//   JudasSwingEvent,
+//   POIDetectedEvent,
+//   RiskWarningEvent,
+//   ScanCompleteEvent,
+//   SessionChangeEvent,
+//   SignalGeneratedEvent,
+// } from "../events";
 
 // 2026 Enhancement Types (re-exported from enhanced-2026 module)
 // 2026 Enhancement Types (merged from enhanced-2026 module)
@@ -598,6 +598,43 @@ export interface ManipulationAnalysis {
 }
 
 /**
+ * Monitoring and Alerting Types
+ */
+export interface EventAlert {
+  type:
+    | "probability_change"
+    | "threshold_crossing"
+    | "new_event"
+    | "resolution";
+  severity: "info" | "warning" | "critical";
+  event: PredictionMarketEvent;
+  details: string;
+  timestamp: Date;
+  previousProbability?: number;
+  newProbability?: number;
+}
+
+export interface MonitoringConfig {
+  probabilityChangeThreshold: number;
+  anomalySensitivity: number;
+}
+
+export interface CompositeEventScore {
+  score: number; // 0-100
+  riskLevel: "low" | "medium" | "high" | "critical";
+  contributingEvents: string[];
+  timestamp: Date;
+}
+
+export interface PredictionAnomaly {
+  eventId: string;
+  type: "flash_volatility" | "stale_data" | "irregular_volume";
+  severity: "low" | "medium" | "high" | "critical";
+  description: string;
+  timestamp: Date;
+}
+
+/**
  * Global CVD aggregation result
  * Requirement 4.2: Aggregate buy/sell volume from all three exchanges
  */
@@ -761,6 +798,79 @@ export interface TechnicalSignal {
   takeProfit: number;
   timestamp: Date;
   source: "hologram" | "poi" | "cvd" | "session";
+}
+
+export type SignalDirection = "bullish" | "bearish" | "neutral";
+
+export interface ExchangeVote {
+  exchange: "binance" | "coinbase" | "kraken";
+  direction: SignalDirection;
+  cvd: number;
+  volume: number;
+  weight: number;
+  confidence: number;
+}
+
+export interface ConsensusData {
+  isValid: boolean;
+  hasConsensus: boolean;
+  consensusDirection: SignalDirection;
+  confidence: number; // 0-100
+  votes: ExchangeVote[];
+  agreementRatio: number; // 0-1
+  connectedExchanges: number;
+  reasoning: string[];
+  timestamp: Date;
+}
+
+export interface SignalValidationResponse {
+  isValid: boolean;
+  adjustedConfidence: number;
+  consensusResult: ConsensusData;
+  recommendation: "proceed" | "reduce_size" | "veto";
+  reasoning: string[];
+}
+
+// ============================================================================
+// ARBITRAGE & MANIPULATION TYPES (Task 12)
+// ============================================================================
+
+/**
+ * Arbitrage Opportunity
+ * Requirement 12.1: Flag arbitrage opportunities
+ */
+export interface ArbitrageOpportunity {
+  symbol: string;
+  buyExchange: string;
+  sellExchange: string;
+  buyPrice: number;
+  sellPrice: number;
+  spread: number;
+  spreadPercentage: number;
+  timestamp: Date;
+}
+
+/**
+ * Price Spread between two exchanges
+ */
+export interface PriceSpread {
+  symbol: string;
+  exchangeA: string;
+  exchangeB: string;
+  priceA: number;
+  priceB: number;
+  spread: number; // priceA - priceB
+  spreadPercentage: number; // (priceA - priceB) / priceB * 100
+  timestamp: Date;
+}
+
+/**
+ * Arbitrage Configuration
+ */
+export interface ArbitrageConfig {
+  minSpreadPercentage: number; // e.g., 0.5 for 0.5%
+  minLiquidity: number; // Minimum volume/liquidity required
+  persistenceMs: number; // How long spread must persist to be flagged
 }
 
 /**

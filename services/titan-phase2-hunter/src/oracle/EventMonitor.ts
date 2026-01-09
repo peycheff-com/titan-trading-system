@@ -1,7 +1,9 @@
 import { EventEmitter } from "events";
 import {
+    CompositeEventScore,
     EventAlert,
     ImpactLevel,
+    PredictionAnomaly,
     PredictionMarketEvent,
 } from "../types";
 import { Enhanced2026ConfigManager } from "../config/Enhanced2026Config";
@@ -137,6 +139,81 @@ export class EventMonitor extends EventEmitter {
             return event.resolution.getTime() <= cutoffTime &&
                 event.resolution.getTime() > Date.now();
         });
+    }
+
+    /**
+     * Calculate Composite Risk Score
+     * Requirement 11.1: Composite event score calculation
+     * Aggregates risk from probability volatility and event proximity
+     */
+    public calculateCompositeRiskScore(
+        windowMinutes: number = 60,
+    ): CompositeEventScore {
+        const upcomingEvents = this.getUpcomingHighImpactEvents(windowMinutes);
+        let totalImpactScore = 0;
+        let maxVolatility = 0;
+
+        for (const event of upcomingEvents) {
+            // Base impact score
+            const impactWeight = event.impact === ImpactLevel.EXTREME ? 10 : 5;
+
+            // Proximity multiplier (closer = higher score)
+            const timeToResolution = event.resolution.getTime() - Date.now();
+            const proximityFactor = Math.max(
+                0,
+                1 - (timeToResolution / (windowMinutes * 60 * 1000)),
+            );
+
+            totalImpactScore += impactWeight * (1 + proximityFactor);
+        }
+
+        // Normalize score 0-100
+        const normalizedScore = Math.min(100, totalImpactScore * 5);
+
+        return {
+            score: normalizedScore,
+            riskLevel: normalizedScore > 75
+                ? "critical"
+                : normalizedScore > 40
+                ? "high"
+                : normalizedScore > 20
+                ? "medium"
+                : "low",
+            contributingEvents: upcomingEvents.map((e) => e.id),
+            timestamp: new Date(),
+        };
+    }
+
+    /**
+     * Detect Anomalies ("Flash Crash" patterns)
+     * Requirement 11.4: Anomaly detection
+     */
+    public detectAnomalies(
+        currentEvents: PredictionMarketEvent[],
+    ): PredictionAnomaly[] {
+        const anomalies: PredictionAnomaly[] = [];
+
+        for (const currentEvent of currentEvents) {
+            const prevEvent = this.previousEvents.get(currentEvent.id);
+            if (!prevEvent) continue;
+
+            // Flash Crash Pattern: >15% drop followed by >10% recovery (simulated check based on simple volatility for now)
+            // Real detection would need tick history. Here we check specific rapid large moves.
+            const probChange = currentEvent.probability - prevEvent.probability;
+
+            if (Math.abs(probChange) >= 20) {
+                anomalies.push({
+                    eventId: currentEvent.id,
+                    type: "flash_volatility",
+                    severity: "high",
+                    description: `Extreme instant probability shift of ${
+                        probChange.toFixed(1)
+                    }%`,
+                    timestamp: new Date(),
+                });
+            }
+        }
+        return anomalies;
     }
 
     /**
