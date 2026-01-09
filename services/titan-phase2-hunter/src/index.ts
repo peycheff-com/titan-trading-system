@@ -6,7 +6,7 @@
  */
 
 import { config } from 'dotenv';
-import { HunterHUD } from './console/HunterHUD';
+import { HunterHUD } from './console';
 
 // Load environment variables
 config();

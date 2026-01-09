@@ -27,7 +27,7 @@ import { WebSocketOptimizer } from './utils/WebSocketOptimizer.js';
 const CONFIG = {
   HEARTBEAT_INTERVAL_MS: 30000,
   CLIENT_TIMEOUT_MS: 60000,
-  MAX_CLIENTS: 10, // Console clients are limited (operators only)
+  MAX_CLIENTS: parseInt(process.env.MAX_CONSOLE_CLIENTS || '50'), // Increased limit to prevent 1013 errors
   PATH: '/ws/console',
   STATE_BROADCAST_INTERVAL_MS: 1000, // Broadcast state every 1 second
   // Optimization settings (Requirements: 3.1-3.5)

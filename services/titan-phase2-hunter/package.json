@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Titan Phase 2 - The Hunter: Holographic Market Structure Engine for institutional-grade swing trading",
   "main": "dist/index.js",
+
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
@@ -31,13 +32,12 @@
     "crypto": "^1.0.1",
     "dotenv": "^17.2.3",
     "fast-check": "^3.15.0",
-    "ink": "^4.4.0",
+    "ink": "^3.2.0",
     "node-fetch": "^3.3.0",
     "react": "^18.2.0",
     "ws": "^8.14.0"
   },
   "devDependencies": {
-    "@types/ink": "^0.5.2",
     "@types/jest": "^30.0.0",
     "@types/node": "^20.19.27",
     "@types/react": "^18.2.0",

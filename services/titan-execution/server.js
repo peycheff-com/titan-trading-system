@@ -200,37 +200,69 @@ if (useMockBroker) {
   loggerAdapter.warn('Using MockBrokerAdapter - NOT FOR PRODUCTION');
   brokerAdapter = new MockBrokerAdapter();
 } else {
-  // Validate required environment variables
-  if (!process.env.BYBIT_API_KEY || !process.env.BYBIT_API_SECRET) {
-    loggerAdapter.error('BYBIT_API_KEY and BYBIT_API_SECRET environment variables are required');
+  const exchangeId = (process.env.EXCHANGE_ID || 'bybit').toLowerCase();
+  
+  loggerAdapter.info({ exchangeId }, 'Initializing Broker Adapter');
+
+  if (exchangeId === 'bybit') {
+    // Validate required environment variables
+    if (!process.env.BYBIT_API_KEY || !process.env.BYBIT_API_SECRET) {
+      loggerAdapter.error('BYBIT_API_KEY and BYBIT_API_SECRET environment variables are required for Bybit');
+      process.exit(1);
+    }
+    
+    loggerAdapter.info({
+      testnet: bybitTestnet,
+      rateLimitRps: parseInt(process.env.BYBIT_RATE_LIMIT_RPS || '10'),
+    }, 'Initializing BybitAdapter');
+    
+    // Import BybitAdapter
+    const { BybitAdapter } = await import('./adapters/BybitAdapter.js');
+    
+    brokerAdapter = new BybitAdapter({
+      apiKey: process.env.BYBIT_API_KEY,
+      apiSecret: process.env.BYBIT_API_SECRET,
+      testnet: bybitTestnet,
+      category: process.env.BYBIT_CATEGORY || 'linear', // USDT perpetual
+      rateLimitRps: parseInt(process.env.BYBIT_RATE_LIMIT_RPS || '10'),
+      maxRetries: parseInt(process.env.BYBIT_MAX_RETRIES || '3'),
+      accountCacheTtl: parseInt(process.env.BYBIT_ACCOUNT_CACHE_TTL || '5000'),
+      logger: loggerAdapter,
+    });
+  } else if (exchangeId === 'mexc') {
+    // Validate required environment variables
+    if (!process.env.MEXC_API_KEY || !process.env.MEXC_API_SECRET) {
+      loggerAdapter.error('MEXC_API_KEY and MEXC_API_SECRET environment variables are required for MEXC');
+      process.exit(1);
+    }
+
+    loggerAdapter.info({ testnet: false }, 'Initializing MexcAdapter'); // MEXC Adapter helper handles testnet param but usually mainnet
+    
+    const { MexcAdapter } = await import('./adapters/MexcAdapter.js');
+    
+    brokerAdapter = new MexcAdapter({
+      apiKey: process.env.MEXC_API_KEY,
+      apiSecret: process.env.MEXC_API_SECRET,
+      testnet: process.env.MEXC_TESTNET === 'true',
+      logger: loggerAdapter,
+    });
+  } else if (exchangeId === 'binance') {
+    loggerAdapter.warn('Initializing BinanceAdapter (Stub)');
+    const { BinanceAdapter } = await import('./adapters/BinanceAdapter.js');
+    brokerAdapter = new BinanceAdapter({ logger: loggerAdapter });
+  } else {
+    loggerAdapter.error({ exchangeId }, 'Unsupported EXCHANGE_ID');
     process.exit(1);
   }
   
-  loggerAdapter.info({
-    testnet: bybitTestnet,
-    rateLimitRps: parseInt(process.env.BYBIT_RATE_LIMIT_RPS || '10'),
-  }, 'Initializing BybitAdapter');
-  
-  // Import BybitAdapter
-  const { BybitAdapter } = await import('./adapters/BybitAdapter.js');
-  
-  brokerAdapter = new BybitAdapter({
-    apiKey: process.env.BYBIT_API_KEY,
-    apiSecret: process.env.BYBIT_API_SECRET,
-    testnet: bybitTestnet,
-    category: process.env.BYBIT_CATEGORY || 'linear', // USDT perpetual
-    rateLimitRps: parseInt(process.env.BYBIT_RATE_LIMIT_RPS || '10'),
-    maxRetries: parseInt(process.env.BYBIT_MAX_RETRIES || '3'),
-    accountCacheTtl: parseInt(process.env.BYBIT_ACCOUNT_CACHE_TTL || '5000'),
-    logger: loggerAdapter,
-  });
-  
   // Test connection on startup
-  loggerAdapter.info('Testing Bybit connection...');
+  loggerAdapter.info(`Testing ${exchangeId} connection...`);
   const healthCheck = await brokerAdapter.healthCheck();
   
   if (!healthCheck.success) {
-    loggerAdapter.error({ error: healthCheck.error }, 'Bybit connection test failed');
+    loggerAdapter.error({ error: healthCheck.error }, `${exchangeId} connection test failed`);
+    // Create detailed error but don't crash if it's just network (retry policy?)
+    // For now, fail fast as per requirement 96.1
     process.exit(1);
   }
   
@@ -239,7 +271,7 @@ if (useMockBroker) {
     testnet: healthCheck.testnet,
     balance: healthCheck.balance,
     rateLimitStatus: healthCheck.rate_limit_status,
-  }, 'Bybit connection test successful');
+  }, `${exchangeId} connection test successful`);
 }
 
 const brokerGateway = new BrokerGateway({

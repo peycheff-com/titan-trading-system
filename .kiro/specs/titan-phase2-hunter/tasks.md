@@ -188,7 +188,7 @@
   - Implement layout with 3 sections: Holographic Map, Active Trade, POI Map
   - _Requirements: 8.1-8.7 (Hunter HUD)_
 
-- [ ] 19. Holographic Map Component
+- [x] 19. Holographic Map Component
   - Create HolographicMap component
   - Display columns: Symbol, 1D Bias, 4H Location, 15m Trigger, Session, Status
   - Color code: Green (A+ Setup), Yellow (B Setup), Red (Veto), Gray (No Play)
@@ -196,7 +196,7 @@
   - Toggle view with F2 key
   - _Requirements: 8.1-8.2_
 
-- [ ] 20. Active Trade Component
+- [x] 20. Active Trade Component
   - Create ActiveTrade component
   - Display Narrative (Daily bias + 4H location)
   - Display Setup (POI type + price)
@@ -205,7 +205,7 @@
   - Display Target (weak high/low)
   - _Requirements: 8.3_
 
-- [ ] 21. POI Map Component
+- [x] 21. POI Map Component
   - Create POIMap component
   - Display active Order Blocks with distance and confidence
   - Display active FVGs with distance and confidence
