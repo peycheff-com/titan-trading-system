@@ -25,6 +25,14 @@ class Backtester extends EventEmitter {
   }
 
   /**
+   * Update options at runtime
+   */
+  updateOptions(newOptions) {
+    this.options = { ...this.options, ...newOptions };
+    this.log('info', 'Backtester options updated', { options: this.options });
+  }
+
+  /**
    * Initialize with dependencies
    */
   initialize(dependencies) {

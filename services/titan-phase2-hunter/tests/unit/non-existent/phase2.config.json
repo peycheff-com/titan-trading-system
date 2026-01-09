@@ -18,6 +18,12 @@
     "maxPortfolioHeat": 15,
     "correlationThreshold": 0.7
   },
-  "version": 24,
-  "lastModified": 1767894431940
+  "forwardTestConfig": {
+    "enabled": false,
+    "duration": 24,
+    "logSignalsOnly": false,
+    "compareToBacktest": false
+  },
+  "version": 25,
+  "lastModified": 1767970785073
 }

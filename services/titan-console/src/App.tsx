@@ -17,6 +17,7 @@ import Execution from "@/pages/organs/Execution";
 import Journal from "@/pages/ops/Journal";
 import Alerts from "@/pages/ops/Alerts";
 import Infra from "@/pages/ops/Infra";
+import SettingsPage from "@/pages/Settings";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,6 +48,7 @@ const App = () => (
             <Route path="/journal" element={<Journal />} />
             <Route path="/alerts" element={<Alerts />} />
             <Route path="/infra" element={<Infra />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Route>
           
           <Route path="*" element={<NotFound />} />

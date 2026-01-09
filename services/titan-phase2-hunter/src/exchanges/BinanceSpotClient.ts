@@ -47,6 +47,7 @@ export class BinanceSpotClient {
   private isReconnecting = false;
   private heartbeatInterval: NodeJS.Timeout | null = null;
   private lastPongTime = 0;
+  private isInitialized = false;
   
   // Callbacks
   private errorCallbacks = new Set<ErrorCallback>();
@@ -54,6 +55,70 @@ export class BinanceSpotClient {
 
   constructor() {
     this.setupHeartbeat();
+  }
+
+  /**
+   * Initialize the Binance client
+   * Tests connection and prepares WebSocket
+   */
+  public async initialize(): Promise<void> {
+    if (this.isInitialized) {
+      return;
+    }
+
+    try {
+      console.log('📡 Initializing Binance Spot Client...');
+      
+      // Test connection by fetching server time
+      const response = await fetch(`${this.baseUrl}/api/v3/time`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      this.isInitialized = true;
+      console.log('✅ Binance Spot Client initialized');
+      
+    } catch (error) {
+      console.error('❌ Failed to initialize Binance client:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Disconnect and cleanup the Binance client
+   */
+  public async disconnect(): Promise<void> {
+    if (!this.isInitialized) {
+      return;
+    }
+
+    try {
+      console.log('📡 Disconnecting Binance Spot Client...');
+      
+      // Close WebSocket connection
+      if (this.ws) {
+        this.ws.close();
+        this.ws = null;
+      }
+      
+      // Clear heartbeat interval
+      if (this.heartbeatInterval) {
+        clearInterval(this.heartbeatInterval);
+        this.heartbeatInterval = null;
+      }
+      
+      // Clear subscriptions
+      this.subscriptions.clear();
+      this.errorCallbacks.clear();
+      this.reconnectCallbacks.clear();
+      
+      this.isInitialized = false;
+      console.log('✅ Binance Spot Client disconnected');
+      
+    } catch (error) {
+      console.error('❌ Error disconnecting Binance client:', error);
+      throw error;
+    }
   }
 
   /**
@@ -291,7 +356,8 @@ export class BinanceSpotClient {
         price: parseFloat(aggTrade.p),
         quantity: parseFloat(aggTrade.q),
         side: aggTrade.m ? 'SELL' : 'BUY', // m=true means buyer is market maker (sell order filled)
-        timestamp: aggTrade.T
+        timestamp: aggTrade.T,
+        isBuyerMaker: aggTrade.m // true = sell order hit buy limit, false = buy order hit sell limit
       };
 
       // Emit to all callbacks for this symbol

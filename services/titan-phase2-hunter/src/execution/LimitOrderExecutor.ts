@@ -26,6 +26,7 @@ import {
   Position
 } from '../types';
 import { BybitPerpsClient } from '../exchanges/BybitPerpsClient';
+import { logExecution, logError } from '../logging/Logger';
 
 export interface LimitOrderConfig {
   orderTimeout: number; // Timeout in milliseconds (default: 60000)
@@ -57,6 +58,7 @@ export interface OrderMonitoringState {
   startTime: number;
   cancelled: boolean;
   filled: boolean;
+  signalId?: string; // Optional signal ID for logging
 }
 
 export interface LimitOrderExecutorEvents {
@@ -154,7 +156,7 @@ export class LimitOrderExecutor extends EventEmitter {
 
       if (orderResult.orderId) {
         // Start monitoring the order
-        this.startOrderMonitoring(orderResult.orderId, signal.symbol, entryPrice, orderBlock);
+        this.startOrderMonitoring(orderResult.orderId, signal.symbol, entryPrice, orderBlock, signal.timestamp.toString());
         
         this.emit('order:placed', orderResult.orderId, signal.symbol, entryPrice);
         
@@ -178,6 +180,14 @@ export class LimitOrderExecutor extends EventEmitter {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       console.error(`❌ Failed to place Post-Only order for ${signal.symbol}:`, errorMsg);
       
+      logError('ERROR', `Failed to place Post-Only order for ${signal.symbol}`, {
+        symbol: signal.symbol,
+        component: 'LimitOrderExecutor',
+        function: 'placePostOnlyOrder',
+        stack: (error as Error).stack,
+        data: { signal, orderBlock }
+      });
+      
       this.emit('execution:error', error as Error, { signal, orderBlock });
       
       return {
@@ -198,7 +208,8 @@ export class LimitOrderExecutor extends EventEmitter {
     orderId: string, 
     symbol: string, 
     entryPrice: number, 
-    orderBlock: OrderBlock
+    orderBlock: OrderBlock,
+    signalId?: string
   ): void {
     const monitoringState: OrderMonitoringState = {
       orderId,
@@ -207,7 +218,8 @@ export class LimitOrderExecutor extends EventEmitter {
       orderBlock,
       startTime: Date.now(),
       cancelled: false,
-      filled: false
+      filled: false,
+      signalId
     };
 
     this.activeOrders.set(orderId, monitoringState);
@@ -537,7 +549,24 @@ export class LimitOrderExecutor extends EventEmitter {
       // Calculate position size (this should be stored from original order)
       const positionSize = 0.1; // Simplified - should get actual fill quantity
       
+      // Calculate slippage
+      const expectedPrice = orderState.entryPrice;
+      const slippage = Math.abs(fillPrice - expectedPrice) / expectedPrice;
+      
       this.emit('order:filled', orderId, fillPrice, positionSize);
+      
+      // Log execution to structured logger
+      const orderResult: OrderResult = {
+        orderId,
+        symbol: orderState.symbol,
+        side: orderState.symbol.includes('LONG') ? 'Buy' : 'Sell',
+        qty: positionSize,
+        price: fillPrice,
+        status: 'FILLED',
+        timestamp: Date.now()
+      };
+      
+      logExecution(orderResult, slippage, orderState.signalId);
       
       // Create position object for position manager
       const { stopLoss, takeProfit } = this.setStopAndTarget(

@@ -1,0 +1,23 @@
+{
+  "alignmentWeights": {
+    "daily": 50,
+    "h4": 30,
+    "m15": 20
+  },
+  "rsConfig": {
+    "threshold": 2,
+    "lookbackPeriod": 4
+  },
+  "riskConfig": {
+    "maxLeverage": 5,
+    "stopLossPercent": 1.5,
+    "targetPercent": 4.5
+  },
+  "portfolioConfig": {
+    "maxConcurrentPositions": 5,
+    "maxPortfolioHeat": 15,
+    "correlationThreshold": 0.7
+  },
+  "version": 2,
+  "lastModified": 1767965122748
+}

@@ -2,10 +2,16 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   
+  // Test setup and teardown
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+  globalSetup: '<rootDir>/tests/globalSetup.ts',
+  globalTeardown: '<rootDir>/tests/globalTeardown.ts',
+  
   // Test discovery
   roots: ['<rootDir>/src', '<rootDir>/tests'],
   testMatch: [
     '**/*.test.ts',
+    '**/*.test.tsx',
     '**/*.property.test.ts', 
     '**/*.integration.test.ts'
   ],
@@ -13,9 +19,9 @@ module.exports = {
   // Coverage configuration
   collectCoverageFrom: [
     'src/**/*.ts',
+    'src/**/*.tsx',
     '!src/**/*.d.ts',
     '!src/**/index.ts',
-    '!src/console/**/*.tsx',
     '!src/**/*.types.ts',
     '!src/**/__tests__/**',
     '!src/**/__mocks__/**'
@@ -34,7 +40,10 @@ module.exports = {
   // Module resolution
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
-    '^@tests/(.*)$': '<rootDir>/tests/$1'
+    '^@tests/(.*)$': '<rootDir>/tests/$1',
+    '^@console/(.*)$': '<rootDir>/src/console/$1',
+    '^@engine/(.*)$': '<rootDir>/src/engine/$1',
+    '^@config/(.*)$': '<rootDir>/src/config/$1'
   },
   
   // Test execution settings
@@ -69,31 +78,10 @@ module.exports = {
   // Maximum number of concurrent workers
   maxWorkers: process.env.CI ? 2 : '50%',
   
-  // ES Modules support for node-fetch v3 and chalk v5
-  extensionsToTreatAsEsm: ['.ts'],
-  
-  // Transform ES modules in node_modules
-  transformIgnorePatterns: [
-    'node_modules/(?!(node-fetch|fetch-blob|data-uri-to-buffer|formdata-polyfill|web-streams-polyfill|chalk)/)'
-  ],
-  
-  // Transform configuration for better TypeScript support
+  // Transform configuration for TypeScript
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
-      tsconfig: 'tsconfig.test.json',
-      useESM: true,
-      // Enable diagnostics in development, disable in CI for performance
-      diagnostics: process.env.CI ? false : {
-        warnOnly: true,
-        exclude: ['**/*.test.ts', '**/*.spec.ts']
-      },
-      // Enable incremental compilation for faster rebuilds
-      incremental: true,
-      // Disable source map support in CI for performance
-      disableSourceMapSupport: process.env.CI ? true : false
+      tsconfig: 'tsconfig.test.json'
     }]
-  },
-  
-  // Setup files for enhanced testing
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts']
+  }
 };

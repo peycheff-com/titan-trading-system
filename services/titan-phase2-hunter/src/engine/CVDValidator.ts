@@ -13,6 +13,7 @@
  * Requirements: 4.1-4.7 (Order Flow X-Ray)
  */
 
+import { EventEmitter } from 'events';
 import { Absorption, Distribution, POI } from '../types';
 
 export interface CVDTrade {
@@ -23,10 +24,14 @@ export interface CVDTrade {
   isBuyerMaker: boolean; // true = sell order hit buy limit, false = buy order hit sell limit
 }
 
-export class CVDValidator {
+export class CVDValidator extends EventEmitter {
   private tradeHistory: Map<string, CVDTrade[]> = new Map();
   private readonly HISTORY_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
   private readonly CVD_WINDOW_MS = 5 * 60 * 1000; // 5 minutes for CVD calculation
+
+  constructor() {
+    super();
+  }
 
   /**
    * Calculate Cumulative Volume Delta for a symbol
@@ -93,12 +98,17 @@ export class CVDValidator {
       
       console.log(`🔍 CVD Absorption detected: Price LL ${p3.toFixed(2)}, CVD HL ${cvd3.toFixed(0)}, Strength: ${strength.toFixed(1)}`);
       
-      return {
+      const absorption: Absorption = {
         price: p3,
         cvdValue: cvd3,
         timestamp: Date.now(),
         confidence: strength
       };
+      
+      // Emit absorption event
+      this.emit('absorption', absorption);
+      
+      return absorption;
     }
     
     return null;
@@ -141,12 +151,17 @@ export class CVDValidator {
       
       console.log(`🔍 CVD Distribution detected: Price HH ${p3.toFixed(2)}, CVD LH ${cvd3.toFixed(0)}, Strength: ${strength.toFixed(1)}`);
       
-      return {
+      const distribution: Distribution = {
         price: p3,
         cvdValue: cvd3,
         timestamp: Date.now(),
         confidence: strength
       };
+      
+      // Emit distribution event
+      this.emit('distribution', distribution);
+      
+      return distribution;
     }
     
     return null;

@@ -66,6 +66,13 @@ import { registerGlobalRateLimiting, createStrictRateLimitConfig, createWebhookR
 import { sanitizationHook, validateSignalPayload } from './middleware/inputValidator.js';
 import { validateOnStartup } from './config/ConfigValidator.js';
 
+// Configuration & Knowledge Components
+import { StrategicMemory } from './StrategicMemory.js';
+import { ConfigVersioning } from './ConfigVersioning.js';
+import { Guardrails } from './Guardrails.js';
+import { Backtester } from './Backtester.js';
+import configRoutes from './routes/config.js';
+
 // Requirement 96.1, 96.10: Validate configuration BEFORE initializing any components
 // This ensures fail-fast startup with clear error messages
 console.log('Starting Titan Execution Microservice...');
@@ -353,6 +360,68 @@ const configManager = new ConfigManager({
   brokerGateway,
 });
 
+// Wire up dynamic configuration updates
+// Requirements: 90.1, 90.2 - Dynamic updates for Fees and Safety
+configManager.on('config:changed', (event) => {
+  loggerAdapter.info({ type: event.type }, 'Configuration update received');
+
+  if (event.type === 'fees' && event.fees) {
+    if (orderManager) {
+      orderManager.updateFees(event.fees.maker_fee_pct, event.fees.taker_fee_pct);
+    }
+  } else if (event.type === 'safety' && event.safety) {
+    if (safetyGates) {
+      safetyGates.updateConfig(event.safety);
+    }
+  } else if (event.type === 'system' && event.system) {
+    if (safetyGates) {
+      // Pass system settings (like rate limits) to SafetyGates
+      safetyGates.updateConfig({ system: event.system });
+    }
+    loggerAdapter.info({ system: event.system }, 'System configuration updated');
+  } else if (event.type === 'guardrails' && event.guardrails) {
+    if (guardrails) {
+      guardrails.updateBounds(event.guardrails);
+    }
+  } else if (event.type === 'backtester' && event.backtester) {
+    if (backtester) {
+      backtester.updateOptions(event.backtester);
+    }
+  } else if (event.type === 'strategic_memory' && event.strategic_memory) {
+    if (strategicMemory) {
+      strategicMemory.updateOptions(event.strategic_memory);
+    }
+  } else if (event.type === 'api_keys' && event.api_keys) {
+    // Dynamic re-initialization of Broker Adapter
+    const exchangeId = (event.api_keys.broker || 'bybit').toLowerCase();
+    
+    if (exchangeId === 'bybit' && event.api_keys.bybit_api_key && event.api_keys.bybit_api_secret) {
+      loggerAdapter.info({ 
+        testnet: event.api_keys.testnet 
+      }, 'Re-initializing BybitAdapter with new configuration');
+      
+      import('./adapters/BybitAdapter.js').then(({ BybitAdapter }) => {
+        const newAdapter = new BybitAdapter({
+          apiKey: event.api_keys.bybit_api_key,
+          apiSecret: event.api_keys.bybit_api_secret,
+          testnet: event.api_keys.testnet,
+          category: process.env.BYBIT_CATEGORY || 'linear',
+          rateLimitRps: parseInt(process.env.BYBIT_RATE_LIMIT_RPS || '10'),
+          maxRetries: parseInt(process.env.BYBIT_MAX_RETRIES || '3'),
+          accountCacheTtl: parseInt(process.env.BYBIT_ACCOUNT_CACHE_TTL || '5000'),
+          logger: loggerAdapter,
+        });
+        
+        if (brokerGateway) {
+          brokerGateway.setAdapter(newAdapter);
+        }
+      }).catch(err => {
+        loggerAdapter.error({ error: err.message }, 'Failed to re-initialize BybitAdapter');
+      });
+    }
+  }
+});
+
 // Initialize Database Manager for trade audit trail and crash recovery
 // Requirements: 97.1-97.2, 97.8
 const databaseManager = new DatabaseManager({
@@ -531,6 +600,28 @@ registerPositionRoutes(fastify, routeDependencies);
 registerTradeRoutes(fastify, routeDependencies);
 registerDetectorRoutes(fastify, routeDependencies);
 registerCalculatorRoutes(fastify, routeDependencies);
+
+// Initialize Configuration & Knowledge Components
+const strategicMemory = new StrategicMemory({ logger: loggerAdapter });
+const configVersioning = new ConfigVersioning({ logger: loggerAdapter });
+const guardrails = new Guardrails({ logger: loggerAdapter });
+const backtester = new Backtester({ logger: loggerAdapter });
+
+// Inject dependencies
+strategicMemory.databaseManager = databaseManager;
+configVersioning.databaseManager = databaseManager;
+configVersioning.configManager = configManager;
+guardrails.databaseManager = databaseManager;
+backtester.databaseManager = databaseManager;
+
+// Register Config Routes
+fastify.register(configRoutes, {
+  configVersioning,
+  strategicMemory,
+  guardrails,
+  backtester,
+  configManager
+});
 
 // Prometheus metrics endpoint
 // Requirements: 6.1 - Expose /metrics endpoint for Prometheus scraping

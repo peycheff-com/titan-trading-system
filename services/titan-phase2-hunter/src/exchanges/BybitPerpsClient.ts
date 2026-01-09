@@ -137,10 +137,70 @@ export class BybitPerpsClient {
   private readonly REQUEST_TIMEOUT = 10000; // 10 seconds
   private readonly RETRY_ATTEMPTS = 3;
   private readonly RETRY_DELAY = 1000; // 1 second
+  private isInitialized = false;
 
-  constructor(apiKey: string, apiSecret: string) {
-    this.apiKey = apiKey;
-    this.apiSecret = apiSecret;
+  constructor(apiKey?: string, apiSecret?: string) {
+    this.apiKey = apiKey || process.env.BYBIT_API_KEY || '';
+    this.apiSecret = apiSecret || process.env.BYBIT_API_SECRET || '';
+  }
+
+  /**
+   * Initialize the Bybit client
+   * Validates API credentials and connection
+   */
+  public async initialize(): Promise<void> {
+    if (this.isInitialized) {
+      return;
+    }
+
+    try {
+      console.log('📡 Initializing Bybit Perps Client...');
+      
+      // Test connection by fetching server time
+      await this.makeRequest('GET', '/v5/market/time');
+      
+      // If API keys are provided, test authentication
+      if (this.apiKey && this.apiSecret) {
+        try {
+          await this.getEquity();
+          console.log('✅ Bybit authentication successful');
+        } catch (error) {
+          console.warn('⚠️ Bybit authentication failed, continuing in read-only mode');
+        }
+      } else {
+        console.log('ℹ️ Bybit running in read-only mode (no API keys)');
+      }
+      
+      this.isInitialized = true;
+      console.log('✅ Bybit Perps Client initialized');
+      
+    } catch (error) {
+      console.error('❌ Failed to initialize Bybit client:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Disconnect and cleanup the Bybit client
+   */
+  public async disconnect(): Promise<void> {
+    if (!this.isInitialized) {
+      return;
+    }
+
+    try {
+      console.log('📡 Disconnecting Bybit Perps Client...');
+      
+      // Clear cache
+      this.cache.clear();
+      
+      this.isInitialized = false;
+      console.log('✅ Bybit Perps Client disconnected');
+      
+    } catch (error) {
+      console.error('❌ Error disconnecting Bybit client:', error);
+      throw error;
+    }
   }
 
   /**

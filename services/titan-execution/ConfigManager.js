@@ -31,13 +31,14 @@ export class ConfigManager extends EventEmitter {
     // Default configuration
     // Requirements: 90.1 - Risk Tuner inputs for Phase 1 Risk % and Phase 2 Risk %
     this.config = {
+      mode: process.env.TRADING_MODE || 'MOCK',
       risk_tuner: {
-        phase1_risk_pct: 0.10, // 10% per trade (Phase 1: KICKSTARTER)
-        phase2_risk_pct: 0.05, // 5% per trade (Phase 2: TREND RIDER)
+        phase1_risk_pct: parseFloat(process.env.PHASE_1_RISK_PCT) || 0.10,
+        phase2_risk_pct: parseFloat(process.env.PHASE_2_RISK_PCT) || 0.05,
       },
       // Requirements: 90.2 - Asset Whitelist multi-select to Enable/Disable specific coins
       asset_whitelist: {
-        enabled: true, // Whether whitelist is active
+        enabled: process.env.ENABLE_WHITELIST === 'true', // Whether whitelist is active
         assets: {
           // Default: all major assets enabled
           'BTCUSDT': true,
@@ -52,16 +53,52 @@ export class ConfigManager extends EventEmitter {
           'DOTUSDT': true,
         },
       },
-      // Requirements: 90.3 - API Config input fields for Broker Keys
       api_keys: {
-        broker: 'BYBIT', // 'BYBIT' or 'MEXC'
-        bybit_api_key: null,
-        bybit_api_secret: null,
-        mexc_api_key: null,
-        mexc_api_secret: null,
+        broker: (process.env.EXCHANGE_ID || 'BYBIT').toUpperCase(),
+        bybit_api_key: process.env.BYBIT_API_KEY,
+        bybit_api_secret: process.env.BYBIT_API_SECRET,
+        mexc_api_key: process.env.MEXC_API_KEY,
+        mexc_api_secret: process.env.MEXC_API_SECRET,
+        testnet: process.env.BYBIT_TESTNET === 'true', // Initialize from env
         validated: false,
         last_validated: null,
       },
+      fees: {
+        maker_fee_pct: parseFloat(process.env.MAKER_FEE_PCT) || 0.0002,
+        taker_fee_pct: parseFloat(process.env.TAKER_FEE_PCT) || 0.0005,
+      },
+      safety: {
+        max_consecutive_losses: parseInt(process.env.MAX_CONSECUTIVE_LOSSES) || 10,
+        max_daily_drawdown_pct: parseFloat(process.env.MAX_DAILY_DRAWDOWN_PCT) || 0.05,
+        max_weekly_drawdown_pct: parseFloat(process.env.MAX_WEEKLY_DRAWDOWN_PCT) || 0.10,
+        circuit_breaker_cooldown_hours: parseInt(process.env.CIRCUIT_BREAKER_COOLDOWN_HOURS) || 1,
+      },
+      system: {
+        rate_limit_per_sec: parseInt(process.env.RATE_LIMIT_PER_SEC) || 10,
+      },
+      guardrails: {
+        maxLeverage: 20,
+        maxStopLossPct: 5,
+        maxRiskPerTrade: 5,
+        maxPositionSizePct: 50,
+        maxDailyDrawdownPct: 10,
+        maxTotalDrawdownPct: 20,
+        minConfidenceScore: 0.5,
+        maxConsecutiveLosses: 10
+      },
+      backtester: {
+        bulgariaLatencyMs: 200,
+        bulgariaSlippagePct: 0.2,
+        minTradesForValidation: 10,
+        maxDrawdownIncreasePct: 10
+      },
+      strategic_memory: {
+        maxRecords: 10000,
+        archiveAfterDays: 90,
+        duplicateWindowDays: 30,
+        performanceTrackingDays: 7,
+        contextLimit: 10
+      }
     };
     
     // Track disabled assets for quick lookup
@@ -443,7 +480,7 @@ export class ConfigManager extends EventEmitter {
   
   /**
    * Update configuration (unified method for web UI)
-   * Supports updating broker, mode, risk tuner, and asset whitelist
+   * Supports updating broker, mode, risk tuner, asset whitelist, fees, safety, and system
    */
   async updateConfig(updates) {
     if (!updates || typeof updates !== 'object') {
@@ -484,7 +521,248 @@ export class ConfigManager extends EventEmitter {
       results.asset_whitelist = this.updateAssetWhitelist(updates.asset_whitelist);
     }
 
+    // Update fees
+    if (updates.fees) {
+      results.fees = this.updateFees(updates.fees);
+    }
+
+    // Update safety settings
+    if (updates.safety) {
+      results.safety = this.updateSafety(updates.safety);
+    }
+
+    // Update system settings
+    if (updates.system) {
+      results.system = this.updateSystem(updates.system);
+    }
+
+    // Update guardrails
+    if (updates.guardrails) {
+      results.guardrails = this.updateGuardrails(updates.guardrails);
+    }
+
+    // Update backtester
+    if (updates.backtester) {
+      results.backtester = this.updateBacktester(updates.backtester);
+    }
+
+    // Update strategic memory
+    if (updates.strategic_memory) {
+      results.strategic_memory = this.updateStrategicMemory(updates.strategic_memory);
+    }
+
+    });
+    
+    // Update api_keys
+    if (updates.api_keys) {
+      results.api_keys = this.updateApiKeys(updates.api_keys);
+    }
+
     return results;
+  }
+
+  /**
+   * Update API keys configuration
+   * @param {Object} apiKeys - API keys configuration updates
+   * @returns {Object} Updated API keys configuration
+   */
+  updateApiKeys(apiKeys) {
+    if (!this.config.api_keys) this.config.api_keys = {};
+
+    const fields = [
+      'broker',
+      'bybit_api_key',
+      'bybit_api_secret', 
+      'mexc_api_key',
+      'mexc_api_secret',
+      'testnet' // New field for environment switching
+    ];
+
+    fields.forEach(field => {
+      if (apiKeys[field] !== undefined) {
+        this.config.api_keys[field] = apiKeys[field];
+      }
+    });
+
+    // Special handling for testnet boolean
+    // If it comes as a string "true" or "false", convert it
+    if (typeof this.config.api_keys.testnet === 'string') {
+        this.config.api_keys.testnet = this.config.api_keys.testnet === 'true';
+    }
+
+    this.logger.info({ 
+        broker: this.config.api_keys.broker,
+        testnet: this.config.api_keys.testnet 
+    }, 'API Keys configuration updated');
+
+    this.emit('config:changed', {
+      type: 'api_keys',
+      api_keys: this.config.api_keys,
+    });
+
+    return this.config.api_keys;
+  }
+
+  /**
+   * Update fee configuration
+   * @param {Object} fees - Fee configuration updates
+   * @returns {Object} Updated fee configuration
+   */
+  updateFees(fees) {
+    if (!this.config.fees) this.config.fees = {};
+    
+    if (fees.maker_fee_pct !== undefined) {
+      this.config.fees.maker_fee_pct = fees.maker_fee_pct;
+    }
+    if (fees.taker_fee_pct !== undefined) {
+      this.config.fees.taker_fee_pct = fees.taker_fee_pct;
+    }
+    
+    this.logger.info({ fees }, 'Fee configuration updated');
+    
+    this.emit('config:changed', {
+      type: 'fees',
+      fees: this.config.fees,
+    });
+
+    return this.config.fees;
+  }
+
+  /**
+   * Update safety configuration
+   * @param {Object} safety - Safety configuration updates
+   * @returns {Object} Updated safety configuration
+   */
+  updateSafety(safety) {
+    if (!this.config.safety) this.config.safety = {};
+
+    const fields = [
+      'max_consecutive_losses', 
+      'max_daily_drawdown_pct', 
+      'max_weekly_drawdown_pct', 
+      'circuit_breaker_cooldown_hours'
+    ];
+
+    fields.forEach(field => {
+      if (safety[field] !== undefined) {
+        this.config.safety[field] = safety[field];
+      }
+    });
+
+    this.logger.info({ safety }, 'Safety configuration updated');
+
+    this.emit('config:changed', {
+      type: 'safety',
+      safety: this.config.safety,
+    });
+
+    return this.config.safety;
+  }
+
+  /**
+   * Update system configuration
+   * @param {Object} system - System configuration updates
+   * @returns {Object} Updated system configuration
+   */
+  updateSystem(system) {
+    if (!this.config.system) this.config.system = {};
+
+    if (system.rate_limit_per_sec !== undefined) {
+      this.config.system.rate_limit_per_sec = system.rate_limit_per_sec;
+    }
+
+    this.logger.info({ system }, 'System configuration updated');
+
+    this.emit('config:changed', {
+      type: 'system',
+      system: this.config.system,
+    });
+
+    return this.config.system;
+  }
+
+  updateGuardrails(guardrails) {
+    if (!this.config.guardrails) this.config.guardrails = {};
+
+    // Fields mapping to Guardrails globalBounds
+    const fields = [
+      'maxLeverage',
+      'maxStopLossPct',
+      'maxRiskPerTrade',
+      'maxPositionSizePct',
+      'maxDailyDrawdownPct',
+      'maxTotalDrawdownPct',
+      'minConfidenceScore',
+      'maxConsecutiveLosses'
+    ];
+
+    fields.forEach(field => {
+      if (guardrails[field] !== undefined) {
+        this.config.guardrails[field] = guardrails[field];
+      }
+    });
+
+    this.logger.info({ guardrails }, 'Guardrails configuration updated');
+
+    this.emit('config:changed', {
+      type: 'guardrails',
+      guardrails: this.config.guardrails,
+    });
+
+    return this.config.guardrails;
+  }
+
+  updateBacktester(backtester) {
+    if (!this.config.backtester) this.config.backtester = {};
+
+    const fields = [
+      'bulgariaLatencyMs',
+      'bulgariaSlippagePct',
+      'minTradesForValidation',
+      'maxDrawdownIncreasePct'
+    ];
+
+    fields.forEach(field => {
+      if (backtester[field] !== undefined) {
+        this.config.backtester[field] = backtester[field];
+      }
+    });
+
+    this.logger.info({ backtester }, 'Backtester configuration updated');
+
+    this.emit('config:changed', {
+      type: 'backtester',
+      backtester: this.config.backtester,
+    });
+
+    return this.config.backtester;
+  }
+
+  updateStrategicMemory(memory) {
+    if (!this.config.strategic_memory) this.config.strategic_memory = {};
+
+    const fields = [
+      'maxRecords',
+      'archiveAfterDays',
+      'duplicateWindowDays',
+      'performanceTrackingDays',
+      'contextLimit'
+    ];
+
+    fields.forEach(field => {
+      if (memory[field] !== undefined) {
+        this.config.strategic_memory[field] = memory[field];
+      }
+    });
+
+    this.logger.info({ memory }, 'Strategic Memory configuration updated');
+
+    this.emit('config:changed', {
+      type: 'strategic_memory',
+      strategic_memory: this.config.strategic_memory,
+    });
+
+    return this.config.strategic_memory;
   }
 
   /**
@@ -492,6 +770,7 @@ export class ConfigManager extends EventEmitter {
    */
   reset() {
     this.config = {
+      mode: process.env.TRADING_MODE || 'MOCK',
       risk_tuner: {
         phase1_risk_pct: 0.10,
         phase2_risk_pct: 0.05,
@@ -520,6 +799,19 @@ export class ConfigManager extends EventEmitter {
         validated: false,
         last_validated: null,
       },
+      fees: {
+        maker_fee_pct: 0.0002, // 0.02%
+        taker_fee_pct: 0.0005, // 0.05%
+      },
+      safety: {
+        max_consecutive_losses: 10,
+        max_daily_drawdown_pct: 0.05,
+        max_weekly_drawdown_pct: 0.10,
+        circuit_breaker_cooldown_hours: 1,
+      },
+      system: {
+        rate_limit_per_sec: 10,
+      }
     };
     
     this._updateDisabledAssets();

@@ -21,6 +21,7 @@ import {
   OrderResult
 } from '../types';
 import { BybitPerpsClient } from '../exchanges/BybitPerpsClient';
+import { logPositionClose, logError } from '../logging/Logger';
 
 export interface PositionManagerConfig {
   breakevenRLevel: number; // R level to move stop to breakeven (default: 1.5)
@@ -349,9 +350,31 @@ export class PositionManager extends EventEmitter {
       const result = await this.bybitClient.placeOrderWithRetry(orderParams);
       
       if (result.status === 'FILLED') {
+        // Calculate profit percentage and hold time
+        const profitPercentage = ((result.price - position.entryPrice) / position.entryPrice) * 100;
+        const holdTime = Date.now() - position.entryTime;
+        
         // Update position status
         position.status = 'CLOSED';
         position.realizedPnL += (position.quantity * (result.price - position.entryPrice));
+        
+        // Map PositionManager close reasons to Logger close reasons
+        const loggerReason = reason === 'STOP_HIT' ? 'STOP_LOSS' : 
+                            reason === 'TARGET_HIT' ? 'TAKE_PROFIT' : 
+                            'MANUAL';
+        
+        // Log position close to structured logger
+        logPositionClose(
+          position.id,
+          position.symbol,
+          position.side,
+          position.entryPrice,
+          result.price,
+          profitPercentage,
+          loggerReason,
+          holdTime,
+          position.rValue
+        );
         
         // Remove from active management
         this.positions.delete(position.id);
@@ -364,6 +387,13 @@ export class PositionManager extends EventEmitter {
       return false;
     } catch (error) {
       console.error(`❌ Failed to close position ${position.symbol}:`, error);
+      logError('ERROR', `Failed to close position ${position.symbol}`, {
+        symbol: position.symbol,
+        component: 'PositionManager',
+        function: 'closePosition',
+        stack: (error as Error).stack,
+        data: { position, reason }
+      });
       this.emit('position:error', position, error as Error);
       return false;
     }

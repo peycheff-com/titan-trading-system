@@ -10,11 +10,6 @@ export default async function globalSetup() {
   process.env.NODE_ENV = 'test';
   process.env.LOG_LEVEL = 'error'; // Reduce log noise during tests
   
-  // Mock time for consistent test results
-  const mockDate = new Date('2024-01-01T12:00:00Z');
-  jest.useFakeTimers();
-  jest.setSystemTime(mockDate);
-  
   // Initialize any global test resources
   // (e.g., test database, mock servers, etc.)
   

@@ -79,6 +79,31 @@ class SafetyGates {
     stop() {
         this.liquidationDetector.stop();
     }
+    /**
+     * Update configuration dynamically
+     * @param {Object} config - Configuration updates for safety components
+     */
+    updateConfig(config) {
+        if (config.circuit_breaker) {
+            this.circuitBreaker.updateConfig(config.circuit_breaker);
+        }
+        
+        if (config.rate_limiter || config.system) {
+            // Support both direct rate_limiter config and system.rate_limit_per_sec
+            const newLimit = config.rate_limiter?.requestsPerSecond || config.system?.rate_limit_per_sec;
+            
+            if (newLimit) {
+                this.rateLimiter.updateLimits('binance', {
+                    requestsPerSecond: newLimit,
+                    // Scale per minute limit proportionally or keep default? 
+                    // Let's assume per minute is 60 * per second for now to keep it safe
+                    requestsPerMinute: newLimit * 60 
+                });
+            }
+        }
+
+        console.log('[SafetyGates] Configuration updated');
+    }
 }
 
 export { SafetyGates };

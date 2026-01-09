@@ -54,6 +54,16 @@ export interface PortfolioConfig {
 }
 
 /**
+ * Forward test configuration
+ */
+export interface ForwardTestConfig {
+  enabled: boolean; // Paper trading toggle
+  duration: number; // Test duration in hours
+  logSignalsOnly: boolean; // If true, only log signals without simulating trades
+  compareToBacktest: boolean; // If true, compare results to backtest
+}
+
+/**
  * Complete Phase 2 configuration
  */
 export interface Phase2Config {
@@ -61,6 +71,7 @@ export interface Phase2Config {
   rsConfig: RSConfig;
   riskConfig: RiskConfig;
   portfolioConfig: PortfolioConfig;
+  forwardTestConfig: ForwardTestConfig;
   version: number;
   lastModified: number;
 }
@@ -106,6 +117,12 @@ const DEFAULT_CONFIG: Phase2Config = {
     maxConcurrentPositions: 5, // 5 positions
     maxPortfolioHeat: 15, // 15%
     correlationThreshold: 0.7, // 0.7
+  },
+  forwardTestConfig: {
+    enabled: false, // Paper trading disabled by default
+    duration: 24, // 24 hours
+    logSignalsOnly: false, // Full paper trading by default
+    compareToBacktest: false, // No comparison by default
   },
   version: 1,
   lastModified: Date.now(),
@@ -313,6 +330,24 @@ export class ConfigManager extends EventEmitter {
   }
 
   /**
+   * Update forward test configuration
+   * Add paper trading toggle in config
+   */
+  updateForwardTestConfig(forwardTestConfig: Partial<ForwardTestConfig>): void {
+    const newForwardTestConfig = {
+      ...this.config.forwardTestConfig,
+      ...forwardTestConfig,
+    };
+
+    const newConfig = {
+      ...this.config,
+      forwardTestConfig: newForwardTestConfig,
+    };
+
+    this.saveConfig(newConfig);
+  }
+
+  /**
    * Start watching configuration file for changes (hot-reload)
    * Support hot-reload without restart
    */
@@ -457,6 +492,26 @@ export class ConfigManager extends EventEmitter {
       }
     }
 
+    // Validate forward test config
+    if (!config.forwardTestConfig) {
+      errors.push("Missing forwardTestConfig");
+    } else {
+      const { enabled, duration, logSignalsOnly, compareToBacktest } = config.forwardTestConfig;
+
+      if (typeof enabled !== 'boolean') {
+        errors.push("Forward test enabled must be boolean");
+      }
+      if (duration < 1 || duration > 168) { // 1 hour to 1 week
+        errors.push(`Forward test duration must be 1-168 hours, got ${duration} hours`);
+      }
+      if (typeof logSignalsOnly !== 'boolean') {
+        errors.push("Forward test logSignalsOnly must be boolean");
+      }
+      if (typeof compareToBacktest !== 'boolean') {
+        errors.push("Forward test compareToBacktest must be boolean");
+      }
+    }
+
     return {
       isValid: errors.length === 0,
       errors,
@@ -485,6 +540,10 @@ export class ConfigManager extends EventEmitter {
         ...DEFAULT_CONFIG.portfolioConfig,
         ...loadedConfig.portfolioConfig,
       },
+      forwardTestConfig: {
+        ...DEFAULT_CONFIG.forwardTestConfig,
+        ...loadedConfig.forwardTestConfig,
+      },
       version: loadedConfig.version || DEFAULT_CONFIG.version,
       lastModified: loadedConfig.lastModified || Date.now(),
     };
@@ -508,6 +567,7 @@ export class ConfigManager extends EventEmitter {
       `📈 RS: Threshold ${config.rsConfig.threshold}%, Lookback ${config.rsConfig.lookbackPeriod}h`,
       `⚡ Risk: Leverage ${config.riskConfig.maxLeverage}x, Stop ${config.riskConfig.stopLossPercent}%, Target ${config.riskConfig.targetPercent}%`,
       `💼 Portfolio: Max ${config.portfolioConfig.maxConcurrentPositions} positions, Heat ${config.portfolioConfig.maxPortfolioHeat}%, Correlation ${config.portfolioConfig.correlationThreshold}`,
+      `🧪 Forward Test: ${config.forwardTestConfig.enabled ? 'Enabled' : 'Disabled'}, Duration ${config.forwardTestConfig.duration}h, Signals Only: ${config.forwardTestConfig.logSignalsOnly}`,
     ].join("\n");
   }
 

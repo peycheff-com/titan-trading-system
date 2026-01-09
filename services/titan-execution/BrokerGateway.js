@@ -700,6 +700,15 @@ export class BrokerGateway extends EventEmitter {
   }
 
   /**
+   * Set a new broker adapter (for runtime switching)
+   * @param {BrokerAdapter} adapter - New broker adapter instance
+   */
+  setAdapter(adapter) {
+    this.adapter = adapter;
+    this.logger.info({}, 'Broker adapter updated successfully');
+  }
+
+  /**
    * Destroy the gateway and clean up resources
    * Call this for graceful shutdown
    */

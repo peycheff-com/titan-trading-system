@@ -280,4 +280,32 @@ async function configRoutes(fastify, options) {
   });
 }
 
+  // Requirements: 90.1, 90.2, 90.3 - Config Updates from UI
+  fastify.post('/api/config/update', async (request, reply) => {
+    try {
+      const changes = request.body;
+      
+      if (!changes || Object.keys(changes).length === 0) {
+        return reply.code(400).send({
+          error: 'No configuration changes provided'
+        });
+      }
+
+      // Use configManager's unified update method
+      const results = await configManager.updateConfig(changes);
+
+      return {
+        success: true,
+        message: 'Configuration updated successfully',
+        results
+      };
+    } catch (error) {
+      request.log.error(error);
+      return reply.code(400).send({
+        error: error.message
+      });
+    }
+  });
+}
+
 export default configRoutes;

@@ -135,6 +135,29 @@ class CircuitBreaker extends EventEmitter {
                 : 0
         };
     }
+    /**
+     * Update configuration dynamically
+     * @param {Object} newConfig - New configuration values
+     */
+    updateConfig(newConfig) {
+        if (!newConfig) return;
+        
+        const validKeys = ['maxConsecutiveLosses', 'maxDailyDrawdownPct', 'maxWeeklyDrawdownPct', 'cooldownHours', 'autoReset'];
+        let updated = false;
+
+        for (const key of validKeys) {
+            if (newConfig[key] !== undefined) {
+                this.config[key] = newConfig[key];
+                updated = true;
+            }
+        }
+
+        if (updated) {
+            console.log('[CircuitBreaker] Configuration updated:', this.config);
+            // Re-check breakers with new thresholds immediately
+            this.checkBreakers();
+        }
+    }
 }
 
 export { CircuitBreaker };

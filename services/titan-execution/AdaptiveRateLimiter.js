@@ -22,6 +22,23 @@ class AdaptiveRateLimiter {
         console.log(`[RateLimiter] Registered ${exchangeId}: ${config.requestsPerMinute}/min`);
     }
 
+    updateLimits(exchangeId, config) {
+        if (!this.limits.has(exchangeId)) {
+            console.warn(`[RateLimiter] Cannot update limits: ${exchangeId} not registered`);
+            return;
+        }
+
+        const current = this.limits.get(exchangeId);
+        this.limits.set(exchangeId, {
+            ...current,
+            requestsPerSecond: config.requestsPerSecond || current.requestsPerSecond,
+            requestsPerMinute: config.requestsPerMinute || current.requestsPerMinute,
+            weightPerRequest: config.weightPerRequest || current.weightPerRequest
+        });
+        
+        console.log(`[RateLimiter] Updated limits for ${exchangeId}: ${config.requestsPerSecond}/s, ${config.requestsPerMinute}/min`);
+    }
+
     async throttle(exchangeId, weight = 1) {
         const limits = this.limits.get(exchangeId);
         if (!limits) {

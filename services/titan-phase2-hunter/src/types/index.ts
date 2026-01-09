@@ -143,6 +143,7 @@ export interface Trade {
   quantity: number;
   side: 'BUY' | 'SELL';
   timestamp: number;
+  isBuyerMaker: boolean; // true = sell order hit buy limit, false = buy order hit sell limit
 }
 
 export interface CVDTrade {
@@ -298,3 +299,18 @@ export interface PartialProfitConfig {
   rLevel: number; // R level to take partial profit
   percentage: number; // Percentage to close
 }
+// Event Types (re-exported from events module)
+export type {
+  EventMap,
+  HologramUpdatedEvent,
+  SessionChangeEvent,
+  CVDAbsorptionEvent,
+  CVDDistributionEvent,
+  SignalGeneratedEvent,
+  ExecutionCompleteEvent,
+  ErrorEvent,
+  ScanCompleteEvent,
+  JudasSwingEvent,
+  POIDetectedEvent,
+  RiskWarningEvent
+} from '../events';

@@ -26,6 +26,7 @@ import { HologramEngine } from '../engine/HologramEngine';
 import { SessionProfiler } from '../engine/SessionProfiler';
 import { InefficiencyMapper } from '../engine/InefficiencyMapper';
 import { CVDValidator } from '../engine/CVDValidator';
+import { logSignal, logError } from '../logging/Logger';
 
 export interface SignalGeneratorConfig {
   minAlignmentScore: number; // Minimum alignment score for B signals (default: 60)
@@ -364,10 +365,27 @@ export class SignalGenerator {
       };
 
       console.log(`✅ Signal generated for ${symbol} ${direction}: ${hologram.status} alignment, ${confidence}% confidence`);
+      
+      // Log signal to structured logger
+      logSignal(
+        signal,
+        hologram,
+        session.type,
+        this.getPOIType(context.nearbyPOIs[0]),
+        validation.cvdValid
+      );
+      
       return signal;
 
     } catch (error) {
       console.error(`❌ Error generating signal for ${symbol}:`, error);
+      logError('ERROR', `Error generating signal for ${symbol}`, {
+        symbol,
+        component: 'SignalGenerator',
+        function: 'generateSignal',
+        stack: (error as Error).stack,
+        data: { direction }
+      });
       return null;
     }
   }

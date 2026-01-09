@@ -22,6 +22,7 @@ import {
   Server,
   ChevronLeft,
   ChevronRight,
+  Settings,
 } from 'lucide-react';
 
 const navigation = [
@@ -54,6 +55,7 @@ const navigation = [
       { name: 'Journal', path: '/journal', icon: BookOpen },
       { name: 'Alerts', path: '/alerts', icon: Bell },
       { name: 'Infra / DR', path: '/infra', icon: Server },
+      { name: 'Settings', path: '/settings', icon: Settings },
     ],
   },
 ];
