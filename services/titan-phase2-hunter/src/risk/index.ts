@@ -30,3 +30,15 @@ export type {
   RankedSignal,
   RiskAllocation
 } from './PortfolioManager';
+
+// Enhanced Risk Management (2026 Modernization)
+export { EnhancedRiskManager, DEFAULT_ENHANCED_RISK_CONFIG } from './EnhancedRiskManager';
+export type {
+  EnhancedRiskManagerConfig,
+  EnhancedRiskManagerEvents,
+  RiskConditionType,
+  RiskCondition,
+  RiskAdjustments,
+  ExchangeStatus,
+  EnhancedRiskState
+} from './EnhancedRiskManager';

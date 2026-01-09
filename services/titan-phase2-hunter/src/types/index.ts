@@ -314,3 +314,6 @@ export type {
   POIDetectedEvent,
   RiskWarningEvent
 } from '../events';
+
+// 2026 Enhancement Types (re-exported from enhanced-2026 module)
+export * from './enhanced-2026';

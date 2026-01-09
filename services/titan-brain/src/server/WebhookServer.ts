@@ -68,6 +68,19 @@ interface SignalRequestBody {
 }
 
 /**
+ * Execution Report Body Schema
+ */
+interface ExecutionReportBody {
+  type: string;
+  phaseId: PhaseId;
+  symbol: string;
+  side: "BUY" | "SELL";
+  price: number;
+  qty: number;
+  timestamp: number;
+}
+
+/**
  * Manual override request body schema
  */
 interface OverrideRequestBody {
@@ -503,6 +516,12 @@ export class WebhookServer {
       this.handlePhaseSignal.bind(this, "phase3"),
     );
 
+    // Execution Report Webhook (Feedback Loop)
+    this.server.post(
+      "/webhook/execution-report",
+      this.handleExecutionReport.bind(this),
+    );
+
     // Phase notification endpoints (for phases to register/update)
     this.server.post("/phases/register", this.handlePhaseRegister.bind(this));
     this.server.get("/phases/status", this.handlePhasesStatus.bind(this));
@@ -788,6 +807,39 @@ export class WebhookServer {
         error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
+    }
+  }
+
+  /**
+   * Handle POST /webhook/execution-report - Process execution feedback
+   * Completes the loop from Execution -> Brain
+   */
+  private async handleExecutionReport(
+    request: FastifyRequest<{ Body: ExecutionReportBody }>,
+    reply: FastifyReply,
+  ): Promise<void> {
+    try {
+      const report = request.body;
+      this.logger.info("Execution Report Processing", {
+        phaseId: report.phaseId,
+        symbol: report.symbol,
+        side: report.side,
+      });
+
+      // Process execution in Brain (updates positions and calculates PnL)
+      if (this.brain) {
+        await this.brain.handleExecutionReport(report);
+      } else {
+        this.logger.warn("Brain instance not available for execution report");
+      }
+
+      reply.send({ success: true, timestamp: Date.now() });
+    } catch (error) {
+      this.logger.error(
+        "Failed to process execution report",
+        error instanceof Error ? error : new Error(String(error)),
+      );
+      reply.status(500).send({ error: "Processing failed" });
     }
   }
 

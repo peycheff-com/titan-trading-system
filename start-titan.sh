@@ -16,9 +16,9 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Configuration - Port assignments
-if [ -f "$CONSOLE_PID" ]; then
-
-fi
+# Port assignments moved to specific sections
+CONSOLE_PORT=8080      # titan-console (Frontend)
+EXECUTION_PORT=3002    # titan-execution (Execution/Trading Engine)
 BRAIN_PORT=3100        # titan-brain (Brain orchestrator)
 
 # Database configuration (for titan-brain)

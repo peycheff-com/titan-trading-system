@@ -12,6 +12,7 @@ import {
   BreakerStatus,
   DashboardData,
   DecisionRecord,
+  ExecutionReport,
   HealthStatus,
   IntentSignal,
   PhaseId,
@@ -560,6 +561,91 @@ export class TitanBrain
   }
 
   /**
+   * Handle execution report from Titan Execution
+   * Updates positions and calculates Realized PnL
+   */
+  async handleExecutionReport(report: ExecutionReport): Promise<void> {
+    console.log(
+      `🧠 Processing execution report for ${report.symbol} (${report.side})`,
+    );
+
+    // Find existing position
+    const existingPosIndex = this.currentPositions.findIndex((p) =>
+      p.symbol === report.symbol
+    );
+    const existingPos = existingPosIndex >= 0
+      ? this.currentPositions[existingPosIndex]
+      : null;
+
+    if (!existingPos) {
+      // Open new position
+      this.currentPositions.push({
+        symbol: report.symbol,
+        side: report.side === "BUY" ? "LONG" : "SHORT",
+        size: report.qty,
+        entryPrice: report.price,
+        unrealizedPnL: 0,
+        leverage: 1, // Default or from report
+        phaseId: report.phaseId, // Added missing phaseId
+      });
+      console.log(
+        `Positions updated: New position opened for ${report.symbol}`,
+      );
+    } else {
+      // Update existing position
+      const reportSide = report.side === "BUY" ? "LONG" : "SHORT";
+      if (existingPos.side === reportSide) {
+        // Increase Position (Weighted Average Price)
+        const totalValue = (existingPos.size * existingPos.entryPrice) +
+          (report.qty * report.price);
+        const totalSize = existingPos.size + report.qty;
+        existingPos.entryPrice = totalValue / totalSize;
+        existingPos.size = totalSize;
+        console.log(`Positions updated: Increased size for ${report.symbol}`);
+      } else {
+        // Reduce/Close Position
+        const closeSize = Math.min(existingPos.size, report.qty);
+
+        // Calculate Realized PnL
+        // Long: (Exit - Entry) * Size
+        // Short: (Entry - Exit) * Size
+        let realizedPnL = 0;
+        if (existingPos.side === "LONG") {
+          realizedPnL = (report.price - existingPos.entryPrice) * closeSize;
+        } else {
+          realizedPnL = (existingPos.entryPrice - report.price) * closeSize;
+        }
+
+        console.log(
+          `💰 Realized PnL for ${report.symbol}: $${realizedPnL.toFixed(2)}`,
+        );
+
+        // Record Trade
+        await this.recordTrade(
+          report.phaseId,
+          realizedPnL,
+          report.symbol,
+          reportSide === "LONG" ? "SELL" : "BUY",
+        );
+
+        // Update remaining size
+        existingPos.size -= closeSize;
+
+        if (existingPos.size <= 0.00000001) { // Floating point tolerance
+          this.currentPositions.splice(existingPosIndex, 1);
+          console.log(
+            `Positions updated: Closed position for ${report.symbol}`,
+          );
+        } else {
+          // Determine if flip (net opposite) - For simplicty, assuming reduce-only or flip handling logic separate
+          // If remaining report qty > 0, we flip.
+          // Basic implementation handles reduce to zero.
+        }
+      }
+    }
+  }
+
+  /**
    * Record a trade result
    * Updates performance tracking and circuit breaker state
    *
@@ -747,12 +833,12 @@ export class TitanBrain
     // For Railway deployment, be more lenient with health checks
     const isRailwayDeployment = process.env.RAILWAY_ENVIRONMENT === "true";
     const healthy = isRailwayDeployment
-      ? // Railway: Just check that the service is running (phases are healthy)
-      Object.values(components.phases).every(Boolean)
-      : // Local: Check all components
-      components.database &&
-      components.executionEngine &&
-      Object.values(components.phases).every(Boolean);
+      // Railway: Just check that the service is running (phases are healthy)
+      ? Object.values(components.phases).every(Boolean)
+      // Local: Check all components
+      : components.database &&
+        components.executionEngine &&
+        Object.values(components.phases).every(Boolean);
 
     return {
       healthy,

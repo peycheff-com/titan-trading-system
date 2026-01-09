@@ -131,21 +131,25 @@ main() {
     echo "1) All services (recommended for first deployment)"
     echo "2) Titan Brain only"
     echo "3) Titan Execution only"
-
-    echo "5) Titan Scavenger only"
-    echo "6) Custom selection"
+    echo "4) Titan Console only"
+    echo "5) Titan Phase 1 Scavenger only"
+    echo "6) Titan Phase 2 Hunter only"
+    echo "7) Titan AI Quant only"
+    echo "8) Custom selection"
     
-    read -p "Enter your choice (1-6): " choice
+    read -p "Enter your choice (1-8): " choice
     
     case $choice in
         1)
             # Deploy all services
             print_status "Deploying all Titan services..."
             
+            deploy_service "Titan Console" "services/titan-console"
             deploy_service "Titan Brain" "services/titan-brain"
             deploy_service "Titan Execution" "services/titan-execution"
-
-            deploy_service "Titan Scavenger" "services/titan-phase1-scavenger"
+            deploy_service "Titan Phase 1 Scavenger" "services/titan-phase1-scavenger"
+            deploy_service "Titan Phase 2 Hunter" "services/titan-phase2-hunter"
+            deploy_service "Titan AI Quant" "services/titan-ai-quant"
             ;;
         2)
             deploy_service "Titan Brain" "services/titan-brain"
@@ -153,11 +157,19 @@ main() {
         3)
             deploy_service "Titan Execution" "services/titan-execution"
             ;;
-
+        4)
+            deploy_service "Titan Console" "services/titan-console"
+            ;;
         5)
-            deploy_service "Titan Scavenger" "services/titan-phase1-scavenger"
+            deploy_service "Titan Phase 1 Scavenger" "services/titan-phase1-scavenger"
             ;;
         6)
+            deploy_service "Titan Phase 2 Hunter" "services/titan-phase2-hunter"
+            ;;
+        7)
+            deploy_service "Titan AI Quant" "services/titan-ai-quant"
+            ;;
+        8)
             echo "Custom selection not implemented yet. Please run individual deployments."
             exit 1
             ;;

@@ -4,68 +4,69 @@
 
 // Allocation types
 export {
-  EquityTier,
-  AllocationVector,
+  AllocationEngineConfig,
   AllocationRecord,
+  AllocationVector,
+  EquityTier,
   LeverageCaps,
   TransitionPoints,
-  AllocationEngineConfig,
-} from './allocation.js';
+} from "./allocation.js";
 
 // Performance types
 export {
-  PhaseId,
-  TradeRecord,
-  PhasePerformance,
-  PerformanceTrackerConfig,
+  ExecutionReport,
   PerformanceRecord,
-} from './performance.js';
+  PerformanceTrackerConfig,
+  PhaseId,
+  PhasePerformance,
+  TradeRecord,
+} from "./performance.js";
 
 // Risk types
 export {
   IntentSignal,
   Position,
-  RiskMetrics,
   RiskDecision,
-  RiskSnapshot,
   RiskGuardianConfig,
-} from './risk.js';
+  RiskMetrics,
+  RiskSnapshot,
+} from "./risk.js";
 
 // Capital types
 export {
+  CapitalFlowConfig,
   SweepDecision,
   SweepResult,
-  TreasuryStatus,
   TreasuryOperation,
-  CapitalFlowConfig,
-} from './capital.js';
+  TreasuryStatus,
+} from "./capital.js";
 
 // Breaker types
 export {
-  BreakerType,
-  BreakerStatus,
-  BreakerEvent,
-  CircuitBreakerConfig,
   BreakerCheckInput,
-} from './breaker.js';
+  BreakerEvent,
+  BreakerStatus,
+  BreakerType,
+  CircuitBreakerConfig,
+} from "./breaker.js";
 
 // Brain types
 export {
+  BrainConfig,
   BrainDecision,
-  DecisionRecord,
   DashboardData,
+  DecisionRecord,
   HealthStatus,
   QueuedSignal,
-  BrainConfig,
-} from './brain.js';
+} from "./brain.js";
 
 // Config types
 export {
   DatabaseConfig,
-  RedisConfig,
-  ServerConfig,
+  EnvConfig,
   HmacConfig,
   NotificationConfig,
+  RedisConfig,
+  ServerConfig,
   TitanBrainConfig,
-  EnvConfig,
-} from './config.js';
+} from "./config.js";

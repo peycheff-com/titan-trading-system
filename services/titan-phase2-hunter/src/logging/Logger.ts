@@ -106,7 +106,60 @@ export interface ErrorLogEntry {
   };
 }
 
-export type LogEntry = SignalLogEntry | ExecutionLogEntry | CloseLogEntry | ErrorLogEntry;
+export type LogEntry = SignalLogEntry | ExecutionLogEntry | CloseLogEntry | ErrorLogEntry | EnhancedHologramLogEntry | ConvictionSizingLogEntry;
+
+/**
+ * Enhanced Hologram log entry structure
+ * Requirement 5.7: Enhanced logging and event emission
+ */
+export interface EnhancedHologramLogEntry {
+  timestamp: number;
+  type: 'enhanced_hologram';
+  symbol: string;
+  classicScore: number;
+  enhancedScore: number;
+  alignment: 'A+' | 'A' | 'B' | 'C' | 'VETO';
+  convictionLevel: 'low' | 'medium' | 'high' | 'extreme';
+  oracle: {
+    sentiment: number;
+    confidence: number;
+    veto: boolean;
+    convictionMultiplier: number;
+  } | null;
+  flow: {
+    flowType: string;
+    confidence: number;
+    institutionalProbability: number;
+  } | null;
+  botTrap: {
+    isSuspect: boolean;
+    suspicionScore: number;
+  } | null;
+  globalCVD: {
+    consensus: string;
+    confidence: number;
+    manipulationDetected: boolean;
+  } | null;
+  enhancementsActive: boolean;
+}
+
+/**
+ * Conviction sizing log entry structure
+ * Requirement 7.7: Position sizing calculation logging
+ */
+export interface ConvictionSizingLogEntry {
+  timestamp: number;
+  type: 'conviction_sizing';
+  symbol: string;
+  baseSize: number;
+  oracleMultiplier: number;
+  flowMultiplier: number;
+  trapReduction: number;
+  globalCVDMultiplier: number;
+  finalSize: number;
+  cappedAt: number;
+  reasoning: string[];
+}
 
 /**
  * Logger configuration
@@ -314,6 +367,116 @@ export class Logger {
     if (this.config.enableConsoleOutput) {
       const levelColor = level === 'CRITICAL' ? '\x1b[31m' : level === 'ERROR' ? '\x1b[33m' : '\x1b[36m';
       console.log(`${levelColor}❌ ${level}: ${message}\x1b[0m`);
+    }
+  }
+
+  /**
+   * Log enhanced holographic state
+   * Requirement 5.7: Enhanced logging and event emission
+   */
+  public logEnhancedHologram(
+    symbol: string,
+    state: {
+      classicScore: number;
+      enhancedScore: number;
+      alignment: 'A+' | 'A' | 'B' | 'C' | 'VETO';
+      convictionLevel: 'low' | 'medium' | 'high' | 'extreme';
+      oracleScore: {
+        sentiment: number;
+        confidence: number;
+        veto: boolean;
+        convictionMultiplier: number;
+      } | null;
+      flowValidation: {
+        flowType: string;
+        confidence: number;
+        institutionalProbability: number;
+      } | null;
+      botTrapAnalysis: {
+        isSuspect: boolean;
+        suspicionScore: number;
+      } | null;
+      globalCVD: {
+        consensus: string;
+        confidence: number;
+        manipulation: { detected: boolean };
+      } | null;
+      enhancementsActive: boolean;
+    }
+  ): void {
+    const logEntry: EnhancedHologramLogEntry = {
+      timestamp: Date.now(),
+      type: 'enhanced_hologram',
+      symbol,
+      classicScore: state.classicScore,
+      enhancedScore: state.enhancedScore,
+      alignment: state.alignment,
+      convictionLevel: state.convictionLevel,
+      oracle: state.oracleScore ? {
+        sentiment: state.oracleScore.sentiment,
+        confidence: state.oracleScore.confidence,
+        veto: state.oracleScore.veto,
+        convictionMultiplier: state.oracleScore.convictionMultiplier
+      } : null,
+      flow: state.flowValidation ? {
+        flowType: state.flowValidation.flowType,
+        confidence: state.flowValidation.confidence,
+        institutionalProbability: state.flowValidation.institutionalProbability
+      } : null,
+      botTrap: state.botTrapAnalysis ? {
+        isSuspect: state.botTrapAnalysis.isSuspect,
+        suspicionScore: state.botTrapAnalysis.suspicionScore
+      } : null,
+      globalCVD: state.globalCVD ? {
+        consensus: state.globalCVD.consensus,
+        confidence: state.globalCVD.confidence,
+        manipulationDetected: state.globalCVD.manipulation.detected
+      } : null,
+      enhancementsActive: state.enhancementsActive
+    };
+
+    this.writeLogEntry(logEntry);
+
+    if (this.config.enableConsoleOutput) {
+      console.log(`🔮 ENHANCED HOLOGRAM: ${symbol} ${state.alignment} (${state.enhancedScore.toFixed(1)}) - ${state.convictionLevel} conviction`);
+    }
+  }
+
+  /**
+   * Log conviction-based position sizing
+   * Requirement 7.7: Position sizing calculation logging
+   */
+  public logConvictionSizing(
+    symbol: string,
+    sizing: {
+      baseSize: number;
+      oracleMultiplier: number;
+      flowMultiplier: number;
+      trapReduction: number;
+      globalCVDMultiplier: number;
+      finalSize: number;
+      cappedAt: number;
+      reasoning: string[];
+    }
+  ): void {
+    const logEntry: ConvictionSizingLogEntry = {
+      timestamp: Date.now(),
+      type: 'conviction_sizing',
+      symbol,
+      baseSize: sizing.baseSize,
+      oracleMultiplier: sizing.oracleMultiplier,
+      flowMultiplier: sizing.flowMultiplier,
+      trapReduction: sizing.trapReduction,
+      globalCVDMultiplier: sizing.globalCVDMultiplier,
+      finalSize: sizing.finalSize,
+      cappedAt: sizing.cappedAt,
+      reasoning: sizing.reasoning
+    };
+
+    this.writeLogEntry(logEntry);
+
+    if (this.config.enableConsoleOutput) {
+      console.log(`📊 CONVICTION SIZING: ${symbol} base=${sizing.baseSize.toFixed(2)} → final=${sizing.finalSize.toFixed(2)} (capped at ${sizing.cappedAt}x)`);
     }
   }
 
@@ -601,3 +764,13 @@ export const logError = (
     data?: any;
   }
 ) => getLogger().logError(level, message, context);
+
+export const logEnhancedHologram = (
+  symbol: string,
+  state: Parameters<Logger['logEnhancedHologram']>[1]
+) => getLogger().logEnhancedHologram(symbol, state);
+
+export const logConvictionSizing = (
+  symbol: string,
+  sizing: Parameters<Logger['logConvictionSizing']>[1]
+) => getLogger().logConvictionSizing(symbol, sizing);
