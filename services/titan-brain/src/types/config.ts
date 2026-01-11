@@ -84,6 +84,17 @@ export interface TitanBrainConfig {
   redis: RedisConfig;
   server: ServerConfig;
   notifications: NotificationConfig;
+  services: ServicesConfig;
+}
+
+/**
+ * External Services configuration
+ */
+export interface ServicesConfig {
+  executionUrl?: string;
+  phase1WebhookUrl?: string;
+  phase2WebhookUrl?: string;
+  phase3WebhookUrl?: string;
 }
 
 /**

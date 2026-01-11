@@ -108,11 +108,14 @@ const configSchema: ConfigSchema = {
     port: { type: 'number', required: true, min: 1, max: 65535 },
     corsOrigins: { type: 'array', required: true },
   },
+  services: {
+    executionUrl: { type: 'string', required: false, pattern: /^http/ },
+    phase1WebhookUrl: { type: 'string', required: false, pattern: /^http/ },
+    phase2WebhookUrl: { type: 'string', required: false, pattern: /^http/ },
+    phase3WebhookUrl: { type: 'string', required: false, pattern: /^http/ },
+  },
 };
 
-
-
-/**
  * Validate a single field against its schema
  */
 function validateField(
@@ -422,6 +425,17 @@ export function loadConfigFromEnvironment(): Partial<TitanBrainConfig> {
     };
   }
 
+
+  // Services config
+  if (process.env.EXECUTION_SERVICE_URL || process.env.PHASE1_WEBHOOK_URL || process.env.PHASE2_WEBHOOK_URL || process.env.PHASE3_WEBHOOK_URL) {
+    config.services = {
+      executionUrl: process.env.EXECUTION_SERVICE_URL,
+      phase1WebhookUrl: process.env.PHASE1_WEBHOOK_URL,
+      phase2WebhookUrl: process.env.PHASE2_WEBHOOK_URL,
+      phase3WebhookUrl: process.env.PHASE3_WEBHOOK_URL,
+    };
+  }
+
   return config;
 }
 
@@ -470,6 +484,7 @@ function deepMerge(target: TitanBrainConfig, source: Partial<TitanBrainConfig>):
     redis: mergeConfigSection(target.redis, source.redis),
     server: mergeConfigSection(target.server, source.server),
     notifications: mergeConfigSection(target.notifications, source.notifications),
+    services: mergeConfigSection(target.services, source.services),
   };
 }
 

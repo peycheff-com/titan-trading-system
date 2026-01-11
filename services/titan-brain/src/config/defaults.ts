@@ -90,6 +90,10 @@ export const defaultConfig: TitanBrainConfig = {
       enabled: false,
     },
   },
+
+  services: {
+    executionUrl: undefined,
+  },
 };
 
 /**

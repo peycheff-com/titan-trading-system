@@ -371,20 +371,40 @@ export class ProductionServer {
   }
   
   async start() {
-    await this.configManager.load();
-    const config = this.configManager.get();
+    console.log('[DEBUG] PRODUCTION_SERVER_STARTING - VERSION: 2026-DEBUG-V1');
+    console.log('[DEBUG] TRADING_MODE:', process.env.TRADING_MODE);
+    console.log('[DEBUG] EXCHANGE_ID:', process.env.EXCHANGE_ID);
     
-    if (config && config.api_key) {
+    await this.configManager.load();
+    let config = this.configManager.get() || {};
+    
+    // ENV VAR OVERRIDES (Priority 1)
+    // Checks standard Railway/Titan env vars to force correct configuration
+    if (process.env.TRADING_MODE === 'LIVE' || process.env.EXCHANGE_ID) {
+        this.logger.info('Apply Environment Variable Overrides for Production');
+        config = {
+            ...config,
+            exchange: (process.env.EXCHANGE_ID || config.exchange || 'bybit').toLowerCase(),
+            network: process.env.EXCHANGE_ENV || config.network || 'mainnet',
+            api_key: process.env.BYBIT_API_KEY || config.api_key,
+            api_secret: process.env.BYBIT_API_SECRET || config.api_secret
+        };
+    }
+
+    if (config && (config.api_key || process.env.TRADING_MODE === 'LIVE')) {
         const { exchange = 'bybit', api_key, api_secret, network } = config;
         this.exchangeName = exchange;
         
         try {
             if (exchange === 'binance') {
                 this.adapter = new BinanceAdapter(api_key, api_secret, network === 'testnet');
+            } else if (exchange === 'mock' && process.env.TRADING_MODE !== 'LIVE') {
+                this.adapter = new MockAdapter();
             } else {
+                // Default to Bybit
                 this.adapter = new BybitAdapter({ apiKey: api_key, apiSecret: api_secret, testnet: network === 'testnet' });
             }
-            this.logger.info(`${exchange} adapter initialized from config`);
+            this.logger.info(`${exchange} adapter initialized from config (Network: ${network})`);
         } catch (e) {
             this.logger.error('Failed to init adapter from config:', e.message);
         }

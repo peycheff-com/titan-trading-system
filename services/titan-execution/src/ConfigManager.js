@@ -31,7 +31,7 @@ export class ConfigManager extends EventEmitter {
     // Default configuration
     // Requirements: 90.1 - Risk Tuner inputs for Phase 1 Risk % and Phase 2 Risk %
     this.config = {
-      mode: process.env.TRADING_MODE || 'MOCK',
+      mode: process.env.TRADING_MODE || 'MOCK', // Default to MOCK if not specified, but we will log it.
       risk_tuner: {
         phase1_risk_pct: parseFloat(process.env.PHASE_1_RISK_PCT) || 0.10,
         phase2_risk_pct: parseFloat(process.env.PHASE_2_RISK_PCT) || 0.05,

@@ -6,7 +6,7 @@
  * Simple entry point to launch the production-ready web UI and trading system.
  */
 
-import ProductionServer from './ProductionServer.js';
+import { ProductionServer } from './ProductionServerV2.js';
 
 const logger = {
   info: (msg, ...args) => console.log(`[INFO] ${msg}`, ...args),
