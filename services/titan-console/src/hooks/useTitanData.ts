@@ -48,30 +48,32 @@ export function useTitanData() {
     );
 
     const getSystemStatus = useCallback(
-        () => request("/api/console/system-status"),
+        () => request("/api/status"),
         [request],
     );
 
     const toggleMasterArm = useCallback(
         (enabled: boolean) =>
-            request("/api/console/master-arm", {
-                method: "POST",
-                body: { enabled, operator_id: "console_user" },
-            }),
+            request(
+                enabled ? "/api/auto-exec/enable" : "/api/auto-exec/disable",
+                {
+                    method: "POST",
+                    body: { operator_id: "console_user" },
+                },
+            ),
         [request],
     );
 
     const flattenAll = useCallback(() =>
-        request("/api/console/flatten-all", {
+        request("/api/emergency-flatten", {
             method: "POST",
             body: { operator_id: "console_user" },
         }), [request]);
 
-    const cancelAll = useCallback(() =>
-        request("/api/console/cancel-all", {
-            method: "POST",
-            body: { operator_id: "console_user" },
-        }), [request]);
+    const cancelAll = useCallback(() => {
+        console.warn("cancelAll not implemented in backend");
+        return Promise.resolve(); // Placeholder
+    }, []);
 
     return {
         loading,
