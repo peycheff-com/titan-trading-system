@@ -6,7 +6,14 @@
     "services/*"
   ],
   "scripts": {
-    "start": "cd services/titan-console && npx vite preview --host 0.0.0.0 --port ${PORT:-8080}",
+    "start": "node dispatch-start.js",
+    "start:brain": "npm start -w services/titan-brain",
+    "start:execution": "npm start -w services/titan-execution",
+    "start:console": "npm start -w services/titan-console",
+    "start:scavenger": "npm start -w services/titan-phase1-scavenger",
+    "start:hunter": "npm start -w services/titan-phase2-hunter",
+    "start:sentinel": "npm start -w services/titan-phase3-sentinel",
+    "start:ai-quant": "npm start -w services/titan-ai-quant",
     "build": "npm run build --workspaces --if-present",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
