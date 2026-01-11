@@ -4,7 +4,7 @@ import {
     EventCategory,
     ImpactLevel,
     PredictionMarketEvent,
-} from "../../src/types/enhanced-2026";
+} from "../../src/types";
 import { Oracle } from "../../src/oracle/Oracle";
 import {
     Enhanced2026ConfigManager,

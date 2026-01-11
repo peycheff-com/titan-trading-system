@@ -278,7 +278,6 @@ async function configRoutes(fastify, options) {
     const stats = await strategicMemory.getStatistics();
     return stats;
   });
-}
 
   // Requirements: 90.1, 90.2, 90.3 - Config Updates from UI
   fastify.post('/api/config/update', async (request, reply) => {

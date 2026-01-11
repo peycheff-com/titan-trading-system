@@ -15,7 +15,7 @@ const logger = {
 };
 
 const server = new ProductionServer({
-  port: 3000,
+  port: parseInt(process.env.PORT) || 3000,
   logger,
 });
 

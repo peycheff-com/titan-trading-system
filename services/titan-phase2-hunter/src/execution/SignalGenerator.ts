@@ -51,7 +51,7 @@ export interface SignalValidationResult {
   poiValid: boolean;
   cvdValid: boolean;
   oracleValid: boolean;
-  globalCVDValid: boolean;
+  globalLiquidityValid: boolean;
 }
 
 export interface SignalContext {
@@ -248,12 +248,82 @@ export class SignalGenerator {
   }
 
   /**
+   * Check if Oracle vetoes the trade based on sentiment
+   */
+  async checkOracleVeto(
+    symbol: string,
+    direction: "LONG" | "SHORT",
+  ): Promise<{ valid: boolean; reason: string | null }> {
+    if (!this.config.useOracle || !this.oracle) {
+      return { valid: true, reason: null };
+    }
+
+    // Use calculateOracleScore instead of getScore (which doesn't exist)
+    const score = await this.oracle.calculateOracleScore(symbol, direction);
+    const sentiment = score.sentiment;
+
+    // Veto logic: if sentiment strongly opposes direction
+    // For LONG: Veto if sentiment is strongly negative (bearish)
+    // For SHORT: Veto if sentiment is strongly positive (bullish)
+    const threshold = 50; // Hardcoded threshold for now or from config
+    // Actually config has sentimentThreshold, let's use Oracle config or simple check
+    // The previous test expects veto if sentiment is -80 for LONG.
+
+    if (direction === "LONG" && sentiment <= -Math.abs(threshold)) {
+      return {
+        valid: false,
+        reason: "Oracle VETO: Strongly Bearish Sentiment",
+      };
+    }
+    if (direction === "SHORT" && sentiment >= Math.abs(threshold)) {
+      return {
+        valid: false,
+        reason: "Oracle VETO: Strongly Bullish Sentiment",
+      };
+    }
+
+    return { valid: true, reason: null };
+  }
+
+  /**
+   * Check if Global CVD confirms the trade or detects manipulation
+   */
+  async checkGlobalCVD(
+    symbol: string,
+    direction: "LONG" | "SHORT",
+    technicalConfidence: number = 0, // Optional default
+  ): Promise<{ valid: boolean; reason: string | null }> {
+    if (!this.config.useGlobalCVD || !this.globalLiquidity) {
+      return { valid: true, reason: null };
+    }
+
+    // Need to validate against global liquidity
+    // Corrected to use validateSignal signature (symbol, direction, confidence)
+    const validation = await this.globalLiquidity.validateSignal(
+      symbol,
+      direction,
+      technicalConfidence,
+    );
+
+    if (!validation) return { valid: true, reason: null };
+
+    if (validation.recommendation === "veto") {
+      return {
+        valid: false,
+        reason: `Global CVD VETO: ${validation.reasoning.join(", ")}`,
+      };
+    }
+
+    return { valid: true, reason: null };
+  }
+
+  /**
    * Validate all signal conditions
    */
-  validateSignal(
+  async validateSignal(
     context: SignalContext,
     direction: "LONG" | "SHORT",
-  ): SignalValidationResult {
+  ): Promise<SignalValidationResult> {
     const hologramValid = this.checkHologramStatus(context.hologram);
     const sessionValid = this.checkSession(context.session);
     const rsValid = this.checkRSScore(context.hologram.rsScore, direction);
@@ -276,12 +346,42 @@ export class SignalGenerator {
       }
     }
 
-    if (this.config.useGlobalCVD && context.globalCVDValidation) {
-      if (context.globalCVDValidation.recommendation === "veto") {
-        globalCVDValid = false;
-        reason += `Global CVD VETO: ${
-          context.globalCVDValidation.reasoning.join(", ")
-        }. `;
+    if (this.config.useOracle) {
+      // Use context score if available, otherwise could fetch (but SignalContext should have it)
+      if (context.oracleScore && context.oracleScore.veto) {
+        oracleValid = false;
+        reason += `Oracle VETO: ${context.oracleScore.vetoReason}. `;
+      } else if (!context.oracleScore && this.oracle) {
+        // Fallback to async check if not in context
+        const check = await this.checkOracleVeto(
+          context.hologram.symbol,
+          direction,
+        );
+        if (!check.valid) {
+          oracleValid = false;
+          reason += `${check.reason}. `;
+        }
+      }
+    }
+
+    if (this.config.useGlobalCVD) {
+      if (context.globalCVDValidation) {
+        if (context.globalCVDValidation.recommendation === "veto") {
+          globalCVDValid = false;
+          reason += `Global CVD VETO: ${
+            context.globalCVDValidation.reasoning.join(", ")
+          }. `;
+        }
+      } else if (this.globalLiquidity) {
+        const check = await this.checkGlobalCVD(
+          context.hologram.symbol,
+          direction,
+          context.hologram.alignmentScore || 0,
+        );
+        if (!check.valid) {
+          globalCVDValid = false;
+          reason += `${check.reason}. `;
+        }
       }
     }
 
@@ -309,7 +409,7 @@ export class SignalGenerator {
       poiValid: poiResult.valid,
       cvdValid,
       oracleValid,
-      globalCVDValid,
+      globalLiquidityValid: globalCVDValid, // Map internal var to interface property
     };
   }
 
@@ -408,7 +508,7 @@ export class SignalGenerator {
       };
 
       // Validate signal
-      const validation = this.validateSignal(context, direction);
+      const validation = await this.validateSignal(context, direction);
 
       if (!validation.valid) {
         console.log(

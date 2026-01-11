@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "@jest/globals";
 import fc from "fast-check";
 import { ArbitrageMonitor } from "../../src/arbitrage/ArbitrageMonitor";
 

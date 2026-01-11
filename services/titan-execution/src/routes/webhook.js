@@ -64,7 +64,9 @@ export function registerWebhookRoutes(fastify, dependencies) {
     const sourceIp = request.ip || request.headers['x-forwarded-for'] || 'unknown';
 
     // Verify x-source header
-    if (source !== 'titan_dashboard') {
+    // Requirements: Sentinel integration (Phase 3)
+    const allowedSources = ['titan_dashboard', 'titan_sentinel'];
+    if (!allowedSources.includes(source)) {
       logger.warn({ source, source_ip: sourceIp }, 'Invalid source header');
       return reply.code(401).send({
         error: 'Unauthorized',

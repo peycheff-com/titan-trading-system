@@ -58,6 +58,22 @@ export class MockOracle extends Oracle {
         this.scoreOverride = override;
     }
 
+    public async calculateOracleScore(
+        symbol: string,
+        direction: "LONG" | "SHORT",
+    ): Promise<OracleScore> {
+        return {
+            sentiment: this.scoreOverride?.sentiment ?? 0,
+            confidence: this.scoreOverride?.confidence ?? 50,
+            events: [],
+            veto: this.scoreOverride?.veto ?? false,
+            vetoReason: this.scoreOverride?.vetoReason ?? null,
+            convictionMultiplier: this.scoreOverride?.convictionMultiplier ??
+                1.0,
+            timestamp: new Date(),
+        };
+    }
+
     public async evaluateSignal(signal: TechnicalSignal): Promise<OracleScore> {
         // Basic score calculation
         let sentiment = 0;

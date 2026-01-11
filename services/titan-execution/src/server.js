@@ -973,4 +973,7 @@ export {
 };
 
 // Start server if run directly
+fastify.ready(() => {
+  fastify.log.info(fastify.printRoutes());
+});
 start();

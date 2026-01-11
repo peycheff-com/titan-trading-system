@@ -1,4 +1,4 @@
-import { describe, expect, it, jest } from "vitest";
+import { describe, expect, it, jest } from "@jest/globals";
 import fc from "fast-check";
 import { GlobalCVDAggregator } from "../../src/global-liquidity/GlobalCVDAggregator";
 import { ConsensusValidator } from "../../src/global-liquidity/ConsensusValidator";

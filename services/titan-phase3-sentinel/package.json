@@ -41,6 +41,8 @@
     "ink": "^4.4.1",
     "node-fetch": "^3.3.2",
     "react": "^18.2.0",
+    "undici": "^7.18.2",
+    "uuid": "^8.3.2",
     "viem": "^2.0.0",
     "ws": "^8.16.0"
   },
@@ -48,6 +50,7 @@
     "@types/jest": "^29.5.11",
     "@types/node": "^20.10.6",
     "@types/react": "^18.2.46",
+    "@types/uuid": "^10.0.0",
     "@types/ws": "^8.5.10",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
     "@typescript-eslint/parser": "^6.13.0",

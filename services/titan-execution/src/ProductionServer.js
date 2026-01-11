@@ -12,6 +12,7 @@ import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import fastifyWebsocket from '@fastify/websocket';
 import fastifyCors from '@fastify/cors';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs/promises';
@@ -20,6 +21,7 @@ import { fetch } from 'undici';
 // External Adapters
 import { BybitAdapter } from './adapters/BybitAdapter.js';
 import { BinanceAdapter } from './adapters/BinanceAdapter.js';
+import { MockAdapter } from './adapters/MockAdapter.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -129,14 +131,18 @@ export class ProductionServer {
         return reply.code(400).send({ success: false, error: 'API key and secret required' });
       }
 
+
+
+// ... (in _setupRoutes or similar where constructor is used)
+
       // Initialize appropriate adapter
       let adapter;
       try {
         if (exchange === 'binance') {
-          // Note: BinanceAdapter constructor expects (apiKey, apiSecret, testnetBoolean)
           adapter = new BinanceAdapter(api_key, api_secret, network === 'testnet');
+        } else if (exchange === 'mock') {
+            adapter = new MockAdapter();
         } else {
-          // BybitAdapter expects object { apiKey, apiSecret, testnet }
           adapter = new BybitAdapter({ apiKey: api_key, apiSecret: api_secret, testnet: network === 'testnet' });
         }
 
@@ -336,9 +342,20 @@ export class ProductionServer {
           const url = `${this.brainUrl}/webhook/execution-report`;
           this.logger.info(`Broadcasting fill to Brain: ${url}`, fillData);
           
+          const timestamp = Math.floor(Date.now() / 1000).toString();
+          const signature = crypto
+              .createHmac('sha256', process.env.HMAC_SECRET || 'mysecret')
+              .update(JSON.stringify(fillData))
+              .digest('hex');
+
           await fetch(url, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 
+                  'Content-Type': 'application/json',
+                  'x-signature': signature,
+                  'x-timestamp': timestamp,
+                  'x-source': 'titan-execution' 
+              },
               body: JSON.stringify(fillData)
           });
       } catch (err) {

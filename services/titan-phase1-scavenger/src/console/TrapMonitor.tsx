@@ -23,7 +23,7 @@ export interface Tripwire {
   symbol: string;
   triggerPrice: number;
   direction: 'LONG' | 'SHORT';
-  trapType: 'LIQUIDATION' | 'DAILY_LEVEL' | 'BOLLINGER' | 'OI_WIPEOUT' | 'FUNDING_SQUEEZE' | 'BASIS_ARB' | 'ULTIMATE_BULGARIA';
+  trapType: 'LIQUIDATION' | 'DAILY_LEVEL' | 'BOLLINGER' | 'OI_WIPEOUT' | 'FUNDING_SQUEEZE' | 'BASIS_ARB' | 'ULTIMATE_BULGARIA' | 'PREDICTION_SPIKE';
   confidence: number;
   leverage: number;
   estimatedCascadeSize: number;
@@ -200,6 +200,8 @@ function formatTrapType(trapType: string): string {
       return 'BASIS_ARB';
     case 'ULTIMATE_BULGARIA':
       return 'ULTIMATE';
+    case 'PREDICTION_SPIKE':
+      return 'PRED_SPIKE';
     default:
       return trapType;
   }

@@ -1,4 +1,4 @@
-import { describe, expect, it, jest } from "vitest";
+import { describe, expect, it, jest } from "@jest/globals";
 import fc from "fast-check";
 import { EventMonitor } from "../../src/oracle/EventMonitor";
 import { Enhanced2026ConfigManager } from "../../src/config/Enhanced2026Config";

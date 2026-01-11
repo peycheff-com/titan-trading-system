@@ -1,0 +1,6 @@
+{
+  "exchange": "mock",
+  "api_key": "mock-key",
+  "api_secret": "mock-secret",
+  "network": "mainnet"
+}

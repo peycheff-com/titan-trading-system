@@ -251,7 +251,7 @@ export class WebhookServer {
     // Register raw body parser for HMAC validation
     await this.server.register(fastifyRawBody, {
       field: "rawBody",
-      global: false,
+      global: true,
       encoding: "utf8",
       runFirst: true,
     });
