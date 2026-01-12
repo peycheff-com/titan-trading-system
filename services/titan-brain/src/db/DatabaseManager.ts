@@ -624,14 +624,7 @@ export class DatabaseManager {
   /**
    * Get the connection pool (PostgreSQL only)
    */
-  getPool(): Pool {
-    if (!this.pool) {
-      throw new DatabaseError(
-        "PostgreSQL not connected",
-        "NOT_CONNECTED",
-        new Error("Pool is null"),
-      );
-    }
+  getPool(): Pool | null {
     return this.pool;
   }
 
@@ -654,13 +647,6 @@ export class DatabaseManager {
    */
   isSQLite(): boolean {
     return this.dbType === DatabaseType.SQLITE;
-  }
-
-  /**
-   * Get the underlying Postgres pool (for migrations)
-   */
-  getPool(): Pool | null {
-    return this.pool;
   }
 
   /**
