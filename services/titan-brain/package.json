@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "start": "echo '[DEBUG] STARTING_BUILD' && npm run build && echo '[DEBUG] BUILD_COMPLETE' && node dist/index.js",
+    "start": "echo '[DEBUG] STARTING_BUILD' && npm run build && echo '[DEBUG] BUILD_COMPLETE' && npm run migrate && node dist/index.js",
     "dev": "tsc && node --watch dist/index.js",
     "test": "npm run test:unit",
     "test:unit": "jest --config jest.config.cjs",
