@@ -123,12 +123,8 @@ export class DatabaseManager {
    * Initialize the database connection pool
    */
   async connect(): Promise<void> {
-    // For Railway deployment, skip database connection and use in-memory storage
-    if (process.env.RAILWAY_ENVIRONMENT) {
-      console.log("🚂 Railway environment detected, using in-memory storage");
-      this.dbType = DatabaseType.SQLITE; // Use SQLite type but no actual database
-      return;
-    }
+    // For Railway deployment, prioritize PostgreSQL connection
+    // Removed legacy in-memory fallback check to ensure production persistence
 
     // Try PostgreSQL first, fallback to SQLite
     try {
