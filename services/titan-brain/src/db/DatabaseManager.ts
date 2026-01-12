@@ -325,17 +325,7 @@ export class DatabaseManager {
     params?: unknown[],
     options: { cache?: boolean; cacheTtl?: number } = {},
   ): Promise<QueryResult<T>> {
-    // For Railway environment, return mock results
-    if (process.env.RAILWAY_ENVIRONMENT && !this.pool && !this.sqlite) {
-      console.log("🚂 Railway in-memory mode: mocking query result");
-      return {
-        rows: [] as T[],
-        rowCount: 0,
-        command: "SELECT",
-        oid: 0,
-        fields: [],
-      } as QueryResult<T>;
-    }
+    // Railway-specific mocking removed to ensure production persistence
 
     if (this.dbType === DatabaseType.SQLITE) {
       return this.querySQLite<T>(text, params, options);

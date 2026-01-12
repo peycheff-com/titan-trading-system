@@ -14,8 +14,8 @@ import { EventEmitter } from "../events/EventEmitter.js";
 import { FastPathClient, IntentSignal } from "../ipc/FastPathClient.js";
 import { VolatilityScaler } from "../calculators/VolatilityScaler.js";
 import { CVDCalculator } from "../calculators/CVDCalculator.js";
-import { PredictionMarketDetector } from "../detectors/PredictionMarketDetector";
-import { PolymarketClient } from "../exchanges/PolymarketClient";
+import { PredictionMarketDetector } from "../detectors/PredictionMarketDetector.js";
+import { PolymarketClient } from "../exchanges/PolymarketClient.js";
 
 export interface OHLCV {
   timestamp: number;
