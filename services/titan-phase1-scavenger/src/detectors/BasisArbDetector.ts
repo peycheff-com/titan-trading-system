@@ -1,22 +1,22 @@
 /**
  * Basis Arb Detector (The Rubber Band)
- * 
+ *
  * Strategy: Exploit Spot-Perp price disconnects during extreme volatility
- * 
+ *
  * The Physics:
  * During extreme volatility, Perp price disconnects from Spot. Perp MUST return
  * to Spot price - it's mathematical law. The basis (Spot - Perp) / Spot represents
  * a rubber band that will snap back.
- * 
+ *
  * The Edge:
  * HFTs close this gap, but during panic they widen spreads or turn off. That leaves
  * a 5-30 second window - you can drive a truck through it from Bulgaria (200ms latency).
- * 
+ *
  * Detection Criteria:
  * 1. Basis > 0.5% (Perp is discounted relative to Spot)
  * 2. 24h volume > $1M (not a dead market)
  * 3. Perp must converge to Spot (mathematical certainty)
- * 
+ *
  * Entry:
  * - Enter at Perp price + 0.1% (aggressive entry)
  * - Target: Spot price * 0.999 (slight discount for safety)
@@ -25,7 +25,7 @@
  * - Leverage: 10x
  */
 
-import { Tripwire } from '../engine/TitanTrap';
+import { Tripwire } from "../engine/TitanTrap";
 
 interface BinanceClient {
   getSpotPrice(symbol: string): Promise<number>;
@@ -39,6 +39,7 @@ interface BybitClient {
 export class BasisArbDetector {
   private binanceClient: BinanceClient;
   private bybitClient: BybitClient;
+  private isGeoBlocked: boolean = false;
 
   constructor(binanceClient: BinanceClient, bybitClient: BybitClient | null) {
     this.binanceClient = binanceClient;
@@ -47,13 +48,15 @@ export class BasisArbDetector {
 
   /**
    * Detect Basis Arb pattern
-   * 
+   *
    * Returns a Tripwire if all conditions are met:
    * - Basis > 0.5% (Perp is discounted)
    * - 24h volume > $1M (not dead market)
    * - Perp will converge to Spot (mathematical certainty)
    */
   async detectBasisArb(symbol: string): Promise<Tripwire | null> {
+    if (this.isGeoBlocked) return null;
+
     try {
       // 1. Get Spot price from Binance
       const spotPrice = await this.binanceClient.getSpotPrice(symbol);
@@ -70,7 +73,11 @@ export class BasisArbDetector {
         return null;
       }
 
-      console.log(`🔍 Checking basis arb: ${symbol} (Basis: ${(basis * 100).toFixed(2)}%)`);
+      console.log(
+        `🔍 Checking basis arb: ${symbol} (Basis: ${
+          (basis * 100).toFixed(2)
+        }%)`,
+      );
 
       // 5. Validate with volume (ensure it's not a dead market)
       const volume = await this.bybitClient.get24hVolume(symbol);
@@ -90,13 +97,17 @@ export class BasisArbDetector {
       console.log(`   Perp: ${perpPrice.toFixed(2)}`);
       console.log(`   Basis: ${(basis * 100).toFixed(2)}%`);
       console.log(`   Volume: $${(volume / 1000000).toFixed(1)}M`);
-      console.log(`   Target: ${targetPrice.toFixed(2)} (+${((targetPrice / perpPrice - 1) * 100).toFixed(1)}%)`);
+      console.log(
+        `   Target: ${targetPrice.toFixed(2)} (+${
+          ((targetPrice / perpPrice - 1) * 100).toFixed(1)
+        }%)`,
+      );
 
       return {
         symbol,
         triggerPrice: perpPrice * 1.001, // Aggressive entry (+0.1%)
-        direction: 'LONG',
-        trapType: 'BASIS_ARB',
+        direction: "LONG",
+        trapType: "BASIS_ARB",
         confidence: 85,
         leverage: 10,
         estimatedCascadeSize: basis, // Expected convergence
@@ -104,7 +115,18 @@ export class BasisArbDetector {
         targetPrice,
         stopLoss,
       };
-    } catch (error) {
+    } catch (error: any) {
+      // Check for Geo-blocking (HTTP 403)
+      if (error && (error.message || "").includes("403")) {
+        if (!this.isGeoBlocked) {
+          console.warn(
+            `⛔ Geo-blocking detected for ${symbol} (HTTP 403). Disabling BasisArbDetector.`,
+          );
+          this.isGeoBlocked = true;
+        }
+        return null;
+      }
+
       console.error(`Error detecting basis arb for ${symbol}:`, error);
       return null;
     }
