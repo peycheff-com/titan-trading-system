@@ -54,8 +54,14 @@ export async function runMigrations(db: DatabaseManager): Promise<void> {
       // For SQLite compatibility, we'll run migrations through DatabaseManager
       // instead of directly on the pool
       try {
-        // Check if we have a pool (PostgreSQL) or SQLite
-        if (db.isConnected()) {
+        // Check if we have a pool (PostgreSQL)
+        const pool = db.getPool();
+        if (pool) {
+          // Verify we really are on Postgres
+          // Run migration via its native up() function
+          await migration.up(pool);
+        } else if (db.isConnected()) {
+          // SQLite fallback (original logic)
           // Run migration SQL directly through DatabaseManager
           await runMigrationSQL(db, migration.version);
         }

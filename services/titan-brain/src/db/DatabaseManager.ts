@@ -657,6 +657,13 @@ export class DatabaseManager {
   }
 
   /**
+   * Get the underlying Postgres pool (for migrations)
+   */
+  getPool(): Pool | null {
+    return this.pool;
+  }
+
+  /**
    * Check if database is connected
    */
   isConnected(): boolean {
