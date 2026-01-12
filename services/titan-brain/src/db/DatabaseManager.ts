@@ -624,14 +624,7 @@ export class DatabaseManager {
   /**
    * Get the connection pool (PostgreSQL only)
    */
-  getPool(): Pool {
-    if (!this.pool) {
-      throw new DatabaseError(
-        "PostgreSQL not connected",
-        "NOT_CONNECTED",
-        new Error("Pool is null"),
-      );
-    }
+  getPool(): Pool | null {
     return this.pool;
   }
 
@@ -660,10 +653,10 @@ export class DatabaseManager {
    * Check if database is connected
    */
   isConnected(): boolean {
-    // For Railway environment, always return true
-    if (process.env.RAILWAY_ENVIRONMENT) {
-      return true;
-    }
+    // For Railway environment, bypass check only if explicitly disabled
+    // if (process.env.RAILWAY_ENVIRONMENT) {
+    //   return true;
+    // }
     return this.pool !== null || this.sqlite !== null;
   }
 
@@ -671,10 +664,10 @@ export class DatabaseManager {
    * Health check
    */
   async healthCheck(): Promise<boolean> {
-    // For Railway environment, always return true
-    if (process.env.RAILWAY_ENVIRONMENT) {
-      return true;
-    }
+    // For Railway environment, bypass check only if explicitly disabled
+    // if (process.env.RAILWAY_ENVIRONMENT) {
+    //   return true;
+    // }
 
     try {
       if (this.dbType === DatabaseType.SQLITE && this.sqlite) {
