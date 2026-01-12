@@ -175,5 +175,6 @@ export function mergeConfig(
       ...defaultConfig.notifications,
       ...partial.notifications,
     },
+    services: { ...defaultConfig.services, ...partial.services },
   };
 }
