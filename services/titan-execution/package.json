@@ -5,7 +5,7 @@
   "main": "src/server.js",
   "type": "module",
   "scripts": {
-    "start": "node src/start-production.js",
+    "start": "node src/server.js",
     "build": "echo 'No build needed'",
     "start:full": "node src/server.js",
     "dev": "node --watch src/server-production.js",
