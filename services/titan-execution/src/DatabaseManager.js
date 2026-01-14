@@ -87,10 +87,16 @@ export class DatabaseManager extends EventEmitter {
         });
       } else {
         // SQLite for development/testing
+        // Ignore DATABASE_URL if it's a Postgres connection string (Railway default)
+        const isPostgresUrl = this.config.url && this.config.url.startsWith('postgres');
+        const filename = (this.config.url && !isPostgresUrl) 
+          ? this.config.url 
+          : './titan_execution.db';
+
         this.db = knex({
           client: 'sqlite3',
           connection: {
-            filename: this.config.url || './titan_execution.db'
+            filename: filename
           },
           useNullAsDefault: true,
           pool: {
