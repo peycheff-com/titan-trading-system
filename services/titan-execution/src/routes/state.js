@@ -16,16 +16,7 @@ export function registerStateRoutes(fastify, dependencies) {
     return shadowState.getStateSnapshot();
   }, logger));
 
-  /**
-   * Get all open positions
-   */
-  fastify.get('/positions', asyncHandler(async () => {
-    const positions = shadowState.getAllPositions();
-    return ResponseFactory.success({
-      positions: Object.fromEntries(positions),
-      count: positions.size,
-    });
-  }, logger));
+
 
   /**
    * Get position for a specific symbol
