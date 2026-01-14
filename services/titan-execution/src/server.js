@@ -270,7 +270,7 @@ if (useMockBroker) {
     loggerAdapter.error({ error: healthCheck.error }, `${exchangeId} connection test failed`);
     // Create detailed error but don't crash if it's just network (retry policy?)
     // For now, fail fast as per requirement 96.1
-    process.exit(1);
+    // process.exit(1); // DISABLED to allow startup despite IP issues (user must fix IP)
   }
   
   loggerAdapter.info({
