@@ -1,13 +1,6 @@
-/**
- * Titan Guardrails Module
- * 
- * Enforces parameter bounds and validates proposals against safety limits.
- * Prevents dangerous configurations from being applied.
- */
+import { EventEmitter } from 'events';
 
-const EventEmitter = require('events');
-
-class Guardrails extends EventEmitter {
+export class Guardrails extends EventEmitter {
   constructor(options = {}) {
     super();
     
@@ -400,5 +393,3 @@ class Guardrails extends EventEmitter {
     }
   }
 }
-
-module.exports = Guardrails;

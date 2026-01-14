@@ -1,13 +1,6 @@
-/**
- * Titan Backtester
- * 
- * Replays historical data with different configurations to validate
- * optimization proposals. Applies Bulgaria Tax (latency + slippage).
- */
+import { EventEmitter } from 'events';
 
-const EventEmitter = require('events');
-
-class Backtester extends EventEmitter {
+export class Backtester extends EventEmitter {
   constructor(options = {}) {
     super();
     
@@ -403,5 +396,3 @@ class Backtester extends EventEmitter {
     }
   }
 }
-
-module.exports = Backtester;

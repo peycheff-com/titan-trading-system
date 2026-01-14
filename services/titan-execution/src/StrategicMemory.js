@@ -446,4 +446,5 @@ class StrategicMemory extends EventEmitter {
   }
 }
 
-export default StrategicMemory;
+// export default StrategicMemory;
+export { StrategicMemory };
