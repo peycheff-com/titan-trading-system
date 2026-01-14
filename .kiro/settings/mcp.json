@@ -74,6 +74,17 @@
         "firecrawl_search",
         "firecrawl_map"
       ]
+    },
+    "railway": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@railway/mcp-server"
+      ],
+      "env": {
+        "RAILWAY_API_TOKEN": "937343c4-c3b1-4f03-85fc-3369a69c5cf0"
+      },
+      "disabled": false
     }
   }
 }
