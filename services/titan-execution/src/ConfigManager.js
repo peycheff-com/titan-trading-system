@@ -556,7 +556,7 @@ export class ConfigManager extends EventEmitter {
       results.scavenger = this.updateScavenger(updates.scavenger);
     }
 
-    });
+
     
     // Update api_keys
     if (updates.api_keys) {
