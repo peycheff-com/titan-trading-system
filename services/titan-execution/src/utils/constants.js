@@ -71,6 +71,12 @@ export const CONSTANTS = {
     WARN: 'warn',
     ERROR: 'error',
   },
+
+  // Execution modes
+  EXECUTION_MODES: {
+    MAKER: 'MAKER',
+    TAKER: 'TAKER',
+  },
 };
 
 // Freeze to prevent accidental modification
@@ -80,3 +86,4 @@ Object.freeze(CONSTANTS.POSITION_SIDES);
 Object.freeze(CONSTANTS.ORDER_TYPES);
 Object.freeze(CONSTANTS.CIRCUIT_BREAKER_STATES);
 Object.freeze(CONSTANTS.LOG_LEVELS);
+Object.freeze(CONSTANTS.EXECUTION_MODES);
