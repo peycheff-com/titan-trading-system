@@ -213,8 +213,11 @@ if (useMockBroker) {
 
   if (exchangeId === 'bybit') {
     // Validate required environment variables
-    if (!process.env.BYBIT_API_KEY || !process.env.BYBIT_API_SECRET) {
-      loggerAdapter.error('BYBIT_API_KEY and BYBIT_API_SECRET environment variables are required for Bybit');
+    const apiKey = process.env.BYBIT_API_KEY || process.env.BROKER_API_KEY;
+    const apiSecret = process.env.BYBIT_API_SECRET || process.env.BROKER_API_SECRET;
+
+    if (!apiKey || !apiSecret) {
+      loggerAdapter.error('BYBIT_API_KEY (or BROKER_API_KEY) and BYBIT_API_SECRET (or BROKER_API_SECRET) environment variables are required for Bybit');
       process.exit(1);
     }
     
@@ -227,8 +230,8 @@ if (useMockBroker) {
     const { BybitAdapter } = await import('./adapters/BybitAdapter.js');
     
     brokerAdapter = new BybitAdapter({
-      apiKey: process.env.BYBIT_API_KEY,
-      apiSecret: process.env.BYBIT_API_SECRET,
+      apiKey: apiKey,
+      apiSecret: apiSecret,
       testnet: bybitTestnet,
       category: process.env.BYBIT_CATEGORY || 'linear', // USDT perpetual
       rateLimitRps: parseInt(process.env.BYBIT_RATE_LIMIT_RPS || '10'),

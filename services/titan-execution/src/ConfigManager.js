@@ -55,8 +55,8 @@ export class ConfigManager extends EventEmitter {
       },
       api_keys: {
         broker: (process.env.EXCHANGE_ID || 'BYBIT').toUpperCase(),
-        bybit_api_key: process.env.BYBIT_API_KEY,
-        bybit_api_secret: process.env.BYBIT_API_SECRET,
+        bybit_api_key: process.env.BYBIT_API_KEY || process.env.BROKER_API_KEY,
+        bybit_api_secret: process.env.BYBIT_API_SECRET || process.env.BROKER_API_SECRET,
         mexc_api_key: process.env.MEXC_API_KEY,
         mexc_api_secret: process.env.MEXC_API_SECRET,
         testnet: process.env.BYBIT_TESTNET === 'true', // Initialize from env
