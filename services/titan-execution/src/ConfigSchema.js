@@ -645,15 +645,22 @@ const CONFIG_SPEC = {
  * @throws {Error} If required variables are missing or have invalid types
  */
 function parseEnvironment(env) {
-  const parsed = {};
+  // Map aliases for backward compatibility and provider-specific keys
+  if (!env.BROKER_API_KEY && env.BYBIT_API_KEY) env.BROKER_API_KEY = env.BYBIT_API_KEY;
+  if (!env.BROKER_API_SECRET && env.BYBIT_API_SECRET) env.BROKER_API_SECRET = env.BYBIT_API_SECRET;
+
+  // Set defaults for required risk parameters if missing
+  if (!env.MAX_RISK_PCT) env.MAX_RISK_PCT = '0.02';
+  if (!env.PHASE_1_RISK_PCT) env.PHASE_1_RISK_PCT = '0.10';
+  if (!env.PHASE_2_RISK_PCT) env.PHASE_2_RISK_PCT = '0.05';
 
   for (const [key, spec] of Object.entries(CONFIG_SPEC)) {
-    const value = env[key];
+    let value = env[key];
 
     // Handle missing values
     if (value === undefined || value === '') {
       if (spec.required) {
-        throw new Error(`${key} is required but not provided`);
+        throw new Error(`${key} is required but not provided. (Available env keys: ${Object.keys(env).filter(k => !k.includes('SECRET') && !k.includes('KEY')).join(', ')})`);
       }
       if (spec.default !== undefined) {
         parsed[key] = spec.default;
