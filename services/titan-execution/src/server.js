@@ -462,6 +462,9 @@ const scavengerHandler = new ScavengerHandler({
   wsStatus: null, // Will be set after server starts
 });
 
+// Pre-declare metricsUpdateInterval to avoid "decorator added after start" error
+fastify.decorate('metricsUpdateInterval', null);
+
 // Register Scavenger Handler with Signal Router (with metrics recording)
 // Requirements: Titan Phase 1 Integration 4.1-4.5, 6.2 - Record signal metrics
 signalRouter.registerHandler('scavenger', async (signal) => {
@@ -711,7 +714,7 @@ async function start() {
     }, 5000); // Update every 5 seconds
     
     // Store interval for cleanup
-    fastify.decorate('metricsUpdateInterval', metricsUpdateInterval);
+    fastify.metricsUpdateInterval = metricsUpdateInterval;
 
     await fastify.listen({ port: internalConfig.port, host: internalConfig.host });
     fastify.log.info(`Titan Execution Microservice listening on ${internalConfig.host}:${internalConfig.port}`);
