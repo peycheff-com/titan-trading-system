@@ -19,7 +19,18 @@ interface TopBarProps {
 export function TopBar({ safetyLocked, onSafetyToggle }: TopBarProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [clockSynced, setClockSynced] = useState(true);
-  const [environment] = useState<Environment>('testnet');
+  
+  // Determine environment from VITE_APP_ENV or MODE
+  const getInitialEnv = (): Environment => {
+    const envVar = import.meta.env.VITE_APP_ENV as string;
+    if (envVar === 'prod' || envVar === 'production') return 'prod';
+    if (envVar === 'testnet') return 'testnet';
+    if (envVar === 'local') return 'local';
+    
+    return import.meta.env.MODE === 'production' ? 'prod' : 'local';
+  };
+
+  const [environment] = useState<Environment>(getInitialEnv);
 
   useEffect(() => {
     const timer = setInterval(() => {

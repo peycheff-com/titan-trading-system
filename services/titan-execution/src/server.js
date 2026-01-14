@@ -9,6 +9,7 @@
 import 'dotenv/config';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import fastifyWebsocket from '@fastify/websocket';
 import { validateConfig, validateRedisConnection } from './ConfigSchema.js';
 import { ShadowState } from './ShadowState.js';
 import { ReplayGuard } from './ReplayGuard.js';
@@ -147,6 +148,39 @@ try {
   fastify.log.info('CORS enabled for frontend connections');
 } catch (error) {
   fastify.log.error({ error: error.message }, 'Failed to register CORS plugin');
+  throw error;
+}
+
+// Register WebSocket plugin and routes
+try {
+  await fastify.register(fastifyWebsocket);
+  fastify.log.info('WebSocket plugin registered');
+
+  fastify.get(CONSTANTS.WS_CONSOLE_PATH, { websocket: true }, (connection, req) => {
+    if (consoleWs) {
+      consoleWs.handleExternalConnection(connection.socket, req.raw);
+    } else {
+      connection.socket.close(1011, "Server initializing");
+    }
+  });
+
+  fastify.get(CONSTANTS.WS_STATUS_PATH, { websocket: true }, (connection, req) => {
+    if (wsStatus) {
+      wsStatus.handleExternalConnection(connection.socket, req.raw);
+    } else {
+      connection.socket.close(1011, "Server initializing");
+    }
+  });
+
+  fastify.get('/ws/scavenger', { websocket: true }, (connection, req) => {
+    if (scavengerWs) {
+      scavengerWs.handleConnection(connection.socket, req.raw);
+    } else {
+      connection.socket.close(1011, "Server initializing");
+    }
+  });
+} catch (error) {
+  fastify.log.error({ error: error.message }, 'Failed to register WebSocket plugin');
   throw error;
 }
 
@@ -730,7 +764,6 @@ async function start() {
     // Initialize WebSocket Status Channel after server starts
     // Requirements: 23.4 - Push status update via WebSocket /ws/status channel
     wsStatus = new WebSocketStatus({
-      server: fastify.server,
       path: CONSTANTS.WS_STATUS_PATH,
       logger: loggerAdapter,
     });
@@ -806,7 +839,6 @@ async function start() {
     // Initialize Console WebSocket after server starts
     // Requirements: 89.6, 95.3-95.6 - Real-time state updates to Command Console
     consoleWs = new ConsoleWebSocket({
-      server: fastify.server,
       path: CONSTANTS.WS_CONSOLE_PATH,
       logger: loggerAdapter,
     });
@@ -847,7 +879,6 @@ async function start() {
     // Initialize Scavenger WebSocket after server starts
     // Requirements: 10.1-10.5 - Real-time Phase 1 (Scavenger) activity updates
     scavengerWs = new ScavengerWebSocket({
-      server: fastify.server,
       path: '/ws/scavenger',
       logger: loggerAdapter,
     });

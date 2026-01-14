@@ -290,6 +290,15 @@ export class ConsoleWebSocket extends EventEmitter {
   }
 
   /**
+   * Handle external WebSocket connection (e.g. from Fastify)
+   * @param {WebSocket} ws - WebSocket connection
+   * @param {Object} req - HTTP request
+   */
+  handleExternalConnection(ws, req) {
+    this._handleConnection(ws, req);
+  }
+
+  /**
    * Handle new client connection
    * Requirements: 89.6 - Establish WebSocket connection for real-time updates
    * @param {WebSocket} ws - WebSocket connection

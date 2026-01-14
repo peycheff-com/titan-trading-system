@@ -12,7 +12,12 @@ export const CONSTANTS = {
   WS_SCAVENGER_PATH: '/ws/scavenger',
 
   // CORS
-  CORS_ORIGINS: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:3001'],
+  CORS_ORIGINS: [
+    'http://localhost:3000', 
+    'http://localhost:5173', 
+    'http://localhost:3001',
+    'https://titan-console-production.up.railway.app'
+  ],
   
   // Timing constants (milliseconds)
   METRICS_UPDATE_INTERVAL_MS: 5000,
