@@ -1,14 +1,7 @@
-/**
- * Titan Configuration Versioning System
- * 
- * Tracks configuration changes with version tags, links trades to config versions,
- * calculates performance deltas, and supports rollback to previous versions.
- */
+import crypto from 'crypto';
+import { EventEmitter } from 'events';
 
-const crypto = require('crypto');
-const EventEmitter = require('events');
-
-class ConfigVersioning extends EventEmitter {
+export class ConfigVersioning extends EventEmitter {
   constructor(options = {}) {
     super();
     
@@ -337,6 +330,87 @@ class ConfigVersioning extends EventEmitter {
   /**
    * Calculate performance delta between two versions
    */
+  async calculateVersionPerformance(versionTag) {
+    if (!this.databaseManager) {
+      return null;
+    }
+    
+    const stats = await this.databaseManager.get(`
+      SELECT 
+        COUNT(*) as trades_count,
+        SUM(realized_pnl) as total_pnl,
+        AVG(CASE WHEN win = 1 THEN 1.0 ELSE 0.0 END) * 100 as win_rate,
+        AVG(r_multiple) as avg_r_multiple
+      FROM trade_history
+      WHERE config_version_tag = ? AND status = 'closed'
+    `, [versionTag]);
+    
+    // Calculate Sharpe ratio (simplified)
+    const trades = await this.databaseManager.all(`
+      SELECT realized_pnl FROM trade_history
+      WHERE config_version_tag = ? AND status = 'closed'
+    `, [versionTag]);
+    
+    let sharpeRatio = null;
+    let maxDrawdown = null;
+    
+    if (trades.length > 1) {
+      const returns = trades.map(t => t.realized_pnl);
+      const avgReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
+      const stdDev = Math.sqrt(
+        returns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / returns.length
+      );
+      
+      if (stdDev > 0) {
+        sharpeRatio = (avgReturn / stdDev) * Math.sqrt(252); // Annualized
+      }
+      
+      // Calculate max drawdown
+      let peak = 0;
+      let maxDd = 0;
+      let cumulative = 0;
+      
+      for (const trade of trades) {
+        cumulative += trade.realized_pnl;
+        if (cumulative > peak) peak = cumulative;
+        const dd = (peak - cumulative) / Math.max(peak, 1);
+        if (dd > maxDd) maxDd = dd;
+      }
+      
+      maxDrawdown = maxDd;
+    }
+    
+    // Update version record
+    await this.databaseManager.run(`
+      UPDATE config_versions SET
+        trades_count = ?,
+        total_pnl = ?,
+        win_rate = ?,
+        sharpe_ratio = ?,
+        max_drawdown = ?
+      WHERE version_tag = ?
+    `, [
+      stats.trades_count || 0,
+      stats.total_pnl || 0,
+      stats.win_rate || 0,
+      sharpeRatio,
+      maxDrawdown,
+      versionTag
+    ]);
+    
+    return {
+      tradesCount: stats.trades_count || 0,
+      totalPnl: stats.total_pnl || 0,
+      winRate: stats.win_rate || 0,
+      avgRMultiple: stats.avg_r_multiple || 0,
+      sharpeRatio,
+      maxDrawdown
+    };
+  }
+
+  /**
+   * Calculate performance delta between two versions
+   */
   async calculatePerformanceDelta(oldVersionTag, newVersionTag) {
     const oldPerf = await this.calculateVersionPerformance(oldVersionTag);
     const newPerf = await this.calculateVersionPerformance(newVersionTag);
@@ -404,5 +478,3 @@ class ConfigVersioning extends EventEmitter {
     }
   }
 }
-
-module.exports = ConfigVersioning;
