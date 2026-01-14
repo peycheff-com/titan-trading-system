@@ -14,7 +14,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
  * @param {Object} fastify - Fastify instance
  * @param {Object} options - Route options
  */
-export async function tradesRoutes(fastify, options) {
+export async function registerTradeRoutes(fastify, options) {
   const { databaseManager, logger } = options;
 
   /**
@@ -355,4 +355,4 @@ async function streamCSV(reply, trades, analytics) {
   return reply.send(stream);
 }
 
-export default tradesRoutes;
+export default registerTradeRoutes;

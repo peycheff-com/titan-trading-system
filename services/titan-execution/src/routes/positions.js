@@ -92,7 +92,7 @@ class PositionValidator {
  * @param {Object} fastify - Fastify instance
  * @param {Object} options - Route options
  */
-export async function positionRoutes(fastify, options) {
+export async function registerPositionRoutes(fastify, options) {
   const { brokerGateway, shadowState, logger } = options;
 
   /**
@@ -312,4 +312,4 @@ export async function positionRoutes(fastify, options) {
   }, logger));
 }
 
-export default positionRoutes;
+export default registerPositionRoutes;
