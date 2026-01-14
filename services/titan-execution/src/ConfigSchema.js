@@ -645,6 +645,8 @@ const CONFIG_SPEC = {
  * @throws {Error} If required variables are missing or have invalid types
  */
 function parseEnvironment(env) {
+  const parsed = {};
+
   // Map aliases for backward compatibility and provider-specific keys
   if (!env.BROKER_API_KEY && env.BYBIT_API_KEY) env.BROKER_API_KEY = env.BYBIT_API_KEY;
   if (!env.BROKER_API_SECRET && env.BYBIT_API_SECRET) env.BROKER_API_SECRET = env.BYBIT_API_SECRET;
