@@ -58,6 +58,24 @@ export class BybitAdapter {
   }
   
   /**
+   * Health check including balance and connection status
+   */
+  async healthCheck() {
+    try {
+      const account = await this.getAccount();
+      return {
+        success: true,
+        exchange: 'bybit',
+        testnet: this.baseUrl.includes('testnet'),
+        balance: account.available_balance,
+        rate_limit_status: 'OK', 
+      };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  }
+
+  /**
    * Test connection
    */
   async testConnection() {
