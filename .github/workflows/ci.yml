@@ -53,7 +53,7 @@ jobs:
       
       - name: Run unit tests
         working-directory: services/titan-execution
-        run: npm test -- --testPathPattern="\.test\.js$" --coverage
+        run: npm test -- --testPathPattern=\.test\.js$ --coverage
         env:
           NODE_ENV: test
       
@@ -161,7 +161,7 @@ jobs:
       - name: Check coverage threshold
         working-directory: services/titan-execution
         run: |
-          COVERAGE=$(npm test -- --coverage --coverageReporters=json-summary | grep -oP '"lines":\{"total":\d+,"covered":\d+,"skipped":\d+,"pct":\K[\d.]+')
+          COVERAGE=$(npm test -- --coverage --coverageReporters=json-summary | grep -oP '"lines":{"total":\d+,"covered":\d+,"skipped":\d+,"pct":\K[\d.]+')
           echo "Coverage: $COVERAGE%"
           if (( $(echo "$COVERAGE < 80" | bc -l) )); then
             echo "❌ Coverage $COVERAGE% is below 80% threshold"
