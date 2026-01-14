@@ -13,7 +13,7 @@ import { z } from 'zod';
  * Validation constants for configuration bounds
  */
 const VALIDATION_CONSTANTS = {
-  MIN_HMAC_SECRET_LENGTH: 32,
+  MIN_HMAC_SECRET_LENGTH: 16,
   MIN_RISK_PCT: 0.01,
   MAX_RISK_PCT: 0.20,
   MIN_PHASE_RISK_PCT: 0.01,
