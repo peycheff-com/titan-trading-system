@@ -12,7 +12,7 @@
  *   3. Sensitivity (Higher threshold in high volatility)
  */
 
-import { OHLCV } from "../engine/TitanTrap.js";
+import { OHLCV } from "../types/index.js";
 
 export interface VolatilityMetrics {
     atr: number;

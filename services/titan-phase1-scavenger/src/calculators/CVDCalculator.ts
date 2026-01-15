@@ -1,30 +1,24 @@
 /**
  * CVD (Cumulative Volume Delta) Calculator
- * 
+ *
  * Purpose: Track buy volume - sell volume over time windows
- * 
+ *
  * CVD is a critical indicator for detecting institutional flow:
  * - Positive CVD = Net buying pressure (whales accumulating)
  * - Negative CVD = Net selling pressure (whales distributing)
- * 
+ *
  * Used by:
  * - OIWipeoutDetector: Detect when CVD flips from red to green (buying returns)
  * - FundingSqueezeDetector: Detect when CVD is rising (whales absorbing shorts)
  * - BasisArbDetector: Validate that volume is real, not wash trading
- * 
+ *
  * Key Features:
  * - Variable time windows (60s, 300s, 600s)
  * - Offset support for comparing historical CVD
  * - Uses exchange timestamps (not Date.now()) to avoid clock drift
  */
 
-export interface Trade {
-  symbol: string;
-  price: number;
-  qty: number;
-  time: number;        // Exchange timestamp (NOT Date.now())
-  isBuyerMaker: boolean;
-}
+import { Trade } from "../types/index.js";
 
 interface TradeHistoryPoint {
   qty: number;
@@ -38,9 +32,9 @@ export class CVDCalculator {
 
   /**
    * Record a trade for CVD calculation
-   * 
+   *
    * Call this method for every trade received from the exchange WebSocket.
-   * 
+   *
    * @param trade - Trade data from exchange
    */
   recordTrade(trade: Trade): void {
@@ -49,7 +43,7 @@ export class CVDCalculator {
     }
 
     const history = this.tradeHistory.get(trade.symbol)!;
-    
+
     // Add trade to history
     // isBuyerMaker = false means the buyer was the aggressor (market buy = bullish)
     // isBuyerMaker = true means the seller was the aggressor (market sell = bearish)
@@ -63,24 +57,24 @@ export class CVDCalculator {
     const cutoff = trade.time - (this.MAX_HISTORY_SECONDS * 1000);
     this.tradeHistory.set(
       trade.symbol,
-      history.filter(t => t.time > cutoff)
+      history.filter((t) => t.time > cutoff),
     );
   }
 
   /**
    * Calculate CVD (Cumulative Volume Delta) for a symbol
-   * 
+   *
    * CVD = Sum(Buy Volume) - Sum(Sell Volume)
-   * 
+   *
    * @param symbol - Trading symbol (e.g., 'BTCUSDT')
    * @param windowSeconds - Time window in seconds (e.g., 60, 300, 600)
    * @param offsetSeconds - Optional offset to look back in time (for comparing historical CVD)
    * @returns CVD value (positive = net buying, negative = net selling)
-   * 
+   *
    * @example
    * // Get CVD for last 5 minutes
    * const cvd = await calculator.calcCVD('BTCUSDT', 300);
-   * 
+   *
    * @example
    * // Get CVD from 5-10 minutes ago (for comparison)
    * const previousCVD = await calculator.calcCVD('BTCUSDT', 300, 300);
@@ -88,10 +82,10 @@ export class CVDCalculator {
   async calcCVD(
     symbol: string,
     windowSeconds: number,
-    offsetSeconds: number = 0
+    offsetSeconds: number = 0,
   ): Promise<number> {
     const history = this.tradeHistory.get(symbol);
-    
+
     if (!history || history.length === 0) {
       return 0;
     }
@@ -109,7 +103,7 @@ export class CVDCalculator {
     // Filter trades within the time window
     // Use <= for windowEnd to include trades at the exact boundary
     const tradesInWindow = history.filter(
-      t => t.time >= windowStart && t.time <= windowEnd
+      (t) => t.time >= windowStart && t.time <= windowEnd,
     );
 
     if (tradesInWindow.length === 0) {

@@ -8,7 +8,7 @@
  */
 
 import { EventEmitter } from "eventemitter3";
-import { getTelemetryService } from "../../../shared/src/index.js";
+import { getTelemetryService } from "@titan/shared";
 import { Config, OHLCV, RegimeSnapshot, Trade } from "../types/index.js";
 
 /**

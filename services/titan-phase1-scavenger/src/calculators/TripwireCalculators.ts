@@ -6,30 +6,7 @@
  * levels (liquidation clusters, daily levels, Bollinger breakouts).
  */
 
-export interface OHLCV {
-  timestamp: number;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
-}
-
-export interface Tripwire {
-  symbol: string;
-  triggerPrice: number;
-  direction: "LONG" | "SHORT";
-  trapType: "LIQUIDATION" | "DAILY_LEVEL" | "BOLLINGER" | "SIGMA_FADE";
-  confidence: number; // 80-95
-  leverage: number; // 10x-20x
-  estimatedCascadeSize: number; // Expected move in %
-  activated: boolean;
-  activatedAt?: number; // Timestamp
-
-  // Alpha Logic
-  adx?: number; // Trend Strength (0-100)
-  trend?: "UP" | "DOWN" | "RANGING";
-}
+import { OHLCV, TrapType, Tripwire } from "../types/index.js";
 
 interface VolumeProfileNode {
   price: number;
@@ -44,15 +21,19 @@ export class TripwireCalculators {
    * at cluster price ± 0.2%
    *
    * @param ohlcv - OHLCV data (minimum 50 bars recommended)
+   * @param symbol - Ticker symbol
    * @returns Tripwire or null if no valid cluster found
    */
-  calcLiquidationCluster(ohlcv: OHLCV[]): Tripwire | null {
+  static calcLiquidationCluster(
+    ohlcv: OHLCV[],
+    symbol: string = "",
+  ): Tripwire | null {
     if (ohlcv.length < 50) {
       return null; // Insufficient data
     }
 
     // Build volume profile with 50 bins
-    const volumeProfile = this.buildVolumeProfile(ohlcv, 50);
+    const volumeProfile = TripwireCalculators.buildVolumeProfile(ohlcv, 50);
 
     // Find top 3 volume peaks (liquidation clusters)
     const peaks = volumeProfile
@@ -77,7 +58,7 @@ export class TripwireCalculators {
     const trap =
       longCluster && (!shortCluster || longCluster.volume > shortCluster.volume)
         ? {
-          symbol: "", // Set by caller
+          symbol, // Set by caller or default
           triggerPrice: longCluster.price * 1.002, // +0.2% above cluster
           direction: "LONG" as const,
           trapType: "LIQUIDATION" as const,
@@ -87,7 +68,7 @@ export class TripwireCalculators {
           activated: false,
         }
         : {
-          symbol: "",
+          symbol,
           triggerPrice: shortCluster!.price * 0.998, // -0.2% below cluster
           direction: "SHORT" as const,
           trapType: "LIQUIDATION" as const,
@@ -110,7 +91,7 @@ export class TripwireCalculators {
    * @param bins - Number of price bins (default 50)
    * @returns Array of price/volume nodes
    */
-  buildVolumeProfile(ohlcv: OHLCV[], bins: number): VolumeProfileNode[] {
+  static buildVolumeProfile(ohlcv: OHLCV[], bins: number): VolumeProfileNode[] {
     if (ohlcv.length === 0 || bins <= 0) {
       return [];
     }
@@ -160,9 +141,10 @@ export class TripwireCalculators {
    * and sets breakout triggers at these key psychological levels
    *
    * @param ohlcv - OHLCV data (1h bars, minimum 48 bars)
+   * @param symbol - Ticker symbol
    * @returns Tripwire or null if not close to any daily level
    */
-  calcDailyLevel(ohlcv: OHLCV[]): Tripwire | null {
+  static calcDailyLevel(ohlcv: OHLCV[], symbol: string = ""): Tripwire | null {
     // Need at least 48 bars (2 days of 1h data)
     if (ohlcv.length < 48) {
       return null;
@@ -187,7 +169,7 @@ export class TripwireCalculators {
     if (distanceToHigh < 0.02 && distanceToHigh < distanceToLow) {
       // Close to PDH, set breakout trap
       return {
-        symbol: "",
+        symbol,
         triggerPrice: pdh * 1.001, // +0.1% above PDH
         direction: "LONG",
         trapType: "DAILY_LEVEL",
@@ -199,7 +181,7 @@ export class TripwireCalculators {
     } else if (distanceToLow < 0.02) {
       // Close to PDL, set breakdown trap
       return {
-        symbol: "",
+        symbol,
         triggerPrice: pdl * 0.999, // -0.1% below PDL
         direction: "SHORT",
         trapType: "DAILY_LEVEL",
@@ -220,9 +202,13 @@ export class TripwireCalculators {
    * triggers at upper/lower bands
    *
    * @param ohlcv - OHLCV data (minimum 92 bars for 72-hour history)
+   * @param symbol - Ticker symbol
    * @returns Tripwire or null if no squeeze detected
    */
-  calcBollingerBreakout(ohlcv: OHLCV[]): Tripwire | null {
+  static calcBollingerBreakout(
+    ohlcv: OHLCV[],
+    symbol: string = "",
+  ): Tripwire | null {
     const period = 20;
 
     // Need at least 92 bars (20 for calculation + 72 for historical comparison)
@@ -233,8 +219,8 @@ export class TripwireCalculators {
     const closes = new Float64Array(ohlcv.map((bar) => bar.close));
 
     // Calculate current SMA and standard deviation
-    const sma = this.calcSMA(closes, period);
-    const stdDev = this.calcStdDev(closes, period);
+    const sma = TripwireCalculators.calcSMA(closes, period);
+    const stdDev = TripwireCalculators.calcStdDev(closes, period);
 
     // Calculate Bollinger Bands
     const upperBand = sma + (stdDev * 2);
@@ -248,8 +234,8 @@ export class TripwireCalculators {
     for (let i = 0; i < 72; i++) {
       const startIdx = ohlcv.length - 92 + i;
       const slice = closes.slice(startIdx, startIdx + period);
-      const sliceSMA = this.calcSMA(slice, period);
-      const sliceStdDev = this.calcStdDev(slice, period);
+      const sliceSMA = TripwireCalculators.calcSMA(slice, period);
+      const sliceStdDev = TripwireCalculators.calcStdDev(slice, period);
       historicalWidths[i] = (sliceStdDev * 2 * 2) / sliceSMA;
     }
 
@@ -266,7 +252,7 @@ export class TripwireCalculators {
     const direction = currentPrice > sma ? "LONG" : "SHORT";
 
     return {
-      symbol: "",
+      symbol,
       triggerPrice: direction === "LONG"
         ? upperBand * 1.001
         : lowerBand * 0.999,
@@ -286,7 +272,7 @@ export class TripwireCalculators {
    * @param period - SMA period
    * @returns SMA value
    */
-  calcSMA(data: Float64Array, period: number): number {
+  static calcSMA(data: Float64Array, period: number): number {
     if (data.length < period) {
       return 0;
     }
@@ -306,13 +292,13 @@ export class TripwireCalculators {
    * @param period - Period for calculation
    * @returns Standard deviation value
    */
-  calcStdDev(data: Float64Array, period: number): number {
+  static calcStdDev(data: Float64Array, period: number): number {
     if (data.length < period) {
       return 0;
     }
 
     const slice = data.slice(-period);
-    const mean = this.calcSMA(data, period);
+    const mean = TripwireCalculators.calcSMA(data, period);
 
     let sumSquaredDiffs = 0;
     for (let i = 0; i < slice.length; i++) {
@@ -335,7 +321,7 @@ export class TripwireCalculators {
    * @param period - ADX period (default 14)
    * @returns ADX value (0-100)
    */
-  calcADX(ohlcv: OHLCV[], period: number = 14): number {
+  static calcADX(ohlcv: OHLCV[], period: number = 14): number {
     if (ohlcv.length < period * 2) return 0;
 
     const tr = new Float64Array(ohlcv.length);

@@ -25,7 +25,7 @@
  * - Leverage: 10x
  */
 
-import { Tripwire } from "../engine/TitanTrap";
+import { Tripwire } from "../types/index.js";
 
 interface BinanceClient {
   getSpotPrice(symbol: string): Promise<number>;

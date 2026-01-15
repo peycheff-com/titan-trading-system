@@ -20,7 +20,7 @@ import {
   StrategyPrediction,
 } from "./PredictiveAnalytics.js";
 import { TitanAnalyst } from "./TitanAnalyst.js";
-import { getTelemetryService } from "../../../shared/src/index.js";
+import { getTelemetryService } from "@titan/shared";
 import {
   Config,
   OHLCV,
@@ -476,7 +476,9 @@ export class EnhancedAIIntegration extends EventEmitter {
       Math.min(maxStrategies, sortedPredictions.length);
 
     for (
-      let i = 0; i < Math.min(maxStrategies, sortedPredictions.length); i++
+      let i = 0;
+      i < Math.min(maxStrategies, sortedPredictions.length);
+      i++
     ) {
       const prediction = sortedPredictions[i];
 
