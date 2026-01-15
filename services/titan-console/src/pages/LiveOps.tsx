@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { EventTimeline } from '@/components/titan/EventTimeline';
 import { LatencyWaterfall } from '@/components/titan/LatencyWaterfall';
 import { ServiceHealthCard } from '@/components/titan/ServiceHealthCard';
@@ -26,16 +26,18 @@ export default function LiveOps() {
   const [selectedSymbol, setSelectedSymbol] = useState<string>('all');
   const [data, setData] = useState<LiveOpsData>({ events: [], orders: [], services: [] });
 
-  useWebSocket({
-    onMessage: (msg: any) => {
-      if (msg.type === 'EVENT_STREAM') {
-        setData(prev => ({ ...prev, events: [msg.event, ...prev.events].slice(0, 50) }));
-      } else if (msg.type === 'ORDER_UPDATE') {
-        setData(prev => ({ ...prev, orders: [msg.order, ...prev.orders].slice(0, 20) }));
-      } else if (msg.type === 'SERVICE_STATUS') {
-        setData(prev => ({ ...prev, services: msg.services }));
-      }
+  const handleMessage = useCallback((msg: any) => {
+    if (msg.type === 'EVENT_STREAM') {
+      setData(prev => ({ ...prev, events: [msg.event, ...prev.events].slice(0, 50) }));
+    } else if (msg.type === 'ORDER_UPDATE') {
+      setData(prev => ({ ...prev, orders: [msg.order, ...prev.orders].slice(0, 20) }));
+    } else if (msg.type === 'SERVICE_STATUS') {
+      setData(prev => ({ ...prev, services: msg.services }));
     }
+  }, []);
+
+  useWebSocket({
+    onMessage: handleMessage
   });
 
   const filteredEvents = data.events.filter((event) => {

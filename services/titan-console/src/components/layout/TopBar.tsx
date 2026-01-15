@@ -20,13 +20,20 @@ export function TopBar({ safetyLocked, onSafetyToggle }: TopBarProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [clockSynced, setClockSynced] = useState(true);
   
-  // Determine environment from VITE_APP_ENV or MODE
+  // Determine environment from VITE_APP_ENV or MODE or window location
   const getInitialEnv = (): Environment => {
     const envVar = import.meta.env.VITE_APP_ENV as string;
     if (envVar === 'prod' || envVar === 'production') return 'prod';
     if (envVar === 'testnet') return 'testnet';
     if (envVar === 'local') return 'local';
     
+    // Check hostname for production indicators
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      if (hostname.includes('railway.app') && hostname.includes('production')) return 'prod';
+      if (hostname.includes('railway.app') && hostname.includes('testnet')) return 'testnet';
+    }
+
     return import.meta.env.MODE === 'production' ? 'prod' : 'local';
   };
 

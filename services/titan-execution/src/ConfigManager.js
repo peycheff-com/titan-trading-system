@@ -59,7 +59,7 @@ export class ConfigManager extends EventEmitter {
         bybit_api_secret: process.env.BYBIT_API_SECRET || process.env.BROKER_API_SECRET,
         mexc_api_key: process.env.MEXC_API_KEY,
         mexc_api_secret: process.env.MEXC_API_SECRET,
-        testnet: process.env.BYBIT_TESTNET === 'true', // Initialize from env
+        testnet: process.env.BYBIT_TESTNET === 'true' || (process.env.NODE_ENV !== 'production' && !process.env.BYBIT_TESTNET), // Initialize from env, default false in prod
         validated: false,
         last_validated: null,
       },

@@ -879,6 +879,7 @@ async function start() {
     // Initialize Scavenger WebSocket after server starts
     // Requirements: 10.1-10.5 - Real-time Phase 1 (Scavenger) activity updates
     scavengerWs = new ScavengerWebSocket({
+      server: fastify.server,
       path: '/ws/scavenger',
       logger: loggerAdapter,
     });

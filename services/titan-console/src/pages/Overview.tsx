@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, AlertTriangle, TrendingUp, Bug, Target, Shield, Brain, Zap } from 'lucide-react';
 
@@ -12,13 +12,16 @@ import { useWebSocket } from '@/hooks/useWebSocket';
 
 export default function Overview() {
   const [data, setData] = useState<any>(null);
-  const { status } = useWebSocket({
-    onMessage: (msg: any) => {
-      if (msg.type === 'STATE_UPDATE' || msg.type === 'CONNECTED') {
-        const stateData = msg.state || msg;
-        setData((prev: any) => ({ ...prev, ...stateData }));
-      }
+
+  const handleWebSocketMessage = useCallback((msg: any) => {
+    if (msg.type === 'STATE_UPDATE' || msg.type === 'CONNECTED') {
+      const stateData = msg.state || msg;
+      setData((prev: any) => ({ ...prev, ...stateData }));
     }
+  }, []);
+
+  const { status } = useWebSocket({
+    onMessage: handleWebSocketMessage
   });
 
   const portfolioKPIs = data || {

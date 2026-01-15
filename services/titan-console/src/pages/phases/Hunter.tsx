@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { Target, AlertTriangle, Edit3, TrendingUp, TrendingDown, Brain, Zap, ShieldAlert, Cpu, Settings } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
 import { toast } from 'sonner';
+import { getApiBaseUrl } from '@/lib/api-config';
 
 import { Button } from "@/components/ui/button"
 import {
@@ -61,7 +62,7 @@ export default function HunterPhase() {
   useEffect(() => {
     const fetchHolograms = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/console/hunter/holograms`);
+        const response = await fetch(`${getApiBaseUrl()}/api/console/hunter/holograms`);
         if (response.ok) {
           const data = await response.json();
           setHolograms(data.data.holograms || []);

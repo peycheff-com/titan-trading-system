@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DenseTable } from '@/components/titan/DenseTable';
 import { RowDetailDrawer, DetailSection, DetailRow } from '@/components/titan/RowDetailDrawer';
 import { LatencyWaterfall } from '@/components/titan/LatencyWaterfall';
@@ -6,24 +6,53 @@ import { StatusPill } from '@/components/titan/StatusPill';
 import { formatTimestamp, formatCurrency } from '@/types';
 import { cn } from '@/lib/utils';
 import { Zap, Check, AlertTriangle, Clock } from 'lucide-react';
+import { useTitanData } from '@/hooks/useTitanData';
 
 const statusConfig: any = {
-  FILLED: { color: 'text-status-healthy', bg: 'bg-status-healthy/10' },
-  PARTIAL: { color: 'text-warning', bg: 'bg-warning/10' },
-  OPEN: { color: 'text-primary', bg: 'bg-primary/10' },
-  CANCELLED: { color: 'text-muted-foreground', bg: 'bg-muted' },
+FILLED: { color: 'text-status-healthy', bg: 'bg-status-healthy/10' },
+PARTIAL: { color: 'text-warning', bg: 'bg-warning/10' },
+OPEN: { color: 'text-primary', bg: 'bg-primary/10' },
+CANCELLED: { color: 'text-muted-foreground', bg: 'bg-muted' },
 };
 
 const phaseColors: any = {
-  scavenger: 'bg-phase-scavenger/10 text-phase-scavenger',
-  hunter: 'bg-phase-hunter/10 text-phase-hunter',
-  sentinel: 'bg-phase-sentinel/10 text-phase-sentinel',
+scavenger: 'bg-phase-scavenger/10 text-phase-scavenger',
+hunter: 'bg-phase-hunter/10 text-phase-hunter',
+sentinel: 'bg-phase-sentinel/10 text-phase-sentinel',
 };
 
 export default function ExecutionPage() {
-  const orders: any[] = []; // Default empty
+  const { request } = useTitanData();
+  const [orders, setOrders] = useState<any[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    const fetchTrades = async () => {
+      try {
+        const response = await request('/api/console/trades?limit=50');
+        if (response && response.success) {
+          // Normalize trades to match order view
+          const normalized = (response.data.trades || []).map((t: any) => ({
+            ...t,
+            id: t.id || t.trade_id || `t-${t.timestamp}`,
+            status: 'FILLED', // Historical trades are filled
+            qty: t.size,
+            filled: t.size,
+            price: t.entry_price || t.price,
+            phase: t.phase || 'scavenger'
+          }));
+          setOrders(normalized);
+        }
+      } catch (error) {
+        console.error('Failed to fetch trades:', error);
+      }
+    };
+
+    fetchTrades();
+    const interval = setInterval(fetchTrades, 10000);
+    return () => clearInterval(interval);
+  }, [request]);
 
   const handleRowClick = (order: any) => {
     setSelectedOrder(order);

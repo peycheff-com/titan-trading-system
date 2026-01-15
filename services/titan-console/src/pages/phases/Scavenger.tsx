@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { Bug, AlertTriangle, Edit3, Wifi, Activity, RotateCcw } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
 import { toast } from 'sonner';
+import { getTitanExecutionUrl } from '@/lib/api-config';
 
 interface ContextType {
   safetyLocked: boolean;
@@ -43,7 +44,7 @@ export default function ScavengerPhase() {
   const armedTripwires = trapMap.filter(t => t.proximity < 0.1); // Consider <10% as "Armed/Watching"
   const criticalTripwires = trapMap.filter(t => t.proximity < 0.02); // <2% is Critical
 
-  const getBaseUrl = () => import.meta.env.VITE_TITAN_EXECUTION_URL || "http://localhost:3000";
+  const getBaseUrl = () => getTitanExecutionUrl();
 
   const handleCreateDraft = () => {
     if (safetyLocked) {

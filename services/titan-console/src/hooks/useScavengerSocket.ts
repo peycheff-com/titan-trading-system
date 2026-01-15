@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { getTitanExecutionUrl } from "@/lib/api-config";
 
 // Type definitions
+// ... (rest of imports/types)
 export interface ScavengerTrap {
     symbol: string;
     trapType: string;
@@ -81,9 +83,7 @@ export function useScavengerSocket() {
     const connect = useCallback(() => {
         try {
             // Connect to Titan Execution Service which proxies Scavenger WS
-            // Use environment variable or default to localhost:3000
-            const baseUrl = import.meta.env.VITE_TITAN_EXECUTION_URL ||
-                "http://localhost:3000";
+            const baseUrl = getTitanExecutionUrl();
             const wsUrl = baseUrl.replace(/^http/, "ws") + "/ws/scavenger";
             console.log("Connecting to Scavenger WS:", wsUrl);
 
