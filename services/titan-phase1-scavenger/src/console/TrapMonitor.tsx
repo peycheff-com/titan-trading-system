@@ -16,42 +16,7 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 
-/**
- * Tripwire data structure
- */
-export interface Tripwire {
-  symbol: string;
-  triggerPrice: number;
-  direction: 'LONG' | 'SHORT';
-  trapType: 'LIQUIDATION' | 'DAILY_LEVEL' | 'BOLLINGER' | 'OI_WIPEOUT' | 'FUNDING_SQUEEZE' | 'BASIS_ARB' | 'ULTIMATE_BULGARIA' | 'PREDICTION_SPIKE';
-  confidence: number;
-  leverage: number;
-  estimatedCascadeSize: number;
-  activated: boolean;
-  activatedAt?: number;
-  currentPrice?: number;  // Updated by system
-  estimatedLeadTime?: number;  // Milliseconds until Bybit reaches trigger
-}
-
-/**
- * Sensor status data
- */
-export interface SensorStatus {
-  binanceHealth: 'OK' | 'DEGRADED' | 'DOWN';
-  binanceTickRate: number;  // Ticks per second
-  bybitStatus: 'ARMED' | 'DEGRADED' | 'DOWN';
-  bybitPing: number;  // Milliseconds
-  slippage: number;  // Percentage
-}
-
-/**
- * Live feed event
- */
-export interface LiveEvent {
-  timestamp: number;
-  type: 'TRAP_SPRUNG' | 'TRAP_SET' | 'EXECUTION_COMPLETE' | 'ERROR' | 'INFO';
-  message: string;
-}
+import { Tripwire, SensorStatus, LiveEvent } from '../types/index.js';
 
 /**
  * TrapMonitor props

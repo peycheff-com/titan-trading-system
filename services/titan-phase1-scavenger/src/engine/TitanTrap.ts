@@ -16,67 +16,15 @@ import { VolatilityScaler } from "../calculators/VolatilityScaler.js";
 import { CVDCalculator } from "../calculators/CVDCalculator.js";
 import { PredictionMarketDetector } from "../detectors/PredictionMarketDetector.js";
 import { PolymarketClient } from "../exchanges/PolymarketClient.js";
-
-export interface OHLCV {
-  timestamp: number;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
-}
-
-export interface Trade {
-  symbol: string;
-  price: number;
-  qty: number;
-  time: number;
-  isBuyerMaker: boolean;
-}
-
-export type TrapType =
-  | "LIQUIDATION"
-  | "DAILY_LEVEL"
-  | "BOLLINGER"
-  | "OI_WIPEOUT"
-  | "FUNDING_SQUEEZE"
-  | "BASIS_ARB"
-  | "ULTIMATE_BULGARIA"
-  | "PREDICTION_SPIKE";
-
-export interface Tripwire {
-  symbol: string;
-  triggerPrice: number;
-  direction: "LONG" | "SHORT";
-  trapType: TrapType;
-  confidence: number; // 80-98
-  leverage: number; // 10x-20x
-  estimatedCascadeSize: number; // Expected move in %
-  activated: boolean;
-  activatedAt?: number; // Timestamp of activation
-  targetPrice?: number;
-  stopLoss?: number;
-  // Volatility metrics for adaptive execution
-  volatilityMetrics?: {
-    atr: number;
-    regime: string;
-    stopLossMultiplier: number;
-    positionSizeMultiplier: number;
-  };
-  // Alpha Logic
-  adx?: number; // Trend Strength (0-100)
-  trend?: "UP" | "DOWN" | "RANGING";
-}
-
-export interface OrderParams {
-  symbol: string;
-  side: "Buy" | "Sell";
-  type: "MARKET" | "LIMIT";
-  price?: number;
-  qty: number;
-  leverage: number;
-  timeInForce?: "IOC" | "GTC";
-}
+import { TripwireCalculators } from "../calculators/TripwireCalculators.js";
+import { PositionSizeCalculator } from "../calculators/PositionSizeCalculator.js";
+import {
+  OHLCV,
+  OrderParams,
+  Trade,
+  TrapType,
+  Tripwire,
+} from "../types/index.js";
 
 interface VolumeCounter {
   count: number;
@@ -409,13 +357,13 @@ export class TitanTrap {
             const traps: Tripwire[] = [];
 
             // Basic tripwires
-            const liquidationTrap = this.tripwireCalculators
+            const liquidationTrap = TripwireCalculators
               .calcLiquidationCluster(ohlcv, symbol);
-            const dailyLevelTrap = this.tripwireCalculators.calcDailyLevel(
+            const dailyLevelTrap = TripwireCalculators.calcDailyLevel(
               ohlcv,
               symbol,
             );
-            const bollingerTrap = this.tripwireCalculators
+            const bollingerTrap = TripwireCalculators
               .calcBollingerBreakout(ohlcv, symbol);
 
             if (liquidationTrap) traps.push(liquidationTrap);
@@ -444,11 +392,11 @@ export class TitanTrap {
             const volMetrics = this.volatilityScaler.calculateMetrics(ohlcv);
 
             // --- ALPHA LOGIC: TREND AGGREGATION ---
-            const adx = this.tripwireCalculators.calcADX(ohlcv);
+            const adx = TripwireCalculators.calcADX(ohlcv);
 
             // Determine trend direction (Price vs SMA20)
             const lastClose = ohlcv[ohlcv.length - 1].close;
-            const sma20 = this.tripwireCalculators.calcSMA(
+            const sma20 = TripwireCalculators.calcSMA(
               new Float64Array(ohlcv.map((b) => b.close)),
               20,
             );
@@ -893,11 +841,14 @@ export class TitanTrap {
       }
 
       // Calculate position size using cached equity
-      const positionSize = this.positionSizeCalculator.calcPositionSize(
-        this.cachedEquity,
-        trap.confidence,
-        trap.leverage,
-      );
+      const positionSize = PositionSizeCalculator.calcPositionSize({
+        equity: this.cachedEquity,
+        confidence: trap.confidence,
+        leverage: trap.leverage,
+        stopLossPercent: config.stopLossPercent || 0.01,
+        targetPercent: config.targetPercent || 0.03,
+        maxPositionSizePercent: config.maxPositionSizePercent || 0.5,
+      });
 
       console.log(
         `   💰 Position size: ${positionSize.toFixed(4)} (Equity: $${

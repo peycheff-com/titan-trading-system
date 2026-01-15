@@ -13,7 +13,7 @@ import {
   getTelemetryService,
   getWebSocketManager,
   WebSocketMessage,
-} from "../../../shared/src/index.js";
+} from "@titan/shared";
 import {
   Config,
   MetricData,

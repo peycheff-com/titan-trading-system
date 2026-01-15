@@ -1,4 +1,4 @@
-import { Tripwire } from "../engine/TitanTrap";
+import { Tripwire } from "../types/index.js";
 import {
     PolymarketClient,
     PolymarketMarket,

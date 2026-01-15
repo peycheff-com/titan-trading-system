@@ -25,7 +25,7 @@
  * - Leverage: 20x
  */
 
-import { Tripwire } from "../engine/TitanTrap";
+import { Tripwire } from "../types/index.js";
 
 interface OIHistoryPoint {
   oi: number;
