@@ -1,7 +1,8 @@
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
+import { getApiBaseUrl } from "@/lib/api-config";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
+const API_BASE = getApiBaseUrl();
 console.log("Titan Console: API_BASE is", API_BASE);
 
 interface ApiOptions {

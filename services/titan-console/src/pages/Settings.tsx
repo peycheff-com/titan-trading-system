@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, Activity, Wallet, Server, Save, Globe } from "lucide-react";
+import { getTitanExecutionUrl } from "@/lib/api-config";
 
 // Types matching Backend Config
 interface RiskTuner {
@@ -111,7 +112,7 @@ const Settings = () => {
   const [localBacktester, setLocalBacktester] = useState<Backtester | null>(null);
   const [localMemory, setLocalMemory] = useState<StrategicMemory | null>(null);
 
-  const TITAN_EXECUTION_URL = import.meta.env.VITE_TITAN_EXECUTION_URL || "http://localhost:8080";
+  const TITAN_EXECUTION_URL = getTitanExecutionUrl();
 
   useEffect(() => {
     fetchConfig();

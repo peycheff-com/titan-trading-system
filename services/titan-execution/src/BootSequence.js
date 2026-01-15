@@ -391,7 +391,7 @@ class BootSequence extends EventEmitter {
    */
   getDefaultConfig() {
     return {
-      testnet: true,
+      testnet: process.env.NODE_ENV !== 'production',
       maxLeverage: 20,
       maxDrawdown: 0.20,
       riskPerTrade: 0.02,

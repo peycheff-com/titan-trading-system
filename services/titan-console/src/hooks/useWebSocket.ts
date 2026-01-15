@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { getWsBaseUrl } from "@/lib/api-config";
 
 export type ConnectionStatus =
     | "CONNECTING"
@@ -15,7 +16,7 @@ interface WebSocketOptions {
 }
 
 export function useWebSocket({
-    url = import.meta.env.VITE_WS_URL || "ws://localhost:8080",
+    url = getWsBaseUrl(),
     onMessage,
     reconnectInterval = 3000,
     maxRetries = 10,
