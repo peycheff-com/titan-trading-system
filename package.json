@@ -6,7 +6,7 @@
     "services/*"
   ],
   "scripts": {
-    "start": "node dispatch-start.js",
+    "start": "echo 'Use npm run start:<service> to start a specific service'",
     "start:brain": "npm start -w services/titan-brain",
     "start:execution": "npm start -w services/titan-execution",
     "start:console": "npm start -w services/titan-console",

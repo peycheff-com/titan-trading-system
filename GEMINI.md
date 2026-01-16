@@ -70,5 +70,16 @@ npm run start:console     # Port 5173
 
 ## Deployment
 
-Railway auto-deploys from `main` branch. The `dispatch-start.js` routes based on
-`RAILWAY_SERVICE_NAME`.
+DigitalOcean App Platform auto-deploys from `main` branch. Configuration is in
+`.do/app.yaml`.
+
+```bash
+# Validate app specification
+./deploy-to-digitalocean.sh --validate
+
+# First-time deployment
+./deploy-to-digitalocean.sh --create
+
+# Update existing app
+./deploy-to-digitalocean.sh --update
+```

@@ -12,8 +12,8 @@ export default defineConfig(({ mode }) => ({
   preview: {
     host: "0.0.0.0",
     port: process.env.PORT ? parseInt(process.env.PORT) : 8080,
-    allowedHosts: ["titan-console-production.up.railway.app"],
-    // Explicitly allowed host for Railway production
+    allowedHosts: true,
+    // Allow all hosts in production (configured via reverse proxy)
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(
     Boolean,

@@ -2,9 +2,9 @@
  * Titan Brain - Phase 5 Orchestrator (Enhanced)
  *
  * Main entry point for the Titan Brain service with enhanced startup management.
- * Integrates StartupManager and ConfigManager for reliable Railway deployment.
+ * Integrates StartupManager and ConfigManager for reliable production deployment.
  *
- * Enhanced with StartupManager and ConfigManager for reliable Railway deployment.
+ * Enhanced with StartupManager and ConfigManager for reliable deployment.
  */
 
 // Load environment variables from .env file
@@ -124,7 +124,7 @@ async function main(): Promise<void> {
     "║                   Master Orchestrator v1.0                     ║",
   );
   console.log(
-    "║                  Enhanced Railway Deployment                    ║",
+    "║                  Production Deployment                         ║",
   );
   console.log(
     "╚═══════════════════════════════════════════════════════════════╝",
@@ -134,7 +134,7 @@ async function main(): Promise<void> {
   try {
     // Initialize startup manager
     startupManager = new StartupManager({
-      maxStartupTime: 60000, // 60 seconds for Railway
+      maxStartupTime: 60000, // 60 seconds for production
       gracefulShutdownTimeout: 30000, // 30 seconds
     });
 
@@ -206,8 +206,7 @@ async function main(): Promise<void> {
       // Redis connection (optional)
       console.log("📬 Initializing signal queue...");
       if (
-        process.env.REDIS_DISABLED === "true" ||
-        process.env.RAILWAY_ENVIRONMENT === "true"
+        process.env.REDIS_DISABLED === "true"
       ) {
         console.log(
           "   ⚠️  Redis disabled, using in-memory queue",

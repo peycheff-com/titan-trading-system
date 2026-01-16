@@ -3,7 +3,7 @@
 **Bio-Mimetic Trading Organism** — A 5-phase algorithmic trading system that
 evolves with capital growth.
 
-[![Railway Deployment](https://img.shields.io/badge/Railway-Deployed-blueviolet)](https://railway.com)
+[![DigitalOcean](https://img.shields.io/badge/DigitalOcean-App%20Platform-0080FF)](https://digitalocean.com)
 [![Node.js](https://img.shields.io/badge/Node.js-22+-43853D)](https://nodejs.org)
 [![Rust](https://img.shields.io/badge/Rust-1.75+-000000)](https://rust-lang.org)
 
@@ -72,7 +72,7 @@ evolves with capital growth.
 | **Database**         | PostgreSQL (Supabase)            |
 | **Frontend**         | React, Vite, TailwindCSS         |
 | **AI/ML**            | Google Gemini 2.0 Flash          |
-| **Deployment**       | Railway                          |
+| **Deployment**       | DigitalOcean App Platform        |
 | **IPC**              | Unix Domain Sockets (FastPath)   |
 
 ## Quick Start
@@ -128,7 +128,7 @@ cd services/titan-execution-rs && cargo build --release
 ```bash
 # Core
 NODE_ENV=production
-RAILWAY_ENVIRONMENT=true
+DEPLOYMENT_ENVIRONMENT=production
 
 # Database
 DATABASE_URL=postgresql://user:pass@host:5432/titan
@@ -163,11 +163,13 @@ BYBIT_API_SECRET=your_secret
 
 ## Deployment
 
-Automatic CI/CD via Railway:
+Automatic CI/CD via DigitalOcean App Platform:
 
 1. Push to `main` branch
-2. Railway builds and deploys all services
+2. DigitalOcean builds and deploys all services
 3. Health checks validate deployment
+
+Configuration is in `.do/app.yaml`.
 
 ## Project Structure
 

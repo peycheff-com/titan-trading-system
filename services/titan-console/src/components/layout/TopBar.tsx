@@ -30,8 +30,8 @@ export function TopBar({ safetyLocked, onSafetyToggle }: TopBarProps) {
     // Check hostname for production indicators
     if (typeof window !== 'undefined') {
       const hostname = window.location.hostname;
-      if (hostname.includes('railway.app') && hostname.includes('production')) return 'prod';
-      if (hostname.includes('railway.app') && hostname.includes('testnet')) return 'testnet';
+      if (hostname.includes('ondigitalocean.app') && hostname.includes('production')) return 'prod';
+      if (hostname.includes('ondigitalocean.app') && hostname.includes('testnet')) return 'testnet';
     }
 
     return import.meta.env.MODE === 'production' ? 'prod' : 'local';

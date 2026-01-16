@@ -895,10 +895,10 @@ export class TitanBrain
       }
     }
 
-    // For Railway deployment, be more lenient with health checks
-    const isRailwayDeployment = process.env.RAILWAY_ENVIRONMENT === "true";
-    const healthy = isRailwayDeployment
-      // Railway: Just check that the service is running (phases are healthy)
+    // For production deployment, be more lenient with health checks
+    const isProduction = process.env.NODE_ENV === "production";
+    const healthy = isProduction
+      // Production: Just check that the service is running (phases are healthy)
       ? Object.values(components.phases).every(Boolean)
       // Local: Check all components
       : components.database &&
