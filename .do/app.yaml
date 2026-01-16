@@ -167,6 +167,12 @@ services:
         value: "production"
       - key: SERVICE_NAME
         value: "titan-scavenger"
+      - key: BINANCE_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: BINANCE_API_SECRET
+        scope: RUN_TIME
+        type: SECRET
 
   # ---------------------------------------------------------------------------
   # PHASE 2: HUNTER - Holographic Market Analysis (Internal)
