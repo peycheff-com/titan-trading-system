@@ -1,203 +1,224 @@
 /**
  * Shared Infrastructure Components for Titan Trading System
- * 
+ *
  * This module exports all shared infrastructure components that can be used
  * across different Titan services for centralized management.
  */
 
 // WebSocket Management
 export {
-  WebSocketManager,
+  type ConnectionStatus,
   getWebSocketManager,
   resetWebSocketManager,
-  type WebSocketConfig,
-  type WebSocketMessage,
   type SubscriptionCallback,
-  type ConnectionStatus
-} from './WebSocketManager';
+  type WebSocketConfig,
+  WebSocketManager,
+  type WebSocketMessage,
+} from "./WebSocketManager";
 
 // Execution Service
 export {
+  type ExchangeConfig,
   ExecutionService,
   getExecutionService,
-  resetExecutionService,
   type OrderParams,
   type OrderResult,
   type OrderStatus,
-  type ExchangeConfig
-} from './ExecutionService';
+  resetExecutionService,
+} from "./ExecutionService";
 
 // Telemetry Service
 export {
-  TelemetryService,
-  getTelemetryService,
-  resetTelemetryService,
-  type LogLevel,
-  type LogEntry,
-  type SignalData,
   type ExecutionData,
+  getTelemetryService,
+  type LogEntry,
+  type LogLevel,
   type MetricData,
-  type TelemetryConfig
-} from './TelemetryService';
+  resetTelemetryService,
+  type SignalData,
+  type TelemetryConfig,
+  TelemetryService,
+} from "./TelemetryService";
 
 // Configuration Management
 export {
+  type BrainConfig,
+  type ConfigChangeEvent,
+  type ConfigLevel,
   ConfigManager,
   getConfigManager,
-  resetConfigManager,
-  type ConfigLevel,
-  type BrainConfig,
   type PhaseConfig,
+  resetConfigManager,
   type ServiceConfig,
-  type ConfigChangeEvent
-} from './ConfigManager';
+} from "./ConfigManager";
 
 // Configuration Schema and Validation
 export {
   ConfigValidator,
+  type DeploymentConfig,
   type Environment,
-  type ValidationResult,
   type ExchangeConfig as SchemaExchangeConfig,
   type InfrastructureConfig,
-  type DeploymentConfig
-} from './config/ConfigSchema';
+  type ValidationResult,
+} from "./config/ConfigSchema";
 
 // Hierarchical Configuration Loading
 export {
-  HierarchicalConfigLoader,
-  createConfigLoader,
-  type ConfigLoadResult,
   type ConfigHierarchyOptions,
-  type ConfigSource
-} from './config/HierarchicalConfigLoader';
+  type ConfigLoadResult,
+  type ConfigSource,
+  createConfigLoader,
+  HierarchicalConfigLoader,
+} from "./config/HierarchicalConfigLoader";
 
 // Configuration Encryption
 export {
   ConfigEncryption,
-  getConfigEncryption,
-  resetConfigEncryption,
+  type DecryptionResult,
   type EncryptedData,
   type EncryptionResult,
-  type DecryptionResult
-} from './config/ConfigEncryption';
+  getConfigEncryption,
+  resetConfigEncryption,
+} from "./config/ConfigEncryption";
 
 // Hot-Reload Configuration Management
 export {
-  HotReloadConfigManager,
-  createHotReloadConfigManager,
-  type HotReloadEvent,
   type ChangeValidationResult,
-  type HotReloadOptions
-} from './config/HotReloadConfigManager';
+  createHotReloadConfigManager,
+  HotReloadConfigManager,
+  type HotReloadEvent,
+  type HotReloadOptions,
+} from "./config/HotReloadConfigManager";
 
 // Configuration Version History
 export {
+  type ConfigVersion,
   ConfigVersionHistory,
   getConfigVersionHistory,
   resetConfigVersionHistory,
-  type ConfigVersion,
-  type VersionHistoryMetadata,
+  type RollbackResult,
   type VersionComparison,
-  type RollbackResult
-} from './config/ConfigVersionHistory';
+  type VersionHistoryMetadata,
+} from "./config/ConfigVersionHistory";
 
 // Resource Optimization
 export {
-  ResourceOptimizer,
-  getResourceOptimizer,
-  resetResourceOptimizer,
-  type MemoryStats,
+  type BenchmarkResult,
   type CPUStats,
+  getResourceOptimizer,
+  type MemoryStats,
+  resetResourceOptimizer,
+  ResourceOptimizer,
   type ResourceThresholds,
-  type BenchmarkResult
-} from './ResourceOptimizer';
+} from "./ResourceOptimizer";
 
 // Performance Monitoring
 export {
-  PerformanceMonitor,
   getPerformanceMonitor,
-  resetPerformanceMonitor,
-  type PerformanceMetrics,
   type PerformanceAlert,
+  type PerformanceMetrics,
+  PerformanceMonitor,
+  type PerformanceMonitorConfig,
+  resetPerformanceMonitor,
   type ScalingRecommendation,
-  type PerformanceMonitorConfig
-} from './PerformanceMonitor';
+} from "./PerformanceMonitor";
 
 // Load Balancing
 export {
-  LoadBalancer,
-  DEFAULT_LOAD_BALANCER_CONFIG,
   type BackendServer,
-  type ServerHealth,
-  type LoadBalancingAlgorithm,
+  DEFAULT_LOAD_BALANCER_CONFIG,
+  LoadBalancer,
   type LoadBalancerConfig,
+  type LoadBalancingAlgorithm,
+  type LoadBalancingMetrics,
   type RoutingInfo,
-  type LoadBalancingMetrics
-} from './LoadBalancer';
+  type ServerHealth,
+} from "./LoadBalancer";
 
 // Service Discovery
 export {
-  ServiceDiscovery,
+  DEFAULT_SERVICE_DISCOVERY_CONFIG,
   getServiceDiscovery,
   resetServiceDiscovery,
-  DEFAULT_SERVICE_DISCOVERY_CONFIG,
-  type ServiceInstance,
+  ServiceDiscovery,
   type ServiceDiscoveryConfig,
+  type ServiceEvent,
+  type ServiceInstance,
   type ServiceQuery,
-  type ServiceEvent
-} from './ServiceDiscovery';
+} from "./ServiceDiscovery";
 
 // Distributed State Management
 export {
-  DistributedStateManager,
-  getDistributedStateManager,
-  resetDistributedStateManager,
-  DEFAULT_DISTRIBUTED_STATE_CONFIG,
-  type StateEntry,
-  type StateOperation,
   type ConflictResolutionStrategy,
   type ConsistencyLevel,
+  DEFAULT_DISTRIBUTED_STATE_CONFIG,
   type DistributedStateConfig,
-  type NodeInfo
-} from './DistributedStateManager';
+  DistributedStateManager,
+  getDistributedStateManager,
+  type NodeInfo,
+  resetDistributedStateManager,
+  type StateEntry,
+  type StateOperation,
+} from "./DistributedStateManager";
 
 // High-Frequency Trading
 export {
-  HighFrequencyProcessor,
-  getHighFrequencyProcessor,
-  resetHighFrequencyProcessor,
   DEFAULT_HF_PROCESSOR_CONFIG,
-  type HFSignal,
-  type ProcessingStage,
+  getHighFrequencyProcessor,
   type HFProcessorConfig,
-  type HFTMetrics
-} from './HighFrequencyProcessor';
+  type HFSignal,
+  type HFTMetrics,
+  HighFrequencyProcessor,
+  type ProcessingStage,
+  resetHighFrequencyProcessor,
+} from "./HighFrequencyProcessor";
 
 // Advanced Order Routing
 export {
   AdvancedOrderRouter,
-  getAdvancedOrderRouter,
-  resetAdvancedOrderRouter,
   DEFAULT_ORDER_ROUTER_CONFIG,
-  type TradingVenue,
-  type RoutingRequest,
-  type RoutingDecision,
-  type RouteAllocation,
-  type MarketData,
   type ExecutionAlgorithm,
-  type OrderRouterConfig
-} from './AdvancedOrderRouter';
+  getAdvancedOrderRouter,
+  type MarketData,
+  type OrderRouterConfig,
+  resetAdvancedOrderRouter,
+  type RouteAllocation,
+  type RoutingDecision,
+  type RoutingRequest,
+  type TradingVenue,
+} from "./AdvancedOrderRouter";
 
 // Network Optimization
 export {
-  NetworkOptimizer,
-  getNetworkOptimizer,
-  resetNetworkOptimizer,
-  DEFAULT_NETWORK_OPTIMIZER_CONFIG,
-  type NetworkEndpoint,
-  type LatencyMeasurement,
-  type NetworkPath,
   type CoLocationConfig,
+  DEFAULT_NETWORK_OPTIMIZER_CONFIG,
+  getNetworkOptimizer,
+  type LatencyMeasurement,
+  type NetworkEndpoint,
+  type NetworkMetrics,
+  NetworkOptimizer,
   type NetworkOptimizerConfig,
-  type NetworkMetrics
-} from './NetworkOptimizer';
+  type NetworkPath,
+  resetNetworkOptimizer,
+} from "./NetworkOptimizer";
+
+// Messaging
+export {
+  getNatsClient,
+  NatsClient,
+  type NatsConfig,
+  TitanSubject,
+} from "./messaging/NatsClient.js";
+
+// IPC (Fast Path Communication)
+export {
+  type AbortResponse,
+  type ConfirmResponse,
+  ConnectionState,
+  FastPathClient,
+  type IntentSignal,
+  type IPCClientConfig,
+  type IPCMetrics,
+  type PrepareResponse,
+  type SignalSource,
+} from "./ipc/index.js";

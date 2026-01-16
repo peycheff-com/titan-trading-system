@@ -35,6 +35,7 @@ import {
   SignalData,
 } from "./types";
 import { getLogger, logError } from "./logging/Logger";
+import { FastPathClient, type IntentSignal } from "@titan/shared";
 
 // Load environment variables
 config();
@@ -52,6 +53,7 @@ class HunterApplication {
   private sessionProfiler: SessionProfiler;
   private inefficiencyMapper: InefficiencyMapper;
   private cvdValidator: CVDValidator;
+  private fastPathClient: FastPathClient;
   private logger = getLogger();
 
   // Application state
@@ -86,6 +88,13 @@ class HunterApplication {
     this.inefficiencyMapper = new InefficiencyMapper();
     this.cvdValidator = new CVDValidator();
 
+    // Initialize IPC client for execution
+    this.fastPathClient = new FastPathClient({
+      source: "hunter",
+      socketPath: process.env.TITAN_IPC_SOCKET || "/tmp/titan-ipc.sock",
+      hmacSecret: process.env.TITAN_HMAC_SECRET || "titan-hmac-secret",
+    });
+
     this.setupEventListeners();
   }
 
@@ -119,10 +128,13 @@ class HunterApplication {
       );
     });
 
-    hunterEvents.onEvent("SIGNAL_GENERATED", (payload) => {
+    hunterEvents.onEvent("SIGNAL_GENERATED", async (payload) => {
       console.log(
         `🎯 Signal generated: ${payload.signal.direction} ${payload.signal.symbol} at ${payload.signal.entryPrice}`,
       );
+
+      // Forward signal to execution engine via IPC
+      await this.forwardSignalToExecution(payload.signal);
     });
 
     hunterEvents.onEvent("EXECUTION_COMPLETE", (payload) => {
@@ -198,6 +210,18 @@ class HunterApplication {
       console.log("📡 Initializing exchange clients...");
       await this.bybitClient.initialize();
       await this.binanceClient.initialize();
+
+      // Initialize IPC connection to execution engine
+      console.log("🔗 Connecting to execution engine via IPC...");
+      try {
+        await this.fastPathClient.connect();
+        console.log("✅ IPC connection established");
+      } catch (error) {
+        console.warn(
+          "⚠️ IPC connection failed, signals will be logged only:",
+          (error as Error).message,
+        );
+      }
 
       // Start configuration watching
       this.configManager.startWatching();
@@ -553,6 +577,74 @@ class HunterApplication {
         stack: (error as Error).stack,
       });
       throw error;
+    }
+  }
+
+  /**
+   * Forward signal to execution engine via IPC
+   * Uses PREPARE/CONFIRM flow for sub-millisecond execution
+   */
+  private async forwardSignalToExecution(signal: SignalData): Promise<void> {
+    if (!this.fastPathClient.isConnected()) {
+      console.warn(
+        `⚠️ IPC not connected, signal for ${signal.symbol} logged only`,
+      );
+      return;
+    }
+
+    try {
+      // Convert SignalData to IntentSignal format
+      const intentSignal: IntentSignal = {
+        signal_id: `hunter-${Date.now()}-${
+          Math.random().toString(36).substring(7)
+        }`,
+        source: "hunter",
+        symbol: signal.symbol,
+        direction: signal.direction,
+        entry_zone: {
+          min: signal.entryPrice * 0.998, // 0.2% below entry
+          max: signal.entryPrice * 1.002, // 0.2% above entry
+        },
+        stop_loss: signal.stopLoss,
+        take_profits: [signal.takeProfit],
+        confidence: signal.confidence || 0.7,
+        leverage: signal.leverage || 3,
+        timestamp: Date.now(),
+      };
+
+      console.log(`📤 Sending PREPARE for ${signal.symbol}...`);
+      const prepareResult = await this.fastPathClient.sendPrepare(intentSignal);
+
+      if (prepareResult.prepared) {
+        console.log(`✅ PREPARE accepted, confirming...`);
+        const confirmResult = await this.fastPathClient.sendConfirm(
+          intentSignal.signal_id,
+        );
+
+        if (confirmResult.executed) {
+          console.log(
+            `✅ Signal executed: ${signal.symbol} @ ${confirmResult.fill_price}`,
+          );
+        } else {
+          console.warn(`⚠️ Execution rejected: ${confirmResult.reason}`);
+        }
+      } else {
+        console.warn(`⚠️ PREPARE rejected: ${prepareResult.reason}`);
+      }
+    } catch (error) {
+      console.error(
+        `❌ IPC signal forwarding failed:`,
+        (error as Error).message,
+      );
+      this.logger.logError(
+        "ERROR",
+        `IPC signal forwarding failed for ${signal.symbol}`,
+        {
+          component: "FastPathClient",
+          function: "forwardSignalToExecution",
+          stack: (error as Error).stack,
+        },
+      );
     }
   }
 

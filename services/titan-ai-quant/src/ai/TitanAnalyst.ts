@@ -73,6 +73,7 @@ export class TitanAnalyst {
   private readonly promptsDir: string;
   private analysisPromptTemplate: string = "";
   private optimizationPromptTemplate: string = "";
+  private deepThinkPromptTemplate: string = "";
 
   constructor(config: TitanAnalystConfig = {}) {
     this.client = new GeminiClient(config.geminiConfig);
@@ -104,10 +105,18 @@ export class TitanAnalyst {
       } else {
         this.optimizationPromptTemplate = this.getDefaultOptimizationPrompt();
       }
+
+      const deepThinkPath = path.join(this.promptsDir, "deep_think.txt");
+      if (fs.existsSync(deepThinkPath)) {
+        this.deepThinkPromptTemplate = fs.readFileSync(deepThinkPath, "utf-8");
+      } else {
+        this.deepThinkPromptTemplate = this.getDefaultDeepThinkPrompt();
+      }
     } catch {
       // Use default prompts if files can't be read
       this.analysisPromptTemplate = this.getDefaultAnalysisPrompt();
       this.optimizationPromptTemplate = this.getDefaultOptimizationPrompt();
+      this.deepThinkPromptTemplate = this.getDefaultDeepThinkPrompt();
     }
   }
 
@@ -182,10 +191,21 @@ export class TitanAnalyst {
     // Build the optimization prompt
     const prompt = this.buildOptimizationPrompt(insight, currentConfig);
 
+    // Deep Think Step: Generate reasoning chain
+    const reasoningContext =
+      `Insight: ${insight.text}\nConfig Schema: ${this.getConfigSchemaDescription()}\nCurrent Values: ${
+        JSON.stringify(this.extractRelevantConfigValues(insight, currentConfig))
+      }`;
+    const reasoning = await this.deepThink(reasoningContext);
+
+    // Append reasoning to the final prompt to guide the output
+    const finalPrompt =
+      `${prompt}\n\nPREVIOUS REASONING:\n${reasoning}\n\nBased on this reasoning, generate the final JSON proposal.`;
+
     try {
       // Call Gemini API for optimization proposal
       const response = await this.client.generateJSON<OptimizationResponse>(
-        prompt,
+        finalPrompt,
         {
           temperature: 0.3,
           maxOutputTokens: 1024,
@@ -521,6 +541,24 @@ export class TitanAnalyst {
   }
 
   /**
+   * Deep Think: Generate intermediate reasoning chain
+   * Requirement: Phase 3 - "Depp Think" loop
+   */
+  private async deepThink(context: string): Promise<string> {
+    const prompt = this.deepThinkPromptTemplate.replace("{context}", context);
+
+    try {
+      return await this.client.generate(prompt, {
+        temperature: 0.7, // Higher temperature for creative reasoning
+        maxOutputTokens: 2048,
+      });
+    } catch (error) {
+      console.warn("Deep think failed, proceeding without it:", error);
+      return "Analysis skipped due to error.";
+    }
+  }
+
+  /**
    * Extract relevant config values based on insight
    */
   private extractRelevantConfigValues(
@@ -718,6 +756,26 @@ OUTPUT FORMAT (JSON):
     "confidenceScore": 0.75
   }
 }`;
+  }
+
+  /**
+   * Default deep think prompt template
+   */
+  private getDefaultDeepThinkPrompt(): string {
+    return `You are a senior quantitative researcher analyzing a trading system configuration issue.
+
+CONTEXT:
+{context}
+
+TASK:
+Perform a "Deep Think" analysis. Do not generate the JSON proposal yet. Instead:
+1. Analyze the root cause of the insight.
+2. Evaluate potential side effects of changing relevant parameters.
+3. Consider counter-factuals (what if we do the opposite?).
+4. Formulate a specific hypothesis for optimization.
+
+OUTPUT:
+Provide a concise reasoning paragraph (plain text).`;
   }
 
   /**

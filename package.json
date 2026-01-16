@@ -19,5 +19,9 @@
   },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "nats": "^2.29.3",
+    "uuid": "^13.0.0"
   }
 }

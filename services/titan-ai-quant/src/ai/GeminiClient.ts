@@ -49,7 +49,7 @@ export class GeminiClient {
 
     this.client = new GoogleGenerativeAI(apiKey);
     this.model = this.client.getGenerativeModel({
-      model: config.modelName ?? "gemini-1.5-flash",
+      model: config.modelName ?? "gemini-3.0-flash",
     });
 
     this.rateLimiter = new RateLimiter({

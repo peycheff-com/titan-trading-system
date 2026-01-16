@@ -241,17 +241,7 @@ export const ServiceConfigSchemas: Record<string, z.ZodSchema<any>> = {
       keyPrefix: z.string(),
     }),
   }),
-
-  "titan-execution": z.object({
-    port: z.number().min(1).max(65535),
-    logLevel: z.enum(["debug", "info", "warn", "error"]),
-    rateLimiting: z.object({
-      enabled: z.boolean(),
-      requestsPerSecond: z.number().min(1).max(100),
-      burstSize: z.number().min(1).max(1000),
-    }),
-    exchanges: z.record(z.string(), ExchangeConfigSchema),
-  }),
+  // titan-execution-rs uses Rust-native configuration
 };
 
 /**

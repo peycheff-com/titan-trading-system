@@ -28,6 +28,9 @@ export interface BrainConfig {
   // Redis configuration (optional)
   redisUrl?: string;
 
+  // NATS configuration
+  natsUrl?: string;
+
   // Security configuration
   hmacSecret?: string;
   hmacAlgorithm: 'sha256' | 'sha512';
@@ -125,6 +128,9 @@ export class ConfigManager extends EventEmitter {
 
       // Redis configuration (optional)
       redisUrl: this.getEnvValue('REDIS_URL') as string | undefined,
+
+      // NATS configuration
+      natsUrl: this.getEnvValue('NATS_URL') as string | undefined,
 
       // Security configuration
       hmacSecret: this.getEnvValue('HMAC_SECRET') as string | undefined,
@@ -288,7 +294,7 @@ export class ConfigManager extends EventEmitter {
    * Mask sensitive configuration values for logging
    */
   private maskSensitiveValue(key: string, value: any): any {
-    const sensitiveKeys = ['hmacSecret', 'databaseUrl', 'redisUrl'];
+    const sensitiveKeys = ['hmacSecret', 'databaseUrl', 'redisUrl', 'natsUrl'];
     const lowerKey = key.toLowerCase();
     
     if (sensitiveKeys.some(sensitiveKey => lowerKey.includes(sensitiveKey.toLowerCase()))) {

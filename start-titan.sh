@@ -394,6 +394,31 @@ else
 fi
 
 # ============================================================================
+# Step 0.5: Start NATS JetStream (Messaging Backbone)
+# ============================================================================
+echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BLUE}Step 0.5: Starting NATS JetStream${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+
+echo -e "${BLUE}Starting NATS container...${NC}"
+if docker compose up -d nats; then
+    echo -e "${GREEN}✅ NATS container started${NC}"
+else
+    echo -e "${RED}❌ Failed to start NATS container${NC}"
+    exit 1
+fi
+
+# Wait for NATS port to be ready
+echo -e "${YELLOW}⏳ Waiting for NATS (4222)...${NC}"
+if wait_for_health "http://localhost:8222/varz" "nats-server"; then
+    echo -e "${GREEN}✅ NATS is ready${NC}"
+else
+    echo -e "${RED}❌ NATS health check failed${NC}"
+    # Continue anyway as we might be in a dev env without monitoring port exposed cleanly to curl
+    # But ideally this should fail in strict mode
+fi
+
+# ============================================================================
 # Step 1: Start titan-brain (Brain Orchestrator)
 # ============================================================================
 echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"

@@ -40,6 +40,7 @@ import {
 import { getMetrics } from "../monitoring/PrometheusMetrics.js";
 import { ManualOverrideService } from "./ManualOverrideService.js";
 import { DatabaseManager } from "../db/DatabaseManager.js";
+import { getNatsPublisher, NatsPublisher } from "../server/NatsPublisher.js";
 
 /**
  * Phase priority for signal processing
@@ -110,6 +111,11 @@ export class TitanBrain
     phase2: { approved: 0, total: 0 },
     phase3: { approved: 0, total: 0 },
   };
+
+  /** AI Optimization trigger state */
+  private lastAIOptimizationTrigger: number = 0;
+  private readonly AI_OPTIMIZATION_COOLDOWN_MS = 3600000; // 1 hour cooldown
+  private readonly AI_TRIGGER_SHARPE_THRESHOLD = 0; // Trigger when Sharpe < 0
 
   constructor(
     config: BrainConfig,
@@ -681,8 +687,67 @@ export class TitanBrain
       t.timestamp >= oneHourAgo
     );
 
+    // Check if AI optimization should be triggered
+    await this.checkAIOptimizationTrigger(phaseId, pnl);
+
     // Update metrics after trade
     await this.updateMetrics();
+  }
+
+  /**
+   * Check if AI optimization should be triggered based on phase performance
+   * Triggers when Sharpe drops below threshold with cooldown to prevent spam
+   */
+  private async checkAIOptimizationTrigger(
+    phaseId: PhaseId,
+    lastPnl: number,
+  ): Promise<void> {
+    const now = Date.now();
+
+    // Check cooldown
+    if (
+      now - this.lastAIOptimizationTrigger < this.AI_OPTIMIZATION_COOLDOWN_MS
+    ) {
+      return;
+    }
+
+    // Get phase performance
+    const performance = await this.performanceTracker.getPhasePerformance(
+      phaseId,
+    );
+
+    // Trigger if Sharpe is below threshold and we have enough trades
+    if (
+      performance.sharpeRatio < this.AI_TRIGGER_SHARPE_THRESHOLD &&
+      performance.tradeCount >= 5
+    ) {
+      console.log(
+        `🤖 AI Optimization triggered for ${phaseId}: Sharpe=${
+          performance.sharpeRatio.toFixed(2)
+        }`,
+      );
+
+      try {
+        const publisher = getNatsPublisher();
+        await publisher.triggerAIOptimization({
+          reason: `Poor performance detected: Sharpe ratio ${
+            performance.sharpeRatio.toFixed(2)
+          } below threshold`,
+          triggeredBy: "titan-brain",
+          phaseId,
+          metrics: {
+            sharpeRatio: performance.sharpeRatio,
+            totalPnL: performance.totalPnL,
+            winRate: performance.winRate,
+          },
+          timestamp: now,
+        });
+
+        this.lastAIOptimizationTrigger = now;
+      } catch (err) {
+        console.error("Failed to trigger AI optimization:", err);
+      }
+    }
   }
 
   /**

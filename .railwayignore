@@ -1,0 +1,24 @@
+# Railway Ignore
+node_modules/
+**/node_modules/
+.git/
+services/*/node_modules/
+
+# Build artifacts
+dist/
+build/
+coverage/
+.next/
+.turbo/
+.cache/
+
+# Environment and Secrets
+.env
+.env.*
+
+# Logs and DBs
+logs/
+*.log
+*.db
+*.sqlite
+*.sqlite3

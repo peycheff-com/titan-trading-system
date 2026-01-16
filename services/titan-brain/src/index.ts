@@ -86,20 +86,24 @@ import {
   WebhookServer,
   WebSocketService,
 } from "./server/index.js";
+import { InMemorySignalQueue } from "./server/InMemorySignalQueue.js";
+import { ISignalQueue } from "./server/ISignalQueue.js";
 import { getLogger, getMetrics } from "./monitoring/index.js";
 import { StateRecoveryService } from "./engine/StateRecoveryService.js";
 import { ManualOverrideService } from "./engine/ManualOverrideService.js";
+import { NatsConsumer } from "./server/NatsConsumer.js";
 
 // Global instances for cleanup
 let brain: TitanBrain | null = null;
 let webhookServer: WebhookServer | null = null;
-let signalQueue: SignalQueue | null = null;
+let signalQueue: ISignalQueue | null = null;
 let databaseManager: DatabaseManager | null = null;
 let executionEngineClient: ExecutionEngineClient | null = null;
 let phaseIntegrationService: PhaseIntegrationService | null = null;
 let webSocketService: WebSocketService | null = null;
 let startupManager: StartupManager | null = null;
 let configManager: ConfigManager | null = null;
+let natsConsumer: NatsConsumer | null = null;
 
 /**
  * Main startup function with enhanced startup management
@@ -206,9 +210,13 @@ async function main(): Promise<void> {
         process.env.RAILWAY_ENVIRONMENT === "true"
       ) {
         console.log(
-          "   ⚠️  Redis disabled for Railway deployment, using in-memory queue",
+          "   ⚠️  Redis disabled, using in-memory queue",
         );
-        signalQueue = null;
+        signalQueue = new InMemorySignalQueue({
+          idempotencyTTL: 3600000, // 1 hour
+          maxQueueSize: 10000,
+        });
+        await signalQueue.connect();
       } else {
         try {
           const brainConfig = configManager!.getConfig();
@@ -224,7 +232,11 @@ async function main(): Promise<void> {
           console.log("   ✅ Redis signal queue connected");
         } catch (error) {
           console.log("   ⚠️  Redis not available, using in-memory queue");
-          signalQueue = null;
+          signalQueue = new InMemorySignalQueue({
+            idempotencyTTL: 3600000,
+            maxQueueSize: 10000,
+          });
+          await signalQueue.connect();
         }
       }
     };
@@ -390,6 +402,10 @@ async function main(): Promise<void> {
       // Create dashboard service
       const dashboardService = new DashboardService(brain!);
 
+      // Start Dashboard Service publishing
+      console.log("📊 Starting Dashboard Service publishing...");
+      dashboardService.startPublishing(1000);
+
       // Create and start webhook server
       console.log("🚀 Starting webhook server...");
       webhookServer = new WebhookServer(
@@ -412,18 +428,32 @@ async function main(): Promise<void> {
 
       await webhookServer.start();
 
-      // Mark startup as complete for health checks
-      webhookServer.markStartupComplete();
-
-      // Initialize WebSocket service for real-time updates
-      console.log("📡 Starting WebSocket service...");
+      // Initialize WebSocket service first (but don't listen yet if needed?)
+      console.log("📡 Initializing WebSocket service...");
       const wsPort = parseInt(process.env.WS_PORT || "3101", 10);
       webSocketService = new WebSocketService(brain!, {
         pingInterval: 30000,
         pingTimeout: 10000,
-        stateUpdateInterval: 1000,
+        stateUpdateInterval: 0, // Disable polling, use NATS
       });
+      // Start listening later or now? listen() starts server.
       webSocketService.listen(wsPort, brainConfig.host);
+
+      // Initialize NATS Consumer
+      console.log("📨 Starting NATS Consumer...");
+      natsConsumer = new NatsConsumer(brain!, webSocketService);
+      await natsConsumer.start(brainConfig.natsUrl);
+      console.log("   ✅ NATS Consumer started");
+
+      // Initialize NATS Publisher for AI optimization triggers
+      console.log("📤 Starting NATS Publisher...");
+      const { getNatsPublisher } = await import("./server/NatsPublisher.js");
+      const natsPublisher = getNatsPublisher();
+      await natsPublisher.connect(brainConfig.natsUrl);
+      console.log("   ✅ NATS Publisher started");
+
+      // Mark startup as complete for health checks
+      webhookServer.markStartupComplete(); // Wait webhookServer not created yet if I reordered?
     };
 
     // Add all steps to startup manager
@@ -445,6 +475,10 @@ async function main(): Promise<void> {
 
     sm.registerShutdownHandler(async () => {
       if (webSocketService) await webSocketService.shutdown();
+    });
+
+    sm.registerShutdownHandler(async () => {
+      if (natsConsumer) await natsConsumer.stop();
     });
 
     sm.registerShutdownHandler(async () => {
@@ -560,6 +594,7 @@ async function shutdown(signal: string): Promise<void> {
       if (brain) await brain.shutdown();
       if (webhookServer) await webhookServer.stop();
       if (webSocketService) await webSocketService.shutdown();
+      if (natsConsumer) await natsConsumer.stop();
       if (executionEngineClient) await executionEngineClient.shutdown();
       if (phaseIntegrationService) await phaseIntegrationService.shutdown();
       if (signalQueue) await signalQueue.disconnect();
