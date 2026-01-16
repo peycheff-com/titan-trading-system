@@ -12,14 +12,14 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++
 
 # Copy package files
-COPY package*.json ./
+COPY services/titan-brain/package*.json ./
 
 # Install all dependencies (including dev for build)
 RUN npm ci
 
 # Copy source code
-COPY tsconfig.json ./
-COPY src/ ./src/
+COPY services/titan-brain/tsconfig.json ./
+COPY services/titan-brain/src/ ./src/
 
 # Build TypeScript
 RUN npm run build
@@ -40,7 +40,7 @@ RUN addgroup -g 1001 -S titan && \
     adduser -S titan -u 1001 -G titan
 
 # Copy package files
-COPY package*.json ./
+COPY services/titan-brain/package*.json ./
 
 # Install production dependencies only
 RUN npm ci --only=production && \
@@ -49,9 +49,9 @@ RUN npm ci --only=production && \
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
 
-# Copy configuration files
-COPY config.schema.json ./
-COPY config.example.json ./
+# Copy configuration files if they exist
+COPY services/titan-brain/config.schema.json* ./
+COPY services/titan-brain/config.example.json* ./
 
 # Create directories for logs and data
 RUN mkdir -p /app/logs /app/data && \
