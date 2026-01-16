@@ -35,6 +35,17 @@ async function main() {
 
         const url = new URL(req.url || "/", `http://${req.headers.host}`);
 
+        if (url.pathname === "/health" && req.method === "GET") {
+            res.writeHead(200, { "Content-Type": "application/json" });
+            res.end(
+                JSON.stringify({
+                    status: "healthy",
+                    service: "titan-ai-quant",
+                }),
+            );
+            return;
+        }
+
         if (url.pathname === "/status" && req.method === "GET") {
             res.writeHead(200, { "Content-Type": "application/json" });
             res.end(JSON.stringify({
