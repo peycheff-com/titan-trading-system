@@ -23,12 +23,16 @@ export class PolymarketClient {
                 throw new Error(`Polymarket API error: ${response.statusText}`);
             }
 
-            const data: any[] = await response.json();
+            const rawData = await response.json() as any;
+            const data: any[] = Array.isArray(rawData)
+                ? rawData
+                : (rawData.events || rawData.markets || []);
 
             // Filter for BTC related markets manually for safety
             const markets = data.filter((m: any) =>
                 m.question &&
-                m.question.includes("Bitcoin") &&
+                (m.question.includes("Bitcoin") ||
+                    m.question.includes("BTC")) &&
                 m.question.includes("Price")
             );
 
