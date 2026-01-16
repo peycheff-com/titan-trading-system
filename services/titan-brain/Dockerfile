@@ -11,13 +11,24 @@ WORKDIR /app
 # Install build dependencies
 RUN apk add --no-cache python3 make g++
 
-# Copy package files
-COPY services/titan-brain/package*.json ./
+# Copy root package files for workspace resolution
+COPY package*.json ./
 
-# Install all dependencies (including dev for build)
-RUN npm ci
+# Copy shared workspace package
+COPY services/shared/ ./services/shared/
 
-# Copy source code
+# Copy titan-brain package files
+COPY services/titan-brain/package*.json ./services/titan-brain/
+
+# Install all dependencies (workspace mode)
+RUN npm ci --workspace=services/titan-brain --workspace=services/shared
+
+# Build the shared package first
+WORKDIR /app/services/shared
+RUN npm run build
+
+# Copy titan-brain source code and build
+WORKDIR /app/services/titan-brain
 COPY services/titan-brain/tsconfig.json ./
 COPY services/titan-brain/src/ ./src/
 
@@ -39,19 +50,25 @@ RUN apk add --no-cache \
 RUN addgroup -g 1001 -S titan && \
     adduser -S titan -u 1001 -G titan
 
-# Copy package files
-COPY services/titan-brain/package*.json ./
+# Copy root package files for workspace resolution
+COPY package*.json ./
 
-# Install production dependencies only
-RUN npm ci --only=production && \
+# Copy shared workspace package (built)
+COPY --from=builder /app/services/shared/ ./services/shared/
+
+# Copy titan-brain package files
+COPY services/titan-brain/package*.json ./services/titan-brain/
+
+# Install production dependencies only (workspace mode)
+RUN npm ci --only=production --workspace=services/titan-brain --workspace=services/shared && \
     npm cache clean --force
 
 # Copy built application from builder stage
-COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/services/titan-brain/dist ./services/titan-brain/dist
 
 # Copy configuration files if they exist
-COPY services/titan-brain/config.schema.json* ./
-COPY services/titan-brain/config.example.json* ./
+COPY services/titan-brain/config.schema.json* ./services/titan-brain/
+COPY services/titan-brain/config.example.json* ./services/titan-brain/
 
 # Create directories for logs and data
 RUN mkdir -p /app/logs /app/data && \
@@ -59,6 +76,8 @@ RUN mkdir -p /app/logs /app/data && \
 
 # Switch to non-root user
 USER titan
+
+WORKDIR /app/services/titan-brain
 
 # Expose the webhook server port
 EXPOSE 3100
