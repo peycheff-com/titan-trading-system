@@ -14,11 +14,7 @@ async function main() {
 
     logger.log("✅ Nightly Optimizer scheduled");
 
-    // Initialize NATS Adapter
-    const natsAdapter = new NatsAdapter(optimizer);
-    await natsAdapter.init();
-
-    // Start HTTP Server for Railway Health Checks & Control
+    // Start HTTP Server for Health Checks FIRST (before NATS)
     const port = parseInt(process.env.PORT || "4000", 10);
     const host = "0.0.0.0";
 
@@ -86,6 +82,19 @@ async function main() {
     server.listen(port, host, () => {
         logger.log(`🌍 Server listening on http://${host}:${port}`);
     });
+
+    // Initialize NATS Adapter AFTER server is running (non-blocking)
+    try {
+        const natsAdapter = new NatsAdapter(optimizer);
+        await natsAdapter.init();
+        logger.log("✅ NATS Adapter connected");
+    } catch (error) {
+        logger.warn(
+            "⚠️ NATS connection failed, running without event bus:",
+            error,
+        );
+        // Continue running without NATS - optimizer can still work via HTTP triggers
+    }
 
     // Graceful Shutdown
     const shutdown = () => {
