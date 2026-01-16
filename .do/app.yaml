@@ -10,7 +10,7 @@ services:
   # TITAN CONSOLE - Public Web Dashboard (only public-facing service)
   # ---------------------------------------------------------------------------
   - name: titan-console
-    source_dir: /services/titan-console
+    source_dir: /
     dockerfile_path: services/titan-console/Dockerfile
     github:
       repo: peycheff-com/titan-trading-system
@@ -35,7 +35,7 @@ services:
   # TITAN BRAIN - Phase 5 Master Orchestrator (Internal)
   # ---------------------------------------------------------------------------
   - name: titan-brain
-    source_dir: /services/titan-brain
+    source_dir: /
     dockerfile_path: services/titan-brain/Dockerfile
     github:
       repo: peycheff-com/titan-trading-system
@@ -78,7 +78,7 @@ services:
   # TITAN EXECUTION (Rust) - High-Performance Order Execution (Internal)
   # ---------------------------------------------------------------------------
   - name: titan-execution
-    source_dir: /services/titan-execution-rs
+    source_dir: /
     dockerfile_path: services/titan-execution-rs/Dockerfile
     github:
       repo: peycheff-com/titan-trading-system
@@ -110,7 +110,7 @@ services:
   # TITAN AI QUANT - Gemini AI Parameter Optimization (Internal)
   # ---------------------------------------------------------------------------
   - name: titan-ai-quant
-    source_dir: /services/titan-ai-quant
+    source_dir: /
     dockerfile_path: services/titan-ai-quant/Dockerfile
     github:
       repo: peycheff-com/titan-trading-system
@@ -143,7 +143,7 @@ services:
   # PHASE 1: SCAVENGER - High Leverage Trap Detection (Internal)
   # ---------------------------------------------------------------------------
   - name: titan-scavenger
-    source_dir: /services/titan-phase1-scavenger
+    source_dir: /
     dockerfile_path: services/titan-phase1-scavenger/Dockerfile
     github:
       repo: peycheff-com/titan-trading-system
@@ -172,7 +172,7 @@ services:
   # PHASE 2: HUNTER - Holographic Market Analysis (Internal)
   # ---------------------------------------------------------------------------
   - name: titan-hunter
-    source_dir: /services/titan-phase2-hunter
+    source_dir: /
     dockerfile_path: services/titan-phase2-hunter/Dockerfile
     github:
       repo: peycheff-com/titan-trading-system
@@ -201,7 +201,7 @@ services:
   # PHASE 3: SENTINEL - Market-Neutral Basis Arbitrage (Internal)
   # ---------------------------------------------------------------------------
   - name: titan-sentinel
-    source_dir: /services/titan-phase3-sentinel
+    source_dir: /
     dockerfile_path: services/titan-phase3-sentinel/Dockerfile
     github:
       repo: peycheff-com/titan-trading-system
