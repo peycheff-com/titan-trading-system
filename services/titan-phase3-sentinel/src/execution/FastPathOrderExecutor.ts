@@ -34,6 +34,21 @@ export class FastPathOrderExecutor implements IOrderExecutor {
             hmacSecret: config?.hmacSecret || process.env.TITAN_HMAC_SECRET ||
                 "titan-hmac-secret",
         });
+
+        // CRITICAL: Handle error events to prevent Node.js crash
+        // The EventEmitter 'error' event will crash the process if unhandled
+        this.client.on("error", (error: Error) => {
+            console.warn(
+                `⚠️ [Sentinel FastPath] IPC error (non-fatal): ${error.message}`,
+            );
+            // IPC is optional in cloud deployments - service continues without it
+        });
+
+        this.client.on("maxReconnectAttemptsReached", () => {
+            console.warn(
+                "⚠️ [Sentinel FastPath] Max reconnect attempts reached - IPC disabled",
+            );
+        });
     }
 
     /**

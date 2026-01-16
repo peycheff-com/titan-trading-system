@@ -95,6 +95,21 @@ class HunterApplication {
       hmacSecret: process.env.TITAN_HMAC_SECRET || "titan-hmac-secret",
     });
 
+    // CRITICAL: Handle FastPathClient error events to prevent Node.js crash
+    // The EventEmitter 'error' event will crash the process if unhandled
+    this.fastPathClient.on("error", (error: Error) => {
+      console.warn(
+        `⚠️ [FastPath] IPC error (non-fatal): ${error.message}`,
+      );
+      // IPC is optional in cloud deployments - service continues without it
+    });
+
+    this.fastPathClient.on("maxReconnectAttemptsReached", () => {
+      console.warn(
+        "⚠️ [FastPath] Max reconnect attempts reached - IPC disabled for this session",
+      );
+    });
+
     this.setupEventListeners();
   }
 
