@@ -21,7 +21,7 @@ import {
   ServerConfig,
 } from "../types/index.js";
 import { TitanBrain } from "../engine/TitanBrain.js";
-import { SignalQueue } from "./SignalQueue";
+import { ISignalQueue } from "./ISignalQueue.js";
 import { DashboardService } from "./DashboardService.js";
 import { getMetrics } from "../monitoring/PrometheusMetrics.js";
 import {
@@ -146,7 +146,7 @@ const DEFAULT_HMAC_OPTIONS: HmacOptions = {
 export class WebhookServer {
   private readonly config: WebhookServerConfig;
   private readonly brain: TitanBrain;
-  private readonly signalQueue: SignalQueue | null;
+  private readonly signalQueue: ISignalQueue | null;
   private readonly dashboardService: DashboardService;
   private readonly healthManager: HealthManager;
   private readonly serviceDiscovery: ServiceDiscovery;
@@ -161,7 +161,7 @@ export class WebhookServer {
   constructor(
     config: WebhookServerConfig,
     brain: TitanBrain,
-    signalQueue?: SignalQueue,
+    signalQueue?: ISignalQueue,
     dashboardService?: DashboardService,
     serviceDiscovery?: ServiceDiscovery,
     logger?: Logger,
@@ -516,11 +516,8 @@ export class WebhookServer {
       this.handlePhaseSignal.bind(this, "phase3"),
     );
 
-    // Execution Report Webhook (Feedback Loop)
-    this.server.post(
-      "/webhook/execution-report",
-      this.handleExecutionReport.bind(this),
-    );
+    // Execution Report Webhook (Legacy - Removed in favor of NATS)
+    // this.server.post("/webhook/execution-report", this.handleExecutionReport.bind(this));
 
     // Phase notification endpoints (for phases to register/update)
     this.server.post("/phases/register", this.handlePhaseRegister.bind(this));
@@ -810,38 +807,10 @@ export class WebhookServer {
     }
   }
 
-  /**
-   * Handle POST /webhook/execution-report - Process execution feedback
-   * Completes the loop from Execution -> Brain
+  /*
+   * Legacy Execution Report Handler (Removed)
+   * Handled by NatsConsumer now via EXECUTION_REPORTS subject
    */
-  private async handleExecutionReport(
-    request: FastifyRequest<{ Body: ExecutionReportBody }>,
-    reply: FastifyReply,
-  ): Promise<void> {
-    try {
-      const report = request.body;
-      this.logger.info("Execution Report Processing", undefined, {
-        phaseId: report.phaseId,
-        symbol: report.symbol,
-        side: report.side,
-      });
-
-      // Process execution in Brain (updates positions and calculates PnL)
-      if (this.brain) {
-        await this.brain.handleExecutionReport(report);
-      } else {
-        this.logger.warn("Brain instance not available for execution report");
-      }
-
-      reply.send({ success: true, timestamp: Date.now() });
-    } catch (error) {
-      this.logger.error(
-        "Failed to process execution report",
-        error instanceof Error ? error : new Error(String(error)),
-      );
-      reply.status(500).send({ error: "Processing failed" });
-    }
-  }
 
   /**
    * Handle GET /breaker - Circuit breaker status

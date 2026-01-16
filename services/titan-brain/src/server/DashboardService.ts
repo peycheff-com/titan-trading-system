@@ -1,23 +1,24 @@
 /**
  * DashboardService - Comprehensive data collection and aggregation for dashboard
  * Handles NAV calculation, allocation formatting, risk metrics, and treasury status
- * 
+ *
  * Requirements: 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8
  */
 
 import {
-  DashboardData,
   AllocationVector,
+  BrainDecision,
+  BreakerStatus,
+  DashboardData,
   PhaseId,
   PhasePerformance,
-  TreasuryStatus,
-  BreakerStatus,
-  BrainDecision,
-  RiskMetrics,
   Position,
-} from '../types/index.js';
-import { TitanBrain } from '../engine/TitanBrain.js';
-import { DatabaseManager } from '../db/DatabaseManager.js';
+  RiskMetrics,
+  TreasuryStatus,
+} from "../types/index.js";
+import { getNatsClient, TitanSubject } from "@titan/shared";
+import { TitanBrain } from "../engine/TitanBrain.js";
+import { DatabaseManager } from "../db/DatabaseManager.js";
 
 /**
  * Extended dashboard data with additional metrics
@@ -54,7 +55,7 @@ export interface ExtendedDashboardData extends DashboardData {
  */
 export interface WalletBalance {
   exchange: string;
-  walletType: 'spot' | 'futures' | 'margin';
+  walletType: "spot" | "futures" | "margin";
   asset: string;
   balance: number;
   usdValue: number;
@@ -91,7 +92,7 @@ const DEFAULT_CONFIG: DashboardServiceConfig = {
   cacheTTL: 60000, // 1 minute
   navCacheTTL: 30000, // 30 seconds
   maxRecentDecisions: 50,
-  version: '1.0.0',
+  version: "1.0.0",
 };
 
 /**
@@ -112,12 +113,13 @@ export class DashboardService {
   private navCacheTime: number = 0;
 
   /** External wallet balance providers */
-  private walletProviders: Map<string, () => Promise<WalletBalance[]>> = new Map();
+  private walletProviders: Map<string, () => Promise<WalletBalance[]>> =
+    new Map();
 
   constructor(
     brain: TitanBrain,
     db?: DatabaseManager,
-    config?: Partial<DashboardServiceConfig>
+    config?: Partial<DashboardServiceConfig>,
   ) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.brain = brain;
@@ -126,14 +128,36 @@ export class DashboardService {
   }
 
   /**
+   * Start publishing dashboard updates to NATS
+   * @param intervalMs - Interval in milliseconds
+   */
+  startPublishing(intervalMs: number = 1000): void {
+    setInterval(async () => {
+      try {
+        const data = await this.getDashboardData();
+        const nats = getNatsClient();
+        if (nats.isConnected()) {
+          await nats.publish(TitanSubject.DASHBOARD_UPDATES, {
+            type: "STATE_UPDATE",
+            timestamp: Date.now(),
+            ...data,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to publish dashboard update:", err);
+      }
+    }, intervalMs);
+  }
+
+  /**
    * Register a wallet balance provider
-   * 
+   *
    * @param exchange - Exchange name (e.g., 'bybit', 'binance')
    * @param provider - Function that returns wallet balances
    */
   registerWalletProvider(
     exchange: string,
-    provider: () => Promise<WalletBalance[]>
+    provider: () => Promise<WalletBalance[]>,
   ): void {
     this.walletProviders.set(exchange, provider);
   }
@@ -141,7 +165,7 @@ export class DashboardService {
   /**
    * Calculate NAV from all wallets
    * Requirement 10.2: Implement NAV calculation from all wallets
-   * 
+   *
    * @returns NAV calculation with wallet breakdown
    */
   async calculateNAV(): Promise<NAVCalculation> {
@@ -162,7 +186,7 @@ export class DashboardService {
       try {
         const balances = await provider();
         walletBreakdown.push(...balances);
-        
+
         // Sum USD values
         for (const balance of balances) {
           totalNAV += balance.usdValue;
@@ -199,7 +223,7 @@ export class DashboardService {
   /**
    * Format allocation vector with metadata
    * Requirement 10.3: Implement allocation vector formatting
-   * 
+   *
    * @param allocation - Raw allocation vector
    * @param equity - Current equity
    * @returns Formatted allocation data
@@ -211,17 +235,17 @@ export class DashboardService {
         phase1: {
           weight: allocation.w1,
           equity: equity * allocation.w1,
-          percentage: (allocation.w1 * 100).toFixed(2) + '%',
+          percentage: (allocation.w1 * 100).toFixed(2) + "%",
         },
         phase2: {
           weight: allocation.w2,
           equity: equity * allocation.w2,
-          percentage: (allocation.w2 * 100).toFixed(2) + '%',
+          percentage: (allocation.w2 * 100).toFixed(2) + "%",
         },
         phase3: {
           weight: allocation.w3,
           equity: equity * allocation.w3,
-          percentage: (allocation.w3 * 100).toFixed(2) + '%',
+          percentage: (allocation.w3 * 100).toFixed(2) + "%",
         },
       },
       totalEquity: equity,
@@ -232,14 +256,14 @@ export class DashboardService {
   /**
    * Calculate phase equity for each phase
    * Requirement 10.4: Implement phase equity calculation
-   * 
+   *
    * @param allocation - Allocation vector
    * @param equity - Total equity
    * @returns Phase equity breakdown
    */
   calculatePhaseEquity(
     allocation: AllocationVector,
-    equity: number
+    equity: number,
   ): Record<PhaseId, number> {
     return {
       phase1: equity * allocation.w1,
@@ -251,7 +275,7 @@ export class DashboardService {
   /**
    * Aggregate risk metrics with additional calculations
    * Requirement 10.5: Implement risk metrics aggregation
-   * 
+   *
    * @param positions - Current positions
    * @returns Aggregated risk metrics
    */
@@ -265,22 +289,28 @@ export class DashboardService {
       portfolioDelta: 0,
       portfolioBeta: 0,
     };
-    
+
     // Calculate additional metrics
     const positionCount = positions.length;
-    const totalNotional = positions.reduce((sum, pos) => sum + Math.abs(pos.size), 0);
-    const totalUnrealizedPnL = positions.reduce((sum, pos) => sum + (pos.unrealizedPnL ?? 0), 0);
-    
+    const totalNotional = positions.reduce(
+      (sum, pos) => sum + Math.abs(pos.size),
+      0,
+    );
+    const totalUnrealizedPnL = positions.reduce(
+      (sum, pos) => sum + (pos.unrealizedPnL ?? 0),
+      0,
+    );
+
     // Calculate correlation matrix for all positions
     const correlations: Record<string, Record<string, number>> = {};
     for (let i = 0; i < positions.length; i++) {
       for (let j = i + 1; j < positions.length; j++) {
         const symbolA = positions[i].symbol;
         const symbolB = positions[j].symbol;
-        
+
         if (!correlations[symbolA]) correlations[symbolA] = {};
         if (!correlations[symbolB]) correlations[symbolB] = {};
-        
+
         // For now, use a placeholder correlation calculation
         // In a real implementation, this would access the risk guardian's correlation data
         const correlation = 0.5;
@@ -295,14 +325,18 @@ export class DashboardService {
       totalNotional,
       totalUnrealizedPnL,
       correlationMatrix: correlations,
-      riskScore: this.calculateRiskScore(baseMetrics, positionCount, totalNotional),
+      riskScore: this.calculateRiskScore(
+        baseMetrics,
+        positionCount,
+        totalNotional,
+      ),
     };
   }
 
   /**
    * Aggregate treasury status with additional metrics
    * Requirement 10.6: Implement treasury status aggregation
-   * 
+   *
    * @returns Enhanced treasury status
    */
   async aggregateTreasuryStatus() {
@@ -310,13 +344,17 @@ export class DashboardService {
     const nextSweepLevel = this.brain.getNextSweepTriggerLevel();
     const totalSwept = this.brain.getTotalSwept();
     const highWatermark = this.brain.getHighWatermark();
-    
+
     // Calculate additional metrics
     const currentEquity = this.brain.getEquity();
     const totalEquity = treasury.futuresWallet + treasury.spotWallet;
-    const drawdownFromHigh = highWatermark > 0 ? (highWatermark - currentEquity) / highWatermark : 0;
-    const sweepProgress = nextSweepLevel > 0 ? Math.min(treasury.futuresWallet / nextSweepLevel, 1) : 0;
-    
+    const drawdownFromHigh = highWatermark > 0
+      ? (highWatermark - currentEquity) / highWatermark
+      : 0;
+    const sweepProgress = nextSweepLevel > 0
+      ? Math.min(treasury.futuresWallet / nextSweepLevel, 1)
+      : 0;
+
     return {
       ...treasury,
       nextSweepTriggerLevel: nextSweepLevel,
@@ -324,34 +362,38 @@ export class DashboardService {
       highWatermark,
       drawdownFromHigh,
       sweepProgress,
-      riskCapitalRatio: totalEquity > 0 ? treasury.riskCapital / totalEquity : 0,
-      lockedProfitRatio: totalEquity > 0 ? treasury.lockedProfit / totalEquity : 0,
+      riskCapitalRatio: totalEquity > 0
+        ? treasury.riskCapital / totalEquity
+        : 0,
+      lockedProfitRatio: totalEquity > 0
+        ? treasury.lockedProfit / totalEquity
+        : 0,
     };
   }
 
   /**
    * Retrieve recent decisions with filtering
    * Requirement 10.7: Implement recent decisions retrieval
-   * 
+   *
    * @param limit - Maximum number of decisions
    * @param phaseFilter - Optional phase filter
    * @returns Recent decisions with metadata
    */
   async getRecentDecisions(
     limit: number = this.config.maxRecentDecisions,
-    phaseFilter?: PhaseId
+    phaseFilter?: PhaseId,
   ) {
     let decisions = this.brain.getRecentDecisions(limit);
-    
+
     // Apply phase filter if specified
     if (phaseFilter) {
-      decisions = decisions.filter(d => 
+      decisions = decisions.filter((d) =>
         d.allocation && this.getPhaseFromDecision(d) === phaseFilter
       );
     }
 
     // Add metadata to each decision
-    const enhancedDecisions = decisions.map(decision => ({
+    const enhancedDecisions = decisions.map((decision) => ({
       ...decision,
       processingTime: this.estimateProcessingTime(decision),
       riskLevel: this.calculateDecisionRiskLevel(decision),
@@ -362,10 +404,11 @@ export class DashboardService {
       decisions: enhancedDecisions,
       summary: {
         total: enhancedDecisions.length,
-        approved: enhancedDecisions.filter(d => d.approved).length,
-        rejected: enhancedDecisions.filter(d => !d.approved).length,
-        approvalRate: enhancedDecisions.length > 0 
-          ? enhancedDecisions.filter(d => d.approved).length / enhancedDecisions.length 
+        approved: enhancedDecisions.filter((d) => d.approved).length,
+        rejected: enhancedDecisions.filter((d) => !d.approved).length,
+        approvalRate: enhancedDecisions.length > 0
+          ? enhancedDecisions.filter((d) => d.approved).length /
+            enhancedDecisions.length
           : 0,
       },
     };
@@ -374,7 +417,7 @@ export class DashboardService {
   /**
    * Get comprehensive dashboard data
    * Aggregates all dashboard components
-   * 
+   *
    * @returns Extended dashboard data
    */
   async getDashboardData(): Promise<ExtendedDashboardData> {
@@ -388,22 +431,28 @@ export class DashboardService {
 
     // Get base dashboard data from brain
     const baseDashboard = await this.brain.getDashboardData();
-    
+
     // Calculate NAV
     const navCalculation = await this.calculateNAV();
-    
+
     // Get enhanced metrics
     const phasePerformance = await this.brain.getAllPhasePerformance();
     const approvalRates = this.brain.getAllApprovalRates();
     const enhancedTreasury = await this.aggregateTreasuryStatus();
     const enhancedDecisions = await this.getRecentDecisions();
-    
+
     // Calculate additional metrics
     const positions = this.brain.getPositions();
     const positionsSummary = {
       count: positions.length,
-      totalNotional: positions.reduce((sum, pos) => sum + Math.abs(pos.size), 0),
-      totalUnrealizedPnL: positions.reduce((sum, pos) => sum + (pos.unrealizedPnL ?? 0), 0),
+      totalNotional: positions.reduce(
+        (sum, pos) => sum + Math.abs(pos.size),
+        0,
+      ),
+      totalUnrealizedPnL: positions.reduce(
+        (sum, pos) => sum + (pos.unrealizedPnL ?? 0),
+        0,
+      ),
     };
 
     // Calculate time since last profitable trade
@@ -436,17 +485,17 @@ export class DashboardService {
   /**
    * Export dashboard data to JSON with metadata
    * Requirement 10.8: Create export endpoint for dashboard data
-   * 
+   *
    * @returns JSON string with timestamp and version metadata
    */
   async exportDashboardJSON(): Promise<string> {
     const dashboardData = await this.getDashboardData();
-    
+
     const exportData = {
       metadata: {
         exportedAt: new Date().toISOString(),
         version: this.config.version,
-        source: 'titan-brain-dashboard-service',
+        source: "titan-brain-dashboard-service",
       },
       data: dashboardData,
     };
@@ -490,27 +539,27 @@ export class DashboardService {
   private calculateRiskScore(
     metrics: RiskMetrics,
     positionCount: number,
-    totalNotional: number
+    totalNotional: number,
   ): number {
     // Simple risk scoring algorithm (0-100)
     let score = 0;
-    
+
     // Leverage component (0-40 points)
     score += Math.min(metrics.currentLeverage * 2, 40);
-    
+
     // Correlation component (0-30 points)
     score += metrics.correlation * 30;
-    
+
     // Position count component (0-20 points)
     score += Math.min(positionCount * 2, 20);
-    
+
     // Notional size component (0-10 points)
     const equity = this.brain.getEquity();
     if (equity > 0) {
       const notionalRatio = totalNotional / equity;
       score += Math.min(notionalRatio * 5, 10);
     }
-    
+
     return Math.min(score, 100);
   }
 
@@ -529,30 +578,32 @@ export class DashboardService {
   private estimateProcessingTime(decision: BrainDecision): number {
     // Simple estimation based on decision complexity
     let baseTime = 10; // Base 10ms
-    
+
     if (decision.risk.riskMetrics) {
       baseTime += 20; // Risk calculation overhead
     }
-    
+
     if (!decision.approved) {
       baseTime += 5; // Veto processing
     }
-    
+
     return baseTime;
   }
 
   /**
    * Calculate risk level for a decision
    */
-  private calculateDecisionRiskLevel(decision: BrainDecision): 'low' | 'medium' | 'high' {
-    if (!decision.risk.riskMetrics) return 'low';
-    
+  private calculateDecisionRiskLevel(
+    decision: BrainDecision,
+  ): "low" | "medium" | "high" {
+    if (!decision.risk.riskMetrics) return "low";
+
     const leverage = decision.risk.riskMetrics.currentLeverage;
     const correlation = decision.risk.riskMetrics.correlation;
-    
-    if (leverage > 10 || correlation > 0.8) return 'high';
-    if (leverage > 5 || correlation > 0.6) return 'medium';
-    return 'low';
+
+    if (leverage > 10 || correlation > 0.8) return "high";
+    if (leverage > 5 || correlation > 0.6) return "medium";
+    return "low";
   }
 
   /**
@@ -560,10 +611,10 @@ export class DashboardService {
    */
   private calculateImpactScore(decision: BrainDecision): number {
     if (!decision.approved) return 0;
-    
+
     const equity = this.brain.getEquity();
     if (equity === 0) return 0;
-    
+
     return (decision.authorizedSize / equity) * 100;
   }
 
@@ -579,14 +630,14 @@ export class DashboardService {
          FROM phase_performance 
          WHERE pnl > 0 
          ORDER BY timestamp DESC 
-         LIMIT 1`
+         LIMIT 1`,
       );
 
       if (result.rows.length > 0 && result.rows[0].last_profit_time) {
         return Date.now() - result.rows[0].last_profit_time;
       }
     } catch (error) {
-      console.error('Error fetching last profit time:', error);
+      console.error("Error fetching last profit time:", error);
     }
 
     return null;

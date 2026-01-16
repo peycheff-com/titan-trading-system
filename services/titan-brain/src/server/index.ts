@@ -3,47 +3,53 @@
  * Exports webhook server, signal queue, notification components, and integration services
  */
 
-export { WebhookServer, WebhookServerConfig } from './WebhookServer.js';
-export { SignalQueue, SignalQueueConfig } from './SignalQueue.js';
-export { DashboardService } from './DashboardService.js';
-export { 
-  NotificationService,
-  NotificationType,
-  NotificationMessage,
+export { WebhookServer, WebhookServerConfig } from "./WebhookServer.js";
+export { SignalQueue, SignalQueueConfig } from "./SignalQueue.js";
+export { DashboardService } from "./DashboardService.js";
+export {
   CircuitBreakerNotification,
   HighCorrelationNotification,
+  NotificationMessage,
+  NotificationService,
+  NotificationType,
   SweepNotification,
   VetoNotification,
-} from './NotificationService.js';
-export { TitanNotificationHandler } from './NotificationHandler.js';
+} from "./NotificationService.js";
+export { TitanNotificationHandler } from "./NotificationHandler.js";
 
 // Integration services for connecting to Execution Engine and Phase services
-export { 
+export {
   ExecutionEngineClient,
   ExecutionEngineConfig,
-  FillConfirmation,
   ExecutionPosition,
-} from './ExecutionEngineClient.js';
-export { 
-  PhaseIntegrationService,
+  FillConfirmation,
+} from "./ExecutionEngineClient.js";
+export {
   PhaseIntegrationConfig,
-  VetoNotification as PhaseVetoNotification,
+  PhaseIntegrationService,
   PhaseStatusUpdate,
   RawPhaseSignal,
-} from './PhaseIntegrationService.js';
+  VetoNotification as PhaseVetoNotification,
+} from "./PhaseIntegrationService.js";
 export {
-  BybitWalletProvider,
   BinanceWalletProvider,
+  BybitWalletProvider,
   setupDashboardService,
-} from './DashboardIntegration.js';
+} from "./DashboardIntegration.js";
 
-// WebSocket service for real-time updates
 export {
+  Position as WSPosition,
+  SensorStatus,
+  Tripwire,
   WebSocketService,
   WebSocketServiceConfig,
   WSMessage,
   WSMessageType,
-  Position as WSPosition,
-  Tripwire,
-  SensorStatus,
-} from './WebSocketService.js';
+} from "./WebSocketService.js";
+
+// NATS Publisher for cross-service communication
+export {
+  AIOptimizationRequest,
+  getNatsPublisher,
+  NatsPublisher,
+} from "./NatsPublisher.js";

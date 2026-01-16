@@ -15,17 +15,17 @@
     "lint:fix": "eslint src/**/*.ts --fix"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.21.0",
+    "@google/generative-ai": "^0.24.1",
+    "@titan/shared": "*",
     "better-sqlite3": "^9.2.2",
     "eventemitter3": "^5.0.1",
     "ink": "^4.4.0",
     "ink-text-input": "^5.0.1",
     "node-schedule": "^2.1.1",
     "react": "^18.2.0",
-    "ws": "^8.18.0",
     "typescript": "^5.3.3",
-    "zod": "^3.22.4",
-    "@titan/shared": "*"
+    "ws": "^8.18.0",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.8",

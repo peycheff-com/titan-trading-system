@@ -1,6 +1,7 @@
 import http from "http";
 import { NightlyOptimize } from "./cron/NightlyOptimize.js";
 import { getErrorLogger } from "./utils/ErrorHandler.js";
+import { NatsAdapter } from "./messaging/NatsAdapter.js";
 
 const logger = console;
 
@@ -12,6 +13,10 @@ async function main() {
     optimizer.start();
 
     logger.log("✅ Nightly Optimizer scheduled");
+
+    // Initialize NATS Adapter
+    const natsAdapter = new NatsAdapter(optimizer);
+    await natsAdapter.init();
 
     // Start HTTP Server for Railway Health Checks & Control
     const port = parseInt(process.env.PORT || "4000", 10);
