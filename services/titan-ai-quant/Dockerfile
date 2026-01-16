@@ -46,4 +46,4 @@ EXPOSE 8082
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD wget -qO- http://localhost:8082/health || exit 1
 
-CMD ["node", "dist/index.js"]
+CMD ["node", "dist/server.js"]
