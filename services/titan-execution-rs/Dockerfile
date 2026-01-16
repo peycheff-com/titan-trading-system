@@ -2,7 +2,11 @@
 FROM rust:1.75-bookworm as builder
 
 WORKDIR /usr/src/app
-COPY . .
+
+# Copy only the Rust service source files
+COPY services/titan-execution-rs/Cargo.toml ./
+COPY services/titan-execution-rs/Cargo.lock ./
+COPY services/titan-execution-rs/src ./src
 
 # Build the application
 RUN cargo build --release
