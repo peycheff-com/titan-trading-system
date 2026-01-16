@@ -1,0 +1,262 @@
+# Titan Trading System - Production Docker Compose
+# Deploy all services on a single VPS with IPC support
+
+services:
+  # =============================================================================
+  # REVERSE PROXY
+  # =============================================================================
+  traefik:
+    image: traefik:v3.0
+    container_name: titan-traefik
+    command:
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@example.com}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-certs:/letsencrypt
+    networks:
+      - titan-network
+    restart: unless-stopped
+
+  # =============================================================================
+  # INFRASTRUCTURE
+  # =============================================================================
+  nats:
+    image: nats:latest
+    container_name: titan-nats
+    command: [ "-js", "-m", "8222" ]
+    ports:
+      - "4222:4222" # Client
+      - "8222:8222" # Monitoring
+    networks:
+      - titan-network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8222/healthz" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # =============================================================================
+  # TITAN BRAIN - Master Orchestrator
+  # =============================================================================
+  titan-brain:
+    build:
+      context: .
+      dockerfile: services/titan-brain/Dockerfile
+    container_name: titan-brain
+    environment:
+      - NODE_ENV=production
+      - PORT=3100
+      - HOST=0.0.0.0
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL:-}
+      - NATS_URL=nats://nats:4222
+      - HMAC_SECRET=${HMAC_SECRET}
+      - LOG_LEVEL=info
+      - SERVICE_NAME=titan-brain
+    volumes:
+      - titan-ipc:/tmp
+    networks:
+      - titan-network
+    depends_on:
+      nats:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:3100/health" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # =============================================================================
+  # TITAN EXECUTION (Rust) - High-Performance Order Execution
+  # =============================================================================
+  titan-execution:
+    build:
+      context: .
+      dockerfile: services/titan-execution-rs/Dockerfile
+    container_name: titan-execution
+    environment:
+      - RUST_LOG=info
+      - PORT=3002
+      - NATS_URL=nats://nats:4222
+      - BINANCE_API_KEY=${BINANCE_API_KEY}
+      - BINANCE_API_SECRET=${BINANCE_API_SECRET}
+    volumes:
+      - titan-ipc:/tmp
+    networks:
+      - titan-network
+    depends_on:
+      nats:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:3002/health" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # =============================================================================
+  # TITAN CONSOLE - Web Dashboard
+  # =============================================================================
+  titan-console:
+    build:
+      context: .
+      dockerfile: services/titan-console/Dockerfile
+    container_name: titan-console
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      - VITE_API_URL=http://titan-brain:3100
+      - VITE_WS_URL=ws://titan-brain:3100
+    networks:
+      - titan-network
+    depends_on:
+      - titan-brain
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.console.rule=Host(`${DOMAIN:-localhost}`)
+      - traefik.http.routers.console.entrypoints=websecure
+      - traefik.http.routers.console.tls.certresolver=letsencrypt
+      - traefik.http.services.console.loadbalancer.server.port=8080
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8080/" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # =============================================================================
+  # PHASE 1: SCAVENGER - Trap Detection
+  # =============================================================================
+  titan-scavenger:
+    build:
+      context: .
+      dockerfile: services/titan-phase1-scavenger/Dockerfile
+    container_name: titan-scavenger
+    environment:
+      - NODE_ENV=production
+      - PORT=8081
+      - BRAIN_URL=http://titan-brain:3100
+      - SERVICE_NAME=titan-scavenger
+      - BINANCE_API_KEY=${BINANCE_API_KEY}
+      - BINANCE_API_SECRET=${BINANCE_API_SECRET}
+    volumes:
+      - titan-ipc:/tmp
+    networks:
+      - titan-network
+    depends_on:
+      - titan-brain
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8081/health" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # =============================================================================
+  # PHASE 2: HUNTER - Market Structure Analysis
+  # =============================================================================
+  titan-hunter:
+    build:
+      context: .
+      dockerfile: services/titan-phase2-hunter/Dockerfile
+    container_name: titan-hunter
+    environment:
+      - NODE_ENV=production
+      - PORT=8083
+      - BRAIN_URL=http://titan-brain:3100
+      - SERVICE_NAME=titan-hunter
+    volumes:
+      - titan-ipc:/tmp
+    networks:
+      - titan-network
+    depends_on:
+      - titan-brain
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8083/health" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # =============================================================================
+  # PHASE 3: SENTINEL - Basis Arbitrage
+  # =============================================================================
+  titan-sentinel:
+    build:
+      context: .
+      dockerfile: services/titan-phase3-sentinel/Dockerfile
+    container_name: titan-sentinel
+    environment:
+      - NODE_ENV=production
+      - PORT=8084
+      - BRAIN_URL=http://titan-brain:3100
+      - SERVICE_NAME=titan-sentinel
+    volumes:
+      - titan-ipc:/tmp
+    networks:
+      - titan-network
+    depends_on:
+      - titan-brain
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8084/health" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # =============================================================================
+  # PHASE 4: AI QUANT - Parameter Optimization
+  # =============================================================================
+  titan-ai-quant:
+    build:
+      context: .
+      dockerfile: services/titan-ai-quant/Dockerfile
+    container_name: titan-ai-quant
+    environment:
+      - NODE_ENV=production
+      - PORT=8082
+      - NATS_URL=nats://nats:4222
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - SERVICE_NAME=titan-ai-quant
+    volumes:
+      - titan-ipc:/tmp
+      - titan-ai-data:/app/data
+    networks:
+      - titan-network
+    depends_on:
+      nats:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8082/health" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+# =============================================================================
+# NETWORKS & VOLUMES
+# =============================================================================
+networks:
+  titan-network:
+    driver: bridge
+
+volumes:
+  traefik-certs:
+  titan-ipc:
+    driver: local
+  titan-ai-data:
+    driver: local
