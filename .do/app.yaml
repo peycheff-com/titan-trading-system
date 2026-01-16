@@ -55,18 +55,6 @@ services:
         value: "3100"
       - key: HOST
         value: "0.0.0.0"
-      - key: DATABASE_URL
-        scope: RUN_TIME
-        type: SECRET
-      - key: REDIS_URL
-        scope: RUN_TIME
-        type: SECRET
-      - key: NATS_URL
-        scope: RUN_TIME
-        type: SECRET
-      - key: HMAC_SECRET
-        scope: RUN_TIME
-        type: SECRET
       - key: LOG_LEVEL
         value: "info"
       - key: DEPLOYMENT_ENVIRONMENT
@@ -96,15 +84,6 @@ services:
         value: "info"
       - key: PORT
         value: "3002"
-      - key: NATS_URL
-        scope: RUN_TIME
-        type: SECRET
-      - key: BINANCE_API_KEY
-        scope: RUN_TIME
-        type: SECRET
-      - key: BINANCE_API_SECRET
-        scope: RUN_TIME
-        type: SECRET
 
   # ---------------------------------------------------------------------------
   # TITAN AI QUANT - Gemini AI Parameter Optimization (Internal)
@@ -128,12 +107,6 @@ services:
         value: production
       - key: PORT
         value: "8082"
-      - key: NATS_URL
-        scope: RUN_TIME
-        type: SECRET
-      - key: GEMINI_API_KEY
-        scope: RUN_TIME
-        type: SECRET
       - key: DEPLOYMENT_ENVIRONMENT
         value: "production"
       - key: SERVICE_NAME
@@ -167,12 +140,6 @@ services:
         value: "production"
       - key: SERVICE_NAME
         value: "titan-scavenger"
-      - key: BINANCE_API_KEY
-        scope: RUN_TIME
-        type: SECRET
-      - key: BINANCE_API_SECRET
-        scope: RUN_TIME
-        type: SECRET
 
   # ---------------------------------------------------------------------------
   # PHASE 2: HUNTER - Holographic Market Analysis (Internal)
