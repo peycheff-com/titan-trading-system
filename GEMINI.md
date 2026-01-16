@@ -2,95 +2,73 @@
 
 ## Project Overview
 
-Titan is a **Bio-Mimetic Trading Organism** designed as a 5-phase algorithmic trading system. It evolves its behavior based on available capital, orchestrated by a central "Brain" and executed via specialized microservices.
+Titan is a **Bio-Mimetic Trading Organism** — a 5-phase algorithmic trading
+system that evolves its behavior based on available capital. The system is
+orchestrated by a central "Brain" and executed via specialized microservices
+with sub-millisecond latency.
 
-**Key Phases:**
-*   **Phase 1 (Scavenger):** High leverage, small capital trap system.
-*   **Phase 2 (Hunter):** Medium leverage, holographic market structure analysis.
-*   **Phase 3 (Sentinel):** Low leverage, market-neutral basis arbitrage.
-*   **Phase 4 (AI Quant):** Offline parameter optimization using Gemini AI.
-*   **Phase 5 (Brain):** Master orchestrator managing capital allocation and risk.
+### Trading Phases
+
+| Phase | Name      | Description                                 |
+| ----- | --------- | ------------------------------------------- |
+| 1     | Scavenger | High leverage trap system for small capital |
+| 2     | Hunter    | Medium leverage holographic market analysis |
+| 3     | Sentinel  | Low leverage market-neutral basis arbitrage |
+| 4     | AI Quant  | Gemini AI parameter optimization            |
+| 5     | Brain     | Master orchestrator for capital & risk      |
 
 ## Architecture
 
-The system follows a microservices architecture within a monorepo structure:
+The system follows a microservices architecture within a monorepo:
 
-*   **Titan Brain (`services/titan-brain`):** The central decision maker (Node.js/Fastify, PostgreSQL). Orchestrates phases and manages global risk.
-*   **Titan Execution (`services/titan-execution`):** Handles order execution, position tracking (Shadow State), and exchange connections (Node.js/Fastify, SQLite/Postgres).
-*   **Titan Console (`services/titan-console`):** Web-based monitoring dashboard (React/Vite).
-*   **Titan AI Quant (`services/titan-ai-quant`):** AI optimization engine using Google's Gemini models.
-*   **Shared Infrastructure (`services/shared`):** Common code for logging, config, and events.
+| Service                  | Technology                   | Purpose                               |
+| ------------------------ | ---------------------------- | ------------------------------------- |
+| `titan-brain`            | Node.js, Fastify, PostgreSQL | Central orchestrator, risk management |
+| `titan-execution-rs`     | **Rust**, Actix, NATS        | High-performance order execution      |
+| `titan-phase1-scavenger` | TypeScript                   | Trap detection & signals              |
+| `titan-phase2-hunter`    | TypeScript                   | Holographic analysis                  |
+| `titan-phase3-sentinel`  | TypeScript                   | Basis arbitrage                       |
+| `titan-ai-quant`         | TypeScript, Gemini AI        | Parameter optimization                |
+| `titan-console`          | React, Vite                  | Web monitoring dashboard              |
+| `@titan/shared`          | TypeScript                   | Common infrastructure                 |
 
 ## Prerequisites
 
-*   **Node.js:** v20+ (Required by root `package.json`).
-*   **PostgreSQL:** Required for Titan Brain.
-*   **Redis:** Required for caching and communication.
-*   **Package Manager:** npm (Workspaces enabled).
+- **Node.js:** v22+
+- **Rust:** 1.75+ (for execution engine)
+- **PostgreSQL:** Supabase or local instance
+- **NATS:** JetStream for event streaming (optional locally)
 
-## Building and Running
-
-### Quick Start (All Services)
-
-The recommended way to start the entire system locally is using the provided shell script:
+## Quick Start
 
 ```bash
+# Start all services
 ./start-titan.sh
+
+# Or start individually
+npm run start:brain       # Port 3100
+npm run start:execution   # Port 3002
+npm run start:console     # Port 5173
 ```
 
-This script:
-1.  Validates the environment (Node, disk space, memory).
-2.  Starts PostgreSQL and Redis (if installed via Homebrew).
-3.  Builds and starts **Titan Brain**, **Titan Execution**, and **Titan Scavenger** (headless).
-4.  Performs health checks on all services.
+## Key Directories
 
-### Running Individual Services
+| Path          | Description                      |
+| ------------- | -------------------------------- |
+| `services/`   | All microservice source code     |
+| `config/`     | Centralized configuration        |
+| `scripts/`    | Operational & deployment scripts |
+| `docs/`       | Technical documentation          |
+| `monitoring/` | Prometheus & Grafana configs     |
 
-You can run specific services using npm workspaces from the root directory:
+## Development
 
-```bash
-# Install dependencies for all workspaces
-npm install
+- **Monorepo:** npm workspaces, shared code in `services/shared`
+- **IPC:** FastPath via Unix Domain Sockets with HMAC signing
+- **Event Bus:** NATS JetStream for async communication
+- **Database:** PostgreSQL (Supabase in production)
 
-# Start Titan Brain
-npm run start:brain
+## Deployment
 
-# Start Titan Execution
-npm run start:execution
-
-# Start Titan Console (Frontend)
-npm run start:console
-
-# Start AI Quant
-npm run start:ai-quant
-```
-
-### Deployment Logic
-
-The project uses `dispatch-start.js` for Railway deployments. It detects the service to run based on the `RAILWAY_SERVICE_NAME` environment variable.
-*   **Default:** Titan Console (if no env var is set).
-*   **Supported Names:** "Titan Brain", "Titan Execution", "Titan AI Quant", etc.
-
-## Key Files & Directories
-
-*   **`start-titan.sh`**: The master startup script for local development.
-*   **`.kiro/steering/titan-architecture.md`**: Detailed architectural documentation. **Read this for deep system understanding.**
-*   **`services/`**: Contains the source code for all microservices.
-*   **`config/`**: Centralized configuration files (e.g., `brain.config.json`).
-*   **`dispatch-start.js`**: Entry point for cloud deployments.
-*   **`README.md`**: General project info and quick start guide.
-
-## Development Conventions
-
-*   **Monorepo:** Code is organized in `services/*`. Shared code is in `services/shared`.
-*   **Environment Variables:** Service-specific `.env` files (e.g., `services/titan-execution/.env`). Use `.env.example` as a template.
-*   **Database:** Titan Brain uses PostgreSQL (Supabase in prod). Titan Execution uses SQLite or Postgres.
-*   **AI Integration:** Phase 4 uses `@google/generative-ai` for parameter optimization. **Target:** Upgrade to Gemini 3 Flash (Dec 2025 release) for real-time reasoning.
-
-## Modernization Roadmap (2026)
-
-Based on the [SOTA Upgrade Analysis](reports/SOTA_Upgrade_Analysis_2026.md), the following upgrades are planned:
-1.  **Execution Engine:** Rewrite `titan-execution` in **Rust** (Actix/Tokio) to eliminate GC jitter and achieve <1ms P99 latency.
-2.  **Event Bus:** Migrate from Redis to **NATS JetStream** for deterministic low-latency messaging.
-3.  **AI Core:** Upgrade from Gemini 1.5 to **Gemini 3 Flash** & **Deep Think** for superior reasoning capabilities.
-
+Railway auto-deploys from `main` branch. The `dispatch-start.js` routes based on
+`RAILWAY_SERVICE_NAME`.

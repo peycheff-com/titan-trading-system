@@ -134,3 +134,27 @@ backups/
 # Monitoring and metrics
 prometheus/
 grafana/
+
+# Rust build artifacts
+target/
+Cargo.lock
+!services/titan-execution-rs/Cargo.lock
+
+# Development artifacts
+artifacts/logs/
+.genkit/
+tasks/
+powers/
+
+# Debug and crash logs
+*_crash_logs.txt
+*_logs.txt
+*_connect_logs.txt
+firebase-debug.log
+
+# Test scripts (not for production)
+test-*.js
+!services/**/test-*.ts
+
+# Disabled configs
+*.disabled
