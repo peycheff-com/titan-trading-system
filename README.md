@@ -200,4 +200,4 @@ guarantee future results.
 
 ---
 
-**Built with ❤️ by the Titan Team**
+**Built with ❤️ by the Mindburn Labs**
