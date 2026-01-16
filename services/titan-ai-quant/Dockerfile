@@ -14,6 +14,10 @@ RUN npm ci --workspace=services/titan-ai-quant --workspace=services/shared
 # Copy source code
 COPY services/titan-ai-quant services/titan-ai-quant/
 
+# Build shared package first (required for workspace imports)
+WORKDIR /app/services/shared
+RUN npm run build
+
 # Build the application
 WORKDIR /app/services/titan-ai-quant
 RUN npm run build
