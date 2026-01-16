@@ -1,7 +1,7 @@
 /**
- * Service Discovery for Railway Deployment
+ * Service Discovery for Production Deployment
  *
- * Manages service URLs and connectivity validation for Railway-deployed services.
+ * Manages service URLs and connectivity validation for deployed services.
  * Handles service URL resolution, health checking, and failover logic.
  *
  * Requirements: 2.2.1, 2.2.2, 2.2.3, 2.2.4
@@ -126,7 +126,7 @@ export class ServiceDiscovery {
   private parseServicesFromEnvironment(): ServiceEndpoint[] {
     const services: ServiceEndpoint[] = [];
 
-    // Parse Railway service URLs
+    // Parse Phase service URLs
     const serviceNames = ["PHASE1", "PHASE2", "PHASE3", "SHARED"];
 
     for (const serviceName of serviceNames) {

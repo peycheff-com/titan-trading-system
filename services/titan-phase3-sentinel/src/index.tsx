@@ -11,7 +11,7 @@ import { MarketMonitor } from "./polymarket/MarketMonitor.js";
 import http from 'http';
 
 async function main() {
-  // 0. Start Health Check Server (Railway Requirement)
+  // 0. Start Health Check Server (Production Requirement)
   const port = process.env.PORT || 8080;
   const server = http.createServer((req, res) => {
     res.writeHead(200);

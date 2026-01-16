@@ -21,7 +21,7 @@ echo -e "${GREEN}✓ Ports 3100 and 8080 cleared.${NC}"
 echo -e "${BLUE}[2/4] Starting Titan Brain (Port 3100)...${NC}"
 cd services/titan-brain
 # Use local_bypass to avoid Postgres dependency for local run
-PORT=3100 HMAC_SECRET=mysecret DATABASE_URL="sqlite://titan_brain.db" RAILWAY_ENVIRONMENT=local_bypass npm start > ../../logs/brain.log 2>&1 &
+PORT=3100 HMAC_SECRET=mysecret DATABASE_URL="sqlite://titan_brain.db" npm start > ../../logs/brain.log 2>&1 &
 BRAIN_PID=$!
 echo "Brain PID: $BRAIN_PID"
 cd ../..
