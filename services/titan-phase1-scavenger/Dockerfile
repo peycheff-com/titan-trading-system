@@ -14,6 +14,10 @@ RUN npm ci --workspace=services/titan-phase1-scavenger --workspace=services/shar
 # Copy source code
 COPY services/titan-phase1-scavenger services/titan-phase1-scavenger/
 
+# Build shared package first (required for workspace imports)
+WORKDIR /app/services/shared
+RUN npm run build
+
 # Build the application
 WORKDIR /app/services/titan-phase1-scavenger
 RUN npm run build

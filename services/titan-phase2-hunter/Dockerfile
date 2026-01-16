@@ -14,6 +14,10 @@ RUN npm ci --workspace=services/titan-phase2-hunter --workspace=services/shared
 # Copy source code
 COPY services/titan-phase2-hunter services/titan-phase2-hunter/
 
+# Build shared package first (required for workspace imports)
+WORKDIR /app/services/shared
+RUN npm run build
+
 # Build the application
 WORKDIR /app/services/titan-phase2-hunter
 RUN npm run build

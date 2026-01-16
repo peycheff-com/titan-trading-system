@@ -14,6 +14,10 @@ RUN npm ci --workspace=services/titan-phase3-sentinel --workspace=services/share
 # Copy source code
 COPY services/titan-phase3-sentinel services/titan-phase3-sentinel/
 
+# Build shared package first (required for workspace imports)
+WORKDIR /app/services/shared
+RUN npm run build
+
 # Build the application
 WORKDIR /app/services/titan-phase3-sentinel
 RUN npm run build
