@@ -330,40 +330,30 @@ async function main(): Promise<void> {
 
       console.log("🔗 Initializing integration services...");
 
-      // Execution Engine Client (optional)
-      // Use legacy config for execution URL as it's not in proper BrainConfig yet
+      // ExecutionEngineClient
+      // Initialize unconditionally to support NATS communication
       const { config } = loadConfig({ validate: false });
-      if ((config as any).services?.execution) {
-        executionEngineClient = new ExecutionEngineClient({
-          baseUrl: (config as any).services.execution,
-          hmacSecret: brainConfig.hmacSecret,
-          timeout: 5000,
-          maxRetries: 3,
-        });
-        await executionEngineClient.initialize();
+      executionEngineClient = new ExecutionEngineClient({
+        baseUrl: (config as any).services?.execution || "http://localhost:3002", // Default/Fallback
+        hmacSecret: brainConfig.hmacSecret,
+        timeout: 5000,
+        maxRetries: 3,
+      });
+      await executionEngineClient.initialize();
 
-        // Wire up fill confirmation handling
-        executionEngineClient.onFillConfirmation((fill) => {
-          logger.info("Fill confirmation received", {
-            signalId: fill.signalId,
-            symbol: fill.symbol,
-            fillPrice: fill.fillPrice,
-            fillSize: fill.fillSize,
-          });
+      // Wire up fill confirmation handling
+      executionEngineClient.onFillConfirmation((fill) => {
+        logger.info("Fill confirmation received", {
+          signalId: fill.signalId,
+          symbol: fill.symbol,
+          fillPrice: fill.fillPrice,
+          fillSize: fill.fillSize,
         });
+      });
 
-        // Set execution engine client on brain
-        brain!.setExecutionEngine(executionEngineClient);
-        console.log(
-          `   ✅ ExecutionEngineClient connected to ${
-            (config as any).services.execution
-          }`,
-        );
-      } else {
-        console.log(
-          "   ⚠️  Execution service URL not configured, signal forwarding disabled",
-        );
-      }
+      // Set execution engine client on brain
+      brain!.setExecutionEngine(executionEngineClient);
+      console.log("   ✅ ExecutionEngineClient initialized (NATS)");
 
       // Phase Integration Service (optional)
       if (

@@ -76,7 +76,7 @@ impl OrderManager {
 
         // Default decision: Maker order
         let mut decision = OrderDecision {
-            order_type: "LIMIT".to_string(),
+            order_type: crate::model::OrderType::Limit,
             post_only: true,
             reduce_only,
             limit_price: params.limit_price,

@@ -3,11 +3,11 @@
  * Defines types for the main orchestrator
  */
 
-import { AllocationVector } from './allocation.js';
-import { PhasePerformance, PhaseId } from './performance.js';
-import { RiskDecision, RiskMetrics, IntentSignal } from './risk.js';
-import { TreasuryStatus } from './capital.js';
-import { BreakerStatus } from './breaker.js';
+import { AllocationVector } from "./allocation.js";
+import { PhaseId, PhasePerformance } from "./performance.js";
+import { IntentSignal, RiskDecision, RiskMetrics } from "./risk.js";
+import { TreasuryStatus } from "./capital.js";
+import { BreakerStatus } from "./breaker.js";
 
 /**
  * Brain decision result
@@ -111,4 +111,20 @@ export interface BrainConfig {
   dashboardCacheTTL: number;
   /** Maximum signals in queue */
   maxQueueSize: number;
+}
+
+/**
+ * Active Inference Engine configuration
+ */
+export interface ActiveInferenceConfig {
+  /** Number of bins for probability distribution */
+  distributionBins: number;
+  /** Sliding window size for price history */
+  windowSize: number;
+  /** Minimum history points required before inference */
+  minHistory: number;
+  /** Sensitivity to surprise (slope of sigmoid) */
+  sensitivity: number;
+  /** Offset for surprise sigmoid (center point) */
+  surpriseOffset: number;
 }

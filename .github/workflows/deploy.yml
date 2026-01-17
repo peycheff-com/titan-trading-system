@@ -1,0 +1,46 @@
+name: Deploy to DigitalOcean
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Copy files to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "."
+          target: "/opt/titan"
+          rm: false
+          strip_components: 0
+          exclude: |
+            .git/
+            node_modules/
+            .env
+            *.log
+            coverage/
+            dist/
+
+      - name: Deploy on VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /opt/titan
+            # Ensure permissions
+            mkdir -p services/titan-brain/dist/db
+            
+            # Start services
+            docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
+            
+            # Prune unused images to save space
+            docker system prune -f

@@ -15,51 +15,37 @@
 module.exports = {
   apps: [
     // ============================================
-    // TITAN CORE (Execution Service) - The Hub
+    // TITAN EXECUTION (Rust Engine)
     // ============================================
     {
-      name: 'titan-core',
-      script: './services/titan-execution/server.js',
+      name: 'titan-execution',
+      script: './services/titan-execution-rs/target/release/titan-execution-rs',
       cwd: __dirname,
       instances: 1,
       exec_mode: 'fork',
+      interpreter: 'none',
       
       // Startup behavior
-      wait_ready: true,
-      listen_timeout: 10000,
+      wait_ready: false, // Rust engine doesn't send ready signal to PM2 yet
       
       // Restart behavior
       autorestart: true,
       max_restarts: 10,
       restart_delay: 1000,
-      max_memory_restart: '500M',
       
       // Environment
       env: {
-        NODE_ENV: 'production',
-        PORT: 8080,
-        WS_PORT: 8081,
-        DATABASE_PATH: '/data/titan.db',
-        CORS_ORIGINS: 'http://localhost:3000,http://localhost:5173,http://localhost:3001,https://titan-console-production.up.railway.app',
-        LOG_LEVEL: 'info'
-      },
-      env_development: {
-        NODE_ENV: 'development',
-        PORT: 8080,
-        WS_PORT: 8081,
-        DATABASE_PATH: './services/titan-execution/titan_execution.db',
-        LOG_LEVEL: 'debug'
+        RUST_LOG: 'info',
+        NATS_URL: 'nats://localhost:4222'
       },
       
       // Logging
-      log_date_format: 'YYYY-MM-DD HH:mm:ss.SSS',
-      error_file: './logs/titan-core-error.log',
-      out_file: './logs/titan-core-out.log',
+      error_file: './logs/titan-execution-error.log',
+      out_file: './logs/titan-execution-out.log',
       merge_logs: true,
       
       // Graceful shutdown
-      kill_timeout: 5000,
-      shutdown_with_message: true
+      kill_timeout: 5000
     },
 
     // ============================================

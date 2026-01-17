@@ -52,6 +52,7 @@ export {
 
 // Brain types
 export {
+  ActiveInferenceConfig,
   BrainConfig,
   BrainDecision,
   DashboardData,
@@ -59,6 +60,9 @@ export {
   HealthStatus,
   QueuedSignal,
 } from "./brain.js";
+
+// Market types
+export { MarketSignal, SignalType } from "./market.js";
 
 // Config types
 export {

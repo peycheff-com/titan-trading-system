@@ -222,3 +222,24 @@ export {
   type PrepareResponse,
   type SignalSource,
 } from "./ipc/index.js";
+
+// Logger
+import {
+  LogEntry,
+  Logger,
+  LoggerConfig,
+  LogLevel,
+  PerformanceTimer,
+  TradeLogEntry,
+} from "./logger/Logger";
+
+export {
+  LogEntry as SharedLogEntry,
+  Logger,
+  LoggerConfig,
+  PerformanceTimer,
+  TradeLogEntry,
+};
+
+export const SharedLogLevel = LogLevel;
+export type SharedLogLevel = LogLevel;

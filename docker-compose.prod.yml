@@ -205,6 +205,8 @@ services:
       - PORT=8084
       - BRAIN_URL=http://titan-brain:3100
       - SERVICE_NAME=titan-sentinel
+      - BINANCE_API_KEY=${BINANCE_API_KEY}
+      - BINANCE_API_SECRET=${BINANCE_API_SECRET}
     volumes:
       - titan-ipc:/tmp
     networks:
