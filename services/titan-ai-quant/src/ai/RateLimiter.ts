@@ -1,6 +1,6 @@
 /**
  * Rate Limiter for Gemini API
- * 
+ *
  * Enforces max 10 requests per minute to stay within free tier limits.
  * Implements token bucket algorithm with exponential backoff on 429 errors.
  */
@@ -46,13 +46,13 @@ export class RateLimiter {
    */
   getTimeUntilNextSlot(): number {
     this.pruneOldTimestamps();
-    
+
     if (this.requestTimestamps.length < this.maxRequests) {
       return 0;
     }
 
     const oldestTimestamp = this.requestTimestamps[0];
-    const timeUntilExpiry = (oldestTimestamp + this.windowMs) - Date.now();
+    const timeUntilExpiry = oldestTimestamp + this.windowMs - Date.now();
     return Math.max(0, timeUntilExpiry);
   }
 
@@ -116,7 +116,7 @@ export class RateLimiter {
    */
   private pruneOldTimestamps(): void {
     const cutoff = Date.now() - this.windowMs;
-    this.requestTimestamps = this.requestTimestamps.filter(ts => ts > cutoff);
+    this.requestTimestamps = this.requestTimestamps.filter((ts) => ts > cutoff);
   }
 
   /**
@@ -154,6 +154,6 @@ export class RateLimiter {
    * Sleep helper
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

@@ -13,8 +13,8 @@
  * Requirements: 4.1-4.7 (Order Flow X-Ray)
  */
 
-import { EventEmitter } from "events";
-import { Absorption, Distribution, POI } from "../types";
+import { EventEmitter } from 'events';
+import { Absorption, Distribution, POI } from '../types';
 
 export interface CVDTrade {
   symbol: string;
@@ -43,7 +43,7 @@ export class CVDValidator extends EventEmitter {
    */
   calcCVD(trades: CVDTrade[], windowMs: number = this.CVD_WINDOW_MS): number {
     const cutoff = Date.now() - windowMs;
-    const recentTrades = trades.filter((t) => t.time > cutoff);
+    const recentTrades = trades.filter(t => t.time > cutoff);
 
     let cvd = 0;
     for (const trade of recentTrades) {
@@ -97,9 +97,9 @@ export class CVDValidator extends EventEmitter {
       const strength = Math.min(100, (priceDrop + cvdRise) * 50);
 
       console.log(
-        `🔍 CVD Absorption detected: Price LL ${p3.toFixed(2)}, CVD HL ${
-          cvd3.toFixed(0)
-        }, Strength: ${strength.toFixed(1)}`,
+        `🔍 CVD Absorption detected: Price LL ${p3.toFixed(2)}, CVD HL ${cvd3.toFixed(
+          0
+        )}, Strength: ${strength.toFixed(1)}`
       );
 
       const absorption: Absorption = {
@@ -110,7 +110,7 @@ export class CVDValidator extends EventEmitter {
       };
 
       // Emit absorption event
-      this.emit("absorption", absorption);
+      this.emit('absorption', absorption);
 
       return absorption;
     }
@@ -127,10 +127,7 @@ export class CVDValidator extends EventEmitter {
    * @param cvdValues - Array of corresponding CVD values
    * @returns Distribution object if pattern detected, null otherwise
    */
-  detectDistribution(
-    prices: number[],
-    cvdValues: number[],
-  ): Distribution | null {
+  detectDistribution(prices: number[], cvdValues: number[]): Distribution | null {
     if (prices.length < 3 || cvdValues.length < 3) {
       return null;
     }
@@ -157,9 +154,9 @@ export class CVDValidator extends EventEmitter {
       const strength = Math.min(100, (priceRise + cvdDrop) * 50);
 
       console.log(
-        `🔍 CVD Distribution detected: Price HH ${p3.toFixed(2)}, CVD LH ${
-          cvd3.toFixed(0)
-        }, Strength: ${strength.toFixed(1)}`,
+        `🔍 CVD Distribution detected: Price HH ${p3.toFixed(2)}, CVD LH ${cvd3.toFixed(
+          0
+        )}, Strength: ${strength.toFixed(1)}`
       );
 
       const distribution: Distribution = {
@@ -170,7 +167,7 @@ export class CVDValidator extends EventEmitter {
       };
 
       // Emit distribution event
-      this.emit("distribution", distribution);
+      this.emit('distribution', distribution);
 
       return distribution;
     }
@@ -190,14 +187,14 @@ export class CVDValidator extends EventEmitter {
   validateWithCVD(
     poi: POI,
     absorption: Absorption | null = null,
-    distribution: Distribution | null = null,
+    distribution: Distribution | null = null
   ): number {
     let confidenceAdjustment = 0;
 
     // Check if POI type matches CVD signal
-    if ("type" in poi) {
+    if ('type' in poi) {
       // For Bullish POIs (Order Blocks, FVGs)
-      if (poi.type === "BULLISH") {
+      if (poi.type === 'BULLISH') {
         if (absorption) {
           // Bullish POI + CVD Absorption = Strong confirmation
           confidenceAdjustment += 30;
@@ -210,7 +207,7 @@ export class CVDValidator extends EventEmitter {
       }
 
       // For Bearish POIs (Order Blocks, FVGs)
-      if (poi.type === "BEARISH") {
+      if (poi.type === 'BEARISH') {
         if (distribution) {
           // Bearish POI + CVD Distribution = Strong confirmation
           confidenceAdjustment += 30;
@@ -224,7 +221,7 @@ export class CVDValidator extends EventEmitter {
     }
 
     // For Liquidity Pools, any CVD divergence adds confidence
-    if ("strength" in poi && (absorption || distribution)) {
+    if ('strength' in poi && (absorption || distribution)) {
       confidenceAdjustment += 15;
       console.log(`✅ CVD confirms Liquidity Pool: +15 confidence`);
     }
@@ -248,15 +245,13 @@ export class CVDValidator extends EventEmitter {
 
     // Keep only trades within the history window (10 minutes)
     const cutoff = Date.now() - this.HISTORY_WINDOW_MS;
-    const filteredHistory = history.filter((t) => t.time > cutoff);
+    const filteredHistory = history.filter(t => t.time > cutoff);
 
     this.tradeHistory.set(trade.symbol, filteredHistory);
 
     // Log if history is getting large (performance monitoring)
     if (filteredHistory.length > 10000) {
-      console.warn(
-        `⚠️ Large trade history for ${trade.symbol}: ${filteredHistory.length} trades`,
-      );
+      console.warn(`⚠️ Large trade history for ${trade.symbol}: ${filteredHistory.length} trades`);
     }
   }
 
@@ -267,13 +262,10 @@ export class CVDValidator extends EventEmitter {
    * @param windowMs - Time window (default: full history window)
    * @returns Array of trades within the time window
    */
-  getTradeHistory(
-    symbol: string,
-    windowMs: number = this.HISTORY_WINDOW_MS,
-  ): CVDTrade[] {
+  getTradeHistory(symbol: string, windowMs: number = this.HISTORY_WINDOW_MS): CVDTrade[] {
     const history = this.tradeHistory.get(symbol) || [];
     const cutoff = Date.now() - windowMs;
-    return history.filter((t) => t.time > cutoff);
+    return history.filter(t => t.time > cutoff);
   }
 
   /**
@@ -326,7 +318,7 @@ export class CVDValidator extends EventEmitter {
       totalTrades += history.length;
     }
 
-    const memoryUsage = `${(totalTrades * 64 / 1024).toFixed(1)} KB`; // Rough estimate
+    const memoryUsage = `${((totalTrades * 64) / 1024).toFixed(1)} KB`; // Rough estimate
 
     return {
       totalSymbols: this.tradeHistory.size,

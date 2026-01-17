@@ -74,7 +74,13 @@ const riskConfig: RiskGuardianConfig = {
   correlationPenalty: 0.5,
   betaUpdateInterval: 300000,
   correlationUpdateInterval: 300000,
+  minStopDistanceMultiplier: 2.0,
 };
+
+import {
+  DefconLevel,
+  GovernanceEngine,
+} from "../../src/engine/GovernanceEngine";
 
 const capitalFlowConfig: CapitalFlowConfig = {
   sweepThreshold: 1.2,
@@ -96,7 +102,23 @@ const circuitBreakerConfig: CircuitBreakerConfig = {
 function createTitanBrain(): TitanBrain {
   const allocationEngine = new AllocationEngine(allocationConfig);
   const performanceTracker = new PerformanceTracker(performanceConfig);
-  const riskGuardian = new RiskGuardian(riskConfig, allocationEngine);
+
+  // Mock GovernanceEngine
+  const governanceEngine = {
+    getDefconLevel: jest.fn().mockReturnValue(DefconLevel.NORMAL),
+    getLeverageMultiplier: jest.fn().mockReturnValue(1.0),
+    canOpenNewPosition: jest.fn().mockReturnValue(true),
+    updateHealth: jest.fn(),
+    setOverride: jest.fn(),
+    on: jest.fn(),
+    emit: jest.fn(),
+  } as unknown as GovernanceEngine;
+
+  const riskGuardian = new RiskGuardian(
+    riskConfig,
+    allocationEngine,
+    governanceEngine,
+  );
   const capitalFlowManager = new CapitalFlowManager(capitalFlowConfig);
   const circuitBreaker = new CircuitBreaker(circuitBreakerConfig);
   const activeInferenceEngine = new ActiveInferenceEngine(
@@ -111,6 +133,7 @@ function createTitanBrain(): TitanBrain {
     capitalFlowManager,
     circuitBreaker,
     activeInferenceEngine,
+    governanceEngine,
   );
 }
 

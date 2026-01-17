@@ -9,7 +9,7 @@
  * Requirements: 3.6
  */
 
-import { OHLCV } from "../types/index.js";
+import { OHLCV } from '../types/index.js';
 
 export class LatencyModel {
   private baseLatency: number;
@@ -34,11 +34,7 @@ export class LatencyModel {
    * @param timestamp - The timestamp of the signal (in milliseconds)
    * @returns The adjusted entry price after latency penalty
    */
-  applyLatencyPenalty(
-    idealEntry: number,
-    marketData: OHLCV[],
-    timestamp: number,
-  ): number {
+  applyLatencyPenalty(idealEntry: number, marketData: OHLCV[], timestamp: number): number {
     if (marketData.length === 0) {
       return idealEntry;
     }
@@ -70,11 +66,7 @@ export class LatencyModel {
    * @param liquidityState - Liquidity state: 0=Low, 1=Normal, 2=High
    * @returns The slippage amount as a price delta
    */
-  calculateSlippage(
-    orderSize: number,
-    atr: number,
-    liquidityState: number,
-  ): number {
+  calculateSlippage(orderSize: number, atr: number, liquidityState: number): number {
     // Handle edge cases
     if (atr <= 0 || orderSize <= 0) {
       return 0;
@@ -116,9 +108,7 @@ export class LatencyModel {
     }
 
     // Sort data by timestamp to ensure correct ordering
-    const sortedData = [...marketData].sort((a, b) =>
-      a.timestamp - b.timestamp
-    );
+    const sortedData = [...marketData].sort((a, b) => a.timestamp - b.timestamp);
 
     // If timestamp is before all data, return first open
     if (timestamp <= sortedData[0].timestamp) {
@@ -183,7 +173,7 @@ export class LatencyModel {
    */
   setBaseLatency(latencyMs: number): void {
     if (latencyMs < 0) {
-      throw new Error("Latency cannot be negative");
+      throw new Error('Latency cannot be negative');
     }
     this.baseLatency = latencyMs;
   }
@@ -216,13 +206,7 @@ export class LatencyModel {
    * @param x - Target x value to interpolate
    * @returns Interpolated y value
    */
-  private linearInterpolate(
-    x1: number,
-    y1: number,
-    x2: number,
-    y2: number,
-    x: number,
-  ): number {
+  private linearInterpolate(x1: number, y1: number, x2: number, y2: number, x: number): number {
     // Avoid division by zero
     if (x2 === x1) {
       return y1;

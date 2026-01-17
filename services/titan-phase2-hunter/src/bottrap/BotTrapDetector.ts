@@ -1,9 +1,9 @@
 /**
  * BotTrapDetector - Main Bot Trap Detection Integration Component
- * 
+ *
  * Integrates pattern precision analysis, risk adjustment, and adaptive learning
  * into a unified bot trap detection system for Phase 2 signal validation.
- * 
+ *
  * Requirements: 3.1-3.7 (Bot Trap Pattern Recognition)
  * Requirements: 13.1-13.7 (Adaptive Learning from Bot Trap Patterns)
  */
@@ -14,26 +14,26 @@ import {
   TrapRecommendation,
   PatternPrecision,
   FlowValidation,
-  TradeOutcome
+  TradeOutcome,
 } from '../types';
 import { FVG, OrderBlock, LiquidityPool, POI, OHLCV } from '../types';
 import {
   PatternPrecisionAnalyzer,
   PatternPrecisionConfig,
   PrecisionAnalysisResult,
-  TechnicalPattern
+  TechnicalPattern,
 } from './PatternPrecisionAnalyzer';
 import {
   SuspectPatternRiskAdjuster,
   RiskAdjustmentConfig,
   RiskAdjustmentResult,
-  EntryValidationResult
+  EntryValidationResult,
 } from './SuspectPatternRiskAdjuster';
 import {
   AdaptiveLearningEngine,
   AdaptiveLearningConfig,
   LearningStatistics,
-  ParameterAdjustment
+  ParameterAdjustment,
 } from './AdaptiveLearningEngine';
 
 /**
@@ -63,7 +63,7 @@ export const DEFAULT_BOT_TRAP_DETECTOR_CONFIG: BotTrapDetectorConfig = {
   riskConfig: {},
   learningConfig: {},
   learningEnabled: true,
-  adaptiveAdjustments: true
+  adaptiveAdjustments: true,
 };
 
 /**
@@ -91,7 +91,7 @@ export interface POITrapAnalysis {
 
 /**
  * BotTrapDetector - Main integration component
- * 
+ *
  * Requirement 3.7: Log BOT_TRAP_DETECTED with pattern type, precision score, and action
  */
 export class BotTrapDetector extends EventEmitter {
@@ -102,14 +102,11 @@ export class BotTrapDetector extends EventEmitter {
   private symbol: string;
   private analysisCache: Map<string, PrecisionAnalysisResult>;
 
-  constructor(
-    symbol: string,
-    config: Partial<BotTrapDetectorConfig> = {}
-  ) {
+  constructor(symbol: string, config: Partial<BotTrapDetectorConfig> = {}) {
     super();
     this.symbol = symbol;
     this.config = { ...DEFAULT_BOT_TRAP_DETECTOR_CONFIG, ...config };
-    
+
     // Initialize components
     this.precisionAnalyzer = new PatternPrecisionAnalyzer(this.config.precisionConfig);
     this.riskAdjuster = new SuspectPatternRiskAdjuster(this.config.riskConfig);
@@ -126,7 +123,7 @@ export class BotTrapDetector extends EventEmitter {
         poi,
         trapAnalysis: this.createNullAnalysis(poi),
         entryValidation: null,
-        recommendation: 'PROCEED'
+        recommendation: 'PROCEED',
       };
     }
 
@@ -147,7 +144,7 @@ export class BotTrapDetector extends EventEmitter {
         poi,
         trapAnalysis: this.createNullAnalysis(poi),
         entryValidation: null,
-        recommendation: 'PROCEED'
+        recommendation: 'PROCEED',
       };
     }
 
@@ -172,7 +169,7 @@ export class BotTrapDetector extends EventEmitter {
       poi,
       trapAnalysis,
       entryValidation: null, // Will be set when validateEntry is called
-      recommendation
+      recommendation,
     };
   }
 
@@ -185,13 +182,10 @@ export class BotTrapDetector extends EventEmitter {
 
   /**
    * Validate entry for a POI with flow validation
-   * 
+   *
    * Requirement 3.4: Require Passive Absorption signature before entry on SUSPECT_TRAP
    */
-  validateEntry(
-    poi: POI,
-    flowValidation: FlowValidation | null
-  ): EntryValidationResult {
+  validateEntry(poi: POI, flowValidation: FlowValidation | null): EntryValidationResult {
     const cacheKey = this.getPOICacheKey(poi);
     let trapAnalysis = this.analysisCache.get(cacheKey);
 
@@ -220,12 +214,12 @@ export class BotTrapDetector extends EventEmitter {
     const analyses = pois.map(poi => {
       const cacheKey = this.getPOICacheKey(poi);
       let analysis = this.analysisCache.get(cacheKey);
-      
+
       if (!analysis) {
         const poiAnalysis = this.analyzePOI(poi);
         analysis = poiAnalysis.trapAnalysis;
       }
-      
+
       return analysis;
     });
 
@@ -234,7 +228,7 @@ export class BotTrapDetector extends EventEmitter {
 
   /**
    * Record trade outcome for learning
-   * 
+   *
    * Requirement 13.1: Track subsequent price action for validation
    */
   recordTradeOutcome(poi: POI, outcome: TradeOutcome): void {
@@ -247,9 +241,9 @@ export class BotTrapDetector extends EventEmitter {
       this.learningEngine.recordOutcome(analysis, outcome);
 
       // Emit learning event
-      const wasCorrect = analysis.isSuspect 
-        ? (outcome.exitReason === 'stop_loss' || outcome.pnl < 0)
-        : (outcome.exitReason !== 'stop_loss' && outcome.pnl >= 0);
+      const wasCorrect = analysis.isSuspect
+        ? outcome.exitReason === 'stop_loss' || outcome.pnl < 0
+        : outcome.exitReason !== 'stop_loss' && outcome.pnl >= 0;
 
       if (wasCorrect) {
         if (analysis.isSuspect) {
@@ -279,7 +273,7 @@ export class BotTrapDetector extends EventEmitter {
 
   /**
    * Get learning statistics
-   * 
+   *
    * Requirement 13.7: Log learning statistics
    */
   getLearningStatistics(): LearningStatistics {
@@ -288,7 +282,7 @@ export class BotTrapDetector extends EventEmitter {
 
   /**
    * Get parameter adjustment history
-   * 
+   *
    * Requirement 13.7: Log parameter adjustments
    */
   getParameterHistory(): ParameterAdjustment[] {
@@ -338,7 +332,7 @@ export class BotTrapDetector extends EventEmitter {
 
   /**
    * Check if bot trap detection rate is too high (saturation)
-   * 
+   *
    * Used for emergency protocol activation
    */
   getTrapDetectionRate(): number {
@@ -349,7 +343,7 @@ export class BotTrapDetector extends EventEmitter {
 
   /**
    * Check if trap saturation emergency should be triggered
-   * 
+   *
    * Requirement 14.5: Trigger TRAP_SATURATION_EMERGENCY if detection rate > 80%
    */
   isTrapSaturationEmergency(): boolean {
@@ -394,7 +388,7 @@ export class BotTrapDetector extends EventEmitter {
       type: 'order_block',
       levels: [],
       timestamp: new Date(),
-      barIndex: 0
+      barIndex: 0,
     };
 
     return {
@@ -403,24 +397,24 @@ export class BotTrapDetector extends EventEmitter {
         type: 'order_block',
         precision: 0,
         suspicionLevel: 'low',
-        characteristics: []
+        characteristics: [],
       },
       characteristics: {
         precision: 0,
         timing: 0,
         volume: 0,
         complexity: 0,
-        frequency: 0
+        frequency: 0,
       },
       indicators: {
         exactTickPrecision: false,
         perfectTiming: false,
         unusualVolume: false,
         textbookPattern: false,
-        suspiciousFrequency: false
+        suspiciousFrequency: false,
       },
       isSuspect: false,
-      suspicionScore: 0
+      suspicionScore: 0,
     };
   }
 
@@ -462,7 +456,7 @@ export class BotTrapDetector extends EventEmitter {
 
   /**
    * Emit bot trap event
-   * 
+   *
    * Requirement 3.7: Log BOT_TRAP_DETECTED with pattern type, precision score, and action
    */
   private emitBotTrapEvent(
@@ -478,12 +472,12 @@ export class BotTrapDetector extends EventEmitter {
         suspicionScore: analysis.suspicionScore,
         patterns: [analysis.precision],
         recommendations: [],
-        timestamp: new Date()
+        timestamp: new Date(),
       },
       patternType: analysis.pattern.type,
       precisionScore: analysis.precision.precision,
       action,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
     this.emit('botTrap', event);

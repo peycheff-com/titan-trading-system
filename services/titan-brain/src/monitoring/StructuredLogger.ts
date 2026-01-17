@@ -7,13 +7,13 @@
  * Requirements: 2.7, 4.7, 5.7, 9.6
  */
 
-import { randomUUID } from "crypto";
+import { randomUUID } from 'crypto';
 import {
   Logger as SharedLogger,
   LoggerConfig as SharedLoggerConfig,
   SharedLogEntry,
   SharedLogLevel,
-} from "@titan/shared";
+} from '@titan/shared';
 
 /**
  * Re-export types for backward compatibility
@@ -25,7 +25,7 @@ export { SharedLogLevel };
 /**
  * Log levels in order of severity (String based for local usage)
  */
-export type LogLevel = "debug" | "info" | "warn" | "error";
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 /**
  * Log handler type for backward compatibility
@@ -36,8 +36,7 @@ export type LogHandler = (entry: LogEntry) => void;
  * Configuration options for StructuredLogger
  * Extends SharedLoggerConfig but allows loose parsing for compatibility
  */
-export interface StructuredLoggerOptions
-  extends Partial<Omit<SharedLoggerConfig, "level">> {
+export interface StructuredLoggerOptions extends Partial<Omit<SharedLoggerConfig, 'level'>> {
   level?: SharedLogLevel | LogLevel;
   sanitizeSensitive?: boolean;
   component?: string;
@@ -54,7 +53,7 @@ export class StructuredLogger {
   private sanitizeSensitive: boolean;
 
   constructor(config: StructuredLoggerOptions = {}) {
-    this.component = config.component || "titan-brain";
+    this.component = config.component || 'titan-brain';
     this.sanitizeSensitive = config.sanitizeSensitive ?? true; // Default to true if not specified
 
     // Get singleton instance of shared logger
@@ -65,12 +64,12 @@ export class StructuredLogger {
     if (config.level !== undefined) {
       let sharedLevel: SharedLogLevel = SharedLogLevel.INFO;
 
-      if (typeof config.level === "number") {
+      if (typeof config.level === 'number') {
         sharedLevel = config.level;
-      } else if (typeof config.level === "string") {
-        if (config.level === "debug") sharedLevel = SharedLogLevel.DEBUG;
-        else if (config.level === "warn") sharedLevel = SharedLogLevel.WARN;
-        else if (config.level === "error") sharedLevel = SharedLogLevel.ERROR;
+      } else if (typeof config.level === 'string') {
+        if (config.level === 'debug') sharedLevel = SharedLogLevel.DEBUG;
+        else if (config.level === 'warn') sharedLevel = SharedLogLevel.WARN;
+        else if (config.level === 'error') sharedLevel = SharedLogLevel.ERROR;
         else sharedLevel = SharedLogLevel.INFO;
       }
 
@@ -128,15 +127,9 @@ export class StructuredLogger {
   /**
    * Log an error message
    */
-  error(
-    message: string,
-    error?: Error | unknown,
-    context?: Record<string, unknown>,
-  ): void {
+  error(message: string, error?: Error | unknown, context?: Record<string, unknown>): void {
     const err = error instanceof Error ? error : undefined;
-    const ctx = error instanceof Error
-      ? context
-      : (error as Record<string, unknown> | undefined);
+    const ctx = error instanceof Error ? context : (error as Record<string, unknown> | undefined);
 
     this.sharedLogger.error(message, err, this.correlationId || undefined, ctx);
   }
@@ -154,7 +147,7 @@ export class StructuredLogger {
     reason: string,
     context?: Record<string, unknown>,
   ): void {
-    this.info("Signal processed", {
+    this.info('Signal processed', {
       signalId,
       phaseId,
       approved,
@@ -173,7 +166,7 @@ export class StructuredLogger {
     reason: string,
     context?: Record<string, unknown>,
   ): void {
-    this.info("Allocation changed", {
+    this.info('Allocation changed', {
       previousAllocation,
       newAllocation,
       reason,
@@ -195,7 +188,7 @@ export class StructuredLogger {
   ): void {
     // If success, log as INFO, else WARN
     if (success) {
-      this.info("Sweep operation success", {
+      this.info('Sweep operation success', {
         amount,
         fromWallet,
         toWallet,
@@ -203,7 +196,7 @@ export class StructuredLogger {
         ...context,
       });
     } else {
-      this.warn("Sweep operation failed", {
+      this.warn('Sweep operation failed', {
         amount,
         fromWallet,
         toWallet,
@@ -218,13 +211,13 @@ export class StructuredLogger {
    * Requirement 5.7: Log circuit breaker events with full context
    */
   logCircuitBreakerEvent(
-    eventType: "TRIGGER" | "RESET",
+    eventType: 'TRIGGER' | 'RESET',
     reason: string,
     equity: number,
     operatorId?: string,
     context?: Record<string, unknown>,
   ): void {
-    if (eventType === "TRIGGER") {
+    if (eventType === 'TRIGGER') {
       this.error(`Circuit breaker ${eventType.toLowerCase()}`, undefined, {
         eventType,
         reason,
@@ -254,7 +247,7 @@ export class StructuredLogger {
     tradeCount: number,
     context?: Record<string, unknown>,
   ): void {
-    this.debug("Performance updated", {
+    this.debug('Performance updated', {
       phaseId,
       sharpeRatio,
       modifier,
@@ -273,7 +266,7 @@ export class StructuredLogger {
     riskMetrics: Record<string, unknown>,
     context?: Record<string, unknown>,
   ): void {
-    this.info("Risk decision", {
+    this.info('Risk decision', {
       signalId,
       approved,
       reason,
@@ -293,14 +286,14 @@ export class StructuredLogger {
     context?: Record<string, unknown>,
   ): void {
     if (success) {
-      this.debug("Database operation success", {
+      this.debug('Database operation success', {
         operation,
         table,
         durationMs,
         ...context,
       });
     } else {
-      this.warn("Database operation failed", {
+      this.warn('Database operation failed', {
         operation,
         table,
         durationMs,
@@ -315,12 +308,12 @@ export class StructuredLogger {
    */
   logManualOverride(
     operatorId: string,
-    action: "CREATE" | "DEACTIVATE",
+    action: 'CREATE' | 'DEACTIVATE',
     allocation?: { w1: number; w2: number; w3: number },
     reason?: string,
     context?: Record<string, unknown>,
   ): void {
-    this.warn("Manual override", {
+    this.warn('Manual override', {
       operatorId,
       action,
       allocation,
@@ -339,13 +332,13 @@ export class StructuredLogger {
     context?: Record<string, unknown>,
   ): void {
     if (success) {
-      this.info("Notification sent", {
+      this.info('Notification sent', {
         channel,
         type,
         ...context,
       });
     } else {
-      this.warn("Notification failed", {
+      this.warn('Notification failed', {
         channel,
         type,
         ...context,
@@ -391,10 +384,7 @@ export class StructuredLogger {
   /**
    * Execute a function with a correlation ID
    */
-  async withCorrelationId<T>(
-    correlationId: string | null,
-    fn: () => Promise<T>,
-  ): Promise<T> {
+  async withCorrelationId<T>(correlationId: string | null, fn: () => Promise<T>): Promise<T> {
     const previousId = this.correlationId;
     this.correlationId = correlationId ?? this.generateCorrelationId();
 
@@ -416,9 +406,9 @@ export class StructuredLogger {
 
   setLevel(level: LogLevel): void {
     let sharedLevel = SharedLogLevel.INFO;
-    if (level === "debug") sharedLevel = SharedLogLevel.DEBUG;
-    if (level === "warn") sharedLevel = SharedLogLevel.WARN;
-    if (level === "error") sharedLevel = SharedLogLevel.ERROR;
+    if (level === 'debug') sharedLevel = SharedLogLevel.DEBUG;
+    if (level === 'warn') sharedLevel = SharedLogLevel.WARN;
+    if (level === 'error') sharedLevel = SharedLogLevel.ERROR;
 
     this.sharedLogger.setLogLevel(sharedLevel);
   }

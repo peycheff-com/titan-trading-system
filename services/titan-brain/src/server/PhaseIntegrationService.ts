@@ -1,18 +1,15 @@
 /**
  * PhaseIntegrationService - Integration with Titan Phase Services
- * 
+ *
  * Handles webhook reception from Phase 1 (Scavenger), Phase 2 (Hunter), and Phase 3 (Sentinel).
  * Implements phase notification endpoints for veto notifications and status updates.
- * 
+ *
  * Requirements: 7.4, 7.6
  */
 
 import { EventEmitter } from 'events';
 import { createHmac } from 'crypto';
-import {
-  IntentSignal,
-  PhaseId,
-} from '../types/index.js';
+import { IntentSignal, PhaseId } from '../types/index.js';
 import { PhaseNotifier } from '../engine/TitanBrain.js';
 
 /**
@@ -187,7 +184,7 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
    */
   transformSignal(rawSignal: RawPhaseSignal): IntentSignal {
     const phaseId = SOURCE_TO_PHASE[rawSignal.source];
-    
+
     if (!phaseId) {
       throw new Error(`Unknown signal source: ${rawSignal.source}`);
     }
@@ -232,9 +229,11 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
    */
   async notifyVeto(phaseId: PhaseId, signalId: string, reason: string): Promise<void> {
     const webhook = this.phaseWebhooks.get(phaseId);
-    
+
     if (!webhook || !webhook.enabled) {
-      console.log(`📢 Veto notification for ${phaseId} (no webhook configured): ${signalId} - ${reason}`);
+      console.log(
+        `📢 Veto notification for ${phaseId} (no webhook configured): ${signalId} - ${reason}`,
+      );
       return;
     }
 
@@ -250,9 +249,8 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
     try {
       await this.sendNotification(webhook.url, '/brain/veto', notification);
       console.log(`📢 Veto notification sent to ${phaseId}: ${signalId}`);
-      
+
       this.emit('veto:sent', notification);
-      
     } catch (error) {
       console.error(`❌ Failed to send veto notification to ${phaseId}:`, error);
       this.emit('veto:failed', { ...notification, error });
@@ -264,7 +262,7 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
    */
   async sendStatusUpdate(update: PhaseStatusUpdate): Promise<void> {
     const webhook = this.phaseWebhooks.get(update.phaseId);
-    
+
     if (!webhook || !webhook.enabled) {
       return;
     }
@@ -272,7 +270,6 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
     try {
       await this.sendNotification(webhook.url, '/brain/status', update);
       console.log(`📊 Status update sent to ${update.phaseId}: ${update.status}`);
-      
     } catch (error) {
       console.error(`❌ Failed to send status update to ${update.phaseId}:`, error);
     }
@@ -285,7 +282,7 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
     status: 'active' | 'inactive' | 'throttled' | 'paused',
     allocations: Record<PhaseId, number>,
     approvalRates: Record<PhaseId, number>,
-    message?: string
+    message?: string,
   ): Promise<void> {
     const timestamp = Date.now();
 
@@ -309,10 +306,10 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
   async notifyAllocationChange(
     phaseId: PhaseId,
     newAllocation: number,
-    reason: string
+    reason: string,
   ): Promise<void> {
     const webhook = this.phaseWebhooks.get(phaseId);
-    
+
     if (!webhook || !webhook.enabled) {
       return;
     }
@@ -327,8 +324,9 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
 
     try {
       await this.sendNotification(webhook.url, '/brain/allocation', notification);
-      console.log(`📊 Allocation change notification sent to ${phaseId}: ${(newAllocation * 100).toFixed(1)}%`);
-      
+      console.log(
+        `📊 Allocation change notification sent to ${phaseId}: ${(newAllocation * 100).toFixed(1)}%`,
+      );
     } catch (error) {
       console.error(`❌ Failed to send allocation notification to ${phaseId}:`, error);
     }
@@ -362,7 +360,7 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
    */
   async checkPhaseHealth(phaseId: PhaseId): Promise<boolean> {
     const webhook = this.phaseWebhooks.get(phaseId);
-    
+
     if (!webhook || !webhook.enabled) {
       return false;
     }
@@ -437,11 +435,7 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
   /**
    * Send notification to a phase
    */
-  private async sendNotification(
-    baseUrl: string,
-    path: string,
-    payload: unknown
-  ): Promise<void> {
+  private async sendNotification(baseUrl: string, path: string, payload: unknown): Promise<void> {
     await this.makeRequest(baseUrl, path, 'POST', payload);
   }
 
@@ -453,7 +447,7 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
     path: string,
     method: 'GET' | 'POST',
     body?: unknown,
-    timeout?: number
+    timeout?: number,
   ): Promise<any> {
     const url = `${baseUrl}${path}`;
     const requestTimeout = timeout || this.config.timeout || 5000;
@@ -494,10 +488,9 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
         }
 
         return await response.json();
-
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
-        
+
         if (attempt < maxRetries) {
           await this.delay(500 * attempt);
         }
@@ -512,6 +505,6 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
    * Delay helper
    */
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

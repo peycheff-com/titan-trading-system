@@ -1,10 +1,10 @@
 /**
  * CircuitBreaker - Circuit breaker pattern implementation for fault tolerance
- * 
+ *
  * Implements the circuit breaker pattern to prevent cascade failures
  * when calling external services. Provides automatic recovery and
  * configurable failure thresholds.
- * 
+ *
  * Requirements: 2.1.2, 2.1.3, 2.1.4
  */
 
@@ -15,21 +15,21 @@ import { Logger } from '../logging/Logger.js';
  * Circuit breaker states
  */
 export enum CircuitBreakerState {
-  CLOSED = 'closed',     // Normal operation
-  OPEN = 'open',         // Failing fast
-  HALF_OPEN = 'half-open' // Testing recovery
+  CLOSED = 'closed', // Normal operation
+  OPEN = 'open', // Failing fast
+  HALF_OPEN = 'half-open', // Testing recovery
 }
 
 /**
  * Circuit breaker configuration
  */
 export interface CircuitBreakerConfig {
-  failureThreshold: number;      // Number of failures before opening
-  recoveryTimeout: number;       // Time to wait before trying half-open (ms)
-  requestTimeout: number;        // Individual request timeout (ms)
-  monitoringPeriod: number;      // Time window for failure counting (ms)
-  halfOpenMaxCalls: number;      // Max calls to allow in half-open state
-  name: string;                  // Circuit breaker name for logging
+  failureThreshold: number; // Number of failures before opening
+  recoveryTimeout: number; // Time to wait before trying half-open (ms)
+  requestTimeout: number; // Individual request timeout (ms)
+  monitoringPeriod: number; // Time window for failure counting (ms)
+  halfOpenMaxCalls: number; // Max calls to allow in half-open state
+  name: string; // Circuit breaker name for logging
 }
 
 /**
@@ -53,7 +53,7 @@ export class CircuitBreakerError extends Error {
   constructor(
     message: string,
     public readonly state: CircuitBreakerState,
-    public readonly stats: CircuitBreakerStats
+    public readonly stats: CircuitBreakerStats,
   ) {
     super(message);
     this.name = 'CircuitBreakerError';
@@ -79,12 +79,12 @@ export class CircuitBreaker extends EventEmitter {
     super();
     this.config = config;
     this.logger = logger ?? Logger.getInstance(`circuit-breaker-${config.name}`);
-    
+
     this.logger.info('Circuit breaker initialized', undefined, {
       name: config.name,
       failureThreshold: config.failureThreshold,
       recoveryTimeout: config.recoveryTimeout,
-      requestTimeout: config.requestTimeout
+      requestTimeout: config.requestTimeout,
     });
   }
 
@@ -97,60 +97,59 @@ export class CircuitBreaker extends EventEmitter {
       const error = new CircuitBreakerError(
         `Circuit breaker is ${this.state}`,
         this.state,
-        this.getStats()
+        this.getStats(),
       );
-      
+
       this.logger.warn('Circuit breaker blocked request', undefined, {
         state: this.state,
         failureCount: this.failureCount,
-        nextAttemptTime: this.nextAttemptTime
+        nextAttemptTime: this.nextAttemptTime,
       });
-      
+
       throw error;
     }
 
     this.totalRequests++;
-    
+
     // Track half-open calls
     if (this.state === CircuitBreakerState.HALF_OPEN) {
       this.halfOpenCallsCount++;
     }
 
     const startTime = Date.now();
-    
+
     try {
       // Execute with timeout
       const result = await Promise.race([
         fn(),
         new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Request timeout')), this.config.requestTimeout)
-        )
+          setTimeout(() => reject(new Error('Request timeout')), this.config.requestTimeout),
+        ),
       ]);
 
       // Success
       this.onSuccess();
-      
+
       const duration = Date.now() - startTime;
       this.logger.debug('Circuit breaker request succeeded', undefined, {
         duration,
         state: this.state,
-        successCount: this.successCount
+        successCount: this.successCount,
       });
-      
+
       return result;
-      
     } catch (error) {
       // Failure
       this.onFailure(error);
-      
+
       const duration = Date.now() - startTime;
       this.logger.warn('Circuit breaker request failed', undefined, {
         duration,
         state: this.state,
         failureCount: this.failureCount,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
-      
+
       throw error;
     }
   }
@@ -160,11 +159,11 @@ export class CircuitBreaker extends EventEmitter {
    */
   private canExecute(): boolean {
     const now = Date.now();
-    
+
     switch (this.state) {
       case CircuitBreakerState.CLOSED:
         return true;
-        
+
       case CircuitBreakerState.OPEN:
         // Check if recovery timeout has passed
         if (this.nextAttemptTime && now >= this.nextAttemptTime) {
@@ -172,11 +171,11 @@ export class CircuitBreaker extends EventEmitter {
           return true;
         }
         return false;
-        
+
       case CircuitBreakerState.HALF_OPEN:
         // Allow limited calls in half-open state
         return this.halfOpenCallsCount < this.config.halfOpenMaxCalls;
-        
+
       default:
         return false;
     }
@@ -188,7 +187,7 @@ export class CircuitBreaker extends EventEmitter {
   private onSuccess(): void {
     this.successCount++;
     this.lastSuccessTime = Date.now();
-    
+
     if (this.state === CircuitBreakerState.HALF_OPEN) {
       // If we've had enough successful calls, close the circuit
       if (this.halfOpenCallsCount >= this.config.halfOpenMaxCalls) {
@@ -206,7 +205,7 @@ export class CircuitBreaker extends EventEmitter {
   private onFailure(error: unknown): void {
     this.failureCount++;
     this.lastFailureTime = Date.now();
-    
+
     if (this.state === CircuitBreakerState.CLOSED) {
       // Check if we should open the circuit
       if (this.failureCount >= this.config.failureThreshold) {
@@ -227,17 +226,17 @@ export class CircuitBreaker extends EventEmitter {
     this.failureCount = 0;
     this.halfOpenCallsCount = 0;
     this.nextAttemptTime = null;
-    
+
     this.logger.info('Circuit breaker transitioned to CLOSED', undefined, {
       previousState,
       successCount: this.successCount,
-      totalRequests: this.totalRequests
+      totalRequests: this.totalRequests,
     });
-    
+
     this.emit('stateChange', {
       from: previousState,
       to: this.state,
-      stats: this.getStats()
+      stats: this.getStats(),
     });
   }
 
@@ -249,18 +248,18 @@ export class CircuitBreaker extends EventEmitter {
     this.state = CircuitBreakerState.OPEN;
     this.nextAttemptTime = Date.now() + this.config.recoveryTimeout;
     this.halfOpenCallsCount = 0;
-    
+
     this.logger.warn('Circuit breaker transitioned to OPEN', undefined, {
       previousState,
       failureCount: this.failureCount,
       nextAttemptTime: this.nextAttemptTime,
-      recoveryTimeout: this.config.recoveryTimeout
+      recoveryTimeout: this.config.recoveryTimeout,
     });
-    
+
     this.emit('stateChange', {
       from: previousState,
       to: this.state,
-      stats: this.getStats()
+      stats: this.getStats(),
     });
   }
 
@@ -272,16 +271,16 @@ export class CircuitBreaker extends EventEmitter {
     this.state = CircuitBreakerState.HALF_OPEN;
     this.halfOpenCallsCount = 0;
     this.nextAttemptTime = null;
-    
+
     this.logger.info('Circuit breaker transitioned to HALF_OPEN', undefined, {
       previousState,
-      maxCalls: this.config.halfOpenMaxCalls
+      maxCalls: this.config.halfOpenMaxCalls,
     });
-    
+
     this.emit('stateChange', {
       from: previousState,
       to: this.state,
-      stats: this.getStats()
+      stats: this.getStats(),
     });
   }
 
@@ -297,7 +296,7 @@ export class CircuitBreaker extends EventEmitter {
       lastFailureTime: this.lastFailureTime,
       lastSuccessTime: this.lastSuccessTime,
       nextAttemptTime: this.nextAttemptTime,
-      halfOpenCallsCount: this.halfOpenCallsCount
+      halfOpenCallsCount: this.halfOpenCallsCount,
     };
   }
 
@@ -341,9 +340,9 @@ export class CircuitBreaker extends EventEmitter {
     this.lastFailureTime = null;
     this.lastSuccessTime = null;
     this.halfOpenCallsCount = 0;
-    
+
     this.logger.info('Circuit breaker statistics reset');
-    
+
     this.emit('reset', { stats: this.getStats() });
   }
 
@@ -391,11 +390,11 @@ export const CircuitBreakerDefaults = {
    */
   http: {
     failureThreshold: 5,
-    recoveryTimeout: 30000,    // 30 seconds
-    requestTimeout: 10000,     // 10 seconds
-    monitoringPeriod: 60000,   // 1 minute
+    recoveryTimeout: 30000, // 30 seconds
+    requestTimeout: 10000, // 10 seconds
+    monitoringPeriod: 60000, // 1 minute
     halfOpenMaxCalls: 3,
-    name: 'http-service'
+    name: 'http-service',
   },
 
   /**
@@ -403,11 +402,11 @@ export const CircuitBreakerDefaults = {
    */
   database: {
     failureThreshold: 3,
-    recoveryTimeout: 60000,    // 1 minute
-    requestTimeout: 5000,      // 5 seconds
-    monitoringPeriod: 300000,  // 5 minutes
+    recoveryTimeout: 60000, // 1 minute
+    requestTimeout: 5000, // 5 seconds
+    monitoringPeriod: 300000, // 5 minutes
     halfOpenMaxCalls: 2,
-    name: 'database-service'
+    name: 'database-service',
   },
 
   /**
@@ -415,11 +414,11 @@ export const CircuitBreakerDefaults = {
    */
   cache: {
     failureThreshold: 10,
-    recoveryTimeout: 15000,    // 15 seconds
-    requestTimeout: 2000,      // 2 seconds
-    monitoringPeriod: 60000,   // 1 minute
+    recoveryTimeout: 15000, // 15 seconds
+    requestTimeout: 2000, // 2 seconds
+    monitoringPeriod: 60000, // 1 minute
     halfOpenMaxCalls: 5,
-    name: 'cache-service'
+    name: 'cache-service',
   },
 
   /**
@@ -427,10 +426,10 @@ export const CircuitBreakerDefaults = {
    */
   externalApi: {
     failureThreshold: 3,
-    recoveryTimeout: 120000,   // 2 minutes
-    requestTimeout: 15000,     // 15 seconds
-    monitoringPeriod: 300000,  // 5 minutes
+    recoveryTimeout: 120000, // 2 minutes
+    requestTimeout: 15000, // 15 seconds
+    monitoringPeriod: 300000, // 5 minutes
     halfOpenMaxCalls: 2,
-    name: 'external-api'
-  }
+    name: 'external-api',
+  },
 } as const;

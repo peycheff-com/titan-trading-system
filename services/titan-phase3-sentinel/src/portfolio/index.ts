@@ -1,8 +1,8 @@
 /**
  * Portfolio Module Exports
- * 
+ *
  * Contains portfolio management, rebalancing, and risk management.
- * 
+ *
  * @module portfolio
  */
 

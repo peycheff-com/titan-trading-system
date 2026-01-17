@@ -1,7 +1,7 @@
 /**
  * SignalQueue - Redis-based signal queue with priority ordering
  * Implements idempotency checks and priority-based dequeuing
- * 
+ *
  * Requirements: 7.1, 7.4
  */
 
@@ -113,7 +113,7 @@ export class SignalQueue {
   /**
    * Enqueue a signal with priority
    * Requirement 7.4: Maintain signal queue with timestamps and phase source
-   * 
+   *
    * @param signal - Intent signal to enqueue
    * @returns True if enqueued, false if duplicate or queue full
    */
@@ -157,7 +157,7 @@ export class SignalQueue {
     await this.client.setEx(
       `${this.idempotencyKey}:${signal.signalId}`,
       this.config.idempotencyTTL,
-      '1'
+      '1',
     );
 
     return true;
@@ -166,7 +166,7 @@ export class SignalQueue {
   /**
    * Dequeue the highest priority signal
    * Requirement 7.1: Process in priority order (P3 > P2 > P1)
-   * 
+   *
    * @returns The highest priority signal, or null if queue is empty
    */
   async dequeue(): Promise<IntentSignal | null> {
@@ -176,7 +176,7 @@ export class SignalQueue {
 
     // Get and remove highest score (highest priority)
     const result = await this.client.zPopMax(this.queueKey);
-    
+
     if (!result) {
       return null;
     }
@@ -192,7 +192,7 @@ export class SignalQueue {
 
   /**
    * Peek at the highest priority signal without removing it
-   * 
+   *
    * @returns The highest priority signal, or null if queue is empty
    */
   async peek(): Promise<IntentSignal | null> {
@@ -202,7 +202,7 @@ export class SignalQueue {
 
     // Get highest score without removing
     const result = await this.client.zRange(this.queueKey, -1, -1);
-    
+
     if (!result || result.length === 0) {
       return null;
     }
@@ -219,7 +219,7 @@ export class SignalQueue {
   /**
    * Check if a signal ID is a duplicate
    * Requirement 7.4: Implement idempotency check using signal IDs
-   * 
+   *
    * @param signalId - Signal ID to check
    * @returns True if duplicate, false otherwise
    */
@@ -234,7 +234,7 @@ export class SignalQueue {
 
   /**
    * Mark a signal as processed
-   * 
+   *
    * @param signalId - Signal ID to mark as processed
    */
   async markProcessed(signalId: string): Promise<void> {
@@ -246,15 +246,12 @@ export class SignalQueue {
     await this.client.hSet(this.processedKey, signalId, Date.now().toString());
 
     // Extend idempotency TTL
-    await this.client.expire(
-      `${this.idempotencyKey}:${signalId}`,
-      this.config.idempotencyTTL
-    );
+    await this.client.expire(`${this.idempotencyKey}:${signalId}`, this.config.idempotencyTTL);
   }
 
   /**
    * Check if a signal was processed
-   * 
+   *
    * @param signalId - Signal ID to check
    * @returns True if processed, false otherwise
    */
@@ -269,7 +266,7 @@ export class SignalQueue {
 
   /**
    * Get the current queue size
-   * 
+   *
    * @returns Number of signals in queue
    */
   async size(): Promise<number> {
@@ -282,7 +279,7 @@ export class SignalQueue {
 
   /**
    * Get all queued signals (for debugging/monitoring)
-   * 
+   *
    * @returns Array of queued signals with metadata
    */
   async getAll(): Promise<QueuedSignalEntry[]> {
@@ -291,14 +288,16 @@ export class SignalQueue {
     }
 
     const results = await this.client.zRange(this.queueKey, 0, -1);
-    
-    return results.map(value => {
-      try {
-        return JSON.parse(value) as QueuedSignalEntry;
-      } catch {
-        return null;
-      }
-    }).filter((entry): entry is QueuedSignalEntry => entry !== null);
+
+    return results
+      .map((value) => {
+        try {
+          return JSON.parse(value) as QueuedSignalEntry;
+        } catch {
+          return null;
+        }
+      })
+      .filter((entry): entry is QueuedSignalEntry => entry !== null);
   }
 
   /**
@@ -374,7 +373,7 @@ export class SignalQueue {
 
   /**
    * Dequeue multiple signals up to a limit
-   * 
+   *
    * @param limit - Maximum number of signals to dequeue
    * @returns Array of signals
    */
@@ -384,7 +383,7 @@ export class SignalQueue {
     }
 
     const signals: IntentSignal[] = [];
-    
+
     for (let i = 0; i < limit; i++) {
       const signal = await this.dequeue();
       if (!signal) break;
@@ -396,14 +395,12 @@ export class SignalQueue {
 
   /**
    * Get signals by phase
-   * 
+   *
    * @param phaseId - Phase to filter by
    * @returns Array of signals for the phase
    */
   async getByPhase(phaseId: PhaseId): Promise<IntentSignal[]> {
     const all = await this.getAll();
-    return all
-      .filter(entry => entry.signal.phaseId === phaseId)
-      .map(entry => entry.signal);
+    return all.filter((entry) => entry.signal.phaseId === phaseId).map((entry) => entry.signal);
   }
 }

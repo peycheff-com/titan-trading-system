@@ -5,22 +5,22 @@
  * Broadcasts state updates, signals, trades, and alerts.
  */
 
-import { WebSocket, WebSocketServer } from "ws";
-import { TitanBrain } from "../engine/TitanBrain.js";
-import { getLogger } from "../monitoring/index.js";
+import { WebSocket, WebSocketServer } from 'ws';
+import { TitanBrain } from '../engine/TitanBrain.js';
+import { getLogger } from '../monitoring/index.js';
 
 /**
  * WebSocket message types
  */
 export type WSMessageType =
-  | "CONNECTED"
-  | "STATE_UPDATE"
-  | "SIGNAL"
-  | "TRADE"
-  | "ALERT"
-  | "PHASE1_UPDATE"
-  | "ping"
-  | "pong";
+  | 'CONNECTED'
+  | 'STATE_UPDATE'
+  | 'SIGNAL'
+  | 'TRADE'
+  | 'ALERT'
+  | 'PHASE1_UPDATE'
+  | 'ping'
+  | 'pong';
 
 /**
  * WebSocket message structure
@@ -54,7 +54,7 @@ export interface WSMessage {
  */
 export interface Position {
   symbol: string;
-  side: "LONG" | "SHORT";
+  side: 'LONG' | 'SHORT';
   size: number;
   entryPrice: number;
   currentPrice: number;
@@ -74,7 +74,7 @@ export interface Tripwire {
   symbol: string;
   type: string;
   price: number;
-  status: "ARMED" | "TRIGGERED" | "EXPIRED";
+  status: 'ARMED' | 'TRIGGERED' | 'EXPIRED';
   confidence: number;
 }
 
@@ -138,21 +138,21 @@ export class WebSocketService {
   attachToServer(server: { server: unknown }): void {
     // Create WebSocket server attached to the HTTP server
     this.wss = new WebSocketServer({
-      server: server.server as import("http").Server,
-      path: "/ws/console",
+      server: server.server as import('http').Server,
+      path: '/ws/console',
     });
 
     this.setupWebSocketServer();
     this.startPingInterval();
     this.startStateUpdateInterval();
 
-    this.logger.info("WebSocket service attached to server on /ws/console");
+    this.logger.info('WebSocket service attached to server on /ws/console');
   }
 
   /**
    * Create standalone WebSocket server on a specific port
    */
-  listen(port: number, host: string = "0.0.0.0"): void {
+  listen(port: number, host: string = '0.0.0.0'): void {
     this.wss = new WebSocketServer({ port, host });
 
     this.setupWebSocketServer();
@@ -169,9 +169,9 @@ export class WebSocketService {
   private setupWebSocketServer(): void {
     if (!this.wss) return;
 
-    this.wss.on("connection", (ws: WebSocket, req) => {
+    this.wss.on('connection', (ws: WebSocket, req) => {
       const clientId = this.generateClientId();
-      const endpoint = req.url || "/ws/console";
+      const endpoint = req.url || '/ws/console';
 
       const clientInfo: ClientInfo = {
         id: clientId,
@@ -181,20 +181,18 @@ export class WebSocketService {
       };
 
       this.clients.set(ws, clientInfo);
-      this.logger.info(
-        `WebSocket client connected: ${clientId} on ${endpoint}`,
-      );
+      this.logger.info(`WebSocket client connected: ${clientId} on ${endpoint}`);
 
       // Send initial state
       this.sendInitialState(ws);
 
       // Handle incoming messages
-      ws.on("message", (data: Buffer) => {
+      ws.on('message', (data: Buffer) => {
         this.handleMessage(ws, data);
       });
 
       // Handle client disconnect
-      ws.on("close", () => {
+      ws.on('close', () => {
         const info = this.clients.get(ws);
         if (info) {
           this.logger.info(`WebSocket client disconnected: ${info.id}`);
@@ -203,14 +201,14 @@ export class WebSocketService {
       });
 
       // Handle errors
-      ws.on("error", (error) => {
+      ws.on('error', (error) => {
         const info = this.clients.get(ws);
         this.logger.error(`WebSocket error for client ${info?.id}:`, error);
       });
     });
 
-    this.wss.on("error", (error) => {
-      this.logger.error("WebSocket server error:", error);
+    this.wss.on('error', (error) => {
+      this.logger.error('WebSocket server error:', error);
     });
   }
 
@@ -222,7 +220,7 @@ export class WebSocketService {
     const allocation = this.brain.getAllocation();
 
     const message: WSMessage = {
-      type: "CONNECTED",
+      type: 'CONNECTED',
       timestamp: Date.now(),
       state: {
         equity,
@@ -250,31 +248,29 @@ export class WebSocketService {
       const clientInfo = this.clients.get(ws);
 
       switch (message.type) {
-        case "ping":
-          this.sendToClient(ws, { type: "pong", timestamp: Date.now() });
+        case 'ping':
+          this.sendToClient(ws, { type: 'pong', timestamp: Date.now() });
           if (clientInfo) {
             clientInfo.lastPing = Date.now();
           }
           break;
 
-        case "pong":
+        case 'pong':
           if (clientInfo) {
             clientInfo.lastPing = Date.now();
           }
           break;
 
-        case "subscribe":
+        case 'subscribe':
           // Handle subscription requests (future enhancement)
-          this.logger.debug(
-            `Client ${clientInfo?.id} subscribed to: ${message.channels}`,
-          );
+          this.logger.debug(`Client ${clientInfo?.id} subscribed to: ${message.channels}`);
           break;
 
         default:
           this.logger.debug(`Unknown message type: ${message.type}`);
       }
     } catch (error) {
-      this.logger.error("Failed to parse WebSocket message:", error);
+      this.logger.error('Failed to parse WebSocket message:', error);
     }
   }
 
@@ -286,7 +282,7 @@ export class WebSocketService {
     const allocation = this.brain.getAllocation();
 
     const message: WSMessage = {
-      type: "STATE_UPDATE",
+      type: 'STATE_UPDATE',
       timestamp: Date.now(),
       equity,
       daily_pnl: 0, // TODO: Get from performance tracker
@@ -309,7 +305,7 @@ export class WebSocketService {
    */
   broadcastSignal(signalData: Record<string, unknown>): void {
     const message: WSMessage = {
-      type: "SIGNAL",
+      type: 'SIGNAL',
       timestamp: Date.now(),
       data: signalData,
     };
@@ -322,7 +318,7 @@ export class WebSocketService {
    */
   broadcastTrade(tradeData: Record<string, unknown>): void {
     const message: WSMessage = {
-      type: "TRADE",
+      type: 'TRADE',
       timestamp: Date.now(),
       data: tradeData,
     };
@@ -333,12 +329,9 @@ export class WebSocketService {
   /**
    * Broadcast alert to all clients
    */
-  broadcastAlert(
-    level: "info" | "warning" | "error",
-    alertMessage: string,
-  ): void {
+  broadcastAlert(level: 'info' | 'warning' | 'error', alertMessage: string): void {
     const message: WSMessage = {
-      type: "ALERT",
+      type: 'ALERT',
       timestamp: Date.now(),
       data: { level, message: alertMessage },
     };
@@ -349,12 +342,9 @@ export class WebSocketService {
   /**
    * Broadcast Phase 1 update to all clients
    */
-  broadcastPhase1Update(
-    tripwires: Tripwire[],
-    sensorStatus: SensorStatus,
-  ): void {
+  broadcastPhase1Update(tripwires: Tripwire[], sensorStatus: SensorStatus): void {
     const message: WSMessage = {
-      type: "PHASE1_UPDATE",
+      type: 'PHASE1_UPDATE',
       timestamp: Date.now(),
       tripwires,
       sensorStatus,
@@ -415,10 +405,7 @@ export class WebSocketService {
 
       this.clients.forEach((info, ws) => {
         // Check if client has timed out
-        if (
-          now - info.lastPing >
-            this.config.pingTimeout + this.config.pingInterval
-        ) {
+        if (now - info.lastPing > this.config.pingTimeout + this.config.pingInterval) {
           this.logger.warn(`Client ${info.id} timed out, closing connection`);
           ws.terminate();
           this.clients.delete(ws);
@@ -427,7 +414,7 @@ export class WebSocketService {
 
         // Send ping
         if (ws.readyState === WebSocket.OPEN) {
-          this.sendToClient(ws, { type: "ping", timestamp: now });
+          this.sendToClient(ws, { type: 'ping', timestamp: now });
         }
       });
     }, this.config.pingInterval);
@@ -438,7 +425,7 @@ export class WebSocketService {
    */
   private startStateUpdateInterval(): void {
     if (this.config.stateUpdateInterval <= 0) {
-      this.logger.info("WebSocket state update interval disabled (NATS mode)");
+      this.logger.info('WebSocket state update interval disabled (NATS mode)');
       return;
     }
 
@@ -480,7 +467,7 @@ export class WebSocketService {
 
     // Close all client connections
     this.clients.forEach((info, ws) => {
-      ws.close(1000, "Server shutting down");
+      ws.close(1000, 'Server shutting down');
     });
     this.clients.clear();
 
@@ -492,6 +479,6 @@ export class WebSocketService {
       this.wss = null;
     }
 
-    this.logger.info("WebSocket service shut down");
+    this.logger.info('WebSocket service shut down');
   }
 }

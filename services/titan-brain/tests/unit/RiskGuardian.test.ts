@@ -39,13 +39,31 @@ const riskConfig: RiskGuardianConfig = {
   minStopDistanceMultiplier: 2.0, // 2x ATR
 };
 
+import {
+  DefconLevel,
+  GovernanceEngine,
+} from "../../src/engine/GovernanceEngine";
+
 describe("RiskGuardian Unit Tests", () => {
   let allocationEngine: AllocationEngine;
   let riskGuardian: RiskGuardian;
+  let governanceEngine: GovernanceEngine;
 
   beforeEach(() => {
     allocationEngine = new AllocationEngine(allocationConfig);
-    riskGuardian = new RiskGuardian(riskConfig, allocationEngine);
+
+    // Mock GovernanceEngine
+    governanceEngine = {
+      getDefconLevel: jest.fn().mockReturnValue(DefconLevel.NORMAL),
+      getLeverageMultiplier: jest.fn().mockReturnValue(1.0),
+      canOpenNewPosition: jest.fn().mockReturnValue(true),
+    } as unknown as GovernanceEngine;
+
+    riskGuardian = new RiskGuardian(
+      riskConfig,
+      allocationEngine,
+      governanceEngine,
+    );
   });
 
   describe("Leverage Calculation with Multiple Positions", () => {
@@ -748,6 +766,54 @@ describe("RiskGuardian Unit Tests", () => {
       expect(decision.riskMetrics.portfolioDelta).toBe(0);
       expect(decision.riskMetrics.correlation).toBe(0); // No existing positions to correlate with
       expect(decision.riskMetrics.portfolioBeta).toBeGreaterThanOrEqual(0);
+    });
+  });
+  describe("Latency Feedback Integration", () => {
+    it("should penalize size for high latency (>200ms)", () => {
+      riskGuardian.setEquity(10000);
+
+      const signal: IntentSignal = {
+        signalId: "latency-test-1",
+        phaseId: "phase1" as PhaseId,
+        symbol: "BTCUSDT",
+        side: "BUY",
+        requestedSize: 1000,
+        timestamp: Date.now(),
+        latencyProfile: {
+          transit: 100,
+          processing: 150,
+          endToEnd: 250, // > 200ms
+        },
+      };
+
+      const decision = riskGuardian.checkSignal(signal, []);
+
+      expect(decision.approved).toBe(true);
+      if (decision.approved && decision.adjustedSize) {
+        // 25% penalty
+        expect(decision.adjustedSize).toBe(750);
+      }
+    });
+
+    it("should veto signal for extreme latency (>500ms)", () => {
+      riskGuardian.setEquity(10000);
+      const signal: IntentSignal = {
+        signalId: "latency-veto-test",
+        phaseId: "phase1" as PhaseId,
+        symbol: "BTCUSDT",
+        side: "BUY",
+        requestedSize: 1000,
+        timestamp: Date.now(),
+        latencyProfile: {
+          transit: 200,
+          processing: 350,
+          endToEnd: 550, // > 500ms
+        },
+      };
+
+      const decision = riskGuardian.checkSignal(signal, []);
+      expect(decision.approved).toBe(false);
+      expect(decision.reason).toContain("LATENCY_VETO");
     });
   });
 });

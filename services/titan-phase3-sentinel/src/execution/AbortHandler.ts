@@ -1,47 +1,47 @@
-import { EventEmitter } from "events";
+import { EventEmitter } from 'events';
 
 /**
  * Handles abort signals and coordination for complex execution tasks
  */
 export class AbortHandler extends EventEmitter {
-    private controller: AbortController;
-    private _isAborted: boolean = false;
+  private controller: AbortController;
+  private _isAborted: boolean = false;
 
-    constructor() {
-        super();
-        this.controller = new AbortController();
-    }
+  constructor() {
+    super();
+    this.controller = new AbortController();
+  }
 
-    /**
-     * Signal an abort
-     */
-    abort(reason?: string): void {
-        if (this._isAborted) return;
+  /**
+   * Signal an abort
+   */
+  abort(reason?: string): void {
+    if (this._isAborted) return;
 
-        this._isAborted = true;
-        this.controller.abort(reason);
-        this.emit("abort", reason);
-    }
+    this._isAborted = true;
+    this.controller.abort(reason);
+    this.emit('abort', reason);
+  }
 
-    /**
-     * Check if aborted
-     */
-    get isAborted(): boolean {
-        return this._isAborted;
-    }
+  /**
+   * Check if aborted
+   */
+  get isAborted(): boolean {
+    return this._isAborted;
+  }
 
-    /**
-     * Get the signal
-     */
-    get signal(): AbortSignal {
-        return this.controller.signal;
-    }
+  /**
+   * Get the signal
+   */
+  get signal(): AbortSignal {
+    return this.controller.signal;
+  }
 
-    /**
-     * Reset the handler (create new controller)
-     */
-    reset(): void {
-        this.controller = new AbortController();
-        this._isAborted = false;
-    }
+  /**
+   * Reset the handler (create new controller)
+   */
+  reset(): void {
+    this.controller = new AbortController();
+    this._isAborted = false;
+  }
 }

@@ -3,16 +3,16 @@
  */
 
 export { LimitOrderExecutor } from './LimitOrderExecutor';
-export type { 
+export type {
   LimitOrderConfig,
   ExecutionResult,
   OrderMonitoringState,
-  LimitOrderExecutorEvents
+  LimitOrderExecutorEvents,
 } from './LimitOrderExecutor';
 
 export { SignalGenerator } from './SignalGenerator';
 export type {
   SignalGeneratorConfig,
   SignalValidationResult,
-  SignalContext
+  SignalContext,
 } from './SignalGenerator';

@@ -23,6 +23,7 @@ import {
 import { HologramEngine } from "./HologramEngine";
 import { EnhancedHolographicEngine } from "./enhanced/EnhancedHolographicEngine";
 import { BybitPerpsClient } from "../exchanges/BybitPerpsClient";
+import { InstitutionalFlowClassifier } from "../flow/InstitutionalFlowClassifier";
 
 export interface ScanResult {
   symbols: EnhancedHolographicState[];
@@ -61,13 +62,14 @@ export class HologramScanner extends EventEmitter {
   constructor(bybitClient: BybitPerpsClient) {
     super();
     this.bybitClient = bybitClient;
-    this.hologramEngine = new HologramEngine(bybitClient);
+    const flowClassifier = new InstitutionalFlowClassifier();
+    this.hologramEngine = new HologramEngine(bybitClient, flowClassifier);
     this.enhancedEngine = new EnhancedHolographicEngine();
     this.enhancedEngine.setHologramEngine(this.hologramEngine);
     // Initialize (fire and forget for now, or await if possible - keeping sync in constructor, relying on lazy init or error handling if not ready)
-    this.enhancedEngine.initialize().catch((err) =>
-      console.error("Failed to init enhanced engine:", err)
-    );
+    this.enhancedEngine
+      .initialize()
+      .catch((err) => console.error("Failed to init enhanced engine:", err));
   }
 
   /**
@@ -186,10 +188,10 @@ export class HologramScanner extends EventEmitter {
     // New 2026 Enhanced Alignments: A+, A, B, C, VETO
     const statusPriority: { [key: string]: number } = {
       "A+": 1,
-      "A": 2,
-      "B": 3,
-      "C": 4,
-      "VETO": 5,
+      A: 2,
+      B: 3,
+      C: 4,
+      VETO: 5,
     };
 
     return holograms.sort((a, b) => {
@@ -223,8 +225,8 @@ export class HologramScanner extends EventEmitter {
     rankedSymbols: EnhancedHolographicState[],
   ): EnhancedHolographicState[] {
     // First, try to get 20 tradeable symbols (A+, A, and B)
-    const tradeableSymbols = rankedSymbols.filter((h) =>
-      h.alignment === "A+" || h.alignment === "A" || h.alignment === "B"
+    const tradeableSymbols = rankedSymbols.filter(
+      (h) => h.alignment === "A+" || h.alignment === "A" || h.alignment === "B",
     );
 
     if (tradeableSymbols.length >= 20) {
@@ -282,7 +284,9 @@ export class HologramScanner extends EventEmitter {
 
       console.log(
         `📈 Analyzing batch ${Math.floor(i / this.MAX_PARALLEL_REQUESTS) + 1}/${
-          Math.ceil(symbols.length / this.MAX_PARALLEL_REQUESTS)
+          Math.ceil(
+            symbols.length / this.MAX_PARALLEL_REQUESTS,
+          )
         } (${batch.length} symbols)`,
       );
 
@@ -362,7 +366,8 @@ export class HologramScanner extends EventEmitter {
     // Update average duration (rolling average)
     this.scanStats.averageDuration =
       (this.scanStats.averageDuration * (this.scanStats.totalScans - 1) +
-        duration) / this.scanStats.totalScans;
+        duration) /
+      this.scanStats.totalScans;
 
     // Update success rate (simple calculation based on current scan)
     if (totalCount > 0) {

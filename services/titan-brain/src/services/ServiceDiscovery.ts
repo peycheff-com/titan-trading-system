@@ -7,8 +7,8 @@
  * Requirements: 2.2.1, 2.2.2, 2.2.3, 2.2.4
  */
 
-import { ServiceClient, ServiceClientConfig } from "./ServiceClient.js";
-import { Logger } from "../logging/Logger.js";
+import { ServiceClient, ServiceClientConfig } from './ServiceClient.js';
+import { Logger } from '../logging/Logger.js';
 
 export interface ServiceEndpoint {
   /** Service name */
@@ -66,7 +66,7 @@ export class ServiceDiscovery {
     private readonly config: ServiceDiscoveryConfig,
     logger?: Logger,
   ) {
-    this.logger = logger ?? Logger.getInstance("service-discovery");
+    this.logger = logger ?? Logger.getInstance('service-discovery');
   }
 
   /**
@@ -96,7 +96,7 @@ export class ServiceDiscovery {
       consecutiveFailures: 0,
     });
 
-    this.logger.info("Service registered", undefined, {
+    this.logger.info('Service registered', undefined, {
       service: endpoint.name,
       url: endpoint.url,
       required: endpoint.required,
@@ -114,7 +114,7 @@ export class ServiceDiscovery {
       this.registerService(service);
     }
 
-    this.logger.info("Services registered from environment", undefined, {
+    this.logger.info('Services registered from environment', undefined, {
       count: services.length,
       services: services.map((s) => s.name),
     });
@@ -127,7 +127,7 @@ export class ServiceDiscovery {
     const services: ServiceEndpoint[] = [];
 
     // Parse Phase service URLs
-    const serviceNames = ["PHASE1", "PHASE2", "PHASE3", "SHARED"];
+    const serviceNames = ['PHASE1', 'PHASE2', 'PHASE3', 'SHARED'];
 
     for (const serviceName of serviceNames) {
       const urlKey = `${serviceName}_SERVICE_URL`;
@@ -136,8 +136,8 @@ export class ServiceDiscovery {
       if (url) {
         const endpoint: ServiceEndpoint = {
           name: serviceName.toLowerCase(),
-          url: url.endsWith("/") ? url.slice(0, -1) : url,
-          healthPath: "/health",
+          url: url.endsWith('/') ? url.slice(0, -1) : url,
+          healthPath: '/health',
           priority: this.getServicePriority(serviceName),
           required: this.isServiceRequired(serviceName),
           clientConfig: {
@@ -148,12 +148,7 @@ export class ServiceDiscovery {
               maxDelay: 5000,
               backoffMultiplier: 2,
               retryableStatusCodes: [408, 429, 500, 502, 503, 504],
-              retryableErrors: [
-                "ECONNRESET",
-                "ENOTFOUND",
-                "ECONNREFUSED",
-                "ETIMEDOUT",
-              ],
+              retryableErrors: ['ECONNRESET', 'ENOTFOUND', 'ECONNREFUSED', 'ETIMEDOUT'],
             },
           },
         };
@@ -168,14 +163,12 @@ export class ServiceDiscovery {
       try {
         const parsed = JSON.parse(customServices);
         for (const [name, config] of Object.entries(parsed)) {
-          if (
-            typeof config === "object" && config !== null && "url" in config
-          ) {
+          if (typeof config === 'object' && config !== null && 'url' in config) {
             const serviceConfig = config as any;
             const endpoint: ServiceEndpoint = {
               name,
               url: serviceConfig.url,
-              healthPath: serviceConfig.healthPath || "/health",
+              healthPath: serviceConfig.healthPath || '/health',
               priority: serviceConfig.priority || 10,
               required: serviceConfig.required || false,
               clientConfig: {
@@ -188,13 +181,9 @@ export class ServiceDiscovery {
           }
         }
       } catch (error) {
-        this.logger.warn(
-          "Failed to parse custom services configuration",
-          undefined,
-          {
-            error: error instanceof Error ? error.message : String(error),
-          },
-        );
+        this.logger.warn('Failed to parse custom services configuration', undefined, {
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     }
 
@@ -206,10 +195,10 @@ export class ServiceDiscovery {
    */
   private getServicePriority(serviceName: string): number {
     const priorities: Record<string, number> = {
-      "SHARED": 1, // Highest priority
-      "PHASE1": 2,
-      "PHASE2": 3,
-      "PHASE3": 4,
+      SHARED: 1, // Highest priority
+      PHASE1: 2,
+      PHASE2: 3,
+      PHASE3: 4,
     };
 
     return priorities[serviceName] || 10;
@@ -219,7 +208,7 @@ export class ServiceDiscovery {
    * Check if service is required for system operation
    */
   private isServiceRequired(serviceName: string): boolean {
-    const requiredServices = ["SHARED"];
+    const requiredServices = ['SHARED'];
     return requiredServices.includes(serviceName);
   }
 
@@ -268,11 +257,10 @@ export class ServiceDiscovery {
    * Get unhealthy required services
    */
   getUnhealthyRequiredServices(): ServiceStatus[] {
-    return Array.from(this.serviceStatus.values())
-      .filter((status) => {
-        const service = this.services.get(status.name);
-        return service?.required && !status.healthy;
-      });
+    return Array.from(this.serviceStatus.values()).filter((status) => {
+      const service = this.services.get(status.name);
+      return service?.required && !status.healthy;
+    });
   }
 
   /**
@@ -295,7 +283,7 @@ export class ServiceDiscovery {
       this.performHealthChecks();
     }, this.config.healthCheckInterval);
 
-    this.logger.info("Health checking started", undefined, {
+    this.logger.info('Health checking started', undefined, {
       interval: this.config.healthCheckInterval,
       services: Array.from(this.services.keys()),
     });
@@ -310,7 +298,7 @@ export class ServiceDiscovery {
       this.healthCheckInterval = null;
     }
 
-    this.logger.info("Health checking stopped");
+    this.logger.info('Health checking stopped');
   }
 
   /**
@@ -318,7 +306,7 @@ export class ServiceDiscovery {
    */
   private async performHealthChecks(): Promise<void> {
     const promises = Array.from(this.services.keys()).map((serviceName) =>
-      this.checkServiceHealth(serviceName)
+      this.checkServiceHealth(serviceName),
     );
 
     await Promise.allSettled(promises);
@@ -359,14 +347,13 @@ export class ServiceDiscovery {
 
       // Update status - unhealthy
       status.consecutiveFailures++;
-      status.healthy =
-        status.consecutiveFailures < this.config.maxConsecutiveFailures;
+      status.healthy = status.consecutiveFailures < this.config.maxConsecutiveFailures;
       status.lastCheck = Date.now();
       status.responseTime = responseTime;
       status.error = error instanceof Error ? error.message : String(error);
 
       if (status.consecutiveFailures >= this.config.maxConsecutiveFailures) {
-        this.logger.warn("Service marked as unhealthy", undefined, {
+        this.logger.warn('Service marked as unhealthy', undefined, {
           service: serviceName,
           consecutiveFailures: status.consecutiveFailures,
           error: error instanceof Error ? error.message : String(error),
@@ -381,38 +368,32 @@ export class ServiceDiscovery {
    * Validate all required services are healthy
    */
   async validateRequiredServices(): Promise<boolean> {
-    const requiredServices = Array.from(this.services.values())
-      .filter((service) => service.required);
+    const requiredServices = Array.from(this.services.values()).filter(
+      (service) => service.required,
+    );
 
     if (requiredServices.length === 0) {
       return true;
     }
 
-    const healthChecks = requiredServices.map((service) =>
-      this.checkServiceHealth(service.name)
-    );
+    const healthChecks = requiredServices.map((service) => this.checkServiceHealth(service.name));
 
     const results = await Promise.allSettled(healthChecks);
-    const allHealthy = results.every((result) =>
-      result.status === "fulfilled" && result.value === true
+    const allHealthy = results.every(
+      (result) => result.status === 'fulfilled' && result.value === true,
     );
 
     if (!allHealthy) {
       const unhealthyServices = requiredServices
         .filter((_, index) => {
           const result = results[index];
-          return result.status === "rejected" || !result.value;
+          return result.status === 'rejected' || !result.value;
         })
         .map((service) => service.name);
 
-      this.logger.error(
-        "Required services are unhealthy",
-        undefined,
-        undefined,
-        {
-          unhealthyServices,
-        },
-      );
+      this.logger.error('Required services are unhealthy', undefined, undefined, {
+        unhealthyServices,
+      });
     }
 
     return allHealthy;
@@ -430,8 +411,7 @@ export class ServiceDiscovery {
   } {
     const services = this.getAllServiceStatuses();
     const healthyServices = services.filter((s) => s.healthy);
-    const requiredServicesHealthy =
-      this.getUnhealthyRequiredServices().length === 0;
+    const requiredServicesHealthy = this.getUnhealthyRequiredServices().length === 0;
 
     return {
       healthy: requiredServicesHealthy,
@@ -451,7 +431,7 @@ export class ServiceDiscovery {
     this.serviceClients.clear();
     this.serviceStatus.clear();
 
-    this.logger.info("Service discovery shutdown complete");
+    this.logger.info('Service discovery shutdown complete');
   }
 }
 

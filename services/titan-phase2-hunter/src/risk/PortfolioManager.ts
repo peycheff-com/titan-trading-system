@@ -1,6 +1,6 @@
 /**
  * Portfolio Manager for Titan Phase 2 - The Hunter
- * 
+ *
  * Manages multiple positions simultaneously with proper risk allocation:
  * - Calculate total exposure capped at 200% equity (5x max leverage)
  * - Enforce max 5 concurrent trades limit
@@ -8,17 +8,12 @@
  * - Rank signals by alignment score and RS score
  * - Check portfolio heat capped at 15%
  * - Adjust for directional bias with 20% reduction
- * 
+ *
  * Requirements: 16.1-16.7 (Multi-Symbol Portfolio Management)
  */
 
 import { EventEmitter } from 'events';
-import { 
-  Position, 
-  SignalData, 
-  HologramState,
-  PhaseConfig
-} from '../types';
+import { Position, SignalData, HologramState, PhaseConfig } from '../types';
 
 export interface PortfolioState {
   totalEquity: number;
@@ -77,7 +72,7 @@ export class PortfolioManager extends EventEmitter {
 
   constructor(config?: Partial<PortfolioManagerConfig>) {
     super();
-    
+
     this.config = {
       maxTotalExposure: 2.0, // 200% of equity
       maxConcurrentPositions: 5,
@@ -88,7 +83,7 @@ export class PortfolioManager extends EventEmitter {
       alignmentScoreWeight: 0.7, // 70%
       rsScoreWeight: 0.3, // 30%
       maxSignalsToRank: 10,
-      ...config
+      ...config,
     };
 
     // Initialize portfolio state
@@ -102,7 +97,7 @@ export class PortfolioManager extends EventEmitter {
       biasPercentage: 0,
       totalUnrealizedPnL: 0,
       totalRealizedPnL: 0,
-      totalPnLPercentage: 0
+      totalPnLPercentage: 0,
     };
   }
 
@@ -126,7 +121,9 @@ export class PortfolioManager extends EventEmitter {
 
     if (exposurePercentage > maxExposure) {
       this.emit('portfolio:exposure_limit', exposurePercentage, maxExposure);
-      console.warn(`⚠️ Total exposure ${(exposurePercentage * 100).toFixed(1)}% exceeds limit ${(maxExposure * 100).toFixed(1)}%`);
+      console.warn(
+        `⚠️ Total exposure ${(exposurePercentage * 100).toFixed(1)}% exceeds limit ${(maxExposure * 100).toFixed(1)}%`
+      );
     }
 
     return exposurePercentage; // Return actual exposure, not capped
@@ -143,7 +140,9 @@ export class PortfolioManager extends EventEmitter {
 
     if (openPositions.length >= maxPositions) {
       this.emit('portfolio:position_limit', openPositions.length, maxPositions);
-      console.warn(`⚠️ Position limit reached: ${openPositions.length}/${maxPositions} positions open`);
+      console.warn(
+        `⚠️ Position limit reached: ${openPositions.length}/${maxPositions} positions open`
+      );
       return false;
     }
 
@@ -162,7 +161,7 @@ export class PortfolioManager extends EventEmitter {
 
     // Dynamic allocation: divide base risk by number of open positions + 1 (for new position)
     const adjustedRiskPerTrade = baseRisk / Math.max(1, numOpenPositions + 1);
-    
+
     // Calculate max position size (risk amount / typical stop distance)
     const typicalStopDistance = 0.015; // 1.5% typical stop distance
     const riskAmount = totalEquity * adjustedRiskPerTrade;
@@ -175,13 +174,15 @@ export class PortfolioManager extends EventEmitter {
       baseRiskPerTrade: baseRisk,
       adjustedRiskPerTrade,
       maxPositionSize,
-      recommendedLeverage
+      recommendedLeverage,
     };
 
     this.emit('portfolio:risk_allocated', allocation);
-    
-    console.log(`💰 Risk allocation: ${(adjustedRiskPerTrade * 100).toFixed(2)}% per trade, max size ${maxPositionSize.toFixed(0)}, leverage ${recommendedLeverage.toFixed(1)}x`);
-    
+
+    console.log(
+      `💰 Risk allocation: ${(adjustedRiskPerTrade * 100).toFixed(2)}% per trade, max size ${maxPositionSize.toFixed(0)}, leverage ${recommendedLeverage.toFixed(1)}x`
+    );
+
     return allocation;
   }
 
@@ -190,27 +191,29 @@ export class PortfolioManager extends EventEmitter {
    * @param signals - Array of signals with hologram states
    * @returns Ranked signals (top 3)
    */
-  public rankSignals(signals: Array<{ signal: SignalData; hologramState: HologramState }>): RankedSignal[] {
+  public rankSignals(
+    signals: Array<{ signal: SignalData; hologramState: HologramState }>
+  ): RankedSignal[] {
     if (signals.length === 0) return [];
 
     // Calculate composite score for each signal
     const scoredSignals = signals.map(({ signal, hologramState }) => {
       // Normalize alignment score (0-100 → 0-1)
       const normalizedAlignment = hologramState.alignmentScore / 100;
-      
+
       // Normalize RS score (typically -0.1 to +0.1 → 0-1)
       const normalizedRS = Math.max(0, Math.min(1, (Math.abs(hologramState.rsScore) + 0.1) / 0.2));
-      
+
       // Calculate composite score
-      const compositeScore = 
-        (normalizedAlignment * this.config.alignmentScoreWeight) + 
-        (normalizedRS * this.config.rsScoreWeight);
+      const compositeScore =
+        normalizedAlignment * this.config.alignmentScoreWeight +
+        normalizedRS * this.config.rsScoreWeight;
 
       return {
         signal,
         hologramState,
         compositeScore,
-        rank: 0 // Will be set after sorting
+        rank: 0, // Will be set after sorting
       };
     });
 
@@ -221,17 +224,19 @@ export class PortfolioManager extends EventEmitter {
     const maxSignals = Math.min(this.config.maxSignalsToRank, scoredSignals.length);
     const rankedSignals = scoredSignals.slice(0, maxSignals).map((signal, index) => ({
       ...signal,
-      rank: index + 1
+      rank: index + 1,
     }));
 
     // Select top 3 for execution
     const top3 = rankedSignals.slice(0, 3);
 
     this.emit('portfolio:signal_ranked', top3);
-    
+
     console.log(`📊 Ranked ${signals.length} signals, selected top ${top3.length}:`);
     top3.forEach(rs => {
-      console.log(`  ${rs.rank}. ${rs.signal.symbol} (${rs.signal.direction}): Score ${rs.compositeScore.toFixed(3)} (A:${rs.hologramState.alignmentScore}, RS:${rs.hologramState.rsScore.toFixed(3)})`);
+      console.log(
+        `  ${rs.rank}. ${rs.signal.symbol} (${rs.signal.direction}): Score ${rs.compositeScore.toFixed(3)} (A:${rs.hologramState.alignmentScore}, RS:${rs.hologramState.rsScore.toFixed(3)})`
+      );
     });
 
     return top3;
@@ -260,7 +265,9 @@ export class PortfolioManager extends EventEmitter {
 
     if (portfolioHeat > maxHeat) {
       this.emit('portfolio:heat_limit', portfolioHeat, maxHeat);
-      console.warn(`🔥 Portfolio heat ${(portfolioHeat * 100).toFixed(1)}% exceeds limit ${(maxHeat * 100).toFixed(1)}%`);
+      console.warn(
+        `🔥 Portfolio heat ${(portfolioHeat * 100).toFixed(1)}% exceeds limit ${(maxHeat * 100).toFixed(1)}%`
+      );
       return false;
     }
 
@@ -275,12 +282,12 @@ export class PortfolioManager extends EventEmitter {
    * @returns Adjusted position size
    */
   public adjustForDirectionalBias(
-    positions: Position[], 
-    proposedDirection: 'LONG' | 'SHORT', 
+    positions: Position[],
+    proposedDirection: 'LONG' | 'SHORT',
     basePositionSize: number
   ): number {
     const openPositions = positions.filter(p => p.status === 'OPEN');
-    
+
     if (openPositions.length === 0) {
       return basePositionSize; // No bias with no positions
     }
@@ -293,7 +300,7 @@ export class PortfolioManager extends EventEmitter {
     // Calculate directional bias
     const longPercentage = longPositions / totalPositions;
     const shortPercentage = shortPositions / totalPositions;
-    
+
     let directionalBias: 'LONG' | 'SHORT' | 'NEUTRAL' = 'NEUTRAL';
     let biasPercentage = 0;
 
@@ -307,15 +314,18 @@ export class PortfolioManager extends EventEmitter {
 
     // Apply reduction if new position adds to existing bias
     let adjustedSize = basePositionSize;
-    
-    if (directionalBias !== 'NEUTRAL' && 
-        ((directionalBias === 'LONG' && proposedDirection === 'LONG') ||
-         (directionalBias === 'SHORT' && proposedDirection === 'SHORT'))) {
-      
+
+    if (
+      directionalBias !== 'NEUTRAL' &&
+      ((directionalBias === 'LONG' && proposedDirection === 'LONG') ||
+        (directionalBias === 'SHORT' && proposedDirection === 'SHORT'))
+    ) {
       adjustedSize = basePositionSize * (1 - this.config.directionalBiasReduction);
-      
+
       this.emit('portfolio:directional_bias', directionalBias, biasPercentage);
-      console.log(`⚖️ Directional bias detected: ${directionalBias} ${(biasPercentage * 100).toFixed(1)}%, reducing ${proposedDirection} position by ${(this.config.directionalBiasReduction * 100).toFixed(0)}%`);
+      console.log(
+        `⚖️ Directional bias detected: ${directionalBias} ${(biasPercentage * 100).toFixed(1)}%, reducing ${proposedDirection} position by ${(this.config.directionalBiasReduction * 100).toFixed(0)}%`
+      );
     }
 
     return adjustedSize;
@@ -328,16 +338,16 @@ export class PortfolioManager extends EventEmitter {
    */
   public updatePortfolioState(positions: Position[], totalEquity: number): void {
     const openPositions = positions.filter(p => p.status === 'OPEN');
-    
+
     // Calculate total exposure
     const totalExposure = openPositions.reduce((sum, pos) => {
-      return sum + (pos.quantity * pos.currentPrice * pos.leverage);
+      return sum + pos.quantity * pos.currentPrice * pos.leverage;
     }, 0);
 
     // Calculate portfolio heat
     const totalRisk = openPositions.reduce((sum, pos) => {
       const riskPerUnit = Math.abs(pos.entryPrice - pos.stopLoss);
-      return sum + (riskPerUnit * pos.quantity);
+      return sum + riskPerUnit * pos.quantity;
     }, 0);
 
     // Calculate directional bias
@@ -377,7 +387,7 @@ export class PortfolioManager extends EventEmitter {
       biasPercentage,
       totalUnrealizedPnL,
       totalRealizedPnL,
-      totalPnLPercentage: totalEquity > 0 ? totalPnL / totalEquity : 0
+      totalPnLPercentage: totalEquity > 0 ? totalPnL / totalEquity : 0,
     };
 
     // Update positions map
@@ -394,7 +404,11 @@ export class PortfolioManager extends EventEmitter {
    * @param totalEquity - Total account equity
    * @returns True if signal can be accepted
    */
-  public canAcceptSignal(signal: SignalData, hologramState: HologramState, totalEquity: number): boolean {
+  public canAcceptSignal(
+    signal: SignalData,
+    hologramState: HologramState,
+    totalEquity: number
+  ): boolean {
     const openPositions = Array.from(this.positions.values()).filter(p => p.status === 'OPEN');
 
     // Check position limit
@@ -445,18 +459,21 @@ export class PortfolioManager extends EventEmitter {
   } {
     const openPositions = this.portfolioState.openPositions;
     const positionSizes = openPositions.map(p => p.quantity * p.currentPrice);
-    
+
     return {
       totalPositions: Array.from(this.positions.values()).length,
       openPositions: openPositions.length,
       exposureUtilization: this.portfolioState.exposurePercentage / this.config.maxTotalExposure,
       heatUtilization: this.portfolioState.portfolioHeat / this.config.maxPortfolioHeat,
       positionUtilization: openPositions.length / this.config.maxConcurrentPositions,
-      avgPositionSize: positionSizes.length > 0 ? positionSizes.reduce((a, b) => a + b, 0) / positionSizes.length : 0,
+      avgPositionSize:
+        positionSizes.length > 0
+          ? positionSizes.reduce((a, b) => a + b, 0) / positionSizes.length
+          : 0,
       largestPosition: positionSizes.length > 0 ? Math.max(...positionSizes) : 0,
       directionalBias: `${this.portfolioState.directionalBias} (${(this.portfolioState.biasPercentage * 100).toFixed(1)}%)`,
       totalPnL: this.portfolioState.totalUnrealizedPnL + this.portfolioState.totalRealizedPnL,
-      totalPnLPercentage: this.portfolioState.totalPnLPercentage
+      totalPnLPercentage: this.portfolioState.totalPnLPercentage,
     };
   }
 
@@ -475,7 +492,9 @@ export class PortfolioManager extends EventEmitter {
    */
   public addPosition(position: Position): void {
     this.positions.set(position.id, position);
-    console.log(`📊 Portfolio Manager: Added position ${position.id} (${position.symbol} ${position.side})`);
+    console.log(
+      `📊 Portfolio Manager: Added position ${position.id} (${position.symbol} ${position.side})`
+    );
   }
 
   /**
@@ -544,5 +563,8 @@ export class PortfolioManager extends EventEmitter {
 // Export event interface for TypeScript
 export declare interface PortfolioManager {
   on<U extends keyof PortfolioManagerEvents>(event: U, listener: PortfolioManagerEvents[U]): this;
-  emit<U extends keyof PortfolioManagerEvents>(event: U, ...args: Parameters<PortfolioManagerEvents[U]>): boolean;
+  emit<U extends keyof PortfolioManagerEvents>(
+    event: U,
+    ...args: Parameters<PortfolioManagerEvents[U]>
+  ): boolean;
 }

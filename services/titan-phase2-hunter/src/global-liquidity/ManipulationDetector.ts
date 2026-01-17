@@ -1,9 +1,9 @@
 /**
  * ManipulationDetector - Cross-Exchange Manipulation Detection
- * 
+ *
  * Detects single-exchange anomalies, divergence patterns, and
  * coordinated manipulation across multiple exchanges.
- * 
+ *
  * Requirements: 4.3, 4.5 (Cross-Exchange Manipulation Detection)
  */
 
@@ -50,7 +50,7 @@ export interface OutlierAnalysis {
 /**
  * Manipulation pattern types
  */
-export type ManipulationPattern = 
+export type ManipulationPattern =
   | 'single_exchange_outlier'
   | 'coordinated_manipulation'
   | 'volume_spike'
@@ -91,17 +91,17 @@ const DEFAULT_CONFIG: ManipulationDetectorConfig = {
   volumeAnomalyThreshold: 300, // 300% of average volume
   priceSpreadThreshold: 0.5, // 0.5% price spread
   analysisWindow: 5 * 60 * 1000, // 5 minutes
-  minDataPoints: 10
+  minDataPoints: 10,
 };
 
 /**
  * ManipulationDetector - Detects cross-exchange manipulation patterns
- * 
+ *
  * Requirements: 4.3, 4.5
  * - Build outlier detection for single-exchange anomalies
  * - Create divergence analysis across exchanges
  * - Implement manipulation pattern recognition
- * 
+ *
  * Emits events:
  * - 'manipulationDetected': ComprehensiveManipulationAnalysis
  * - 'divergenceAlert': DivergenceAnalysis
@@ -142,7 +142,7 @@ export class ManipulationDetector extends EventEmitter {
     const outlier = this.analyzeOutliers(connectedFlows);
 
     // Determine overall manipulation status
-    const { detected, confidence, pattern, suspectExchange, recommendation, reasoning } = 
+    const { detected, confidence, pattern, suspectExchange, recommendation, reasoning } =
       this.synthesizeAnalysis(divergence, outlier, connectedFlows);
 
     const analysis: ComprehensiveManipulationAnalysis = {
@@ -154,7 +154,7 @@ export class ManipulationDetector extends EventEmitter {
       outlier,
       recommendation,
       reasoning,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
     // Emit events if manipulation detected
@@ -184,7 +184,7 @@ export class ManipulationDetector extends EventEmitter {
         laggingExchanges: [],
         cvdDivergence: 0,
         volumeDivergence: 0,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     }
 
@@ -208,17 +208,20 @@ export class ManipulationDetector extends EventEmitter {
     let maxDivergence = 0;
     for (const flow of flows) {
       if (flow.exchange !== leadingExchange) {
-        const divergence = Math.abs(flow.cvd - (leadingExchange ? 
-          flows.find(f => f.exchange === leadingExchange)!.cvd : 0));
-        
+        const divergence = Math.abs(
+          flow.cvd - (leadingExchange ? flows.find(f => f.exchange === leadingExchange)!.cvd : 0)
+        );
+
         if (divergence > maxDivergence) {
           maxDivergence = divergence;
         }
 
         // Check if this exchange is lagging (opposite direction or much smaller magnitude)
         const leaderCVD = flows.find(f => f.exchange === leadingExchange)?.cvd || 0;
-        if (Math.sign(flow.cvd) !== Math.sign(leaderCVD) || 
-            Math.abs(flow.cvd) < Math.abs(leaderCVD) * 0.3) {
+        if (
+          Math.sign(flow.cvd) !== Math.sign(leaderCVD) ||
+          Math.abs(flow.cvd) < Math.abs(leaderCVD) * 0.3
+        ) {
           laggingExchanges.push(flow.exchange);
         }
       }
@@ -238,7 +241,7 @@ export class ManipulationDetector extends EventEmitter {
       laggingExchanges: hasDivergence ? laggingExchanges : [],
       cvdDivergence,
       volumeDivergence,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
   }
 
@@ -254,7 +257,7 @@ export class ManipulationDetector extends EventEmitter {
         outlierScore: 0,
         outlierType: 'none',
         deviation: 0,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     }
 
@@ -283,7 +286,8 @@ export class ManipulationDetector extends EventEmitter {
       }
 
       // Check volume outlier
-      const volumeDeviation = volumeStdDev > 0 ? Math.abs(flow.volume - volumeMean) / volumeStdDev : 0;
+      const volumeDeviation =
+        volumeStdDev > 0 ? Math.abs(flow.volume - volumeMean) / volumeStdDev : 0;
       if (volumeDeviation > maxDeviation && volumeDeviation > this.config.outlierStdDevMultiplier) {
         maxDeviation = volumeDeviation;
         outlierExchange = flow.exchange;
@@ -300,7 +304,7 @@ export class ManipulationDetector extends EventEmitter {
       outlierScore,
       outlierType: hasOutlier ? outlierType : 'none',
       deviation: maxDeviation,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
   }
 
@@ -314,7 +318,7 @@ export class ManipulationDetector extends EventEmitter {
 
     // Look for consistent single-exchange CVD divergence over time
     const recentHistory = history.slice(-this.config.minDataPoints);
-    
+
     let consistentOutlierCount = 0;
     let lastOutlier: string | null = null;
 
@@ -322,7 +326,7 @@ export class ManipulationDetector extends EventEmitter {
       const connectedFlows = point.exchangeFlows.filter(
         f => f.status === ConnectionStatus.CONNECTED
       );
-      
+
       if (connectedFlows.length < 2) continue;
 
       const outlier = this.analyzeOutliers(connectedFlows);
@@ -365,7 +369,9 @@ export class ManipulationDetector extends EventEmitter {
       confidence += outlier.outlierScore * 0.4;
       pattern = 'single_exchange_outlier';
       suspectExchange = outlier.outlierExchange;
-      reasoning.push(`${outlier.outlierExchange} shows ${outlier.outlierType} outlier (${outlier.deviation.toFixed(1)} std devs)`);
+      reasoning.push(
+        `${outlier.outlierExchange} shows ${outlier.outlierType} outlier (${outlier.deviation.toFixed(1)} std devs)`
+      );
     }
 
     // Check for divergence
@@ -377,7 +383,9 @@ export class ManipulationDetector extends EventEmitter {
       if (!suspectExchange) {
         suspectExchange = divergence.leadingExchange;
       }
-      reasoning.push(`Exchange divergence detected: ${divergence.leadingExchange} leading, ${divergence.laggingExchanges.join(', ')} lagging`);
+      reasoning.push(
+        `Exchange divergence detected: ${divergence.leadingExchange} leading, ${divergence.laggingExchanges.join(', ')} lagging`
+      );
     }
 
     // Check for volume anomaly
@@ -388,7 +396,9 @@ export class ManipulationDetector extends EventEmitter {
         if (pattern === 'none') {
           pattern = 'volume_spike';
         }
-        reasoning.push(`${flow.exchange} volume spike: ${((flow.volume / avgVolume) * 100).toFixed(0)}% of average`);
+        reasoning.push(
+          `${flow.exchange} volume spike: ${((flow.volume / avgVolume) * 100).toFixed(0)}% of average`
+        );
         break;
       }
     }
@@ -414,7 +424,7 @@ export class ManipulationDetector extends EventEmitter {
       pattern,
       suspectExchange,
       recommendation,
-      reasoning
+      reasoning,
     };
   }
 
@@ -426,7 +436,7 @@ export class ManipulationDetector extends EventEmitter {
 
     let maxDivergence = 0;
     for (const flow of flows) {
-      const divergence = Math.abs(flow.volume - avgVolume) / avgVolume * 100;
+      const divergence = (Math.abs(flow.volume - avgVolume) / avgVolume) * 100;
       if (divergence > maxDivergence) {
         maxDivergence = divergence;
       }
@@ -440,7 +450,7 @@ export class ManipulationDetector extends EventEmitter {
    */
   private calculateStdDev(values: number[], mean: number): number {
     if (values.length < 2) return 0;
-    
+
     const squaredDiffs = values.map(v => Math.pow(v - mean, 2));
     const avgSquaredDiff = squaredDiffs.reduce((a, b) => a + b, 0) / values.length;
     return Math.sqrt(avgSquaredDiff);
@@ -462,7 +472,7 @@ export class ManipulationDetector extends EventEmitter {
     history.push({
       timestamp: Date.now(),
       exchangeFlows: [...exchangeFlows],
-      aggregatedCVD
+      aggregatedCVD,
     });
 
     // Cleanup old data
@@ -487,7 +497,7 @@ export class ManipulationDetector extends EventEmitter {
         laggingExchanges: [],
         cvdDivergence: 0,
         volumeDivergence: 0,
-        timestamp: new Date()
+        timestamp: new Date(),
       },
       outlier: {
         hasOutlier: false,
@@ -495,11 +505,11 @@ export class ManipulationDetector extends EventEmitter {
         outlierScore: 0,
         outlierType: 'none',
         deviation: 0,
-        timestamp: new Date()
+        timestamp: new Date(),
       },
       recommendation: 'proceed',
       reasoning: [reason],
-      timestamp: new Date()
+      timestamp: new Date(),
     };
   }
 

@@ -1,6 +1,8 @@
-use crate::model::{FeeAnalysis, OrderDecision, OrderParams};
+use crate::model::{FeeAnalysis, OrderDecision, OrderParams, Side, OrderType};
+use crate::market_data::engine::MarketDataEngine;
 use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
+use std::sync::Arc;
 use tracing::{info, warn};
 
 // Constants
@@ -28,12 +30,14 @@ impl Default for OrderManagerConfig {
     }
 }
 
+#[derive(Clone)]
 pub struct OrderManager {
     config: OrderManagerConfig,
+    market_data: Arc<MarketDataEngine>,
 }
 
 impl OrderManager {
-    pub fn new(config: Option<OrderManagerConfig>) -> Self {
+    pub fn new(config: Option<OrderManagerConfig>, market_data: Arc<MarketDataEngine>) -> Self {
         let config = config.unwrap_or_default();
         
         info!(
@@ -43,7 +47,34 @@ impl OrderManager {
             "OrderManager initialized"
         );
 
-        Self { config }
+        Self { config, market_data }
+    }
+
+    /// Assess liquidity quality for a symbol
+    /// Returns: (spread_bps, imbalance_ratio)
+    /// Imbalance: (BidQty - AskQty) / (BidQty + AskQty) -> Range [-1, 1]
+    /// Positive = Buy Pressure, Negative = Sell Pressure
+    pub fn assess_liquidity_quality(&self, symbol: &str) -> Option<(Decimal, Decimal)> {
+        let ticker = self.market_data.get_ticker(symbol)?;
+        
+        let mid_price = (ticker.best_bid + ticker.best_ask) / Decimal::from(2);
+        if mid_price.is_zero() { return None; }
+        
+        // Spread BPS
+        let spread_diff = ticker.best_ask - ticker.best_bid;
+        let spread_bps = (spread_diff / mid_price) * Decimal::from(10000);
+        
+        // Imbalance
+        let total_qty = ticker.best_bid_qty + ticker.best_ask_qty;
+        let diff_qty = ticker.best_bid_qty - ticker.best_ask_qty;
+        
+        let imbalance = if total_qty.is_zero() {
+            Decimal::ZERO
+        } else {
+            diff_qty / total_qty
+        };
+        
+        Some((spread_bps, imbalance))
     }
 
     pub fn analyze_fees(&self, expected_profit_pct: Decimal) -> FeeAnalysis {
@@ -76,13 +107,49 @@ impl OrderManager {
 
         // Default decision: Maker order
         let mut decision = OrderDecision {
-            order_type: crate::model::OrderType::Limit,
+            order_type: OrderType::Limit,
             post_only: true,
             reduce_only,
             limit_price: params.limit_price,
             reason: "DEFAULT_MAKER".to_string(),
             fee_analysis: None,
         };
+
+        // --- EXECUTION ALPHA: LIQUIDITY SNIPING ---
+        if let Some((spread_bps, imbalance)) = self.assess_liquidity_quality(&params.symbol) {
+             info!(
+                symbol = %params.symbol,
+                spread_bps = %spread_bps,
+                imbalance = %imbalance,
+                "Liquidity Analysis"
+            );
+
+            // 1. Wide Spread Protocol (> 10 bps) -> FORCE MAKER
+            // Don't cross wide spreads.
+            if spread_bps > Decimal::from(10) {
+                decision.reason = format!("WIDE_SPREAD_MAKER: {}bps", spread_bps);
+                decision.post_only = true;
+                return decision;
+            }
+
+            // 2. Imbalance Sniping (FOMO / Panic)
+            // If we are Buying and Imbalance > 0.6 (Strong Buy Pressure), liquidity is fleeting.
+            // Switch to TAKER (Market or Aggressive Limit) to swipe before it's gone.
+            if params.side == Side::Buy && imbalance > Decimal::from_f32(0.6).unwrap() {
+                decision.order_type = OrderType::Market;
+                decision.post_only = false;
+                decision.reason = format!("IMBALANCE_SNIPE_BUY: Imb {}", imbalance);
+                return decision;
+            }
+            
+            // If we are Selling and Imbalance < -0.6 (Strong Sell Pressure)
+            if params.side == Side::Sell && imbalance < Decimal::from_f32(-0.6).unwrap() {
+                decision.order_type = OrderType::Market;
+                decision.post_only = false;
+                decision.reason = format!("IMBALANCE_SNIPE_SELL: Imb {}", imbalance);
+                return decision;
+            }
+        }
 
         // If no expected profit provided, use maker order
         if params.expected_profit_pct.is_none() {

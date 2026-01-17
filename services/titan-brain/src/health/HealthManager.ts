@@ -1,10 +1,10 @@
 /**
  * HealthManager - Comprehensive health monitoring for Railway deployment
- * 
+ *
  * Provides health checks for all system components including database,
  * Redis, configuration, and memory usage. Designed for Railway's health
  * monitoring requirements.
- * 
+ *
  * Requirements: 1.1.1, 1.1.2, 1.1.3, 1.1.4, 1.1.5
  */
 
@@ -16,7 +16,7 @@ import { EventEmitter } from 'events';
 export enum HealthStatus {
   HEALTHY = 'healthy',
   DEGRADED = 'degraded',
-  UNHEALTHY = 'unhealthy'
+  UNHEALTHY = 'unhealthy',
 }
 
 /**
@@ -76,7 +76,7 @@ export class DatabaseHealthComponent implements HealthComponent {
 
   async check(): Promise<ComponentHealth> {
     const startTime = Date.now();
-    
+
     try {
       if (!this.databaseManager) {
         return {
@@ -84,13 +84,13 @@ export class DatabaseHealthComponent implements HealthComponent {
           status: HealthStatus.UNHEALTHY,
           message: 'Database manager not initialized',
           duration: Date.now() - startTime,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         };
       }
 
       const isHealthy = this.databaseManager.isHealthy();
       const metrics = this.databaseManager.getMetrics();
-      
+
       if (!isHealthy) {
         return {
           name: this.name,
@@ -100,8 +100,8 @@ export class DatabaseHealthComponent implements HealthComponent {
           timestamp: Date.now(),
           details: {
             connectionErrors: metrics.connectionErrors,
-            lastHealthCheck: metrics.lastHealthCheck
-          }
+            lastHealthCheck: metrics.lastHealthCheck,
+          },
         };
       }
 
@@ -115,8 +115,8 @@ export class DatabaseHealthComponent implements HealthComponent {
           totalConnections: metrics.totalConnections,
           idleConnections: metrics.idleConnections,
           successfulQueries: metrics.successfulQueries,
-          failedQueries: metrics.failedQueries
-        }
+          failedQueries: metrics.failedQueries,
+        },
       };
     } catch (error) {
       return {
@@ -124,7 +124,7 @@ export class DatabaseHealthComponent implements HealthComponent {
         status: HealthStatus.UNHEALTHY,
         message: error instanceof Error ? error.message : 'Database check failed',
         duration: Date.now() - startTime,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
     }
   }
@@ -142,12 +142,12 @@ export class ConfigHealthComponent implements HealthComponent {
 
   async check(): Promise<ComponentHealth> {
     const startTime = Date.now();
-    
+
     try {
       // Check if required configuration is present
       const requiredFields = ['port', 'nodeEnv'];
-      const missingFields = requiredFields.filter(field => !this.config[field]);
-      
+      const missingFields = requiredFields.filter((field) => !this.config[field]);
+
       if (missingFields.length > 0) {
         return {
           name: this.name,
@@ -155,7 +155,7 @@ export class ConfigHealthComponent implements HealthComponent {
           message: `Missing required configuration: ${missingFields.join(', ')}`,
           duration: Date.now() - startTime,
           timestamp: Date.now(),
-          details: { missingFields }
+          details: { missingFields },
         };
       }
 
@@ -167,8 +167,8 @@ export class ConfigHealthComponent implements HealthComponent {
         timestamp: Date.now(),
         details: {
           nodeEnv: this.config.nodeEnv,
-          port: this.config.port
-        }
+          port: this.config.port,
+        },
       };
     } catch (error) {
       return {
@@ -176,7 +176,7 @@ export class ConfigHealthComponent implements HealthComponent {
         status: HealthStatus.UNHEALTHY,
         message: error instanceof Error ? error.message : 'Configuration check failed',
         duration: Date.now() - startTime,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
     }
   }
@@ -195,7 +195,7 @@ export class MemoryHealthComponent implements HealthComponent {
 
   async check(): Promise<ComponentHealth> {
     const startTime = Date.now();
-    
+
     try {
       const memUsage = process.memoryUsage();
       const totalMemory = memUsage.heapTotal;
@@ -224,8 +224,8 @@ export class MemoryHealthComponent implements HealthComponent {
           heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024), // MB
           external: Math.round(memUsage.external / 1024 / 1024), // MB
           rss: Math.round(memUsage.rss / 1024 / 1024), // MB
-          usagePercentage: Math.round(memoryUsageRatio * 100)
-        }
+          usagePercentage: Math.round(memoryUsageRatio * 100),
+        },
       };
     } catch (error) {
       return {
@@ -233,7 +233,7 @@ export class MemoryHealthComponent implements HealthComponent {
         status: HealthStatus.UNHEALTHY,
         message: error instanceof Error ? error.message : 'Memory check failed',
         duration: Date.now() - startTime,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
     }
   }
@@ -251,7 +251,7 @@ export class RedisHealthComponent implements HealthComponent {
 
   async check(): Promise<ComponentHealth> {
     const startTime = Date.now();
-    
+
     try {
       if (!this.cacheManager) {
         return {
@@ -259,19 +259,19 @@ export class RedisHealthComponent implements HealthComponent {
           status: HealthStatus.DEGRADED,
           message: 'Redis not configured (using in-memory fallback)',
           duration: Date.now() - startTime,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         };
       }
 
       const isHealthy = await this.cacheManager.isHealthy();
-      
+
       if (!isHealthy) {
         return {
           name: this.name,
           status: HealthStatus.DEGRADED,
           message: 'Redis unavailable (using in-memory fallback)',
           duration: Date.now() - startTime,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         };
       }
 
@@ -280,7 +280,7 @@ export class RedisHealthComponent implements HealthComponent {
         status: HealthStatus.HEALTHY,
         message: 'Redis connection healthy',
         duration: Date.now() - startTime,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
     } catch (error) {
       return {
@@ -288,7 +288,7 @@ export class RedisHealthComponent implements HealthComponent {
         status: HealthStatus.DEGRADED,
         message: 'Redis check failed (using in-memory fallback)',
         duration: Date.now() - startTime,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
     }
   }
@@ -306,13 +306,13 @@ export class HealthManager extends EventEmitter {
 
   constructor(config: Partial<HealthManagerConfig> = {}) {
     super();
-    
+
     this.config = {
       checkInterval: config.checkInterval || 30000, // 30 seconds
       componentTimeout: config.componentTimeout || 5000, // 5 seconds
       maxConcurrentChecks: config.maxConcurrentChecks || 10,
       cacheHealthResults: config.cacheHealthResults ?? true,
-      cacheTtl: config.cacheTtl || 10000 // 10 seconds
+      cacheTtl: config.cacheTtl || 10000, // 10 seconds
     };
   }
 
@@ -337,7 +337,7 @@ export class HealthManager extends EventEmitter {
    */
   async checkHealth(): Promise<SystemHealth> {
     const startTime = Date.now();
-    
+
     // Return cached result if available and fresh
     if (this.config.cacheHealthResults && this.lastHealthCheck) {
       const age = Date.now() - this.lastHealthCheck.timestamp;
@@ -346,27 +346,27 @@ export class HealthManager extends EventEmitter {
       }
     }
 
-    const componentChecks = Array.from(this.components.values()).map(component =>
-      this.checkComponent(component)
+    const componentChecks = Array.from(this.components.values()).map((component) =>
+      this.checkComponent(component),
     );
 
     const componentResults = await Promise.all(componentChecks);
-    
+
     // Determine overall system health
     const overallStatus = this.determineOverallStatus(componentResults);
-    
+
     const systemHealth: SystemHealth = {
       status: overallStatus,
       timestamp: Date.now(),
       duration: Date.now() - startTime,
       components: componentResults,
       version: process.env.npm_package_version || '1.0.0',
-      uptime: Date.now() - this.startTime
+      uptime: Date.now() - this.startTime,
     };
 
     this.lastHealthCheck = systemHealth;
     this.emit('health:checked', systemHealth);
-    
+
     return systemHealth;
   }
 
@@ -376,12 +376,12 @@ export class HealthManager extends EventEmitter {
   private async checkComponent(component: HealthComponent): Promise<ComponentHealth> {
     try {
       const timeout = component.timeout || this.config.componentTimeout;
-      
+
       const result = await Promise.race([
         component.check(),
         new Promise<ComponentHealth>((_, reject) =>
-          setTimeout(() => reject(new Error('Health check timeout')), timeout)
-        )
+          setTimeout(() => reject(new Error('Health check timeout')), timeout),
+        ),
       ]);
 
       this.emit('component:checked', result);
@@ -392,7 +392,7 @@ export class HealthManager extends EventEmitter {
         status: HealthStatus.UNHEALTHY,
         message: error instanceof Error ? error.message : 'Component check failed',
         duration: component.timeout || this.config.componentTimeout,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       this.emit('component:failed', result);
@@ -404,18 +404,18 @@ export class HealthManager extends EventEmitter {
    * Determine overall system health status
    */
   private determineOverallStatus(components: ComponentHealth[]): HealthStatus {
-    const requiredComponents = components.filter(c => {
+    const requiredComponents = components.filter((c) => {
       const component = this.components.get(c.name);
       return component?.isRequired ?? true;
     });
 
     // If any required component is unhealthy, system is unhealthy
-    if (requiredComponents.some(c => c.status === HealthStatus.UNHEALTHY)) {
+    if (requiredComponents.some((c) => c.status === HealthStatus.UNHEALTHY)) {
       return HealthStatus.UNHEALTHY;
     }
 
     // If any component is degraded, system is degraded
-    if (components.some(c => c.status === HealthStatus.DEGRADED)) {
+    if (components.some((c) => c.status === HealthStatus.DEGRADED)) {
       return HealthStatus.DEGRADED;
     }
 

@@ -7,9 +7,9 @@
  * Requirements: 4.3.1, 4.3.2, 4.3.3, 4.3.4, 4.3.5
  */
 
-import { FastifyReply, FastifyRequest, HookHandlerDoneFunction } from "fastify";
-import { CacheManager } from "../cache/CacheManager.js";
-import { Logger } from "../logging/Logger.js";
+import { FastifyReply, FastifyRequest, HookHandlerDoneFunction } from 'fastify';
+import { CacheManager } from '../cache/CacheManager.js';
+import { Logger } from '../logging/Logger.js';
 
 /**
  * Rate limit configuration for an endpoint
@@ -41,11 +41,7 @@ export class RateLimiter {
   private logger: Logger;
   private defaultConfig: RateLimitConfig;
 
-  constructor(
-    cacheManager: CacheManager,
-    logger: Logger,
-    defaultConfig: RateLimitConfig,
-  ) {
+  constructor(cacheManager: CacheManager, logger: Logger, defaultConfig: RateLimitConfig) {
     this.cacheManager = cacheManager;
     this.logger = logger;
     this.defaultConfig = defaultConfig;
@@ -54,15 +50,12 @@ export class RateLimiter {
   /**
    * Create rate limiter from environment variables
    */
-  static createFromEnvironment(
-    cacheManager: CacheManager,
-    logger: Logger,
-  ): RateLimiter {
+  static createFromEnvironment(cacheManager: CacheManager, logger: Logger): RateLimiter {
     const defaultConfig: RateLimitConfig = {
-      windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "60000"), // 1 minute
-      maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "100"), // 100 requests per minute
-      skipSuccessfulRequests: process.env.RATE_LIMIT_SKIP_SUCCESS === "true",
-      skipFailedRequests: process.env.RATE_LIMIT_SKIP_FAILED === "true",
+      windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000'), // 1 minute
+      maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'), // 100 requests per minute
+      skipSuccessfulRequests: process.env.RATE_LIMIT_SKIP_SUCCESS === 'true',
+      skipFailedRequests: process.env.RATE_LIMIT_SKIP_FAILED === 'true',
     };
 
     return new RateLimiter(cacheManager, logger, defaultConfig);
@@ -72,8 +65,8 @@ export class RateLimiter {
    * Default key generator using IP address
    */
   private defaultKeyGenerator(request: FastifyRequest): string {
-    const ip = request.ip || "unknown";
-    const endpoint = request.url.split("?")[0]; // Remove query parameters
+    const ip = request.ip || 'unknown';
+    const endpoint = request.url.split('?')[0]; // Remove query parameters
     return `rate_limit:${ip}:${endpoint}`;
   }
 
@@ -88,8 +81,7 @@ export class RateLimiter {
     config?: Partial<RateLimitConfig>,
   ): Promise<RateLimitResult> {
     const finalConfig = { ...this.defaultConfig, ...config };
-    const keyGenerator = finalConfig.keyGenerator ||
-      this.defaultKeyGenerator.bind(this);
+    const keyGenerator = finalConfig.keyGenerator || this.defaultKeyGenerator.bind(this);
     const key = keyGenerator(request);
 
     const now = Date.now();
@@ -107,7 +99,7 @@ export class RateLimiter {
             hits = [];
           }
         } catch (error) {
-          this.logger.warn("Failed to parse rate limit data", undefined, {
+          this.logger.warn('Failed to parse rate limit data', undefined, {
             key,
             error: error instanceof Error ? error.message : String(error),
           });
@@ -120,9 +112,7 @@ export class RateLimiter {
 
       // Count relevant hits based on configuration
       let relevantHits = hits.length;
-      if (
-        finalConfig.skipSuccessfulRequests || finalConfig.skipFailedRequests
-      ) {
+      if (finalConfig.skipSuccessfulRequests || finalConfig.skipFailedRequests) {
         relevantHits = hits.filter((hit) => {
           if (finalConfig.skipSuccessfulRequests && hit.success === true) {
             return false;
@@ -135,10 +125,7 @@ export class RateLimiter {
       }
 
       const allowed = relevantHits < finalConfig.maxRequests;
-      const remaining = Math.max(
-        0,
-        finalConfig.maxRequests - relevantHits - (allowed ? 1 : 0),
-      );
+      const remaining = Math.max(0, finalConfig.maxRequests - relevantHits - (allowed ? 1 : 0));
       const resetTime = windowStart + finalConfig.windowMs;
 
       // Add current request to hits if we're tracking it
@@ -158,7 +145,7 @@ export class RateLimiter {
       };
     } catch (error) {
       this.logger.error(
-        "Rate limit check failed",
+        'Rate limit check failed',
         error instanceof Error ? error : new Error(String(error)),
         undefined,
         { key },
@@ -185,23 +172,18 @@ export class RateLimiter {
     const finalConfig = { ...this.defaultConfig, ...config };
 
     // Only update if we're conditionally counting requests
-    if (
-      !finalConfig.skipSuccessfulRequests && !finalConfig.skipFailedRequests
-    ) {
+    if (!finalConfig.skipSuccessfulRequests && !finalConfig.skipFailedRequests) {
       return;
     }
 
-    const keyGenerator = finalConfig.keyGenerator ||
-      this.defaultKeyGenerator.bind(this);
+    const keyGenerator = finalConfig.keyGenerator || this.defaultKeyGenerator.bind(this);
     const key = keyGenerator(request);
 
     try {
       const cacheResult = await this.cacheManager.get<string>(key);
       if (!cacheResult.success || !cacheResult.value) return;
 
-      let hits: Array<{ timestamp: number; success?: boolean }> = JSON.parse(
-        cacheResult.value,
-      );
+      const hits: Array<{ timestamp: number; success?: boolean }> = JSON.parse(cacheResult.value);
 
       // Update the most recent hit with success status
       if (hits.length > 0) {
@@ -211,7 +193,7 @@ export class RateLimiter {
         await this.cacheManager.set(key, JSON.stringify(hits), ttlMs);
       }
     } catch (error) {
-      this.logger.warn("Failed to update rate limit", undefined, {
+      this.logger.warn('Failed to update rate limit', undefined, {
         key,
         success,
         error: error instanceof Error ? error.message : String(error),
@@ -219,10 +201,7 @@ export class RateLimiter {
     }
   }
   createMiddleware(config?: Partial<RateLimitConfig>) {
-    return async (
-      request: FastifyRequest,
-      reply: FastifyReply,
-    ): Promise<void> => {
+    return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
       const startTime = Date.now();
 
       try {
@@ -230,26 +209,23 @@ export class RateLimiter {
 
         // Add rate limit headers
         reply.header(
-          "X-RateLimit-Limit",
+          'X-RateLimit-Limit',
           (config?.maxRequests || this.defaultConfig.maxRequests).toString(),
         );
-        reply.header("X-RateLimit-Remaining", result.remaining.toString());
-        reply.header(
-          "X-RateLimit-Reset",
-          Math.ceil(result.resetTime / 1000).toString(),
-        );
+        reply.header('X-RateLimit-Remaining', result.remaining.toString());
+        reply.header('X-RateLimit-Reset', Math.ceil(result.resetTime / 1000).toString());
 
         if (!result.allowed) {
           // Log rate limit exceeded
           this.logger.logSecurityEvent(
-            "Rate limit exceeded",
-            "medium",
+            'Rate limit exceeded',
+            'medium',
             (request as any).correlationId,
             {
               ip: request.ip,
               endpoint: request.url,
               method: request.method,
-              userAgent: request.headers["user-agent"],
+              userAgent: request.headers['user-agent'],
               totalHits: result.totalHits,
               limit: config?.maxRequests || this.defaultConfig.maxRequests,
             },
@@ -260,8 +236,8 @@ export class RateLimiter {
             config.onLimitReached(request, reply);
           } else {
             reply.status(429).send({
-              error: "Too Many Requests",
-              message: "Rate limit exceeded. Please try again later.",
+              error: 'Too Many Requests',
+              message: 'Rate limit exceeded. Please try again later.',
               retryAfter: Math.ceil((result.resetTime - Date.now()) / 1000),
               timestamp: new Date().toISOString(),
             });
@@ -278,22 +254,18 @@ export class RateLimiter {
 
         // Log rate limit check
         const duration = Date.now() - startTime;
-        this.logger.debug(
-          "Rate limit check completed",
-          (request as any).correlationId,
-          {
-            ip: request.ip,
-            endpoint: request.url,
-            allowed: result.allowed,
-            remaining: result.remaining,
-            duration,
-          },
-        );
+        this.logger.debug('Rate limit check completed', (request as any).correlationId, {
+          ip: request.ip,
+          endpoint: request.url,
+          allowed: result.allowed,
+          remaining: result.remaining,
+          duration,
+        });
 
         // done();
       } catch (error) {
         this.logger.error(
-          "Rate limit middleware error",
+          'Rate limit middleware error',
           error instanceof Error ? error : new Error(String(error)),
           (request as any).correlationId,
           {
@@ -310,14 +282,9 @@ export class RateLimiter {
   /**
    * Create endpoint-specific rate limiting middleware
    */
-  createEndpointMiddleware(
-    endpointConfigs: Record<string, Partial<RateLimitConfig>>,
-  ) {
-    return async (
-      request: FastifyRequest,
-      reply: FastifyReply,
-    ): Promise<void> => {
-      const endpoint = request.url.split("?")[0]; // Remove query parameters
+  createEndpointMiddleware(endpointConfigs: Record<string, Partial<RateLimitConfig>>) {
+    return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+      const endpoint = request.url.split('?')[0]; // Remove query parameters
       const config = endpointConfigs[endpoint];
 
       if (!config) {
@@ -337,10 +304,10 @@ export class RateLimiter {
   async resetRateLimit(key: string): Promise<void> {
     try {
       await this.cacheManager.delete(key);
-      this.logger.info("Rate limit reset", undefined, { key });
+      this.logger.info('Rate limit reset', undefined, { key });
     } catch (error) {
       this.logger.error(
-        "Failed to reset rate limit",
+        'Failed to reset rate limit',
         error instanceof Error ? error : new Error(String(error)),
         undefined,
         { key },
@@ -351,13 +318,11 @@ export class RateLimiter {
   /**
    * Get rate limit status for a key
    */
-  async getRateLimitStatus(key: string): Promise<
-    {
-      hits: number;
-      remaining: number;
-      resetTime: number;
-    } | null
-  > {
+  async getRateLimitStatus(key: string): Promise<{
+    hits: number;
+    remaining: number;
+    resetTime: number;
+  } | null> {
     try {
       const cacheResult = await this.cacheManager.get<string>(key);
       if (!cacheResult.success || !cacheResult.value) {
@@ -375,15 +340,12 @@ export class RateLimiter {
 
       return {
         hits: validHits.length,
-        remaining: Math.max(
-          0,
-          this.defaultConfig.maxRequests - validHits.length,
-        ),
+        remaining: Math.max(0, this.defaultConfig.maxRequests - validHits.length),
         resetTime: windowStart + this.defaultConfig.windowMs,
       };
     } catch (error) {
       this.logger.error(
-        "Failed to get rate limit status",
+        'Failed to get rate limit status',
         error instanceof Error ? error : new Error(String(error)),
         undefined,
         { key },
@@ -396,48 +358,45 @@ export class RateLimiter {
 /**
  * Default rate limit configurations for different endpoints
  */
-export const DEFAULT_ENDPOINT_CONFIGS: Record<
-  string,
-  Partial<RateLimitConfig>
-> = {
-  "/signal": {
+export const DEFAULT_ENDPOINT_CONFIGS: Record<string, Partial<RateLimitConfig>> = {
+  '/signal': {
     windowMs: 60000, // 1 minute
     maxRequests: 60, // 60 signals per minute
     skipFailedRequests: true, // Don't count failed signals
   },
-  "/webhook/phase1": {
+  '/webhook/phase1': {
     windowMs: 60000, // 1 minute
     maxRequests: 120, // 120 webhooks per minute
     skipFailedRequests: true,
   },
-  "/webhook/phase2": {
+  '/webhook/phase2': {
     windowMs: 60000, // 1 minute
     maxRequests: 60, // 60 webhooks per minute
     skipFailedRequests: true,
   },
-  "/webhook/phase3": {
+  '/webhook/phase3': {
     windowMs: 60000, // 1 minute
     maxRequests: 30, // 30 webhooks per minute
     skipFailedRequests: true,
   },
-  "/admin/override": {
+  '/admin/override': {
     windowMs: 300000, // 5 minutes
     maxRequests: 5, // 5 override attempts per 5 minutes
     skipSuccessfulRequests: false,
     skipFailedRequests: false,
   },
-  "/breaker/reset": {
+  '/breaker/reset': {
     windowMs: 300000, // 5 minutes
     maxRequests: 10, // 10 reset attempts per 5 minutes
     skipSuccessfulRequests: false,
     skipFailedRequests: false,
   },
-  "/dashboard": {
+  '/dashboard': {
     windowMs: 60000, // 1 minute
     maxRequests: 300, // 300 dashboard requests per minute
     skipFailedRequests: true,
   },
-  "/metrics": {
+  '/metrics': {
     windowMs: 60000, // 1 minute
     maxRequests: 600, // 600 metrics requests per minute (for monitoring)
     skipFailedRequests: true,
@@ -468,8 +427,8 @@ export async function rateLimiterPlugin(
   const endpointConfigs = options.endpointConfigs || DEFAULT_ENDPOINT_CONFIGS;
   const middleware = rateLimiter.createEndpointMiddleware(endpointConfigs);
 
-  fastify.addHook("preHandler", middleware);
+  fastify.addHook('preHandler', middleware);
 
   // Add rate limiter instance to fastify for access in routes
-  fastify.decorate("rateLimiter", rateLimiter);
+  fastify.decorate('rateLimiter', rateLimiter);
 }

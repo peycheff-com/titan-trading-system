@@ -15,10 +15,10 @@ import {
   Position,
   RiskMetrics,
   TreasuryStatus,
-} from "../types/index.js";
-import { getNatsClient, TitanSubject } from "@titan/shared";
-import { TitanBrain } from "../engine/TitanBrain.js";
-import { DatabaseManager } from "../db/DatabaseManager.js";
+} from '../types/index.js';
+import { getNatsClient, TitanSubject } from '@titan/shared';
+import { TitanBrain } from '../engine/TitanBrain.js';
+import { DatabaseManager } from '../db/DatabaseManager.js';
 
 /**
  * Extended dashboard data with additional metrics
@@ -55,7 +55,7 @@ export interface ExtendedDashboardData extends DashboardData {
  */
 export interface WalletBalance {
   exchange: string;
-  walletType: "spot" | "futures" | "margin";
+  walletType: 'spot' | 'futures' | 'margin';
   asset: string;
   balance: number;
   usdValue: number;
@@ -92,7 +92,7 @@ const DEFAULT_CONFIG: DashboardServiceConfig = {
   cacheTTL: 60000, // 1 minute
   navCacheTTL: 30000, // 30 seconds
   maxRecentDecisions: 50,
-  version: "1.0.0",
+  version: '1.0.0',
 };
 
 /**
@@ -113,14 +113,9 @@ export class DashboardService {
   private navCacheTime: number = 0;
 
   /** External wallet balance providers */
-  private walletProviders: Map<string, () => Promise<WalletBalance[]>> =
-    new Map();
+  private walletProviders: Map<string, () => Promise<WalletBalance[]>> = new Map();
 
-  constructor(
-    brain: TitanBrain,
-    db?: DatabaseManager,
-    config?: Partial<DashboardServiceConfig>,
-  ) {
+  constructor(brain: TitanBrain, db?: DatabaseManager, config?: Partial<DashboardServiceConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.brain = brain;
     this.db = db ?? null;
@@ -138,13 +133,13 @@ export class DashboardService {
         const nats = getNatsClient();
         if (nats.isConnected()) {
           await nats.publish(TitanSubject.DASHBOARD_UPDATES, {
-            type: "STATE_UPDATE",
+            type: 'STATE_UPDATE',
             timestamp: Date.now(),
             ...data,
           });
         }
       } catch (err) {
-        console.error("Failed to publish dashboard update:", err);
+        console.error('Failed to publish dashboard update:', err);
       }
     }, intervalMs);
   }
@@ -155,10 +150,7 @@ export class DashboardService {
    * @param exchange - Exchange name (e.g., 'bybit', 'binance')
    * @param provider - Function that returns wallet balances
    */
-  registerWalletProvider(
-    exchange: string,
-    provider: () => Promise<WalletBalance[]>,
-  ): void {
+  registerWalletProvider(exchange: string, provider: () => Promise<WalletBalance[]>): void {
     this.walletProviders.set(exchange, provider);
   }
 
@@ -170,10 +162,7 @@ export class DashboardService {
    */
   async calculateNAV(): Promise<NAVCalculation> {
     // Check cache
-    if (
-      this.navCache &&
-      Date.now() - this.navCacheTime < this.config.navCacheTTL
-    ) {
+    if (this.navCache && Date.now() - this.navCacheTime < this.config.navCacheTTL) {
       return this.navCache;
     }
 
@@ -235,17 +224,17 @@ export class DashboardService {
         phase1: {
           weight: allocation.w1,
           equity: equity * allocation.w1,
-          percentage: (allocation.w1 * 100).toFixed(2) + "%",
+          percentage: (allocation.w1 * 100).toFixed(2) + '%',
         },
         phase2: {
           weight: allocation.w2,
           equity: equity * allocation.w2,
-          percentage: (allocation.w2 * 100).toFixed(2) + "%",
+          percentage: (allocation.w2 * 100).toFixed(2) + '%',
         },
         phase3: {
           weight: allocation.w3,
           equity: equity * allocation.w3,
-          percentage: (allocation.w3 * 100).toFixed(2) + "%",
+          percentage: (allocation.w3 * 100).toFixed(2) + '%',
         },
       },
       totalEquity: equity,
@@ -261,10 +250,7 @@ export class DashboardService {
    * @param equity - Total equity
    * @returns Phase equity breakdown
    */
-  calculatePhaseEquity(
-    allocation: AllocationVector,
-    equity: number,
-  ): Record<PhaseId, number> {
+  calculatePhaseEquity(allocation: AllocationVector, equity: number): Record<PhaseId, number> {
     return {
       phase1: equity * allocation.w1,
       phase2: equity * allocation.w2,
@@ -292,14 +278,8 @@ export class DashboardService {
 
     // Calculate additional metrics
     const positionCount = positions.length;
-    const totalNotional = positions.reduce(
-      (sum, pos) => sum + Math.abs(pos.size),
-      0,
-    );
-    const totalUnrealizedPnL = positions.reduce(
-      (sum, pos) => sum + (pos.unrealizedPnL ?? 0),
-      0,
-    );
+    const totalNotional = positions.reduce((sum, pos) => sum + Math.abs(pos.size), 0);
+    const totalUnrealizedPnL = positions.reduce((sum, pos) => sum + (pos.unrealizedPnL ?? 0), 0);
 
     // Calculate correlation matrix for all positions
     const correlations: Record<string, Record<string, number>> = {};
@@ -325,11 +305,7 @@ export class DashboardService {
       totalNotional,
       totalUnrealizedPnL,
       correlationMatrix: correlations,
-      riskScore: this.calculateRiskScore(
-        baseMetrics,
-        positionCount,
-        totalNotional,
-      ),
+      riskScore: this.calculateRiskScore(baseMetrics, positionCount, totalNotional),
     };
   }
 
@@ -348,12 +324,10 @@ export class DashboardService {
     // Calculate additional metrics
     const currentEquity = this.brain.getEquity();
     const totalEquity = treasury.futuresWallet + treasury.spotWallet;
-    const drawdownFromHigh = highWatermark > 0
-      ? (highWatermark - currentEquity) / highWatermark
-      : 0;
-    const sweepProgress = nextSweepLevel > 0
-      ? Math.min(treasury.futuresWallet / nextSweepLevel, 1)
-      : 0;
+    const drawdownFromHigh =
+      highWatermark > 0 ? (highWatermark - currentEquity) / highWatermark : 0;
+    const sweepProgress =
+      nextSweepLevel > 0 ? Math.min(treasury.futuresWallet / nextSweepLevel, 1) : 0;
 
     return {
       ...treasury,
@@ -362,12 +336,8 @@ export class DashboardService {
       highWatermark,
       drawdownFromHigh,
       sweepProgress,
-      riskCapitalRatio: totalEquity > 0
-        ? treasury.riskCapital / totalEquity
-        : 0,
-      lockedProfitRatio: totalEquity > 0
-        ? treasury.lockedProfit / totalEquity
-        : 0,
+      riskCapitalRatio: totalEquity > 0 ? treasury.riskCapital / totalEquity : 0,
+      lockedProfitRatio: totalEquity > 0 ? treasury.lockedProfit / totalEquity : 0,
     };
   }
 
@@ -379,16 +349,13 @@ export class DashboardService {
    * @param phaseFilter - Optional phase filter
    * @returns Recent decisions with metadata
    */
-  async getRecentDecisions(
-    limit: number = this.config.maxRecentDecisions,
-    phaseFilter?: PhaseId,
-  ) {
+  async getRecentDecisions(limit: number = this.config.maxRecentDecisions, phaseFilter?: PhaseId) {
     let decisions = this.brain.getRecentDecisions(limit);
 
     // Apply phase filter if specified
     if (phaseFilter) {
-      decisions = decisions.filter((d) =>
-        d.allocation && this.getPhaseFromDecision(d) === phaseFilter
+      decisions = decisions.filter(
+        (d) => d.allocation && this.getPhaseFromDecision(d) === phaseFilter,
       );
     }
 
@@ -406,10 +373,10 @@ export class DashboardService {
         total: enhancedDecisions.length,
         approved: enhancedDecisions.filter((d) => d.approved).length,
         rejected: enhancedDecisions.filter((d) => !d.approved).length,
-        approvalRate: enhancedDecisions.length > 0
-          ? enhancedDecisions.filter((d) => d.approved).length /
-            enhancedDecisions.length
-          : 0,
+        approvalRate:
+          enhancedDecisions.length > 0
+            ? enhancedDecisions.filter((d) => d.approved).length / enhancedDecisions.length
+            : 0,
       },
     };
   }
@@ -422,10 +389,7 @@ export class DashboardService {
    */
   async getDashboardData(): Promise<ExtendedDashboardData> {
     // Check cache
-    if (
-      this.dashboardCache &&
-      Date.now() - this.dashboardCacheTime < this.config.cacheTTL
-    ) {
+    if (this.dashboardCache && Date.now() - this.dashboardCacheTime < this.config.cacheTTL) {
       return this.dashboardCache;
     }
 
@@ -445,14 +409,8 @@ export class DashboardService {
     const positions = this.brain.getPositions();
     const positionsSummary = {
       count: positions.length,
-      totalNotional: positions.reduce(
-        (sum, pos) => sum + Math.abs(pos.size),
-        0,
-      ),
-      totalUnrealizedPnL: positions.reduce(
-        (sum, pos) => sum + (pos.unrealizedPnL ?? 0),
-        0,
-      ),
+      totalNotional: positions.reduce((sum, pos) => sum + Math.abs(pos.size), 0),
+      totalUnrealizedPnL: positions.reduce((sum, pos) => sum + (pos.unrealizedPnL ?? 0), 0),
     };
 
     // Calculate time since last profitable trade
@@ -495,7 +453,7 @@ export class DashboardService {
       metadata: {
         exportedAt: new Date().toISOString(),
         version: this.config.version,
-        source: "titan-brain-dashboard-service",
+        source: 'titan-brain-dashboard-service',
       },
       data: dashboardData,
     };
@@ -593,17 +551,15 @@ export class DashboardService {
   /**
    * Calculate risk level for a decision
    */
-  private calculateDecisionRiskLevel(
-    decision: BrainDecision,
-  ): "low" | "medium" | "high" {
-    if (!decision.risk.riskMetrics) return "low";
+  private calculateDecisionRiskLevel(decision: BrainDecision): 'low' | 'medium' | 'high' {
+    if (!decision.risk.riskMetrics) return 'low';
 
     const leverage = decision.risk.riskMetrics.currentLeverage;
     const correlation = decision.risk.riskMetrics.correlation;
 
-    if (leverage > 10 || correlation > 0.8) return "high";
-    if (leverage > 5 || correlation > 0.6) return "medium";
-    return "low";
+    if (leverage > 10 || correlation > 0.8) return 'high';
+    if (leverage > 5 || correlation > 0.6) return 'medium';
+    return 'low';
   }
 
   /**
@@ -637,7 +593,7 @@ export class DashboardService {
         return Date.now() - result.rows[0].last_profit_time;
       }
     } catch (error) {
-      console.error("Error fetching last profit time:", error);
+      console.error('Error fetching last profit time:', error);
     }
 
     return null;

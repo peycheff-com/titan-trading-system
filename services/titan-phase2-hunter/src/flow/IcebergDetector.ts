@@ -1,14 +1,14 @@
 /**
  * IcebergDetector - Iceberg Order Detection System
- * 
+ *
  * Purpose: Detect hidden liquidity (iceberg orders) by measuring
  * how quickly liquidity refills at specific price levels.
- * 
+ *
  * Key Features:
  * - Build liquidity refill rate measurement
  * - Implement iceberg density calculation
  * - Real-time monitoring for Order Block liquidity changes
- * 
+ *
  * Requirements: 2.3, 2.4 (Iceberg Detection and Order Block monitoring)
  */
 
@@ -90,7 +90,7 @@ const DEFAULT_CONFIG: IcebergDetectorConfig = {
   minRefillRate: 100, // $100/second
   densityThreshold: 60, // 60% density threshold
   tickSize: 0.01,
-  maxDataAge: 300000 // 5 minutes
+  maxDataAge: 300000, // 5 minutes
 };
 
 // ============================================================================
@@ -99,7 +99,7 @@ const DEFAULT_CONFIG: IcebergDetectorConfig = {
 
 /**
  * IcebergDetector - Identifies hidden liquidity through refill patterns
- * 
+ *
  * Iceberg orders are large orders that are partially hidden, showing only
  * a small portion at a time. They can be detected by measuring how quickly
  * liquidity refills after being consumed.
@@ -123,11 +123,7 @@ export class IcebergDetector extends EventEmitter {
    * Measure liquidity refill rate at a price level
    * Requirement 2.3: Build liquidity refill rate measurement
    */
-  measureRefillRate(
-    symbol: string,
-    priceLevel: number,
-    trades: CVDTrade[]
-  ): number {
+  measureRefillRate(symbol: string, priceLevel: number, trades: CVDTrade[]): number {
     const tickSize = this.calculateTickSize(priceLevel);
     const roundedLevel = this.roundToTick(priceLevel, tickSize);
 
@@ -135,8 +131,8 @@ export class IcebergDetector extends EventEmitter {
     const level = this.getOrCreateLiquidityLevel(symbol, roundedLevel);
 
     // Analyze trades at this level
-    const levelTrades = trades.filter(t => 
-      Math.abs(this.roundToTick(t.price, tickSize) - roundedLevel) < tickSize
+    const levelTrades = trades.filter(
+      t => Math.abs(this.roundToTick(t.price, tickSize) - roundedLevel) < tickSize
     );
 
     if (levelTrades.length === 0) return 0;
@@ -157,20 +153,23 @@ export class IcebergDetector extends EventEmitter {
         level.consumptions.push({
           timestamp: trade.time,
           volumeConsumed: volume,
-          remainingLiquidity: Math.max(0, level.currentLiquidity - volume)
+          remainingLiquidity: Math.max(0, level.currentLiquidity - volume),
         });
 
         level.currentLiquidity = Math.max(0, level.currentLiquidity - volume);
       } else {
         // Buy order - check if this is a refill
-        if (lastConsumptionTime > 0 && trade.time - lastConsumptionTime < this.config.refillWindow) {
+        if (
+          lastConsumptionTime > 0 &&
+          trade.time - lastConsumptionTime < this.config.refillWindow
+        ) {
           const timeSinceConsumption = trade.time - lastConsumptionTime;
 
           level.refills.push({
             timestamp: trade.time,
             volumeRefilled: volume,
             newLiquidity: level.currentLiquidity + volume,
-            timeSinceConsumption
+            timeSinceConsumption,
           });
 
           level.currentLiquidity += volume;
@@ -179,14 +178,15 @@ export class IcebergDetector extends EventEmitter {
     }
 
     // Calculate refill rate (volume per second)
-    const recentRefills = level.refills.filter(r => 
-      r.timestamp > Date.now() - this.config.refillWindow
+    const recentRefills = level.refills.filter(
+      r => r.timestamp > Date.now() - this.config.refillWindow
     );
 
     if (recentRefills.length === 0) return 0;
 
     const totalRefillVolume = recentRefills.reduce((sum, r) => sum + r.volumeRefilled, 0);
-    const timeSpan = (recentRefills[recentRefills.length - 1].timestamp - recentRefills[0].timestamp) || 1;
+    const timeSpan =
+      recentRefills[recentRefills.length - 1].timestamp - recentRefills[0].timestamp || 1;
     const refillRate = (totalRefillVolume / timeSpan) * 1000; // Per second
 
     level.lastUpdate = Date.now();
@@ -202,11 +202,7 @@ export class IcebergDetector extends EventEmitter {
    * Calculate iceberg density at a price level
    * Requirement 2.3: Implement iceberg density calculation
    */
-  calculateIcebergDensity(
-    symbol: string,
-    priceLevel: number,
-    trades: CVDTrade[]
-  ): IcebergAnalysis {
+  calculateIcebergDensity(symbol: string, priceLevel: number, trades: CVDTrade[]): IcebergAnalysis {
     const tickSize = this.calculateTickSize(priceLevel);
     const roundedLevel = this.roundToTick(priceLevel, tickSize);
 
@@ -217,8 +213,8 @@ export class IcebergDetector extends EventEmitter {
     const level = this.getOrCreateLiquidityLevel(symbol, roundedLevel);
 
     // Calculate density based on refill patterns
-    const refillCount = level.refills.filter(r => 
-      r.timestamp > Date.now() - this.config.maxDataAge
+    const refillCount = level.refills.filter(
+      r => r.timestamp > Date.now() - this.config.maxDataAge
     ).length;
 
     // Density formula: combines refill rate, refill count, and consistency
@@ -237,9 +233,10 @@ export class IcebergDetector extends EventEmitter {
     density += consistencyScore;
 
     // Determine if this is an iceberg
-    const isIceberg = density >= this.config.densityThreshold &&
-                      refillCount >= this.config.minRefillCount &&
-                      refillRate >= this.config.minRefillRate;
+    const isIceberg =
+      density >= this.config.densityThreshold &&
+      refillCount >= this.config.minRefillCount &&
+      refillRate >= this.config.minRefillRate;
 
     const analysis: IcebergAnalysis = {
       priceLevel: roundedLevel,
@@ -247,7 +244,7 @@ export class IcebergDetector extends EventEmitter {
       refillRate,
       refillCount,
       density: Math.min(100, density),
-      isIceberg
+      isIceberg,
     };
 
     // Cache the analysis
@@ -275,7 +272,8 @@ export class IcebergDetector extends EventEmitter {
 
     // Calculate coefficient of variation (lower = more consistent)
     const mean = intervals.reduce((sum, i) => sum + i, 0) / intervals.length;
-    const variance = intervals.reduce((sum, i) => sum + Math.pow(i - mean, 2), 0) / intervals.length;
+    const variance =
+      intervals.reduce((sum, i) => sum + Math.pow(i - mean, 2), 0) / intervals.length;
     const stdDev = Math.sqrt(variance);
     const cv = mean > 0 ? stdDev / mean : 1;
 
@@ -314,34 +312,38 @@ export class IcebergDetector extends EventEmitter {
       // Iceberg detected - strong hidden liquidity
       liquidityHealth = 'strong';
       recommendation = 'caution';
-      reasoning = `Iceberg detected at ${priceLevel.toFixed(2)} with density ${primaryAnalysis.density.toFixed(1)}%. ` +
-                  `Refill rate: ${primaryAnalysis.refillRate.toFixed(2)}/s. ` +
-                  `This may indicate institutional selling - consider avoiding Long entries.`;
+      reasoning =
+        `Iceberg detected at ${priceLevel.toFixed(2)} with density ${primaryAnalysis.density.toFixed(1)}%. ` +
+        `Refill rate: ${primaryAnalysis.refillRate.toFixed(2)}/s. ` +
+        `This may indicate institutional selling - consider avoiding Long entries.`;
 
       this.emit('icebergWarning', {
         symbol,
         priceLevel,
         density: primaryAnalysis.density,
-        recommendation: 'ICEBERG_SELL'
+        recommendation: 'ICEBERG_SELL',
       });
     } else if (primaryAnalysis.density > 30) {
       // Moderate liquidity
       liquidityHealth = 'weakening';
       recommendation = 'caution';
-      reasoning = `Moderate liquidity at ${priceLevel.toFixed(2)} with density ${primaryAnalysis.density.toFixed(1)}%. ` +
-                  `Monitor for further changes.`;
+      reasoning =
+        `Moderate liquidity at ${priceLevel.toFixed(2)} with density ${primaryAnalysis.density.toFixed(1)}%. ` +
+        `Monitor for further changes.`;
     } else if (primaryAnalysis.refillCount > 0) {
       // Some refill activity
       liquidityHealth = 'weakening';
       recommendation = 'valid';
-      reasoning = `Order Block at ${priceLevel.toFixed(2)} shows some liquidity activity. ` +
-                  `Refill count: ${primaryAnalysis.refillCount}. Proceed with normal validation.`;
+      reasoning =
+        `Order Block at ${priceLevel.toFixed(2)} shows some liquidity activity. ` +
+        `Refill count: ${primaryAnalysis.refillCount}. Proceed with normal validation.`;
     } else {
       // No significant liquidity
       liquidityHealth = 'depleted';
       recommendation = 'valid';
-      reasoning = `Order Block at ${priceLevel.toFixed(2)} shows no iceberg activity. ` +
-                  `Liquidity appears genuine.`;
+      reasoning =
+        `Order Block at ${priceLevel.toFixed(2)} shows no iceberg activity. ` +
+        `Liquidity appears genuine.`;
     }
 
     const result: OrderBlockLiquidityResult = {
@@ -349,7 +351,7 @@ export class IcebergDetector extends EventEmitter {
       icebergAnalysis: primaryAnalysis,
       liquidityHealth,
       recommendation,
-      reasoning
+      reasoning,
     };
 
     this.emit('orderBlockMonitored', result);
@@ -372,8 +374,8 @@ export class IcebergDetector extends EventEmitter {
     if (!level) return false;
 
     // Quick check based on recent refill activity
-    const recentRefills = level.refills.filter(r => 
-      r.timestamp > Date.now() - this.config.refillWindow
+    const recentRefills = level.refills.filter(
+      r => r.timestamp > Date.now() - this.config.refillWindow
     );
 
     return recentRefills.length >= this.config.minRefillCount;
@@ -400,7 +402,7 @@ export class IcebergDetector extends EventEmitter {
         peakLiquidity: 0,
         consumptions: [],
         refills: [],
-        lastUpdate: Date.now()
+        lastUpdate: Date.now(),
       });
     }
 
@@ -525,7 +527,7 @@ export class IcebergDetector extends EventEmitter {
     return {
       symbolsTracked: this.liquidityLevels.size,
       levelsTracked,
-      cachedAnalyses
+      cachedAnalyses,
     };
   }
 

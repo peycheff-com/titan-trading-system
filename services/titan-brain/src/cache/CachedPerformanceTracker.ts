@@ -1,7 +1,7 @@
 /**
  * CachedPerformanceTracker - Wrapper that adds caching to PerformanceTracker
  * Caches performance metrics with 1 minute TTL
- * 
+ *
  * Requirements: 2.2
  */
 
@@ -31,7 +31,7 @@ export class CachedPerformanceTracker {
     pnl: number,
     timestamp: number,
     symbol?: string,
-    side?: 'BUY' | 'SELL'
+    side?: 'BUY' | 'SELL',
   ): Promise<void> {
     await this.tracker.recordTrade(phaseId, pnl, timestamp, symbol, side);
     // Invalidate cache for this phase

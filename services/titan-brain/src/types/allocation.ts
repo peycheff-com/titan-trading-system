@@ -7,11 +7,11 @@
  * Equity tier classification based on account size
  */
 export enum EquityTier {
-  MICRO = 'MICRO',           // < $1,500
-  SMALL = 'SMALL',           // $1,500 - $5,000
-  MEDIUM = 'MEDIUM',         // $5,000 - $25,000
-  LARGE = 'LARGE',           // $25,000 - $50,000
-  INSTITUTIONAL = 'INSTITUTIONAL' // > $50,000
+  MICRO = 'MICRO', // < $1,500
+  SMALL = 'SMALL', // $1,500 - $5,000
+  MEDIUM = 'MEDIUM', // $5,000 - $25,000
+  LARGE = 'LARGE', // $25,000 - $50,000
+  INSTITUTIONAL = 'INSTITUTIONAL', // > $50,000
 }
 
 /**

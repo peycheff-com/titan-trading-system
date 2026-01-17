@@ -1,7 +1,7 @@
 /**
  * DashboardIntegration - Integration example for DashboardService
  * Shows how to set up wallet providers and configure the service
- * 
+ *
  * Requirements: 10.2, 10.8
  */
 
@@ -86,10 +86,7 @@ export class BinanceWalletProvider {
 /**
  * Set up dashboard service with wallet providers
  */
-export function setupDashboardService(
-  brain: TitanBrain,
-  db?: DatabaseManager
-): DashboardService {
+export function setupDashboardService(brain: TitanBrain, db?: DatabaseManager): DashboardService {
   const dashboardService = new DashboardService(brain, db, {
     version: '1.0.0',
     cacheTTL: 60000, // 1 minute

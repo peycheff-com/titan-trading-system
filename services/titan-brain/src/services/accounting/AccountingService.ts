@@ -46,7 +46,7 @@ export class AccountingService {
                     // Execution publishes `titan.execution.status` or similar.
                     this.trackIntent(intent);
                 } catch (e) {
-                    this.logger.error("Failed to parse intent", e);
+                    this.logger.error("Failed to parse intent", e as Error);
                 }
             },
         );
@@ -59,7 +59,31 @@ export class AccountingService {
                 try {
                     await this.processFill(fill);
                 } catch (e) {
-                    this.logger.error("Failed to process fill", e);
+                    this.logger.error("Failed to process fill", e as Error);
+                }
+            },
+        );
+
+        // Subscribe to Shadow Fills (Truth Layer)
+        // Subject: titan.execution.shadow_fill.<symbol>
+        await this.nats.subscribe<FillReport>(
+            "titan.execution.shadow_fill.>",
+            async (fill: FillReport, subject: string) => {
+                try {
+                    this.logger.info("👻 Shadow Fill Received", undefined, {
+                        symbol: fill.symbol,
+                        price: fill.price,
+                        t_signal: fill.t_signal,
+                        t_exchange: fill.t_exchange,
+                    });
+
+                    // TODO: Implement full Drift/Slippage calculation by matching with Real Fill
+                    // For now, we just log it to verify the pipeline.
+                } catch (e) {
+                    this.logger.error(
+                        "Failed to process shadow fill",
+                        e as Error,
+                    );
                 }
             },
         );

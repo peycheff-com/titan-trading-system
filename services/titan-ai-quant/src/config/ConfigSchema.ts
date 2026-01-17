@@ -1,9 +1,9 @@
 /**
  * Config Schema with Zod
- * 
+ *
  * Defines Zod schemas for configuration validation
  * and exports TypeScript types.
- * 
+ *
  * Requirements: 2.6
  */
 
@@ -16,7 +16,7 @@ import { z } from 'zod';
 export const TrapConfigSchema = z.object({
   enabled: z.boolean(),
   stop_loss: z.number().min(0.001).max(0.05),
-  take_profit: z.number().min(0.005).max(0.20),
+  take_profit: z.number().min(0.005).max(0.2),
   trailing_stop: z.number().min(0.001).max(0.05).optional(),
   risk_per_trade: z.number().min(0.001).max(0.05),
   max_leverage: z.number().int().min(1).max(20),
@@ -29,10 +29,10 @@ export const TrapConfigSchema = z.object({
  * Defines global risk management parameters
  */
 export const RiskConfigSchema = z.object({
-  max_daily_loss: z.number().min(0.01).max(0.20),
+  max_daily_loss: z.number().min(0.01).max(0.2),
   max_position_size: z.number().min(0.1).max(1.0),
   max_open_positions: z.number().int().min(1).max(10),
-  emergency_flatten_threshold: z.number().min(0.05).max(0.30),
+  emergency_flatten_threshold: z.number().min(0.05).max(0.3),
 });
 
 /**
@@ -77,7 +77,9 @@ export function validateConfig(config: unknown): Config {
 /**
  * Safely validate configuration, returning errors instead of throwing
  */
-export function safeValidateConfig(config: unknown): { success: true; data: Config } | { success: false; error: z.ZodError } {
+export function safeValidateConfig(
+  config: unknown,
+): { success: true; data: Config } | { success: false; error: z.ZodError } {
   const result = ConfigSchema.safeParse(config);
   return result;
 }
@@ -130,7 +132,7 @@ export function getDefaultConfig(): Config {
       max_daily_loss: 0.05,
       max_position_size: 0.5,
       max_open_positions: 3,
-      emergency_flatten_threshold: 0.10,
+      emergency_flatten_threshold: 0.1,
     },
     execution: {
       latency_penalty: 200,

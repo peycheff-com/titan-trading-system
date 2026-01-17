@@ -1,6 +1,6 @@
 /**
  * Order Types for Titan Phase 3 - The Sentinel
- * 
+ *
  * Defines order structures, execution results, and TWAP execution types.
  */
 

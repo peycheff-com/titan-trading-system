@@ -34,6 +34,8 @@ interface ApiKeys {
   testnet?: boolean; // New field
   validated: boolean;
   last_validated: string | null;
+  has_api_key?: boolean;
+  has_api_secret?: boolean;
 }
 
 interface Fees {
@@ -111,14 +113,11 @@ const Settings = () => {
   const [localGuardrails, setLocalGuardrails] = useState<Guardrails | null>(null);
   const [localBacktester, setLocalBacktester] = useState<Backtester | null>(null);
   const [localMemory, setLocalMemory] = useState<StrategicMemory | null>(null);
-
+  const [localApiKeys, setLocalApiKeys] = useState<ApiKeys | null>(null);
+  
   const TITAN_EXECUTION_URL = getTitanExecutionUrl();
 
-  useEffect(() => {
-    fetchConfig();
-  }, []);
-
-  const fetchConfig = async () => {
+  const fetchConfig = React.useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`${TITAN_EXECUTION_URL}/api/config/current`);
@@ -180,7 +179,11 @@ const Settings = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [TITAN_EXECUTION_URL, toast]);
+
+  useEffect(() => {
+    fetchConfig();
+  }, [fetchConfig]);
 
   const saveConfig = async (section: string, updates: any) => {
     try {

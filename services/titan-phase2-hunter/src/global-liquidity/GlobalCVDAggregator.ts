@@ -1,28 +1,23 @@
 /**
  * GlobalCVDAggregator - Volume-Weighted CVD Aggregation Engine
- * 
+ *
  * Aggregates Cumulative Volume Delta from multiple exchanges using
  * volume-weighted averaging for accurate global flow analysis.
- * 
+ *
  * Requirements: 4.2 (Global CVD Calculation)
  */
 
 import { EventEmitter } from 'events';
 import { ExchangeTrade } from './ExchangeWebSocketClient';
-import { 
-  ConnectionStatus, 
-  ExchangeFlow, 
-  GlobalCVDData,
-  ManipulationAnalysis 
-} from '../types';
+import { ConnectionStatus, ExchangeFlow, GlobalCVDData, ManipulationAnalysis } from '../types';
 
 /**
  * CVD calculation window configuration
  */
 export interface CVDWindowConfig {
-  shortWindow: number;  // 1 minute
+  shortWindow: number; // 1 minute
   mediumWindow: number; // 5 minutes
-  longWindow: number;   // 15 minutes
+  longWindow: number; // 15 minutes
 }
 
 /**
@@ -77,24 +72,24 @@ const DEFAULT_CONFIG: GlobalCVDAggregatorConfig = {
   exchangeWeights: {
     binance: 40,
     coinbase: 35,
-    kraken: 25
+    kraken: 25,
   },
   weightingMethod: 'volume',
   updateInterval: 1000, // 1 second
   tradeHistoryWindow: 15 * 60 * 1000, // 15 minutes
   cvdWindows: {
-    shortWindow: 60 * 1000,      // 1 minute
+    shortWindow: 60 * 1000, // 1 minute
     mediumWindow: 5 * 60 * 1000, // 5 minutes
-    longWindow: 15 * 60 * 1000   // 15 minutes
-  }
+    longWindow: 15 * 60 * 1000, // 15 minutes
+  },
 };
 
 /**
  * GlobalCVDAggregator - Aggregates CVD from multiple exchanges
- * 
+ *
  * Requirement 4.2: Aggregate buy/sell volume from all three exchanges
  * with volume-weighted averaging
- * 
+ *
  * Emits events:
  * - 'cvdUpdate': GlobalCVDData - CVD data updated
  * - 'exchangeUpdate': ExchangeFlow - Single exchange CVD updated
@@ -119,7 +114,7 @@ export class GlobalCVDAggregator extends EventEmitter {
    */
   private initializeExchangeStates(): void {
     const exchanges: ('binance' | 'coinbase' | 'kraken')[] = ['binance', 'coinbase', 'kraken'];
-    
+
     for (const exchange of exchanges) {
       this.exchangeStates.set(exchange, {
         exchange,
@@ -127,7 +122,7 @@ export class GlobalCVDAggregator extends EventEmitter {
         volume: 0,
         trades: 0,
         lastUpdate: 0,
-        status: ConnectionStatus.DISCONNECTED
+        status: ConnectionStatus.DISCONNECTED,
       });
     }
   }
@@ -163,11 +158,10 @@ export class GlobalCVDAggregator extends EventEmitter {
    */
   processTrade(trade: ExchangeTrade): void {
     const symbol = trade.symbol;
-    
+
     // Calculate CVD contribution (positive for buy, negative for sell)
-    const cvdContribution = trade.side === 'buy' 
-      ? trade.quantity * trade.price 
-      : -trade.quantity * trade.price;
+    const cvdContribution =
+      trade.side === 'buy' ? trade.quantity * trade.price : -trade.quantity * trade.price;
 
     // Create history entry
     const entry: TradeHistoryEntry = {
@@ -177,7 +171,7 @@ export class GlobalCVDAggregator extends EventEmitter {
       quantity: trade.quantity,
       side: trade.side,
       timestamp: trade.timestamp,
-      cvdContribution
+      cvdContribution,
     };
 
     // Add to trade history
@@ -203,7 +197,10 @@ export class GlobalCVDAggregator extends EventEmitter {
   /**
    * Update exchange connection status
    */
-  updateExchangeStatus(exchange: 'binance' | 'coinbase' | 'kraken', status: ConnectionStatus): void {
+  updateExchangeStatus(
+    exchange: 'binance' | 'coinbase' | 'kraken',
+    status: ConnectionStatus
+  ): void {
     const state = this.exchangeStates.get(exchange);
     if (state) {
       state.status = status;
@@ -219,7 +216,10 @@ export class GlobalCVDAggregator extends EventEmitter {
    * Calculate Global CVD with volume-weighted averaging
    * Requirement 4.2: Volume-weighted CVD calculation across exchanges
    */
-  calculateGlobalCVD(symbol: string, windowMs: number = this.config.cvdWindows.mediumWindow): GlobalCVDData {
+  calculateGlobalCVD(
+    symbol: string,
+    windowMs: number = this.config.cvdWindows.mediumWindow
+  ): GlobalCVDData {
     const now = Date.now();
     const cutoff = now - windowMs;
     const trades = this.tradeHistory.get(symbol) || [];
@@ -227,7 +227,10 @@ export class GlobalCVDAggregator extends EventEmitter {
 
     // Calculate per-exchange CVD and volume
     const exchangeFlows: ExchangeFlow[] = [];
-    const exchangeCVDs: Map<'binance' | 'coinbase' | 'kraken', { cvd: number; volume: number; trades: number }> = new Map();
+    const exchangeCVDs: Map<
+      'binance' | 'coinbase' | 'kraken',
+      { cvd: number; volume: number; trades: number }
+    > = new Map();
 
     // Initialize
     for (const exchange of ['binance', 'coinbase', 'kraken'] as const) {
@@ -254,7 +257,7 @@ export class GlobalCVDAggregator extends EventEmitter {
 
     for (const [exchange, data] of exchangeCVDs) {
       const state = this.exchangeStates.get(exchange)!;
-      
+
       // Calculate weight based on method
       let weight: number;
       if (this.config.weightingMethod === 'volume' && totalVolume > 0) {
@@ -278,7 +281,7 @@ export class GlobalCVDAggregator extends EventEmitter {
         trades: data.trades,
         weight,
         timestamp: new Date(state.lastUpdate),
-        status: state.status
+        status: state.status,
       });
     }
 
@@ -300,7 +303,7 @@ export class GlobalCVDAggregator extends EventEmitter {
       consensus,
       confidence,
       manipulation,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
     this.lastGlobalCVD = globalCVD;
@@ -325,14 +328,17 @@ export class GlobalCVDAggregator extends EventEmitter {
     return {
       short: this.calculateGlobalCVD(symbol, this.config.cvdWindows.shortWindow),
       medium: this.calculateGlobalCVD(symbol, this.config.cvdWindows.mediumWindow),
-      long: this.calculateGlobalCVD(symbol, this.config.cvdWindows.longWindow)
+      long: this.calculateGlobalCVD(symbol, this.config.cvdWindows.longWindow),
     };
   }
 
   /**
    * Get exchange flow for a specific exchange
    */
-  getExchangeFlow(exchange: 'binance' | 'coinbase' | 'kraken', symbol: string): ExchangeFlow | null {
+  getExchangeFlow(
+    exchange: 'binance' | 'coinbase' | 'kraken',
+    symbol: string
+  ): ExchangeFlow | null {
     const globalCVD = this.calculateGlobalCVD(symbol);
     return globalCVD.exchangeFlows.find(f => f.exchange === exchange) || null;
   }
@@ -340,9 +346,13 @@ export class GlobalCVDAggregator extends EventEmitter {
   /**
    * Determine consensus direction from exchange flows
    */
-  private determineConsensus(flows: ExchangeFlow[]): 'bullish' | 'bearish' | 'neutral' | 'conflicted' {
-    const connectedFlows = flows.filter(f => f.status === ConnectionStatus.CONNECTED && f.trades > 0);
-    
+  private determineConsensus(
+    flows: ExchangeFlow[]
+  ): 'bullish' | 'bearish' | 'neutral' | 'conflicted' {
+    const connectedFlows = flows.filter(
+      f => f.status === ConnectionStatus.CONNECTED && f.trades > 0
+    );
+
     if (connectedFlows.length === 0) {
       return 'neutral';
     }
@@ -359,7 +369,7 @@ export class GlobalCVDAggregator extends EventEmitter {
     if (bullishCount >= 2) return 'bullish';
     if (bearishCount >= 2) return 'bearish';
     if (bullishCount === 1 && bearishCount === 1) return 'conflicted';
-    
+
     return 'neutral';
   }
 
@@ -367,8 +377,10 @@ export class GlobalCVDAggregator extends EventEmitter {
    * Calculate confidence score based on exchange agreement and volume
    */
   private calculateConfidence(flows: ExchangeFlow[], totalVolume: number): number {
-    const connectedFlows = flows.filter(f => f.status === ConnectionStatus.CONNECTED && f.trades > 0);
-    
+    const connectedFlows = flows.filter(
+      f => f.status === ConnectionStatus.CONNECTED && f.trades > 0
+    );
+
     if (connectedFlows.length === 0) return 0;
 
     // Factor 1: Exchange agreement (0-50 points)
@@ -389,20 +401,22 @@ export class GlobalCVDAggregator extends EventEmitter {
    * Detect potential manipulation patterns
    */
   private detectManipulation(flows: ExchangeFlow[]): ManipulationAnalysis {
-    const connectedFlows = flows.filter(f => f.status === ConnectionStatus.CONNECTED && f.trades > 0);
-    
+    const connectedFlows = flows.filter(
+      f => f.status === ConnectionStatus.CONNECTED && f.trades > 0
+    );
+
     if (connectedFlows.length < 2) {
       return {
         detected: false,
         suspectExchange: null,
         divergenceScore: 0,
-        pattern: 'none'
+        pattern: 'none',
       };
     }
 
     // Calculate average CVD
     const avgCVD = connectedFlows.reduce((sum, f) => sum + f.cvd, 0) / connectedFlows.length;
-    
+
     // Find outliers (CVD significantly different from average)
     let maxDivergence = 0;
     let suspectExchange: string | null = null;
@@ -410,7 +424,7 @@ export class GlobalCVDAggregator extends EventEmitter {
     for (const flow of connectedFlows) {
       const divergence = Math.abs(flow.cvd - avgCVD);
       const normalizedDivergence = avgCVD !== 0 ? divergence / Math.abs(avgCVD) : 0;
-      
+
       if (normalizedDivergence > maxDivergence) {
         maxDivergence = normalizedDivergence;
         suspectExchange = flow.exchange;
@@ -425,7 +439,7 @@ export class GlobalCVDAggregator extends EventEmitter {
       detected,
       suspectExchange: detected ? suspectExchange : null,
       divergenceScore,
-      pattern: detected ? 'single_exchange_outlier' : 'none'
+      pattern: detected ? 'single_exchange_outlier' : 'none',
     };
   }
 
@@ -483,7 +497,7 @@ export class GlobalCVDAggregator extends EventEmitter {
    * Get current exchange weights
    */
   getExchangeWeights(): ExchangeWeightConfig {
-    return this.config.weightingMethod === 'fixed' 
+    return this.config.weightingMethod === 'fixed'
       ? { ...this.config.exchangeWeights }
       : { ...this.dynamicWeights };
   }
@@ -493,7 +507,7 @@ export class GlobalCVDAggregator extends EventEmitter {
    */
   updateExchangeWeights(weights: Partial<ExchangeWeightConfig>): void {
     this.config.exchangeWeights = { ...this.config.exchangeWeights, ...weights };
-    
+
     // Validate weights sum to 100
     const total = Object.values(this.config.exchangeWeights).reduce((a, b) => a + b, 0);
     if (Math.abs(total - 100) > 0.1) {
@@ -520,7 +534,7 @@ export class GlobalCVDAggregator extends EventEmitter {
     return {
       symbols: this.tradeHistory.size,
       totalTrades,
-      memoryEstimate: `${(totalTrades * 100 / 1024).toFixed(1)} KB`
+      memoryEstimate: `${((totalTrades * 100) / 1024).toFixed(1)} KB`,
     };
   }
 

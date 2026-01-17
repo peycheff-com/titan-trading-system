@@ -1,9 +1,9 @@
 /**
  * ServiceClient - Robust HTTP client for inter-service communication
- * 
+ *
  * Provides a robust HTTP client with automatic retries, exponential backoff,
  * circuit breaker pattern, request/response logging, and Railway service URL support.
- * 
+ *
  * Requirements: 2.1.1, 2.1.2, 2.1.3, 2.1.4, 2.1.5
  */
 
@@ -72,8 +72,12 @@ export interface ServiceClientConfig {
  * Request/Response interceptor functions
  */
 export type RequestInterceptor = (config: RequestConfig) => RequestConfig | Promise<RequestConfig>;
-export type ResponseInterceptor<T = any> = (response: ServiceResponse<T>) => ServiceResponse<T> | Promise<ServiceResponse<T>>;
-export type ErrorInterceptor = (error: ServiceClientError) => ServiceClientError | Promise<ServiceClientError>;
+export type ResponseInterceptor<T = any> = (
+  response: ServiceResponse<T>,
+) => ServiceResponse<T> | Promise<ServiceResponse<T>>;
+export type ErrorInterceptor = (
+  error: ServiceClientError,
+) => ServiceClientError | Promise<ServiceClientError>;
 
 /**
  * Service client error
@@ -84,7 +88,7 @@ export class ServiceClientError extends Error {
     public readonly status?: number,
     public readonly response?: ServiceResponse,
     public readonly config?: RequestConfig,
-    public readonly cause?: Error
+    public readonly cause?: Error,
   ) {
     super(message);
     this.name = 'ServiceClientError';
@@ -96,16 +100,16 @@ export class ServiceClientError extends Error {
   isRetryable(): boolean {
     // Network errors are retryable
     if (!this.status) return true;
-    
+
     // 5xx server errors are retryable
     if (this.status >= 500) return true;
-    
+
     // 429 rate limit is retryable
     if (this.status === 429) return true;
-    
+
     // 408 request timeout is retryable
     if (this.status === 408) return true;
-    
+
     return false;
   }
 
@@ -129,27 +133,27 @@ export class ServiceClientError extends Error {
  */
 const DEFAULT_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,
-  initialDelay: 1000,      // 1 second
-  maxDelay: 30000,         // 30 seconds
+  initialDelay: 1000, // 1 second
+  maxDelay: 30000, // 30 seconds
   backoffMultiplier: 2,
   retryableStatusCodes: [408, 429, 500, 502, 503, 504],
-  retryableErrors: ['ECONNRESET', 'ENOTFOUND', 'ECONNREFUSED', 'ETIMEDOUT']
+  retryableErrors: ['ECONNRESET', 'ENOTFOUND', 'ECONNREFUSED', 'ETIMEDOUT'],
 };
 
 /**
  * Default service client configuration
  */
 const DEFAULT_CONFIG: ServiceClientConfig = {
-  defaultTimeout: 10000,   // 10 seconds
+  defaultTimeout: 10000, // 10 seconds
   defaultHeaders: {
     'Content-Type': 'application/json',
-    'User-Agent': 'TitanBrain/1.0.0'
+    'User-Agent': 'TitanBrain/1.0.0',
   },
   retry: DEFAULT_RETRY_CONFIG,
   circuitBreaker: CircuitBreakerDefaults.http,
   logRequests: true,
   logResponses: true,
-  maxResponseBodyLogSize: 1024 // 1KB
+  maxResponseBodyLogSize: 1024, // 1KB
 };
 
 /**
@@ -165,26 +169,23 @@ export class ServiceClient extends EventEmitter {
 
   constructor(config: Partial<ServiceClientConfig> = {}, logger?: Logger) {
     super();
-    
+
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.logger = logger ?? Logger.getInstance('service-client');
-    
+
     // Initialize circuit breaker
-    this.circuitBreaker = new CircuitBreaker(
-      { ...this.config.circuitBreaker },
-      this.logger
-    );
-    
+    this.circuitBreaker = new CircuitBreaker({ ...this.config.circuitBreaker }, this.logger);
+
     // Forward circuit breaker events
     this.circuitBreaker.on('stateChange', (event) => {
       this.emit('circuitBreakerStateChange', event);
     });
-    
+
     this.logger.info('Service client initialized', undefined, {
       baseUrl: this.config.baseUrl,
       defaultTimeout: this.config.defaultTimeout,
       maxRetries: this.config.retry.maxRetries,
-      circuitBreakerName: this.config.circuitBreaker.name
+      circuitBreakerName: this.config.circuitBreaker.name,
     });
   }
 
@@ -197,7 +198,7 @@ export class ServiceClient extends EventEmitter {
     for (const interceptor of this.requestInterceptors) {
       processedConfig = await interceptor(processedConfig);
     }
-    
+
     // Add default configuration
     const finalConfig: RequestConfig = {
       timeout: this.config.defaultTimeout,
@@ -206,60 +207,60 @@ export class ServiceClient extends EventEmitter {
       ...processedConfig,
       headers: {
         ...this.config.defaultHeaders,
-        ...processedConfig.headers
-      }
+        ...processedConfig.headers,
+      },
     };
-    
+
     // Add correlation ID if not present
     if (!finalConfig.correlationId) {
       finalConfig.correlationId = this.generateCorrelationId();
     }
-    
+
     // Add correlation ID to headers
     finalConfig.headers!['x-correlation-id'] = finalConfig.correlationId;
-    
+
     // Build full URL
     const fullUrl = this.buildUrl(finalConfig.url);
     finalConfig.url = fullUrl;
-    
+
     this.logger.debug('Making HTTP request', finalConfig.correlationId, {
       method: finalConfig.method,
       url: fullUrl,
       timeout: finalConfig.timeout,
-      retries: finalConfig.retries
+      retries: finalConfig.retries,
     });
-    
+
     try {
       // Execute with circuit breaker protection
       const response = await this.circuitBreaker.execute(async () => {
         return await this.executeWithRetry(finalConfig);
       });
-      
+
       // Apply response interceptors
       let processedResponse = response;
       for (const interceptor of this.responseInterceptors) {
-        processedResponse = await interceptor(processedResponse) as ServiceResponse<T>;
+        processedResponse = (await interceptor(processedResponse)) as ServiceResponse<T>;
       }
-      
+
       this.emit('response', processedResponse);
       return processedResponse as ServiceResponse<T>;
-      
     } catch (error) {
-      let processedError = error instanceof ServiceClientError 
-        ? error 
-        : new ServiceClientError(
-            error instanceof Error ? error.message : String(error),
-            undefined,
-            undefined,
-            finalConfig,
-            error instanceof Error ? error : undefined
-          );
-      
+      let processedError =
+        error instanceof ServiceClientError
+          ? error
+          : new ServiceClientError(
+              error instanceof Error ? error.message : String(error),
+              undefined,
+              undefined,
+              finalConfig,
+              error instanceof Error ? error : undefined,
+            );
+
       // Apply error interceptors
       for (const interceptor of this.errorInterceptors) {
         processedError = await interceptor(processedError);
       }
-      
+
       this.emit('error', processedError);
       throw processedError;
     }
@@ -271,72 +272,75 @@ export class ServiceClient extends EventEmitter {
   private async executeWithRetry<T>(config: RequestConfig): Promise<ServiceResponse<T>> {
     let lastError: ServiceClientError | undefined;
     const maxRetries = config.retries || 0;
-    
+
     // Try initial request + retries
     for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
       try {
         const response = await this.executeRequest<T>(config, attempt);
-        
+
         if (attempt > 1) {
           this.logger.info('Request succeeded after retry', config.correlationId, {
             attempt,
             url: config.url,
-            method: config.method
+            method: config.method,
           });
         }
-        
+
         return response;
-        
       } catch (error) {
-        lastError = error instanceof ServiceClientError 
-          ? error 
-          : new ServiceClientError(
-              error instanceof Error ? error.message : String(error),
-              undefined,
-              undefined,
-              config,
-              error instanceof Error ? error : undefined
-            );
-        
+        lastError =
+          error instanceof ServiceClientError
+            ? error
+            : new ServiceClientError(
+                error instanceof Error ? error.message : String(error),
+                undefined,
+                undefined,
+                config,
+                error instanceof Error ? error : undefined,
+              );
+
         // Check if we should retry (not on last attempt and error is retryable)
         const isLastAttempt = attempt >= maxRetries + 1;
         if (!isLastAttempt && lastError.isRetryable()) {
           const delay = this.calculateRetryDelay(attempt);
-          
+
           this.logger.warn('Request failed, retrying', config.correlationId, {
             attempt,
             maxRetries: maxRetries,
             delay,
             error: lastError.message,
-            status: lastError.status
+            status: lastError.status,
           });
-          
+
           // Wait before retry
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise((resolve) => setTimeout(resolve, delay));
           continue;
         }
-        
+
         // No more retries or not retryable
         this.logger.error('Request failed permanently', lastError, config.correlationId, {
           attempt,
           maxRetries: maxRetries,
           url: config.url,
-          method: config.method
+          method: config.method,
         });
-        
+
         throw lastError;
       }
     }
-    
+
     throw lastError!;
   }
 
   /**
    * Execute a single HTTP request
    */
-  private async executeRequest<T>(config: RequestConfig, attempt: number): Promise<ServiceResponse<T>> {
+  private async executeRequest<T>(
+    config: RequestConfig,
+    attempt: number,
+  ): Promise<ServiceResponse<T>> {
     const startTime = Date.now();
-    
+
     try {
       // Log request
       if (this.config.logRequests) {
@@ -345,51 +349,51 @@ export class ServiceClient extends EventEmitter {
           url: config.url,
           attempt,
           headers: this.sanitizeHeaders(config.headers || {}),
-          bodySize: config.body ? JSON.stringify(config.body).length : 0
+          bodySize: config.body ? JSON.stringify(config.body).length : 0,
         });
       }
-      
+
       // Make the actual HTTP request using fetch
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), config.timeout);
-      
+
       const fetchOptions: RequestInit = {
         method: config.method,
         headers: config.headers,
         body: config.body ? JSON.stringify(config.body) : undefined,
-        signal: controller.signal
+        signal: controller.signal,
       };
-      
+
       const response = await fetch(config.url, fetchOptions);
       clearTimeout(timeoutId);
-      
+
       const duration = Date.now() - startTime;
-      
+
       // Parse response
       let data: T;
       const contentType = response.headers.get('content-type') || '';
-      
+
       if (contentType.includes('application/json')) {
-        data = await response.json() as T;
+        data = (await response.json()) as T;
       } else {
-        data = await response.text() as T;
+        data = (await response.text()) as T;
       }
-      
+
       // Build response headers object
       const responseHeaders: Record<string, string> = {};
       response.headers.forEach((value, key) => {
         responseHeaders[key] = value;
       });
-      
+
       const serviceResponse: ServiceResponse<T> = {
         status: response.status,
         statusText: response.statusText,
         headers: responseHeaders,
         data,
         duration,
-        correlationId: config.correlationId
+        correlationId: config.correlationId,
       };
-      
+
       // Log response
       if (this.config.logResponses) {
         this.logger.debug('HTTP response', config.correlationId, {
@@ -397,29 +401,28 @@ export class ServiceClient extends EventEmitter {
           statusText: response.statusText,
           duration,
           responseSize: this.getResponseSize(data),
-          responseBody: this.truncateResponseBody(data)
+          responseBody: this.truncateResponseBody(data),
         });
       }
-      
+
       // Check for HTTP errors
       if (!response.ok) {
         throw new ServiceClientError(
           `HTTP ${response.status}: ${response.statusText}`,
           response.status,
           serviceResponse,
-          config
+          config,
         );
       }
-      
+
       return serviceResponse;
-      
     } catch (error) {
       const duration = Date.now() - startTime;
-      
+
       if (error instanceof ServiceClientError) {
         throw error;
       }
-      
+
       // Handle fetch errors
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
@@ -428,25 +431,20 @@ export class ServiceClient extends EventEmitter {
             408,
             undefined,
             config,
-            error
+            error,
           );
         }
-        
+
         throw new ServiceClientError(
           `Network error: ${error.message}`,
           undefined,
           undefined,
           config,
-          error
+          error,
         );
       }
-      
-      throw new ServiceClientError(
-        'Unknown error occurred',
-        undefined,
-        undefined,
-        config
-      );
+
+      throw new ServiceClientError('Unknown error occurred', undefined, undefined, config);
     }
   }
 
@@ -458,12 +456,12 @@ export class ServiceClient extends EventEmitter {
     if (attempt > maxRetries) {
       return false;
     }
-    
+
     // Check if error is retryable
     if (!error.isRetryable()) {
       return false;
     }
-    
+
     return true;
   }
 
@@ -471,7 +469,8 @@ export class ServiceClient extends EventEmitter {
    * Calculate retry delay with exponential backoff
    */
   private calculateRetryDelay(attempt: number): number {
-    const delay = this.config.retry.initialDelay * Math.pow(this.config.retry.backoffMultiplier, attempt - 1);
+    const delay =
+      this.config.retry.initialDelay * Math.pow(this.config.retry.backoffMultiplier, attempt - 1);
     return Math.min(delay, this.config.retry.maxDelay);
   }
 
@@ -482,15 +481,15 @@ export class ServiceClient extends EventEmitter {
     if (url.startsWith('http://') || url.startsWith('https://')) {
       return url;
     }
-    
+
     if (this.config.baseUrl) {
-      const baseUrl = this.config.baseUrl.endsWith('/') 
-        ? this.config.baseUrl.slice(0, -1) 
+      const baseUrl = this.config.baseUrl.endsWith('/')
+        ? this.config.baseUrl.slice(0, -1)
         : this.config.baseUrl;
       const path = url.startsWith('/') ? url : `/${url}`;
       return `${baseUrl}${path}`;
     }
-    
+
     return url;
   }
 
@@ -507,7 +506,7 @@ export class ServiceClient extends EventEmitter {
   private sanitizeHeaders(headers: Record<string, string>): Record<string, string> {
     const sanitized: Record<string, string> = {};
     const sensitiveHeaders = ['authorization', 'x-api-key', 'x-signature'];
-    
+
     for (const [key, value] of Object.entries(headers)) {
       if (sensitiveHeaders.includes(key.toLowerCase())) {
         sanitized[key] = '[REDACTED]';
@@ -515,7 +514,7 @@ export class ServiceClient extends EventEmitter {
         sanitized[key] = value;
       }
     }
-    
+
     return sanitized;
   }
 
@@ -537,7 +536,7 @@ export class ServiceClient extends EventEmitter {
     if (str.length <= this.config.maxResponseBodyLogSize) {
       return data;
     }
-    
+
     return str.substring(0, this.config.maxResponseBodyLogSize) + '... [truncated]';
   }
 
@@ -548,11 +547,19 @@ export class ServiceClient extends EventEmitter {
     return this.request<T>({ method: 'GET', url, ...config });
   }
 
-  async post<T = any>(url: string, body?: any, config?: Partial<RequestConfig>): Promise<ServiceResponse<T>> {
+  async post<T = any>(
+    url: string,
+    body?: any,
+    config?: Partial<RequestConfig>,
+  ): Promise<ServiceResponse<T>> {
     return this.request<T>({ method: 'POST', url, body, ...config });
   }
 
-  async put<T = any>(url: string, body?: any, config?: Partial<RequestConfig>): Promise<ServiceResponse<T>> {
+  async put<T = any>(
+    url: string,
+    body?: any,
+    config?: Partial<RequestConfig>,
+  ): Promise<ServiceResponse<T>> {
     return this.request<T>({ method: 'PUT', url, body, ...config });
   }
 
@@ -560,7 +567,11 @@ export class ServiceClient extends EventEmitter {
     return this.request<T>({ method: 'DELETE', url, ...config });
   }
 
-  async patch<T = any>(url: string, body?: any, config?: Partial<RequestConfig>): Promise<ServiceResponse<T>> {
+  async patch<T = any>(
+    url: string,
+    body?: any,
+    config?: Partial<RequestConfig>,
+  ): Promise<ServiceResponse<T>> {
     return this.request<T>({ method: 'PATCH', url, body, ...config });
   }
 

@@ -1,13 +1,13 @@
 /**
  * Drawdown Protector for Titan Phase 2 - The Hunter
- * 
+ *
  * Provides automatic drawdown protection to preserve capital during adverse conditions:
  * - Daily drawdown thresholds: 3%, 5%, 7%
  * - Weekly drawdown threshold: 10%
  * - Consecutive loss protection: 3 trades
  * - Win rate monitoring: 40% threshold over 20 trades
  * - Emergency flatten at 7% drawdown
- * 
+ *
  * Requirements: 15.1-15.7 (Drawdown Protection)
  */
 
@@ -84,25 +84,25 @@ export class DrawdownProtector extends EventEmitter {
 
   constructor(bybitClient: BybitPerpsClient, config?: Partial<DrawdownProtectorConfig>) {
     super();
-    
+
     this.bybitClient = bybitClient;
     this.config = {
       dailyDrawdownThresholds: {
         level1: 0.03, // 3%
         level2: 0.05, // 5%
-        level3: 0.07  // 7%
+        level3: 0.07, // 7%
       },
-      weeklyDrawdownThreshold: 0.10, // 10%
+      weeklyDrawdownThreshold: 0.1, // 10%
       consecutiveLossThreshold: 3,
-      consecutiveLossReduction: 0.30, // 30% reduction
-      winRateThreshold: 0.40, // 40%
+      consecutiveLossReduction: 0.3, // 30% reduction
+      winRateThreshold: 0.4, // 40%
       winRateTradeCount: 20,
       emergencyPauseDuration: 24 * 60 * 60 * 1000, // 24 hours
       leverageReduction: {
         from: 5,
-        to: 3
+        to: 3,
       },
-      ...config
+      ...config,
     };
 
     // Initialize state
@@ -121,7 +121,7 @@ export class DrawdownProtector extends EventEmitter {
       emergencyPauseUntil: 0,
       positionSizeReduction: 1.0, // No reduction initially
       maxLeverageReduction: false,
-      lastUpdate: Date.now()
+      lastUpdate: Date.now(),
     };
 
     this.startMonitoring();
@@ -140,19 +140,27 @@ export class DrawdownProtector extends EventEmitter {
       // Reset daily tracking if new day
       const now = new Date();
       const lastUpdate = new Date(this.state.lastUpdate);
-      
-      if (now.getDate() !== lastUpdate.getDate() || 
-          now.getMonth() !== lastUpdate.getMonth() || 
-          now.getFullYear() !== lastUpdate.getFullYear()) {
+
+      if (
+        now.getDate() !== lastUpdate.getDate() ||
+        now.getMonth() !== lastUpdate.getMonth() ||
+        now.getFullYear() !== lastUpdate.getFullYear()
+      ) {
         this.state.startOfDayEquity = currentEquity; // Use the parameter, not the state
         this.state.dailyDrawdown = 0;
-        console.log(`📅 New day detected. Reset daily equity baseline: ${currentEquity.toFixed(2)} USDT`);
+        console.log(
+          `📅 New day detected. Reset daily equity baseline: ${currentEquity.toFixed(2)} USDT`
+        );
       }
 
       // Calculate daily drawdown
       if (this.state.startOfDayEquity > 0) {
-        this.state.dailyDrawdown = (this.state.startOfDayEquity - currentEquity) / this.state.startOfDayEquity;
-        this.state.maxDailyDrawdown = Math.max(this.state.maxDailyDrawdown, this.state.dailyDrawdown);
+        this.state.dailyDrawdown =
+          (this.state.startOfDayEquity - currentEquity) / this.state.startOfDayEquity;
+        this.state.maxDailyDrawdown = Math.max(
+          this.state.maxDailyDrawdown,
+          this.state.dailyDrawdown
+        );
       }
 
       const drawdownPercent = this.state.dailyDrawdown * 100;
@@ -161,41 +169,49 @@ export class DrawdownProtector extends EventEmitter {
       if (this.state.dailyDrawdown >= this.config.dailyDrawdownThresholds.level3) {
         // Level 3: 7% - Emergency flatten and pause
         if (!this.state.isEmergencyPaused) {
-          console.log(`🚨 CRITICAL: Daily drawdown ${drawdownPercent.toFixed(2)}% >= 7%. Emergency flatten triggered!`);
-          
+          console.log(
+            `🚨 CRITICAL: Daily drawdown ${drawdownPercent.toFixed(2)}% >= 7%. Emergency flatten triggered!`
+          );
+
           this.state.isEmergencyPaused = true;
           this.state.emergencyPauseUntil = Date.now() + this.config.emergencyPauseDuration;
-          
+
           this.emit('drawdown:level3', this.state);
           this.emit('emergency:paused', this.state, this.config.emergencyPauseDuration);
           this.logProtectionEvent('EMERGENCY_FLATTEN', drawdownPercent);
-          
+
           return 'EMERGENCY_FLATTEN';
         }
       } else if (this.state.dailyDrawdown >= this.config.dailyDrawdownThresholds.level2) {
         // Level 2: 5% - Halt new entries
-        console.log(`⚠️ WARNING: Daily drawdown ${drawdownPercent.toFixed(2)}% >= 5%. Halting new entries.`);
-        
+        console.log(
+          `⚠️ WARNING: Daily drawdown ${drawdownPercent.toFixed(2)}% >= 5%. Halting new entries.`
+        );
+
         this.emit('drawdown:level2', this.state);
         this.logProtectionEvent('HALT_NEW_ENTRIES', drawdownPercent);
-        
+
         return 'HALT_NEW_ENTRIES';
       } else if (this.state.dailyDrawdown >= this.config.dailyDrawdownThresholds.level1) {
         // Level 1: 3% - Reduce position sizes by 50%
         if (this.state.positionSizeReduction === 1.0) {
-          console.log(`⚠️ WARNING: Daily drawdown ${drawdownPercent.toFixed(2)}% >= 3%. Reducing position sizes by 50%.`);
-          
+          console.log(
+            `⚠️ WARNING: Daily drawdown ${drawdownPercent.toFixed(2)}% >= 3%. Reducing position sizes by 50%.`
+          );
+
           this.state.positionSizeReduction = 0.5;
           this.emit('drawdown:level1', this.state);
           this.logProtectionEvent('REDUCE_POSITION_SIZES', drawdownPercent);
-          
+
           return 'REDUCE_POSITION_SIZES';
         }
       } else {
         // Reset position size reduction if drawdown improves
         if (this.state.positionSizeReduction < 1.0) {
           this.state.positionSizeReduction = 1.0;
-          console.log(`✅ Daily drawdown improved to ${drawdownPercent.toFixed(2)}%. Position size reduction lifted.`);
+          console.log(
+            `✅ Daily drawdown improved to ${drawdownPercent.toFixed(2)}%. Position size reduction lifted.`
+          );
         }
       }
 
@@ -221,30 +237,41 @@ export class DrawdownProtector extends EventEmitter {
       const lastUpdate = new Date(this.state.lastUpdate);
       const nowWeek = this.getWeekNumber(now);
       const lastWeek = this.getWeekNumber(lastUpdate);
-      
+
       if (nowWeek !== lastWeek) {
         this.state.startOfWeekEquity = currentEquity; // Use the parameter, not the state
         this.state.weeklyDrawdown = 0;
         this.state.maxLeverageReduction = false;
-        console.log(`📅 New week detected. Reset weekly equity baseline: ${currentEquity.toFixed(2)} USDT`);
+        console.log(
+          `📅 New week detected. Reset weekly equity baseline: ${currentEquity.toFixed(2)} USDT`
+        );
       }
 
       // Calculate weekly drawdown
       if (this.state.startOfWeekEquity > 0) {
-        this.state.weeklyDrawdown = (this.state.startOfWeekEquity - currentEquity) / this.state.startOfWeekEquity;
-        this.state.maxWeeklyDrawdown = Math.max(this.state.maxWeeklyDrawdown, this.state.weeklyDrawdown);
+        this.state.weeklyDrawdown =
+          (this.state.startOfWeekEquity - currentEquity) / this.state.startOfWeekEquity;
+        this.state.maxWeeklyDrawdown = Math.max(
+          this.state.maxWeeklyDrawdown,
+          this.state.weeklyDrawdown
+        );
       }
 
       const drawdownPercent = this.state.weeklyDrawdown * 100;
 
       // Check weekly threshold
-      if (this.state.weeklyDrawdown >= this.config.weeklyDrawdownThreshold && !this.state.maxLeverageReduction) {
-        console.log(`⚠️ WARNING: Weekly drawdown ${drawdownPercent.toFixed(2)}% >= 10%. Reducing max leverage from ${this.config.leverageReduction.from}x to ${this.config.leverageReduction.to}x.`);
-        
+      if (
+        this.state.weeklyDrawdown >= this.config.weeklyDrawdownThreshold &&
+        !this.state.maxLeverageReduction
+      ) {
+        console.log(
+          `⚠️ WARNING: Weekly drawdown ${drawdownPercent.toFixed(2)}% >= 10%. Reducing max leverage from ${this.config.leverageReduction.from}x to ${this.config.leverageReduction.to}x.`
+        );
+
         this.state.maxLeverageReduction = true;
         this.emit('drawdown:weekly', this.state);
         this.logProtectionEvent('REDUCE_MAX_LEVERAGE', drawdownPercent);
-        
+
         return 'REDUCE_MAX_LEVERAGE';
       }
 
@@ -264,7 +291,7 @@ export class DrawdownProtector extends EventEmitter {
     try {
       // Sort trades by timestamp (most recent first)
       const sortedTrades = trades.sort((a, b) => b.timestamp - a.timestamp);
-      
+
       // Count consecutive losses from most recent trades
       let consecutiveLosses = 0;
       for (const trade of sortedTrades) {
@@ -279,15 +306,20 @@ export class DrawdownProtector extends EventEmitter {
 
       // Check threshold
       if (consecutiveLosses >= this.config.consecutiveLossThreshold) {
-        console.log(`⚠️ WARNING: ${consecutiveLosses} consecutive losses detected. Reducing position sizes by ${this.config.consecutiveLossReduction * 100}% for next 3 trades.`);
-        
+        console.log(
+          `⚠️ WARNING: ${consecutiveLosses} consecutive losses detected. Reducing position sizes by ${this.config.consecutiveLossReduction * 100}% for next 3 trades.`
+        );
+
         // Apply additional reduction for consecutive losses
         const reductionMultiplier = 1 - this.config.consecutiveLossReduction;
-        this.state.positionSizeReduction = Math.min(this.state.positionSizeReduction, reductionMultiplier);
-        
+        this.state.positionSizeReduction = Math.min(
+          this.state.positionSizeReduction,
+          reductionMultiplier
+        );
+
         this.emit('consecutive:losses', this.state, consecutiveLosses);
         this.logProtectionEvent('CONSECUTIVE_LOSSES', consecutiveLosses);
-        
+
         return 'CONSECUTIVE_LOSSES';
       }
 
@@ -322,11 +354,13 @@ export class DrawdownProtector extends EventEmitter {
 
       // Check threshold
       if (winRate < this.config.winRateThreshold) {
-        console.log(`⚠️ STRATEGY DEGRADATION: Win rate ${(winRate * 100).toFixed(1)}% < ${this.config.winRateThreshold * 100}% over last ${recentTrades.length} trades. Parameter review suggested.`);
-        
+        console.log(
+          `⚠️ STRATEGY DEGRADATION: Win rate ${(winRate * 100).toFixed(1)}% < ${this.config.winRateThreshold * 100}% over last ${recentTrades.length} trades. Parameter review suggested.`
+        );
+
         this.emit('strategy:degradation', this.state, winRate);
         this.logProtectionEvent('STRATEGY_DEGRADATION', winRate * 100);
-        
+
         return 'STRATEGY_DEGRADATION';
       }
 
@@ -345,7 +379,7 @@ export class DrawdownProtector extends EventEmitter {
   public async emergencyFlatten(positions: Position[]): Promise<boolean> {
     try {
       console.log(`🚨 EMERGENCY FLATTEN: Closing ${positions.length} positions`);
-      
+
       let successCount = 0;
       let failCount = 0;
 
@@ -355,14 +389,14 @@ export class DrawdownProtector extends EventEmitter {
           const orderParams = {
             phase: 'phase2' as const,
             symbol: position.symbol,
-            side: position.side === 'LONG' ? 'Sell' as const : 'Buy' as const,
+            side: position.side === 'LONG' ? ('Sell' as const) : ('Buy' as const),
             type: 'MARKET' as const,
             qty: position.quantity,
-            leverage: position.leverage
+            leverage: position.leverage,
           };
 
           const result = await this.bybitClient.placeOrderWithRetry(orderParams);
-          
+
           if (result.status === 'FILLED') {
             successCount++;
             console.log(`✅ Emergency closed: ${position.symbol} at ${result.price}`);
@@ -381,7 +415,9 @@ export class DrawdownProtector extends EventEmitter {
       this.state.emergencyPauseUntil = Date.now() + this.config.emergencyPauseDuration;
 
       console.log(`🚨 Emergency flatten complete: ${successCount} success, ${failCount} failed`);
-      console.log(`⏸️ Trading paused for ${this.config.emergencyPauseDuration / (1000 * 60 * 60)} hours`);
+      console.log(
+        `⏸️ Trading paused for ${this.config.emergencyPauseDuration / (1000 * 60 * 60)} hours`
+      );
 
       this.logProtectionEvent('EMERGENCY_FLATTEN_COMPLETE', successCount);
 
@@ -398,14 +434,16 @@ export class DrawdownProtector extends EventEmitter {
    */
   public addTrade(trade: TradeRecord): void {
     this.state.recentTrades.push(trade);
-    
+
     // Keep only last 100 trades for memory efficiency
     if (this.state.recentTrades.length > 100) {
       this.state.recentTrades = this.state.recentTrades.slice(-100);
     }
 
-    console.log(`📊 Trade recorded: ${trade.symbol} ${trade.side} ${trade.isWin ? 'WIN' : 'LOSS'} P&L: ${trade.pnl.toFixed(2)}`);
-    
+    console.log(
+      `📊 Trade recorded: ${trade.symbol} ${trade.side} ${trade.isWin ? 'WIN' : 'LOSS'} P&L: ${trade.pnl.toFixed(2)}`
+    );
+
     // Check consecutive losses and win rate after each trade
     this.checkConsecutiveLosses(this.state.recentTrades);
     this.checkWinRate(this.state.recentTrades);
@@ -447,7 +485,7 @@ export class DrawdownProtector extends EventEmitter {
       console.log(`✅ Emergency pause lifted. Trading resumed.`);
       this.emit('emergency:resumed', this.state);
     }
-    
+
     return this.state.isEmergencyPaused;
   }
 
@@ -464,8 +502,8 @@ export class DrawdownProtector extends EventEmitter {
    * @returns Maximum leverage allowed
    */
   public getMaxLeverage(): number {
-    return this.state.maxLeverageReduction 
-      ? this.config.leverageReduction.to 
+    return this.state.maxLeverageReduction
+      ? this.config.leverageReduction.to
       : this.config.leverageReduction.from;
   }
 
@@ -477,8 +515,10 @@ export class DrawdownProtector extends EventEmitter {
     // Block new entries if:
     // 1. Emergency paused
     // 2. Daily drawdown >= 5%
-    return !this.isEmergencyPaused() && 
-           this.state.dailyDrawdown < this.config.dailyDrawdownThresholds.level2;
+    return (
+      !this.isEmergencyPaused() &&
+      this.state.dailyDrawdown < this.config.dailyDrawdownThresholds.level2
+    );
   }
 
   /**
@@ -493,7 +533,9 @@ export class DrawdownProtector extends EventEmitter {
       await this.updateDrawdownState();
     }, this.MONITORING_FREQUENCY);
 
-    console.log(`🛡️ Drawdown Protector: Started monitoring (${this.MONITORING_FREQUENCY / 1000}s interval)`);
+    console.log(
+      `🛡️ Drawdown Protector: Started monitoring (${this.MONITORING_FREQUENCY / 1000}s interval)`
+    );
   }
 
   /**
@@ -513,7 +555,7 @@ export class DrawdownProtector extends EventEmitter {
   private async updateDrawdownState(): Promise<void> {
     try {
       const currentEquity = await this.bybitClient.getEquity();
-      
+
       // Initialize baselines if not set
       if (this.state.startOfDayEquity === 0) {
         this.state.startOfDayEquity = currentEquity;
@@ -525,7 +567,7 @@ export class DrawdownProtector extends EventEmitter {
       // Check all protection measures
       await this.checkDailyDrawdown(currentEquity);
       await this.checkWeeklyDrawdown(currentEquity);
-      
+
       this.state.lastUpdate = Date.now();
     } catch (error) {
       console.error(`❌ Error updating drawdown state:`, error);
@@ -558,7 +600,7 @@ export class DrawdownProtector extends EventEmitter {
       dailyDrawdown: this.state.dailyDrawdown * 100,
       weeklyDrawdown: this.state.weeklyDrawdown * 100,
       consecutiveLosses: this.state.consecutiveLosses,
-      winRate: this.state.winRate * 100
+      winRate: this.state.winRate * 100,
     };
 
     console.log(`🛡️ DRAWDOWN_PROTECTION:`, JSON.stringify(event));
@@ -593,7 +635,7 @@ export class DrawdownProtector extends EventEmitter {
       emergencyPauseUntil: 0,
       positionSizeReduction: 1.0,
       maxLeverageReduction: false,
-      lastUpdate: Date.now()
+      lastUpdate: Date.now(),
     };
     console.log(`🛡️ Drawdown Protector: State reset`);
   }
@@ -624,7 +666,7 @@ export class DrawdownProtector extends EventEmitter {
       totalTrades: this.state.recentTrades.length,
       isEmergencyPaused: this.state.isEmergencyPaused,
       positionSizeReduction: this.state.positionSizeReduction,
-      maxLeverageReduction: this.state.maxLeverageReduction
+      maxLeverageReduction: this.state.maxLeverageReduction,
     };
   }
 
@@ -641,5 +683,8 @@ export class DrawdownProtector extends EventEmitter {
 // Export event interface for TypeScript
 export declare interface DrawdownProtector {
   on<U extends keyof DrawdownProtectorEvents>(event: U, listener: DrawdownProtectorEvents[U]): this;
-  emit<U extends keyof DrawdownProtectorEvents>(event: U, ...args: Parameters<DrawdownProtectorEvents[U]>): boolean;
+  emit<U extends keyof DrawdownProtectorEvents>(
+    event: U,
+    ...args: Parameters<DrawdownProtectorEvents[U]>
+  ): boolean;
 }

@@ -73,6 +73,7 @@ import {
   AllocationEngine,
   CapitalFlowManager,
   CircuitBreaker,
+  GovernanceEngine,
   PerformanceTracker,
   RiskGuardian,
   TitanBrain,
@@ -257,9 +258,13 @@ async function main(): Promise<void> {
       );
       logger.info("   ✅ PerformanceTracker initialized");
 
+      const governanceEngine = new GovernanceEngine();
+      logger.info("   ✅ GovernanceEngine initialized");
+
       const riskGuardian = new RiskGuardian(
         config.riskGuardian,
         allocationEngine,
+        governanceEngine,
       );
       logger.info("   ✅ RiskGuardian initialized");
 
@@ -306,6 +311,7 @@ async function main(): Promise<void> {
         capitalFlowManager,
         circuitBreaker,
         activeInferenceEngine,
+        governanceEngine,
         databaseManager!,
         stateRecoveryService,
         manualOverrideService,
@@ -410,7 +416,7 @@ async function main(): Promise<void> {
           corsOrigins: brainConfig.corsOrigins,
           hmac: {
             enabled: !!brainConfig.hmacSecret,
-            secret: brainConfig.hmacSecret,
+            secret: brainConfig.hmacSecret || "",
             headerName: "x-signature",
             algorithm: "sha256",
           },

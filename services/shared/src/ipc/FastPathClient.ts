@@ -45,6 +45,30 @@ export interface IntentSignal {
     t_ingress?: number; // Time Execution engine received it
     t_exchange?: number; // Exchange matching engine timestamp
     max_slippage_bps?: number; // Maximum allowed slippage in basis points
+    fill_feasibility?: number; // Score 0-100: Feasibility of getting filled (spread, queue depth)
+    expected_impact_bps?: number; // Expected price impact in bps
+    latency_profile?: LatencyProfile; // End-to-end latency measurement timestamps
+}
+
+/**
+ * End-to-end latency profile for signal auditing
+ */
+export interface LatencyProfile {
+    t0_market_data: number; // Time market data received
+    t1_signal_generated: number; // Time signal logic triggered
+    t2_brain_ingress: number; // Time Brain received signal
+    t3_brain_decision: number; // Time Brain made decision
+    t4_execution_ingress: number; // Time Execution received intent
+}
+
+/**
+ * Market Regime State for BOCPD
+ */
+export enum RegimeState {
+    STABLE = "STABLE", // Low vol, mean-reverting (Sentinel dominant)
+    VOLATILE_BREAKOUT = "VOLATILE_BREAKOUT", // High vol, directional (Hunter dominant)
+    MEAN_REVERSION = "MEAN_REVERSION", // Moderate vol, range-bound
+    CRASH = "CRASH", // Extreme vol, correlation breakdown (Scavenger dominant)
 }
 
 /**

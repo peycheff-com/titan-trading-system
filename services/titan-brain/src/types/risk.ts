@@ -3,7 +3,7 @@
  * Defines types for risk management and correlation guards
  */
 
-import { PhaseId } from "./performance.js";
+import { PhaseId } from './performance.js';
 
 /**
  * Intent signal from a phase requesting execution
@@ -12,7 +12,7 @@ export interface IntentSignal {
   signalId: string;
   phaseId: PhaseId;
   symbol: string;
-  side: "BUY" | "SELL";
+  side: 'BUY' | 'SELL';
   /** Requested position size in USD notional */
   requestedSize: number;
   timestamp: number;
@@ -23,7 +23,14 @@ export interface IntentSignal {
   /** Optional: calculated volatility (ATR) associated with signal */
   volatility?: number;
   /** Optional: stop loss distance or price */
+  /** Optional: stop loss distance or price */
   stopLossPrice?: number;
+  /** Optional: latency profile for feedback loop */
+  latencyProfile?: {
+    transit: number;
+    processing: number;
+    endToEnd: number;
+  };
 }
 
 /**
@@ -31,7 +38,7 @@ export interface IntentSignal {
  */
 export interface Position {
   symbol: string;
-  side: "LONG" | "SHORT";
+  side: 'LONG' | 'SHORT';
   /** Position size in USD notional */
   size: number;
   /** Entry price */

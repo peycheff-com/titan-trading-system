@@ -2,8 +2,8 @@ import { Tripwire } from "../types/index.js";
 import {
     PolymarketClient,
     PolymarketMarket,
-} from "../exchanges/PolymarketClient";
-import { BinanceSpotClient } from "../exchanges/BinanceSpotClient";
+} from "../exchanges/PolymarketClient.js";
+import { BinanceSpotClient } from "../exchanges/BinanceSpotClient.js";
 
 export class PredictionMarketDetector {
     private client: PolymarketClient;

@@ -9,7 +9,7 @@
  * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5
  */
 
-import { LatencyModel } from "./LatencyModel.js";
+import { LatencyModel } from './LatencyModel.js';
 import {
   BacktestResult,
   Config,
@@ -17,20 +17,15 @@ import {
   RegimeSnapshot,
   Trade,
   ValidationReport,
-} from "../types/index.js";
-import {
-  ErrorCode,
-  getUserFriendlyMessage,
-  logError,
-  TitanError,
-} from "../utils/ErrorHandler.js";
+} from '../types/index.js';
+import { ErrorCode, getUserFriendlyMessage, logError, TitanError } from '../utils/ErrorHandler.js';
 
 export interface ComparisonResult {
   baseResult: BacktestResult;
   proposedResult: BacktestResult;
   pnlDelta: number;
   drawdownDelta: number;
-  recommendation: "approve" | "reject";
+  recommendation: 'approve' | 'reject';
   reason: string;
 }
 
@@ -71,11 +66,7 @@ export interface ExtendedBacktestResult extends BacktestResult {
  */
 export interface DataCache {
   /** Load OHLCV data for a symbol within a time range */
-  loadOHLCV(
-    symbol: string,
-    startTime: number,
-    endTime: number,
-  ): Promise<OHLCV[]>;
+  loadOHLCV(symbol: string, startTime: number, endTime: number): Promise<OHLCV[]>;
   /** Load regime snapshots for a symbol within a time range */
   loadRegimeSnapshots(
     symbol: string,
@@ -99,15 +90,9 @@ export class InMemoryDataCache implements DataCache {
     this.regimeData.set(symbol, data);
   }
 
-  async loadOHLCV(
-    symbol: string,
-    startTime: number,
-    endTime: number,
-  ): Promise<OHLCV[]> {
+  async loadOHLCV(symbol: string, startTime: number, endTime: number): Promise<OHLCV[]> {
     const data = this.ohlcvData.get(symbol) || [];
-    return data.filter((d) =>
-      d.timestamp >= startTime && d.timestamp <= endTime
-    );
+    return data.filter((d) => d.timestamp >= startTime && d.timestamp <= endTime);
   }
 
   async loadRegimeSnapshots(
@@ -116,9 +101,7 @@ export class InMemoryDataCache implements DataCache {
     endTime: number,
   ): Promise<RegimeSnapshot[]> {
     const data = this.regimeData.get(symbol) || [];
-    return data.filter((d) =>
-      d.timestamp >= startTime && d.timestamp <= endTime
-    );
+    return data.filter((d) => d.timestamp >= startTime && d.timestamp <= endTime);
   }
 }
 
@@ -166,11 +149,7 @@ export class Backtester {
         ohlcvData.set(symbol, ohlcv);
 
         // Load regime snapshots
-        const regimes = await this.cache.loadRegimeSnapshots(
-          symbol,
-          startTime,
-          endTime,
-        );
+        const regimes = await this.cache.loadRegimeSnapshots(symbol, startTime, endTime);
         regimeData.set(symbol, regimes);
       } catch (error) {
         // Log error but continue with other symbols
@@ -237,16 +216,11 @@ export class Backtester {
         );
 
         // Calculate slippage
-        const slippage = this.latencyModel.calculateSlippage(
-          positionSize,
-          atr,
-          liquidityState,
-        );
+        const slippage = this.latencyModel.calculateSlippage(positionSize, atr, liquidityState);
 
         // Adjust entry for slippage
-        const finalEntry = trade.side === "long"
-          ? adjustedEntry + slippage
-          : adjustedEntry - slippage;
+        const finalEntry =
+          trade.side === 'long' ? adjustedEntry + slippage : adjustedEntry - slippage;
 
         // Simulate exit based on config
         const exitResult = this.simulateExit(
@@ -334,39 +308,22 @@ export class Backtester {
     const avgPnL = totalPnL / totalTrades;
 
     // Drawdown metrics
-    const { maxDrawdown, maxDrawdownPercent } = this.calculateDrawdownMetrics(
-      equityCurve,
-    );
+    const { maxDrawdown, maxDrawdownPercent } = this.calculateDrawdownMetrics(equityCurve);
 
     // Profit factor
-    const grossProfit = trades
-      .filter((t) => t.pnl > 0)
-      .reduce((sum, t) => sum + t.pnl, 0);
-    const grossLoss = Math.abs(
-      trades
-        .filter((t) => t.pnl < 0)
-        .reduce((sum, t) => sum + t.pnl, 0),
-    );
-    const profitFactor = grossLoss > 0
-      ? grossProfit / grossLoss
-      : grossProfit > 0
-      ? Infinity
-      : 0;
+    const grossProfit = trades.filter((t) => t.pnl > 0).reduce((sum, t) => sum + t.pnl, 0);
+    const grossLoss = Math.abs(trades.filter((t) => t.pnl < 0).reduce((sum, t) => sum + t.pnl, 0));
+    const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0;
 
     // Risk-adjusted returns
     const returns = trades.map((t) => t.pnl / initialCapital);
     const sharpeRatio = this.calculateSharpeRatio(returns, riskFreeRate);
     const sortinoRatio = this.calculateSortinoRatio(returns, riskFreeRate);
-    const calmarRatio = this.calculateCalmarRatio(
-      totalPnL / initialCapital,
-      maxDrawdownPercent,
-    );
+    const calmarRatio = this.calculateCalmarRatio(totalPnL / initialCapital, maxDrawdownPercent);
 
     // Execution metrics
-    const avgSlippage = trades.reduce((sum, t) => sum + t.slippage, 0) /
-      totalTrades;
-    const avgDuration = trades.reduce((sum, t) => sum + t.duration, 0) /
-      totalTrades;
+    const avgSlippage = trades.reduce((sum, t) => sum + t.slippage, 0) / totalTrades;
+    const avgDuration = trades.reduce((sum, t) => sum + t.duration, 0) / totalTrades;
 
     // Advanced metrics
     const maxConsecutiveLosses = this.calculateMaxConsecutiveLosses(trades);
@@ -415,47 +372,46 @@ export class Backtester {
   ): ValidationReport {
     // Calculate deltas
     const pnlDelta = proposedResult.totalPnL - baselineResult.totalPnL;
-    const pnlDeltaPercent = baselineResult.totalPnL !== 0
-      ? (pnlDelta / Math.abs(baselineResult.totalPnL)) * 100
-      : pnlDelta > 0
-      ? 100
-      : pnlDelta < 0
-      ? -100
-      : 0;
+    const pnlDeltaPercent =
+      baselineResult.totalPnL !== 0
+        ? (pnlDelta / Math.abs(baselineResult.totalPnL)) * 100
+        : pnlDelta > 0
+          ? 100
+          : pnlDelta < 0
+            ? -100
+            : 0;
 
-    const drawdownDelta = proposedResult.maxDrawdown -
-      baselineResult.maxDrawdown;
-    const drawdownDeltaPercent = baselineResult.maxDrawdown !== 0
-      ? (drawdownDelta / baselineResult.maxDrawdown) * 100
-      : drawdownDelta > 0
-      ? 100
-      : drawdownDelta < 0
-      ? -100
-      : 0;
+    const drawdownDelta = proposedResult.maxDrawdown - baselineResult.maxDrawdown;
+    const drawdownDeltaPercent =
+      baselineResult.maxDrawdown !== 0
+        ? (drawdownDelta / baselineResult.maxDrawdown) * 100
+        : drawdownDelta > 0
+          ? 100
+          : drawdownDelta < 0
+            ? -100
+            : 0;
 
     const winRateDelta = proposedResult.winRate - baselineResult.winRate;
 
     // Apply rejection rules
     let passed = true;
     let rejectionReason: string | undefined;
-    let recommendation: "approve" | "reject" | "review" = "approve";
+    let recommendation: 'approve' | 'reject' | 'review' = 'approve';
 
     // Rule 1: Reject if new PnL <= old PnL
     if (proposedResult.totalPnL <= baselineResult.totalPnL) {
       passed = false;
-      rejectionReason = `New PnL (${
-        proposedResult.totalPnL.toFixed(2)
-      }) is not better than baseline (${baselineResult.totalPnL.toFixed(2)})`;
-      recommendation = "reject";
+      rejectionReason = `New PnL (${proposedResult.totalPnL.toFixed(
+        2,
+      )}) is not better than baseline (${baselineResult.totalPnL.toFixed(2)})`;
+      recommendation = 'reject';
     } // Rule 2: Reject if new drawdown > old drawdown * 1.1 (10% worse)
     else if (proposedResult.maxDrawdown > baselineResult.maxDrawdown * 1.1) {
       passed = false;
-      rejectionReason = `New drawdown (${
-        proposedResult.maxDrawdown.toFixed(2)
-      }) exceeds baseline (${
-        baselineResult.maxDrawdown.toFixed(2)
-      }) by more than 10%`;
-      recommendation = "reject";
+      rejectionReason = `New drawdown (${proposedResult.maxDrawdown.toFixed(
+        2,
+      )}) exceeds baseline (${baselineResult.maxDrawdown.toFixed(2)}) by more than 10%`;
+      recommendation = 'reject';
     }
 
     // Calculate confidence score
@@ -467,7 +423,7 @@ export class Backtester {
 
     // Adjust recommendation based on confidence
     if (passed && confidenceScore < 0.5) {
-      recommendation = "review";
+      recommendation = 'review';
     }
 
     return {
@@ -528,14 +484,10 @@ export class Backtester {
     // Filter trades by time range if specified
     let filteredTrades = trades;
     if (options.startTime !== undefined) {
-      filteredTrades = filteredTrades.filter((t) =>
-        t.timestamp >= options.startTime!
-      );
+      filteredTrades = filteredTrades.filter((t) => t.timestamp >= options.startTime!);
     }
     if (options.endTime !== undefined) {
-      filteredTrades = filteredTrades.filter((t) =>
-        t.timestamp <= options.endTime!
-      );
+      filteredTrades = filteredTrades.filter((t) => t.timestamp <= options.endTime!);
     }
 
     if (filteredTrades.length === 0) {
@@ -550,9 +502,7 @@ export class Backtester {
     if (periodDays > maxPeriodDays) {
       const error = new TitanError(
         ErrorCode.MEMORY_OVERFLOW,
-        `Backtest period (${
-          periodDays.toFixed(1)
-        } days) exceeds maximum (${maxPeriodDays} days)`,
+        `Backtest period (${periodDays.toFixed(1)} days) exceeds maximum (${maxPeriodDays} days)`,
         { periodDays, maxPeriodDays },
       );
       logError(error);
@@ -564,29 +514,27 @@ export class Backtester {
       if (!skipMissingData) {
         const error = new TitanError(
           ErrorCode.MISSING_OHLCV_DATA,
-          "No OHLCV data available for backtest period",
+          'No OHLCV data available for backtest period',
         );
         logError(error);
         throw error;
       }
       warnings.push({
-        code: "MISSING_OHLCV_DATA",
-        message: "No OHLCV data available - using trade prices directly",
+        code: 'MISSING_OHLCV_DATA',
+        message: 'No OHLCV data available - using trade prices directly',
       });
     }
 
     // Check for incomplete regime data
     if (regimeSnapshots.length === 0) {
       warnings.push({
-        code: "INCOMPLETE_REGIME_DATA",
-        message: "No regime data available - using default liquidity state",
+        code: 'INCOMPLETE_REGIME_DATA',
+        message: 'No regime data available - using default liquidity state',
       });
     }
 
     // Sort trades by timestamp
-    const sortedTrades = [...filteredTrades].sort((a, b) =>
-      a.timestamp - b.timestamp
-    );
+    const sortedTrades = [...filteredTrades].sort((a, b) => a.timestamp - b.timestamp);
 
     // Simulate each trade with config parameters
     const simulatedResults: SimulatedTrade[] = [];
@@ -644,15 +592,11 @@ export class Backtester {
             skippedTrades++;
             continue;
           }
-          throw new TitanError(
-            ErrorCode.DIVISION_BY_ZERO,
-            "Invalid position size calculation",
-            {
-              equity,
-              riskPerTrade: trapConfig.risk_per_trade,
-              entryPrice: trade.entryPrice,
-            },
-          );
+          throw new TitanError(ErrorCode.DIVISION_BY_ZERO, 'Invalid position size calculation', {
+            equity,
+            riskPerTrade: trapConfig.risk_per_trade,
+            entryPrice: trade.entryPrice,
+          });
         }
       } catch (error) {
         if (skipMissingData && !(error instanceof TitanError)) {
@@ -663,16 +607,11 @@ export class Backtester {
       }
 
       // Calculate slippage
-      const slippage = this.latencyModel.calculateSlippage(
-        positionSize,
-        atr,
-        liquidityState,
-      );
+      const slippage = this.latencyModel.calculateSlippage(positionSize, atr, liquidityState);
 
       // Adjust entry for slippage (worse entry for both long and short)
-      const finalEntry = trade.side === "long"
-        ? adjustedEntry + slippage
-        : adjustedEntry - slippage;
+      const finalEntry =
+        trade.side === 'long' ? adjustedEntry + slippage : adjustedEntry - slippage;
 
       // Simulate exit based on config stop loss and take profit
       const exitResult = this.simulateExit(
@@ -700,11 +639,11 @@ export class Backtester {
             skippedTrades++;
             continue;
           }
-          throw new TitanError(
-            ErrorCode.DIVISION_BY_ZERO,
-            "Invalid PnL calculation",
-            { entry: finalEntry, exit: exitResult.exitPrice, positionSize },
-          );
+          throw new TitanError(ErrorCode.DIVISION_BY_ZERO, 'Invalid PnL calculation', {
+            entry: finalEntry,
+            exit: exitResult.exitPrice,
+            positionSize,
+          });
         }
       } catch (error) {
         if (skipMissingData && !(error instanceof TitanError)) {
@@ -722,9 +661,7 @@ export class Backtester {
         peakEquity = equity;
       }
       const currentDrawdown = peakEquity - equity;
-      const currentDrawdownPercent = peakEquity > 0
-        ? currentDrawdown / peakEquity
-        : 0;
+      const currentDrawdownPercent = peakEquity > 0 ? currentDrawdown / peakEquity : 0;
       if (currentDrawdown > maxDrawdown) {
         maxDrawdown = currentDrawdown;
         maxDrawdownPercent = currentDrawdownPercent;
@@ -744,9 +681,8 @@ export class Backtester {
     // Add warning if trades were skipped
     if (skippedTrades > 0) {
       warnings.push({
-        code: "TRADES_SKIPPED",
-        message:
-          `${skippedTrades} trades skipped due to missing or invalid data`,
+        code: 'TRADES_SKIPPED',
+        message: `${skippedTrades} trades skipped due to missing or invalid data`,
         context: { skippedTrades, totalTrades: sortedTrades.length },
       });
     }
@@ -791,13 +727,7 @@ export class Backtester {
     options: BacktestOptions = {},
   ): Promise<ComparisonResult> {
     // Run backtest with baseline config
-    const baseResult = await this.replay(
-      trades,
-      baseConfig,
-      ohlcvData,
-      regimeSnapshots,
-      options,
-    );
+    const baseResult = await this.replay(trades, baseConfig, ohlcvData, regimeSnapshots, options);
 
     // Run backtest with proposed config
     const proposedResult = await this.replay(
@@ -813,23 +743,21 @@ export class Backtester {
     const drawdownDelta = proposedResult.maxDrawdown - baseResult.maxDrawdown;
 
     // Apply rejection rules
-    let recommendation: "approve" | "reject" = "approve";
-    let reason = "Proposal improves performance metrics";
+    let recommendation: 'approve' | 'reject' = 'approve';
+    let reason = 'Proposal improves performance metrics';
 
     // Rule 1: Reject if new PnL <= old PnL (Requirement 3.3)
     if (proposedResult.totalPnL <= baseResult.totalPnL) {
-      recommendation = "reject";
-      reason = `New PnL (${
-        proposedResult.totalPnL.toFixed(2)
-      }) is not better than old PnL (${baseResult.totalPnL.toFixed(2)})`;
+      recommendation = 'reject';
+      reason = `New PnL (${proposedResult.totalPnL.toFixed(
+        2,
+      )}) is not better than old PnL (${baseResult.totalPnL.toFixed(2)})`;
     } // Rule 2: Reject if new drawdown > old drawdown * 1.1 (Requirement 3.4)
     else if (proposedResult.maxDrawdown > baseResult.maxDrawdown * 1.1) {
-      recommendation = "reject";
-      reason = `New drawdown (${
-        proposedResult.maxDrawdown.toFixed(2)
-      }) exceeds old drawdown (${
-        baseResult.maxDrawdown.toFixed(2)
-      }) by more than 10%`;
+      recommendation = 'reject';
+      reason = `New drawdown (${proposedResult.maxDrawdown.toFixed(
+        2,
+      )}) exceeds old drawdown (${baseResult.maxDrawdown.toFixed(2)}) by more than 10%`;
     }
 
     return {
@@ -870,31 +798,27 @@ export class Backtester {
       options,
     );
 
-    const {
-      baseResult,
-      proposedResult,
-      pnlDelta,
-      drawdownDelta,
-      recommendation,
-      reason,
-    } = comparison;
+    const { baseResult, proposedResult, pnlDelta, drawdownDelta, recommendation, reason } =
+      comparison;
 
     // Calculate percentage deltas
-    const pnlDeltaPercent = baseResult.totalPnL !== 0
-      ? (pnlDelta / Math.abs(baseResult.totalPnL)) * 100
-      : pnlDelta > 0
-      ? 100
-      : pnlDelta < 0
-      ? -100
-      : 0;
+    const pnlDeltaPercent =
+      baseResult.totalPnL !== 0
+        ? (pnlDelta / Math.abs(baseResult.totalPnL)) * 100
+        : pnlDelta > 0
+          ? 100
+          : pnlDelta < 0
+            ? -100
+            : 0;
 
-    const drawdownDeltaPercent = baseResult.maxDrawdown !== 0
-      ? (drawdownDelta / baseResult.maxDrawdown) * 100
-      : drawdownDelta > 0
-      ? 100
-      : drawdownDelta < 0
-      ? -100
-      : 0;
+    const drawdownDeltaPercent =
+      baseResult.maxDrawdown !== 0
+        ? (drawdownDelta / baseResult.maxDrawdown) * 100
+        : drawdownDelta > 0
+          ? 100
+          : drawdownDelta < 0
+            ? -100
+            : 0;
 
     const winRateDelta = proposedResult.winRate - baseResult.winRate;
 
@@ -911,7 +835,7 @@ export class Backtester {
     const endTime = options.endTime ?? Math.max(...timestamps);
 
     return {
-      passed: recommendation === "approve",
+      passed: recommendation === 'approve',
       timestamp: Date.now(),
       backtestPeriod: {
         start: startTime,
@@ -927,8 +851,8 @@ export class Backtester {
         winRateDelta,
       },
       confidenceScore,
-      rejectionReason: recommendation === "reject" ? reason : undefined,
-      recommendation: recommendation === "approve" ? "approve" : "reject",
+      rejectionReason: recommendation === 'reject' ? reason : undefined,
+      recommendation: recommendation === 'approve' ? 'approve' : 'reject',
     };
   }
 
@@ -975,9 +899,7 @@ export class Backtester {
     }
 
     // Sort by timestamp
-    const sorted = [...regimeSnapshots].sort((a, b) =>
-      a.timestamp - b.timestamp
-    );
+    const sorted = [...regimeSnapshots].sort((a, b) => a.timestamp - b.timestamp);
 
     // Find the closest regime that is <= timestamp
     let closest: RegimeSnapshot | null = null;
@@ -995,11 +917,7 @@ export class Backtester {
   /**
    * Estimate ATR from OHLCV data around a timestamp
    */
-  private estimateATR(
-    ohlcvData: OHLCV[],
-    timestamp: number,
-    periods = 14,
-  ): number {
+  private estimateATR(ohlcvData: OHLCV[], timestamp: number, periods = 14): number {
     if (ohlcvData.length === 0) {
       return 0;
     }
@@ -1068,15 +986,11 @@ export class Backtester {
     stopLoss: number,
     takeProfit: number,
     ohlcvData: OHLCV[],
-  ): { exitPrice: number; exitReason: Trade["exitReason"]; duration: number } {
+  ): { exitPrice: number; exitReason: Trade['exitReason']; duration: number } {
     // Calculate stop and target prices
-    const stopPrice = trade.side === "long"
-      ? entry * (1 - stopLoss)
-      : entry * (1 + stopLoss);
+    const stopPrice = trade.side === 'long' ? entry * (1 - stopLoss) : entry * (1 + stopLoss);
 
-    const targetPrice = trade.side === "long"
-      ? entry * (1 + takeProfit)
-      : entry * (1 - takeProfit);
+    const targetPrice = trade.side === 'long' ? entry * (1 + takeProfit) : entry * (1 - takeProfit);
 
     // Find candles after entry
     const relevantCandles = ohlcvData
@@ -1085,12 +999,12 @@ export class Backtester {
 
     // Simulate price action
     for (const candle of relevantCandles) {
-      if (trade.side === "long") {
+      if (trade.side === 'long') {
         // Check stop loss first (worst case)
         if (candle.low <= stopPrice) {
           return {
             exitPrice: stopPrice,
-            exitReason: "stop_loss",
+            exitReason: 'stop_loss',
             duration: candle.timestamp - trade.timestamp,
           };
         }
@@ -1098,7 +1012,7 @@ export class Backtester {
         if (candle.high >= targetPrice) {
           return {
             exitPrice: targetPrice,
-            exitReason: "take_profit",
+            exitReason: 'take_profit',
             duration: candle.timestamp - trade.timestamp,
           };
         }
@@ -1108,7 +1022,7 @@ export class Backtester {
         if (candle.high >= stopPrice) {
           return {
             exitPrice: stopPrice,
-            exitReason: "stop_loss",
+            exitReason: 'stop_loss',
             duration: candle.timestamp - trade.timestamp,
           };
         }
@@ -1116,7 +1030,7 @@ export class Backtester {
         if (candle.low <= targetPrice) {
           return {
             exitPrice: targetPrice,
-            exitReason: "take_profit",
+            exitReason: 'take_profit',
             duration: candle.timestamp - trade.timestamp,
           };
         }
@@ -1135,15 +1049,13 @@ export class Backtester {
    * Calculate PnL for a trade
    */
   private calculatePnL(
-    side: "long" | "short",
+    side: 'long' | 'short',
     entry: number,
     exit: number,
     positionSize: number,
     leverage: number,
   ): number {
-    const priceChange = side === "long"
-      ? (exit - entry) / entry
-      : (entry - exit) / entry;
+    const priceChange = side === 'long' ? (exit - entry) / entry : (entry - exit) / entry;
 
     // PnL = position size * price change (leverage already factored into position size)
     return positionSize * priceChange;
@@ -1173,29 +1085,19 @@ export class Backtester {
     const avgPnL = totalPnL / totalTrades;
 
     // Calculate profit factor
-    const grossProfit = simulatedTrades
-      .filter((t) => t.pnl > 0)
-      .reduce((sum, t) => sum + t.pnl, 0);
+    const grossProfit = simulatedTrades.filter((t) => t.pnl > 0).reduce((sum, t) => sum + t.pnl, 0);
     const grossLoss = Math.abs(
-      simulatedTrades
-        .filter((t) => t.pnl < 0)
-        .reduce((sum, t) => sum + t.pnl, 0),
+      simulatedTrades.filter((t) => t.pnl < 0).reduce((sum, t) => sum + t.pnl, 0),
     );
-    const profitFactor = grossLoss > 0
-      ? grossProfit / grossLoss
-      : grossProfit > 0
-      ? Infinity
-      : 0;
+    const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0;
 
     // Calculate Sharpe ratio
     const returns = simulatedTrades.map((t) => t.pnl / initialCapital);
     const sharpeRatio = this.calculateSharpeRatio(returns, riskFreeRate);
 
     // Calculate averages
-    const avgSlippage =
-      simulatedTrades.reduce((sum, t) => sum + t.slippage, 0) / totalTrades;
-    const avgDuration =
-      simulatedTrades.reduce((sum, t) => sum + t.duration, 0) / totalTrades;
+    const avgSlippage = simulatedTrades.reduce((sum, t) => sum + t.slippage, 0) / totalTrades;
+    const avgDuration = simulatedTrades.reduce((sum, t) => sum + t.duration, 0) / totalTrades;
 
     return {
       totalTrades,
@@ -1216,10 +1118,7 @@ export class Backtester {
   /**
    * Calculate Sharpe ratio from returns
    */
-  private calculateSharpeRatio(
-    returns: number[],
-    riskFreeRate: number,
-  ): number {
+  private calculateSharpeRatio(returns: number[], riskFreeRate: number): number {
     if (returns.length < 2) {
       return 0;
     }
@@ -1229,8 +1128,7 @@ export class Backtester {
 
     // Calculate standard deviation
     const squaredDiffs = returns.map((r) => Math.pow(r - meanReturn, 2));
-    const variance = squaredDiffs.reduce((sum, d) => sum + d, 0) /
-      (returns.length - 1);
+    const variance = squaredDiffs.reduce((sum, d) => sum + d, 0) / (returns.length - 1);
     const stdDev = Math.sqrt(variance);
 
     if (stdDev === 0) {
@@ -1262,12 +1160,12 @@ export class Backtester {
     const consistencyPenalty = Math.max(0, winRateDrop * 0.5);
 
     // Improvement factor: boost if PnL improved significantly
-    const pnlImprovement = baseResult.totalPnL !== 0
-      ? (proposedResult.totalPnL - baseResult.totalPnL) /
-        Math.abs(baseResult.totalPnL)
-      : proposedResult.totalPnL > 0
-      ? 0.1
-      : 0;
+    const pnlImprovement =
+      baseResult.totalPnL !== 0
+        ? (proposedResult.totalPnL - baseResult.totalPnL) / Math.abs(baseResult.totalPnL)
+        : proposedResult.totalPnL > 0
+          ? 0.1
+          : 0;
     const improvementBonus = Math.min(0.1, Math.max(0, pnlImprovement * 0.1));
 
     // Final confidence score
@@ -1296,10 +1194,7 @@ export class Backtester {
   /**
    * Calculate equity curve from trades
    */
-  private calculateEquityCurve(
-    trades: SimulatedTrade[],
-    initialCapital: number,
-  ): number[] {
+  private calculateEquityCurve(trades: SimulatedTrade[], initialCapital: number): number[] {
     const curve = [initialCapital];
     let equity = initialCapital;
 
@@ -1342,10 +1237,7 @@ export class Backtester {
   /**
    * Calculate Sortino ratio (downside deviation)
    */
-  private calculateSortinoRatio(
-    returns: number[],
-    riskFreeRate: number,
-  ): number {
+  private calculateSortinoRatio(returns: number[], riskFreeRate: number): number {
     if (returns.length < 2) {
       return 0;
     }
@@ -1358,9 +1250,9 @@ export class Backtester {
       return meanReturn > riskFreeRate / 252 ? Infinity : 0;
     }
 
-    const downsideVariance = negativeReturns
-      .map((r) => Math.pow(r, 2))
-      .reduce((sum, sq) => sum + sq, 0) / negativeReturns.length;
+    const downsideVariance =
+      negativeReturns.map((r) => Math.pow(r, 2)).reduce((sum, sq) => sum + sq, 0) /
+      negativeReturns.length;
 
     const downsideDeviation = Math.sqrt(downsideVariance);
 
@@ -1378,10 +1270,7 @@ export class Backtester {
   /**
    * Calculate Calmar ratio (return / max drawdown)
    */
-  private calculateCalmarRatio(
-    totalReturn: number,
-    maxDrawdownPercent: number,
-  ): number {
+  private calculateCalmarRatio(totalReturn: number, maxDrawdownPercent: number): number {
     if (maxDrawdownPercent === 0) {
       return totalReturn > 0 ? Infinity : 0;
     }
@@ -1416,7 +1305,7 @@ interface SimulatedTrade {
   originalTrade: Trade;
   adjustedEntry: number;
   exitPrice: number;
-  exitReason: Trade["exitReason"];
+  exitReason: Trade['exitReason'];
   pnl: number;
   slippage: number;
   duration: number;

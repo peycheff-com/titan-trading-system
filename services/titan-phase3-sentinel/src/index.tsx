@@ -75,6 +75,8 @@ async function main() {
       });
   } else {
       console.log("Starting in Headless Mode");
+      core.on("log", (msg) => console.log(`[LOG] ${msg}`));
+      core.on("error", (err) => console.error(`[ERROR] ${err}`));
       process.on("SIGINT", shutdown);
   }
 

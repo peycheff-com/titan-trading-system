@@ -43,6 +43,7 @@ export class TitanTrap {
   // Trap storage
   private trapMap: Map<string, Tripwire[]> = new Map();
   private volumeCounters: Map<string, VolumeCounter> = new Map();
+  private latestPrices: Map<string, number> = new Map(); // Real-time price cache for confirmation checks
 
   // Cached equity (updated every 5 seconds in background)
   private cachedEquity: number = 0;
@@ -296,6 +297,61 @@ export class TitanTrap {
   }
 
   /**
+   * Phase 2: Confirmation Check
+   * Requires price to be actively holding or extending beyond the trigger level.
+   */
+  private async checkConfirmation(
+    symbol: string,
+    trap: Tripwire,
+    microCVD: number,
+    burstVolume: number,
+  ): Promise<void> {
+    const currentPrice = this.latestPrices.get(symbol);
+
+    if (!currentPrice) {
+      console.warn(`⚠️ Confirmation failed: No price data for ${symbol}`);
+      return;
+    }
+
+    // Logic:
+    // LONG: Current Price >= Trigger Price
+    // SHORT: Current Price <= Trigger Price
+    // We allow a tiny tolerance (epsilon) because noise happens, but mostly it should hold.
+
+    // Actually, distinct from "trigger price", we want to ensure it hasn't fully reverted.
+    // If we simply check vs trigger price, that's good.
+    // Ideally it should be BETTER than trigger price.
+
+    let isHolding = false;
+
+    if (trap.direction === "LONG") {
+      isHolding = currentPrice >= trap.triggerPrice * 0.9995; // Allow 0.05% slip back only
+    } else {
+      isHolding = currentPrice <= trap.triggerPrice * 1.0005;
+    }
+
+    if (isHolding) {
+      console.log(
+        `✅ CONFIRMATION PASSED: ${symbol} holding at ${
+          currentPrice.toFixed(2)
+        } vs Trigger ${trap.triggerPrice.toFixed(2)}`,
+      );
+      await this.fire(trap, microCVD, burstVolume);
+    } else {
+      console.warn(
+        `❌ CONFIRMATION FAILED (WICK): ${symbol} reverted to ${
+          currentPrice.toFixed(2)
+        } (Trigger: ${trap.triggerPrice.toFixed(2)})`,
+      );
+      this.eventEmitter.emit("TRAP_ABORTED", {
+        symbol,
+        reason: "WICK_REVERSION",
+        timestamp: Date.now(),
+      });
+    }
+  }
+
+  /**
    * Background loop: Update equity every 5 seconds
    *
    * CRITICAL: This prevents fire() from hanging on slow API calls.
@@ -394,7 +450,7 @@ export class TitanTrap {
             // Determine trend direction (Price vs SMA20)
             const lastClose = ohlcv[ohlcv.length - 1].close;
             const sma20 = TripwireCalculators.calcSMA(
-              new Float64Array(ohlcv.map((b) => b.close)),
+              new Float64Array(ohlcv.map((b: any) => b.close)),
               20,
             );
             const trend = lastClose > sma20 ? "UP" : "DOWN";
@@ -594,6 +650,7 @@ export class TitanTrap {
 
     // Record price with exchange timestamp (not Date.now())
     const exchangeTime = trades[0].time;
+    this.latestPrices.set(symbol, price); // Update real-time price cache
     this.velocityCalculator.recordPrice(symbol, price, exchangeTime);
     this.leadLagDetector.recordPrice(symbol, "BINANCE", price, exchangeTime);
 
@@ -668,8 +725,22 @@ export class TitanTrap {
             elapsed,
           });
 
+          // Phase 2: Confirmation Check (200ms Delay)
+          // Don't fire immediately. Wait to see if price holds.
           const totalVolume = counter.buyVolume + counter.sellVolume;
-          this.fire(trap, microCVD, totalVolume);
+
+          console.log(`   ⏳ PENDING CONFIRMATION: Waiting 200ms...`);
+
+          setTimeout(() => {
+            this.checkConfirmation(
+              symbol,
+              trap,
+              microCVD,
+              totalVolume,
+            );
+          }, 200);
+
+          // Old logic: this.fire(trap, microCVD, totalVolume);
         }
 
         // Reset counter

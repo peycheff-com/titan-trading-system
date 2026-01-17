@@ -1,12 +1,12 @@
 /**
  * ErrorHandler - Centralized Error Handling Utilities
- * 
+ *
  * Provides:
  * - Exponential backoff for API retries
  * - Transaction safety for SQLite operations
  * - User-friendly error messages
  * - Error logging to file
- * 
+ *
  * Requirements: All error scenarios from design
  */
 
@@ -23,14 +23,14 @@ export enum ErrorCode {
   INVALID_RESPONSE = 'INVALID_RESPONSE',
   TIMEOUT = 'TIMEOUT',
   NETWORK_ERROR = 'NETWORK_ERROR',
-  
+
   // Database Errors
   DB_BUSY = 'DB_BUSY',
   DB_CORRUPT = 'DB_CORRUPT',
   DB_DISK_FULL = 'DB_DISK_FULL',
   DB_SCHEMA_MISMATCH = 'DB_SCHEMA_MISMATCH',
   DB_TRANSACTION_FAILED = 'DB_TRANSACTION_FAILED',
-  
+
   // Backtesting Errors
   MISSING_OHLCV_DATA = 'MISSING_OHLCV_DATA',
   INCOMPLETE_REGIME_DATA = 'INCOMPLETE_REGIME_DATA',
@@ -38,7 +38,7 @@ export enum ErrorCode {
   DIVISION_BY_ZERO = 'DIVISION_BY_ZERO',
   SIMULATION_TIMEOUT = 'SIMULATION_TIMEOUT',
   MEMORY_OVERFLOW = 'MEMORY_OVERFLOW',
-  
+
   // Configuration Errors
   CONFIG_PARSE_ERROR = 'CONFIG_PARSE_ERROR',
   CONFIG_MISSING_KEYS = 'CONFIG_MISSING_KEYS',
@@ -46,16 +46,16 @@ export enum ErrorCode {
   CONFIG_WRITE_FAILURE = 'CONFIG_WRITE_FAILURE',
   CONFIG_VALIDATION_ERROR = 'CONFIG_VALIDATION_ERROR',
   HOT_RELOAD_FAILURE = 'HOT_RELOAD_FAILURE',
-  
+
   // User Input Errors
   UNKNOWN_COMMAND = 'UNKNOWN_COMMAND',
   INVALID_SYMBOL = 'INVALID_SYMBOL',
   MALFORMED_INPUT = 'MALFORMED_INPUT',
-  
+
   // Approval Workflow Errors
   CONCURRENT_APPROVAL = 'CONCURRENT_APPROVAL',
   STALE_PROPOSAL = 'STALE_PROPOSAL',
-  
+
   // Generic
   UNKNOWN = 'UNKNOWN',
 }
@@ -73,7 +73,7 @@ export class TitanError extends Error {
     code: ErrorCode,
     message: string,
     context?: Record<string, unknown>,
-    isRetryable = false
+    isRetryable = false,
   ) {
     super(message);
     this.name = 'TitanError';
@@ -113,26 +113,28 @@ export function getUserFriendlyMessage(code: ErrorCode, details?: string): strin
   const messages: Record<ErrorCode, string> = {
     // AI API Errors
     [ErrorCode.RATE_LIMIT]: 'AI service is temporarily busy. Please wait a moment and try again.',
-    [ErrorCode.SERVER_ERROR]: 'AI service encountered an error. The system will retry automatically.',
+    [ErrorCode.SERVER_ERROR]:
+      'AI service encountered an error. The system will retry automatically.',
     [ErrorCode.INVALID_RESPONSE]: 'Received an unexpected response from AI. Please try again.',
     [ErrorCode.TIMEOUT]: 'AI request timed out. Please try again.',
     [ErrorCode.NETWORK_ERROR]: 'Network connection issue. Please check your internet connection.',
-    
+
     // Database Errors
     [ErrorCode.DB_BUSY]: 'Database is busy. Please wait and try again.',
     [ErrorCode.DB_CORRUPT]: 'Database integrity issue detected. Please contact support.',
     [ErrorCode.DB_DISK_FULL]: 'Disk space is low. Please free up space to continue.',
     [ErrorCode.DB_SCHEMA_MISMATCH]: 'Database schema needs update. Running migration...',
     [ErrorCode.DB_TRANSACTION_FAILED]: 'Database operation failed. Changes have been rolled back.',
-    
+
     // Backtesting Errors
-    [ErrorCode.MISSING_OHLCV_DATA]: 'Historical price data is unavailable for the requested period.',
+    [ErrorCode.MISSING_OHLCV_DATA]:
+      'Historical price data is unavailable for the requested period.',
     [ErrorCode.INCOMPLETE_REGIME_DATA]: 'Market regime data is incomplete. Using last known state.',
     [ErrorCode.CACHE_CORRUPTION]: 'Data cache is corrupted. Rebuilding from source...',
     [ErrorCode.DIVISION_BY_ZERO]: 'Calculation error: division by zero. Check input data.',
     [ErrorCode.SIMULATION_TIMEOUT]: 'Backtest simulation took too long. Try a shorter period.',
     [ErrorCode.MEMORY_OVERFLOW]: 'Backtest period too large. Please reduce to 30 days or less.',
-    
+
     // Configuration Errors
     [ErrorCode.CONFIG_PARSE_ERROR]: 'Configuration file has invalid format. Please check syntax.',
     [ErrorCode.CONFIG_MISSING_KEYS]: 'Configuration is missing required values. Using defaults.',
@@ -140,16 +142,17 @@ export function getUserFriendlyMessage(code: ErrorCode, details?: string): strin
     [ErrorCode.CONFIG_WRITE_FAILURE]: 'Failed to save configuration. Check file permissions.',
     [ErrorCode.CONFIG_VALIDATION_ERROR]: 'Configuration values are out of allowed range.',
     [ErrorCode.HOT_RELOAD_FAILURE]: 'Failed to apply new configuration. Rolled back to previous.',
-    
+
     // User Input Errors
     [ErrorCode.UNKNOWN_COMMAND]: 'Unknown command. Type /help for available commands.',
-    [ErrorCode.INVALID_SYMBOL]: 'Invalid trading symbol. Please use a valid symbol like SOL, BTC, ETH.',
+    [ErrorCode.INVALID_SYMBOL]:
+      'Invalid trading symbol. Please use a valid symbol like SOL, BTC, ETH.',
     [ErrorCode.MALFORMED_INPUT]: 'Invalid input format. Please check your command syntax.',
-    
+
     // Approval Workflow Errors
     [ErrorCode.CONCURRENT_APPROVAL]: 'Another approval is in progress. Please wait.',
     [ErrorCode.STALE_PROPOSAL]: 'This proposal is outdated. Please re-validate before applying.',
-    
+
     // Generic
     [ErrorCode.UNKNOWN]: 'An unexpected error occurred. Please try again.',
   };
@@ -187,7 +190,7 @@ const DEFAULT_BACKOFF_CONFIG: BackoffConfig = {
  */
 export function calculateBackoffDelay(
   attempt: number,
-  config: Partial<BackoffConfig> = {}
+  config: Partial<BackoffConfig> = {},
 ): number {
   const { initialDelayMs, maxDelayMs, multiplier, jitter } = {
     ...DEFAULT_BACKOFF_CONFIG,
@@ -196,11 +199,11 @@ export function calculateBackoffDelay(
 
   // Calculate base delay: initialDelay * multiplier^attempt
   const baseDelay = initialDelayMs * Math.pow(multiplier, attempt);
-  
+
   // Apply jitter
   const jitterAmount = baseDelay * jitter * (Math.random() * 2 - 1);
   const delayWithJitter = baseDelay + jitterAmount;
-  
+
   // Cap at max delay
   return Math.min(delayWithJitter, maxDelayMs);
 }
@@ -211,33 +214,31 @@ export function calculateBackoffDelay(
 export async function withRetry<T>(
   fn: () => Promise<T>,
   config: Partial<BackoffConfig> = {},
-  shouldRetry?: (error: unknown, attempt: number) => boolean
+  shouldRetry?: (error: unknown, attempt: number) => boolean,
 ): Promise<T> {
   const { maxRetries } = { ...DEFAULT_BACKOFF_CONFIG, ...config };
-  
+
   let lastError: unknown;
-  
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await fn();
     } catch (error) {
       lastError = error;
-      
+
       // Check if we should retry
-      const canRetry = shouldRetry 
-        ? shouldRetry(error, attempt)
-        : isRetryableError(error);
-      
+      const canRetry = shouldRetry ? shouldRetry(error, attempt) : isRetryableError(error);
+
       if (!canRetry || attempt >= maxRetries) {
         throw error;
       }
-      
+
       // Wait before retrying
       const delay = calculateBackoffDelay(attempt, config);
       await sleep(delay);
     }
   }
-  
+
   throw lastError;
 }
 
@@ -248,7 +249,7 @@ export function isRetryableError(error: unknown): boolean {
   if (error instanceof TitanError) {
     return error.isRetryable;
   }
-  
+
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
     return (
@@ -263,7 +264,7 @@ export function isRetryableError(error: unknown): boolean {
       message.includes('sqlite_busy')
     );
   }
-  
+
   return false;
 }
 
@@ -274,10 +275,10 @@ export function classifyError(error: unknown): TitanError {
   if (error instanceof TitanError) {
     return error;
   }
-  
+
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
-    
+
     // AI API errors
     if (message.includes('429') || message.includes('rate limit')) {
       return new TitanError(ErrorCode.RATE_LIMIT, error.message, undefined, true);
@@ -288,29 +289,36 @@ export function classifyError(error: unknown): TitanError {
     if (message.includes('timeout')) {
       return new TitanError(ErrorCode.TIMEOUT, error.message, undefined, true);
     }
-    if (message.includes('network') || message.includes('econnreset') || message.includes('econnrefused')) {
+    if (
+      message.includes('network') ||
+      message.includes('econnreset') ||
+      message.includes('econnrefused')
+    ) {
       return new TitanError(ErrorCode.NETWORK_ERROR, error.message, undefined, true);
     }
-    
+
     // Database errors
     if (message.includes('sqlite_busy')) {
       return new TitanError(ErrorCode.DB_BUSY, error.message, undefined, true);
     }
-    if (message.includes('sqlite_corrupt') || message.includes('database disk image is malformed')) {
+    if (
+      message.includes('sqlite_corrupt') ||
+      message.includes('database disk image is malformed')
+    ) {
       return new TitanError(ErrorCode.DB_CORRUPT, error.message, undefined, false);
     }
     if (message.includes('disk full') || message.includes('no space')) {
       return new TitanError(ErrorCode.DB_DISK_FULL, error.message, undefined, false);
     }
-    
+
     // Config errors
     if (message.includes('json') && (message.includes('parse') || message.includes('syntax'))) {
       return new TitanError(ErrorCode.CONFIG_PARSE_ERROR, error.message, undefined, false);
     }
-    
+
     return new TitanError(ErrorCode.UNKNOWN, error.message, undefined, false);
   }
-  
+
   return new TitanError(ErrorCode.UNKNOWN, String(error), undefined, false);
 }
 
@@ -402,11 +410,13 @@ export class ErrorLogger {
 
     const logEntry = {
       timestamp: new Date().toISOString(),
-      ...(error instanceof TitanError ? error.toJSON() : {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      }),
+      ...(error instanceof TitanError
+        ? error.toJSON()
+        : {
+            name: error.name,
+            message: error.message,
+            stack: error.stack,
+          }),
       context,
     };
 
@@ -426,7 +436,7 @@ export class ErrorLogger {
   logWithLevel(
     level: 'debug' | 'info' | 'warn' | 'error' | 'critical',
     message: string,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ): void {
     const logEntry = {
       timestamp: new Date().toISOString(),
@@ -479,7 +489,7 @@ export function logError(error: TitanError | Error, context?: Record<string, unk
  * Sleep helper
  */
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -487,7 +497,7 @@ function sleep(ms: number): Promise<void> {
  */
 export function withErrorLogging<T extends (...args: unknown[]) => Promise<unknown>>(
   fn: T,
-  context?: Record<string, unknown>
+  context?: Record<string, unknown>,
 ): T {
   return (async (...args: unknown[]) => {
     try {
@@ -506,7 +516,7 @@ export function withErrorLogging<T extends (...args: unknown[]) => Promise<unkno
 export function withFallback<T>(
   fn: () => Promise<T>,
   fallback: T,
-  onError?: (error: TitanError) => void
+  onError?: (error: TitanError) => void,
 ): () => Promise<T> {
   return async () => {
     try {

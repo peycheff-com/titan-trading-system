@@ -1,7 +1,7 @@
 /**
  * State Recovery Service
  * Handles loading and recovery of system state on startup
- * 
+ *
  * Requirements: 9.4, 9.5
  */
 
@@ -41,10 +41,7 @@ export class StateRecoveryService {
   private readonly riskRepo: RiskRepository;
   private readonly config: StateRecoveryConfig;
 
-  constructor(
-    db: DatabaseManager,
-    config: StateRecoveryConfig
-  ) {
+  constructor(db: DatabaseManager, config: StateRecoveryConfig) {
     this.allocationRepo = new AllocationRepository(db);
     this.performanceRepo = new PerformanceRepository(db);
     this.treasuryRepo = new TreasuryRepository(db);
@@ -55,7 +52,7 @@ export class StateRecoveryService {
   /**
    * Recover complete system state on startup
    * Requirement 9.4: Load allocation vector, performance metrics, and high watermark
-   * 
+   *
    * @returns RecoveredState with all loaded data
    */
   async recoverState(): Promise<RecoveredState> {
@@ -90,13 +87,13 @@ export class StateRecoveryService {
   /**
    * Load the latest allocation vector from database
    * Requirement 9.4: Load allocation vector on startup
-   * 
+   *
    * @returns Latest allocation vector or default if none exists
    */
   async loadAllocationVector(): Promise<AllocationVector | null> {
     try {
       const latestAllocation = await this.allocationRepo.getLatestVector();
-      
+
       if (latestAllocation) {
         // Validate allocation vector (weights should sum to 1.0)
         const sum = latestAllocation.w1 + latestAllocation.w2 + latestAllocation.w3;
@@ -104,10 +101,10 @@ export class StateRecoveryService {
           console.warn(`Invalid allocation vector sum: ${sum}, using default`);
           return this.config.defaultAllocation;
         }
-        
+
         return latestAllocation;
       }
-      
+
       console.log('No allocation vector found in database, using default');
       return this.config.defaultAllocation;
     } catch (error) {
@@ -119,7 +116,7 @@ export class StateRecoveryService {
   /**
    * Load performance metrics for all phases
    * Requirement 9.4: Load performance metrics on startup
-   * 
+   *
    * @returns Performance metrics for each phase
    */
   async loadPerformanceMetrics(): Promise<Record<PhaseId, PhasePerformance>> {
@@ -135,7 +132,7 @@ export class StateRecoveryService {
       try {
         // Get recent trades for the phase
         const trades = await this.performanceRepo.getTradesInWindow(phaseId, windowMs);
-        
+
         if (trades.length === 0) {
           console.log(`No recent trades found for ${phaseId}, using defaults`);
           continue;
@@ -143,19 +140,21 @@ export class StateRecoveryService {
 
         // Calculate performance metrics
         const totalPnL = trades.reduce((sum, trade) => sum + trade.pnl, 0);
-        const winningTrades = trades.filter(trade => trade.pnl > 0);
-        const losingTrades = trades.filter(trade => trade.pnl < 0);
-        
+        const winningTrades = trades.filter((trade) => trade.pnl > 0);
+        const losingTrades = trades.filter((trade) => trade.pnl < 0);
+
         const winRate = trades.length > 0 ? winningTrades.length / trades.length : 0;
-        const avgWin = winningTrades.length > 0 
-          ? winningTrades.reduce((sum, trade) => sum + trade.pnl, 0) / winningTrades.length 
-          : 0;
-        const avgLoss = losingTrades.length > 0 
-          ? losingTrades.reduce((sum, trade) => sum + trade.pnl, 0) / losingTrades.length 
-          : 0;
+        const avgWin =
+          winningTrades.length > 0
+            ? winningTrades.reduce((sum, trade) => sum + trade.pnl, 0) / winningTrades.length
+            : 0;
+        const avgLoss =
+          losingTrades.length > 0
+            ? losingTrades.reduce((sum, trade) => sum + trade.pnl, 0) / losingTrades.length
+            : 0;
 
         // Calculate Sharpe ratio (simplified)
-        const returns = trades.map(trade => trade.pnl);
+        const returns = trades.map((trade) => trade.pnl);
         const sharpeRatio = this.calculateSharpeRatio(returns);
 
         // Calculate performance modifier
@@ -172,7 +171,9 @@ export class StateRecoveryService {
           modifier,
         };
 
-        console.log(`Loaded performance for ${phaseId}: Sharpe=${sharpeRatio.toFixed(2)}, Trades=${trades.length}, Modifier=${modifier.toFixed(2)}`);
+        console.log(
+          `Loaded performance for ${phaseId}: Sharpe=${sharpeRatio.toFixed(2)}, Trades=${trades.length}, Modifier=${modifier.toFixed(2)}`,
+        );
       } catch (error) {
         console.error(`Error loading performance for ${phaseId}:`, error);
         // Keep default performance for this phase
@@ -185,19 +186,19 @@ export class StateRecoveryService {
   /**
    * Load the high watermark from database
    * Requirement 9.4: Load high watermark on startup
-   * 
+   *
    * @returns High watermark value
    */
   async loadHighWatermark(): Promise<number> {
     try {
       const highWatermark = await this.treasuryRepo.getHighWatermark();
-      
+
       // Validate high watermark (should be positive)
       if (highWatermark <= 0) {
         console.warn(`Invalid high watermark: ${highWatermark}, using default`);
         return this.config.defaultHighWatermark;
       }
-      
+
       return highWatermark;
     } catch (error) {
       console.error('Error loading high watermark:', error);
@@ -208,19 +209,21 @@ export class StateRecoveryService {
   /**
    * Load the latest risk metrics snapshot
    * Note: Risk metrics will be recalculated with current positions
-   * 
+   *
    * @returns Latest risk metrics or null if none exist
    */
   async loadRiskMetrics(): Promise<RiskMetrics | null> {
     try {
       const latestSnapshot = await this.riskRepo.getLatest();
-      return latestSnapshot ? {
-        currentLeverage: latestSnapshot.globalLeverage,
-        projectedLeverage: latestSnapshot.globalLeverage,
-        correlation: latestSnapshot.correlationScore,
-        portfolioDelta: latestSnapshot.netDelta,
-        portfolioBeta: latestSnapshot.portfolioBeta,
-      } : null;
+      return latestSnapshot
+        ? {
+            currentLeverage: latestSnapshot.globalLeverage,
+            projectedLeverage: latestSnapshot.globalLeverage,
+            correlation: latestSnapshot.correlationScore,
+            portfolioDelta: latestSnapshot.netDelta,
+            portfolioBeta: latestSnapshot.portfolioBeta,
+          }
+        : null;
     } catch (error) {
       console.error('Error loading risk metrics:', error);
       return null;
@@ -230,7 +233,7 @@ export class StateRecoveryService {
   /**
    * Recalculate risk metrics with current positions
    * Requirement 9.5: Recalculate risk metrics before accepting new signals
-   * 
+   *
    * @param positions - Current positions
    * @param equity - Current equity
    * @returns Recalculated risk metrics
@@ -265,7 +268,7 @@ export class StateRecoveryService {
 
   /**
    * Validate recovered state for consistency
-   * 
+   *
    * @param state - Recovered state to validate
    * @returns True if state is valid
    */
@@ -319,7 +322,8 @@ export class StateRecoveryService {
     if (returns.length < 2) return 0;
 
     const mean = returns.reduce((sum, ret) => sum + ret, 0) / returns.length;
-    const variance = returns.reduce((sum, ret) => sum + Math.pow(ret - mean, 2), 0) / (returns.length - 1);
+    const variance =
+      returns.reduce((sum, ret) => sum + Math.pow(ret - mean, 2), 0) / (returns.length - 1);
     const stdDev = Math.sqrt(variance);
 
     return stdDev > 0 ? mean / stdDev : 0;
@@ -356,15 +360,15 @@ export class StateRecoveryService {
 
     // Simplified correlation calculation
     // In a real implementation, this would use price history
-    const symbols = positions.map(pos => pos.symbol);
+    const symbols = positions.map((pos) => pos.symbol);
     const uniqueSymbols = new Set(symbols);
-    
+
     // If all positions are on the same symbol, correlation is 1.0
     if (uniqueSymbols.size === 1) return 1.0;
-    
+
     // If all positions are on different symbols, assume low correlation
     if (uniqueSymbols.size === positions.length) return 0.2;
-    
+
     // Otherwise, moderate correlation
     return 0.6;
   }
@@ -377,7 +381,7 @@ export class StateRecoveryService {
 
     // Simplified beta calculation
     // In a real implementation, this would use BTC price correlation
-    const btcPositions = positions.filter(pos => pos.symbol.includes('BTC'));
+    const btcPositions = positions.filter((pos) => pos.symbol.includes('BTC'));
     const totalNotional = positions.reduce((sum, pos) => sum + Math.abs(pos.size), 0);
     const btcNotional = btcPositions.reduce((sum, pos) => sum + Math.abs(pos.size), 0);
 

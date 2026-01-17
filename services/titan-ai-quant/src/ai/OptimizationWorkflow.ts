@@ -7,9 +7,9 @@
  * Requirements: 3.4
  */
 
-import { TitanAnalyst } from "./TitanAnalyst.js";
-import { Backtester, InMemoryDataCache } from "../simulation/Backtester.js";
-import { DataLoader } from "../simulation/DataLoader.js";
+import { TitanAnalyst } from './TitanAnalyst.js';
+import { Backtester, InMemoryDataCache } from '../simulation/Backtester.js';
+import { DataLoader } from '../simulation/DataLoader.js';
 import {
   Config,
   Insight,
@@ -18,8 +18,8 @@ import {
   RegimeSnapshot,
   Trade,
   ValidationReport,
-} from "../types/index.js";
-import { ErrorCode, logError, TitanError } from "../utils/ErrorHandler.js";
+} from '../types/index.js';
+import { ErrorCode, logError, TitanError } from '../utils/ErrorHandler.js';
 
 export interface WorkflowConfig {
   backtestPeriodDays?: number;
@@ -88,7 +88,7 @@ export class OptimizationWorkflow {
    */
   async executeWorkflow(): Promise<WorkflowResult> {
     try {
-      console.log("Starting optimization workflow...");
+      console.log('Starting optimization workflow...');
 
       // Step 1: Load historical data
       const historicalData = await this.loadHistoricalData();
@@ -98,8 +98,7 @@ export class OptimizationWorkflow {
           success: false,
           insights: [],
           proposals: [],
-          error:
-            `Insufficient trade data: ${historicalData.trades.length} trades (minimum: ${this.config.minTradesForValidation})`,
+          error: `Insufficient trade data: ${historicalData.trades.length} trades (minimum: ${this.config.minTradesForValidation})`,
         };
       }
 
@@ -122,17 +121,12 @@ export class OptimizationWorkflow {
       }
 
       // Step 3: Generate and validate proposals
-      const proposalResults = await this.processProposals(
-        insights,
-        historicalData,
-      );
+      const proposalResults = await this.processProposals(insights, historicalData);
 
       console.log(`Processed ${proposalResults.length} proposals`);
 
       // Step 4: Apply approved proposals
-      const appliedProposals = await this.applyApprovedProposals(
-        proposalResults,
-      );
+      const appliedProposals = await this.applyApprovedProposals(proposalResults);
 
       console.log(`Applied ${appliedProposals.length} proposals`);
 
@@ -149,14 +143,12 @@ export class OptimizationWorkflow {
         performanceComparison,
       };
     } catch (error) {
-      logError(
-        error instanceof Error ? error : new Error("Unknown workflow error"),
-      );
+      logError(error instanceof Error ? error : new Error('Unknown workflow error'));
       return {
         success: false,
         insights: [],
         proposals: [],
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -170,30 +162,21 @@ export class OptimizationWorkflow {
     regimeSnapshots: RegimeSnapshot[];
   }> {
     const endTime = Date.now();
-    const startTime = endTime -
-      this.config.backtestPeriodDays * 24 * 60 * 60 * 1000;
+    const startTime = endTime - this.config.backtestPeriodDays * 24 * 60 * 60 * 1000;
 
     try {
       // Load trade history
       const trades = await this.dataLoader.loadTradeHistory(startTime, endTime);
 
       // Load OHLCV data for major symbols
-      const symbols = ["BTCUSDT", "ETHUSDT", "ADAUSDT"];
+      const symbols = ['BTCUSDT', 'ETHUSDT', 'ADAUSDT'];
       let ohlcvData: OHLCV[] = [];
       let regimeSnapshots: RegimeSnapshot[] = [];
 
       for (const symbol of symbols) {
         try {
-          const symbolOHLCV = await this.dataLoader.loadOHLCVData(
-            symbol,
-            startTime,
-            endTime,
-          );
-          const symbolRegimes = await this.dataLoader.loadRegimeData(
-            symbol,
-            startTime,
-            endTime,
-          );
+          const symbolOHLCV = await this.dataLoader.loadOHLCVData(symbol, startTime, endTime);
+          const symbolRegimes = await this.dataLoader.loadRegimeData(symbol, startTime, endTime);
 
           ohlcvData = ohlcvData.concat(symbolOHLCV);
           regimeSnapshots = regimeSnapshots.concat(symbolRegimes);
@@ -206,11 +189,11 @@ export class OptimizationWorkflow {
     } catch (error) {
       throw new TitanError(
         ErrorCode.MISSING_OHLCV_DATA,
-        "Failed to load historical data for workflow",
+        'Failed to load historical data for workflow',
         {
           startTime,
           endTime,
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: error instanceof Error ? error.message : 'Unknown error',
         },
       );
     }
@@ -235,7 +218,7 @@ export class OptimizationWorkflow {
     }>
   > {
     const results = [];
-    const currentConfig = await this.analyst["loadCurrentConfig"](); // Access private method
+    const currentConfig = await this.analyst['loadCurrentConfig'](); // Access private method
 
     // Limit number of proposals per run
     const limitedInsights = insights.slice(0, this.config.maxProposalsPerRun);
@@ -243,10 +226,7 @@ export class OptimizationWorkflow {
     for (const insight of limitedInsights) {
       try {
         // Generate optimization proposal
-        const proposal = await this.analyst.proposeOptimization(
-          insight,
-          currentConfig,
-        );
+        const proposal = await this.analyst.proposeOptimization(insight, currentConfig);
 
         console.log(`Generated proposal for insight: ${insight.topic}`);
 
@@ -258,9 +238,9 @@ export class OptimizationWorkflow {
         );
 
         console.log(
-          `Validation result: ${validation.recommendation} (confidence: ${
-            validation.confidenceScore.toFixed(2)
-          })`,
+          `Validation result: ${validation.recommendation} (confidence: ${validation.confidenceScore.toFixed(
+            2,
+          )})`,
         );
 
         results.push({
@@ -274,7 +254,7 @@ export class OptimizationWorkflow {
           proposal: {} as OptimizationProposal,
           validation: {} as ValidationReport,
           applied: false,
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: error instanceof Error ? error.message : 'Unknown error',
         });
       }
     }
@@ -310,17 +290,15 @@ export class OptimizationWorkflow {
       const { proposal, validation } = result;
 
       // Check if proposal should be auto-applied
-      const shouldAutoApply = validation.recommendation === "approve" &&
+      const shouldAutoApply =
+        validation.recommendation === 'approve' &&
         validation.confidenceScore >= this.config.autoApplyThreshold;
 
       if (shouldAutoApply) {
         try {
           console.log(`Auto-applying proposal: ${proposal.targetKey}`);
 
-          const applyResult = await this.analyst.applyProposal(
-            proposal,
-            validation,
-          );
+          const applyResult = await this.analyst.applyProposal(proposal, validation);
 
           if (applyResult.success) {
             result.applied = true;
@@ -331,16 +309,14 @@ export class OptimizationWorkflow {
             console.error(`Failed to apply proposal: ${applyResult.error}`);
           }
         } catch (error) {
-          result.error = error instanceof Error
-            ? error.message
-            : "Unknown error";
+          result.error = error instanceof Error ? error.message : 'Unknown error';
           console.error(`Error applying proposal:`, error);
         }
       } else {
         console.log(
-          `Proposal requires manual review: ${proposal.targetKey} (${validation.recommendation}, confidence: ${
-            validation.confidenceScore.toFixed(2)
-          })`,
+          `Proposal requires manual review: ${proposal.targetKey} (${validation.recommendation}, confidence: ${validation.confidenceScore.toFixed(
+            2,
+          )})`,
         );
       }
     }
@@ -351,13 +327,11 @@ export class OptimizationWorkflow {
   /**
    * Monitor performance after applying proposals
    */
-  private async monitorPerformance(
-    historicalData: {
-      trades: Trade[];
-      ohlcvData: OHLCV[];
-      regimeSnapshots: RegimeSnapshot[];
-    },
-  ): Promise<{
+  private async monitorPerformance(historicalData: {
+    trades: Trade[];
+    ohlcvData: OHLCV[];
+    regimeSnapshots: RegimeSnapshot[];
+  }): Promise<{
     beforeMetrics: any;
     afterMetrics: any;
     improvement: boolean;
@@ -367,7 +341,7 @@ export class OptimizationWorkflow {
       // and comparing performance metrics. For now, we'll simulate this.
 
       // Load current configuration (after proposals applied)
-      const currentConfig = await this.analyst["loadCurrentConfig"]();
+      const currentConfig = await this.analyst['loadCurrentConfig']();
 
       // Run backtest with current configuration
       const currentResult = await this.backtester.replay(
@@ -399,7 +373,7 @@ export class OptimizationWorkflow {
         improvement,
       };
     } catch (error) {
-      console.error("Failed to monitor performance:", error);
+      console.error('Failed to monitor performance:', error);
       return {
         beforeMetrics: {},
         afterMetrics: {},

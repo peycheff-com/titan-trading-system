@@ -1,12 +1,12 @@
 /**
  * EmergencyProtocolManager - Emergency Protocols and Failsafe Systems
- * 
+ *
  * Implements comprehensive emergency protocols for the 2026 modernization:
  * - Prediction market emergency protocols (Requirement 14.1, 10.6)
  * - Multi-system failure detection and response (Requirement 14.2, 14.4, 14.5)
  * - Graceful degradation system (Requirement 14.6)
  * - Emergency notification and logging (Requirement 14.7)
- * 
+ *
  * Task 8: Emergency Protocols and Failsafe Systems
  */
 
@@ -19,7 +19,7 @@ import {
   GlobalCVDData,
   BotTrapAnalysis,
   ConnectionStatus,
-  ImpactLevel
+  ImpactLevel,
 } from '../types';
 
 // ============================================================================
@@ -33,21 +33,21 @@ export interface EmergencyProtocolConfig {
   // Prediction market emergency (Requirement 14.1)
   extremeEventProbabilityThreshold: number; // Default: 90%
   predictionDataStaleThreshold: number; // Default: 300000ms (5 minutes)
-  
+
   // Multi-exchange failure (Requirement 14.2)
   minExchangesForTrading: number; // Default: 2
   exchangeOfflineGracePeriod: number; // Default: 30000ms (30 seconds)
-  
+
   // Flow emergency (Requirement 14.4)
   extremeCVDDivergenceThreshold: number; // Default: 80
-  
+
   // Trap saturation (Requirement 14.5)
   trapSaturationThreshold: number; // Default: 0.8 (80%)
-  
+
   // Graceful degradation (Requirement 14.6)
   enableGracefulDegradation: boolean;
   degradationCheckInterval: number; // Default: 5000ms
-  
+
   // Notification settings (Requirement 14.7)
   enableNotifications: boolean;
   notificationCooldown: number; // Default: 60000ms (1 minute)
@@ -69,7 +69,12 @@ export interface EmergencyTriggerResult {
  * Emergency action to take
  */
 export interface EmergencyAction {
-  action: 'flatten_positions' | 'halt_trading' | 'reduce_positions' | 'switch_to_fallback' | 'notify_user';
+  action:
+    | 'flatten_positions'
+    | 'halt_trading'
+    | 'reduce_positions'
+    | 'switch_to_fallback'
+    | 'notify_user';
   description: string;
   priority: number; // 1 = highest
   executed: boolean;
@@ -147,24 +152,24 @@ export const DEFAULT_EMERGENCY_CONFIG: EmergencyProtocolConfig = {
   // Prediction market emergency
   extremeEventProbabilityThreshold: 90,
   predictionDataStaleThreshold: 300000, // 5 minutes
-  
+
   // Multi-exchange failure
   minExchangesForTrading: 2,
   exchangeOfflineGracePeriod: 30000, // 30 seconds
-  
+
   // Flow emergency
   extremeCVDDivergenceThreshold: 80,
-  
+
   // Trap saturation
   trapSaturationThreshold: 0.8,
-  
+
   // Graceful degradation
   enableGracefulDegradation: true,
   degradationCheckInterval: 5000,
-  
+
   // Notifications
   enableNotifications: true,
-  notificationCooldown: 60000
+  notificationCooldown: 60000,
 };
 
 // ============================================================================
@@ -173,7 +178,7 @@ export const DEFAULT_EMERGENCY_CONFIG: EmergencyProtocolConfig = {
 
 /**
  * EmergencyProtocolManager
- * 
+ *
  * Manages all emergency protocols and failsafe systems for the 2026 modernization.
  * Monitors system health, detects emergency conditions, and coordinates responses.
  */
@@ -186,25 +191,25 @@ export class EmergencyProtocolManager extends EventEmitter {
   private notificationHistory: EmergencyNotification[] = [];
   private lastNotificationTime: Map<EmergencyType, number> = new Map();
   private healthCheckInterval: NodeJS.Timeout | null = null;
-  
+
   // Tracking for data staleness
   private lastOracleUpdate: Date | null = null;
   private lastGlobalCVDUpdate: Date | null = null;
-  
+
   // Exchange status tracking
   private exchangeStatuses: Map<string, { status: ConnectionStatus; lastSeen: Date }> = new Map();
 
   constructor(config?: Partial<EmergencyProtocolConfig>) {
     super();
     this.config = { ...DEFAULT_EMERGENCY_CONFIG, ...config };
-    
+
     this.currentDegradation = {
       level: 'none',
       affectedComponents: [],
       fallbackStrategy: 'none',
-      performanceImpact: 0
+      performanceImpact: 0,
     };
-    
+
     this.initializeComponentHealth();
     this.initializeExchangeStatuses();
   }
@@ -221,7 +226,7 @@ export class EmergencyProtocolManager extends EventEmitter {
       if (this.config.enableGracefulDegradation) {
         this.startHealthChecks();
       }
-      
+
       this.logEmergencyEvent('TRIGGER', null, 'info', 'Emergency Protocol Manager initialized');
       console.log('🚨 Emergency Protocol Manager: Initialized');
       return true;
@@ -236,14 +241,14 @@ export class EmergencyProtocolManager extends EventEmitter {
    */
   private initializeComponentHealth(): void {
     const components = ['oracle', 'global_cvd', 'bot_trap', 'flow_validator', 'hologram_engine'];
-    
+
     for (const component of components) {
       this.componentHealth.set(component, {
         component,
         status: 'healthy',
         lastUpdate: new Date(),
         errorCount: 0,
-        details: 'Initialized'
+        details: 'Initialized',
       });
     }
   }
@@ -253,11 +258,11 @@ export class EmergencyProtocolManager extends EventEmitter {
    */
   private initializeExchangeStatuses(): void {
     const exchanges = ['binance', 'coinbase', 'kraken'];
-    
+
     for (const exchange of exchanges) {
       this.exchangeStatuses.set(exchange, {
         status: ConnectionStatus.DISCONNECTED,
-        lastSeen: new Date()
+        lastSeen: new Date(),
       });
     }
   }
@@ -287,13 +292,14 @@ export class EmergencyProtocolManager extends EventEmitter {
     }
 
     // Check for extreme event probability
-    const extremeEvents = oracleScore.events.filter(event => 
-      (event.impact === ImpactLevel.EXTREME || event.impact === ImpactLevel.HIGH) &&
-      event.probability >= this.config.extremeEventProbabilityThreshold
+    const extremeEvents = oracleScore.events.filter(
+      event =>
+        (event.impact === ImpactLevel.EXTREME || event.impact === ImpactLevel.HIGH) &&
+        event.probability >= this.config.extremeEventProbabilityThreshold
     );
 
     if (extremeEvents.length > 0) {
-      const mostExtreme = extremeEvents.reduce((max, event) => 
+      const mostExtreme = extremeEvents.reduce((max, event) =>
         event.probability > max.probability ? event : max
       );
 
@@ -313,11 +319,15 @@ export class EmergencyProtocolManager extends EventEmitter {
    * Requirement 10.6: Fall back to technical analysis when prediction data is stale
    */
   private handlePredictionDataStale(): EmergencyTriggerResult {
-    const staleDuration = this.lastOracleUpdate 
+    const staleDuration = this.lastOracleUpdate
       ? Date.now() - this.lastOracleUpdate.getTime()
       : Infinity;
 
-    this.updateComponentHealth('oracle', 'degraded', `Data stale for ${Math.round(staleDuration / 1000)}s`);
+    this.updateComponentHealth(
+      'oracle',
+      'degraded',
+      `Data stale for ${Math.round(staleDuration / 1000)}s`
+    );
 
     // Don't trigger full emergency, but log and degrade
     this.logEmergencyEvent(
@@ -332,13 +342,15 @@ export class EmergencyProtocolManager extends EventEmitter {
       type: null,
       reason: 'Prediction data stale - falling back to technical analysis',
       severity: 'warning',
-      actions: [{
-        action: 'switch_to_fallback',
-        description: 'Switch to technical analysis only mode',
-        priority: 2,
-        executed: false
-      }],
-      timestamp: new Date()
+      actions: [
+        {
+          action: 'switch_to_fallback',
+          description: 'Switch to technical analysis only mode',
+          priority: 2,
+          executed: false,
+        },
+      ],
+      timestamp: new Date(),
     };
   }
 
@@ -347,7 +359,7 @@ export class EmergencyProtocolManager extends EventEmitter {
    */
   private isPredictionDataStale(): boolean {
     if (!this.lastOracleUpdate) return true;
-    
+
     const staleDuration = Date.now() - this.lastOracleUpdate.getTime();
     return staleDuration > this.config.predictionDataStaleThreshold;
   }
@@ -355,13 +367,16 @@ export class EmergencyProtocolManager extends EventEmitter {
   /**
    * Trigger prediction emergency
    */
-  private triggerPredictionEmergency(eventTitle: string, probability: number): EmergencyTriggerResult {
+  private triggerPredictionEmergency(
+    eventTitle: string,
+    probability: number
+  ): EmergencyTriggerResult {
     const emergencyState: EmergencyState = {
       active: true,
       type: EmergencyType.PREDICTION_EMERGENCY,
       triggeredAt: new Date(),
       reason: `Extreme event "${eventTitle}" has ${probability.toFixed(1)}% probability`,
-      actions: ['Flatten all positions', 'Halt new entries']
+      actions: ['Flatten all positions', 'Halt new entries'],
     };
 
     this.activateEmergency(emergencyState);
@@ -371,20 +386,20 @@ export class EmergencyProtocolManager extends EventEmitter {
         action: 'flatten_positions',
         description: 'Flatten all open positions immediately',
         priority: 1,
-        executed: false
+        executed: false,
       },
       {
         action: 'halt_trading',
         description: 'Halt all new trading activity',
         priority: 1,
-        executed: false
+        executed: false,
       },
       {
         action: 'notify_user',
         description: 'Send immediate notification to user',
         priority: 1,
-        executed: false
-      }
+        executed: false,
+      },
     ];
 
     this.sendEmergencyNotification(
@@ -401,10 +416,9 @@ export class EmergencyProtocolManager extends EventEmitter {
       reason: emergencyState.reason!,
       severity: 'emergency',
       actions,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
   }
-
 
   // ============================================================================
   // MULTI-SYSTEM FAILURE DETECTION (Requirement 14.2, 14.4, 14.5)
@@ -427,7 +441,7 @@ export class EmergencyProtocolManager extends EventEmitter {
         type: EmergencyType.LIQUIDITY_EMERGENCY,
         triggeredAt: new Date(),
         reason: `Only ${onlineCount} exchange(s) online. Offline: ${offlineExchanges.join(', ')}`,
-        actions: ['Halt all trading', 'Manage existing positions with remaining exchanges']
+        actions: ['Halt all trading', 'Manage existing positions with remaining exchanges'],
       };
 
       this.activateEmergency(emergencyState);
@@ -437,14 +451,14 @@ export class EmergencyProtocolManager extends EventEmitter {
           action: 'halt_trading',
           description: 'Halt all new trading activity',
           priority: 1,
-          executed: false
+          executed: false,
         },
         {
           action: 'notify_user',
           description: 'Notify user of exchange connectivity issues',
           priority: 1,
-          executed: false
-        }
+          executed: false,
+        },
       ];
 
       this.sendEmergencyNotification(
@@ -461,7 +475,7 @@ export class EmergencyProtocolManager extends EventEmitter {
         reason: emergencyState.reason!,
         severity: 'critical',
         actions,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     }
 
@@ -496,7 +510,7 @@ export class EmergencyProtocolManager extends EventEmitter {
         type: EmergencyType.FLOW_EMERGENCY,
         triggeredAt: new Date(),
         reason: `Extreme CVD divergence detected: ${divergenceScore.toFixed(1)} (threshold: ${this.config.extremeCVDDivergenceThreshold})`,
-        actions: ['Investigate for market manipulation', 'Halt pattern-based trading']
+        actions: ['Investigate for market manipulation', 'Halt pattern-based trading'],
       };
 
       this.activateEmergency(emergencyState);
@@ -506,14 +520,14 @@ export class EmergencyProtocolManager extends EventEmitter {
           action: 'halt_trading',
           description: 'Halt pattern-based trading',
           priority: 1,
-          executed: false
+          executed: false,
         },
         {
           action: 'notify_user',
           description: 'Alert user to potential market manipulation',
           priority: 1,
-          executed: false
-        }
+          executed: false,
+        },
       ];
 
       this.sendEmergencyNotification(
@@ -530,7 +544,7 @@ export class EmergencyProtocolManager extends EventEmitter {
         reason: emergencyState.reason!,
         severity: 'critical',
         actions,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     }
 
@@ -546,7 +560,10 @@ export class EmergencyProtocolManager extends EventEmitter {
    * Check for trap saturation emergency
    * Requirement 14.5: Trigger TRAP_SATURATION when bot trap detection rate > 80%
    */
-  checkTrapSaturationEmergency(botTrapAnalysis: BotTrapAnalysis | null, trapDetectionRate: number): EmergencyTriggerResult {
+  checkTrapSaturationEmergency(
+    botTrapAnalysis: BotTrapAnalysis | null,
+    trapDetectionRate: number
+  ): EmergencyTriggerResult {
     // Update component health
     if (botTrapAnalysis) {
       this.updateComponentHealth('bot_trap', 'healthy', 'Analysis received');
@@ -558,7 +575,7 @@ export class EmergencyProtocolManager extends EventEmitter {
         type: EmergencyType.TRAP_SATURATION,
         triggeredAt: new Date(),
         reason: `Bot trap detection rate: ${(trapDetectionRate * 100).toFixed(1)}% (threshold: ${this.config.trapSaturationThreshold * 100}%)`,
-        actions: ['Pause pattern-based trading', 'Wait for market conditions to normalize']
+        actions: ['Pause pattern-based trading', 'Wait for market conditions to normalize'],
       };
 
       this.activateEmergency(emergencyState);
@@ -568,14 +585,14 @@ export class EmergencyProtocolManager extends EventEmitter {
           action: 'halt_trading',
           description: 'Pause pattern-based trading',
           priority: 2,
-          executed: false
+          executed: false,
         },
         {
           action: 'notify_user',
           description: 'Alert user to high bot trap saturation',
           priority: 2,
-          executed: false
-        }
+          executed: false,
+        },
       ];
 
       this.sendEmergencyNotification(
@@ -592,7 +609,7 @@ export class EmergencyProtocolManager extends EventEmitter {
         reason: emergencyState.reason!,
         severity: 'warning',
         actions,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     }
 
@@ -610,7 +627,7 @@ export class EmergencyProtocolManager extends EventEmitter {
   updateExchangeStatus(exchange: string, status: ConnectionStatus): void {
     this.exchangeStatuses.set(exchange, {
       status,
-      lastSeen: new Date()
+      lastSeen: new Date(),
     });
 
     // Check for liquidity emergency after status update
@@ -628,7 +645,7 @@ export class EmergencyProtocolManager extends EventEmitter {
   assessSystemHealth(): SystemHealthAssessment {
     const components = Array.from(this.componentHealth.values());
     const activeEmergencies = Array.from(this.activeEmergencies.values());
-    
+
     // Count component statuses
     const healthyCount = components.filter(c => c.status === 'healthy').length;
     const degradedCount = components.filter(c => c.status === 'degraded').length;
@@ -636,7 +653,7 @@ export class EmergencyProtocolManager extends EventEmitter {
 
     // Determine overall health
     let overallHealth: 'healthy' | 'degraded' | 'critical' | 'emergency';
-    
+
     if (activeEmergencies.length > 0) {
       overallHealth = 'emergency';
     } else if (failedCount >= 2 || (failedCount >= 1 && degradedCount >= 2)) {
@@ -660,7 +677,7 @@ export class EmergencyProtocolManager extends EventEmitter {
       degradationLevel,
       activeEmergencies,
       recommendations,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
     this.emit('health:updated', assessment);
@@ -675,7 +692,9 @@ export class EmergencyProtocolManager extends EventEmitter {
     emergencies: EmergencyState[]
   ): DegradationLevel {
     const failedComponents = components.filter(c => c.status === 'failed').map(c => c.component);
-    const degradedComponents = components.filter(c => c.status === 'degraded').map(c => c.component);
+    const degradedComponents = components
+      .filter(c => c.status === 'degraded')
+      .map(c => c.component);
     const affectedComponents = [...failedComponents, ...degradedComponents];
 
     // Emergency level
@@ -684,7 +703,7 @@ export class EmergencyProtocolManager extends EventEmitter {
         level: 'emergency',
         affectedComponents,
         fallbackStrategy: 'Halt all trading, flatten positions if PREDICTION_EMERGENCY',
-        performanceImpact: 100
+        performanceImpact: 100,
       };
     }
 
@@ -694,7 +713,7 @@ export class EmergencyProtocolManager extends EventEmitter {
         level: 'significant',
         affectedComponents,
         fallbackStrategy: 'Fall back to classic Phase 2 logic',
-        performanceImpact: 60
+        performanceImpact: 60,
       };
     }
 
@@ -704,7 +723,7 @@ export class EmergencyProtocolManager extends EventEmitter {
         level: 'partial',
         affectedComponents,
         fallbackStrategy: 'Disable non-critical enhancements',
-        performanceImpact: 30
+        performanceImpact: 30,
       };
     }
 
@@ -713,7 +732,7 @@ export class EmergencyProtocolManager extends EventEmitter {
       level: 'none',
       affectedComponents: [],
       fallbackStrategy: 'none',
-      performanceImpact: 0
+      performanceImpact: 0,
     };
   }
 
@@ -724,9 +743,9 @@ export class EmergencyProtocolManager extends EventEmitter {
     if (this.currentDegradation.level !== newLevel.level) {
       const oldLevel = this.currentDegradation;
       this.currentDegradation = newLevel;
-      
+
       this.emit('degradation:changed', newLevel);
-      
+
       this.logEmergencyEvent(
         'DEGRADATION',
         null,
@@ -789,8 +808,10 @@ export class EmergencyProtocolManager extends EventEmitter {
    * Check if system should fall back to classic Phase 2
    */
   shouldFallbackToClassic(): boolean {
-    return this.currentDegradation.level === 'significant' || 
-           this.currentDegradation.level === 'emergency';
+    return (
+      this.currentDegradation.level === 'significant' ||
+      this.currentDegradation.level === 'emergency'
+    );
   }
 
   /**
@@ -799,7 +820,6 @@ export class EmergencyProtocolManager extends EventEmitter {
   getDegradationLevel(): DegradationLevel {
     return { ...this.currentDegradation };
   }
-
 
   // ============================================================================
   // EMERGENCY NOTIFICATION AND LOGGING (Requirement 14.7)
@@ -832,7 +852,7 @@ export class EmergencyProtocolManager extends EventEmitter {
       message,
       actions,
       timestamp: new Date(),
-      acknowledged: false
+      acknowledged: false,
     };
 
     this.notificationHistory.push(notification);
@@ -842,13 +862,9 @@ export class EmergencyProtocolManager extends EventEmitter {
     this.emit('notification:sent', notification);
 
     // Log notification
-    this.logEmergencyEvent(
-      'NOTIFICATION',
-      type,
-      severity,
-      `Notification sent: ${title}`,
-      { notification }
-    );
+    this.logEmergencyEvent('NOTIFICATION', type, severity, `Notification sent: ${title}`, {
+      notification,
+    });
 
     // Console output for immediate visibility
     const severityEmoji = severity === 'emergency' ? '🚨' : severity === 'critical' ? '⚠️' : '⚡';
@@ -877,9 +893,9 @@ export class EmergencyProtocolManager extends EventEmitter {
       systemState: {
         overallHealth: this.getOverallHealth(),
         degradationLevel: this.currentDegradation,
-        activeEmergencies: Array.from(this.activeEmergencies.values())
+        activeEmergencies: Array.from(this.activeEmergencies.values()),
       },
-      metadata
+      metadata,
     };
 
     this.emergencyLog.push(entry);
@@ -971,12 +987,7 @@ export class EmergencyProtocolManager extends EventEmitter {
     this.activeEmergencies.delete(type);
     this.emit('emergency:cleared', type);
 
-    this.logEmergencyEvent(
-      'CLEAR',
-      type,
-      'info',
-      `Emergency cleared: ${type}`
-    );
+    this.logEmergencyEvent('CLEAR', type, 'info', `Emergency cleared: ${type}`);
 
     // Reassess system health after clearing
     this.assessSystemHealth();
@@ -1023,7 +1034,7 @@ export class EmergencyProtocolManager extends EventEmitter {
     details: string
   ): void {
     const current = this.componentHealth.get(component);
-    
+
     if (current) {
       const wasHealthy = current.status === 'healthy';
       const isNowFailed = status === 'failed';
@@ -1052,11 +1063,11 @@ export class EmergencyProtocolManager extends EventEmitter {
    */
   recordComponentError(component: string, error: string): void {
     const current = this.componentHealth.get(component);
-    
+
     if (current) {
       current.errorCount++;
       current.details = error;
-      
+
       // Degrade or fail based on error count
       if (current.errorCount >= 5) {
         current.status = 'failed';
@@ -1127,11 +1138,11 @@ export class EmergencyProtocolManager extends EventEmitter {
     const systemHealth = this.assessSystemHealth();
 
     // Determine actions
-    const shouldHaltTrading = emergencies.some(e => 
+    const shouldHaltTrading = emergencies.some(e =>
       e.actions.some(a => a.action === 'halt_trading')
     );
 
-    const shouldFlattenPositions = emergencies.some(e => 
+    const shouldFlattenPositions = emergencies.some(e =>
       e.actions.some(a => a.action === 'flatten_positions')
     );
 
@@ -1140,7 +1151,7 @@ export class EmergencyProtocolManager extends EventEmitter {
       emergencies,
       systemHealth,
       shouldHaltTrading,
-      shouldFlattenPositions
+      shouldFlattenPositions,
     };
   }
 
@@ -1160,7 +1171,9 @@ export class EmergencyProtocolManager extends EventEmitter {
       this.assessSystemHealth();
     }, this.config.degradationCheckInterval);
 
-    console.log(`🚨 Emergency Protocol Manager: Started health checks (${this.config.degradationCheckInterval}ms interval)`);
+    console.log(
+      `🚨 Emergency Protocol Manager: Started health checks (${this.config.degradationCheckInterval}ms interval)`
+    );
   }
 
   /**
@@ -1187,7 +1200,7 @@ export class EmergencyProtocolManager extends EventEmitter {
       reason: '',
       severity: 'warning',
       actions: [],
-      timestamp: new Date()
+      timestamp: new Date(),
     };
   }
 
@@ -1226,7 +1239,7 @@ export class EmergencyProtocolManager extends EventEmitter {
     const componentHealthSummary: Record<string, number> = {
       healthy: 0,
       degraded: 0,
-      failed: 0
+      failed: 0,
     };
 
     for (const health of this.componentHealth.values()) {
@@ -1238,7 +1251,7 @@ export class EmergencyProtocolManager extends EventEmitter {
       totalEmergenciesTriggered: this.emergencyLog.filter(e => e.type === 'TRIGGER').length,
       totalNotificationsSent: this.notificationHistory.length,
       currentDegradationLevel: this.currentDegradation.level,
-      componentHealthSummary
+      componentHealthSummary,
     };
   }
 
@@ -1252,12 +1265,12 @@ export class EmergencyProtocolManager extends EventEmitter {
     this.lastNotificationTime.clear();
     this.lastOracleUpdate = null;
     this.lastGlobalCVDUpdate = null;
-    
+
     this.currentDegradation = {
       level: 'none',
       affectedComponents: [],
       fallbackStrategy: 'none',
-      performanceImpact: 0
+      performanceImpact: 0,
     };
 
     this.initializeComponentHealth();
@@ -1279,5 +1292,8 @@ export class EmergencyProtocolManager extends EventEmitter {
 // Export event interface for TypeScript
 export declare interface EmergencyProtocolManager {
   on<U extends keyof EmergencyProtocolEvents>(event: U, listener: EmergencyProtocolEvents[U]): this;
-  emit<U extends keyof EmergencyProtocolEvents>(event: U, ...args: Parameters<EmergencyProtocolEvents[U]>): boolean;
+  emit<U extends keyof EmergencyProtocolEvents>(
+    event: U,
+    ...args: Parameters<EmergencyProtocolEvents[U]>
+  ): boolean;
 }

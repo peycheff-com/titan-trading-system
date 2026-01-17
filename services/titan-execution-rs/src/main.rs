@@ -15,6 +15,8 @@ use titan_execution_rs::exchange::binance::BinanceAdapter;
 use titan_execution_rs::exchange::bybit::BybitAdapter;
 use titan_execution_rs::exchange::mexc::MexcAdapter;
 use titan_execution_rs::exchange::router::ExecutionRouter;
+use titan_execution_rs::market_data::engine::MarketDataEngine;
+use titan_execution_rs::simulation_engine::SimulationEngine;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -36,7 +38,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Initialize Core Components
     // Wrap ShadowState in Arc<RwLock> for sharing between NATS (write) and API (read)
     let shadow_state = Arc::new(RwLock::new(ShadowState::new()));
-    let order_manager = OrderManager::new(None); // Use default config
+
+    // Initialize Market Data Engine (Truth Layer) - Moved up for dependency injection
+    let market_data_engine = Arc::new(MarketDataEngine::new());
+    let _md_handle = market_data_engine.start().await;
+    info!("✅ Market Data Engine started");
+
+    let order_manager = OrderManager::new(None, market_data_engine.clone()); // Use default config
 
     info!("✅ Core components initialized");
 
@@ -57,6 +65,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     // Initialize Execution Router
     let router = Arc::new(ExecutionRouter::new());
+
+    // Initialize Simulation Engine (Shadow Layer)
+    let simulation_engine = Arc::new(SimulationEngine::new(market_data_engine.clone()));
 
     // 1. Binance
     let binance_adapter = Arc::new(BinanceAdapter::new());
@@ -84,9 +95,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     // --- NATS Consumer Task ---
     let client_clone = client.clone();
+    let client_shadow = client.clone(); // Clone for shadow publisher
     let state_for_nats = shadow_state.clone();
     let router_nats = router.clone();
-    
+    let sim_engine_nats = simulation_engine.clone();
+
     // Subscribe to Intents
     let subject = "titan.execution.intent.>";
     let mut subscription = client.subscribe(subject.to_string()).await?;
@@ -102,6 +115,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                     match serde_json::from_slice::<Intent>(&msg.payload) {
                         Ok(intent) => {
                             info!("Intent received: {} {}", intent.symbol, intent.signal_id);
+                            
+                            // --- SHADOW EXECUTION (Concurrent) ---
+                            // Execute immediately against valid market data
+                            if let Some(shadow_fill) = sim_engine_nats.simulate_execution(&intent) {
+                                let subject = format!("titan.execution.shadow_fill.{}", intent.symbol);
+                                let payload = serde_json::to_vec(&shadow_fill).unwrap();
+                                client_shadow.publish(subject, payload.into()).await.ok();
+                            }
                             
                             // Enforce Timestamp Freshness (5000ms window)
                             let now = Utc::now().timestamp_millis();

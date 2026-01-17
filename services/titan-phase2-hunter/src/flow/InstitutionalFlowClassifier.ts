@@ -1,82 +1,24 @@
 /**
  * InstitutionalFlowClassifier - Institutional Flow Classification Engine
- * 
+ *
  * Purpose: Classify order flow as institutional or retail based on
  * passive absorption vs aggressive pushing patterns.
- * 
+ *
  * Key Features:
  * - Implement passive absorption vs aggressive pushing detection
  * - Build flow validation scoring system
  * - Integrate with existing CVD validator for enhanced confirmation
- * 
+ *
  * Requirements: 2.5, 2.6 (Flow Classification and CVD Integration)
  */
 
 import { EventEmitter } from 'events';
-import { FlowValidation, TradeFootprint, IcebergAnalysis } from '../types';
-import { CVDTrade, Absorption, Distribution } from '../types';
-import { FootprintAnalyzer, CandleFootprint, FootprintAnalysisResult } from './FootprintAnalyzer';
-import { SweepDetector, SweepDetectionResult } from './SweepDetector';
+import { FlowValidation, IcebergAnalysis, TradeFootprint } from '../types';
+import { Absorption, CVDTrade, Distribution } from '../types';
+import { CVDIntegrationResult, FlowClassificationResult, FlowClassifierConfig } from '../types';
+import { CandleFootprint, FootprintAnalysisResult, FootprintAnalyzer } from './FootprintAnalyzer';
+import { SweepDetectionResult, SweepDetector } from './SweepDetector';
 import { IcebergDetector } from './IcebergDetector';
-
-// ============================================================================
-// INTERFACES
-// ============================================================================
-
-/**
- * Configuration for flow classification
- */
-export interface FlowClassifierConfig {
-  /** Threshold for passive absorption classification (0-1) */
-  passiveThreshold: number;
-  /** Threshold for aggressive pushing classification (0-1) */
-  aggressiveThreshold: number;
-  /** Minimum confidence for valid classification */
-  minConfidence: number;
-  /** Weight for footprint analysis in scoring */
-  footprintWeight: number;
-  /** Weight for sweep analysis in scoring */
-  sweepWeight: number;
-  /** Weight for iceberg analysis in scoring */
-  icebergWeight: number;
-  /** Time window for flow analysis (ms) */
-  analysisWindow: number;
-}
-
-/**
- * Flow classification result with detailed breakdown
- */
-export interface FlowClassificationResult {
-  flowType: 'passive_absorption' | 'aggressive_pushing' | 'neutral';
-  confidence: number; // 0-100
-  institutionalProbability: number; // 0-100
-  breakdown: {
-    footprintScore: number;
-    sweepScore: number;
-    icebergScore: number;
-    cvdScore: number;
-  };
-  signals: {
-    passiveAbsorption: boolean;
-    aggressivePushing: boolean;
-    icebergDetected: boolean;
-    sweepDetected: boolean;
-  };
-  recommendation: 'strong_buy' | 'buy' | 'neutral' | 'sell' | 'strong_sell';
-  reasoning: string[];
-}
-
-/**
- * CVD integration result
- */
-export interface CVDIntegrationResult {
-  cvdConfirmed: boolean;
-  cvdValue: number;
-  cvdDirection: 'bullish' | 'bearish' | 'neutral';
-  absorptionDetected: boolean;
-  distributionDetected: boolean;
-  confidenceAdjustment: number;
-}
 
 // ============================================================================
 // DEFAULT CONFIGURATION
@@ -88,8 +30,8 @@ const DEFAULT_CONFIG: FlowClassifierConfig = {
   minConfidence: 50,
   footprintWeight: 0.35,
   sweepWeight: 0.25,
-  icebergWeight: 0.20,
-  analysisWindow: 60000 // 1 minute
+  icebergWeight: 0.2,
+  analysisWindow: 60000, // 1 minute
 };
 
 // ============================================================================
@@ -98,7 +40,7 @@ const DEFAULT_CONFIG: FlowClassifierConfig = {
 
 /**
  * InstitutionalFlowClassifier - Classifies order flow patterns
- * 
+ *
  * Distinguishes between:
  * - Passive Absorption: Limit orders soaking up aggressive market orders (bullish)
  * - Aggressive Pushing: Market orders consuming limit order liquidity (bearish)
@@ -109,6 +51,7 @@ export class InstitutionalFlowClassifier extends EventEmitter {
   private sweepDetector: SweepDetector;
   private icebergDetector: IcebergDetector;
   private classificationCache: Map<string, FlowClassificationResult[]> = new Map();
+  private tradeBuffer: Map<string, CVDTrade[]> = new Map();
   private readonly MAX_CACHE_SIZE = 50;
 
   constructor(
@@ -119,11 +62,36 @@ export class InstitutionalFlowClassifier extends EventEmitter {
   ) {
     super();
     this.config = { ...DEFAULT_CONFIG, ...config };
-    
+
     // Use provided analyzers or create new ones
     this.footprintAnalyzer = footprintAnalyzer || new FootprintAnalyzer();
     this.sweepDetector = sweepDetector || new SweepDetector();
     this.icebergDetector = icebergDetector || new IcebergDetector();
+  }
+
+  /**
+   * Record a new trade for analysis
+   * Maintains a sliding window of trades based on config.analysisWindow
+   */
+  public recordTrade(trade: CVDTrade): void {
+    if (!this.tradeBuffer.has(trade.symbol)) {
+      this.tradeBuffer.set(trade.symbol, []);
+    }
+
+    const buffer = this.tradeBuffer.get(trade.symbol)!;
+    buffer.push(trade);
+
+    // Prune old trades
+    const cutoff = Date.now() - this.config.analysisWindow;
+
+    // Optimization: Only prune if buffer is getting large or periodically
+    // For now, simple prune from start if old
+    while (buffer.length > 0 && buffer[0].time < cutoff) {
+      buffer.shift();
+    }
+
+    // Optional: Trigger analysis immediately or on schedule?
+    // Doing it on demand in getLatestClassification is better for CPU.
   }
 
   // ============================================================================
@@ -178,7 +146,7 @@ export class InstitutionalFlowClassifier extends EventEmitter {
       const prices = trades.map(t => t.price);
       const priceRange = Math.max(...prices) - Math.min(...prices);
       const avgPrice = prices.reduce((sum, p) => sum + p, 0) / prices.length;
-      const priceStability = 1 - (priceRange / avgPrice);
+      const priceStability = 1 - priceRange / avgPrice;
 
       if (priceStability > 0.99) {
         strength += 30;
@@ -203,7 +171,7 @@ export class InstitutionalFlowClassifier extends EventEmitter {
     return {
       detected,
       strength: Math.min(100, strength),
-      evidence
+      evidence,
     };
   }
 
@@ -242,9 +210,8 @@ export class InstitutionalFlowClassifier extends EventEmitter {
     }
 
     // Calculate aggressive ratio
-    const aggressiveRatio = totalVolume > 0 
-      ? Math.max(aggressiveBuyVolume, aggressiveSellVolume) / totalVolume 
-      : 0;
+    const aggressiveRatio =
+      totalVolume > 0 ? Math.max(aggressiveBuyVolume, aggressiveSellVolume) / totalVolume : 0;
 
     const direction: 'up' | 'down' = aggressiveBuyVolume > aggressiveSellVolume ? 'up' : 'down';
 
@@ -282,7 +249,7 @@ export class InstitutionalFlowClassifier extends EventEmitter {
       detected,
       strength: Math.min(100, strength),
       direction,
-      evidence
+      evidence,
     };
   }
 
@@ -309,7 +276,11 @@ export class InstitutionalFlowClassifier extends EventEmitter {
     // Analyze iceberg (if price level provided)
     let icebergDensity = 0;
     if (priceLevel) {
-      const icebergAnalysis = this.icebergDetector.calculateIcebergDensity(symbol, priceLevel, trades);
+      const icebergAnalysis = this.icebergDetector.calculateIcebergDensity(
+        symbol,
+        priceLevel,
+        trades
+      );
       icebergDensity = icebergAnalysis.density;
     }
 
@@ -339,7 +310,7 @@ export class InstitutionalFlowClassifier extends EventEmitter {
       sweepCount: sweepResult.sweeps.length,
       icebergDensity,
       institutionalProbability,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
     this.emit('flowValidated', { symbol, validation });
@@ -384,11 +355,7 @@ export class InstitutionalFlowClassifier extends EventEmitter {
   /**
    * Perform comprehensive flow classification
    */
-  classifyFlow(
-    symbol: string,
-    trades: CVDTrade[],
-    priceLevel?: number
-  ): FlowClassificationResult {
+  classifyFlow(symbol: string, trades: CVDTrade[], priceLevel?: number): FlowClassificationResult {
     const reasoning: string[] = [];
 
     // Get flow validation
@@ -421,7 +388,9 @@ export class InstitutionalFlowClassifier extends EventEmitter {
       reasoning.push(...pushing.evidence);
     }
     if (sweepResult.sweeps.length > 0) {
-      reasoning.push(`${sweepResult.sweeps.length} sweep(s) with ${sweepResult.dominantDirection} direction`);
+      reasoning.push(
+        `${sweepResult.sweeps.length} sweep(s) with ${sweepResult.dominantDirection} direction`
+      );
     }
     if (icebergAnalysis?.isIceberg) {
       reasoning.push(`Iceberg detected with ${icebergAnalysis.density.toFixed(1)}% density`);
@@ -442,16 +411,16 @@ export class InstitutionalFlowClassifier extends EventEmitter {
         footprintScore,
         sweepScore,
         icebergScore,
-        cvdScore
+        cvdScore,
       },
       signals: {
         passiveAbsorption: absorption.detected,
         aggressivePushing: pushing.detected,
         icebergDetected: icebergAnalysis?.isIceberg || false,
-        sweepDetected: sweepResult.sweeps.length > 0
+        sweepDetected: sweepResult.sweeps.length > 0,
       },
       recommendation,
-      reasoning
+      reasoning,
     };
 
     // Cache result
@@ -467,7 +436,7 @@ export class InstitutionalFlowClassifier extends EventEmitter {
    */
   private calculateFootprintScore(trades: CVDTrade[]): number {
     const classification = this.footprintAnalyzer.classifyVolume(trades);
-    
+
     // Higher aggressive ratio = higher score
     return classification.ratio * 100;
   }
@@ -492,7 +461,7 @@ export class InstitutionalFlowClassifier extends EventEmitter {
 
     // Normalize to 0-100 scale
     if (totalVolume === 0) return 50;
-    
+
     const normalizedCVD = (cvd / totalVolume + 1) / 2; // Convert -1 to 1 range to 0 to 1
     return normalizedCVD * 100;
   }
@@ -593,7 +562,7 @@ export class InstitutionalFlowClassifier extends EventEmitter {
       cvdDirection,
       absorptionDetected: !!absorption,
       distributionDetected: !!distribution,
-      confidenceAdjustment
+      confidenceAdjustment,
     };
 
     this.emit('cvdIntegrated', { symbol, result });
@@ -631,8 +600,19 @@ export class InstitutionalFlowClassifier extends EventEmitter {
 
   /**
    * Get latest classification
+   * Runs analysis on current buffer if available
    */
   getLatestClassification(symbol: string): FlowClassificationResult | null {
+    // Check if we have trades to analyze
+    const trades = this.tradeBuffer.get(symbol);
+    if (trades && trades.length > 0) {
+      // Run fresh analysis
+      // Note: priceLevel is optional, we might miss iceberg nuances without it here,
+      // but for general flow score it's fine.
+      return this.classifyFlow(symbol, trades);
+    }
+
+    // Fallback to cache if no fresh buffer (unlikely if active)
     const cache = this.classificationCache.get(symbol);
     return cache && cache.length > 0 ? cache[cache.length - 1] : null;
   }
@@ -667,7 +647,7 @@ export class InstitutionalFlowClassifier extends EventEmitter {
     return {
       footprint: this.footprintAnalyzer,
       sweep: this.sweepDetector,
-      iceberg: this.icebergDetector
+      iceberg: this.icebergDetector,
     };
   }
 
@@ -691,7 +671,7 @@ export class InstitutionalFlowClassifier extends EventEmitter {
       cachedClassifications,
       footprintStats: this.footprintAnalyzer.getStats(),
       sweepStats: this.sweepDetector.getStats(),
-      icebergStats: this.icebergDetector.getStats()
+      icebergStats: this.icebergDetector.getStats(),
     };
   }
 

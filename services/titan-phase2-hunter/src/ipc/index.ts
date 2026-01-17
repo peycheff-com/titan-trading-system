@@ -5,24 +5,22 @@
  */
 
 export {
-    type AbortResponse,
-    type ConfirmResponse,
-    ConnectionState,
-    ExecutionClient,
-    type IntentSignal,
-    type PrepareResponse,
-    type SignalSource,
-} from "@titan/shared";
+  type AbortResponse,
+  type ConfirmResponse,
+  ConnectionState,
+  ExecutionClient,
+  type IntentSignal,
+  type PrepareResponse,
+  type SignalSource,
+} from '@titan/shared';
 
-import { ExecutionClient, SignalSource } from "@titan/shared";
+import { ExecutionClient, SignalSource } from '@titan/shared';
 
 /**
  * Create a ExecutionClient configured for Hunter phase
  */
-export function createHunterIPCClient(config?: {
-    source?: SignalSource;
-}): ExecutionClient {
-    return new ExecutionClient({
-        source: "hunter",
-    });
+export function createHunterIPCClient(config?: { source?: SignalSource }): ExecutionClient {
+  return new ExecutionClient({
+    source: 'hunter',
+  });
 }

@@ -7,16 +7,16 @@
  * Requirements: 1.3.1, 1.3.2, 1.3.3, 1.3.4, 1.3.5
  */
 
-import { EventEmitter } from "events";
-import { ConfigValidationResult, ConfigValidator } from "./ConfigValidator.js";
-import { Logger } from "../logging/Logger.js";
+import { EventEmitter } from 'events';
+import { ConfigValidationResult, ConfigValidator } from './ConfigValidator.js';
+import { Logger } from '../logging/Logger.js';
 
 /**
  * Brain configuration interface
  */
 export interface BrainConfig {
   // Core application settings
-  nodeEnv: "development" | "production" | "test";
+  nodeEnv: 'development' | 'production' | 'test';
   port: number;
   host: string;
 
@@ -33,10 +33,10 @@ export interface BrainConfig {
 
   // Security configuration
   hmacSecret?: string;
-  hmacAlgorithm: "sha256" | "sha512";
+  hmacAlgorithm: 'sha256' | 'sha512';
 
   // Logging configuration
-  logLevel: "fatal" | "error" | "warn" | "info" | "debug" | "trace";
+  logLevel: 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace';
 
   // Rate limiting configuration
   rateLimitWindowMs: number;
@@ -83,7 +83,7 @@ export class ConfigManager extends EventEmitter {
 
   constructor(logger?: Logger) {
     super();
-    this.logger = logger ?? Logger.getInstance("config-manager");
+    this.logger = logger ?? Logger.getInstance('config-manager');
     this.validator = new ConfigValidator(this.logger);
   }
 
@@ -91,7 +91,7 @@ export class ConfigManager extends EventEmitter {
    * Load and validate configuration from environment variables
    */
   async loadConfig(): Promise<BrainConfig> {
-    this.logger.info("Loading configuration from environment variables");
+    this.logger.info('Loading configuration from environment variables');
 
     // Validate environment variables
     const validationResult = this.validator.validate();
@@ -99,11 +99,9 @@ export class ConfigManager extends EventEmitter {
 
     if (!validationResult.valid) {
       const error = new Error(
-        `Configuration validation failed: ${
-          validationResult.errors.join(", ")
-        }`,
+        `Configuration validation failed: ${validationResult.errors.join(', ')}`,
       );
-      this.logger.error("Configuration validation failed", error, undefined, {
+      this.logger.error('Configuration validation failed', error, undefined, {
         errors: validationResult.errors,
         warnings: validationResult.warnings,
         summary: validationResult.summary,
@@ -121,87 +119,61 @@ export class ConfigManager extends EventEmitter {
     // Build configuration object
     const config: BrainConfig = {
       // Core application settings
-      nodeEnv: this.getEnvValue("NODE_ENV", "production") as
-        | "development"
-        | "production"
-        | "test",
-      port: this.getEnvValue("PORT", 3000) as number,
-      host: this.getEnvValue("HOST", "0.0.0.0") as string,
+      nodeEnv: this.getEnvValue('NODE_ENV', 'production') as 'development' | 'production' | 'test',
+      port: this.getEnvValue('PORT', 3000) as number,
+      host: this.getEnvValue('HOST', '0.0.0.0') as string,
 
       // Database configuration
-      databaseUrl: this.getEnvValue("DATABASE_URL") as string,
-      databasePoolMin: this.getEnvValue("DATABASE_POOL_MIN", 2) as number,
-      databasePoolMax: this.getEnvValue("DATABASE_POOL_MAX", 10) as number,
+      databaseUrl: this.getEnvValue('DATABASE_URL') as string,
+      databasePoolMin: this.getEnvValue('DATABASE_POOL_MIN', 2) as number,
+      databasePoolMax: this.getEnvValue('DATABASE_POOL_MAX', 10) as number,
 
       // Redis configuration (optional)
-      redisUrl: this.getEnvValue("REDIS_URL") as string | undefined,
+      redisUrl: this.getEnvValue('REDIS_URL') as string | undefined,
 
       // NATS configuration
-      natsUrl: this.getEnvValue("NATS_URL") as string | undefined,
+      natsUrl: this.getEnvValue('NATS_URL') as string | undefined,
 
       // Security configuration
-      hmacSecret: this.getEnvValue("HMAC_SECRET") as string | undefined,
-      hmacAlgorithm: this.getEnvValue("HMAC_ALGORITHM", "sha256") as
-        | "sha256"
-        | "sha512",
+      hmacSecret: this.getEnvValue('HMAC_SECRET') as string | undefined,
+      hmacAlgorithm: this.getEnvValue('HMAC_ALGORITHM', 'sha256') as 'sha256' | 'sha512',
 
       // Logging configuration
-      logLevel: this.getEnvValue("LOG_LEVEL", "info") as
-        | "fatal"
-        | "error"
-        | "warn"
-        | "info"
-        | "debug"
-        | "trace",
+      logLevel: this.getEnvValue('LOG_LEVEL', 'info') as
+        | 'fatal'
+        | 'error'
+        | 'warn'
+        | 'info'
+        | 'debug'
+        | 'trace',
 
       // Rate limiting configuration
-      rateLimitWindowMs: this.getEnvValue(
-        "RATE_LIMIT_WINDOW_MS",
-        60000,
-      ) as number,
-      rateLimitMaxRequests: this.getEnvValue(
-        "RATE_LIMIT_MAX_REQUESTS",
-        100,
-      ) as number,
+      rateLimitWindowMs: this.getEnvValue('RATE_LIMIT_WINDOW_MS', 60000) as number,
+      rateLimitMaxRequests: this.getEnvValue('RATE_LIMIT_MAX_REQUESTS', 100) as number,
 
       // Health check configuration
-      healthCheckInterval: this.getEnvValue(
-        "HEALTH_CHECK_INTERVAL",
-        30000,
-      ) as number,
+      healthCheckInterval: this.getEnvValue('HEALTH_CHECK_INTERVAL', 30000) as number,
 
       // Service discovery configuration
-      phase1ServiceUrl: this.getEnvValue("PHASE1_SERVICE_URL") as
-        | string
-        | undefined,
-      phase2ServiceUrl: this.getEnvValue("PHASE2_SERVICE_URL") as
-        | string
-        | undefined,
-      phase3ServiceUrl: this.getEnvValue("PHASE3_SERVICE_URL") as
-        | string
-        | undefined,
+      phase1ServiceUrl: this.getEnvValue('PHASE1_SERVICE_URL') as string | undefined,
+      phase2ServiceUrl: this.getEnvValue('PHASE2_SERVICE_URL') as string | undefined,
+      phase3ServiceUrl: this.getEnvValue('PHASE3_SERVICE_URL') as string | undefined,
 
       // Deployment configuration (platform-agnostic)
-      deploymentEnvironment: this.getEnvValue("DEPLOYMENT_ENVIRONMENT") as
-        | string
-        | undefined,
-      serviceName: this.getEnvValue("SERVICE_NAME") as
-        | string
-        | undefined,
+      deploymentEnvironment: this.getEnvValue('DEPLOYMENT_ENVIRONMENT') as string | undefined,
+      serviceName: this.getEnvValue('SERVICE_NAME') as string | undefined,
 
       // CORS configuration
-      corsOrigins: this.parseCorsOrigins(
-        this.getEnvValue("CORS_ORIGINS", "*") as string,
-      ),
+      corsOrigins: this.parseCorsOrigins(this.getEnvValue('CORS_ORIGINS', '*') as string),
 
       // Startup configuration
-      startupTimeout: this.getEnvValue("STARTUP_TIMEOUT", 60000) as number,
-      shutdownTimeout: this.getEnvValue("SHUTDOWN_TIMEOUT", 10000) as number,
+      startupTimeout: this.getEnvValue('STARTUP_TIMEOUT', 60000) as number,
+      shutdownTimeout: this.getEnvValue('SHUTDOWN_TIMEOUT', 10000) as number,
     };
 
     this.config = config;
 
-    this.logger.info("Configuration loaded successfully", undefined, {
+    this.logger.info('Configuration loaded successfully', undefined, {
       nodeEnv: config.nodeEnv,
       port: config.port,
       host: config.host,
@@ -214,20 +186,15 @@ export class ConfigManager extends EventEmitter {
       validationSummary: validationResult.summary,
     });
 
-    this.emit("config:loaded", config);
+    this.emit('config:loaded', config);
     return config;
   }
 
   /**
    * Get environment variable value with proper type conversion
    */
-  private getEnvValue(
-    name: string,
-    defaultValue?: any,
-  ): string | number | boolean | undefined {
-    const validationResult = this.lastValidation?.variables.find((v) =>
-      v.name === name
-    );
+  private getEnvValue(name: string, defaultValue?: any): string | number | boolean | undefined {
+    const validationResult = this.lastValidation?.variables.find((v) => v.name === name);
 
     if (validationResult) {
       return validationResult.value;
@@ -246,12 +213,12 @@ export class ConfigManager extends EventEmitter {
    * Parse CORS origins from comma-separated string
    */
   private parseCorsOrigins(corsOriginsStr: string): string[] {
-    if (corsOriginsStr === "*") {
-      return ["*"];
+    if (corsOriginsStr === '*') {
+      return ['*'];
     }
 
     return corsOriginsStr
-      .split(",")
+      .split(',')
       .map((origin) => origin.trim())
       .filter((origin) => origin.length > 0);
   }
@@ -261,7 +228,7 @@ export class ConfigManager extends EventEmitter {
    */
   getConfig(): BrainConfig {
     if (!this.config) {
-      throw new Error("Configuration not loaded. Call loadConfig() first.");
+      throw new Error('Configuration not loaded. Call loadConfig() first.');
     }
     return { ...this.config };
   }
@@ -284,7 +251,7 @@ export class ConfigManager extends EventEmitter {
    * Reload configuration from environment variables
    */
   async reloadConfig(): Promise<BrainConfig> {
-    this.logger.info("Reloading configuration");
+    this.logger.info('Reloading configuration');
 
     const oldConfig = this.config ? { ...this.config } : null;
     const newConfig = await this.loadConfig();
@@ -294,17 +261,14 @@ export class ConfigManager extends EventEmitter {
       this.compareAndEmitChanges(oldConfig, newConfig);
     }
 
-    this.emit("config:reloaded", { oldConfig, newConfig });
+    this.emit('config:reloaded', { oldConfig, newConfig });
     return newConfig;
   }
 
   /**
    * Compare configurations and emit change events
    */
-  private compareAndEmitChanges(
-    oldConfig: BrainConfig,
-    newConfig: BrainConfig,
-  ): void {
+  private compareAndEmitChanges(oldConfig: BrainConfig, newConfig: BrainConfig): void {
     const changes: ConfigChangeEvent[] = [];
 
     for (const [key, newValue] of Object.entries(newConfig)) {
@@ -319,7 +283,7 @@ export class ConfigManager extends EventEmitter {
         };
 
         changes.push(change);
-        this.emit("config:changed", change);
+        this.emit('config:changed', change);
 
         this.logger.info(`Configuration changed: ${key}`, undefined, {
           field: key,
@@ -330,7 +294,7 @@ export class ConfigManager extends EventEmitter {
     }
 
     if (changes.length > 0) {
-      this.emit("config:changes", changes);
+      this.emit('config:changes', changes);
     }
   }
 
@@ -338,15 +302,11 @@ export class ConfigManager extends EventEmitter {
    * Mask sensitive configuration values for logging
    */
   private maskSensitiveValue(key: string, value: any): any {
-    const sensitiveKeys = ["hmacSecret", "databaseUrl", "redisUrl", "natsUrl"];
+    const sensitiveKeys = ['hmacSecret', 'databaseUrl', 'redisUrl', 'natsUrl'];
     const lowerKey = key.toLowerCase();
 
-    if (
-      sensitiveKeys.some((sensitiveKey) =>
-        lowerKey.includes(sensitiveKey.toLowerCase())
-      )
-    ) {
-      return value ? "[CONFIGURED]" : "[NOT SET]";
+    if (sensitiveKeys.some((sensitiveKey) => lowerKey.includes(sensitiveKey.toLowerCase()))) {
+      return value ? '[CONFIGURED]' : '[NOT SET]';
     }
 
     return value;
@@ -364,7 +324,7 @@ export class ConfigManager extends EventEmitter {
    */
   getConfigSummary(): Record<string, any> {
     if (!this.config) {
-      return { error: "Configuration not loaded" };
+      return { error: 'Configuration not loaded' };
     }
 
     return {
@@ -402,7 +362,7 @@ export class ConfigManager extends EventEmitter {
     return {
       environment: this.config?.deploymentEnvironment,
       serviceName: this.config?.serviceName,
-      isProduction: this.config?.nodeEnv === "production",
+      isProduction: this.config?.nodeEnv === 'production',
     };
   }
 
@@ -415,7 +375,7 @@ export class ConfigManager extends EventEmitter {
     poolMax: number;
   } {
     if (!this.config) {
-      throw new Error("Configuration not loaded");
+      throw new Error('Configuration not loaded');
     }
 
     return {
@@ -448,7 +408,7 @@ export class ConfigManager extends EventEmitter {
   } {
     return {
       hmacSecret: this.config?.hmacSecret,
-      hmacAlgorithm: this.config?.hmacAlgorithm || "sha256",
+      hmacAlgorithm: this.config?.hmacAlgorithm || 'sha256',
       hmacEnabled: !!this.config?.hmacSecret,
     };
   }
@@ -472,21 +432,21 @@ export class ConfigManager extends EventEmitter {
    * Check if running in production
    */
   isProduction(): boolean {
-    return this.config?.nodeEnv === "production";
+    return this.config?.nodeEnv === 'production';
   }
 
   /**
    * Check if running in development
    */
   isDevelopment(): boolean {
-    return this.config?.nodeEnv === "development";
+    return this.config?.nodeEnv === 'development';
   }
 
   /**
    * Check if running in test mode
    */
   isTest(): boolean {
-    return this.config?.nodeEnv === "test";
+    return this.config?.nodeEnv === 'test';
   }
 
   /**
@@ -498,7 +458,7 @@ export class ConfigManager extends EventEmitter {
     corsOrigins: string[];
   } {
     if (!this.config) {
-      throw new Error("Configuration not loaded");
+      throw new Error('Configuration not loaded');
     }
 
     return {
@@ -516,7 +476,7 @@ export class ConfigManager extends EventEmitter {
     maxRequests: number;
   } {
     if (!this.config) {
-      throw new Error("Configuration not loaded");
+      throw new Error('Configuration not loaded');
     }
 
     return {
@@ -533,7 +493,7 @@ export class ConfigManager extends EventEmitter {
     shutdownTimeout: number;
   } {
     if (!this.config) {
-      throw new Error("Configuration not loaded");
+      throw new Error('Configuration not loaded');
     }
 
     return {

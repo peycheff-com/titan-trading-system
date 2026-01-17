@@ -16,5 +16,5 @@ export {
   type ScanCompleteEvent,
   type JudasSwingEvent,
   type POIDetectedEvent,
-  type RiskWarningEvent
+  type RiskWarningEvent,
 } from './EventEmitter';

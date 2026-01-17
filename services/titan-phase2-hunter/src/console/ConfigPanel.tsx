@@ -1,7 +1,7 @@
 /**
  * ConfigPanel Component - F1 Key Modal Overlay
  * Institutional-grade configuration interface for Titan Phase 2 - The Hunter
- * 
+ *
  * Requirements: 18.1-18.8 (Runtime Configuration)
  * - Modal overlay with alignment weight sliders (Daily 30-60%, 4H 20-40%, 15m 10-30%)
  * - RS threshold slider (0-5%)
@@ -12,7 +12,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
-import { Phase2Config, AlignmentWeights, RSConfig, RiskConfig, PortfolioConfig } from '../config/ConfigManager';
+import {
+  Phase2Config,
+  AlignmentWeights,
+  RSConfig,
+  RiskConfig,
+  PortfolioConfig,
+} from '../config/ConfigManager';
 
 /**
  * ConfigPanel props
@@ -41,7 +47,7 @@ interface SliderConfig {
 
 /**
  * ConfigPanel Component
- * 
+ *
  * Requirement 18.1: Display configuration panel overlay when user presses F1 key
  * Requirement 18.2: Allow adjustment of Daily weight (30-60%), 4H weight (20-40%), 15m weight (10-30%)
  * Requirement 18.3: Allow adjustment of RS threshold (0-5%) and lookback period (2-8 hours)
@@ -62,23 +68,83 @@ export function ConfigPanel({ config, onSave, onCancel }: ConfigPanelProps) {
    */
   const sliderConfigs: Record<string, SliderConfig> = {
     // Alignment weights
-    daily: { min: 30, max: 60, step: 1, unit: '%', description: 'Daily timeframe weight (trend direction)' },
-    h4: { min: 20, max: 40, step: 1, unit: '%', description: '4H timeframe weight (structure location)' },
-    m15: { min: 10, max: 30, step: 1, unit: '%', description: '15m timeframe weight (trigger quality)' },
-    
+    daily: {
+      min: 30,
+      max: 60,
+      step: 1,
+      unit: '%',
+      description: 'Daily timeframe weight (trend direction)',
+    },
+    h4: {
+      min: 20,
+      max: 40,
+      step: 1,
+      unit: '%',
+      description: '4H timeframe weight (structure location)',
+    },
+    m15: {
+      min: 10,
+      max: 30,
+      step: 1,
+      unit: '%',
+      description: '15m timeframe weight (trigger quality)',
+    },
+
     // RS configuration
-    rsThreshold: { min: 0, max: 5, step: 0.1, unit: '%', description: 'Relative strength threshold vs BTC' },
-    rsLookback: { min: 2, max: 8, step: 0.5, unit: 'h', description: 'RS calculation lookback period' },
-    
+    rsThreshold: {
+      min: 0,
+      max: 5,
+      step: 0.1,
+      unit: '%',
+      description: 'Relative strength threshold vs BTC',
+    },
+    rsLookback: {
+      min: 2,
+      max: 8,
+      step: 0.5,
+      unit: 'h',
+      description: 'RS calculation lookback period',
+    },
+
     // Risk configuration
-    maxLeverage: { min: 3, max: 5, step: 0.1, unit: 'x', description: 'Maximum leverage per position' },
-    stopLoss: { min: 1, max: 3, step: 0.1, unit: '%', description: 'Stop loss distance from entry' },
+    maxLeverage: {
+      min: 3,
+      max: 5,
+      step: 0.1,
+      unit: 'x',
+      description: 'Maximum leverage per position',
+    },
+    stopLoss: {
+      min: 1,
+      max: 3,
+      step: 0.1,
+      unit: '%',
+      description: 'Stop loss distance from entry',
+    },
     target: { min: 3, max: 6, step: 0.1, unit: '%', description: 'Take profit target distance' },
-    
+
     // Portfolio configuration
-    maxPositions: { min: 3, max: 8, step: 1, unit: '', description: 'Maximum concurrent positions' },
-    maxHeat: { min: 10, max: 20, step: 0.5, unit: '%', description: 'Maximum portfolio heat (total risk)' },
-    correlation: { min: 0.6, max: 0.9, step: 0.01, unit: '', description: 'Maximum correlation between positions' }
+    maxPositions: {
+      min: 3,
+      max: 8,
+      step: 1,
+      unit: '',
+      description: 'Maximum concurrent positions',
+    },
+    maxHeat: {
+      min: 10,
+      max: 20,
+      step: 0.5,
+      unit: '%',
+      description: 'Maximum portfolio heat (total risk)',
+    },
+    correlation: {
+      min: 0.6,
+      max: 0.9,
+      step: 0.01,
+      unit: '',
+      description: 'Maximum correlation between positions',
+    },
   };
 
   /**
@@ -97,7 +163,7 @@ export function ConfigPanel({ config, onSave, onCancel }: ConfigPanelProps) {
         alignment: 'daily',
         rs: 'rsThreshold',
         risk: 'maxLeverage',
-        portfolio: 'maxPositions'
+        portfolio: 'maxPositions',
       };
       setSelectedParam(defaultParams[sections[parseInt(input) - 1]]);
     } else if (key.upArrow || key.downArrow) {
@@ -126,11 +192,16 @@ export function ConfigPanel({ config, onSave, onCancel }: ConfigPanelProps) {
    */
   const getSectionParams = (section: ActiveSection): string[] => {
     switch (section) {
-      case 'alignment': return ['daily', 'h4', 'm15'];
-      case 'rs': return ['rsThreshold', 'rsLookback'];
-      case 'risk': return ['maxLeverage', 'stopLoss', 'target'];
-      case 'portfolio': return ['maxPositions', 'maxHeat', 'correlation'];
-      default: return [];
+      case 'alignment':
+        return ['daily', 'h4', 'm15'];
+      case 'rs':
+        return ['rsThreshold', 'rsLookback'];
+      case 'risk':
+        return ['maxLeverage', 'stopLoss', 'target'];
+      case 'portfolio':
+        return ['maxPositions', 'maxHeat', 'correlation'];
+      default:
+        return [];
     }
   };
 
@@ -139,18 +210,30 @@ export function ConfigPanel({ config, onSave, onCancel }: ConfigPanelProps) {
    */
   const getParameterValue = (param: string): number => {
     switch (param) {
-      case 'daily': return editedConfig.alignmentWeights.daily;
-      case 'h4': return editedConfig.alignmentWeights.h4;
-      case 'm15': return editedConfig.alignmentWeights.m15;
-      case 'rsThreshold': return editedConfig.rsConfig.threshold;
-      case 'rsLookback': return editedConfig.rsConfig.lookbackPeriod;
-      case 'maxLeverage': return editedConfig.riskConfig.maxLeverage;
-      case 'stopLoss': return editedConfig.riskConfig.stopLossPercent;
-      case 'target': return editedConfig.riskConfig.targetPercent;
-      case 'maxPositions': return editedConfig.portfolioConfig.maxConcurrentPositions;
-      case 'maxHeat': return editedConfig.portfolioConfig.maxPortfolioHeat;
-      case 'correlation': return editedConfig.portfolioConfig.correlationThreshold;
-      default: return 0;
+      case 'daily':
+        return editedConfig.alignmentWeights.daily;
+      case 'h4':
+        return editedConfig.alignmentWeights.h4;
+      case 'm15':
+        return editedConfig.alignmentWeights.m15;
+      case 'rsThreshold':
+        return editedConfig.rsConfig.threshold;
+      case 'rsLookback':
+        return editedConfig.rsConfig.lookbackPeriod;
+      case 'maxLeverage':
+        return editedConfig.riskConfig.maxLeverage;
+      case 'stopLoss':
+        return editedConfig.riskConfig.stopLossPercent;
+      case 'target':
+        return editedConfig.riskConfig.targetPercent;
+      case 'maxPositions':
+        return editedConfig.portfolioConfig.maxConcurrentPositions;
+      case 'maxHeat':
+        return editedConfig.portfolioConfig.maxPortfolioHeat;
+      case 'correlation':
+        return editedConfig.portfolioConfig.correlationThreshold;
+      default:
+        return 0;
     }
   };
 
@@ -159,7 +242,7 @@ export function ConfigPanel({ config, onSave, onCancel }: ConfigPanelProps) {
    */
   const updateParameterValue = (param: string, value: number) => {
     const newConfig = { ...editedConfig };
-    
+
     switch (param) {
       case 'daily':
         newConfig.alignmentWeights = { ...newConfig.alignmentWeights, daily: value };
@@ -186,7 +269,10 @@ export function ConfigPanel({ config, onSave, onCancel }: ConfigPanelProps) {
         newConfig.riskConfig = { ...newConfig.riskConfig, targetPercent: value };
         break;
       case 'maxPositions':
-        newConfig.portfolioConfig = { ...newConfig.portfolioConfig, maxConcurrentPositions: Math.round(value) };
+        newConfig.portfolioConfig = {
+          ...newConfig.portfolioConfig,
+          maxConcurrentPositions: Math.round(value),
+        };
         break;
       case 'maxHeat':
         newConfig.portfolioConfig = { ...newConfig.portfolioConfig, maxPortfolioHeat: value };
@@ -195,7 +281,7 @@ export function ConfigPanel({ config, onSave, onCancel }: ConfigPanelProps) {
         newConfig.portfolioConfig = { ...newConfig.portfolioConfig, correlationThreshold: value };
         break;
     }
-    
+
     setEditedConfig(newConfig);
     validateConfig(newConfig);
   };
@@ -205,19 +291,20 @@ export function ConfigPanel({ config, onSave, onCancel }: ConfigPanelProps) {
    */
   const validateConfig = (config: Phase2Config) => {
     const errors: string[] = [];
-    
+
     // Validate alignment weights sum to 100%
-    const total = config.alignmentWeights.daily + config.alignmentWeights.h4 + config.alignmentWeights.m15;
+    const total =
+      config.alignmentWeights.daily + config.alignmentWeights.h4 + config.alignmentWeights.m15;
     if (Math.abs(total - 100) > 0.1) {
       errors.push(`Alignment weights must sum to 100% (currently ${total.toFixed(1)}%)`);
     }
-    
+
     // Validate R:R ratio
     const rrRatio = config.riskConfig.targetPercent / config.riskConfig.stopLossPercent;
     if (rrRatio < 2.0) {
       errors.push(`R:R ratio too low (${rrRatio.toFixed(1)}:1, minimum 2:1 recommended)`);
     }
-    
+
     setValidationErrors(errors);
   };
 
@@ -245,28 +332,28 @@ export function ConfigPanel({ config, onSave, onCancel }: ConfigPanelProps) {
   const autoAdjustWeights = () => {
     const weights = editedConfig.alignmentWeights;
     const total = weights.daily + weights.h4 + weights.m15;
-    
+
     if (Math.abs(total - 100) > 0.1) {
       // Proportionally adjust to sum to 100%
       const factor = 100 / total;
       const newWeights = {
         daily: Math.round(weights.daily * factor),
         h4: Math.round(weights.h4 * factor),
-        m15: Math.round(weights.m15 * factor)
+        m15: Math.round(weights.m15 * factor),
       };
-      
+
       // Ensure exact sum of 100% by adjusting the largest weight
       const newTotal = newWeights.daily + newWeights.h4 + newWeights.m15;
       if (newTotal !== 100) {
         const largest = Math.max(newWeights.daily, newWeights.h4, newWeights.m15);
-        if (newWeights.daily === largest) newWeights.daily += (100 - newTotal);
-        else if (newWeights.h4 === largest) newWeights.h4 += (100 - newTotal);
-        else newWeights.m15 += (100 - newTotal);
+        if (newWeights.daily === largest) newWeights.daily += 100 - newTotal;
+        else if (newWeights.h4 === largest) newWeights.h4 += 100 - newTotal;
+        else newWeights.m15 += 100 - newTotal;
       }
-      
+
       setEditedConfig(prev => ({
         ...prev,
-        alignmentWeights: newWeights
+        alignmentWeights: newWeights,
       }));
       validateConfig({ ...editedConfig, alignmentWeights: newWeights });
     }
@@ -278,82 +365,88 @@ export function ConfigPanel({ config, onSave, onCancel }: ConfigPanelProps) {
   }, [editedConfig]);
 
   return (
-    <Box flexDirection="column" borderStyle="double" borderColor="cyan" padding={1} width={100} height={25}>
+    <Box
+      flexDirection="column"
+      borderStyle="double"
+      borderColor="cyan"
+      padding={1}
+      width={100}
+      height={25}
+    >
       {/* Header */}
       <Box marginBottom={1}>
-        <Text bold color="cyan">⚙️  PHASE 2 HUNTER - CONFIGURATION PANEL</Text>
+        <Text bold color="cyan">
+          ⚙️ PHASE 2 HUNTER - CONFIGURATION PANEL
+        </Text>
       </Box>
-      
+
       {/* Section Tabs */}
       <Box marginBottom={1}>
-        <Text color={activeSection === 'alignment' ? 'cyan' : 'gray'}>
-          [1] Alignment Weights  
-        </Text>
+        <Text color={activeSection === 'alignment' ? 'cyan' : 'gray'}>[1] Alignment Weights</Text>
         <Text> </Text>
-        <Text color={activeSection === 'rs' ? 'cyan' : 'gray'}>
-          [2] Relative Strength  
-        </Text>
+        <Text color={activeSection === 'rs' ? 'cyan' : 'gray'}>[2] Relative Strength</Text>
         <Text> </Text>
-        <Text color={activeSection === 'risk' ? 'cyan' : 'gray'}>
-          [3] Risk Management  
-        </Text>
+        <Text color={activeSection === 'risk' ? 'cyan' : 'gray'}>[3] Risk Management</Text>
         <Text> </Text>
-        <Text color={activeSection === 'portfolio' ? 'cyan' : 'gray'}>
-          [4] Portfolio
-        </Text>
+        <Text color={activeSection === 'portfolio' ? 'cyan' : 'gray'}>[4] Portfolio</Text>
       </Box>
-      
+
       {/* Content Area */}
       <Box flexDirection="column" marginBottom={1} borderStyle="single" padding={1} height={15}>
         {activeSection === 'alignment' && (
-          <AlignmentWeightsSection 
-            config={editedConfig} 
+          <AlignmentWeightsSection
+            config={editedConfig}
             selectedParam={selectedParam}
             sliderConfigs={sliderConfigs}
             onAutoAdjust={autoAdjustWeights}
           />
         )}
-        
+
         {activeSection === 'rs' && (
-          <RSConfigSection 
-            config={editedConfig} 
+          <RSConfigSection
+            config={editedConfig}
             selectedParam={selectedParam}
             sliderConfigs={sliderConfigs}
           />
         )}
-        
+
         {activeSection === 'risk' && (
-          <RiskConfigSection 
-            config={editedConfig} 
+          <RiskConfigSection
+            config={editedConfig}
             selectedParam={selectedParam}
             sliderConfigs={sliderConfigs}
           />
         )}
-        
+
         {activeSection === 'portfolio' && (
-          <PortfolioConfigSection 
-            config={editedConfig} 
+          <PortfolioConfigSection
+            config={editedConfig}
             selectedParam={selectedParam}
             sliderConfigs={sliderConfigs}
           />
         )}
       </Box>
-      
+
       {/* Validation Errors */}
       {validationErrors.length > 0 && (
         <Box flexDirection="column" marginBottom={1}>
-          <Text color="red" bold>⚠️  Validation Errors:</Text>
+          <Text color="red" bold>
+            ⚠️ Validation Errors:
+          </Text>
           {validationErrors.map((error, index) => (
-            <Text key={index} color="red">  • {error}</Text>
+            <Text key={index} color="red">
+              {' '}
+              • {error}
+            </Text>
           ))}
         </Box>
       )}
-      
+
       {/* Action Buttons */}
       <Box marginTop={1}>
-        <Text dimColor>[S] Save  [C] Cancel  [1-4] Switch Section  [↑↓] Navigate  [←→] Adjust</Text>
+        <Text dimColor>[S] Save [C] Cancel [1-4] Switch Section [↑↓] Navigate [←→] Adjust</Text>
       </Box>
-      
+
       {/* Save Button Status */}
       <Box>
         <Text color={validationErrors.length === 0 ? 'green' : 'red'}>
@@ -368,11 +461,11 @@ export function ConfigPanel({ config, onSave, onCancel }: ConfigPanelProps) {
  * Alignment Weights Section
  * Requirement 18.2: Allow adjustment of Daily weight (30-60%), 4H weight (20-40%), 15m weight (10-30%)
  */
-function AlignmentWeightsSection({ 
-  config, 
-  selectedParam, 
-  sliderConfigs, 
-  onAutoAdjust 
+function AlignmentWeightsSection({
+  config,
+  selectedParam,
+  sliderConfigs,
+  onAutoAdjust,
 }: {
   config: Phase2Config;
   selectedParam: string;
@@ -381,15 +474,19 @@ function AlignmentWeightsSection({
 }) {
   const weights = config.alignmentWeights;
   const total = weights.daily + weights.h4 + weights.m15;
-  
+
   return (
     <Box flexDirection="column">
-      <Text bold color="green">📊 Alignment Weights (Multi-Timeframe Scoring)</Text>
-      
+      <Text bold color="green">
+        📊 Alignment Weights (Multi-Timeframe Scoring)
+      </Text>
+
       <Box marginTop={1}>
-        <Text dimColor>Weights determine how much each timeframe contributes to alignment score.</Text>
+        <Text dimColor>
+          Weights determine how much each timeframe contributes to alignment score.
+        </Text>
       </Box>
-      
+
       <SliderRow
         label="Daily Bias"
         param="daily"
@@ -397,7 +494,7 @@ function AlignmentWeightsSection({
         config={sliderConfigs.daily}
         selected={selectedParam === 'daily'}
       />
-      
+
       <SliderRow
         label="4H Structure"
         param="h4"
@@ -405,7 +502,7 @@ function AlignmentWeightsSection({
         config={sliderConfigs.h4}
         selected={selectedParam === 'h4'}
       />
-      
+
       <SliderRow
         label="15m Trigger"
         param="m15"
@@ -413,18 +510,14 @@ function AlignmentWeightsSection({
         config={sliderConfigs.m15}
         selected={selectedParam === 'm15'}
       />
-      
+
       <Box marginTop={1}>
         <Text>Total: </Text>
-        <Text color={Math.abs(total - 100) < 0.1 ? 'green' : 'red'}>
-          {total.toFixed(1)}%
-        </Text>
+        <Text color={Math.abs(total - 100) < 0.1 ? 'green' : 'red'}>{total.toFixed(1)}%</Text>
         <Text dimColor> (must equal 100%)</Text>
-        {Math.abs(total - 100) > 0.1 && (
-          <Text color="yellow"> [A] Auto-adjust</Text>
-        )}
+        {Math.abs(total - 100) > 0.1 && <Text color="yellow"> [A] Auto-adjust</Text>}
       </Box>
-      
+
       <Box marginTop={1}>
         <Text dimColor>Higher weights = more influence on final alignment score</Text>
       </Box>
@@ -436,25 +529,27 @@ function AlignmentWeightsSection({
  * Relative Strength Configuration Section
  * Requirement 18.3: Allow adjustment of RS threshold (0-5%) and lookback period (2-8 hours)
  */
-function RSConfigSection({ 
-  config, 
-  selectedParam, 
-  sliderConfigs 
+function RSConfigSection({
+  config,
+  selectedParam,
+  sliderConfigs,
 }: {
   config: Phase2Config;
   selectedParam: string;
   sliderConfigs: Record<string, SliderConfig>;
 }) {
   const rsConfig = config.rsConfig;
-  
+
   return (
     <Box flexDirection="column">
-      <Text bold color="green">📈 Relative Strength vs BTC</Text>
-      
+      <Text bold color="green">
+        📈 Relative Strength vs BTC
+      </Text>
+
       <Box marginTop={1}>
         <Text dimColor>RS filters ensure we trade the strongest/weakest assets vs BTC.</Text>
       </Box>
-      
+
       <SliderRow
         label="RS Threshold"
         param="rsThreshold"
@@ -462,7 +557,7 @@ function RSConfigSection({
         config={sliderConfigs.rsThreshold}
         selected={selectedParam === 'rsThreshold'}
       />
-      
+
       <SliderRow
         label="Lookback Period"
         param="rsLookback"
@@ -470,12 +565,16 @@ function RSConfigSection({
         config={sliderConfigs.rsLookback}
         selected={selectedParam === 'rsLookback'}
       />
-      
+
       <Box marginTop={1}>
-        <Text dimColor>• Long signals require RS {'>'} +{rsConfig.threshold}% (stronger than BTC)</Text>
+        <Text dimColor>
+          • Long signals require RS {'>'} +{rsConfig.threshold}% (stronger than BTC)
+        </Text>
       </Box>
       <Box>
-        <Text dimColor>• Short signals require RS {'<'} -{rsConfig.threshold}% (weaker than BTC)</Text>
+        <Text dimColor>
+          • Short signals require RS {'<'} -{rsConfig.threshold}% (weaker than BTC)
+        </Text>
       </Box>
       <Box marginTop={1}>
         <Text dimColor>Higher threshold = more selective (fewer but stronger signals)</Text>
@@ -488,10 +587,10 @@ function RSConfigSection({
  * Risk Management Configuration Section
  * Requirement 18.4: Allow adjustment of max leverage (3-5x), stop loss (1-3%), target (3-6%)
  */
-function RiskConfigSection({ 
-  config, 
-  selectedParam, 
-  sliderConfigs 
+function RiskConfigSection({
+  config,
+  selectedParam,
+  sliderConfigs,
 }: {
   config: Phase2Config;
   selectedParam: string;
@@ -499,15 +598,17 @@ function RiskConfigSection({
 }) {
   const riskConfig = config.riskConfig;
   const rrRatio = riskConfig.targetPercent / riskConfig.stopLossPercent;
-  
+
   return (
     <Box flexDirection="column">
-      <Text bold color="green">🛡️  Risk Management</Text>
-      
+      <Text bold color="green">
+        🛡️ Risk Management
+      </Text>
+
       <Box marginTop={1}>
         <Text dimColor>Conservative risk parameters for institutional-grade trading.</Text>
       </Box>
-      
+
       <SliderRow
         label="Max Leverage"
         param="maxLeverage"
@@ -515,7 +616,7 @@ function RiskConfigSection({
         config={sliderConfigs.maxLeverage}
         selected={selectedParam === 'maxLeverage'}
       />
-      
+
       <SliderRow
         label="Stop Loss"
         param="stopLoss"
@@ -523,7 +624,7 @@ function RiskConfigSection({
         config={sliderConfigs.stopLoss}
         selected={selectedParam === 'stopLoss'}
       />
-      
+
       <SliderRow
         label="Take Profit"
         param="target"
@@ -531,7 +632,7 @@ function RiskConfigSection({
         config={sliderConfigs.target}
         selected={selectedParam === 'target'}
       />
-      
+
       <Box marginTop={1}>
         <Text>Risk-Reward Ratio: </Text>
         <Text color={rrRatio >= 2.5 ? 'green' : rrRatio >= 2.0 ? 'yellow' : 'red'}>
@@ -539,7 +640,7 @@ function RiskConfigSection({
         </Text>
         <Text dimColor> (minimum 2:1 recommended)</Text>
       </Box>
-      
+
       <Box marginTop={1}>
         <Text dimColor>Lower leverage = safer but smaller absolute returns</Text>
       </Box>
@@ -551,25 +652,27 @@ function RiskConfigSection({
  * Portfolio Management Configuration Section
  * Requirement 18.5: Allow adjustment of max positions (3-8), max heat (10-20%), correlation (0.6-0.9)
  */
-function PortfolioConfigSection({ 
-  config, 
-  selectedParam, 
-  sliderConfigs 
+function PortfolioConfigSection({
+  config,
+  selectedParam,
+  sliderConfigs,
 }: {
   config: Phase2Config;
   selectedParam: string;
   sliderConfigs: Record<string, SliderConfig>;
 }) {
   const portfolioConfig = config.portfolioConfig;
-  
+
   return (
     <Box flexDirection="column">
-      <Text bold color="green">💼 Portfolio Management</Text>
-      
+      <Text bold color="green">
+        💼 Portfolio Management
+      </Text>
+
       <Box marginTop={1}>
         <Text dimColor>Multi-position risk management and correlation controls.</Text>
       </Box>
-      
+
       <SliderRow
         label="Max Positions"
         param="maxPositions"
@@ -577,7 +680,7 @@ function PortfolioConfigSection({
         config={sliderConfigs.maxPositions}
         selected={selectedParam === 'maxPositions'}
       />
-      
+
       <SliderRow
         label="Max Portfolio Heat"
         param="maxHeat"
@@ -585,7 +688,7 @@ function PortfolioConfigSection({
         config={sliderConfigs.maxHeat}
         selected={selectedParam === 'maxHeat'}
       />
-      
+
       <SliderRow
         label="Correlation Limit"
         param="correlation"
@@ -593,7 +696,7 @@ function PortfolioConfigSection({
         config={sliderConfigs.correlation}
         selected={selectedParam === 'correlation'}
       />
-      
+
       <Box marginTop={1}>
         <Text dimColor>• Portfolio heat = sum of all position risks as % of equity</Text>
       </Box>
@@ -610,12 +713,12 @@ function PortfolioConfigSection({
 /**
  * Reusable Slider Row Component
  */
-function SliderRow({ 
-  label, 
-  param, 
-  value, 
-  config, 
-  selected 
+function SliderRow({
+  label,
+  param,
+  value,
+  config,
+  selected,
 }: {
   label: string;
   param: string;
@@ -626,14 +729,15 @@ function SliderRow({
   const percentage = ((value - config.min) / (config.max - config.min)) * 100;
   const barLength = 20;
   const filledLength = Math.round((percentage / 100) * barLength);
-  
+
   const bar = '█'.repeat(filledLength) + '░'.repeat(barLength - filledLength);
-  
+
   return (
     <Box marginTop={1}>
       <Box width={15}>
         <Text color={selected ? 'cyan' : 'white'}>
-          {selected ? '► ' : '  '}{label}:
+          {selected ? '► ' : '  '}
+          {label}:
         </Text>
       </Box>
       <Box width={25}>
@@ -641,11 +745,15 @@ function SliderRow({
       </Box>
       <Box width={8}>
         <Text color={selected ? 'cyan' : 'white'}>
-          {value.toFixed(config.step >= 1 ? 0 : config.step >= 0.1 ? 1 : 2)}{config.unit}
+          {value.toFixed(config.step >= 1 ? 0 : config.step >= 0.1 ? 1 : 2)}
+          {config.unit}
         </Text>
       </Box>
       <Box>
-        <Text dimColor>({config.min}-{config.max}{config.unit})</Text>
+        <Text dimColor>
+          ({config.min}-{config.max}
+          {config.unit})
+        </Text>
       </Box>
     </Box>
   );

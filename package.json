@@ -15,7 +15,12 @@
     "start:sentinel": "npm start -w services/titan-phase3-sentinel",
     "start:ai-quant": "npm start -w services/titan-ai-quant",
     "build": "npm run build --workspaces --if-present",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npm run test:all",
+    "test:all": "npm run test:all --workspaces --if-present",
+    "lint:all": "npm run lint --workspaces --if-present",
+    "lint:fix": "npm run lint:fix --workspaces --if-present",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "engines": {
     "node": ">=20.0.0"
@@ -23,5 +28,12 @@
   "dependencies": {
     "nats": "^2.29.3",
     "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "prettier": "^3.8.0",
+    "typescript-eslint": "^8.53.0"
   }
 }

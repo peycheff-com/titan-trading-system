@@ -1,24 +1,24 @@
 /**
  * Position Manager for Titan Phase 2 - The Hunter
- * 
+ *
  * Handles automated position management including:
  * - Move stop to breakeven at 1.5R profit
  * - Take partial profit at 2R profit (50% close)
  * - Update trailing stop with 1 ATR distance
  * - Tighten stop after 48h to 0.5 ATR
  * - Close position for stop/target hits
- * 
+ *
  * Requirements: 12.1-12.7 (Position Management)
  */
 
 import { EventEmitter } from 'events';
-import { 
-  Position, 
-  PositionUpdate, 
-  TrailingStopConfig, 
+import {
+  Position,
+  PositionUpdate,
+  TrailingStopConfig,
   PartialProfitConfig,
   OrderParams,
-  OrderResult
+  OrderResult,
 } from '../types';
 import { BybitPerpsClient } from '../exchanges/BybitPerpsClient';
 import { logPositionClose, logError } from '../logging/Logger';
@@ -50,7 +50,7 @@ export class PositionManager extends EventEmitter {
 
   constructor(bybitClient: BybitPerpsClient, config?: Partial<PositionManagerConfig>) {
     super();
-    
+
     this.bybitClient = bybitClient;
     this.config = {
       breakevenRLevel: 1.5,
@@ -59,7 +59,7 @@ export class PositionManager extends EventEmitter {
       trailingStopDistance: 1.0,
       tightenAfterHours: 48,
       tightenedStopDistance: 0.5,
-      ...config
+      ...config,
     };
 
     // Start position monitoring
@@ -72,7 +72,9 @@ export class PositionManager extends EventEmitter {
    */
   public addPosition(position: Position): void {
     this.positions.set(position.id, { ...position });
-    console.log(`📊 Position Manager: Added position ${position.id} (${position.symbol} ${position.side})`);
+    console.log(
+      `📊 Position Manager: Added position ${position.id} (${position.symbol} ${position.side})`
+    );
   }
 
   /**
@@ -146,16 +148,18 @@ export class PositionManager extends EventEmitter {
         return false; // Not profitable enough yet
       }
 
-      console.log(`🎯 Moving stop to breakeven for ${position.symbol} at ${position.rValue.toFixed(2)}R`);
+      console.log(
+        `🎯 Moving stop to breakeven for ${position.symbol} at ${position.rValue.toFixed(2)}R`
+      );
 
       // Set stop loss to entry price (breakeven)
       const success = await this.bybitClient.setStopLoss(position.symbol, position.entryPrice);
-      
+
       if (success) {
         position.stopLoss = position.entryPrice;
         this.positions.set(position.id, position);
         this.emit('position:breakeven', position);
-        
+
         console.log(`✅ Stop moved to breakeven: ${position.symbol} @ ${position.entryPrice}`);
         return true;
       }
@@ -184,7 +188,9 @@ export class PositionManager extends EventEmitter {
       const originalQuantity = position.quantity;
       const partialQuantity = originalQuantity * (this.config.partialProfitPercentage / 100);
 
-      console.log(`💰 Taking partial profit for ${position.symbol} at ${position.rValue.toFixed(2)}R`);
+      console.log(
+        `💰 Taking partial profit for ${position.symbol} at ${position.rValue.toFixed(2)}R`
+      );
 
       // Place market order to close partial position
       const orderParams: OrderParams = {
@@ -193,20 +199,22 @@ export class PositionManager extends EventEmitter {
         side: position.side === 'LONG' ? 'Sell' : 'Buy',
         type: 'MARKET',
         qty: partialQuantity,
-        leverage: position.leverage
+        leverage: position.leverage,
       };
 
       const result = await this.bybitClient.placeOrderWithRetry(orderParams);
-      
+
       if (result.status === 'FILLED') {
         // Update position quantity
         position.quantity -= partialQuantity;
-        position.realizedPnL += (partialQuantity * (position.currentPrice - position.entryPrice));
-        
+        position.realizedPnL += partialQuantity * (position.currentPrice - position.entryPrice);
+
         this.positions.set(position.id, position);
         this.emit('position:partial', position, partialQuantity);
-        
-        console.log(`✅ Partial profit taken: ${position.symbol} closed ${partialQuantity} at ${result.price}`);
+
+        console.log(
+          `✅ Partial profit taken: ${position.symbol} closed ${partialQuantity} at ${result.price}`
+        );
         return true;
       }
 
@@ -236,7 +244,7 @@ export class PositionManager extends EventEmitter {
       if (position.side === 'LONG') {
         // For long positions, trail stop up
         newStopLoss = position.currentPrice - atrDistance;
-        
+
         // Only update if new stop is higher than current stop
         if (newStopLoss <= position.stopLoss) {
           return false;
@@ -244,23 +252,25 @@ export class PositionManager extends EventEmitter {
       } else {
         // For short positions, trail stop down
         newStopLoss = position.currentPrice + atrDistance;
-        
+
         // Only update if new stop is lower than current stop
         if (newStopLoss >= position.stopLoss) {
           return false;
         }
       }
 
-      console.log(`📈 Updating trailing stop for ${position.symbol}: ${position.stopLoss.toFixed(2)} → ${newStopLoss.toFixed(2)}`);
+      console.log(
+        `📈 Updating trailing stop for ${position.symbol}: ${position.stopLoss.toFixed(2)} → ${newStopLoss.toFixed(2)}`
+      );
 
       // Set new stop loss
       const success = await this.bybitClient.setStopLoss(position.symbol, newStopLoss);
-      
+
       if (success) {
         position.stopLoss = newStopLoss;
         this.positions.set(position.id, position);
         this.emit('position:trailing', position, newStopLoss);
-        
+
         console.log(`✅ Trailing stop updated: ${position.symbol} @ ${newStopLoss.toFixed(2)}`);
         return true;
       }
@@ -291,30 +301,32 @@ export class PositionManager extends EventEmitter {
 
       if (position.side === 'LONG') {
         newStopLoss = position.currentPrice - tightenedDistance;
-        
+
         // Only tighten if new stop is higher than current stop
         if (newStopLoss <= position.stopLoss) {
           return false;
         }
       } else {
         newStopLoss = position.currentPrice + tightenedDistance;
-        
+
         // Only tighten if new stop is lower than current stop
         if (newStopLoss >= position.stopLoss) {
           return false;
         }
       }
 
-      console.log(`⏰ Tightening stop after ${hoursOpen.toFixed(1)}h for ${position.symbol}: ${position.stopLoss.toFixed(2)} → ${newStopLoss.toFixed(2)}`);
+      console.log(
+        `⏰ Tightening stop after ${hoursOpen.toFixed(1)}h for ${position.symbol}: ${position.stopLoss.toFixed(2)} → ${newStopLoss.toFixed(2)}`
+      );
 
       // Set tightened stop loss
       const success = await this.bybitClient.setStopLoss(position.symbol, newStopLoss);
-      
+
       if (success) {
         position.stopLoss = newStopLoss;
         this.positions.set(position.id, position);
         this.emit('position:tightened', position, newStopLoss);
-        
+
         console.log(`✅ Stop tightened: ${position.symbol} @ ${newStopLoss.toFixed(2)}`);
         return true;
       }
@@ -333,7 +345,10 @@ export class PositionManager extends EventEmitter {
    * @param reason - Reason for closing
    * @returns Promise with success status
    */
-  public async closePosition(position: Position, reason: 'STOP_HIT' | 'TARGET_HIT' | 'MANUAL'): Promise<boolean> {
+  public async closePosition(
+    position: Position,
+    reason: 'STOP_HIT' | 'TARGET_HIT' | 'MANUAL'
+  ): Promise<boolean> {
     try {
       console.log(`🚪 Closing position ${position.symbol} - Reason: ${reason}`);
 
@@ -344,25 +359,24 @@ export class PositionManager extends EventEmitter {
         side: position.side === 'LONG' ? 'Sell' : 'Buy',
         type: 'MARKET',
         qty: position.quantity,
-        leverage: position.leverage
+        leverage: position.leverage,
       };
 
       const result = await this.bybitClient.placeOrderWithRetry(orderParams);
-      
+
       if (result.status === 'FILLED') {
         // Calculate profit percentage and hold time
         const profitPercentage = ((result.price - position.entryPrice) / position.entryPrice) * 100;
         const holdTime = Date.now() - position.entryTime;
-        
+
         // Update position status
         position.status = 'CLOSED';
-        position.realizedPnL += (position.quantity * (result.price - position.entryPrice));
-        
+        position.realizedPnL += position.quantity * (result.price - position.entryPrice);
+
         // Map PositionManager close reasons to Logger close reasons
-        const loggerReason = reason === 'STOP_HIT' ? 'STOP_LOSS' : 
-                            reason === 'TARGET_HIT' ? 'TAKE_PROFIT' : 
-                            'MANUAL';
-        
+        const loggerReason =
+          reason === 'STOP_HIT' ? 'STOP_LOSS' : reason === 'TARGET_HIT' ? 'TAKE_PROFIT' : 'MANUAL';
+
         // Log position close to structured logger
         logPositionClose(
           position.id,
@@ -375,11 +389,11 @@ export class PositionManager extends EventEmitter {
           holdTime,
           position.rValue
         );
-        
+
         // Remove from active management
         this.positions.delete(position.id);
         this.emit('position:closed', position, reason);
-        
+
         console.log(`✅ Position closed: ${position.symbol} at ${result.price} (${reason})`);
         return true;
       }
@@ -392,7 +406,7 @@ export class PositionManager extends EventEmitter {
         component: 'PositionManager',
         function: 'closePosition',
         stack: (error as Error).stack,
-        data: { position, reason }
+        data: { position, reason },
       });
       this.emit('position:error', position, error as Error);
       return false;
@@ -417,10 +431,12 @@ export class PositionManager extends EventEmitter {
       }
 
       // Check for management actions (in order of priority)
-      
+
       // 1. Move to breakeven at 1.5R
-      if (position.rValue >= this.config.breakevenRLevel && 
-          Math.abs(position.stopLoss - position.entryPrice) > 0.01) {
+      if (
+        position.rValue >= this.config.breakevenRLevel &&
+        Math.abs(position.stopLoss - position.entryPrice) > 0.01
+      ) {
         await this.moveStopToBreakeven(position);
       }
 
@@ -439,7 +455,6 @@ export class PositionManager extends EventEmitter {
       if (hoursOpen >= this.config.tightenAfterHours) {
         await this.tightenStopAfter48h(position);
       }
-
     } catch (error) {
       console.error(`❌ Error in position management for ${position.symbol}:`, error);
       this.emit('position:error', position, error as Error);
@@ -503,16 +518,17 @@ export class PositionManager extends EventEmitter {
    */
   private async updateAllPositions(): Promise<void> {
     const positions = Array.from(this.positions.values());
-    
+
     for (const position of positions) {
       try {
         // Get current price from exchange
         const currentPrice = await this.bybitClient.getCurrentPrice(position.symbol);
-        
+
         // Calculate unrealized P&L
-        const priceDiff = position.side === 'LONG' 
-          ? currentPrice - position.entryPrice
-          : position.entryPrice - currentPrice;
+        const priceDiff =
+          position.side === 'LONG'
+            ? currentPrice - position.entryPrice
+            : position.entryPrice - currentPrice;
         const unrealizedPnL = priceDiff * position.quantity;
 
         // Update position
@@ -520,9 +536,8 @@ export class PositionManager extends EventEmitter {
           id: position.id,
           currentPrice,
           unrealizedPnL,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
-
       } catch (error) {
         console.error(`❌ Failed to update position ${position.symbol}:`, error);
       }
@@ -542,19 +557,20 @@ export class PositionManager extends EventEmitter {
   } {
     const positions = Array.from(this.positions.values());
     const openPositions = positions.filter(p => p.status === 'OPEN');
-    
+
     const totalUnrealizedPnL = openPositions.reduce((sum, p) => sum + p.unrealizedPnL, 0);
     const totalRealizedPnL = positions.reduce((sum, p) => sum + p.realizedPnL, 0);
-    const averageRValue = openPositions.length > 0 
-      ? openPositions.reduce((sum, p) => sum + p.rValue, 0) / openPositions.length 
-      : 0;
+    const averageRValue =
+      openPositions.length > 0
+        ? openPositions.reduce((sum, p) => sum + p.rValue, 0) / openPositions.length
+        : 0;
 
     return {
       totalPositions: positions.length,
       openPositions: openPositions.length,
       totalUnrealizedPnL,
       totalRealizedPnL,
-      averageRValue
+      averageRValue,
     };
   }
 
@@ -573,7 +589,7 @@ export class PositionManager extends EventEmitter {
    */
   public async emergencyCloseAll(): Promise<{ success: number; failed: number }> {
     console.log(`🚨 Emergency closing all positions`);
-    
+
     const positions = Array.from(this.positions.values());
     let success = 0;
     let failed = 0;
@@ -610,5 +626,8 @@ export class PositionManager extends EventEmitter {
 // Export event interface for TypeScript
 export declare interface PositionManager {
   on<U extends keyof PositionManagerEvents>(event: U, listener: PositionManagerEvents[U]): this;
-  emit<U extends keyof PositionManagerEvents>(event: U, ...args: Parameters<PositionManagerEvents[U]>): boolean;
+  emit<U extends keyof PositionManagerEvents>(
+    event: U,
+    ...args: Parameters<PositionManagerEvents[U]>
+  ): boolean;
 }

@@ -1,13 +1,13 @@
 /**
  * PerformanceAnalytics - Enhancement Effectiveness Tracking
- * 
+ *
  * Tracks and analyzes the performance of 2026 enhancement layers:
  * - Oracle integration win rate improvement
  * - Global CVD false signal reduction
  * - Bot Trap avoided loss tracking
  * - Prediction accuracy measurement
  * - Conviction multiplier performance
- * 
+ *
  * Requirements: 15.1-15.7 (Performance Analytics for 2026 Enhancements)
  */
 
@@ -17,7 +17,7 @@ import {
   GlobalCVDData,
   BotTrapAnalysis,
   TradeOutcome,
-  TechnicalSignal
+  TechnicalSignal,
 } from '../types';
 
 // ============================================================================
@@ -38,7 +38,7 @@ export interface EnhancedTradeRecord {
   duration: number;
   exitReason: 'take_profit' | 'stop_loss' | 'manual' | 'emergency';
   timestamp: Date;
-  
+
   // Enhancement data at entry
   oracleScore: OracleScore | null;
   oracleAligned: boolean;
@@ -47,7 +47,7 @@ export interface EnhancedTradeRecord {
   botTrapFlagged: boolean;
   botTrapSuspicionScore: number;
   convictionMultiplier: number;
-  
+
   // Classic vs Enhanced comparison
   usedEnhancements: boolean;
   classicSignalConfidence: number;
@@ -63,19 +63,19 @@ export interface OracleEffectivenessMetrics {
   alignedSignals: number;
   conflictingSignals: number;
   vetoedSignals: number;
-  
+
   // Win rates
   alignedWinRate: number;
   conflictingWinRate: number;
   overallWinRate: number;
-  
+
   // Win rate improvement
   winRateImprovement: number; // Percentage improvement when aligned
-  
+
   // Veto effectiveness
   vetoedWouldHaveLost: number;
   vetoEffectiveness: number; // % of vetoes that prevented losses
-  
+
   // Conviction multiplier impact
   avgMultiplierOnWins: number;
   avgMultiplierOnLosses: number;
@@ -90,20 +90,20 @@ export interface GlobalCVDEffectivenessMetrics {
   totalSignals: number;
   confirmedSignals: number;
   rejectedSignals: number;
-  
+
   // Win rates
   confirmedWinRate: number;
   rejectedWouldHaveWonRate: number;
-  
+
   // False signal reduction
   falseSignalsAvoided: number;
   falseSignalReductionRate: number;
-  
+
   // Consensus accuracy
   consensusAccuracy: number;
   manipulationDetections: number;
   manipulationAccuracy: number;
-  
+
   // Multi-exchange benefit
   singleExchangeWinRate: number;
   multiExchangeWinRate: number;
@@ -118,23 +118,23 @@ export interface BotTrapEffectivenessMetrics {
   totalPatterns: number;
   flaggedPatterns: number;
   unflaggedPatterns: number;
-  
+
   // Accuracy
   truePositives: number; // Flagged and would have lost
   falsePositives: number; // Flagged but would have won
   trueNegatives: number; // Not flagged and won
   falseNegatives: number; // Not flagged but lost
-  
+
   // Rates
   detectionAccuracy: number;
   falsePositiveRate: number;
   falseNegativeRate: number;
-  
+
   // Avoided losses
   avoidedLosses: number;
   avoidedLossAmount: number;
   avgAvoidedLossPercent: number;
-  
+
   // Risk adjustment effectiveness
   reducedSizeWinRate: number;
   reducedSizeProfitFactor: number;
@@ -146,26 +146,26 @@ export interface BotTrapEffectivenessMetrics {
  */
 export interface PredictionAccuracyMetrics {
   totalPredictions: number;
-  
+
   // Sentiment accuracy
   bullishPredictions: number;
   bullishCorrect: number;
   bearishPredictions: number;
   bearishCorrect: number;
   sentimentAccuracy: number;
-  
+
   // Conviction multiplier performance
   highConvictionTrades: number;
   highConvictionWinRate: number;
   lowConvictionTrades: number;
   lowConvictionWinRate: number;
   convictionCorrelation: number;
-  
+
   // Event prediction accuracy
   eventPredictions: number;
   eventCorrect: number;
   eventAccuracy: number;
-  
+
   // Volatility forecasting
   volatilityPredictions: number;
   volatilityCorrect: number;
@@ -182,41 +182,41 @@ export interface PerformanceReport {
     end: Date;
     tradingDays: number;
   };
-  
+
   // Overall metrics
   totalTrades: number;
   enhancedTrades: number;
   classicTrades: number;
-  
+
   // Win rates
   overallWinRate: number;
   enhancedWinRate: number;
   classicWinRate: number;
-  
+
   // Returns
   totalReturn: number;
   enhancedReturn: number;
   classicReturn: number;
-  
+
   // Risk-adjusted returns
   sharpeRatio: number;
   enhancedSharpeRatio: number;
   classicSharpeRatio: number;
-  
+
   // Enhancement layer contributions
   oracleContribution: number;
   globalCVDContribution: number;
   botTrapContribution: number;
-  
+
   // Detailed metrics
   oracleMetrics: OracleEffectivenessMetrics;
   globalCVDMetrics: GlobalCVDEffectivenessMetrics;
   botTrapMetrics: BotTrapEffectivenessMetrics;
   predictionMetrics: PredictionAccuracyMetrics;
-  
+
   // Optimization suggestions
   suggestions: OptimizationSuggestion[];
-  
+
   timestamp: Date;
 }
 
@@ -242,7 +242,7 @@ export interface VetoedSignalRecord {
   vetoReason: string;
   vetoSource: 'oracle' | 'globalCVD' | 'botTrap' | 'risk';
   timestamp: Date;
-  
+
   // What would have happened
   wouldHaveEnteredAt: number;
   actualPriceAfter: number;
@@ -272,10 +272,8 @@ export const DEFAULT_PERFORMANCE_ANALYTICS_CONFIG: PerformanceAnalyticsConfig = 
   minTradesForStats: 20,
   rollingWindowDays: 30,
   highConvictionThreshold: 1.3,
-  enableDetailedLogging: true
+  enableDetailedLogging: true,
 };
-
-
 
 // ============================================================================
 // PERFORMANCE ANALYTICS CLASS
@@ -283,7 +281,7 @@ export const DEFAULT_PERFORMANCE_ANALYTICS_CONFIG: PerformanceAnalyticsConfig = 
 
 /**
  * PerformanceAnalytics - Main analytics engine for 2026 enhancements
- * 
+ *
  * Requirements:
  * - 15.1: Track win rate improvement from Oracle integration
  * - 15.2: Measure false signal reduction from Global CVD
@@ -314,12 +312,14 @@ export class PerformanceAnalytics extends EventEmitter {
   recordTrade(trade: EnhancedTradeRecord): void {
     this.tradeRecords.push(trade);
     this.emit('tradeRecorded', trade);
-    
+
     // Remove from pending if exists
     this.pendingSignals.delete(trade.id);
-    
+
     if (this.config.enableDetailedLogging) {
-      console.log(`📊 Trade recorded: ${trade.symbol} ${trade.direction} - PnL: ${trade.pnlPercent.toFixed(2)}%`);
+      console.log(
+        `📊 Trade recorded: ${trade.symbol} ${trade.direction} - PnL: ${trade.pnlPercent.toFixed(2)}%`
+      );
     }
   }
 
@@ -346,9 +346,11 @@ export class PerformanceAnalytics extends EventEmitter {
   recordVetoedSignal(record: VetoedSignalRecord): void {
     this.vetoedSignals.push(record);
     this.emit('signalVetoed', record);
-    
+
     if (this.config.enableDetailedLogging) {
-      console.log(`🚫 Signal vetoed: ${record.symbol} ${record.direction} - Reason: ${record.vetoReason}`);
+      console.log(
+        `🚫 Signal vetoed: ${record.symbol} ${record.direction} - Reason: ${record.vetoReason}`
+      );
     }
   }
 
@@ -379,7 +381,7 @@ export class PerformanceAnalytics extends EventEmitter {
    */
   calculateOracleEffectiveness(windowDays?: number): OracleEffectivenessMetrics {
     const trades = this.getTradesInWindow(windowDays);
-    
+
     if (trades.length < this.config.minTradesForStats) {
       return this.createEmptyOracleMetrics();
     }
@@ -394,35 +396,34 @@ export class PerformanceAnalytics extends EventEmitter {
     const conflictingWins = conflictingTrades.filter(t => t.pnl > 0).length;
     const overallWins = trades.filter(t => t.pnl > 0).length;
 
-    const alignedWinRate = alignedTrades.length > 0 
-      ? (alignedWins / alignedTrades.length) * 100 
-      : 0;
-    const conflictingWinRate = conflictingTrades.length > 0 
-      ? (conflictingWins / conflictingTrades.length) * 100 
-      : 0;
-    const overallWinRate = trades.length > 0 
-      ? (overallWins / trades.length) * 100 
-      : 0;
+    const alignedWinRate =
+      alignedTrades.length > 0 ? (alignedWins / alignedTrades.length) * 100 : 0;
+    const conflictingWinRate =
+      conflictingTrades.length > 0 ? (conflictingWins / conflictingTrades.length) * 100 : 0;
+    const overallWinRate = trades.length > 0 ? (overallWins / trades.length) * 100 : 0;
 
     // Calculate win rate improvement
     const winRateImprovement = alignedWinRate - conflictingWinRate;
 
     // Calculate veto effectiveness
     const vetoedWouldHaveLost = vetoedByOracle.filter(v => !v.wouldHaveWon).length;
-    const vetoEffectiveness = vetoedByOracle.length > 0 
-      ? (vetoedWouldHaveLost / vetoedByOracle.length) * 100 
-      : 0;
+    const vetoEffectiveness =
+      vetoedByOracle.length > 0 ? (vetoedWouldHaveLost / vetoedByOracle.length) * 100 : 0;
 
     // Calculate conviction multiplier impact
     const winsWithMultiplier = alignedTrades.filter(t => t.pnl > 0);
     const lossesWithMultiplier = alignedTrades.filter(t => t.pnl <= 0);
-    
-    const avgMultiplierOnWins = winsWithMultiplier.length > 0
-      ? winsWithMultiplier.reduce((sum, t) => sum + t.convictionMultiplier, 0) / winsWithMultiplier.length
-      : 1.0;
-    const avgMultiplierOnLosses = lossesWithMultiplier.length > 0
-      ? lossesWithMultiplier.reduce((sum, t) => sum + t.convictionMultiplier, 0) / lossesWithMultiplier.length
-      : 1.0;
+
+    const avgMultiplierOnWins =
+      winsWithMultiplier.length > 0
+        ? winsWithMultiplier.reduce((sum, t) => sum + t.convictionMultiplier, 0) /
+          winsWithMultiplier.length
+        : 1.0;
+    const avgMultiplierOnLosses =
+      lossesWithMultiplier.length > 0
+        ? lossesWithMultiplier.reduce((sum, t) => sum + t.convictionMultiplier, 0) /
+          lossesWithMultiplier.length
+        : 1.0;
 
     // Calculate profit contribution from multipliers
     const multiplierProfitContribution = this.calculateMultiplierContribution(alignedTrades);
@@ -440,7 +441,7 @@ export class PerformanceAnalytics extends EventEmitter {
       vetoEffectiveness,
       avgMultiplierOnWins,
       avgMultiplierOnLosses,
-      multiplierProfitContribution
+      multiplierProfitContribution,
     };
   }
 
@@ -454,7 +455,7 @@ export class PerformanceAnalytics extends EventEmitter {
    */
   calculateGlobalCVDEffectiveness(windowDays?: number): GlobalCVDEffectivenessMetrics {
     const trades = this.getTradesInWindow(windowDays);
-    
+
     if (trades.length < this.config.minTradesForStats) {
       return this.createEmptyGlobalCVDMetrics();
     }
@@ -465,21 +466,20 @@ export class PerformanceAnalytics extends EventEmitter {
 
     // Calculate win rates
     const confirmedWins = confirmedTrades.filter(t => t.pnl > 0).length;
-    const confirmedWinRate = confirmedTrades.length > 0 
-      ? (confirmedWins / confirmedTrades.length) * 100 
-      : 0;
+    const confirmedWinRate =
+      confirmedTrades.length > 0 ? (confirmedWins / confirmedTrades.length) * 100 : 0;
 
     // Calculate rejected signals that would have won
     const rejectedWouldHaveWon = rejectedByGlobalCVD.filter(v => v.wouldHaveWon).length;
-    const rejectedWouldHaveWonRate = rejectedByGlobalCVD.length > 0 
-      ? (rejectedWouldHaveWon / rejectedByGlobalCVD.length) * 100 
-      : 0;
+    const rejectedWouldHaveWonRate =
+      rejectedByGlobalCVD.length > 0
+        ? (rejectedWouldHaveWon / rejectedByGlobalCVD.length) * 100
+        : 0;
 
     // Calculate false signal reduction
     const falseSignalsAvoided = rejectedByGlobalCVD.filter(v => !v.wouldHaveWon).length;
-    const falseSignalReductionRate = rejectedByGlobalCVD.length > 0 
-      ? (falseSignalsAvoided / rejectedByGlobalCVD.length) * 100 
-      : 0;
+    const falseSignalReductionRate =
+      rejectedByGlobalCVD.length > 0 ? (falseSignalsAvoided / rejectedByGlobalCVD.length) * 100 : 0;
 
     // Calculate consensus accuracy
     const consensusTrades = trades.filter(t => t.globalCVDConsensus !== null);
@@ -487,20 +487,21 @@ export class PerformanceAnalytics extends EventEmitter {
       const expectedDirection = t.globalCVDConsensus === 'bullish' ? 'LONG' : 'SHORT';
       return t.direction === expectedDirection && t.pnl > 0;
     }).length;
-    const consensusAccuracy = consensusTrades.length > 0 
-      ? (consensusCorrect / consensusTrades.length) * 100 
-      : 0;
+    const consensusAccuracy =
+      consensusTrades.length > 0 ? (consensusCorrect / consensusTrades.length) * 100 : 0;
 
     // Multi-exchange vs single exchange comparison
     const multiExchangeTrades = confirmedTrades;
     const singleExchangeTrades = trades.filter(t => !t.globalCVDConfirmed && !t.usedEnhancements);
-    
-    const multiExchangeWinRate = multiExchangeTrades.length > 0
-      ? (multiExchangeTrades.filter(t => t.pnl > 0).length / multiExchangeTrades.length) * 100
-      : 0;
-    const singleExchangeWinRate = singleExchangeTrades.length > 0
-      ? (singleExchangeTrades.filter(t => t.pnl > 0).length / singleExchangeTrades.length) * 100
-      : 0;
+
+    const multiExchangeWinRate =
+      multiExchangeTrades.length > 0
+        ? (multiExchangeTrades.filter(t => t.pnl > 0).length / multiExchangeTrades.length) * 100
+        : 0;
+    const singleExchangeWinRate =
+      singleExchangeTrades.length > 0
+        ? (singleExchangeTrades.filter(t => t.pnl > 0).length / singleExchangeTrades.length) * 100
+        : 0;
 
     return {
       totalSignals: trades.length,
@@ -515,7 +516,7 @@ export class PerformanceAnalytics extends EventEmitter {
       manipulationAccuracy: 0,
       singleExchangeWinRate,
       multiExchangeWinRate,
-      multiExchangeImprovement: multiExchangeWinRate - singleExchangeWinRate
+      multiExchangeImprovement: multiExchangeWinRate - singleExchangeWinRate,
     };
   }
 
@@ -530,7 +531,7 @@ export class PerformanceAnalytics extends EventEmitter {
   calculateBotTrapEffectiveness(windowDays?: number): BotTrapEffectivenessMetrics {
     const trades = this.getTradesInWindow(windowDays);
     const vetoedByBotTrap = this.vetoedSignals.filter(v => v.vetoSource === 'botTrap');
-    
+
     if (trades.length < this.config.minTradesForStats) {
       return this.createEmptyBotTrapMetrics();
     }
@@ -546,35 +547,37 @@ export class PerformanceAnalytics extends EventEmitter {
     const falseNegatives = unflaggedTrades.filter(t => t.pnl <= 0).length;
 
     const total = truePositives + falsePositives + trueNegatives + falseNegatives;
-    const detectionAccuracy = total > 0 
-      ? ((truePositives + trueNegatives) / total) * 100 
-      : 0;
-    const falsePositiveRate = (truePositives + falsePositives) > 0 
-      ? (falsePositives / (truePositives + falsePositives)) * 100 
-      : 0;
-    const falseNegativeRate = (trueNegatives + falseNegatives) > 0 
-      ? (falseNegatives / (trueNegatives + falseNegatives)) * 100 
-      : 0;
+    const detectionAccuracy = total > 0 ? ((truePositives + trueNegatives) / total) * 100 : 0;
+    const falsePositiveRate =
+      truePositives + falsePositives > 0
+        ? (falsePositives / (truePositives + falsePositives)) * 100
+        : 0;
+    const falseNegativeRate =
+      trueNegatives + falseNegatives > 0
+        ? (falseNegatives / (trueNegatives + falseNegatives)) * 100
+        : 0;
 
     // Calculate avoided losses
     const avoidedLosses = truePositives;
     const avoidedLossAmount = vetoedByBotTrap
       .filter(v => !v.wouldHaveWon)
       .reduce((sum, v) => sum + Math.abs(v.potentialPnlPercent), 0);
-    const avgAvoidedLossPercent = avoidedLosses > 0 
-      ? avoidedLossAmount / avoidedLosses 
-      : 0;
+    const avgAvoidedLossPercent = avoidedLosses > 0 ? avoidedLossAmount / avoidedLosses : 0;
 
     // Calculate reduced size trade performance
     const reducedSizeTrades = flaggedTrades.filter(t => t.convictionMultiplier < 1.0);
     const reducedSizeWins = reducedSizeTrades.filter(t => t.pnl > 0).length;
-    const reducedSizeWinRate = reducedSizeTrades.length > 0 
-      ? (reducedSizeWins / reducedSizeTrades.length) * 100 
-      : 0;
-    
-    const reducedSizeProfit = reducedSizeTrades.filter(t => t.pnl > 0).reduce((sum, t) => sum + t.pnl, 0);
-    const reducedSizeLoss = Math.abs(reducedSizeTrades.filter(t => t.pnl <= 0).reduce((sum, t) => sum + t.pnl, 0));
-    const reducedSizeProfitFactor = reducedSizeLoss > 0 ? reducedSizeProfit / reducedSizeLoss : reducedSizeProfit;
+    const reducedSizeWinRate =
+      reducedSizeTrades.length > 0 ? (reducedSizeWins / reducedSizeTrades.length) * 100 : 0;
+
+    const reducedSizeProfit = reducedSizeTrades
+      .filter(t => t.pnl > 0)
+      .reduce((sum, t) => sum + t.pnl, 0);
+    const reducedSizeLoss = Math.abs(
+      reducedSizeTrades.filter(t => t.pnl <= 0).reduce((sum, t) => sum + t.pnl, 0)
+    );
+    const reducedSizeProfitFactor =
+      reducedSizeLoss > 0 ? reducedSizeProfit / reducedSizeLoss : reducedSizeProfit;
 
     return {
       totalPatterns: trades.length,
@@ -591,7 +594,7 @@ export class PerformanceAnalytics extends EventEmitter {
       avoidedLossAmount,
       avgAvoidedLossPercent,
       reducedSizeWinRate,
-      reducedSizeProfitFactor
+      reducedSizeProfitFactor,
     };
   }
 
@@ -606,7 +609,7 @@ export class PerformanceAnalytics extends EventEmitter {
   calculatePredictionAccuracy(windowDays?: number): PredictionAccuracyMetrics {
     const trades = this.getTradesInWindow(windowDays);
     const tradesWithOracle = trades.filter(t => t.oracleScore !== null);
-    
+
     if (tradesWithOracle.length < this.config.minTradesForStats) {
       return this.createEmptyPredictionMetrics();
     }
@@ -614,17 +617,20 @@ export class PerformanceAnalytics extends EventEmitter {
     // Sentiment accuracy
     const bullishPredictions = tradesWithOracle.filter(t => t.oracleScore!.sentiment > 0);
     const bearishPredictions = tradesWithOracle.filter(t => t.oracleScore!.sentiment < 0);
-    
-    const bullishCorrect = bullishPredictions.filter(t => 
-      (t.direction === 'LONG' && t.pnl > 0) || (t.direction === 'SHORT' && t.pnl <= 0)
+
+    const bullishCorrect = bullishPredictions.filter(
+      t => (t.direction === 'LONG' && t.pnl > 0) || (t.direction === 'SHORT' && t.pnl <= 0)
     ).length;
-    const bearishCorrect = bearishPredictions.filter(t => 
-      (t.direction === 'SHORT' && t.pnl > 0) || (t.direction === 'LONG' && t.pnl <= 0)
+    const bearishCorrect = bearishPredictions.filter(
+      t => (t.direction === 'SHORT' && t.pnl > 0) || (t.direction === 'LONG' && t.pnl <= 0)
     ).length;
-    
-    const sentimentAccuracy = (bullishPredictions.length + bearishPredictions.length) > 0
-      ? ((bullishCorrect + bearishCorrect) / (bullishPredictions.length + bearishPredictions.length)) * 100
-      : 0;
+
+    const sentimentAccuracy =
+      bullishPredictions.length + bearishPredictions.length > 0
+        ? ((bullishCorrect + bearishCorrect) /
+            (bullishPredictions.length + bearishPredictions.length)) *
+          100
+        : 0;
 
     // Conviction multiplier performance
     const highConvictionTrades = tradesWithOracle.filter(
@@ -633,18 +639,20 @@ export class PerformanceAnalytics extends EventEmitter {
     const lowConvictionTrades = tradesWithOracle.filter(
       t => t.convictionMultiplier < this.config.highConvictionThreshold
     );
-    
-    const highConvictionWinRate = highConvictionTrades.length > 0
-      ? (highConvictionTrades.filter(t => t.pnl > 0).length / highConvictionTrades.length) * 100
-      : 0;
-    const lowConvictionWinRate = lowConvictionTrades.length > 0
-      ? (lowConvictionTrades.filter(t => t.pnl > 0).length / lowConvictionTrades.length) * 100
-      : 0;
+
+    const highConvictionWinRate =
+      highConvictionTrades.length > 0
+        ? (highConvictionTrades.filter(t => t.pnl > 0).length / highConvictionTrades.length) * 100
+        : 0;
+    const lowConvictionWinRate =
+      lowConvictionTrades.length > 0
+        ? (lowConvictionTrades.filter(t => t.pnl > 0).length / lowConvictionTrades.length) * 100
+        : 0;
 
     // Calculate conviction correlation
     const convictionCorrelation = this.calculateCorrelation(
       tradesWithOracle.map(t => t.convictionMultiplier),
-      tradesWithOracle.map(t => t.pnl > 0 ? 1 : 0)
+      tradesWithOracle.map(t => (t.pnl > 0 ? 1 : 0))
     );
 
     return {
@@ -664,7 +672,7 @@ export class PerformanceAnalytics extends EventEmitter {
       eventAccuracy: 0,
       volatilityPredictions: 0,
       volatilityCorrect: 0,
-      volatilityAccuracy: 0
+      volatilityAccuracy: 0,
     };
   }
 
@@ -679,7 +687,7 @@ export class PerformanceAnalytics extends EventEmitter {
     const days = windowDays || this.config.rollingWindowDays;
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - days);
-    
+
     return this.tradeRecords.filter(t => t.timestamp >= cutoff);
   }
 
@@ -688,15 +696,15 @@ export class PerformanceAnalytics extends EventEmitter {
    */
   private calculateMultiplierContribution(trades: EnhancedTradeRecord[]): number {
     if (trades.length === 0) return 0;
-    
+
     let actualProfit = 0;
     let baseProfit = 0;
-    
+
     for (const trade of trades) {
       actualProfit += trade.pnl;
       baseProfit += trade.pnl / trade.convictionMultiplier;
     }
-    
+
     return actualProfit - baseProfit;
   }
 
@@ -705,17 +713,17 @@ export class PerformanceAnalytics extends EventEmitter {
    */
   private calculateCorrelation(x: number[], y: number[]): number {
     if (x.length !== y.length || x.length === 0) return 0;
-    
+
     const n = x.length;
     const sumX = x.reduce((a, b) => a + b, 0);
     const sumY = y.reduce((a, b) => a + b, 0);
     const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
     const sumX2 = x.reduce((sum, xi) => sum + xi * xi, 0);
     const sumY2 = y.reduce((sum, yi) => sum + yi * yi, 0);
-    
+
     const numerator = n * sumXY - sumX * sumY;
     const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
-    
+
     return denominator === 0 ? 0 : numerator / denominator;
   }
 
@@ -736,7 +744,7 @@ export class PerformanceAnalytics extends EventEmitter {
       vetoEffectiveness: 0,
       avgMultiplierOnWins: 1.0,
       avgMultiplierOnLosses: 1.0,
-      multiplierProfitContribution: 0
+      multiplierProfitContribution: 0,
     };
   }
 
@@ -757,7 +765,7 @@ export class PerformanceAnalytics extends EventEmitter {
       manipulationAccuracy: 0,
       singleExchangeWinRate: 0,
       multiExchangeWinRate: 0,
-      multiExchangeImprovement: 0
+      multiExchangeImprovement: 0,
     };
   }
 
@@ -780,7 +788,7 @@ export class PerformanceAnalytics extends EventEmitter {
       avoidedLossAmount: 0,
       avgAvoidedLossPercent: 0,
       reducedSizeWinRate: 0,
-      reducedSizeProfitFactor: 0
+      reducedSizeProfitFactor: 0,
     };
   }
 
@@ -805,7 +813,7 @@ export class PerformanceAnalytics extends EventEmitter {
       eventAccuracy: 0,
       volatilityPredictions: 0,
       volatilityCorrect: 0,
-      volatilityAccuracy: 0
+      volatilityAccuracy: 0,
     };
   }
 
@@ -849,7 +857,7 @@ export class PerformanceAnalytics extends EventEmitter {
   exportData(): { trades: EnhancedTradeRecord[]; vetoed: VetoedSignalRecord[] } {
     return {
       trades: [...this.tradeRecords],
-      vetoed: [...this.vetoedSignals]
+      vetoed: [...this.vetoedSignals],
     };
   }
 
@@ -859,11 +867,11 @@ export class PerformanceAnalytics extends EventEmitter {
   importData(data: { trades: EnhancedTradeRecord[]; vetoed: VetoedSignalRecord[] }): void {
     this.tradeRecords = data.trades.map(t => ({
       ...t,
-      timestamp: new Date(t.timestamp)
+      timestamp: new Date(t.timestamp),
     }));
     this.vetoedSignals = data.vetoed.map(v => ({
       ...v,
-      timestamp: new Date(v.timestamp)
+      timestamp: new Date(v.timestamp),
     }));
   }
 }

@@ -1,7 +1,7 @@
 /**
  * OptimizedQueries - Optimized database queries with caching
  * Provides efficient queries for frequently accessed data
- * 
+ *
  * Requirements: 2.2, 9.1
  */
 
@@ -72,17 +72,14 @@ export class OptimizedQueries {
   /**
    * Calculate Sharpe ratio using optimized database query
    * Uses database aggregation instead of fetching all rows
-   * 
+   *
    * @param phaseId - Phase to calculate for
    * @param windowDays - Rolling window in days
    * @returns Annualized Sharpe ratio
    */
-  async calculateSharpeRatioOptimized(
-    phaseId: PhaseId,
-    windowDays: number
-  ): Promise<number> {
+  async calculateSharpeRatioOptimized(phaseId: PhaseId, windowDays: number): Promise<number> {
     const cacheKey = `sharpe_opt:${phaseId}:${windowDays}`;
-    
+
     const cached = await this.cache.get<number>(CacheNamespace.QUERY, cacheKey);
     if (cached.success && cached.value !== undefined) {
       return cached.value;
@@ -91,14 +88,17 @@ export class OptimizedQueries {
     const windowStart = Date.now() - windowDays * MS_PER_DAY;
 
     // Use database aggregation for efficiency
-    const result = await this.db.queryOne<SharpeCalcResult>(`
+    const result = await this.db.queryOne<SharpeCalcResult>(
+      `
       SELECT 
         AVG(pnl) as avg_pnl,
         STDDEV_SAMP(pnl) as stddev_pnl,
         COUNT(*) as trade_count
       FROM phase_trades
       WHERE phase_id = $1 AND timestamp >= $2
-    `, [phaseId, windowStart]);
+    `,
+      [phaseId, windowStart],
+    );
 
     if (!result || parseInt(result.trade_count) < 2) {
       this.cache.set(CacheNamespace.QUERY, cacheKey, 0);
@@ -124,12 +124,9 @@ export class OptimizedQueries {
   /**
    * Get trade count using optimized query with caching
    */
-  async getTradeCountOptimized(
-    phaseId: PhaseId,
-    windowDays: number
-  ): Promise<number> {
+  async getTradeCountOptimized(phaseId: PhaseId, windowDays: number): Promise<number> {
     const cacheKey = `trade_count:${phaseId}:${windowDays}`;
-    
+
     const cached = await this.cache.get<number>(CacheNamespace.QUERY, cacheKey);
     if (cached.success && cached.value !== undefined) {
       return cached.value;
@@ -137,11 +134,14 @@ export class OptimizedQueries {
 
     const windowStart = Date.now() - windowDays * MS_PER_DAY;
 
-    const result = await this.db.queryOne<{ count: string }>(`
+    const result = await this.db.queryOne<{ count: string }>(
+      `
       SELECT COUNT(*) as count
       FROM phase_trades
       WHERE phase_id = $1 AND timestamp >= $2
-    `, [phaseId, windowStart]);
+    `,
+      [phaseId, windowStart],
+    );
 
     const count = parseInt(result?.count ?? '0');
     this.cache.set(CacheNamespace.QUERY, cacheKey, count);
@@ -153,21 +153,24 @@ export class OptimizedQueries {
    */
   async getRecentDecisions(limit: number = 10): Promise<BrainDecision[]> {
     const cacheKey = `recent_decisions:${limit}`;
-    
+
     const cached = await this.cache.get<BrainDecision[]>(CacheNamespace.QUERY, cacheKey);
     if (cached.success && cached.value !== undefined) {
       return cached.value;
     }
 
-    const rows = await this.db.queryAll<RecentDecisionRow>(`
+    const rows = await this.db.queryAll<RecentDecisionRow>(
+      `
       SELECT signal_id, phase_id, timestamp, approved, 
              requested_size, authorized_size, reason, risk_metrics
       FROM brain_decisions
       ORDER BY timestamp DESC
       LIMIT $1
-    `, [limit]);
+    `,
+      [limit],
+    );
 
-    const decisions: BrainDecision[] = rows.map(row => ({
+    const decisions: BrainDecision[] = rows.map((row) => ({
       signalId: row.signal_id,
       approved: row.approved,
       authorizedSize: row.authorized_size ? parseFloat(row.authorized_size) : 0,
@@ -187,7 +190,7 @@ export class OptimizedQueries {
       risk: {
         approved: row.approved,
         reason: row.reason,
-        riskMetrics: row.risk_metrics as any ?? {
+        riskMetrics: (row.risk_metrics as any) ?? {
           currentLeverage: 0,
           projectedLeverage: 0,
           correlation: 0,
@@ -206,7 +209,7 @@ export class OptimizedQueries {
    */
   async getLatestRiskSnapshot(): Promise<RiskSnapshot | null> {
     const cacheKey = 'latest_risk_snapshot';
-    
+
     const cached = await this.cache.get<RiskSnapshot | null>(CacheNamespace.QUERY, cacheKey);
     if (cached.success && cached.value !== undefined) {
       return cached.value;
@@ -243,10 +246,10 @@ export class OptimizedQueries {
    */
   async getPhasePerformanceSummary(
     phaseId: PhaseId,
-    windowDays: number
+    windowDays: number,
   ): Promise<PhasePerformance> {
     const cacheKey = `perf_summary:${phaseId}:${windowDays}`;
-    
+
     const cached = await this.cache.get<PhasePerformance>(CacheNamespace.QUERY, cacheKey);
     if (cached.success && cached.value !== undefined) {
       return cached.value;
@@ -263,7 +266,8 @@ export class OptimizedQueries {
       avg_loss: string;
       avg_pnl: string;
       stddev_pnl: string;
-    }>(`
+    }>(
+      `
       SELECT 
         COALESCE(SUM(pnl), 0) as total_pnl,
         COUNT(*) as trade_count,
@@ -274,7 +278,9 @@ export class OptimizedQueries {
         STDDEV_SAMP(pnl) as stddev_pnl
       FROM phase_trades
       WHERE phase_id = $1 AND timestamp >= $2
-    `, [phaseId, windowStart]);
+    `,
+      [phaseId, windowStart],
+    );
 
     const tradeCount = parseInt(result?.trade_count ?? '0');
     const winCount = parseInt(result?.win_count ?? '0');
@@ -325,16 +331,19 @@ export class OptimizedQueries {
    */
   async getBatchPnLValues(
     phaseIds: PhaseId[],
-    windowDays: number
+    windowDays: number,
   ): Promise<Map<PhaseId, number[]>> {
     const windowStart = Date.now() - windowDays * MS_PER_DAY;
 
-    const rows = await this.db.queryAll<TradePnlRow & { phase_id: string }>(`
+    const rows = await this.db.queryAll<TradePnlRow & { phase_id: string }>(
+      `
       SELECT phase_id, pnl
       FROM phase_trades
       WHERE phase_id = ANY($1) AND timestamp >= $2
       ORDER BY phase_id, timestamp ASC
-    `, [phaseIds, windowStart]);
+    `,
+      [phaseIds, windowStart],
+    );
 
     const result = new Map<PhaseId, number[]>();
     for (const phaseId of phaseIds) {

@@ -4,8 +4,8 @@
  */
 
 import { NotificationHandler } from '../engine/CircuitBreaker.js';
-import { 
-  NotificationService, 
+import {
+  NotificationService,
   CircuitBreakerNotification,
   HighCorrelationNotification,
   SweepNotification,
@@ -45,7 +45,7 @@ export class TitanNotificationHandler implements NotificationHandler {
   async sendHighCorrelationWarning(
     correlationScore: number,
     threshold: number,
-    affectedPositions: string[]
+    affectedPositions: string[],
   ): Promise<void> {
     const data: HighCorrelationNotification = {
       correlationScore,
@@ -65,7 +65,7 @@ export class TitanNotificationHandler implements NotificationHandler {
     fromWallet: string,
     toWallet: string,
     reason: string,
-    newBalance: number
+    newBalance: number,
   ): Promise<void> {
     const data: SweepNotification = {
       amount,
@@ -87,7 +87,7 @@ export class TitanNotificationHandler implements NotificationHandler {
     signalId: string,
     symbol: string,
     reason: string,
-    requestedSize: number
+    requestedSize: number,
   ): Promise<void> {
     const data: VetoNotification = {
       phaseId,

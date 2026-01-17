@@ -1,9 +1,9 @@
 /**
  * ExchangeWebSocketClient - Multi-Exchange WebSocket Connection Manager
- * 
+ *
  * Provides WebSocket clients for Binance, Coinbase, and Kraken trade streams
  * with automatic reconnection and connection health monitoring.
- * 
+ *
  * Requirements: 4.1, 4.6 (Global Liquidity Aggregation)
  */
 
@@ -56,7 +56,7 @@ const DEFAULT_CONFIG: Omit<ExchangeWebSocketConfig, 'exchange' | 'symbols'> = {
   reconnectInterval: 5000,
   maxReconnectAttempts: 10,
   heartbeatInterval: 30000,
-  messageTimeout: 60000
+  messageTimeout: 60000,
 };
 
 /**
@@ -65,12 +65,12 @@ const DEFAULT_CONFIG: Omit<ExchangeWebSocketConfig, 'exchange' | 'symbols'> = {
 const EXCHANGE_WS_URLS: Record<'binance' | 'coinbase' | 'kraken', string> = {
   binance: 'wss://stream.binance.com:9443/ws',
   coinbase: 'wss://ws-feed.exchange.coinbase.com',
-  kraken: 'wss://ws.kraken.com'
+  kraken: 'wss://ws.kraken.com',
 };
 
 /**
  * ExchangeWebSocketClient - Manages WebSocket connections to crypto exchanges
- * 
+ *
  * Emits events:
  * - 'trade': ExchangeTrade - New trade received
  * - 'connected': exchange - Connection established
@@ -93,12 +93,14 @@ export class ExchangeWebSocketClient extends EventEmitter {
   private pingTime: number = 0;
   private isClosing: boolean = false;
 
-  constructor(config: Partial<ExchangeWebSocketConfig> & { exchange: 'binance' | 'coinbase' | 'kraken' }) {
+  constructor(
+    config: Partial<ExchangeWebSocketConfig> & { exchange: 'binance' | 'coinbase' | 'kraken' }
+  ) {
     super();
     this.config = {
       ...DEFAULT_CONFIG,
       symbols: ['BTCUSDT'],
-      ...config
+      ...config,
     };
   }
 
@@ -149,15 +151,16 @@ export class ExchangeWebSocketClient extends EventEmitter {
         });
 
         this.ws.on('close', (code: number, reason: Buffer) => {
-          console.log(`🔌 ${this.config.exchange.toUpperCase()} WebSocket closed: ${code} ${reason.toString()}`);
+          console.log(
+            `🔌 ${this.config.exchange.toUpperCase()} WebSocket closed: ${code} ${reason.toString()}`
+          );
           this.stopHeartbeat();
           this.emit('disconnected', this.config.exchange);
-          
+
           if (!this.isClosing) {
             this.attemptReconnect();
           }
         });
-
       } catch (error) {
         reject(error);
       }
@@ -170,12 +173,12 @@ export class ExchangeWebSocketClient extends EventEmitter {
   async disconnect(): Promise<void> {
     this.isClosing = true;
     this.stopHeartbeat();
-    
+
     if (this.ws) {
       this.ws.close();
       this.ws = null;
     }
-    
+
     this.reconnectAttempts = 0;
     this.isReconnecting = false;
   }
@@ -185,7 +188,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
    */
   getStatus(): ConnectionStatus {
     if (!this.ws) return ConnectionStatus.DISCONNECTED;
-    
+
     switch (this.ws.readyState) {
       case WebSocket.CONNECTING:
         return ConnectionStatus.RECONNECTING;
@@ -206,9 +209,10 @@ export class ExchangeWebSocketClient extends EventEmitter {
    * Get connection health metrics
    */
   getHealth(): ConnectionHealth {
-    const avgLatency = this.latencyMeasurements.length > 0
-      ? this.latencyMeasurements.reduce((a, b) => a + b, 0) / this.latencyMeasurements.length
-      : 0;
+    const avgLatency =
+      this.latencyMeasurements.length > 0
+        ? this.latencyMeasurements.reduce((a, b) => a + b, 0) / this.latencyMeasurements.length
+        : 0;
 
     const now = Date.now();
     const timeSinceReset = (now - this.lastMessageCountReset) / 1000;
@@ -227,7 +231,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
       reconnectAttempts: this.reconnectAttempts,
       latency: avgLatency,
       messagesPerSecond,
-      uptime: this.connectionStartTime > 0 ? now - this.connectionStartTime : 0
+      uptime: this.connectionStartTime > 0 ? now - this.connectionStartTime : 0,
     };
   }
 
@@ -236,18 +240,18 @@ export class ExchangeWebSocketClient extends EventEmitter {
    */
   private buildWebSocketUrl(): string {
     const baseUrl = EXCHANGE_WS_URLS[this.config.exchange];
-    
+
     switch (this.config.exchange) {
       case 'binance':
         // Binance uses stream names in URL
         const streams = this.config.symbols.map(s => `${s.toLowerCase()}@aggTrade`).join('/');
         return `${baseUrl}/${streams}`;
-      
+
       case 'coinbase':
       case 'kraken':
         // These exchanges subscribe after connection
         return baseUrl;
-      
+
       default:
         return baseUrl;
     }
@@ -278,7 +282,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
     const subscribeMessage = {
       type: 'subscribe',
       product_ids: productIds,
-      channels: ['matches']
+      channels: ['matches'],
     };
     this.ws?.send(JSON.stringify(subscribeMessage));
   }
@@ -291,7 +295,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
     const subscribeMessage = {
       event: 'subscribe',
       pair: pairs,
-      subscription: { name: 'trade' }
+      subscription: { name: 'trade' },
     };
     this.ws?.send(JSON.stringify(subscribeMessage));
   }
@@ -306,7 +310,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
     try {
       const message = JSON.parse(data.toString());
       const trade = this.parseTradeMessage(message);
-      
+
       if (trade) {
         this.emit('trade', trade);
       }
@@ -344,7 +348,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
       quantity: parseFloat(message.q),
       side: message.m ? 'sell' : 'buy', // m=true means buyer is maker (sell aggressor)
       timestamp: message.T,
-      tradeId: message.a.toString()
+      tradeId: message.a.toString(),
     };
   }
 
@@ -361,7 +365,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
       quantity: parseFloat(message.size),
       side: message.side as 'buy' | 'sell',
       timestamp: new Date(message.time).getTime(),
-      tradeId: message.trade_id.toString()
+      tradeId: message.trade_id.toString(),
     };
   }
 
@@ -375,12 +379,12 @@ export class ExchangeWebSocketClient extends EventEmitter {
 
     const trades = message[1];
     const pair = message[3];
-    
+
     if (!Array.isArray(trades) || trades.length === 0) return null;
 
     // Return the most recent trade
     const latestTrade = trades[trades.length - 1];
-    
+
     return {
       exchange: 'kraken',
       symbol: this.convertKrakenToSymbol(pair),
@@ -388,7 +392,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
       quantity: parseFloat(latestTrade[1]),
       side: latestTrade[3] === 'b' ? 'buy' : 'sell',
       timestamp: Math.floor(parseFloat(latestTrade[2]) * 1000),
-      tradeId: `${pair}-${latestTrade[2]}`
+      tradeId: `${pair}-${latestTrade[2]}`,
     };
   }
 
@@ -419,13 +423,13 @@ export class ExchangeWebSocketClient extends EventEmitter {
   private convertSymbolToKraken(symbol: string): string {
     // Kraken uses XBT for BTC
     let converted = symbol.replace('BTC', 'XBT');
-    
+
     if (converted.endsWith('USDT')) {
       converted = converted.replace('USDT', '/USD');
     } else if (converted.endsWith('USD')) {
       converted = converted.slice(0, -3) + '/USD';
     }
-    
+
     return converted;
   }
 
@@ -441,7 +445,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
    */
   private startHeartbeat(): void {
     this.stopHeartbeat();
-    
+
     this.heartbeatTimer = setInterval(() => {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
         // Send ping
@@ -450,7 +454,9 @@ export class ExchangeWebSocketClient extends EventEmitter {
 
         // Check for stale connection
         if (Date.now() - this.lastMessageTime > this.config.messageTimeout) {
-          console.warn(`⚠️ ${this.config.exchange.toUpperCase()} connection stale, reconnecting...`);
+          console.warn(
+            `⚠️ ${this.config.exchange.toUpperCase()} connection stale, reconnecting...`
+          );
           this.ws.close();
         }
 
@@ -477,9 +483,9 @@ export class ExchangeWebSocketClient extends EventEmitter {
     if (this.isReconnecting || this.isClosing) return;
     if (this.reconnectAttempts >= this.config.maxReconnectAttempts) {
       console.error(`❌ ${this.config.exchange.toUpperCase()} max reconnect attempts reached`);
-      this.emit('error', { 
-        exchange: this.config.exchange, 
-        error: new Error('Max reconnect attempts reached') 
+      this.emit('error', {
+        exchange: this.config.exchange,
+        error: new Error('Max reconnect attempts reached'),
       });
       return;
     }
@@ -492,11 +498,13 @@ export class ExchangeWebSocketClient extends EventEmitter {
       60000 // Max 60 seconds
     );
 
-    console.log(`🔄 ${this.config.exchange.toUpperCase()} reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.config.maxReconnectAttempts})`);
-    
-    this.emit('reconnecting', { 
-      exchange: this.config.exchange, 
-      attempt: this.reconnectAttempts 
+    console.log(
+      `🔄 ${this.config.exchange.toUpperCase()} reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.config.maxReconnectAttempts})`
+    );
+
+    this.emit('reconnecting', {
+      exchange: this.config.exchange,
+      attempt: this.reconnectAttempts,
     });
 
     setTimeout(async () => {
@@ -515,7 +523,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
    */
   updateSymbols(symbols: string[]): void {
     this.config.symbols = symbols;
-    
+
     // Reconnect to apply new symbols
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.close();

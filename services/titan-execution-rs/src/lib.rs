@@ -7,3 +7,6 @@ pub mod rate_limiter;
 
 #[cfg(test)]
 mod tests;
+
+pub mod market_data;
+pub mod simulation_engine;

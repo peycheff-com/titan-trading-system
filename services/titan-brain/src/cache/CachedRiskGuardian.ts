@@ -10,6 +10,7 @@ import {
   PriceHistoryEntry,
   RiskGuardian,
 } from "../engine/RiskGuardian.js";
+import { GovernanceEngine } from "../engine/GovernanceEngine.js";
 import {
   IntentSignal,
   Position,
@@ -31,9 +32,14 @@ export class CachedRiskGuardian {
   constructor(
     config: RiskGuardianConfig,
     allocationEngine: AllocationEngine,
+    governanceEngine: GovernanceEngine,
     cache: CacheManager,
   ) {
-    this.guardian = new RiskGuardian(config, allocationEngine);
+    this.guardian = new RiskGuardian(
+      config,
+      allocationEngine,
+      governanceEngine,
+    );
     this.cache = cache;
   }
 
@@ -65,8 +71,8 @@ export class CachedRiskGuardian {
   checkSignal(
     signal: IntentSignal,
     currentPositions: Position[],
-  ): RiskDecision {
-    return this.guardian.checkSignal(signal, currentPositions);
+  ): Promise<RiskDecision> {
+    return Promise.resolve(this.guardian.checkSignal(signal, currentPositions));
   }
 
   /**
