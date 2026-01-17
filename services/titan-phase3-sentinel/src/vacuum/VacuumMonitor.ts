@@ -40,13 +40,66 @@ export class VacuumMonitor extends EventEmitter {
     }
 
     /**
+     * Check liquidity health of order book to prevent entering thin markets
+     */
+    private checkLiquidityHealth(
+        spotPrice: number,
+        orderBook?: OrderBook,
+    ): boolean {
+        // If no OrderBook provided (mock/sim), assume filtered elsewhere or safe
+        if (!orderBook) return true;
+
+        // Requirement: Order Book depth > $50k within 10bps (0.1%)
+        const thresholdBps = 0.001;
+        const requiredDepth = 50000;
+
+        let bidDepth = 0;
+        let askDepth = 0;
+
+        // Sum Bids within threshold
+        for (const bid of orderBook.bids) {
+            // bid is [price, size]
+            const price = bid[0];
+            const size = bid[1];
+
+            if (price >= spotPrice * (1 - thresholdBps)) {
+                bidDepth += size * price;
+            } else {
+                break;
+            }
+        }
+
+        // Sum Asks within threshold
+        for (const ask of orderBook.asks) {
+            // ask is [price, size]
+            const price = ask[0];
+            const size = ask[1];
+
+            if (price <= spotPrice * (1 + thresholdBps)) {
+                askDepth += size * price;
+            } else {
+                break;
+            }
+        }
+
+        return bidDepth >= requiredDepth && askDepth >= requiredDepth;
+    }
+
+    /**
      * Check for vacuum opportunity based on current market state
      */
     async checkForOpportunity(
         symbol: string,
         spotPrice: number,
         perpPrice: number,
+        orderBook?: OrderBook,
     ): Promise<VacuumOpportunity | null> {
+        // 1. Safety Check: Liquidity Health
+        if (!this.checkLiquidityHealth(spotPrice, orderBook)) {
+            // console.warn(`[VACUUM_SKIP] Low Liquidity for ${symbol}`);
+            return null;
+        }
+
         const now = Date.now();
 
         // Calculate Basis

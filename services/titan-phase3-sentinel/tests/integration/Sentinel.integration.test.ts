@@ -9,6 +9,8 @@ class MockGateway implements ExchangeGateway {
         this.name = id;
     }
 
+    async initialize() {}
+
     async getPrice(symbol: string): Promise<number> {
         if (this.id === "binance_spot") return 10000;
         if (this.id === "bybit_perp") return 10010; // +0.1% basis

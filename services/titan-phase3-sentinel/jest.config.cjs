@@ -2,39 +2,48 @@ module.exports = {
   projects: [
     {
       displayName: 'unit',
-      preset: 'ts-jest',
       testEnvironment: 'node',
       testMatch: ['<rootDir>/tests/unit/**/*.test.ts', '<rootDir>/tests/unit/**/*.test.tsx'],
-      setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
-      globals: {
-        'ts-jest': {
+      setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
+      transform: {
+        '^.+\\.tsx?$': ['ts-jest', {
           isolatedModules: true,
-        },
+          tsconfig: {
+            module: 'commonjs'
+          }
+        }]
       },
+      resolver: '<rootDir>/resolver.cjs',
     },
     {
       displayName: 'integration',
-      preset: 'ts-jest',
       testEnvironment: 'node',
       testMatch: ['<rootDir>/tests/integration/**/*.integration.test.ts'],
-      setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
-      globals: {
-        'ts-jest': {
+      setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
+      transform: {
+        '^.+\\.tsx?$': ['ts-jest', {
           isolatedModules: true,
-        },
+          tsconfig: {
+            module: 'commonjs'
+          }
+        }]
       },
+      resolver: '<rootDir>/resolver.cjs',
     },
     {
       displayName: 'property',
-      preset: 'ts-jest',
       testEnvironment: 'node',
       testMatch: ['<rootDir>/tests/property/**/*.property.test.ts'],
-      setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
-      globals: {
-        'ts-jest': {
+      setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
+      transform: {
+        '^.+\\.tsx?$': ['ts-jest', {
           isolatedModules: true,
-        },
+          tsconfig: {
+            module: 'commonjs'
+          }
+        }]
       },
+      resolver: '<rootDir>/resolver.cjs',
     },
   ],
 
@@ -83,6 +92,6 @@ module.exports = {
   ],
 
   transformIgnorePatterns: [
-    'node_modules/(?!(node-fetch|data-uri-to-buffer|fetch-blob|formdata-polyfill|chalk|ink|ink-testing-library|ethers|viem)/)',
+    'node_modules/(?!(node-fetch|data-uri-to-buffer|fetch-blob|formdata-polyfill|chalk|ink|ink-testing-library|ethers|viem|fast-check)/)',
   ],
 };

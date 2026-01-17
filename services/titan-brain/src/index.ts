@@ -282,7 +282,6 @@ async function main(): Promise<void> {
       });
       logger.info("   ✅ StateRecoveryService initialized");
 
-      // Initialize manual override service
       const manualOverrideService = new ManualOverrideService(
         databaseManager!,
         {
@@ -447,6 +446,18 @@ async function main(): Promise<void> {
       const natsPublisher = getNatsPublisher();
       await natsPublisher.connect(brainConfig.natsUrl);
       logger.info("   ✅ NATS Publisher started");
+
+      // Initialize Accounting Service (Phase 4) - Requires NATS
+      const { TreasuryRepository } = await import(
+        "./db/repositories/TreasuryRepository.js"
+      );
+      const treasuryRepository = new TreasuryRepository(databaseManager!);
+      const { AccountingService } = await import(
+        "./services/accounting/AccountingService.js"
+      );
+      const accountingService = new AccountingService(treasuryRepository);
+      await accountingService.start();
+      logger.info("   ✅ AccountingService (Phase 4) initialized");
 
       // Mark startup as complete for health checks
       webhookServer.markStartupComplete(); // Wait webhookServer not created yet if I reordered?

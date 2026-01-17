@@ -39,7 +39,29 @@ export interface IntentSignal {
     leverage: number;
     velocity?: number;
     trap_type?: string;
-    timestamp: number;
+    timestamp: number; // Signal generation time (t_signal)
+    t_analysis?: number; // Time analysis completed
+    t_decision?: number; // Time Brain approved
+    t_ingress?: number; // Time Execution engine received it
+    t_exchange?: number; // Exchange matching engine timestamp
+    max_slippage_bps?: number; // Maximum allowed slippage in basis points
+}
+
+/**
+ * Report of a trade fill (Execution -> Brain/Accountant)
+ */
+export interface FillReport {
+    fill_id: string;
+    signal_id: string;
+    symbol: string;
+    side: "BUY" | "SELL";
+    price: number;
+    qty: number;
+    fee: number;
+    fee_currency: string;
+    t_signal: number;
+    t_exchange: number;
+    t_ingress: number;
 }
 
 /**

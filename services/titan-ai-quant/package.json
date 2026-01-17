@@ -8,7 +8,7 @@
     "build": "tsc",
     "start": "echo '[DEBUG] STARTING_BUILD' && npm run build && echo '[DEBUG] BUILD_COMPLETE' && node dist/titan-ai-quant/src/server.js",
     "dev": "ts-node src/index.ts",
-    "test": "jest",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage --run",
     "lint": "eslint src/**/*.ts",
@@ -24,8 +24,8 @@
     "node-schedule": "^2.1.1",
     "react": "^18.2.0",
     "typescript": "^5.3.3",
-    "ws": "^8.18.0",
-    "zod": "^4.2.1"
+    "weaviate-ts-client": "^2.2.0",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.8",

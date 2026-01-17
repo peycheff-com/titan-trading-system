@@ -42,6 +42,7 @@ export const defaultConfig: TitanBrainConfig = {
     correlationPenalty: 0.5, // 50% size reduction
     betaUpdateInterval: 300000, // 5 minutes
     correlationUpdateInterval: 300000, // 5 minutes
+    minStopDistanceMultiplier: 2.0, // 2x ATR default
   },
 
   capitalFlow: {

@@ -10,6 +10,7 @@ export {
     type ConfirmResponse,
     ConnectionState,
     FastPathClient,
+    type FillReport,
     type IntentSignal,
     type IPCClientConfig,
     type IPCMetrics,

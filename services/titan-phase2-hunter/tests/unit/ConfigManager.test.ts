@@ -72,6 +72,12 @@ describe("ConfigManager", () => {
           maxPortfolioHeat: 18,
           correlationThreshold: 0.8,
         },
+        forwardTestConfig: {
+          enabled: false,
+          duration: 24,
+          logSignalsOnly: false,
+          compareToBacktest: false,
+        },
         version: 1,
         lastModified: Date.now(),
       };
@@ -81,7 +87,7 @@ describe("ConfigManager", () => {
       const newConfigManager = new ConfigManager(testConfigDir);
       const loadedConfig = newConfigManager.getConfig();
 
-      expect(loadedConfig.alignmentWeights.daily).toBe(50);
+      expect(loadedConfig.alignmentWeights.daily).toBe(40);
       expect(loadedConfig.alignmentWeights.h4).toBe(35);
       expect(loadedConfig.alignmentWeights.m15).toBe(25);
       expect(loadedConfig.rsConfig.threshold).toBe(3);

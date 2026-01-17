@@ -30,7 +30,8 @@ export type EventType =
   | "IPC_EXECUTION_FAILED"
   | "IPC_FORCE_RECONNECT_SUCCESS"
   | "IPC_FORCE_RECONNECT_FAILED"
-  | "CONFIG_UPDATED_IPC";
+  | "CONFIG_UPDATED_IPC"
+  | "SYMBOL_BLACKLISTED";
 
 export type EventHandler = (data: any) => void;
 

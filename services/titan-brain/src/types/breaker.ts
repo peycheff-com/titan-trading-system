@@ -3,16 +3,34 @@
  * Defines types for emergency halt system
  */
 
-import { Position } from './risk.js';
+import { Position } from "./risk.js";
 
 /**
  * Circuit breaker type
  */
 export enum BreakerType {
-  /** Immediate close all + halt */
-  HARD = 'HARD',
-  /** Cooldown period only */
-  SOFT = 'SOFT'
+  /** Immediate close all + halt (Legacy HARD) */
+  HARD = "HARD",
+  /** Cooldown period only (Legacy SOFT) */
+  SOFT = "SOFT",
+  /** Freeze new entries only (allows closing/hedging) */
+  ENTRY_FREEZE = "ENTRY_FREEZE",
+  /** Freeze all order submission */
+  SYSTEM_FREEZE = "SYSTEM_FREEZE",
+  /** Flatten positions and shutdown */
+  EMERGENCY_SHUTDOWN = "EMERGENCY_SHUTDOWN",
+}
+
+/**
+ * Action determined by breaker state
+ */
+export enum BreakerAction {
+  /** Normal operation */
+  NONE = "NONE",
+  /** Allow exits/hedges, block new risk */
+  ENTRY_PAUSE = "ENTRY_PAUSE",
+  /** Close everything and stop */
+  FULL_HALT = "FULL_HALT",
 }
 
 /**
@@ -21,6 +39,7 @@ export enum BreakerType {
 export interface BreakerStatus {
   active: boolean;
   type?: BreakerType;
+  action: BreakerAction;
   reason?: string;
   triggeredAt?: number;
   dailyDrawdown: number;
@@ -36,7 +55,7 @@ export interface BreakerStatus {
 export interface BreakerEvent {
   id?: number;
   timestamp: number;
-  eventType: 'TRIGGER' | 'RESET';
+  eventType: "TRIGGER" | "RESET";
   breakerType?: BreakerType;
   reason: string;
   equity: number;

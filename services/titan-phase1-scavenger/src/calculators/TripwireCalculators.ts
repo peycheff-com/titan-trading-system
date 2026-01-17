@@ -7,6 +7,7 @@
  */
 
 import { OHLCV, TrapType, Tripwire } from "../types/index.js";
+export { OHLCV, Tripwire };
 
 interface VolumeProfileNode {
   price: number;

@@ -2,7 +2,6 @@ import type {
     HealthReport,
     RiskLimits,
     RiskStatus,
-    RiskStatusLevel,
 } from "../types/portfolio.js";
 import { DEFAULT_RISK_LIMITS } from "../types/portfolio.js";
 
@@ -18,13 +17,22 @@ export class RiskManager {
 
     /**
      * Assess risk status based on current portfolio health report
+     * @param health Portfolio health report
+     * @param totalEquity Current Total Equity
+     * @param currentDrawdown Current Drawdown (positive number, e.g. 0.05 for 5%)
+     * @param volatility Market Volatility (0-100)
+     * @param liquidityScore Market Liquidity Score (0-100)
      */
-    evaluate(health: HealthReport, totalEquity: number): RiskStatus {
+    evaluate(
+        health: HealthReport,
+        totalEquity: number,
+        currentDrawdown: number = 0,
+        volatility: number = 0,
+        liquidityScore: number = 100,
+    ): RiskStatus {
         const violations: string[] = [];
 
         // 1. Delta Check
-        // Delta is usually USD exposure. Normalize by Equity for % check?
-        // Limits say "maxDelta: 0.02" (2%). Assuming this implies Delta/Equity ratio.
         const deltaRatio = totalEquity > 0
             ? Math.abs(health.delta) / totalEquity
             : 0;
@@ -44,25 +52,6 @@ export class RiskManager {
         }
 
         // 2. Drawdown Check
-        // Need historical high water mark to calc Drawdown?
-        // For now, assuming HealthReport might contain current drawdown or we calculate it statefully?
-        // The HealthReport doesn't strictly have drawdown field in previous def, but let's check interface.
-        // Interface 'HealthReport' has nav, delta, marginUtilization, riskStatus, positions, alerts.
-        // It does NOT have drawdown.
-
-        // NOTE: PerformanceTracker calculates drawdown. RiskManager might need to receive it.
-        // For this stateless check, let's assume we receive current Drawdown as input or part of HealthReport (if we update it).
-        // Or we rely on the inputs.
-        // Let's add a `currentDrawdown` parameter to evaluate for now, or assume it's passed via some context.
-
-        // Actually, looking at `RiskStatus` return type: `drawdown: number`.
-        // Let's assume for this specific method, we might calculate simple PnL based drawdown if we had history.
-        // But better: Require it as input.
-        // IMPORTANT: The `evaluate` signature in plan didn't specify extra params, but logical requirement dictates it.
-        // I will add `currentDrawdown` to the assess method signature, defaulting to 0 if not provided.
-
-        const currentDrawdown = 0; // Placeholder until integrated with PerformanceTracker
-
         if (currentDrawdown > this.limits.criticalDrawdown) {
             violations.push(
                 `CRITICAL_DRAWDOWN: ${currentDrawdown} > ${this.limits.criticalDrawdown}`,
@@ -73,22 +62,30 @@ export class RiskManager {
             );
         }
 
-        // 3. Leverage Check
-        // Leverage = Total Position Value / Equity
+        // 3. Leverage Check with Dynamic Limits
         let totalPositionValue = 0;
         for (const pos of health.positions) {
             totalPositionValue +=
                 (Math.abs(pos.spotSize) + Math.abs(pos.perpSize)) *
                 pos.spotEntry;
-            // Approx notions.
         }
         const leverage = totalEquity > 0 ? totalPositionValue / totalEquity : 0;
 
-        if (leverage > this.limits.maxLeverage) {
+        // Dynamic Limit Calculation
+        // Volatility Factor: 0-100. If > 80 (Extreme), factor drops to 0.5. Low/Normal vol -> 1.0.
+        // Liquidity Factor: 0-100. If < 20 (Illiquid), factor drops to 0.5. Normal/High val -> 1.0.
+
+        const volFactor = volatility > 80 ? 0.5 : 1.0;
+        const liqFactor = liquidityScore < 20 ? 0.5 : 1.0;
+
+        const effectiveMaxLeverage = this.limits.maxLeverage * volFactor *
+            liqFactor;
+
+        if (leverage > effectiveMaxLeverage) {
             violations.push(
-                `MAX_LEVERAGE: ${
-                    leverage.toFixed(2)
-                } > ${this.limits.maxLeverage}`,
+                `MAX_LEVERAGE: ${leverage.toFixed(2)} > ${
+                    effectiveMaxLeverage.toFixed(2)
+                } (Base: ${this.limits.maxLeverage} * V:${volFactor} * L:${liqFactor})`,
             );
         }
 

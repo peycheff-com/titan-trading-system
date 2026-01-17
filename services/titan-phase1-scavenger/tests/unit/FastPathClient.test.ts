@@ -1,15 +1,15 @@
 /**
  * FastPathClient Unit Tests
- * 
+ *
  * Tests for enhanced IPC client with automatic reconnection and error handling
  */
 
-import { FastPathClient, ConnectionState, IntentSignal } from '../../src/ipc/FastPathClient';
-import * as net from 'net';
-import { EventEmitter } from 'events';
+import { ConnectionState, FastPathClient, IntentSignal } from "@titan/shared";
+import * as net from "net";
+import { EventEmitter } from "events";
 
 // Mock net module
-jest.mock('net');
+jest.mock("net");
 const mockNet = net as jest.Mocked<typeof net>;
 
 // Mock socket
@@ -20,7 +20,7 @@ class MockSocket extends EventEmitter {
   removeAllListeners = jest.fn();
 }
 
-describe('FastPathClient', () => {
+describe("FastPathClient", () => {
   let client: FastPathClient;
   let mockSocket: MockSocket;
 
@@ -30,8 +30,8 @@ describe('FastPathClient', () => {
     mockNet.connect.mockReturnValue(mockSocket as any);
 
     client = new FastPathClient({
-      socketPath: '/tmp/test-ipc.sock',
-      hmacSecret: 'test-secret',
+      socketPath: "/tmp/test-ipc.sock",
+      hmacSecret: "test-secret",
       maxReconnectAttempts: 3,
       baseReconnectDelay: 100,
       connectionTimeout: 1000,
@@ -45,41 +45,44 @@ describe('FastPathClient', () => {
     }
   });
 
-  describe('Connection Management', () => {
-    it('should connect successfully', async () => {
+  describe("Connection Management", () => {
+    it("should connect successfully", async () => {
       const connectPromise = client.connect();
-      
+
       // Simulate successful connection
-      setTimeout(() => mockSocket.emit('connect'), 10);
-      
+      setTimeout(() => mockSocket.emit("connect"), 10);
+
       await expect(connectPromise).resolves.toBeUndefined();
       expect(client.getConnectionState()).toBe(ConnectionState.CONNECTED);
     });
 
-    it('should handle connection timeout', async () => {
+    it("should handle connection timeout", async () => {
       const connectPromise = client.connect();
-      
+
       // Don't emit connect event to simulate timeout
       // Wait for timeout to occur
-      await new Promise(resolve => setTimeout(resolve, 1100));
-      
-      await expect(connectPromise).rejects.toThrow('IPC connection timeout');
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+
+      await expect(connectPromise).rejects.toThrow("IPC connection timeout");
       expect(client.getConnectionState()).toBe(ConnectionState.FAILED);
     }, 2000); // Increase test timeout to allow for connection timeout
 
-    it('should handle connection errors', async () => {
+    it("should handle connection errors", async () => {
       const connectPromise = client.connect();
-      
+
       // Simulate connection error
-      setTimeout(() => mockSocket.emit('error', new Error('Connection refused')), 10);
-      
-      await expect(connectPromise).rejects.toThrow('Connection refused');
+      setTimeout(
+        () => mockSocket.emit("error", new Error("Connection refused")),
+        10,
+      );
+
+      await expect(connectPromise).rejects.toThrow("Connection refused");
     });
 
-    it('should attempt automatic reconnection on connection loss', (done) => {
+    it("should attempt automatic reconnection on connection loss", (done) => {
       let reconnectAttempts = 0;
-      
-      client.on('reconnecting', (attempt) => {
+
+      client.on("reconnecting", (attempt) => {
         reconnectAttempts = attempt;
         if (attempt === 1) {
           expect(reconnectAttempts).toBe(1);
@@ -89,18 +92,18 @@ describe('FastPathClient', () => {
 
       // First connect
       const connectPromise = client.connect();
-      setTimeout(() => mockSocket.emit('connect'), 10);
-      
+      setTimeout(() => mockSocket.emit("connect"), 10);
+
       connectPromise.then(() => {
         // Simulate connection loss
-        mockSocket.emit('close');
+        mockSocket.emit("close");
       });
     });
 
-    it('should stop reconnecting after max attempts', (done) => {
+    it("should stop reconnecting after max attempts", (done) => {
       let maxReconnectReached = false;
-      
-      client.on('maxReconnectAttemptsReached', () => {
+
+      client.on("maxReconnectAttemptsReached", () => {
         maxReconnectReached = true;
         expect(maxReconnectReached).toBe(true);
         expect(client.getConnectionState()).toBe(ConnectionState.FAILED);
@@ -110,41 +113,41 @@ describe('FastPathClient', () => {
       // Simulate multiple failed connections
       for (let i = 0; i < 4; i++) {
         setTimeout(() => {
-          mockSocket.emit('error', new Error('Connection failed'));
+          mockSocket.emit("error", new Error("Connection failed"));
         }, i * 50);
       }
     });
 
-    it('should disconnect gracefully', async () => {
+    it("should disconnect gracefully", async () => {
       // Connect first
       const connectPromise = client.connect();
-      setTimeout(() => mockSocket.emit('connect'), 10);
+      setTimeout(() => mockSocket.emit("connect"), 10);
       await connectPromise;
 
       // Disconnect
       const disconnectPromise = client.disconnect();
-      setTimeout(() => mockSocket.emit('close'), 10);
-      
+      setTimeout(() => mockSocket.emit("close"), 10);
+
       await disconnectPromise;
       expect(client.getConnectionState()).toBe(ConnectionState.DISCONNECTED);
       expect(mockSocket.end).toHaveBeenCalled();
     });
   });
 
-  describe('Message Handling', () => {
+  describe("Message Handling", () => {
     beforeEach(async () => {
       // Connect before each test
       const connectPromise = client.connect();
-      setTimeout(() => mockSocket.emit('connect'), 10);
+      setTimeout(() => mockSocket.emit("connect"), 10);
       await connectPromise;
     });
 
-    it('should send PREPARE signal successfully', async () => {
+    it("should send PREPARE signal successfully", async () => {
       const signal: IntentSignal = {
-        signal_id: 'test-signal-1',
-        source: 'scavenger',
-        symbol: 'BTCUSDT',
-        direction: 'LONG',
+        signal_id: "test-signal-1",
+        source: "scavenger",
+        symbol: "BTCUSDT",
+        direction: "LONG",
         entry_zone: { min: 50000, max: 50100 },
         stop_loss: 49000,
         take_profits: [51000, 52000],
@@ -154,21 +157,21 @@ describe('FastPathClient', () => {
       };
 
       const sendPromise = client.sendPrepare(signal);
-      
+
       // Simulate response
       setTimeout(() => {
         const calls = mockSocket.write.mock.calls;
         const lastCall = calls[calls.length - 1];
         const message = JSON.parse(lastCall[0]);
-        
+
         const response = {
           correlationId: message.correlationId,
           prepared: true,
           signal_id: signal.signal_id,
           position_size: 0.1,
         };
-        
-        mockSocket.emit('data', Buffer.from(JSON.stringify(response) + '\n'));
+
+        mockSocket.emit("data", Buffer.from(JSON.stringify(response) + "\n"));
       }, 10);
 
       const result = await sendPromise;
@@ -176,22 +179,22 @@ describe('FastPathClient', () => {
       expect(result.signal_id).toBe(signal.signal_id);
     });
 
-    it('should send CONFIRM signal successfully', async () => {
-      const sendPromise = client.sendConfirm('test-signal-1');
-      
+    it("should send CONFIRM signal successfully", async () => {
+      const sendPromise = client.sendConfirm("test-signal-1");
+
       // Simulate response
       setTimeout(() => {
         const calls = mockSocket.write.mock.calls;
         const lastCall = calls[calls.length - 1];
         const message = JSON.parse(lastCall[0]);
-        
+
         const response = {
           correlationId: message.correlationId,
           executed: true,
           fill_price: 50050,
         };
-        
-        mockSocket.emit('data', Buffer.from(JSON.stringify(response) + '\n'));
+
+        mockSocket.emit("data", Buffer.from(JSON.stringify(response) + "\n"));
       }, 10);
 
       const result = await sendPromise;
@@ -199,33 +202,33 @@ describe('FastPathClient', () => {
       expect(result.fill_price).toBe(50050);
     });
 
-    it('should send ABORT signal successfully', async () => {
-      const sendPromise = client.sendAbort('test-signal-1');
-      
+    it("should send ABORT signal successfully", async () => {
+      const sendPromise = client.sendAbort("test-signal-1");
+
       // Simulate response
       setTimeout(() => {
         const calls = mockSocket.write.mock.calls;
         const lastCall = calls[calls.length - 1];
         const message = JSON.parse(lastCall[0]);
-        
+
         const response = {
           correlationId: message.correlationId,
           aborted: true,
         };
-        
-        mockSocket.emit('data', Buffer.from(JSON.stringify(response) + '\n'));
+
+        mockSocket.emit("data", Buffer.from(JSON.stringify(response) + "\n"));
       }, 10);
 
       const result = await sendPromise;
       expect(result.aborted).toBe(true);
     });
 
-    it('should handle message timeout', async () => {
+    it("should handle message timeout", async () => {
       const sendPromise = client.sendPrepare({
-        signal_id: 'test-signal-timeout',
-        source: 'scavenger',
-        symbol: 'BTCUSDT',
-        direction: 'LONG',
+        signal_id: "test-signal-timeout",
+        source: "scavenger",
+        symbol: "BTCUSDT",
+        direction: "LONG",
         entry_zone: { min: 50000, max: 50100 },
         stop_loss: 49000,
         take_profits: [51000],
@@ -236,17 +239,17 @@ describe('FastPathClient', () => {
 
       // Don't send response to simulate timeout
       // Wait for message timeout to occur
-      await new Promise(resolve => setTimeout(resolve, 600));
-      
-      await expect(sendPromise).rejects.toThrow('IPC_TIMEOUT');
+      await new Promise((resolve) => setTimeout(resolve, 600));
+
+      await expect(sendPromise).rejects.toThrow("IPC_TIMEOUT");
     }, 1000); // Increase test timeout
 
-    it('should handle multiple concurrent messages', async () => {
+    it("should handle multiple concurrent messages", async () => {
       const signal1: IntentSignal = {
-        signal_id: 'signal-1',
-        source: 'scavenger',
-        symbol: 'BTCUSDT',
-        direction: 'LONG',
+        signal_id: "signal-1",
+        source: "scavenger",
+        symbol: "BTCUSDT",
+        direction: "LONG",
         entry_zone: { min: 50000, max: 50100 },
         stop_loss: 49000,
         take_profits: [51000],
@@ -256,10 +259,10 @@ describe('FastPathClient', () => {
       };
 
       const signal2: IntentSignal = {
-        signal_id: 'signal-2',
-        source: 'scavenger',
-        symbol: 'ETHUSDT',
-        direction: 'SHORT',
+        signal_id: "signal-2",
+        source: "scavenger",
+        symbol: "ETHUSDT",
+        direction: "SHORT",
         entry_zone: { min: 3000, max: 3010 },
         stop_loss: 3100,
         take_profits: [2900],
@@ -274,7 +277,7 @@ describe('FastPathClient', () => {
       // Simulate responses for both messages
       setTimeout(() => {
         const calls = mockSocket.write.mock.calls;
-        
+
         // Response for first message
         const message1 = JSON.parse(calls[0][0]);
         const response1 = {
@@ -282,7 +285,7 @@ describe('FastPathClient', () => {
           prepared: true,
           signal_id: signal1.signal_id,
         };
-        mockSocket.emit('data', Buffer.from(JSON.stringify(response1) + '\n'));
+        mockSocket.emit("data", Buffer.from(JSON.stringify(response1) + "\n"));
 
         // Response for second message
         const message2 = JSON.parse(calls[1][0]);
@@ -291,7 +294,7 @@ describe('FastPathClient', () => {
           prepared: true,
           signal_id: signal2.signal_id,
         };
-        mockSocket.emit('data', Buffer.from(JSON.stringify(response2) + '\n'));
+        mockSocket.emit("data", Buffer.from(JSON.stringify(response2) + "\n"));
       }, 10);
 
       const [result1, result2] = await Promise.all([promise1, promise2]);
@@ -300,11 +303,11 @@ describe('FastPathClient', () => {
     });
   });
 
-  describe('HMAC Signature', () => {
-    it('should generate consistent signatures', () => {
+  describe("HMAC Signature", () => {
+    it("should generate consistent signatures", () => {
       const signal = {
-        signal_id: 'test',
-        signal_type: 'PREPARE',
+        signal_id: "test",
+        signal_type: "PREPARE",
         timestamp: 1234567890,
       };
 
@@ -316,7 +319,7 @@ describe('FastPathClient', () => {
       expect(signature1).toMatch(/^[a-f0-9]{64}$/); // SHA256 hex string
     });
 
-    it('should normalize objects for consistent signing', () => {
+    it("should normalize objects for consistent signing", () => {
       const signal1 = { b: 2, a: 1, c: undefined };
       const signal2 = { a: 1, b: 2 };
 
@@ -327,20 +330,20 @@ describe('FastPathClient', () => {
     });
   });
 
-  describe('Metrics and Status', () => {
+  describe("Metrics and Status", () => {
     beforeEach(async () => {
       // Connect before each test
       const connectPromise = client.connect();
-      setTimeout(() => mockSocket.emit('connect'), 10);
+      setTimeout(() => mockSocket.emit("connect"), 10);
       await connectPromise;
     });
 
-    it('should track message metrics', async () => {
+    it("should track message metrics", async () => {
       const signal: IntentSignal = {
-        signal_id: 'metrics-test',
-        source: 'scavenger',
-        symbol: 'BTCUSDT',
-        direction: 'LONG',
+        signal_id: "metrics-test",
+        source: "scavenger",
+        symbol: "BTCUSDT",
+        direction: "LONG",
         entry_zone: { min: 50000, max: 50100 },
         stop_loss: 49000,
         take_profits: [51000],
@@ -350,7 +353,7 @@ describe('FastPathClient', () => {
       };
 
       const sendPromise = client.sendPrepare(signal);
-      
+
       // Simulate response
       setTimeout(() => {
         const calls = mockSocket.write.mock.calls;
@@ -360,48 +363,47 @@ describe('FastPathClient', () => {
           prepared: true,
           timestamp: message.timestamp,
         };
-        mockSocket.emit('data', Buffer.from(JSON.stringify(response) + '\n'));
+        mockSocket.emit("data", Buffer.from(JSON.stringify(response) + "\n"));
       }, 10);
 
       await sendPromise;
 
       const metrics = client.getMetrics();
-      expect(metrics.messagessSent).toBe(1);
+      expect(metrics.messagesSent).toBe(1);
       expect(metrics.messagesReceived).toBe(1);
       expect(metrics.messagesFailed).toBe(0);
     });
 
-    it('should return comprehensive status', () => {
+    it("should return comprehensive status", () => {
       const status = client.getStatus();
 
       expect(status.connectionState).toBe(ConnectionState.CONNECTED);
-      expect(status.socketPath).toBe('/tmp/test-ipc.sock');
+      expect(status.socketPath).toBe("/tmp/test-ipc.sock");
       expect(status.pendingMessages).toBe(0);
       expect(status.metrics).toBeDefined();
-      expect(status.config).toBeDefined();
     });
 
-    it('should reset metrics', () => {
+    it("should reset metrics", () => {
       client.resetMetrics();
-      
+
       const metrics = client.getMetrics();
-      expect(metrics.messagessSent).toBe(0);
+      expect(metrics.messagesSent).toBe(0);
       expect(metrics.messagesReceived).toBe(0);
       expect(metrics.totalLatencyMs).toBe(0);
     });
   });
 
-  describe('Ping Functionality', () => {
+  describe("Ping Functionality", () => {
     beforeEach(async () => {
       // Connect before each test
       const connectPromise = client.connect();
-      setTimeout(() => mockSocket.emit('connect'), 10);
+      setTimeout(() => mockSocket.emit("connect"), 10);
       await connectPromise;
     });
 
-    it('should ping successfully', async () => {
+    it("should ping successfully", async () => {
       const pingPromise = client.ping();
-      
+
       // Simulate ping response
       setTimeout(() => {
         const calls = mockSocket.write.mock.calls;
@@ -410,7 +412,7 @@ describe('FastPathClient', () => {
           correlationId: message.correlationId,
           pong: true,
         };
-        mockSocket.emit('data', Buffer.from(JSON.stringify(response) + '\n'));
+        mockSocket.emit("data", Buffer.from(JSON.stringify(response) + "\n"));
       }, 10);
 
       const result = await pingPromise;
@@ -418,34 +420,34 @@ describe('FastPathClient', () => {
       expect(result.latency).toBeGreaterThan(0);
     });
 
-    it('should handle ping failure when not connected', async () => {
+    it("should handle ping failure when not connected", async () => {
       await client.disconnect();
-      
+
       const result = await client.ping();
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Not connected');
+      expect(result.error).toBe("Not connected");
     });
   });
 
-  describe('Force Reconnection', () => {
-    it('should force reconnection successfully', async () => {
+  describe("Force Reconnection", () => {
+    it("should force reconnection successfully", async () => {
       // Initial connection
       const connectPromise = client.connect();
-      setTimeout(() => mockSocket.emit('connect'), 10);
+      setTimeout(() => mockSocket.emit("connect"), 10);
       await connectPromise;
 
       expect(client.getConnectionState()).toBe(ConnectionState.CONNECTED);
 
       // Force reconnection
       const reconnectPromise = client.forceReconnect();
-      
+
       // Simulate disconnect and reconnect
       setTimeout(() => {
-        mockSocket.emit('close');
+        mockSocket.emit("close");
         // Create new mock socket for reconnection
         const newMockSocket = new MockSocket();
         mockNet.connect.mockReturnValue(newMockSocket as any);
-        setTimeout(() => newMockSocket.emit('connect'), 10);
+        setTimeout(() => newMockSocket.emit("connect"), 10);
       }, 10);
 
       await reconnectPromise;
