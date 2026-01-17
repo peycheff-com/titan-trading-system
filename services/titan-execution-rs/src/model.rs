@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_json;
 use rust_decimal::Decimal;
 use chrono::{DateTime, Utc};
-use uuid::Uuid;
+
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum Side {
@@ -63,6 +63,8 @@ pub enum IntentStatus {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Intent {
     pub signal_id: String,
+    #[serde(default)]
+    pub source: Option<String>,
     pub symbol: String,
     pub direction: i32, // 1 for long, -1 for short
     #[serde(rename = "type")]

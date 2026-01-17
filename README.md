@@ -3,7 +3,7 @@
 **Bio-Mimetic Trading Organism** — A 5-phase algorithmic trading system that
 evolves with capital growth.
 
-[![DigitalOcean](https://img.shields.io/badge/DigitalOcean-App%20Platform-0080FF)](https://digitalocean.com)
+[![DigitalOcean](https://img.shields.io/badge/DigitalOcean-Droplet-0080FF)](https://digitalocean.com)
 [![Node.js](https://img.shields.io/badge/Node.js-22+-43853D)](https://nodejs.org)
 [![Rust](https://img.shields.io/badge/Rust-1.75+-000000)](https://rust-lang.org)
 
@@ -64,16 +64,16 @@ evolves with capital growth.
 
 ## Technology Stack
 
-| Layer                | Technology                       |
-| -------------------- | -------------------------------- |
-| **Execution Engine** | Rust (sub-millisecond latency)   |
-| **Backend Services** | Node.js 22+, TypeScript, Fastify |
-| **Event Bus**        | NATS JetStream                   |
-| **Database**         | PostgreSQL (Supabase)            |
-| **Frontend**         | React, Vite, TailwindCSS         |
-| **AI/ML**            | Google Gemini 2.0 Flash          |
-| **Deployment**       | DigitalOcean App Platform        |
-| **IPC**              | Unix Domain Sockets (FastPath)   |
+| Layer                | Technology                                  |
+| -------------------- | ------------------------------------------- |
+| **Execution Engine** | Rust (sub-millisecond latency)              |
+| **Backend Services** | Node.js 22+, TypeScript, Fastify            |
+| **Event Bus**        | NATS JetStream                              |
+| **Database**         | PostgreSQL (Supabase)                       |
+| **Frontend**         | React, Vite, TailwindCSS                    |
+| **AI/ML**            | Google Gemini 2.0 Flash                     |
+| **Deployment**       | DigitalOcean Droplet (VPS) + Docker Compose |
+| **IPC**              | Unix Domain Sockets (FastPath)              |
 
 ## Quick Start
 
@@ -163,13 +163,26 @@ BYBIT_API_SECRET=your_secret
 
 ## Deployment
 
-Automatic CI/CD via DigitalOcean App Platform:
+Deployment is managed manually via SSH on a DigitalOcean Droplet.
 
-1. Push to `main` branch
-2. DigitalOcean builds and deploys all services
-3. Health checks validate deployment
+1. **SSH into the server**:
+   ```bash
+   ssh deploy@<droplet-ip>
+   ```
 
-Configuration is in `.do/app.yaml`.
+2. **Navigate to project**:
+   ```bash
+   cd /opt/titan
+   ```
+
+3. **Update and Restart**:
+   ```bash
+   git pull origin main
+   docker-compose -f docker-compose.prod.yml up -d --build --remove-orphans
+   ```
+
+Configuration is managed via `.env` file and `docker-compose.prod.yml` on the
+server.
 
 ## Project Structure
 

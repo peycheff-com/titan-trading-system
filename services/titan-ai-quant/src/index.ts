@@ -1,49 +1,92 @@
 /**
  * Titan AI Quant - Entry Point
- * 
- * Closed-loop parameter optimization engine using Gemini 1.5 Flash.
+ *
+ * Closed-loop parameter optimization engine using Gemini 3.0 Flash.
  * Analyzes trade logs, generates optimization proposals, and validates
  * through backtesting before presenting to the user for approval.
  */
 
-export { GeminiClient } from './ai/GeminiClient.js';
-export { RateLimiter } from './ai/RateLimiter.js';
-export { Journal } from './ai/Journal.js';
-export { StrategicMemory } from './ai/StrategicMemory.js';
-export { TitanAnalyst } from './ai/TitanAnalyst.js';
-export { Guardrails, PARAMETER_BOUNDS } from './ai/Guardrails.js';
-export { ApprovalWorkflow, type ApprovalWorkflowOptions, type ApprovalResult, type RejectionResult } from './ai/ApprovalWorkflow.js';
-export { RealTimeOptimizer, type RealTimeOptimizerConfig, type PerformanceFeedback, type ABTestConfig, type ABTestResult } from './ai/RealTimeOptimizer.js';
-export { PredictiveAnalytics, type PredictiveAnalyticsConfig, type MarketRegime, type VolatilityPrediction, type CorrelationAnalysis, type StrategyPrediction, type RiskAdjustment } from './ai/PredictiveAnalytics.js';
-export { EnhancedAIIntegration, type EnhancedAIIntegrationConfig, type StrategySelection, type AdaptiveRiskConfig, type AIIntegrationStatus } from './ai/EnhancedAIIntegration.js';
-export { Backtester, type BacktestOptions, type BacktestWarning, type ExtendedBacktestResult } from './simulation/Backtester.js';
-export { LatencyModel } from './simulation/LatencyModel.js';
-export { NightlyOptimize } from './cron/NightlyOptimize.js';
+export { GeminiClient } from "./ai/GeminiClient.js";
+export { RateLimiter } from "./ai/RateLimiter.js";
+export { Journal } from "./ai/Journal.js";
+export { StrategicMemory } from "./ai/StrategicMemory.js";
+export { TitanAnalyst } from "./ai/TitanAnalyst.js";
+export { Guardrails, PARAMETER_BOUNDS } from "./ai/Guardrails.js";
+export {
+  type ApprovalResult,
+  ApprovalWorkflow,
+  type ApprovalWorkflowOptions,
+  type RejectionResult,
+} from "./ai/ApprovalWorkflow.js";
+export {
+  type ABTestConfig,
+  type ABTestResult,
+  type PerformanceFeedback,
+  RealTimeOptimizer,
+  type RealTimeOptimizerConfig,
+} from "./ai/RealTimeOptimizer.js";
+export {
+  type CorrelationAnalysis,
+  type MarketRegime,
+  PredictiveAnalytics,
+  type PredictiveAnalyticsConfig,
+  type RiskAdjustment,
+  type StrategyPrediction,
+  type VolatilityPrediction,
+} from "./ai/PredictiveAnalytics.js";
+export {
+  type AdaptiveRiskConfig,
+  type AIIntegrationStatus,
+  EnhancedAIIntegration,
+  type EnhancedAIIntegrationConfig,
+  type StrategySelection,
+} from "./ai/EnhancedAIIntegration.js";
+export {
+  Backtester,
+  type BacktestOptions,
+  type BacktestWarning,
+  type ExtendedBacktestResult,
+} from "./simulation/Backtester.js";
+export { LatencyModel } from "./simulation/LatencyModel.js";
+export { NightlyOptimize } from "./cron/NightlyOptimize.js";
 
 // Console UI components
-export { AIAdvisor, type AIAdvisorProps } from './console/AIAdvisor.js';
-export { ProposalCard, type ProposalCardProps } from './console/ProposalCard.js';
-export { TrapMonitorWithAI, type TrapMonitorWithAIProps } from './console/TrapMonitorWithAI.js';
-export { ChatInterface, type ChatInterfaceProps, type ChatMessage, type ChatCommand, parseCommand, extractSymbolFromOptimizeCommand } from './console/ChatInterface.js';
-export { EnhancedAIConsole } from './console/EnhancedAIConsole.js';
+export { AIAdvisor, type AIAdvisorProps } from "./console/AIAdvisor.js";
+export {
+  ProposalCard,
+  type ProposalCardProps,
+} from "./console/ProposalCard.js";
+export {
+  TrapMonitorWithAI,
+  type TrapMonitorWithAIProps,
+} from "./console/TrapMonitorWithAI.js";
+export {
+  type ChatCommand,
+  ChatInterface,
+  type ChatInterfaceProps,
+  type ChatMessage,
+  extractSymbolFromOptimizeCommand,
+  parseCommand,
+} from "./console/ChatInterface.js";
+export { EnhancedAIConsole } from "./console/EnhancedAIConsole.js";
 
 // Error handling utilities
 export {
-  TitanError,
+  type BackoffConfig,
+  calculateBackoffDelay,
+  classifyError,
   ErrorCode,
   ErrorLogger,
-  getUserFriendlyMessage,
-  calculateBackoffDelay,
-  withRetry,
-  isRetryableError,
-  classifyError,
+  type ErrorLoggerConfig,
   getErrorLogger,
+  getUserFriendlyMessage,
+  isRetryableError,
   logError,
+  TitanError,
   withErrorLogging,
   withFallback,
-  type BackoffConfig,
-  type ErrorLoggerConfig,
-} from './utils/ErrorHandler.js';
+  withRetry,
+} from "./utils/ErrorHandler.js";
 
 // Re-export types
-export * from './types/index.js';
+export * from "./types/index.js";

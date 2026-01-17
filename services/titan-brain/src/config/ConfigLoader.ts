@@ -151,6 +151,13 @@ const configSchema: ConfigSchema = {
     port: { type: "number", required: true, min: 1, max: 65535 },
     corsOrigins: { type: "array", required: true },
   },
+  activeInference: {
+    distributionBins: { type: "number", required: true, min: 10, max: 1000 },
+    windowSize: { type: "number", required: true, min: 10, max: 10000 },
+    minHistory: { type: "number", required: true, min: 1, max: 1000 },
+    sensitivity: { type: "number", required: true, min: 0.1, max: 20 },
+    surpriseOffset: { type: "number", required: true, min: 0, max: 1 },
+  },
   services: {
     executionUrl: { type: "string", required: false, pattern: /^http/ },
     phase1WebhookUrl: { type: "string", required: false, pattern: /^http/ },
@@ -606,6 +613,10 @@ function deepMerge(
     notifications: mergeConfigSection(
       target.notifications,
       source.notifications,
+    ),
+    activeInference: mergeConfigSection(
+      target.activeInference,
+      source.activeInference,
     ),
     services: mergeConfigSection(target.services, source.services),
   };

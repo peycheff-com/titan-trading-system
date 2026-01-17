@@ -1,5 +1,5 @@
 use actix_web::{web, HttpResponse, Responder};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use crate::shadow_state::ShadowState;
 use std::sync::{Arc, RwLock};
 

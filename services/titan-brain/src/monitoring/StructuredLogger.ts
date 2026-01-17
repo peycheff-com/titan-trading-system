@@ -1,95 +1,81 @@
 /**
  * StructuredLogger - JSON structured logging with correlation IDs
- * 
- * Implements JSON structured logging, correlation IDs, log level configuration,
- * and sensitive data sanitization.
- * 
+ *
+ * Implements JSON structured logging by wrapping the authoritative @titan/shared Logger.
+ * Preserves domain-specific logic while consolidating infrastructure.
+ *
  * Requirements: 2.7, 4.7, 5.7, 9.6
  */
 
-import { randomUUID } from 'crypto';
+import { randomUUID } from "crypto";
+import {
+  Logger as SharedLogger,
+  LoggerConfig as SharedLoggerConfig,
+  SharedLogEntry,
+  SharedLogLevel,
+} from "@titan/shared";
 
 /**
- * Log levels in order of severity
+ * Re-export types for backward compatibility
  */
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+export type LogEntry = SharedLogEntry;
+export type LoggerConfig = SharedLoggerConfig;
+export { SharedLogLevel };
 
 /**
- * Log level numeric values for comparison
+ * Log levels in order of severity (String based for local usage)
  */
-const LOG_LEVEL_VALUES: Record<LogLevel, number> = {
-  debug: 0,
-  info: 1,
-  warn: 2,
-  error: 3,
-};
+export type LogLevel = "debug" | "info" | "warn" | "error";
 
 /**
- * Sensitive field patterns to sanitize
- */
-const SENSITIVE_PATTERNS = [
-  /api[_-]?key/i,
-  /api[_-]?secret/i,
-  /password/i,
-  /secret/i,
-  /token/i,
-  /auth/i,
-  /credential/i,
-  /private[_-]?key/i,
-  /access[_-]?key/i,
-];
-
-/**
- * Log entry structure
- */
-export interface LogEntry {
-  timestamp: string;
-  level: LogLevel;
-  message: string;
-  correlationId?: string;
-  component?: string;
-  context?: Record<string, unknown>;
-  error?: {
-    name: string;
-    message: string;
-    stack?: string;
-  };
-}
-
-/**
- * Logger configuration
- */
-export interface LoggerConfig {
-  level: LogLevel;
-  component?: string;
-  enableConsole?: boolean;
-  enableJson?: boolean;
-  sanitizeSensitive?: boolean;
-  correlationIdHeader?: string;
-}
-
-/**
- * Log output handler
+ * Log handler type for backward compatibility
  */
 export type LogHandler = (entry: LogEntry) => void;
 
 /**
+ * Configuration options for StructuredLogger
+ * Extends SharedLoggerConfig but allows loose parsing for compatibility
+ */
+export interface StructuredLoggerOptions
+  extends Partial<Omit<SharedLoggerConfig, "level">> {
+  level?: SharedLogLevel | LogLevel;
+  sanitizeSensitive?: boolean;
+  component?: string;
+}
+
+/**
  * StructuredLogger class for JSON logging with correlation IDs
+ * Wraps @titan/shared Logger for consistent formatting
  */
 export class StructuredLogger {
-  private readonly config: Required<LoggerConfig>;
+  private sharedLogger: SharedLogger;
   private correlationId: string | null = null;
-  private handlers: LogHandler[] = [];
+  private component: string;
+  private sanitizeSensitive: boolean;
 
-  constructor(config: Partial<LoggerConfig> = {}) {
-    this.config = {
-      level: config.level ?? 'info',
-      component: config.component ?? 'titan-brain',
-      enableConsole: config.enableConsole ?? true,
-      enableJson: config.enableJson ?? true,
-      sanitizeSensitive: config.sanitizeSensitive ?? true,
-      correlationIdHeader: config.correlationIdHeader ?? 'x-correlation-id',
-    };
+  constructor(config: StructuredLoggerOptions = {}) {
+    this.component = config.component || "titan-brain";
+    this.sanitizeSensitive = config.sanitizeSensitive ?? true; // Default to true if not specified
+
+    // Get singleton instance of shared logger
+    // We pass the component name to init/config
+    this.sharedLogger = SharedLogger.getInstance(this.component);
+
+    // Apply config overrides if needed
+    if (config.level !== undefined) {
+      let sharedLevel: SharedLogLevel = SharedLogLevel.INFO;
+
+      if (typeof config.level === "number") {
+        sharedLevel = config.level;
+      } else if (typeof config.level === "string") {
+        if (config.level === "debug") sharedLevel = SharedLogLevel.DEBUG;
+        else if (config.level === "warn") sharedLevel = SharedLogLevel.WARN;
+        else if (config.level === "error") sharedLevel = SharedLogLevel.ERROR;
+        else sharedLevel = SharedLogLevel.INFO;
+      }
+
+      this.sharedLogger.setLogLevel(sharedLevel);
+    }
   }
 
   /**
@@ -115,189 +101,44 @@ export class StructuredLogger {
     return id;
   }
 
-  /**
-   * Set the log level
-   */
-  setLevel(level: LogLevel): void {
-    this.config.level = level;
-  }
-
-  /**
-   * Get the current log level
-   */
-  getLevel(): LogLevel {
-    return this.config.level;
-  }
-
-  /**
-   * Add a custom log handler
-   */
-  addHandler(handler: LogHandler): void {
-    this.handlers.push(handler);
-  }
-
-  /**
-   * Remove a custom log handler
-   */
-  removeHandler(handler: LogHandler): void {
-    const index = this.handlers.indexOf(handler);
-    if (index !== -1) {
-      this.handlers.splice(index, 1);
-    }
-  }
-
-  /**
-   * Check if a log level should be logged
-   */
-  private shouldLog(level: LogLevel): boolean {
-    return LOG_LEVEL_VALUES[level] >= LOG_LEVEL_VALUES[this.config.level];
-  }
-
-  /**
-   * Sanitize sensitive data from an object
-   * Requirement: Add sensitive data sanitization
-   */
-  private sanitize(obj: unknown): unknown {
-    if (!this.config.sanitizeSensitive) return obj;
-    
-    if (obj === null || obj === undefined) return obj;
-    
-    if (typeof obj === 'string') {
-      // Check if the string looks like a sensitive value (long alphanumeric)
-      if (obj.length > 20 && /^[A-Za-z0-9+/=_-]+$/.test(obj)) {
-        return '[REDACTED]';
-      }
-      return obj;
-    }
-    
-    if (Array.isArray(obj)) {
-      return obj.map(item => this.sanitize(item));
-    }
-    
-    if (typeof obj === 'object') {
-      const sanitized: Record<string, unknown> = {};
-      for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-        // Check if key matches sensitive patterns
-        const isSensitive = SENSITIVE_PATTERNS.some(pattern => pattern.test(key));
-        if (isSensitive) {
-          sanitized[key] = '[REDACTED]';
-        } else {
-          sanitized[key] = this.sanitize(value);
-        }
-      }
-      return sanitized;
-    }
-    
-    return obj;
-  }
-
-  /**
-   * Create a log entry
-   */
-  private createEntry(
-    level: LogLevel,
-    message: string,
-    context?: Record<string, unknown>,
-    error?: Error
-  ): LogEntry {
-    const entry: LogEntry = {
-      timestamp: new Date().toISOString(),
-      level,
-      message,
-      component: this.config.component,
-    };
-
-    if (this.correlationId) {
-      entry.correlationId = this.correlationId;
-    }
-
-    if (context) {
-      entry.context = this.sanitize(context) as Record<string, unknown>;
-    }
-
-    if (error) {
-      entry.error = {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      };
-    }
-
-    return entry;
-  }
-
-  /**
-   * Output a log entry
-   */
-  private output(entry: LogEntry): void {
-    // Call custom handlers
-    for (const handler of this.handlers) {
-      try {
-        handler(entry);
-      } catch (e) {
-        // Ignore handler errors
-      }
-    }
-
-    // Console output
-    if (this.config.enableConsole) {
-      if (this.config.enableJson) {
-        console.log(JSON.stringify(entry));
-      } else {
-        const prefix = entry.correlationId ? `[${entry.correlationId.slice(0, 8)}]` : '';
-        const component = entry.component ? `[${entry.component}]` : '';
-        const contextStr = entry.context ? ` ${JSON.stringify(entry.context)}` : '';
-        const errorStr = entry.error ? ` Error: ${entry.error.message}` : '';
-        
-        const logFn = entry.level === 'error' ? console.error :
-                      entry.level === 'warn' ? console.warn :
-                      entry.level === 'debug' ? console.debug :
-                      console.log;
-        
-        logFn(`${entry.timestamp} ${entry.level.toUpperCase()} ${prefix}${component} ${entry.message}${contextStr}${errorStr}`);
-      }
-    }
-  }
-
+  // ============ Basic Logging Methods ============
 
   /**
    * Log a debug message
    */
   debug(message: string, context?: Record<string, unknown>): void {
-    if (!this.shouldLog('debug')) return;
-    const entry = this.createEntry('debug', message, context);
-    this.output(entry);
+    // SharedLogger.debug(message, correlationId, metadata)
+    this.sharedLogger.debug(message, this.correlationId || undefined, context);
   }
 
   /**
    * Log an info message
    */
   info(message: string, context?: Record<string, unknown>): void {
-    if (!this.shouldLog('info')) return;
-    const entry = this.createEntry('info', message, context);
-    this.output(entry);
+    this.sharedLogger.info(message, this.correlationId || undefined, context);
   }
 
   /**
    * Log a warning message
    */
   warn(message: string, context?: Record<string, unknown>): void {
-    if (!this.shouldLog('warn')) return;
-    const entry = this.createEntry('warn', message, context);
-    this.output(entry);
+    this.sharedLogger.warn(message, this.correlationId || undefined, context);
   }
 
   /**
    * Log an error message
    */
-  error(message: string, error?: Error | unknown, context?: Record<string, unknown>): void {
-    if (!this.shouldLog('error')) return;
-    
+  error(
+    message: string,
+    error?: Error | unknown,
+    context?: Record<string, unknown>,
+  ): void {
     const err = error instanceof Error ? error : undefined;
-    const ctx = error instanceof Error ? context : (error as Record<string, unknown> | undefined);
-    
-    const entry = this.createEntry('error', message, ctx, err);
-    this.output(entry);
+    const ctx = error instanceof Error
+      ? context
+      : (error as Record<string, unknown> | undefined);
+
+    this.sharedLogger.error(message, err, this.correlationId || undefined, ctx);
   }
 
   // ============ Domain-Specific Logging Methods ============
@@ -311,9 +152,9 @@ export class StructuredLogger {
     phaseId: string,
     approved: boolean,
     reason: string,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ): void {
-    this.info('Signal processed', {
+    this.info("Signal processed", {
       signalId,
       phaseId,
       approved,
@@ -330,9 +171,9 @@ export class StructuredLogger {
     previousAllocation: { w1: number; w2: number; w3: number },
     newAllocation: { w1: number; w2: number; w3: number },
     reason: string,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ): void {
-    this.info('Allocation changed', {
+    this.info("Allocation changed", {
       previousAllocation,
       newAllocation,
       reason,
@@ -350,18 +191,26 @@ export class StructuredLogger {
     toWallet: string,
     reason: string,
     success: boolean,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ): void {
-    const level = success ? 'info' : 'warn';
-    const entry = this.createEntry(level, 'Sweep operation', {
-      amount,
-      fromWallet,
-      toWallet,
-      reason,
-      success,
-      ...context,
-    });
-    this.output(entry);
+    // If success, log as INFO, else WARN
+    if (success) {
+      this.info("Sweep operation success", {
+        amount,
+        fromWallet,
+        toWallet,
+        reason,
+        ...context,
+      });
+    } else {
+      this.warn("Sweep operation failed", {
+        amount,
+        fromWallet,
+        toWallet,
+        reason,
+        ...context,
+      });
+    }
   }
 
   /**
@@ -369,21 +218,29 @@ export class StructuredLogger {
    * Requirement 5.7: Log circuit breaker events with full context
    */
   logCircuitBreakerEvent(
-    eventType: 'TRIGGER' | 'RESET',
+    eventType: "TRIGGER" | "RESET",
     reason: string,
     equity: number,
     operatorId?: string,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ): void {
-    const level = eventType === 'TRIGGER' ? 'error' : 'info';
-    const entry = this.createEntry(level, `Circuit breaker ${eventType.toLowerCase()}`, {
-      eventType,
-      reason,
-      equity,
-      operatorId,
-      ...context,
-    });
-    this.output(entry);
+    if (eventType === "TRIGGER") {
+      this.error(`Circuit breaker ${eventType.toLowerCase()}`, undefined, {
+        eventType,
+        reason,
+        equity,
+        operatorId,
+        ...context,
+      });
+    } else {
+      this.info(`Circuit breaker ${eventType.toLowerCase()}`, {
+        eventType,
+        reason,
+        equity,
+        operatorId,
+        ...context,
+      });
+    }
   }
 
   /**
@@ -395,9 +252,9 @@ export class StructuredLogger {
     sharpeRatio: number,
     modifier: number,
     tradeCount: number,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ): void {
-    this.debug('Performance updated', {
+    this.debug("Performance updated", {
       phaseId,
       sharpeRatio,
       modifier,
@@ -414,9 +271,9 @@ export class StructuredLogger {
     approved: boolean,
     reason: string,
     riskMetrics: Record<string, unknown>,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ): void {
-    this.info('Risk decision', {
+    this.info("Risk decision", {
       signalId,
       approved,
       reason,
@@ -433,17 +290,23 @@ export class StructuredLogger {
     table: string,
     durationMs: number,
     success: boolean,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ): void {
-    const level = success ? 'debug' : 'warn';
-    const entry = this.createEntry(level, 'Database operation', {
-      operation,
-      table,
-      durationMs,
-      success,
-      ...context,
-    });
-    this.output(entry);
+    if (success) {
+      this.debug("Database operation success", {
+        operation,
+        table,
+        durationMs,
+        ...context,
+      });
+    } else {
+      this.warn("Database operation failed", {
+        operation,
+        table,
+        durationMs,
+        ...context,
+      });
+    }
   }
 
   /**
@@ -452,12 +315,12 @@ export class StructuredLogger {
    */
   logManualOverride(
     operatorId: string,
-    action: 'CREATE' | 'DEACTIVATE',
+    action: "CREATE" | "DEACTIVATE",
     allocation?: { w1: number; w2: number; w3: number },
     reason?: string,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ): void {
-    this.warn('Manual override', {
+    this.warn("Manual override", {
       operatorId,
       action,
       allocation,
@@ -473,32 +336,55 @@ export class StructuredLogger {
     channel: string,
     type: string,
     success: boolean,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ): void {
-    const level = success ? 'info' : 'warn';
-    const entry = this.createEntry(level, 'Notification sent', {
-      channel,
-      type,
-      success,
-      ...context,
-    });
-    this.output(entry);
+    if (success) {
+      this.info("Notification sent", {
+        channel,
+        type,
+        ...context,
+      });
+    } else {
+      this.warn("Notification failed", {
+        channel,
+        type,
+        ...context,
+      });
+    }
   }
 
   /**
    * Create a child logger with additional context
    */
   child(context: Record<string, unknown>): StructuredLogger {
-    const child = new StructuredLogger(this.config);
+    const child = new StructuredLogger({
+      component: this.component,
+      sanitizeSensitive: this.sanitizeSensitive,
+    });
     child.correlationId = this.correlationId;
-    
-    // Wrap the output to include additional context
-    const originalOutput = child['output'].bind(child);
-    child['output'] = (entry: LogEntry) => {
-      entry.context = { ...context, ...entry.context };
-      originalOutput(entry);
-    };
-    
+
+    // Custom context injection for child instances
+    (child as any)._childContext = context;
+
+    const originalInfo = child.info.bind(child);
+    child.info = (message, ctx) =>
+      originalInfo(message, { ...(child as any)._childContext, ...ctx });
+
+    const originalDebug = child.debug.bind(child);
+    child.debug = (message, ctx) =>
+      originalDebug(message, { ...(child as any)._childContext, ...ctx });
+
+    const originalWarn = child.warn.bind(child);
+    child.warn = (message, ctx) =>
+      originalWarn(message, { ...(child as any)._childContext, ...ctx });
+
+    const originalError = child.error.bind(child);
+    child.error = (message, error, ctx) =>
+      originalError(message, error, {
+        ...(child as any)._childContext,
+        ...ctx,
+      });
+
     return child;
   }
 
@@ -507,16 +393,34 @@ export class StructuredLogger {
    */
   async withCorrelationId<T>(
     correlationId: string | null,
-    fn: () => Promise<T>
+    fn: () => Promise<T>,
   ): Promise<T> {
     const previousId = this.correlationId;
     this.correlationId = correlationId ?? this.generateCorrelationId();
-    
+
     try {
       return await fn();
     } finally {
       this.correlationId = previousId;
     }
+  }
+
+  // Deprecated support for addHandler/removeHandler
+  addHandler(handler: LogHandler): void {
+    // No-op
+  }
+
+  removeHandler(handler: LogHandler): void {
+    // No-op
+  }
+
+  setLevel(level: LogLevel): void {
+    let sharedLevel = SharedLogLevel.INFO;
+    if (level === "debug") sharedLevel = SharedLogLevel.DEBUG;
+    if (level === "warn") sharedLevel = SharedLogLevel.WARN;
+    if (level === "error") sharedLevel = SharedLogLevel.ERROR;
+
+    this.sharedLogger.setLogLevel(sharedLevel);
   }
 }
 
@@ -528,7 +432,7 @@ let loggerInstance: StructuredLogger | null = null;
 /**
  * Get or create the global logger instance
  */
-export function getLogger(config?: Partial<LoggerConfig>): StructuredLogger {
+export function getLogger(config?: StructuredLoggerOptions): StructuredLogger {
   if (!loggerInstance) {
     loggerInstance = new StructuredLogger(config);
   }
@@ -547,7 +451,7 @@ export function resetLogger(): void {
  */
 export function createRequestLogger(
   correlationId?: string,
-  config?: Partial<LoggerConfig>
+  config?: StructuredLoggerOptions,
 ): StructuredLogger {
   const logger = new StructuredLogger(config);
   logger.setCorrelationId(correlationId ?? logger.generateCorrelationId());

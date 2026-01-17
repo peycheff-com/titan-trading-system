@@ -60,6 +60,7 @@ npm run start:console     # Port 5173
 | `scripts/`    | Operational & deployment scripts |
 | `docs/`       | Technical documentation          |
 | `monitoring/` | Prometheus & Grafana configs     |
+| `.do/`        | _Legacy_ App Platform configs    |
 
 ## Development
 
@@ -70,16 +71,19 @@ npm run start:console     # Port 5173
 
 ## Deployment
 
-DigitalOcean App Platform auto-deploys from `main` branch. Configuration is in
-`.do/app.yaml`.
+Deployment is managed manualy on a DigitalOcean Droplet (VPS) using Docker
+Compose.
 
 ```bash
-# Validate app specification
-./deploy-to-digitalocean.sh --validate
+# SSH into the VPS
+ssh user@titan-vps-ip
 
-# First-time deployment
-./deploy-to-digitalocean.sh --create
+# Navigate to the project directory
+cd /opt/titan
 
-# Update existing app
-./deploy-to-digitalocean.sh --update
+# Pull latest changes
+git pull origin main
+
+# Rebuild and restart services
+docker-compose -f docker-compose.prod.yml up -d --build
 ```

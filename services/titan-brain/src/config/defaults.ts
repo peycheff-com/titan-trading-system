@@ -91,6 +91,14 @@ export const defaultConfig: TitanBrainConfig = {
     },
   },
 
+  activeInference: {
+    distributionBins: 20,
+    windowSize: 100, // 100 data points
+    minHistory: 10,
+    sensitivity: 5.0, // Sigmoid steepness
+    surpriseOffset: 0.5, // Center of sigmoid
+  },
+
   services: {
     executionUrl: undefined,
   },
@@ -174,6 +182,10 @@ export function mergeConfig(
     notifications: {
       ...defaultConfig.notifications,
       ...partial.notifications,
+    },
+    activeInference: {
+      ...defaultConfig.activeInference,
+      ...partial.activeInference,
     },
     services: { ...defaultConfig.services, ...partial.services },
   };

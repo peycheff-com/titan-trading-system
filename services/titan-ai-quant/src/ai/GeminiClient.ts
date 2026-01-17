@@ -1,5 +1,5 @@
 /**
- * Gemini 1.5 Flash Client
+ * Gemini 3.0 Flash Client
  *
  * Wrapper around Google's Generative AI SDK with rate limiting
  * and error handling for the Titan AI Quant system.
