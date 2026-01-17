@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  titan-db-staging:
+    image: postgres:14-alpine
+    container_name: titan-db-staging
+    environment:
+      POSTGRES_USER: titan_staging
+      POSTGRES_PASSWORD: staging_password
+      POSTGRES_DB: titan_brain_staging
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U titan_staging -d titan_brain_staging"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - titan-staging-net
+
+  titan-redis-staging:
+    image: redis:7-alpine
+    container_name: titan-redis-staging
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - titan-staging-net
+
+  titan-nats-staging:
+    image: nats:latest
+    container_name: titan-nats-staging
+    command: ["-js", "-m", "8222"]
+    ports:
+      - "4223:4222" # Client
+      - "8223:8222" # Monitoring
+    networks:
+      - titan-staging-net
+
+networks:
+  titan-staging-net:
+    driver: bridge
