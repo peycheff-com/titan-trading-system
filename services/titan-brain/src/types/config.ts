@@ -8,7 +8,7 @@ import { PerformanceTrackerConfig } from "./performance.js";
 import { RiskGuardianConfig } from "./risk.js";
 import { CapitalFlowConfig } from "./capital.js";
 import { CircuitBreakerConfig } from "./breaker.js";
-import { BrainConfig } from "./brain.js";
+import { ActiveInferenceConfig, BrainConfig } from "./brain.js";
 
 /**
  * Database configuration
@@ -84,6 +84,7 @@ export interface TitanBrainConfig {
   redis: RedisConfig;
   server: ServerConfig;
   notifications: NotificationConfig;
+  activeInference: ActiveInferenceConfig;
   services: ServicesConfig;
 }
 

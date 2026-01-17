@@ -1,33 +1,28 @@
 /**
  * IPC Module for Hunter Phase
  *
- * Re-exports FastPathClient from @titan/shared with Hunter-specific defaults.
+ * Re-exports ExecutionClient from @titan/shared with Hunter-specific defaults.
  */
 
 export {
     type AbortResponse,
     type ConfirmResponse,
     ConnectionState,
-    FastPathClient,
+    ExecutionClient,
     type IntentSignal,
-    type IPCClientConfig,
-    type IPCMetrics,
     type PrepareResponse,
     type SignalSource,
 } from "@titan/shared";
 
-import { FastPathClient } from "@titan/shared";
+import { ExecutionClient, SignalSource } from "@titan/shared";
 
 /**
- * Create a FastPathClient configured for Hunter phase
+ * Create a ExecutionClient configured for Hunter phase
  */
 export function createHunterIPCClient(config?: {
-    socketPath?: string;
-    hmacSecret?: string;
-}): FastPathClient {
-    return new FastPathClient({
+    source?: SignalSource;
+}): ExecutionClient {
+    return new ExecutionClient({
         source: "hunter",
-        socketPath: config?.socketPath,
-        hmacSecret: config?.hmacSecret,
     });
 }

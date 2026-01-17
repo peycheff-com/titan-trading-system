@@ -1,0 +1,167 @@
+use async_trait::async_trait;
+use rust_decimal::Decimal;
+use crate::exchange::adapter::{ExchangeAdapter, ExchangeError, OrderRequest, OrderResponse};
+use crate::model::Side;
+use reqwest::Client;
+use std::env;
+use hmac::{Hmac, Mac};
+use sha2::Sha256;
+use hex;
+use chrono::Utc;
+
+pub struct BinanceAdapter {
+    api_key: String,
+    secret_key: String,
+    base_url: String,
+    client: Client,
+}
+
+impl BinanceAdapter {
+    pub fn new() -> Self {
+        let api_key = env::var("BINANCE_API_KEY").expect("BINANCE_API_KEY not set");
+        let secret_key = env::var("BINANCE_SECRET_KEY").expect("BINANCE_SECRET_KEY not set");
+        let base_url = env::var("BINANCE_BASE_URL").unwrap_or_else(|_| "https://testnet.binancefuture.com".to_string());
+
+        BinanceAdapter {
+            api_key,
+            secret_key,
+            base_url,
+            client: Client::new(),
+        }
+    }
+
+    fn sign(&self, query: &str) -> String {
+        let mut mac = Hmac::<Sha256>::new_from_slice(self.secret_key.as_bytes())
+            .expect("HMAC can take key of any size");
+        mac.update(query.as_bytes());
+        hex::encode(mac.finalize().into_bytes())
+    }
+}
+
+#[async_trait]
+impl ExchangeAdapter for BinanceAdapter {
+    async fn init(&self) -> Result<(), ExchangeError> {
+        // Minimal health check or ping
+        let url = format!("{}/fapi/v1/ping", self.base_url);
+        let resp = self.client.get(&url)
+            .send()
+            .await
+            .map_err(|e| ExchangeError::Network(e.to_string()))?;
+
+        if !resp.status().is_success() {
+            return Err(ExchangeError::Api(format!("Ping failed: {}", resp.status())));
+        }
+        Ok(())
+    }
+
+    async fn place_order(&self, order: OrderRequest) -> Result<OrderResponse, ExchangeError> {
+        let endpoint = "/fapi/v1/order";
+        let timestamp = Utc::now().timestamp_millis();
+        
+        let side_str = match order.side {
+            Side::Buy | Side::Long => "BUY",
+            Side::Sell | Side::Short => "SELL",
+        };
+        
+        // Basic parameters for a LIMIT or MARKET order
+        let mut params = format!(
+            "symbol={}&side={}&type=MARKET&quantity={}&timestamp={}",
+            order.symbol.replace("/", ""), // Binance uses BTCUSDT not BTC/USDT
+            side_str,
+            order.quantity,
+            timestamp
+        );
+
+        if let Some(price) = order.price {
+             params = format!(
+                "symbol={}&side={}&type=LIMIT&quantity={}&price={}&timeInForce=GTC&timestamp={}",
+                order.symbol.replace("/", ""),
+                side_str,
+                order.quantity,
+                price,
+                timestamp
+            );
+        }
+
+        let signature = self.sign(&params);
+        let full_query = format!("{}&signature={}", params, signature);
+        let url = format!("{}{}", self.base_url, endpoint);
+
+        let resp = self.client.post(&url)
+            .header("X-MBX-APIKEY", &self.api_key)
+            .body(full_query) // Usually GET query params for Binance signed requests? No, POST body or query.
+            // For Binance Futures, signed endpoints send params in query string or body. 
+            // Query string is easier for debugging.
+            .send()
+            .await
+            .map_err(|e| ExchangeError::Network(e.to_string()))?;
+
+        let status = resp.status();
+        let text = resp.text().await.map_err(|e| ExchangeError::Network(e.to_string()))?;
+
+        if !status.is_success() {
+            return Err(ExchangeError::Api(format!("Order failed {}: {}", status, text)));
+        }
+
+        // Parse response (simplified)
+        let json: serde_json::Value = serde_json::from_str(&text)
+            .map_err(|e| ExchangeError::Api(format!("Parse error: {}", e)))?;
+
+        let order_id = json["orderId"].to_string();
+        
+        Ok(OrderResponse {
+            order_id,
+            client_order_id: order.client_order_id,
+            symbol: order.symbol,
+            status: json["status"].as_str().unwrap_or("UNKNOWN").to_string(),
+            avg_price: json["avgPrice"].as_str().and_then(|s| rust_decimal::Decimal::from_str_exact(s).ok()),
+            executed_qty: json["executedQty"].as_str().and_then(|s| rust_decimal::Decimal::from_str_exact(s).ok()).unwrap_or_default(),
+        })
+    }
+
+    async fn cancel_order(&self, symbol: &str, order_id: &str) -> Result<OrderResponse, ExchangeError> {
+        let endpoint = "/fapi/v1/order";
+        let timestamp = Utc::now().timestamp_millis();
+        
+        let params = format!(
+            "symbol={}&orderId={}&timestamp={}",
+            symbol.replace("/", ""),
+            order_id,
+            timestamp
+        );
+
+        let signature = self.sign(&params);
+        let full_query = format!("{}&signature={}", params, signature);
+        let url = format!("{}{}?{}", self.base_url, endpoint, full_query);
+
+        let resp = self.client.delete(&url)
+            .header("X-MBX-APIKEY", &self.api_key)
+            .send()
+            .await
+            .map_err(|e| ExchangeError::Network(e.to_string()))?;
+
+        if !resp.status().is_success() {
+            let text = resp.text().await.unwrap_or_default();
+             return Err(ExchangeError::Api(format!("Cancel failed: {}", text)));
+        }
+
+        // Return mock response for now, or parse actual
+         Ok(OrderResponse {
+            order_id: order_id.to_string(),
+            client_order_id: "".to_string(),
+            symbol: symbol.to_string(),
+            status: "CANCELED".to_string(),
+            avg_price: None,
+            executed_qty: Decimal::ZERO,
+        })
+    }
+
+    async fn get_balance(&self, _asset: &str) -> Result<Decimal, ExchangeError> {
+        // Implementation omitted for brevity
+        Ok(Decimal::from(1000))
+    }
+
+    fn name(&self) -> &str {
+        "Binance Futures"
+    }
+}

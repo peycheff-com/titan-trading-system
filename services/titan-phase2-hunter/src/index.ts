@@ -35,7 +35,7 @@ import {
   SignalData,
 } from "./types";
 import { getLogger, logError } from "./logging/Logger";
-import { FastPathClient, type IntentSignal } from "@titan/shared";
+import { ExecutionClient, type IntentSignal } from "@titan/shared";
 
 // Load environment variables
 config();
@@ -53,7 +53,7 @@ class HunterApplication {
   private sessionProfiler: SessionProfiler;
   private inefficiencyMapper: InefficiencyMapper;
   private cvdValidator: CVDValidator;
-  private fastPathClient: FastPathClient;
+  private executionClient: ExecutionClient;
   private logger = getLogger();
 
   // Application state
@@ -62,6 +62,9 @@ class HunterApplication {
   private currentHolograms: EnhancedHolographicState[] = [];
   private currentSession: SessionState | null = null;
   private activePOIs: POI[] = [];
+
+  // Configuration
+  private headlessMode: boolean;
 
   // Interval timers
   private hologramScanInterval: NodeJS.Timeout | null = null;
@@ -74,6 +77,10 @@ class HunterApplication {
   private readonly POI_DETECTION_INTERVAL = 60 * 1000; // 1 minute
 
   constructor() {
+    // Check for headless mode
+    this.headlessMode = process.env.HEADLESS_MODE === "true" ||
+      process.env.LOG_FORMAT === "json";
+
     // Initialize configuration manager
     this.configManager = new ConfigManager();
 
@@ -89,28 +96,54 @@ class HunterApplication {
     this.cvdValidator = new CVDValidator();
 
     // Initialize IPC client for execution
-    this.fastPathClient = new FastPathClient({
+    this.executionClient = new ExecutionClient({
       source: "hunter",
-      socketPath: process.env.TITAN_IPC_SOCKET || "/tmp/titan-ipc.sock",
-      hmacSecret: process.env.TITAN_HMAC_SECRET || "titan-hmac-secret",
     });
 
-    // CRITICAL: Handle FastPathClient error events to prevent Node.js crash
-    // The EventEmitter 'error' event will crash the process if unhandled
-    this.fastPathClient.on("error", (error: Error) => {
-      console.warn(
-        `⚠️ [FastPath] IPC error (non-fatal): ${error.message}`,
-      );
-      // IPC is optional in cloud deployments - service continues without it
-    });
-
-    this.fastPathClient.on("maxReconnectAttemptsReached", () => {
-      console.warn(
-        "⚠️ [FastPath] Max reconnect attempts reached - IPC disabled for this session",
+    // CRITICAL: Handle ExecutionClient error events to prevent Node.js crash
+    this.executionClient.on("error", (error: Error) => {
+      this.logEvent(
+        "WARN",
+        `⚠️ [Execution] Client error (non-fatal): ${error.message}`,
+        { error: error.message },
       );
     });
 
     this.setupEventListeners();
+  }
+
+  /**
+   * Helper to log events to console or JSON depending on mode
+   */
+  private logEvent(
+    level: "INFO" | "WARN" | "ERROR" | "DEBUG" | "CRITICAL",
+    message: string,
+    data?: any,
+  ): void {
+    if (this.headlessMode) {
+      console.log(JSON.stringify({
+        timestamp: new Date().toISOString(),
+        level,
+        message,
+        ...data,
+      }));
+    } else {
+      // In interactive mode, use console methods with formatting
+      switch (level) {
+        case "ERROR":
+        case "CRITICAL":
+          console.error(message);
+          break;
+        case "WARN":
+          console.warn(message);
+          break;
+        case "DEBUG":
+          console.debug(message);
+          break;
+        default:
+          console.log(message);
+      }
+    }
   }
 
   /**
@@ -119,33 +152,43 @@ class HunterApplication {
   private setupEventListeners(): void {
     // Listen to our centralized event system
     hunterEvents.onEvent("HOLOGRAM_UPDATED", (payload) => {
-      console.log(
+      this.logEvent(
+        "INFO",
         `🔍 Hologram updated for ${payload.symbol}: ${payload.hologramState.status}`,
+        payload,
       );
     });
 
     hunterEvents.onEvent("SESSION_CHANGE", (payload) => {
       this.currentSession = payload.currentSession;
-      console.log(
+      this.logEvent(
+        "INFO",
         `⏰ Session changed from ${payload.previousSession.type} to ${payload.currentSession.type}`,
+        payload,
       );
     });
 
     hunterEvents.onEvent("CVD_ABSORPTION", (payload) => {
-      console.log(
+      this.logEvent(
+        "INFO",
         `📈 CVD Absorption detected for ${payload.symbol} at ${payload.absorption.price}`,
+        payload,
       );
     });
 
     hunterEvents.onEvent("CVD_DISTRIBUTION", (payload) => {
-      console.log(
+      this.logEvent(
+        "INFO",
         `📉 CVD Distribution detected for ${payload.symbol} at ${payload.distribution.price}`,
+        payload,
       );
     });
 
     hunterEvents.onEvent("SIGNAL_GENERATED", async (payload) => {
-      console.log(
+      this.logEvent(
+        "INFO",
         `🎯 Signal generated: ${payload.signal.direction} ${payload.signal.symbol} at ${payload.signal.entryPrice}`,
+        payload,
       );
 
       // Forward signal to execution engine via IPC
@@ -154,8 +197,10 @@ class HunterApplication {
 
     hunterEvents.onEvent("EXECUTION_COMPLETE", (payload) => {
       const status = payload.success ? "✅" : "❌";
-      console.log(
+      this.logEvent(
+        "INFO",
         `${status} Execution complete: ${payload.execution.side} ${payload.execution.symbol} at ${payload.execution.fillPrice}`,
+        payload,
       );
     });
 
@@ -165,9 +210,16 @@ class HunterApplication {
         "MEDIUM": "🟡",
         "HIGH": "🟠",
         "CRITICAL": "🔴",
-      }[payload.severity];
-      console.error(
+      }[payload.severity] || "🔴";
+
+      this.logEvent(
+        "ERROR",
         `${severityIcon} Error in ${payload.component}: ${payload.error.message}`,
+        {
+          severity: payload.severity,
+          component: payload.component,
+          stack: payload.error.stack,
+        },
       );
 
       // Log to structured logger
@@ -187,29 +239,37 @@ class HunterApplication {
     });
 
     hunterEvents.onEvent("SCAN_COMPLETE", (payload) => {
-      console.log(
+      this.logEvent(
+        "INFO",
         `🔍 Scan complete: ${payload.symbolsScanned} symbols, ${payload.aPlus} A+, ${payload.bAlignment} B, ${payload.duration}ms`,
+        payload,
       );
     });
 
     hunterEvents.onEvent("JUDAS_SWING_DETECTED", (payload) => {
-      console.log(
+      this.logEvent(
+        "INFO",
         `🎣 Judas Swing detected: ${payload.judasSwing.type} during ${payload.sessionType} session`,
+        payload,
       );
     });
 
     hunterEvents.onEvent("POI_DETECTED", (payload) => {
-      console.log(
+      this.logEvent(
+        "INFO",
         `🎯 POI detected: ${payload.poiType} for ${payload.symbol} at ${payload.price} (${
           payload.distance.toFixed(2)
         }% away)`,
+        payload,
       );
     });
 
     hunterEvents.onEvent("RISK_WARNING", (payload) => {
       const severityIcon = payload.severity === "CRITICAL" ? "🚨" : "⚠️";
-      console.log(
+      this.logEvent(
+        "WARN",
         `${severityIcon} Risk Warning: ${payload.message} (${payload.value}/${payload.threshold})`,
+        payload,
       );
     });
   }
@@ -218,32 +278,33 @@ class HunterApplication {
    * Initialize all components
    */
   private async initializeComponents(): Promise<void> {
-    console.log("🔧 Initializing components...");
+    this.logEvent("INFO", "🔧 Initializing components...");
 
     try {
       // Initialize exchange clients
-      console.log("📡 Initializing exchange clients...");
+      this.logEvent("INFO", "📡 Initializing exchange clients...");
       await this.bybitClient.initialize();
       await this.binanceClient.initialize();
 
       // Initialize IPC connection to execution engine
-      console.log("🔗 Connecting to execution engine via IPC...");
+      this.logEvent("INFO", "🔗 Connecting to execution engine via NATS...");
       try {
-        await this.fastPathClient.connect();
-        console.log("✅ IPC connection established");
+        await this.executionClient.connect();
+        this.logEvent("INFO", "✅ Execution connection established");
       } catch (error) {
-        console.warn(
-          "⚠️ IPC connection failed, signals will be logged only:",
-          (error as Error).message,
+        this.logEvent(
+          "WARN",
+          "⚠️ Execution connection failed, signals will be logged only:",
+          { error: (error as Error).message },
         );
       }
 
       // Start configuration watching
       this.configManager.startWatching();
 
-      console.log("✅ All components initialized successfully");
+      this.logEvent("INFO", "✅ All components initialized successfully");
     } catch (error) {
-      console.error("❌ Failed to initialize components:", error);
+      this.logEvent("ERROR", "❌ Failed to initialize components:", { error });
       this.logger.logError("CRITICAL", "Failed to initialize components", {
         component: "HunterApplication",
         function: "initializeComponents",
@@ -258,7 +319,10 @@ class HunterApplication {
    * Requirements: 9.1-9.7 (Hologram Scanning Engine)
    */
   private startHologramScanCycle(): void {
-    console.log("🔍 Starting hologram scan cycle (5-minute interval)...");
+    this.logEvent(
+      "INFO",
+      "🔍 Starting hologram scan cycle (5-minute interval)...",
+    );
 
     // Run initial scan
     this.runHologramScan();
@@ -276,7 +340,7 @@ class HunterApplication {
    */
   private async runHologramScan(): Promise<void> {
     try {
-      console.log("🔍 Running hologram scan...");
+      this.logEvent("INFO", "🔍 Running hologram scan...");
       const startTime = Date.now();
       const result = await this.hologramScanner.scan();
       const duration = Date.now() - startTime;
@@ -301,7 +365,7 @@ class HunterApplication {
         duration,
       );
     } catch (error) {
-      console.error("❌ Hologram scan failed:", error);
+      this.logEvent("ERROR", "❌ Hologram scan failed:", { error });
       this.logger.logError("ERROR", "Hologram scan failed", {
         component: "HologramScanner",
         function: "runHologramScan",
@@ -316,7 +380,7 @@ class HunterApplication {
    * Requirements: 2.1-2.7 (Session Profiler)
    */
   private startSessionMonitoring(): void {
-    console.log("⏰ Starting session monitoring (real-time)...");
+    this.logEvent("INFO", "⏰ Starting session monitoring (real-time)...");
 
     // Run initial session check
     this.updateSessionState();
@@ -350,7 +414,10 @@ class HunterApplication {
    * Requirements: 3.1-3.7 (Inefficiency Mapper), 10.1-10.7 (Liquidity Pool Detection)
    */
   private startPOIDetectionCycle(): void {
-    console.log("🎯 Starting POI detection cycle (1-minute interval)...");
+    this.logEvent(
+      "INFO",
+      "🎯 Starting POI detection cycle (1-minute interval)...",
+    );
 
     // Run initial POI detection
     this.runPOIDetection();
@@ -372,7 +439,7 @@ class HunterApplication {
         return; // No symbols to analyze
       }
 
-      console.log("🎯 Running POI detection...");
+      this.logEvent("INFO", "🎯 Running POI detection...");
       const newPOIs: POI[] = [];
 
       // Analyze top 5 symbols for POIs
@@ -381,7 +448,8 @@ class HunterApplication {
       for (const hologram of topSymbols) {
         try {
           if (!hologram.classicState) {
-            console.warn(
+            this.logEvent(
+              "WARN",
               `Skipping POI detection for ${hologram.symbol} - no classic state`,
             );
             continue;
@@ -411,9 +479,10 @@ class HunterApplication {
           );
           newPOIs.push(...liquidityPools);
         } catch (error) {
-          console.error(
+          this.logEvent(
+            "ERROR",
             `❌ POI detection failed for ${hologram.symbol}:`,
-            error,
+            { error },
           );
           this.logger.logError(
             "WARNING",
@@ -430,9 +499,13 @@ class HunterApplication {
 
       // Update active POIs
       this.activePOIs = newPOIs;
-      console.log(`🎯 POI detection complete: ${newPOIs.length} active POIs`);
+      this.logEvent(
+        "INFO",
+        `🎯 POI detection complete: ${newPOIs.length} active POIs`,
+        { count: newPOIs.length },
+      );
     } catch (error) {
-      console.error("❌ POI detection cycle failed:", error);
+      this.logEvent("ERROR", "❌ POI detection cycle failed:", { error });
       this.logger.logError("ERROR", "POI detection cycle failed", {
         component: "InefficiencyMapper",
         function: "runPOIDetection",
@@ -446,7 +519,10 @@ class HunterApplication {
    * Requirements: 4.1-4.7 (Order Flow X-Ray)
    */
   private startCVDMonitoring(): void {
-    console.log("📊 Starting CVD monitoring (real-time WebSocket)...");
+    this.logEvent(
+      "INFO",
+      "📊 Starting CVD monitoring (real-time WebSocket)...",
+    );
 
     // Subscribe to trade streams for top symbols
     this.updateCVDSubscriptions();
@@ -488,7 +564,16 @@ class HunterApplication {
    * Requirements: F1, F2, SPACE, Q key handling
    */
   private setupKeyboardHandling(): void {
-    console.log("⌨️ Setting up keyboard handling...");
+    // Disable keyboard hooks in headless mode
+    if (this.headlessMode) {
+      this.logEvent(
+        "INFO",
+        "⌨️ Headless mode active: Keyboard interaction disabled",
+      );
+      return;
+    }
+
+    this.logEvent("INFO", "⌨️ Setting up keyboard handling...");
 
     // Enable raw mode for immediate key capture
     if (process.stdin.isTTY) {
@@ -510,17 +595,17 @@ class HunterApplication {
       case "\u0003": // Ctrl+C
       case "q":
       case "Q":
-        console.log("👋 Shutting down Hunter...");
+        this.logEvent("INFO", "👋 Shutting down Hunter...");
         this.shutdown();
         break;
 
       case "\u001b[11~": // F1
-        console.log("⚙️ Opening configuration panel...");
+        this.logEvent("INFO", "⚙️ Opening configuration panel...");
         // Emit config panel request (would be handled by UI)
         break;
 
       case "\u001b[12~": // F2
-        console.log("👁️ Toggling view mode...");
+        this.logEvent("INFO", "👁️ Toggling view mode...");
         // Emit view toggle request (would be handled by UI)
         break;
 
@@ -540,7 +625,7 @@ class HunterApplication {
   private togglePause(): void {
     this.isPaused = !this.isPaused;
     const status = this.isPaused ? "PAUSED" : "RUNNING";
-    console.log(`⏸️ Hunter ${status}`);
+    this.logEvent("INFO", `⏸️ Hunter ${status}`);
     // Pause state change would be handled by UI components listening to events
   }
 
@@ -552,13 +637,12 @@ class HunterApplication {
       throw new Error("Hunter is already running");
     }
 
-    console.log("🎯 Titan Phase 2 - The Hunter");
-    console.log("📊 Holographic Market Structure Engine");
-    console.log("💰 Capital Range: $2,500 → $50,000");
-    console.log("⚡ Leverage: 3-5x");
-    console.log("🎯 Target: 3:1 R:R (1.5% stop, 4.5% target)");
-    console.log("📈 Win Rate: 55-65%");
-    console.log("");
+    this.logEvent("INFO", "🎯 Titan Phase 2 - The Hunter");
+    this.logEvent("INFO", "📊 Holographic Market Structure Engine");
+    this.logEvent("INFO", "💰 Capital Range: $2,500 → $50,000");
+    this.logEvent("INFO", "⚡ Leverage: 3-5x");
+    this.logEvent("INFO", "🎯 Target: 3:1 R:R (1.5% stop, 4.5% target)");
+    this.logEvent("INFO", "📈 Win Rate: 55-65%");
 
     try {
       // Initialize all components
@@ -576,16 +660,21 @@ class HunterApplication {
       // Mark as running
       this.isRunning = true;
 
-      console.log("🚀 Hunter started successfully!");
-      console.log("");
-      console.log("Keyboard Controls:");
-      console.log("[F1] CONFIG  [F2] VIEW  [SPACE] PAUSE  [Q] QUIT");
-      console.log("");
+      this.logEvent("INFO", "🚀 Hunter started successfully!");
 
-      // Start the Hunter HUD dashboard
-      this.renderHunterHUD();
+      if (!this.headlessMode) {
+        console.log("");
+        console.log("Keyboard Controls:");
+        console.log("[F1] CONFIG  [F2] VIEW  [SPACE] PAUSE  [Q] QUIT");
+        console.log("");
+
+        // Start the Hunter HUD dashboard
+        this.renderHunterHUD();
+      } else {
+        this.logEvent("INFO", "Running in HEADLESS MODE. HUD disabled.");
+      }
     } catch (error) {
-      console.error("❌ Failed to start Hunter:", error);
+      this.logEvent("ERROR", "❌ Failed to start Hunter:", { error });
       this.logger.logError("CRITICAL", "Failed to start Hunter", {
         component: "HunterApplication",
         function: "start",
@@ -600,9 +689,10 @@ class HunterApplication {
    * Uses PREPARE/CONFIRM flow for sub-millisecond execution
    */
   private async forwardSignalToExecution(signal: SignalData): Promise<void> {
-    if (!this.fastPathClient.isConnected()) {
-      console.warn(
-        `⚠️ IPC not connected, signal for ${signal.symbol} logged only`,
+    if (!this.executionClient.isConnected()) {
+      this.logEvent(
+        "WARN",
+        `⚠️ Execution client not connected, signal for ${signal.symbol} logged only`,
       );
       return;
     }
@@ -627,35 +717,46 @@ class HunterApplication {
         timestamp: Date.now(),
       };
 
-      console.log(`📤 Sending PREPARE for ${signal.symbol}...`);
-      const prepareResult = await this.fastPathClient.sendPrepare(intentSignal);
+      this.logEvent("INFO", `📤 Sending PREPARE for ${signal.symbol}...`, {
+        intentSignal,
+      });
+      const prepareResult = await this.executionClient.sendPrepare(
+        intentSignal,
+      );
 
       if (prepareResult.prepared) {
-        console.log(`✅ PREPARE accepted, confirming...`);
-        const confirmResult = await this.fastPathClient.sendConfirm(
+        this.logEvent("INFO", `✅ PREPARE accepted, confirming...`);
+        const confirmResult = await this.executionClient.sendConfirm(
           intentSignal.signal_id,
         );
 
         if (confirmResult.executed) {
-          console.log(
+          this.logEvent(
+            "INFO",
             `✅ Signal executed: ${signal.symbol} @ ${confirmResult.fill_price}`,
+            { confirmResult },
           );
         } else {
-          console.warn(`⚠️ Execution rejected: ${confirmResult.reason}`);
+          this.logEvent(
+            "WARN",
+            `⚠️ Execution rejected: ${confirmResult.reason}`,
+            { confirmResult },
+          );
         }
       } else {
-        console.warn(`⚠️ PREPARE rejected: ${prepareResult.reason}`);
+        this.logEvent("WARN", `⚠️ PREPARE rejected: ${prepareResult.reason}`, {
+          prepareResult,
+        });
       }
     } catch (error) {
-      console.error(
-        `❌ IPC signal forwarding failed:`,
-        (error as Error).message,
-      );
+      this.logEvent("ERROR", `❌ Execution signal forwarding failed:`, {
+        error: (error as Error).message,
+      });
       this.logger.logError(
         "ERROR",
-        `IPC signal forwarding failed for ${signal.symbol}`,
+        `Execution signal forwarding failed for ${signal.symbol}`,
         {
-          component: "FastPathClient",
+          component: "ExecutionClient",
           function: "forwardSignalToExecution",
           stack: (error as Error).stack,
         },
@@ -668,6 +769,8 @@ class HunterApplication {
    * Requirements: 8.1-8.7 (Hunter HUD)
    */
   private renderHunterHUD(): void {
+    if (this.headlessMode) return;
+
     console.log("🖥️ Rendering Hunter HUD dashboard...");
 
     // Start the React-based Hunter Application
@@ -682,7 +785,7 @@ class HunterApplication {
       return;
     }
 
-    console.log("🛑 Shutting down Hunter...");
+    this.logEvent("INFO", "🛑 Shutting down Hunter...");
 
     try {
       // Clear all intervals
@@ -711,10 +814,10 @@ class HunterApplication {
       // Mark as stopped
       this.isRunning = false;
 
-      console.log("✅ Hunter shutdown complete");
+      this.logEvent("INFO", "✅ Hunter shutdown complete");
       process.exit(0);
     } catch (error) {
-      console.error("❌ Error during shutdown:", error);
+      this.logEvent("ERROR", "❌ Error during shutdown:", { error });
       this.logger.logError("ERROR", "Error during shutdown", {
         component: "HunterApplication",
         function: "shutdown",

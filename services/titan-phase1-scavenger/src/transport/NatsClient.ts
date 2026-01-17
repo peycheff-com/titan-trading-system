@@ -1,0 +1,78 @@
+import { connect, JSONCodec, NatsConnection, StringCodec } from "nats";
+import { EventEmitter } from "events";
+
+export interface NatsConfig {
+    servers: string | string[];
+    token?: string;
+    name?: string;
+}
+
+export class NatsClient extends EventEmitter {
+    private nc?: NatsConnection;
+    private jc = JSONCodec();
+    private sc = StringCodec();
+
+    constructor(private config: NatsConfig) {
+        super();
+    }
+
+    async connect(): Promise<void> {
+        try {
+            this.nc = await connect({
+                servers: this.config.servers,
+                token: this.config.token,
+                name: this.config.name || "titan-scavenger",
+                maxReconnectAttempts: -1,
+                waitOnFirstConnect: true,
+            });
+            console.log(`✅ Connected to NATS at ${this.config.servers}`);
+
+            this.monitorConnection();
+        } catch (err) {
+            console.error("Error connecting to NATS:", err);
+            throw err;
+        }
+    }
+
+    private async monitorConnection() {
+        if (!this.nc) return;
+        for await (const status of this.nc.status()) {
+            console.log(`NATS Status: ${status.type} - ${status.data}`);
+            if (status.type === "disconnect") {
+                this.emit("disconnect");
+            } else if (status.type === "reconnect") {
+                this.emit("reconnect");
+            }
+        }
+    }
+
+    async publishSignal(signal: any): Promise<void> {
+        if (!this.nc) throw new Error("Not connected to NATS");
+
+        // Subject: titan.execution.intent.<source>.<symbol>
+        // Example: titan.execution.intent.scavenger.BTCUSDT
+        const subject =
+            `titan.execution.intent.${signal.source}.${signal.symbol}`;
+
+        // Add Scavenger specific metadata if needed
+        const payload = {
+            ...signal,
+            timestamp: Date.now(),
+            meta: {
+                origin: "titan-phase1-scavenger",
+                version: "1.0.0",
+            },
+        };
+
+        console.log(`📤 Publishing signal to ${subject}`, payload.signal_id);
+        this.nc.publish(subject, this.jc.encode(payload));
+    }
+
+    async close(): Promise<void> {
+        if (this.nc) {
+            await this.nc.drain();
+            await this.nc.close();
+            console.log("NATS connection closed");
+        }
+    }
+}

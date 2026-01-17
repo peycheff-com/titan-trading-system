@@ -16,8 +16,8 @@ FROM debian:bookworm-slim
 
 WORKDIR /app
 
-# Install OpenSSL (required by async-nats/tokio-postgres)
-RUN apt-get update && apt-get install -y libssl3 ca-certificates && rm -rf /var/lib/apt/lists/*
+# Install OpenSSL (required by async-nats/tokio-postgres) and curl (for healthchecks)
+RUN apt-get update && apt-get install -y libssl3 ca-certificates curl && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /usr/src/app/target/release/titan-execution-rs /app/titan-execution-rs
 

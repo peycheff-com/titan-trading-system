@@ -210,6 +210,8 @@ export {
   TitanSubject,
 } from "./messaging/NatsClient.js";
 
+export { ExecutionClient } from "./messaging/ExecutionClient.js";
+
 // IPC (Fast Path Communication)
 export {
   type AbortResponse,

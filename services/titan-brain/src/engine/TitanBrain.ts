@@ -41,6 +41,7 @@ import { getMetrics } from "../monitoring/PrometheusMetrics.js";
 import { ManualOverrideService } from "./ManualOverrideService.js";
 import { DatabaseManager } from "../db/DatabaseManager.js";
 import { getNatsPublisher, NatsPublisher } from "../server/NatsPublisher.js";
+import { ActiveInferenceEngine } from "./ActiveInferenceEngine.js";
 
 /**
  * Phase priority for signal processing
@@ -79,6 +80,7 @@ export class TitanBrain
   private readonly riskGuardian: RiskGuardian;
   private readonly capitalFlowManager: CapitalFlowManager;
   private readonly circuitBreaker: CircuitBreaker;
+  private readonly activeInferenceEngine: ActiveInferenceEngine;
   private readonly stateRecoveryService: StateRecoveryService | null;
   private readonly manualOverrideService: ManualOverrideService | null;
   private readonly db: DatabaseManager | null;
@@ -124,6 +126,7 @@ export class TitanBrain
     riskGuardian: RiskGuardian,
     capitalFlowManager: CapitalFlowManager,
     circuitBreaker: CircuitBreaker,
+    activeInferenceEngine: ActiveInferenceEngine,
     db?: DatabaseManager,
     stateRecoveryService?: StateRecoveryService,
     manualOverrideService?: ManualOverrideService,
@@ -134,6 +137,7 @@ export class TitanBrain
     this.riskGuardian = riskGuardian;
     this.capitalFlowManager = capitalFlowManager;
     this.circuitBreaker = circuitBreaker;
+    this.activeInferenceEngine = activeInferenceEngine;
     this.db = db ?? null;
     this.stateRecoveryService = stateRecoveryService ?? null;
     this.manualOverrideService = manualOverrideService ?? null;
@@ -312,6 +316,23 @@ export class TitanBrain
       const decision = this.createVetoDecision(
         signal,
         "Circuit breaker active: all signals rejected",
+        timestamp,
+      );
+      await this.recordDecision(decision, signal);
+      return decision;
+    }
+
+    // Check Active Inference (Cortisol Level)
+    // Requirement 7.2: Freeze trading if market surprise is too high
+    const cortisol = this.activeInferenceEngine.getCortisol();
+    const FREEZE_THRESHOLD = 0.8; // Configurable?
+
+    if (cortisol > FREEZE_THRESHOLD) {
+      const decision = this.createVetoDecision(
+        signal,
+        `High Cortisol/Surprise Level (${
+          cortisol.toFixed(2)
+        } > ${FREEZE_THRESHOLD}): Market Freeze`,
         timestamp,
       );
       await this.recordDecision(decision, signal);
@@ -1465,6 +1486,16 @@ export class TitanBrain
    */
   updatePriceHistory(symbol: string, price: number): void {
     this.riskGuardian.updatePriceHistory(symbol, price);
+
+    // Feed Active Inference Engine with market proxy
+    // Using BTCUSDT as the representative market signal for "Surprise" calculation
+    if (symbol === "BTCUSDT") {
+      this.activeInferenceEngine.processUpdate({
+        price,
+        volume: 0, // not used for surprise calculation currently
+        timestamp: Date.now(),
+      });
+    }
   }
   /**
    * Get database manager

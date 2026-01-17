@@ -69,6 +69,7 @@ function createStandardInitSteps(): any[] {
 import { loadConfig } from "./config/index.js";
 import { DatabaseManager, runMigrations } from "./db/index.js";
 import {
+  ActiveInferenceEngine,
   AllocationEngine,
   CapitalFlowManager,
   CircuitBreaker,
@@ -166,17 +167,17 @@ async function main(): Promise<void> {
         );
       }
 
-      console.log(`Environment: ${process.env.NODE_ENV}`);
-      console.log(
+      logger.info(`Environment: ${process.env.NODE_ENV}`);
+      logger.info(
         `Server Port: ${process.env.SERVER_PORT || process.env.PORT}`,
       );
-      console.log(`Database Host: ${process.env.DB_HOST}`);
-      console.log(`Log Level: ${process.env.LOG_LEVEL || "info"}`);
+      logger.info(`Database Host: ${process.env.DB_HOST}`);
+      logger.info(`Log Level: ${process.env.LOG_LEVEL || "info"}`);
     };
 
     initSteps[1].execute = async () => {
       // Load configuration using new ConfigManager
-      console.log("📋 Loading configuration with ConfigManager...");
+      logger.info("📋 Loading configuration with ConfigManager...");
       const brainConfig = await configManager!.loadConfig();
 
       // Also load legacy config for compatibility
@@ -186,30 +187,30 @@ async function main(): Promise<void> {
       });
 
       if (validation.warnings.length > 0) {
-        console.log("⚠️  Configuration warnings:");
-        validation.warnings.forEach((w) => console.log(`   - ${w}`));
+        logger.warn("Configuration warnings:", {
+          warnings: validation.warnings,
+        });
+        validation.warnings.forEach((w) => logger.warn(`   - ${w}`));
       }
 
       // Initialize database
-      console.log("🗄️  Initializing database...");
-      // Initialize database
-      console.log("🗄️  Initializing database...");
+      logger.info("🗄️  Initializing database...");
       databaseManager = new DatabaseManager(configManager!.getDatabaseConfig());
       await databaseManager.connect();
 
       // Run migrations
-      console.log("📦 Running database migrations...");
+      logger.info("📦 Running database migrations...");
       await runMigrations(databaseManager);
     };
 
     initSteps[2].execute = async () => {
       // Redis connection (optional)
-      console.log("📬 Initializing signal queue...");
+      logger.info("📬 Initializing signal queue...");
       if (
         process.env.REDIS_DISABLED === "true"
       ) {
-        console.log(
-          "   ⚠️  Redis disabled, using in-memory queue",
+        logger.warn(
+          "Redis disabled, using in-memory queue",
         );
         signalQueue = new InMemorySignalQueue({
           idempotencyTTL: 3600000, // 1 hour
@@ -228,9 +229,9 @@ async function main(): Promise<void> {
             maxQueueSize: 10000,
           });
           await signalQueue.connect();
-          console.log("   ✅ Redis signal queue connected");
+          logger.info("   ✅ Redis signal queue connected");
         } catch (error) {
-          console.log("   ⚠️  Redis not available, using in-memory queue");
+          logger.warn("Redis not available, using in-memory queue", { error });
           signalQueue = new InMemorySignalQueue({
             idempotencyTTL: 3600000,
             maxQueueSize: 10000,
@@ -245,28 +246,33 @@ async function main(): Promise<void> {
       const brainConfig = configManager!.getConfig();
       const { config } = loadConfig({ validate: true, throwOnError: true });
 
-      console.log("⚙️  Initializing core engines...");
+      logger.info("⚙️  Initializing core engines...");
 
       const allocationEngine = new AllocationEngine(config.allocationEngine);
-      console.log("   ✅ AllocationEngine initialized");
+      logger.info("   ✅ AllocationEngine initialized");
 
       const performanceTracker = new PerformanceTracker(
         config.performanceTracker,
         databaseManager!,
       );
-      console.log("   ✅ PerformanceTracker initialized");
+      logger.info("   ✅ PerformanceTracker initialized");
 
       const riskGuardian = new RiskGuardian(
         config.riskGuardian,
         allocationEngine,
       );
-      console.log("   ✅ RiskGuardian initialized");
+      logger.info("   ✅ RiskGuardian initialized");
 
       const capitalFlowManager = new CapitalFlowManager(config.capitalFlow);
-      console.log("   ✅ CapitalFlowManager initialized");
+      logger.info("   ✅ CapitalFlowManager initialized");
 
       const circuitBreaker = new CircuitBreaker(config.circuitBreaker);
-      console.log("   ✅ CircuitBreaker initialized");
+      logger.info("   ✅ CircuitBreaker initialized");
+
+      const activeInferenceEngine = new ActiveInferenceEngine(
+        config.activeInference,
+      );
+      logger.info("   ✅ ActiveInferenceEngine initialized");
 
       // Initialize state recovery service
       const stateRecoveryService = new StateRecoveryService(databaseManager!, {
@@ -274,7 +280,7 @@ async function main(): Promise<void> {
         defaultAllocation: { w1: 1.0, w2: 0.0, w3: 0.0, timestamp: Date.now() },
         defaultHighWatermark: 0,
       });
-      console.log("   ✅ StateRecoveryService initialized");
+      logger.info("   ✅ StateRecoveryService initialized");
 
       // Initialize manual override service
       const manualOverrideService = new ManualOverrideService(
@@ -285,14 +291,14 @@ async function main(): Promise<void> {
           warningBannerTimeout: 300000, // 5 minutes
         },
       );
-      console.log("   ✅ ManualOverrideService initialized");
+      logger.info("   ✅ ManualOverrideService initialized");
 
       // Initialize notification service
       const notificationService = new NotificationService(config.notifications);
-      console.log("   ✅ NotificationService initialized");
+      logger.info("   ✅ NotificationService initialized");
 
       // Create TitanBrain orchestrator
-      console.log("🧠 Creating TitanBrain orchestrator...");
+      logger.info("🧠 Creating TitanBrain orchestrator...");
       brain = new TitanBrain(
         config.brain,
         allocationEngine,
@@ -300,6 +306,7 @@ async function main(): Promise<void> {
         riskGuardian,
         capitalFlowManager,
         circuitBreaker,
+        activeInferenceEngine,
         databaseManager!,
         stateRecoveryService,
         manualOverrideService,
@@ -308,11 +315,11 @@ async function main(): Promise<void> {
       // Set initial equity from environment or default
       const initialEquity = (config as any).trading?.initialEquity || 100000;
       brain.setEquity(initialEquity);
-      console.log(`   💰 Initial equity: ${initialEquity.toLocaleString()}`);
+      logger.info(`   💰 Initial equity: ${initialEquity.toLocaleString()}`);
 
       // Initialize brain (loads state from database)
       await brain.initialize();
-      console.log("   ✅ TitanBrain initialized");
+      logger.info("   ✅ TitanBrain initialized");
 
       // Wire up notification handler
       const notificationHandler = new TitanNotificationHandler(
@@ -321,14 +328,14 @@ async function main(): Promise<void> {
       circuitBreaker.setNotificationHandler(notificationHandler);
       riskGuardian.setCorrelationNotifier(notificationHandler);
       capitalFlowManager.setSweepNotifier(notificationHandler);
-      console.log("   ✅ Notification handlers wired");
+      logger.info("   ✅ Notification handlers wired");
     };
 
     initSteps[4].execute = async () => {
       // HTTP server startup
       const brainConfig = configManager!.getConfig();
 
-      console.log("🔗 Initializing integration services...");
+      logger.info("🔗 Initializing integration services...");
 
       // ExecutionEngineClient
       // Initialize unconditionally to support NATS communication
@@ -353,7 +360,7 @@ async function main(): Promise<void> {
 
       // Set execution engine client on brain
       brain!.setExecutionEngine(executionEngineClient);
-      console.log("   ✅ ExecutionEngineClient initialized (NATS)");
+      logger.info("   ✅ ExecutionEngineClient initialized (NATS)");
 
       // Phase Integration Service (optional)
       if (
@@ -372,19 +379,19 @@ async function main(): Promise<void> {
 
         // Set phase notifier on brain
         brain!.setPhaseNotifier(phaseIntegrationService);
-        console.log("   ✅ PhaseIntegrationService initialized");
+        logger.info("   ✅ PhaseIntegrationService initialized");
         if (brainConfig.phase1ServiceUrl) {
-          console.log(`      Phase 1: ${brainConfig.phase1ServiceUrl}`);
+          logger.info(`      Phase 1: ${brainConfig.phase1ServiceUrl}`);
         }
         if (brainConfig.phase2ServiceUrl) {
-          console.log(`      Phase 2: ${brainConfig.phase2ServiceUrl}`);
+          logger.info(`      Phase 2: ${brainConfig.phase2ServiceUrl}`);
         }
         if (brainConfig.phase3ServiceUrl) {
-          console.log(`      Phase 3: ${brainConfig.phase3ServiceUrl}`);
+          logger.info(`      Phase 3: ${brainConfig.phase3ServiceUrl}`);
         }
       } else {
-        console.log(
-          "   ⚠️  No phase webhook URLs configured, phase notifications disabled",
+        logger.info(
+          "No phase webhook URLs configured, phase notifications disabled",
         );
       }
 
@@ -392,11 +399,11 @@ async function main(): Promise<void> {
       const dashboardService = new DashboardService(brain!);
 
       // Start Dashboard Service publishing
-      console.log("📊 Starting Dashboard Service publishing...");
+      logger.info("📊 Starting Dashboard Service publishing...");
       dashboardService.startPublishing(1000);
 
       // Create and start webhook server
-      console.log("🚀 Starting webhook server...");
+      logger.info("🚀 Starting webhook server...");
       webhookServer = new WebhookServer(
         {
           host: brainConfig.host,
@@ -418,7 +425,7 @@ async function main(): Promise<void> {
       await webhookServer.start();
 
       // Initialize WebSocket service first (but don't listen yet if needed?)
-      console.log("📡 Initializing WebSocket service...");
+      logger.info("📡 Initializing WebSocket service...");
       const wsPort = parseInt(process.env.WS_PORT || "3101", 10);
       webSocketService = new WebSocketService(brain!, {
         pingInterval: 30000,
@@ -429,17 +436,17 @@ async function main(): Promise<void> {
       webSocketService.listen(wsPort, brainConfig.host);
 
       // Initialize NATS Consumer
-      console.log("📨 Starting NATS Consumer...");
+      logger.info("📨 Starting NATS Consumer...");
       natsConsumer = new NatsConsumer(brain!, webSocketService);
       await natsConsumer.start(brainConfig.natsUrl);
-      console.log("   ✅ NATS Consumer started");
+      logger.info("   ✅ NATS Consumer started");
 
       // Initialize NATS Publisher for AI optimization triggers
-      console.log("📤 Starting NATS Publisher...");
+      logger.info("📤 Starting NATS Publisher...");
       const { getNatsPublisher } = await import("./server/NatsPublisher.js");
       const natsPublisher = getNatsPublisher();
       await natsPublisher.connect(brainConfig.natsUrl);
-      console.log("   ✅ NATS Publisher started");
+      logger.info("   ✅ NATS Publisher started");
 
       // Mark startup as complete for health checks
       webhookServer.markStartupComplete(); // Wait webhookServer not created yet if I reordered?
@@ -496,7 +503,8 @@ async function main(): Promise<void> {
     const finalConfig = configManager.getConfig();
     displayStartupSummary(finalConfig);
   } catch (error) {
-    console.error("❌ Failed to start Titan Brain:", error);
+    const logger = getLogger();
+    logger.error("❌ Failed to start Titan Brain", error);
     process.exit(1);
   }
 }
@@ -505,6 +513,7 @@ async function main(): Promise<void> {
  * Display startup summary
  */
 function displayStartupSummary(config: BrainConfig): void {
+  const logger = getLogger();
   console.log("");
   console.log(
     "═══════════════════════════════════════════════════════════════",
@@ -518,62 +527,43 @@ function displayStartupSummary(config: BrainConfig): void {
   console.log("");
 
   const allocation = brain!.getAllocation();
-  console.log("📊 Current Allocation:");
-  console.log(`   Phase 1 (Scavenger): ${(allocation.w1 * 100).toFixed(1)}%`);
-  console.log(`   Phase 2 (Hunter):    ${(allocation.w2 * 100).toFixed(1)}%`);
-  console.log(`   Phase 3 (Sentinel):  ${(allocation.w3 * 100).toFixed(1)}%`);
-  console.log("");
+  logger.info("📊 Current Allocation:", { allocation });
+  logger.info(`   Phase 1 (Scavenger): ${(allocation.w1 * 100).toFixed(1)}%`);
+  logger.info(`   Phase 2 (Hunter):    ${(allocation.w2 * 100).toFixed(1)}%`);
+  logger.info(`   Phase 3 (Sentinel):  ${(allocation.w3 * 100).toFixed(1)}%`);
 
-  console.log("🌐 API Endpoints:");
-  console.log(`   Health:     http://${config.host}:${config.port}/health`);
-  console.log(`   Dashboard:  http://${config.host}:${config.port}/dashboard`);
-  console.log(`   Signal:     http://${config.host}:${config.port}/signal`);
-  console.log(`   Allocation: http://${config.host}:${config.port}/allocation`);
-  console.log(
-    `   WebSocket:  ws://${config.host}:${
+  logger.info("🌐 API Endpoints:", {
+    health: `http://${config.host}:${config.port}/health`,
+    dashboard: `http://${config.host}:${config.port}/dashboard`,
+    signal: `http://${config.host}:${config.port}/signal`,
+    allocation: `http://${config.host}:${config.port}/allocation`,
+    websocket: `ws://${config.host}:${
       parseInt(process.env.WS_PORT || "3101")
     }/ws/console`,
-  );
-  console.log("");
+  });
 
-  console.log("📡 Phase Webhooks:");
-  console.log(
-    `   Phase 1:    http://${config.host}:${config.port}/webhook/phase1`,
-  );
-  console.log(
-    `   Phase 2:    http://${config.host}:${config.port}/webhook/phase2`,
-  );
-  console.log(
-    `   Phase 3:    http://${config.host}:${config.port}/webhook/phase3`,
-  );
-  console.log("");
+  logger.info("📡 Phase Webhooks (if enabled):", {
+    phase1: config.phase1ServiceUrl || "disabled",
+    phase2: config.phase2ServiceUrl || "disabled",
+    phase3: config.phase3ServiceUrl || "disabled",
+  });
 
-  console.log("🔗 Integration Status:");
-  console.log(
-    `   Execution Engine: ${
-      executionEngineClient ? "✅ Connected" : "⚠️ Not configured"
-    }`,
-  );
-  console.log(
-    `   Phase Notifier:   ${
-      phaseIntegrationService ? "✅ Configured" : "⚠️ Not configured"
-    }`,
-  );
-  console.log(
-    `   Signal Queue:     ${signalQueue ? "✅ Redis" : "⚠️ In-memory"}`,
-  );
-  console.log("");
+  logger.info("🔗 Integration Status:", {
+    executionEngine: executionEngineClient ? "Connected" : "Not configured",
+    phaseNotifier: phaseIntegrationService ? "Configured" : "Not configured",
+    signalQueue: signalQueue ? "Redis" : "In-memory",
+  });
 
-  console.log("✅ Titan Brain is ready to receive signals");
-  console.log("");
+  logger.info("✅ Titan Brain is ready to receive signals");
 }
 
 /**
  * Enhanced graceful shutdown handler
  */
 async function shutdown(signal: string): Promise<void> {
+  const logger = getLogger();
   console.log("");
-  console.log(`🛑 Received ${signal}, shutting down gracefully...`);
+  logger.info(`🛑 Received ${signal}, shutting down gracefully...`);
 
   if (startupManager) {
     await startupManager.shutdown();
@@ -589,10 +579,10 @@ async function shutdown(signal: string): Promise<void> {
       if (signalQueue) await signalQueue.disconnect();
       if (databaseManager) await databaseManager.disconnect();
 
-      console.log("✅ Titan Brain shutdown complete");
+      logger.info("✅ Titan Brain shutdown complete");
       process.exit(0);
     } catch (error) {
-      console.error("❌ Error during shutdown:", error);
+      logger.error("❌ Error during shutdown", error);
       process.exit(1);
     }
   }
@@ -604,18 +594,21 @@ process.on("SIGTERM", () => shutdown("SIGTERM"));
 
 // Handle uncaught exceptions
 process.on("uncaughtException", (error) => {
-  console.error("❌ Uncaught exception:", error);
+  const logger = getLogger();
+  logger.error("❌ Uncaught exception", error);
   shutdown("uncaughtException");
 });
 
 // Handle unhandled promise rejections
 process.on("unhandledRejection", (reason, promise) => {
-  console.error("❌ Unhandled rejection at:", promise, "reason:", reason);
+  const logger = getLogger();
+  logger.error("❌ Unhandled rejection", undefined, { reason, promise });
 });
 
 // Start the application
 main().catch((error) => {
-  console.error("❌ Fatal error:", error);
+  const logger = getLogger();
+  logger.error("❌ Fatal error", error);
   process.exit(1);
 });
 

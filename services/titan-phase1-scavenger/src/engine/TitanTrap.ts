@@ -11,7 +11,7 @@
  */
 
 import { EventEmitter } from "../events/EventEmitter.js";
-import { FastPathClient, IntentSignal } from "../ipc/FastPathClient.js";
+import { ExecutionClient, IntentSignal } from "@titan/shared";
 import { VolatilityScaler } from "../calculators/VolatilityScaler.js";
 import { CVDCalculator } from "../calculators/CVDCalculator.js";
 import { PredictionMarketDetector } from "../detectors/PredictionMarketDetector.js";
@@ -56,7 +56,7 @@ export class TitanTrap {
   // Client references (injected via constructor)
   private binanceClient: any; // TODO: Type as BinanceSpotClient
   private bybitClient: any; // TODO: Type as BybitPerpsClient
-  private fastPathClient: FastPathClient; // Fast Path IPC client for execution
+  private executionClient: ExecutionClient; // Execution client for NATS signals
   private logger: any; // TODO: Type as Logger
   private config: any; // TODO: Type as ConfigManager
   private eventEmitter: EventEmitter;
@@ -113,44 +113,36 @@ export class TitanTrap {
       this.binanceClient,
     );
 
-    // Initialize Fast Path IPC client with proper configuration
-    this.fastPathClient = new FastPathClient({
-      socketPath: process.env.TITAN_IPC_SOCKET || "/tmp/titan-ipc.sock",
-      hmacSecret: process.env.TITAN_HMAC_SECRET || "default-secret",
-      maxReconnectAttempts: 10,
-      baseReconnectDelay: 1000,
-      maxReconnectDelay: 30000,
-      connectionTimeout: 5000,
-      messageTimeout: 1000,
-      enableMetrics: true,
+    // Initialize Execution Client
+    this.executionClient = new ExecutionClient({
+      source: "scavenger",
     });
 
-    // Setup Fast Path IPC event listeners for enhanced error handling
-    this.setupFastPathEventListeners();
+    // Setup Execution Client event listeners
+    this.setupExecutionEventListeners();
   }
 
   /**
-   * Setup Fast Path IPC event listeners for enhanced error handling and monitoring
-   * Requirements: 2.5, 5.1 (IPC communication failures, automatic reconnection)
+   * Setup Execution Client event listeners for handling execution feedback
    */
-  private setupFastPathEventListeners(): void {
+  private setupExecutionEventListeners(): void {
     // Connection events
-    this.fastPathClient.on("connected", () => {
-      console.log("✅ Fast Path IPC connected");
+    this.executionClient.on("connected", () => {
+      console.log("✅ Execution Client (NATS) connected");
       this.eventEmitter.emit("IPC_CONNECTED", {
         timestamp: Date.now(),
-        socketPath: this.fastPathClient.getStatus().socketPath,
+        socketPath: this.executionClient.getStatus().socketPath,
       });
     });
 
-    this.fastPathClient.on("disconnected", () => {
+    this.executionClient.on("disconnected", () => {
       console.log("🔌 Fast Path IPC disconnected");
       this.eventEmitter.emit("IPC_DISCONNECTED", {
         timestamp: Date.now(),
       });
     });
 
-    this.fastPathClient.on("reconnecting", (attempt: number) => {
+    this.executionClient.on("reconnecting", (attempt: number) => {
       console.log(`🔄 Fast Path IPC reconnecting (attempt ${attempt})`);
       this.eventEmitter.emit("IPC_RECONNECTING", {
         attempt,
@@ -158,7 +150,7 @@ export class TitanTrap {
       });
     });
 
-    this.fastPathClient.on("error", (error: Error) => {
+    this.executionClient.on("error", (error: Error) => {
       console.error(`❌ Fast Path IPC error: ${error.message}`);
       this.eventEmitter.emit("IPC_ERROR", {
         error: error.message,
@@ -166,7 +158,7 @@ export class TitanTrap {
       });
     });
 
-    this.fastPathClient.on("maxReconnectAttemptsReached", () => {
+    this.executionClient.on("maxReconnectAttemptsReached", () => {
       console.error("❌ Fast Path IPC max reconnection attempts reached");
       this.eventEmitter.emit("IPC_MAX_RECONNECT_ATTEMPTS", {
         timestamp: Date.now(),
@@ -174,7 +166,7 @@ export class TitanTrap {
     });
 
     // Message events for monitoring
-    this.fastPathClient.on("message", (message: any) => {
+    this.executionClient.on("message", (message: any) => {
       // Handle unsolicited messages from execution service
       if (message.type === "status_update") {
         console.log("📊 Execution service status update:", message);
@@ -214,24 +206,14 @@ export class TitanTrap {
   async start(): Promise<void> {
     console.log("🕸️ Starting TitanTrap Engine...");
 
-    // Connect to Fast Path IPC with enhanced error handling
+    // Connect to Execution Client
     try {
-      console.log("🔌 Connecting to Fast Path IPC...");
-      await this.fastPathClient.connect();
-      console.log("✅ Connected to Execution Service via Fast Path IPC");
-
-      // Test connection with ping
-      const pingResult = await this.fastPathClient.ping();
-      if (pingResult.success) {
-        console.log(
-          `🏓 Fast Path IPC ping successful: ${pingResult.latency}ms`,
-        );
-      } else {
-        console.warn(`⚠️ Fast Path IPC ping failed: ${pingResult.error}`);
-      }
+      console.log("🔌 Connecting to Execution Service via NATS...");
+      await this.executionClient.connect();
+      console.log("✅ Connected to Execution Service");
     } catch (error) {
       console.warn(
-        "⚠️ Failed to connect to Fast Path IPC, will fall back to HTTP POST:",
+        "⚠️ Failed to connect to Execution Service:",
         error instanceof Error ? error.message : "Unknown error",
       );
 
@@ -284,13 +266,13 @@ export class TitanTrap {
       clearInterval(this.memoryMonitorInterval);
     }
 
-    // Disconnect Fast Path IPC gracefully
+    // Disconnect Execution Client gracefully
     try {
-      await this.fastPathClient.disconnect();
-      console.log("✅ Disconnected from Fast Path IPC");
+      await this.executionClient.disconnect();
+      console.log("✅ Disconnected from Execution Client");
     } catch (error) {
       console.warn(
-        "⚠️ Error disconnecting from Fast Path IPC:",
+        "⚠️ Error disconnecting from Execution Client:",
         error instanceof Error ? error.message : "Unknown error",
       );
     }
@@ -928,11 +910,11 @@ export class TitanTrap {
 
       try {
         // Check if IPC is connected before attempting to send
-        if (!this.fastPathClient.isConnected()) {
+        if (!this.executionClient.isConnected()) {
           throw new Error("IPC_NOT_CONNECTED");
         }
 
-        const prepareResult = await this.fastPathClient.sendPrepare(
+        const prepareResult = await this.executionClient.sendPrepare(
           intentSignal,
         );
 
@@ -954,7 +936,9 @@ export class TitanTrap {
           console.log(`   ✅ Trap still valid, sending CONFIRM...`);
 
           const confirmStartTime = Date.now();
-          const confirmResult = await this.fastPathClient.sendConfirm(signalId);
+          const confirmResult = await this.executionClient.sendConfirm(
+            signalId,
+          );
 
           if (confirmResult.rejected) {
             throw new Error(`CONFIRM_REJECTED: ${confirmResult.reason}`);
@@ -1007,7 +991,7 @@ export class TitanTrap {
           // Send ABORT
           console.log(`   ⚠️ Trap invalidated, sending ABORT...`);
 
-          const abortResult = await this.fastPathClient.sendAbort(signalId);
+          const abortResult = await this.executionClient.sendAbort(signalId);
 
           console.log(
             `   ✅ ABORT acknowledged: aborted=${abortResult.aborted}`,
@@ -1097,7 +1081,7 @@ export class TitanTrap {
       // If we have a signal_id, send ABORT
       if (signalId) {
         try {
-          await this.fastPathClient.sendAbort(signalId);
+          await this.executionClient.sendAbort(signalId);
           console.log(
             `   ✅ Sent ABORT for failed execution: signal_id=${signalId}`,
           );
@@ -1184,10 +1168,10 @@ export class TitanTrap {
     status: any;
   } {
     return {
-      connected: this.fastPathClient.isConnected(),
-      connectionState: this.fastPathClient.getConnectionState(),
-      metrics: this.fastPathClient.getMetrics(),
-      status: this.fastPathClient.getStatus(),
+      connected: this.executionClient.isConnected(),
+      connectionState: this.executionClient.getConnectionState(),
+      metrics: this.executionClient.getMetrics(),
+      status: this.executionClient.getStatus(),
     };
   }
 
@@ -1198,7 +1182,7 @@ export class TitanTrap {
   async forceIPCReconnect(): Promise<void> {
     try {
       console.log("🔄 Force reconnecting Fast Path IPC...");
-      await this.fastPathClient.forceReconnect();
+      await this.executionClient.forceReconnect();
       console.log("✅ Fast Path IPC reconnection successful");
 
       this.eventEmitter.emit("IPC_FORCE_RECONNECT_SUCCESS", {
