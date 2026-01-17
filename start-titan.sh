@@ -117,13 +117,18 @@ check_port() {
 wait_for_health() {
     local url=$1
     local service_name=$2
-    local max_attempts=$((MAX_WAIT / HEALTH_CHECK_INTERVAL))
+    local sleep_time=$HEALTH_CHECK_INTERVAL
+    if [ "$HEALTH_CHECK_INTERVAL" -gt 60 ]; then
+        sleep_time=$((HEALTH_CHECK_INTERVAL / 1000))
+        if [ "$sleep_time" -lt 1 ]; then sleep_time=1; fi
+    fi
+    local max_attempts=$((MAX_WAIT / sleep_time))
     local attempt=0
     local start_time=$(date +%s)
-    
+
     echo -e "${YELLOW}⏳ Waiting for $service_name health check...${NC}"
     echo -e "   URL: $url"
-    echo -e "   Timeout: ${MAX_WAIT}s (checking every ${HEALTH_CHECK_INTERVAL}s)"
+    echo -e "   Timeout: ${MAX_WAIT}s (checking every ${sleep_time}s)"
     
     while [ $attempt -lt $max_attempts ]; do
         local current_time=$(date +%s)
@@ -156,7 +161,7 @@ wait_for_health() {
         local progress=$((attempt * 100 / max_attempts))
         echo -e "${CYAN}   Progress: ${progress}% (${elapsed}s elapsed)${NC}"
         
-        sleep $HEALTH_CHECK_INTERVAL
+        sleep $sleep_time
         attempt=$((attempt + 1))
     done
     
@@ -185,24 +190,7 @@ check_brain_health() {
     fi
 }
 
-check_execution_health() {
-    local base_url=$1
-    local health_response=$(curl -s "${base_url}/health" 2>/dev/null || echo "{}")
-    
-    # Check broker connections
-    if echo "$health_response" | grep -q '"brokers"'; then
-        echo -e "${GREEN}   ✓ Broker connections available${NC}"
-    else
-        echo -e "${YELLOW}   ⚠ Broker connection status unknown${NC}"
-    fi
-    
-    # Check WebSocket status
-    if echo "$health_response" | grep -q '"websocket"'; then
-        echo -e "${GREEN}   ✓ WebSocket servers active${NC}"
-    else
-        echo -e "${YELLOW}   ⚠ WebSocket server status unknown${NC}"
-    fi
-}
+
 
 check_scavenger_health() {
     local base_url=$1
@@ -245,10 +233,7 @@ rollback_deployment() {
     ./stop-titan.sh 2>/dev/null || true
     
     # Restore database backups if they exist
-    if [ -f "services/titan-execution/titan_execution.db.backup-$DEPLOYMENT_ID" ]; then
-        echo -e "${BLUE}📦 Restoring execution database...${NC}"
-        mv "services/titan-execution/titan_execution.db.backup-$DEPLOYMENT_ID" "services/titan-execution/titan_execution.db"
-    fi
+
     
     if [ -f "services/titan-brain/brain.db.backup-$DEPLOYMENT_ID" ]; then
         echo -e "${BLUE}📦 Restoring brain database...${NC}"
@@ -271,10 +256,7 @@ create_deployment_backup() {
         echo -e "${BLUE}💾 Creating deployment backup...${NC}"
         
         # Backup databases
-        if [ -f "services/titan-execution/titan_execution.db" ]; then
-            cp "services/titan-execution/titan_execution.db" "services/titan-execution/titan_execution.db.backup-$DEPLOYMENT_ID"
-            echo -e "${GREEN}   ✓ Execution database backed up${NC}"
-        fi
+
         
         if [ -f "services/titan-brain/brain.db" ]; then
             cp "services/titan-brain/brain.db" "services/titan-brain/brain.db.backup-$DEPLOYMENT_ID"
@@ -452,7 +434,7 @@ else
         node dist/db/migrate.js 2>/dev/null || echo -e "${YELLOW}   Migrations may already be applied${NC}"
 
     # Start titan-brain
-    DB_HOST=$DB_HOST DB_PORT=$DB_PORT DB_NAME=$DB_NAME DB_USER=$DB_USER DB_PASSWORD=$DB_PASSWORD \
+    DB_HOST=$DB_HOST DB_PORT=$DB_PORT DB_NAME=$DB_NAME DB_USER=$DB_USER DB_PASSWORD=$DB_PASSWORD PORT=$BRAIN_PORT \
         node dist/index.js > "../../$BRAIN_LOG" 2>&1 &
     BRAIN_PID_VALUE=$!
     echo $BRAIN_PID_VALUE > "../../$BRAIN_PID"
@@ -479,45 +461,49 @@ echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━�
 echo -e "${BLUE}Step 2: Starting titan-execution (Execution Microservice)${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 
-if [ ! -d "services/titan-execution" ]; then
-    echo -e "${RED}❌ titan-execution not found${NC}"
+if [ ! -d "services/titan-execution-rs" ]; then
+    echo -e "${RED}❌ titan-execution-rs not found${NC}"
     exit 1
 fi
 
-cd services/titan-execution
+cd services/titan-execution-rs
 
-# Check if dependencies are installed
-if [ ! -d "node_modules" ]; then
-    echo -e "${YELLOW}⚠️  Dependencies not installed, installing now...${NC}"
-    npm install
-fi
+# Build release version
+echo -e "${BLUE}Building titan-execution-rs...${NC}"
+cargo build --release
 
-# Check if .env file exists
-if [ ! -f ".env" ]; then
-    echo -e "${YELLOW}⚠️  .env file not found, creating from .env.example...${NC}"
-    if [ -f ".env.example" ]; then
-        cp .env.example .env
-        # Update port in .env
-        sed -i '' 's/PORT=3000/PORT=3002/' .env 2>/dev/null || sed -i 's/PORT=3000/PORT=3002/' .env
-    fi
-fi
-
-# Start titan-execution
-node server-production.js > "../../$EXECUTION_LOG" 2>&1 &
+# Start titan-execution-rs
+./target/release/titan-execution-rs > "../../$EXECUTION_LOG" 2>&1 &
 EXECUTION_PID_VALUE=$!
 echo $EXECUTION_PID_VALUE > "../../$EXECUTION_PID"
 
-echo -e "${GREEN}✅ titan-execution started (PID: $EXECUTION_PID_VALUE)${NC}"
+echo -e "${GREEN}✅ titan-execution-rs started (PID: $EXECUTION_PID_VALUE)${NC}"
 echo -e "   Log: $EXECUTION_LOG"
 echo -e "   Port: $EXECUTION_PORT"
 
 cd ../..
 
-# Wait for health check
-if wait_for_health "http://localhost:$EXECUTION_PORT/health" "titan-execution"; then
-    echo -e "${GREEN}✅ titan-execution is ready${NC}"
-else
-    echo -e "${YELLOW}⚠️  titan-execution health check failed, continuing...${NC}"
+# Wait for NATS connection in logs
+echo -e "${YELLOW}⏳ Waiting for titan-execution to connect to NATS...${NC}"
+MAX_RETRIES=30
+count=0
+while [ $count -lt $MAX_RETRIES ]; do
+    if grep -q "Connected to NATS" "$EXECUTION_LOG"; then
+        echo -e "${GREEN}✅ titan-execution connected to NATS${NC}"
+        break
+    fi
+    if ! kill -0 $EXECUTION_PID_VALUE 2>/dev/null; then
+        echo -e "${RED}❌ titan-execution process died${NC}"
+        cat "$EXECUTION_LOG"
+        exit 1
+    fi
+    sleep 1
+    count=$((count + 1))
+done
+
+if [ $count -ge $MAX_RETRIES ]; then
+    echo -e "${RED}❌ Timeout waiting for titan-execution NATS connection${NC}"
+    exit 1
 fi
 
 # ============================================================================

@@ -8,7 +8,7 @@
   "scripts": {
     "start": "echo 'Use npm run start:<service> to start a specific service'",
     "start:brain": "npm start -w services/titan-brain",
-    "start:execution": "npm start -w services/titan-execution",
+    "start:execution": "cd services/titan-execution-rs && cargo run --release",
     "start:console": "npm start -w services/titan-console",
     "start:scavenger": "npm start -w services/titan-phase1-scavenger",
     "start:hunter": "npm start -w services/titan-phase2-hunter",

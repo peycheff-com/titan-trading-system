@@ -1,0 +1,22 @@
+http:
+  middlewares:
+    # Rate Limiting: 100 requests per second with burst of 50
+    api-ratelimit:
+      rateLimit:
+        average: 100
+        burst: 50
+
+    # Strict Rate Limiting for sensitive endpoints
+    strict-ratelimit:
+      rateLimit:
+        average: 10
+        burst: 5
+
+    # Basic Auth Middleware (Placeholder)
+    # Generate new password with: htpasswd -nb user password
+    # Default: admin / titan_admin_2026
+    admin-auth:
+      basicAuth:
+        users:
+          - "admin:$apr1$e.y/v...$J... (Replace with real hash)"
+        removeHeader: true

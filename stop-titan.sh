@@ -12,6 +12,45 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# PID file definitions
+PID_DIR="."
+EXECUTION_PID="$PID_DIR/.execution.pid"
+BRAIN_PID="$PID_DIR/.brain.pid"
+SCAVENGER_PID="$PID_DIR/.scavenger.pid"
+CONSOLE_PID="$PID_DIR/.console.pid"
+
+# Helper function to stop a service
+stop_service() {
+    local pid_file=$1
+    local service_name=$2
+    
+    if [ -f "$pid_file" ]; then
+        local pid=$(cat "$pid_file")
+        if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+            echo -e "${YELLOW}Stopping $service_name (PID: $pid)...${NC}"
+            kill "$pid" 2>/dev/null || true
+            
+            # Wait loop
+            local count=0
+            while kill -0 "$pid" 2>/dev/null && [ $count -lt 10 ]; do
+                sleep 0.5
+                count=$((count + 1))
+            done
+            
+            if kill -0 "$pid" 2>/dev/null; then
+                echo -e "${RED}Force killing $service_name...${NC}"
+                kill -9 "$pid" 2>/dev/null || true
+            fi
+            echo -e "${GREEN}✅ $service_name stopped${NC}"
+        else
+             echo -e "${YELLOW}⚠️  $service_name PID file exists but process is gone${NC}"
+        fi
+        rm -f "$pid_file"
+    else
+        echo -e "${YELLOW}ℹ️  $service_name is not running (no PID file)${NC}"
+    fi
+}
+
 # Port assignments (must match start-titan.sh)
 # Step 1: Services shutdown sequence
 

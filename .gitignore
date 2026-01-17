@@ -158,3 +158,8 @@ test-*.js
 
 # Disabled configs
 *.disabled
+
+# Test and lint artifacts
+.jest-cache/
+test-results/
+lint_errors.txt

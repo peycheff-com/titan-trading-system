@@ -33,11 +33,20 @@ async function main() {
     },
   };
 
-  // 2. Initialize Gateways
-  const gateways: IExchangeGateway[] = [
-    new BinanceGateway("key", "secret"), // TODO: Load from env
-    new BybitGateway("key", "secret"),   // TODO: Load from env
-  ];
+    // 2. Initialize Gateways
+    const binanceKey = process.env.BINANCE_API_KEY;
+    const binanceSecret = process.env.BINANCE_API_SECRET;
+    const bybitKey = process.env.BYBIT_API_KEY;
+    const bybitSecret = process.env.BYBIT_API_SECRET;
+
+    if (!binanceKey || !binanceSecret) {
+        console.warn("⚠️ Missing BINANCE_API_KEY or BINANCE_API_SECRET. Gateway may fail.");
+    }
+    
+    const gateways: IExchangeGateway[] = [
+        new BinanceGateway(binanceKey || "", binanceSecret || ""), 
+        new BybitGateway(bybitKey || "", bybitSecret || ""), 
+    ];
 
 
   // 3. Start Core

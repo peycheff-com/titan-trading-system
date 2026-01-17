@@ -16,6 +16,22 @@ pub enum Side {
     Short,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum OrderType {
+    #[serde(rename = "LIMIT")]
+    Limit,
+    #[serde(rename = "MARKET")]
+    Market,
+    #[serde(rename = "STOP_LOSS")]
+    StopLoss,
+    #[serde(rename = "STOP_LOSS_LIMIT")]
+    StopLossLimit,
+    #[serde(rename = "TAKE_PROFIT")]
+    TakeProfit,
+    #[serde(rename = "TAKE_PROFIT_LIMIT")]
+    TakeProfitLimit,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum IntentType {
     #[serde(rename = "BUY_SETUP")]
@@ -123,7 +139,7 @@ pub struct FeeAnalysis {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OrderDecision {
-    pub order_type: String, // LIMIT, MARKET
+    pub order_type: OrderType, // LIMIT, MARKET
     pub post_only: bool,
     pub reduce_only: bool,
     pub limit_price: Option<Decimal>,

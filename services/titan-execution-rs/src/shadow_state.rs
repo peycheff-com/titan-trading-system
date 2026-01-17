@@ -287,6 +287,10 @@ impl ShadowState {
         self.positions.get(symbol)
     }
 
+    pub fn get_all_positions(&self) -> HashMap<String, Position> {
+        self.positions.clone()
+    }
+
     pub fn get_trade_history(&self) -> &Vec<TradeRecord> {
         &self.trade_history
     }

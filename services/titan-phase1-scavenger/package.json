@@ -21,9 +21,13 @@
     "binance",
     "mexc"
   ],
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@titan/shared": "*",
     "chalk": "^5.3.0",
     "crypto": "^1.0.1",
     "ink": "^4.4.1",
