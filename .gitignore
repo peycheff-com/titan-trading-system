@@ -165,3 +165,9 @@ test-*.js
 .jest-cache/
 test-results/
 lint_errors.txt
+
+# Generated source artifacts (TypeScript)
+services/*/src/**/*.js
+services/*/src/**/*.js.map
+services/*/src/**/*.d.ts
+services/*/src/**/*.d.ts.map
