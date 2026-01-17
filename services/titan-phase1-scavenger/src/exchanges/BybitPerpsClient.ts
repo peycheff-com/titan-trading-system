@@ -18,6 +18,28 @@ import {
 
 // Import fetch with proper typing for Jest compatibility
 import fetch from "node-fetch";
+import WebSocket from "ws";
+
+export interface BybitTickerUpdate {
+    topic: string;
+    type: string;
+    ts: number;
+    data: {
+        symbol: string;
+        lastPrice: string;
+        highPrice24h: string;
+        lowPrice24h: string;
+        prevPrice24h: string;
+        volume24h: string;
+        turnover24h: string;
+    };
+}
+
+type TickerCallback = (
+    symbol: string,
+    price: number,
+    timestamp: number,
+) => void;
 
 export interface BybitSymbolInfo {
     symbol: string;
@@ -147,9 +169,96 @@ export class BybitPerpsClient {
     private readonly RETRY_ATTEMPTS = 3;
     private readonly RETRY_DELAY = 1000; // 1 second
 
+    // WebSocket support
+    private ws: WebSocket | null = null;
+    private tickerCallbacks: Map<string, TickerCallback> = new Map();
+    private wsPingInterval?: NodeJS.Timeout;
+    private readonly WS_URL = "wss://stream.bybit.com/v5/public/linear";
+
     constructor(apiKey: string, apiSecret: string) {
         this.apiKey = apiKey;
         this.apiSecret = apiSecret;
+    }
+
+    /**
+     * Subscribe to real-time ticker updates
+     * @param symbols - Array of symbols (e.g., ['BTCUSDT'])
+     * @param callback - Callback for ticker updates
+     */
+    public subscribeTicker(symbols: string[], callback: TickerCallback): void {
+        this.tickerCallbacks.clear();
+        for (const symbol of symbols) {
+            this.tickerCallbacks.set(symbol, callback);
+        }
+
+        if (this.ws) {
+            this.ws.close();
+        }
+
+        this.connectWebSocket(symbols);
+    }
+
+    private connectWebSocket(symbols: string[]): void {
+        this.ws = new WebSocket(this.WS_URL);
+
+        this.ws.on("open", () => {
+            console.log("✅ Bybit WebSocket connected");
+
+            // Send subscription
+            const args = symbols.map((s) => `tickers.${s.toUpperCase()}`);
+            const msg = {
+                op: "subscribe",
+                args: args,
+            };
+            this.ws?.send(JSON.stringify(msg));
+
+            // Start heartbeat
+            this.wsPingInterval = setInterval(() => {
+                if (this.ws?.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify({ op: "ping" }));
+                }
+            }, 20000);
+        });
+
+        this.ws.on("message", (data: WebSocket.Data) => {
+            try {
+                const msg = JSON.parse(data.toString());
+
+                // Handle ticker update
+                if (msg.topic && msg.topic.startsWith("tickers.") && msg.data) {
+                    const symbol = msg.topic.split(".")[1];
+                    const tickerData = msg.data;
+                    const price = parseFloat(tickerData.lastPrice);
+                    const ts = msg.ts; // Bybit timestamp (ms)
+
+                    const callback = this.tickerCallbacks.get(symbol);
+                    if (callback) {
+                        callback(symbol, price, ts);
+                    }
+                }
+            } catch (err) {
+                console.error("❌ Error parsing Bybit WS message", err);
+            }
+        });
+
+        this.ws.on("close", () => {
+            console.warn("⚠️ Bybit WebSocket closed. Reconnecting...");
+            if (this.wsPingInterval) clearInterval(this.wsPingInterval);
+            setTimeout(() => this.connectWebSocket(symbols), 2000);
+        });
+
+        this.ws.on("error", (err) => {
+            console.error("❌ Bybit WebSocket error:", err);
+        });
+    }
+
+    public close(): void {
+        if (this.wsPingInterval) clearInterval(this.wsPingInterval);
+        if (this.ws) {
+            this.ws.removeAllListeners(); // Prevent reconnect loop
+            this.ws.close();
+            this.ws = null;
+        }
     }
 
     /**

@@ -35,6 +35,8 @@ pub struct OrderResponse {
     pub status: String,
     pub avg_price: Option<Decimal>,
     pub executed_qty: Decimal,
+    pub t_exchange: Option<i64>,
+    pub t_ack: i64,
 }
 
 #[async_trait]

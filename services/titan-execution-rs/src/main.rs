@@ -2,6 +2,8 @@ use tracing::{info, error, Level};
 use tracing_subscriber::FmtSubscriber;
 use std::env;
 use futures::StreamExt;
+use rust_decimal::Decimal;
+use chrono::Utc;
 use titan_execution_rs::shadow_state::{ShadowState, ExecutionEvent};
 use titan_execution_rs::order_manager::OrderManager;
 use titan_execution_rs::model::Intent;
@@ -101,6 +103,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                         Ok(intent) => {
                             info!("Intent received: {} {}", intent.symbol, intent.signal_id);
                             
+                            // Enforce Timestamp Freshness (5000ms window)
+                            let now = Utc::now().timestamp_millis();
+                            if now - intent.t_signal > 5000 {
+                                error!("❌ Intent EXPIRED: {} ms latency. Dropping.", now - intent.t_signal);
+                                continue;
+                            }
+                            
                             // Lock state for writing
                             // Scope the lock to minimize contention
                             let processed_intent = {
@@ -123,6 +132,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                                 };
                                 order_manager.decide_order_type(&order_params)
                             };
+                            let t_decision = Utc::now().timestamp_millis();
                             
                             info!(
                                 signal_id = %processed_intent.signal_id,
@@ -161,7 +171,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                             info!("🚀 Executing Real Order: {:?} {} @ {:?}", order_req.side, order_req.symbol, order_req.price);
 
                             // 3. Execute via Router (Single or Multi-Exchange)
-                            let results = router_nats.execute(&intent, order_req).await;
+                            let results = router_nats.execute(&intent, order_req.clone()).await;
                             
                             for (exchange_name, result) in results {
                                 match result {
@@ -194,6 +204,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                                                 },
                                             }
                                         }
+
+                                        // 6. Publish Fill Report for Accounting/Audit
+                                        // We need t_ingress from processed_intent, and t_signal from intent
+                                        let fill_report = titan_execution_rs::model::FillReport {
+                                            fill_id: response.order_id.clone(), // Use order_id as fill_id for now
+                                            signal_id: intent.signal_id.clone(),
+                                            symbol: intent.symbol.clone(),
+                                            side: order_req.side.clone(), // Assuming Side matches enum
+                                            price: fill_price,
+                                            qty: response.executed_qty,
+                                            fee: Decimal::ZERO, // TODO: Get from response or fee analysis
+                                            fee_currency: "USDT".to_string(), // Default for now
+                                            t_signal: intent.t_signal,
+                                            t_ingress: processed_intent.t_ingress.unwrap_or(Utc::now().timestamp_millis()),
+                                            t_decision,
+                                            t_ack: response.t_ack,
+                                            t_exchange: response.t_exchange.unwrap_or(Utc::now().timestamp_millis()),
+                                        };
+
+                                        let subject = format!("titan.execution.fill.{}", intent.symbol);
+                                        let payload = serde_json::to_vec(&fill_report).unwrap();
+                                        client_clone.publish(subject, payload.into()).await.ok();
                                     },
                                     Err(e) => {
                                         error!("❌ [{}] Execution Failed: {}", exchange_name, e);

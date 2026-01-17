@@ -1,6 +1,6 @@
 /**
  * OptimizationWorkflow Integration Tests
- * 
+ *
  * Tests the complete optimization workflow including:
  * - Data loading and preprocessing
  * - Insight generation and proposal creation
@@ -8,12 +8,27 @@
  * - Configuration application and rollback
  */
 
-
-import { OptimizationWorkflow } from '../../src/ai/OptimizationWorkflow';
-import { TitanAnalyst } from '../../src/ai/TitanAnalyst';
-import { Backtester, InMemoryDataCache } from '../../src/simulation/Backtester';
-import { DataLoader } from '../../src/simulation/DataLoader';
-import { Trade, OHLCV, RegimeSnapshot, Config, Insight, OptimizationProposal, ValidationReport } from '../../src/types';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  jest,
+} from "@jest/globals";
+import { OptimizationWorkflow } from "../../src/ai/OptimizationWorkflow";
+import { TitanAnalyst } from "../../src/ai/TitanAnalyst";
+import { Backtester, InMemoryDataCache } from "../../src/simulation/Backtester";
+import { DataLoader } from "../../src/simulation/DataLoader";
+import {
+  Config,
+  Insight,
+  OHLCV,
+  OptimizationProposal,
+  RegimeSnapshot,
+  Trade,
+  ValidationReport,
+} from "../../src/types";
 
 // Mock implementations for testing
 class MockTitanAnalyst extends TitanAnalyst {
@@ -21,10 +36,11 @@ class MockTitanAnalyst extends TitanAnalyst {
     return [
       {
         id: 1,
-        topic: 'Stop Loss Optimization',
-        text: 'OI Wipeout trap shows high false positive rate during low volatility periods',
+        topic: "Stop Loss Optimization",
+        text:
+          "OI Wipeout trap shows high false positive rate during low volatility periods",
         confidence: 0.8,
-        affectedTraps: ['oi_wipeout'],
+        affectedTraps: ["oi_wipeout"],
       },
     ];
   }
@@ -34,16 +50,16 @@ class MockTitanAnalyst extends TitanAnalyst {
       id: 1,
       createdAt: Date.now(),
       insightId: 1,
-      targetKey: 'traps.oi_wipeout.stop_loss',
+      targetKey: "traps.oi_wipeout.stop_loss",
       currentValue: 0.015,
       suggestedValue: 0.02,
-      reasoning: 'Increase stop loss to reduce false positives',
+      reasoning: "Increase stop loss to reduce false positives",
       expectedImpact: {
         pnlImprovement: 5.0,
         riskChange: 2.0,
         confidenceScore: 0.8,
       },
-      status: 'pending',
+      status: "pending",
     };
   }
 
@@ -51,7 +67,10 @@ class MockTitanAnalyst extends TitanAnalyst {
     return {
       passed: true,
       timestamp: Date.now(),
-      backtestPeriod: { start: Date.now() - 7 * 24 * 60 * 60 * 1000, end: Date.now() },
+      backtestPeriod: {
+        start: Date.now() - 7 * 24 * 60 * 60 * 1000,
+        end: Date.now(),
+      },
       baselineMetrics: {
         totalTrades: 50,
         winningTrades: 30,
@@ -88,7 +107,7 @@ class MockTitanAnalyst extends TitanAnalyst {
         winRateDelta: 0.07,
       },
       confidenceScore: 0.85,
-      recommendation: 'approve',
+      recommendation: "approve",
     };
   }
 
@@ -102,9 +121,9 @@ class MockDataLoader extends DataLoader {
     return Array.from({ length: 50 }, (_, i) => ({
       id: `trade_${i + 1}`,
       timestamp: Date.now() - (50 - i) * 60 * 60 * 1000,
-      symbol: 'BTCUSDT',
-      trapType: 'oi_wipeout' as const,
-      side: Math.random() > 0.5 ? 'long' as const : 'short' as const,
+      symbol: "BTCUSDT",
+      trapType: "oi_wipeout" as const,
+      side: Math.random() > 0.5 ? "long" as const : "short" as const,
       entryPrice: 50000 + Math.random() * 10000,
       exitPrice: 50000 + Math.random() * 10000,
       quantity: 0.1,
@@ -114,7 +133,9 @@ class MockDataLoader extends DataLoader {
       duration: 30 * 60 * 1000,
       slippage: Math.random() * 5,
       fees: 3,
-      exitReason: Math.random() > 0.4 ? 'take_profit' as const : 'stop_loss' as const,
+      exitReason: Math.random() > 0.4
+        ? "take_profit" as const
+        : "stop_loss" as const,
     }));
   }
 
@@ -132,7 +153,7 @@ class MockDataLoader extends DataLoader {
   async loadRegimeData(): Promise<RegimeSnapshot[]> {
     return Array.from({ length: 50 }, (_, i) => ({
       timestamp: Date.now() - (50 - i) * 15 * 60 * 1000,
-      symbol: 'BTCUSDT',
+      symbol: "BTCUSDT",
       trendState: Math.floor(Math.random() * 3) - 1 as -1 | 0 | 1,
       volState: Math.floor(Math.random() * 3) as 0 | 1 | 2,
       liquidityState: Math.floor(Math.random() * 3) as 0 | 1 | 2,
@@ -141,7 +162,7 @@ class MockDataLoader extends DataLoader {
   }
 }
 
-describe('OptimizationWorkflow', () => {
+describe("OptimizationWorkflow", () => {
   let workflow: OptimizationWorkflow;
   let mockAnalyst: MockTitanAnalyst;
   let mockDataLoader: MockDataLoader;
@@ -149,11 +170,40 @@ describe('OptimizationWorkflow', () => {
 
   beforeEach(() => {
     mockAnalyst = new MockTitanAnalyst();
+
+    // Mock private loadCurrentConfig
+    jest.spyOn(TitanAnalyst.prototype as any, "loadCurrentConfig")
+      .mockResolvedValue({
+        traps: {
+          oi_wipeout: {
+            stop_loss: 0.015,
+            take_profit: 0.05,
+            enabled: true,
+            risk_per_trade: 0.01,
+            max_leverage: 10,
+            min_confidence: 0.8,
+            cooldown_period: 60,
+          },
+        },
+        risk: {
+          max_daily_loss: 0.05,
+          max_position_size: 0.1,
+          max_open_positions: 3,
+          emergency_flatten_threshold: 0.1,
+        },
+        execution: {
+          limit_chaser_enabled: true,
+          max_fill_time: 1000,
+          latency_penalty: 50,
+          slippage_model: "conservative",
+        },
+      });
+
     mockDataLoader = new MockDataLoader();
-    
+
     const cache = new InMemoryDataCache();
     backtester = new Backtester(cache);
-    
+
     workflow = new OptimizationWorkflow(
       mockAnalyst,
       backtester,
@@ -163,12 +213,12 @@ describe('OptimizationWorkflow', () => {
         minTradesForValidation: 20,
         autoApplyThreshold: 0.8,
         maxProposalsPerRun: 3,
-      }
+      },
     );
   });
 
-  describe('executeWorkflow', () => {
-    it('should execute complete optimization workflow successfully', async () => {
+  describe("executeWorkflow", () => {
+    it("should execute complete optimization workflow successfully", async () => {
       const result = await workflow.executeWorkflow();
 
       expect(result.success).toBe(true);
@@ -179,21 +229,21 @@ describe('OptimizationWorkflow', () => {
       expect(result.error).toBeUndefined();
     });
 
-    it('should handle insufficient trade data', async () => {
+    it("should handle insufficient trade data", async () => {
       // Mock data loader to return insufficient trades
-      jest.spyOn(mockDataLoader, 'loadTradeHistory').mockResolvedValue([]);
+      jest.spyOn(mockDataLoader, "loadTradeHistory").mockResolvedValue([]);
 
       const result = await workflow.executeWorkflow();
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('Insufficient trade data');
+      expect(result.error).toContain("Insufficient trade data");
       expect(result.insights).toHaveLength(0);
       expect(result.proposals).toHaveLength(0);
     });
 
-    it('should handle no insights generated', async () => {
+    it("should handle no insights generated", async () => {
       // Mock analyst to return no insights
-      jest.spyOn(mockAnalyst, 'analyzeFailures').mockResolvedValue([]);
+      jest.spyOn(mockAnalyst, "analyzeFailures").mockResolvedValue([]);
 
       const result = await workflow.executeWorkflow();
 
@@ -202,12 +252,15 @@ describe('OptimizationWorkflow', () => {
       expect(result.proposals).toHaveLength(0);
     });
 
-    it('should handle proposal validation failure', async () => {
+    it("should handle proposal validation failure", async () => {
       // Mock analyst to return rejection
-      jest.spyOn(mockAnalyst, 'validateProposal').mockResolvedValue({
+      jest.spyOn(mockAnalyst, "validateProposal").mockResolvedValue({
         passed: false,
         timestamp: Date.now(),
-        backtestPeriod: { start: Date.now() - 7 * 24 * 60 * 60 * 1000, end: Date.now() },
+        backtestPeriod: {
+          start: Date.now() - 7 * 24 * 60 * 60 * 1000,
+          end: Date.now(),
+        },
         baselineMetrics: {} as any,
         proposedMetrics: {} as any,
         deltas: {
@@ -218,23 +271,23 @@ describe('OptimizationWorkflow', () => {
           winRateDelta: -0.1,
         },
         confidenceScore: 0.3,
-        rejectionReason: 'PnL decreased',
-        recommendation: 'reject',
+        rejectionReason: "PnL decreased",
+        recommendation: "reject",
       });
 
       const result = await workflow.executeWorkflow();
 
       expect(result.success).toBe(true);
       expect(result.proposals).toHaveLength(1);
-      expect(result.proposals[0].validation.recommendation).toBe('reject');
+      expect(result.proposals[0].validation.recommendation).toBe("reject");
       expect(result.proposals[0].applied).toBe(false);
     });
 
-    it('should handle proposal application failure', async () => {
+    it("should handle proposal application failure", async () => {
       // Mock analyst to fail application
-      jest.spyOn(mockAnalyst, 'applyProposal').mockResolvedValue({
+      jest.spyOn(mockAnalyst, "applyProposal").mockResolvedValue({
         success: false,
-        error: 'Configuration validation failed',
+        error: "Configuration validation failed",
       });
 
       const result = await workflow.executeWorkflow();
@@ -242,10 +295,12 @@ describe('OptimizationWorkflow', () => {
       expect(result.success).toBe(true);
       expect(result.proposals).toHaveLength(1);
       expect(result.proposals[0].applied).toBe(false);
-      expect(result.proposals[0].error).toContain('Configuration validation failed');
+      expect(result.proposals[0].error).toContain(
+        "Configuration validation failed",
+      );
     });
 
-    it('should respect auto-apply threshold', async () => {
+    it("should respect auto-apply threshold", async () => {
       // Create workflow with high auto-apply threshold
       const restrictiveWorkflow = new OptimizationWorkflow(
         mockAnalyst,
@@ -253,7 +308,7 @@ describe('OptimizationWorkflow', () => {
         mockDataLoader,
         {
           autoApplyThreshold: 0.9, // Higher than mock confidence of 0.85
-        }
+        },
       );
 
       const result = await restrictiveWorkflow.executeWorkflow();
@@ -263,13 +318,13 @@ describe('OptimizationWorkflow', () => {
       expect(result.proposals[0].applied).toBe(false); // Should not auto-apply
     });
 
-    it('should limit proposals per run', async () => {
+    it("should limit proposals per run", async () => {
       // Mock analyst to return multiple insights
-      jest.spyOn(mockAnalyst, 'analyzeFailures').mockResolvedValue([
-        { id: 1, topic: 'Insight 1', text: 'Text 1', confidence: 0.8 },
-        { id: 2, topic: 'Insight 2', text: 'Text 2', confidence: 0.7 },
-        { id: 3, topic: 'Insight 3', text: 'Text 3', confidence: 0.9 },
-        { id: 4, topic: 'Insight 4', text: 'Text 4', confidence: 0.6 },
+      jest.spyOn(mockAnalyst, "analyzeFailures").mockResolvedValue([
+        { id: 1, topic: "Insight 1", text: "Text 1", confidence: 0.8 },
+        { id: 2, topic: "Insight 2", text: "Text 2", confidence: 0.7 },
+        { id: 3, topic: "Insight 3", text: "Text 3", confidence: 0.9 },
+        { id: 4, topic: "Insight 4", text: "Text 4", confidence: 0.6 },
       ]);
 
       // Create workflow with limit of 2 proposals
@@ -279,7 +334,7 @@ describe('OptimizationWorkflow', () => {
         mockDataLoader,
         {
           maxProposalsPerRun: 2,
-        }
+        },
       );
 
       const result = await limitedWorkflow.executeWorkflow();
@@ -290,8 +345,8 @@ describe('OptimizationWorkflow', () => {
     });
   });
 
-  describe('getWorkflowStats', () => {
-    it('should return workflow statistics', () => {
+  describe("getWorkflowStats", () => {
+    it("should return workflow statistics", () => {
       const stats = workflow.getWorkflowStats();
 
       expect(stats.config).toBeDefined();
@@ -303,47 +358,53 @@ describe('OptimizationWorkflow', () => {
     });
   });
 
-  describe('clearCache', () => {
-    it('should clear data loader cache', () => {
-      const clearCacheSpy = jest.spyOn(mockDataLoader, 'clearCache');
-      
+  describe("clearCache", () => {
+    it("should clear data loader cache", () => {
+      const clearCacheSpy = jest.spyOn(mockDataLoader, "clearCache");
+
       workflow.clearCache();
-      
+
       expect(clearCacheSpy).toHaveBeenCalled();
     });
   });
 
-  describe('error handling', () => {
-    it('should handle data loading errors gracefully', async () => {
+  describe("error handling", () => {
+    it("should handle data loading errors gracefully", async () => {
       // Mock data loader to throw error
-      jest.spyOn(mockDataLoader, 'loadTradeHistory').mockRejectedValue(new Error('Data loading failed'));
+      jest.spyOn(mockDataLoader, "loadTradeHistory").mockRejectedValue(
+        new Error("Data loading failed"),
+      );
 
       const result = await workflow.executeWorkflow();
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('Failed to load historical data');
+      expect(result.error).toContain("Failed to load historical data");
     });
 
-    it('should handle analysis errors gracefully', async () => {
+    it("should handle analysis errors gracefully", async () => {
       // Mock analyst to throw error
-      jest.spyOn(mockAnalyst, 'analyzeFailures').mockRejectedValue(new Error('Analysis failed'));
+      jest.spyOn(mockAnalyst, "analyzeFailures").mockRejectedValue(
+        new Error("Analysis failed"),
+      );
 
       const result = await workflow.executeWorkflow();
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('Analysis failed');
+      expect(result.error).toContain("Analysis failed");
     });
 
-    it('should continue with partial failures in proposal processing', async () => {
+    it("should continue with partial failures in proposal processing", async () => {
       // Mock analyst to fail on proposal generation but succeed on analysis
-      jest.spyOn(mockAnalyst, 'proposeOptimization').mockRejectedValue(new Error('Proposal generation failed'));
+      jest.spyOn(mockAnalyst, "proposeOptimization").mockRejectedValue(
+        new Error("Proposal generation failed"),
+      );
 
       const result = await workflow.executeWorkflow();
 
       expect(result.success).toBe(true);
       expect(result.insights).toHaveLength(1);
       expect(result.proposals).toHaveLength(1);
-      expect(result.proposals[0].error).toContain('Proposal generation failed');
+      expect(result.proposals[0].error).toContain("Proposal generation failed");
     });
   });
 });

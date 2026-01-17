@@ -20,6 +20,7 @@ import { BinanceSpotClient } from "../exchanges/BinanceSpotClient";
 import { OIWipeoutDetector } from "./OIWipeoutDetector";
 
 import { Tripwire } from "../types/index.js";
+export { Tripwire };
 
 export class UltimateBulgariaProtocol {
   private bybitClient: any; // Will be null when using titan-execution service

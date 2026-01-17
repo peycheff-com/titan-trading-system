@@ -22,6 +22,8 @@ interface RustIntent {
     size: number;
     status: string; // "PENDING"
     received_at: string; // ISO date
+    t_signal: number;
+    t_exchange?: number;
     metadata?: any;
 }
 
@@ -116,6 +118,8 @@ export class ExecutionClient extends EventEmitter {
             size: 0, // Default to 0, let Rust ShadowState calculation handle risk sizing
             status: "PENDING",
             received_at: new Date().toISOString(),
+            t_signal: signal.timestamp,
+            t_exchange: signal.t_exchange,
             metadata: {
                 confidence: signal.confidence,
                 leverage: signal.leverage,

@@ -9,11 +9,15 @@ use sha2::Sha256;
 use hex;
 use chrono::Utc;
 
+use crate::rate_limiter::TokenBucket;
+
 pub struct BinanceAdapter {
     api_key: String,
     secret_key: String,
     base_url: String,
     client: Client,
+    http_limiter: TokenBucket,
+    ws_limiter: TokenBucket,
 }
 
 impl BinanceAdapter {
@@ -22,11 +26,18 @@ impl BinanceAdapter {
         let secret_key = env::var("BINANCE_SECRET_KEY").expect("BINANCE_SECRET_KEY not set");
         let base_url = env::var("BINANCE_BASE_URL").unwrap_or_else(|_| "https://testnet.binancefuture.com".to_string());
 
+        // HTTP Limit: ~2400 req/min => 40 req/sec. Burst 50.
+        let http_limiter = TokenBucket::new(50, 40.0);
+        // WS Limit: ~5 messages/sec (orders). Burst 10.
+        let ws_limiter = TokenBucket::new(10, 5.0);
+
         BinanceAdapter {
             api_key,
             secret_key,
             base_url,
             client: Client::new(),
+            http_limiter,
+            ws_limiter,
         }
     }
 
@@ -55,6 +66,9 @@ impl ExchangeAdapter for BinanceAdapter {
     }
 
     async fn place_order(&self, order: OrderRequest) -> Result<OrderResponse, ExchangeError> {
+        // Enforce Rate Limit (HTTP)
+        self.http_limiter.acquire(1).await;
+
         let endpoint = "/fapi/v1/order";
         let timestamp = Utc::now().timestamp_millis();
         
@@ -116,10 +130,15 @@ impl ExchangeAdapter for BinanceAdapter {
             status: json["status"].as_str().unwrap_or("UNKNOWN").to_string(),
             avg_price: json["avgPrice"].as_str().and_then(|s| rust_decimal::Decimal::from_str_exact(s).ok()),
             executed_qty: json["executedQty"].as_str().and_then(|s| rust_decimal::Decimal::from_str_exact(s).ok()).unwrap_or_default(),
+            t_ack: Utc::now().timestamp_millis(),
+            t_exchange: None,
         })
     }
 
     async fn cancel_order(&self, symbol: &str, order_id: &str) -> Result<OrderResponse, ExchangeError> {
+        // Enforce Rate Limit (HTTP)
+        self.http_limiter.acquire(1).await;
+
         let endpoint = "/fapi/v1/order";
         let timestamp = Utc::now().timestamp_millis();
         
@@ -153,6 +172,8 @@ impl ExchangeAdapter for BinanceAdapter {
             status: "CANCELED".to_string(),
             avg_price: None,
             executed_qty: Decimal::ZERO,
+            t_ack: Utc::now().timestamp_millis(),
+            t_exchange: None,
         })
     }
 

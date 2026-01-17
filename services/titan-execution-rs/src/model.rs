@@ -78,7 +78,19 @@ pub struct Intent {
     #[serde(default)]
     pub size: Decimal,
     pub status: IntentStatus,
-    pub received_at: DateTime<Utc>,
+    
+    // Time enforcement
+    #[serde(alias = "timestamp")]
+    pub t_signal: i64, 
+    pub t_analysis: Option<i64>,
+    pub t_decision: Option<i64>,
+    pub t_ingress: Option<i64>,
+    pub t_exchange: Option<i64>,
+
+    #[serde(default)]
+    pub max_slippage_bps: Option<i32>,
+
+    #[serde(default)]
     pub rejection_reason: Option<String>,
     pub regime_state: Option<i32>,
     pub phase: Option<i32>,
@@ -114,6 +126,23 @@ pub struct TradeRecord {
     pub closed_at: DateTime<Utc>,
     pub close_reason: String,
     pub metadata: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FillReport {
+    pub fill_id: String,
+    pub signal_id: String,
+    pub symbol: String,
+    pub side: Side,
+    pub price: Decimal,
+    pub qty: Decimal,
+    pub fee: Decimal,
+    pub fee_currency: String,
+    pub t_signal: i64,
+    pub t_ingress: i64,
+    pub t_decision: i64,
+    pub t_ack: i64,
+    pub t_exchange: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

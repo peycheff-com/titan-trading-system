@@ -1,6 +1,6 @@
 /**
  * Jest Test Setup for Titan Phase 3 - The Sentinel
- * 
+ *
  * This file runs before each test file and sets up the testing environment.
  */
 
@@ -26,27 +26,9 @@ afterAll(() => {
   console.debug = originalConsole.debug;
 });
 
-// Global test utilities
-declare global {
-  namespace NodeJS {
-    interface Global {
-      testUtils: {
-        randomPrice: (min?: number, max?: number) => number;
-        randomBasis: (min?: number, max?: number) => number;
-        randomSize: (min?: number, max?: number) => number;
-      };
-    }
-  }
-}
-
 // Add test utilities
-(global as any).testUtils = {
-  randomPrice: (min = 10000, max = 100000) => 
-    Math.random() * (max - min) + min,
-  randomBasis: (min = -0.05, max = 0.05) => 
-    Math.random() * (max - min) + min,
-  randomSize: (min = 0.001, max = 10) => 
-    Math.random() * (max - min) + min,
+global.testUtils = {
+  randomPrice: (min = 10000, max = 100000) => Math.random() * (max - min) + min,
+  randomBasis: (min = -0.05, max = 0.05) => Math.random() * (max - min) + min,
+  randomSize: (min = 0.001, max = 10) => Math.random() * (max - min) + min,
 };
-
-export {};

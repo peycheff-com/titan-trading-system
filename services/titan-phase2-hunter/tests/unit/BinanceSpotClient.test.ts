@@ -8,7 +8,12 @@ import WebSocket from "ws";
 
 // Explicitly mock ws module
 jest.mock("ws", () => {
-  return jest.fn();
+  const MockWebSocket = jest.fn();
+  (MockWebSocket as any).CONNECTING = 0;
+  (MockWebSocket as any).OPEN = 1;
+  (MockWebSocket as any).CLOSING = 2;
+  (MockWebSocket as any).CLOSED = 3;
+  return MockWebSocket;
 });
 
 jest.mock("node-fetch", () => jest.fn());

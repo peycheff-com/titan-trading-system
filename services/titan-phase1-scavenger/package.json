@@ -22,7 +22,7 @@
     "mexc"
   ],
   "engines": {
-    "node": ">=24.0.0"
+    "node": ">=20.0.0"
   },
   "author": "",
   "license": "ISC",

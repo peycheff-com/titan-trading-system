@@ -148,3 +148,21 @@ CREATE TABLE IF NOT EXISTS operators (
 );
 
 CREATE INDEX IF NOT EXISTS idx_operators_operator_id ON operators(operator_id);
+
+-- Fills (Accounting)
+CREATE TABLE IF NOT EXISTS fills (
+  fill_id VARCHAR(100) PRIMARY KEY,
+  signal_id VARCHAR(100),
+  symbol VARCHAR(20) NOT NULL,
+  side VARCHAR(10) NOT NULL,
+  price DECIMAL(18, 8) NOT NULL,
+  qty DECIMAL(18, 8) NOT NULL,
+  fee DECIMAL(18, 8),
+  fee_currency VARCHAR(10),
+  t_signal BIGINT,
+  t_exchange BIGINT,
+  t_ingress BIGINT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_fills_signal_id ON fills(signal_id);

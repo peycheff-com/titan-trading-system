@@ -70,6 +70,7 @@ export interface HologramState {
   status: HologramStatus;
   veto: VetoResult;
   rsScore: number;
+  realizedExpectancy?: number; // 2026: Feedback loop
 }
 
 export type HologramStatus = "A+" | "B" | "CONFLICT" | "NO_PLAY";
@@ -114,6 +115,7 @@ export interface FVG {
   timestamp: number;
   mitigated: boolean;
   fillPercent: number; // 0-100
+  invalidationCondition?: string; // e.g. "Price > 100"
 }
 
 export interface OrderBlock {
@@ -124,6 +126,7 @@ export interface OrderBlock {
   timestamp: number;
   mitigated: boolean;
   confidence: number; // 0-100
+  invalidationCondition?: string;
 }
 
 export interface LiquidityPool {
@@ -133,6 +136,7 @@ export interface LiquidityPool {
   barIndex: number;
   timestamp: number;
   swept: boolean;
+  invalidationCondition?: string;
 }
 
 export type POI = FVG | OrderBlock | LiquidityPool;

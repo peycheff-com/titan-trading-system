@@ -39,7 +39,7 @@ impl ShadowState {
     }
 
     pub fn process_intent(&mut self, mut intent: Intent) -> Intent {
-        intent.received_at = Utc::now();
+        intent.t_ingress = Some(Utc::now().timestamp_millis());
         intent.status = IntentStatus::Pending;
         
         // Clone for storage and return

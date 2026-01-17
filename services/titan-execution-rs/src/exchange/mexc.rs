@@ -144,6 +144,8 @@ impl ExchangeAdapter for MexcAdapter {
             status: "NEW".to_string(), // MEXC Async submit
             avg_price: None,
             executed_qty: Decimal::ZERO,
+            t_ack: chrono::Utc::now().timestamp_millis(),
+            t_exchange: None,
         })
     }
 
@@ -163,6 +165,8 @@ impl ExchangeAdapter for MexcAdapter {
             status: "CANCELLED".to_string(),
             avg_price: None,
             executed_qty: Decimal::ZERO,
+            t_ack: chrono::Utc::now().timestamp_millis(),
+            t_exchange: None,
         })
     }
 

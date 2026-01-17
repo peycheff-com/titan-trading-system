@@ -16,10 +16,14 @@ type HmacSha256 = Hmac<Sha256>;
 const BASE_URL: &str = "https://api.bybit.com";
 const RECV_WINDOW: &str = "5000";
 
+use crate::rate_limiter::TokenBucket;
+
 pub struct BybitAdapter {
     client: Client,
     api_key: String,
     api_secret: String,
+    order_limiter: TokenBucket,
+    query_limiter: TokenBucket,
 }
 
 impl BybitAdapter {
@@ -27,10 +31,22 @@ impl BybitAdapter {
         let api_key = env::var("BYBIT_API_KEY").unwrap_or_default();
         let api_secret = env::var("BYBIT_SECRET_KEY").unwrap_or_default();
         
+        let order_rps = env::var("BYBIT_ORDER_RPS")
+            .unwrap_or("10".to_string())
+            .parse::<f64>()
+            .unwrap_or(10.0);
+
+        let query_rps = env::var("BYBIT_QUERY_RPS")
+            .unwrap_or("50".to_string()) // Higher default for queries
+            .parse::<f64>()
+            .unwrap_or(50.0);
+            
         Self {
             client: Client::new(),
             api_key,
             api_secret,
+            order_limiter: TokenBucket::new(20, order_rps), // Burst 20, Custom RPS
+            query_limiter: TokenBucket::new(50, query_rps), // Burst 50, Higher RPS
         }
     }
 
@@ -57,6 +73,14 @@ impl BybitAdapter {
             String::new()
         };
         
+        if method != Method::GET {
+            // Write/Order operations
+            self.order_limiter.acquire(1).await;
+        } else {
+            // Read/Query operations
+            self.query_limiter.acquire(1).await;
+        }
+
         let params_for_sign = if method == Method::GET && !body_str.is_empty() {
              // For GET, we assume payload is query params, but Bybit V5 usually handles queries in URL
              // If we passed query string, proper implementation looks different.
@@ -157,6 +181,8 @@ impl ExchangeAdapter for BybitAdapter {
             status: resp.order_status,
             avg_price: None, // Bybit Async response doesn't give fill price immediately usually
             executed_qty: Decimal::ZERO, // Need to fetch or wait for ws
+            t_ack: chrono::Utc::now().timestamp_millis(),
+            t_exchange: None, // Not readily available in Async response
         })
     }
 
@@ -176,6 +202,8 @@ impl ExchangeAdapter for BybitAdapter {
             status: "CANCELLED".to_string(),
             avg_price: None,
             executed_qty: Decimal::ZERO,
+            t_ack: chrono::Utc::now().timestamp_millis(),
+            t_exchange: None,
         })
     }
 

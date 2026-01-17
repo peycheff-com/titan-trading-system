@@ -453,6 +453,9 @@ export function loadConfigFromEnvironment(): Partial<TitanBrainConfig> {
       correlationUpdateInterval: parseInt(
         process.env.RISK_CORRELATION_UPDATE_INTERVAL || "300000",
       ),
+      minStopDistanceMultiplier: parseFloat(
+        process.env.RISK_MIN_STOP_DISTANCE_MULTIPLIER || "1.5",
+      ),
     };
   }
 

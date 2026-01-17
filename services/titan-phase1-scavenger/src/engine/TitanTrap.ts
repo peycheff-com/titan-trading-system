@@ -14,6 +14,7 @@ import { EventEmitter } from "../events/EventEmitter.js";
 import { ExecutionClient, IntentSignal } from "@titan/shared";
 import { VolatilityScaler } from "../calculators/VolatilityScaler.js";
 import { CVDCalculator } from "../calculators/CVDCalculator.js";
+import { LeadLagDetector } from "../calculators/LeadLagDetector.js";
 import { PredictionMarketDetector } from "../detectors/PredictionMarketDetector.js";
 import { PolymarketClient } from "../exchanges/PolymarketClient.js";
 import { TripwireCalculators } from "../calculators/TripwireCalculators.js";
@@ -71,7 +72,13 @@ export class TitanTrap {
   private ultimateProtocol?: any; // TODO: Type as UltimateBulgariaProtocol
   private volatilityScaler: VolatilityScaler;
   private cvdCalculator: CVDCalculator;
+  private leadLagDetector: LeadLagDetector;
   private predictionDetector: PredictionMarketDetector;
+
+  // Anti-Gaming State
+  private lastActivationTime: Map<string, number>;
+  private failedAttempts: Map<string, number>;
+  private blacklistedUntil: Map<string, number>;
 
   constructor(dependencies: {
     binanceClient: any;
@@ -105,6 +112,14 @@ export class TitanTrap {
 
     // Initialize CVD Calculator for smart filtering
     this.cvdCalculator = new CVDCalculator();
+
+    // Initialize Lead/Lag Detector
+    this.leadLagDetector = new LeadLagDetector();
+
+    // --- ANTI-GAMING STATE (2026 Requirement) ---
+    this.lastActivationTime = new Map();
+    this.failedAttempts = new Map();
+    this.blacklistedUntil = new Map();
 
     // Initialize Prediction Market Detector (2026)
     const polymarket = new PolymarketClient();
@@ -437,6 +452,18 @@ export class TitanTrap {
       const symbolList = top20.map((s) => s.symbol);
       await this.binanceClient.subscribeAggTrades(symbolList);
 
+      // 6. Subscribe to Bybit Perps for Lead/Lag detection
+      if (
+        this.bybitClient &&
+        typeof this.bybitClient.subscribeTicker === "function"
+      ) {
+        this.bybitClient.subscribeTicker(
+          symbolList,
+          this.onBybitTicker.bind(this),
+        );
+        console.log(`   ✅ Subscribed to Bybit Tickers for Lead/Lag detection`);
+      }
+
       const duration = Date.now() - startTime;
 
       // Warn if pre-computation exceeded 60 seconds
@@ -556,12 +583,19 @@ export class TitanTrap {
    * 4. If trades >= 50, activate trap and trigger execution
    */
   onBinanceTick(symbol: string, price: number, trades: Trade[]): void {
+    // 0. CHECK BLACKLIST (Anti-Gaming)
+    const blacklistedTime = this.blacklistedUntil.get(symbol);
+    if (blacklistedTime && Date.now() < blacklistedTime) {
+      return; // Skip blacklisted symbol
+    }
+
     const traps = this.trapMap.get(symbol);
     if (!traps) return;
 
     // Record price with exchange timestamp (not Date.now())
     const exchangeTime = trades[0].time;
     this.velocityCalculator.recordPrice(symbol, price, exchangeTime);
+    this.leadLagDetector.recordPrice(symbol, "BINANCE", price, exchangeTime);
 
     // Feed trades to CVD Calculator
     for (const trade of trades) {
@@ -634,13 +668,22 @@ export class TitanTrap {
             elapsed,
           });
 
-          this.fire(trap, microCVD);
+          const totalVolume = counter.buyVolume + counter.sellVolume;
+          this.fire(trap, microCVD, totalVolume);
         }
 
         // Reset counter
         this.volumeCounters.delete(symbol);
       }
     }
+  }
+
+  /**
+   * Handle Bybit Ticker Updates (Execution/Perp Layer)
+   * Feeds data to Lead/Lag Detector
+   */
+  onBybitTicker(symbol: string, price: number, timestamp: number): void {
+    this.leadLagDetector.recordPrice(symbol, "BYBIT", price, timestamp);
   }
 
   /**
@@ -653,10 +696,21 @@ export class TitanTrap {
    * 2. Calculate price velocity
    * 3. Send PREPARE via Fast Path IPC
    */
-  async fire(trap: Tripwire, microCVD?: number): Promise<void> {
+  async fire(
+    trap: Tripwire,
+    microCVD?: number,
+    burstVolume?: number,
+  ): Promise<void> {
     let signalId: string | undefined;
 
     try {
+      // 0. COOLDOWN CHECK (Anti-Gaming)
+      const lastActive = this.lastActivationTime.get(trap.symbol) || 0;
+      if (Date.now() - lastActive < 1000) {
+        console.log(`   ⏳ Cooldown active for ${trap.symbol}, skipping...`);
+        return;
+      }
+
       // IDEMPOTENCY CHECK: Prevent duplicate activation (Requirement 7.6)
       if (trap.activated) {
         console.warn(`⚠️ Trap already activated: ${trap.symbol}`);
@@ -677,7 +731,9 @@ export class TitanTrap {
       // --- MICRO-CVD VALIDATION (2026 Optimization) ---
       // Detection Layer passes microCVD from the breakout burst.
       // We must check if the flow supports the breakout.
-      if (microCVD !== undefined) {
+      if (
+        microCVD !== undefined && burstVolume !== undefined && burstVolume > 0
+      ) {
         const isCVDAligned = (trap.direction === "LONG" && microCVD > 0) ||
           (trap.direction === "SHORT" && microCVD < 0);
 
@@ -690,16 +746,35 @@ export class TitanTrap {
           );
           return;
         }
+
+        // --- SECONDARY CONFIRMATION: DIRECTIONAL QUALITY (2026) ---
+        // Ensure the burst is not just churn.
+        // Require > 30% of volume to be net directional.
+        const directionalRatio = Math.abs(microCVD) / burstVolume;
+        if (directionalRatio < 0.3) {
+          console.warn(
+            `🛑 BURST QUALITY VETO: Low directional conviction. Ratio: ${
+              directionalRatio.toFixed(2)
+            } < 0.3. (CVD: ${microCVD.toFixed(4)} / Vol: ${
+              burstVolume.toFixed(4)
+            })`,
+          );
+          return;
+        }
+
         console.log(
           `✅ MICRO-CVD CONFIRMED: ${
             microCVD.toFixed(4)
-          } aligns with ${trap.direction}`,
+          } aligns with ${trap.direction} (Quality: ${
+            directionalRatio.toFixed(2)
+          })`,
         );
       }
 
       // Mark trap as activated
       trap.activated = true;
       trap.activatedAt = Date.now();
+      this.lastActivationTime.set(trap.symbol, Date.now());
 
       console.log(`🔥 FIRING TRAP: ${trap.symbol} ${trap.trapType}`);
 
@@ -754,6 +829,16 @@ export class TitanTrap {
         ? await this.bybitClient.getCurrentPrice(trap.symbol)
         : trap.triggerPrice;
       const velocity = this.velocityCalculator.calcVelocity(trap.symbol);
+
+      // --- LEAD/LAG CHECK (2026 Requirement) ---
+      const leaderStatus = this.leadLagDetector.getLeader(trap.symbol);
+      console.log(`   🏁 Lead/Lag Status: ${leaderStatus} leads`);
+
+      let maxSlippageBps = 50; // Default 0.5%
+      if (leaderStatus === "BYBIT") {
+        maxSlippageBps = 30; // Tighter if Perps leading (chasing)
+        console.log(`   ⚠️ Perps Leading: Tightening slippage to 30bps`);
+      }
 
       // --- DYNAMIC VELOCITY THRESHOLDS (2026 Optimization) ---
       // Use ATR-based metrics if available to scale velocity thresholds
@@ -881,6 +966,7 @@ export class TitanTrap {
         leverage: trap.leverage,
         velocity,
         trap_type: trap.trapType,
+        max_slippage_bps: maxSlippageBps,
         timestamp: Date.now(),
       };
 
@@ -943,6 +1029,9 @@ export class TitanTrap {
           if (confirmResult.rejected) {
             throw new Error(`CONFIRM_REJECTED: ${confirmResult.reason}`);
           }
+
+          // Reset failure count on success
+          this.failedAttempts.set(trap.symbol, 0);
 
           const confirmLatency = Date.now() - confirmStartTime;
           const totalLatency = Date.now() - ipcStartTime;
@@ -1009,6 +1098,9 @@ export class TitanTrap {
             reason: "trap_invalidated",
             timestamp: Date.now(),
           });
+
+          // Increment failures on ABORT
+          this.handleFailure(trap.symbol);
         }
       } catch (ipcError) {
         // Fast Path IPC failed, fall back to HTTP POST
@@ -1077,6 +1169,8 @@ export class TitanTrap {
       }
     } catch (error) {
       console.error(`❌ Trap execution failed: ${trap.symbol}`, error);
+
+      this.handleFailure(trap.symbol);
 
       // If we have a signal_id, send ABORT
       if (signalId) {
@@ -1306,5 +1400,30 @@ export class TitanTrap {
    */
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Handle execution failure (Anti-Gaming Blacklist)
+   */
+  private handleFailure(symbol: string): void {
+    const currentFailures = (this.failedAttempts.get(symbol) || 0) + 1;
+    this.failedAttempts.set(symbol, currentFailures);
+
+    console.log(`   ⚠️ Failure Count for ${symbol}: ${currentFailures}/3`);
+
+    if (currentFailures >= 3) {
+      console.warn(
+        `   ⛔ BLACKLISTING ${symbol} for 5 minutes (Too many failures)`,
+      );
+      this.blacklistedUntil.set(symbol, Date.now() + 5 * 60 * 1000); // 5 mins
+      this.failedAttempts.set(symbol, 0); // Reset count
+
+      this.eventEmitter.emit("SYMBOL_BLACKLISTED", {
+        symbol,
+        reason: "too_many_failures",
+        durationMs: 300000,
+        timestamp: Date.now(),
+      });
+    }
   }
 }

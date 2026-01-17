@@ -43,6 +43,7 @@ export {
 
 // Breaker types
 export {
+  BreakerAction,
   BreakerCheckInput,
   BreakerEvent,
   BreakerStatus,
