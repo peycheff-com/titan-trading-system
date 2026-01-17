@@ -3,7 +3,7 @@
  * Contains all default values for the system
  */
 
-import { EquityTier, TitanBrainConfig } from "../types/index.js";
+import { EquityTier, TitanBrainConfig } from '../types/index.js';
 
 export const defaultConfig: TitanBrainConfig = {
   brain: {
@@ -48,7 +48,7 @@ export const defaultConfig: TitanBrainConfig = {
   capitalFlow: {
     sweepThreshold: 1.2, // 20% excess triggers sweep
     reserveLimit: 200, // $200 minimum
-    sweepSchedule: "0 0 * * *", // Daily at midnight UTC
+    sweepSchedule: '0 0 * * *', // Daily at midnight UTC
     maxRetries: 3,
     retryBaseDelay: 1000, // 1 second
   },
@@ -62,25 +62,25 @@ export const defaultConfig: TitanBrainConfig = {
   },
 
   database: {
-    host: "localhost",
+    host: 'localhost',
     port: 5432,
-    database: "titan_brain",
-    user: "postgres",
-    password: "postgres",
+    database: 'titan_brain',
+    user: 'postgres',
+    password: 'postgres',
     maxConnections: 20,
     idleTimeout: 30000,
   },
 
   redis: {
-    url: "redis://localhost:6379",
+    url: 'redis://localhost:6379',
     maxRetries: 3,
     retryDelay: 1000,
   },
 
   server: {
-    host: "0.0.0.0",
+    host: '0.0.0.0',
     port: 3100,
-    corsOrigins: ["http://localhost:3000"],
+    corsOrigins: ['http://localhost:3000'],
   },
 
   notifications: {
@@ -116,10 +116,10 @@ export function loadConfigFromEnv(): Partial<TitanBrainConfig> {
     config.database = {
       ...defaultConfig.database,
       host: process.env.DB_HOST,
-      port: parseInt(process.env.DB_PORT || "5432"),
-      database: process.env.DB_NAME || "titan_brain",
-      user: process.env.DB_USER || "postgres",
-      password: process.env.DB_PASSWORD || "postgres",
+      port: parseInt(process.env.DB_PORT || '5432'),
+      database: process.env.DB_NAME || 'titan_brain',
+      user: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD || 'postgres',
     };
   }
 
@@ -135,8 +135,8 @@ export function loadConfigFromEnv(): Partial<TitanBrainConfig> {
   if (process.env.SERVER_PORT) {
     config.server = {
       ...defaultConfig.server,
-      host: process.env.SERVER_HOST || "0.0.0.0",
-      port: parseInt(process.env.PORT || process.env.SERVER_PORT || "3100"),
+      host: process.env.SERVER_HOST || '0.0.0.0',
+      port: parseInt(process.env.PORT || process.env.SERVER_PORT || '3100'),
     };
   }
 
@@ -158,9 +158,7 @@ export function loadConfigFromEnv(): Partial<TitanBrainConfig> {
 /**
  * Merge configurations with defaults
  */
-export function mergeConfig(
-  partial: Partial<TitanBrainConfig>,
-): TitanBrainConfig {
+export function mergeConfig(partial: Partial<TitanBrainConfig>): TitanBrainConfig {
   return {
     brain: { ...defaultConfig.brain, ...partial.brain },
     allocationEngine: {

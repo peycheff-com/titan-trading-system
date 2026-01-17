@@ -14,6 +14,8 @@ export {
     type IntentSignal,
     type IPCClientConfig,
     type IPCMetrics,
+    type LatencyProfile,
     type PrepareResponse,
+    RegimeState,
     type SignalSource,
 } from "./FastPathClient.js";

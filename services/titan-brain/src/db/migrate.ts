@@ -4,11 +4,11 @@
  */
 
 // Load environment variables from .env file
-import "dotenv/config";
+import 'dotenv/config';
 
-import { Pool } from "pg";
-import { DatabaseManager } from "./DatabaseManager.js";
-import * as migration001 from "./migrations/001_initial_schema.js";
+import { Pool } from 'pg';
+import { DatabaseManager } from './DatabaseManager.js';
+import * as migration001 from './migrations/001_initial_schema.js';
 
 interface Migration {
   version: number;
@@ -17,9 +17,7 @@ interface Migration {
   down: (pool: Pool) => Promise<void>;
 }
 
-const migrations: Migration[] = [
-  migration001,
-];
+const migrations: Migration[] = [migration001];
 
 /**
  * Run all pending migrations
@@ -42,7 +40,7 @@ export async function runMigrations(db: DatabaseManager): Promise<void> {
 
   // Get applied migrations
   const result = await db.query<{ version: number }>(
-    "SELECT version FROM migrations ORDER BY version",
+    'SELECT version FROM migrations ORDER BY version',
   );
   const appliedVersions = new Set(result.rows.map((r) => r.version));
 
@@ -70,25 +68,22 @@ export async function runMigrations(db: DatabaseManager): Promise<void> {
         throw error;
       }
 
-      await db.query(
-        "INSERT INTO migrations (version, name) VALUES ($1, $2)",
-        [migration.version, migration.name],
-      );
+      await db.query('INSERT INTO migrations (version, name) VALUES ($1, $2)', [
+        migration.version,
+        migration.name,
+      ]);
 
       console.log(`Migration ${migration.version} completed`);
     }
   }
 
-  console.log("All migrations completed");
+  console.log('All migrations completed');
 }
 
 /**
  * Run migration SQL for a specific version
  */
-async function runMigrationSQL(
-  db: DatabaseManager,
-  version: number,
-): Promise<void> {
+async function runMigrationSQL(db: DatabaseManager, version: number): Promise<void> {
   if (version === 1) {
     // Initial schema migration
     await db.query(`
@@ -249,11 +244,11 @@ async function runMigrationSQL(
 export async function rollbackMigration(db: DatabaseManager): Promise<void> {
   // Get last applied migration
   const result = await db.query<{ version: number }>(
-    "SELECT version FROM migrations ORDER BY version DESC LIMIT 1",
+    'SELECT version FROM migrations ORDER BY version DESC LIMIT 1',
   );
 
   if (result.rows.length === 0) {
-    console.log("No migrations to rollback");
+    console.log('No migrations to rollback');
     return;
   }
 
@@ -268,23 +263,23 @@ export async function rollbackMigration(db: DatabaseManager): Promise<void> {
 
   // For SQLite compatibility, we'll handle rollback through DatabaseManager
   // For now, just remove the migration record (tables will remain)
-  console.log("Note: Table rollback not implemented for SQLite compatibility");
+  console.log('Note: Table rollback not implemented for SQLite compatibility');
 
-  await db.query("DELETE FROM migrations WHERE version = $1", [lastVersion]);
+  await db.query('DELETE FROM migrations WHERE version = $1', [lastVersion]);
 
   console.log(`Migration ${migration.version} rolled back`);
 }
 
 // CLI entry point
-if (process.argv[1]?.endsWith("migrate.js")) {
-  const command = process.argv[2] || "up";
+if (process.argv[1]?.endsWith('migrate.js')) {
+  const command = process.argv[2] || 'up';
 
   const config = {
-    host: process.env.DB_HOST || "localhost",
-    port: parseInt(process.env.DB_PORT || "5432"),
-    database: process.env.DB_NAME || "titan_brain",
-    user: process.env.DB_USER || "postgres",
-    password: process.env.DB_PASSWORD || "postgres",
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '5432'),
+    database: process.env.DB_NAME || 'titan_brain',
+    user: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD || 'postgres',
     maxConnections: 10,
     idleTimeout: 30000,
   };
@@ -295,9 +290,9 @@ if (process.argv[1]?.endsWith("migrate.js")) {
     try {
       await db.connect();
 
-      if (command === "up") {
+      if (command === 'up') {
         await runMigrations(db);
-      } else if (command === "down") {
+      } else if (command === 'down') {
         await rollbackMigration(db);
       } else {
         console.error(`Unknown command: ${command}`);
@@ -307,7 +302,7 @@ if (process.argv[1]?.endsWith("migrate.js")) {
       await db.disconnect();
       process.exit(0);
     } catch (error) {
-      console.error("Migration failed:", error);
+      console.error('Migration failed:', error);
       process.exit(1);
     }
   })();

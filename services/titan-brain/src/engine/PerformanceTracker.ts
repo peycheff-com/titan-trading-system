@@ -1,7 +1,7 @@
 /**
  * PerformanceTracker - Tracks PnL and calculates rolling Sharpe Ratios
  * Enables performance-based throttling of phase allocations
- * 
+ *
  * Requirements: 2.1, 2.2, 2.3, 2.4, 2.8
  */
 
@@ -34,7 +34,7 @@ export class PerformanceTracker {
 
   /**
    * Record a trade for a phase with database persistence
-   * 
+   *
    * @param phaseId - The phase that executed the trade
    * @param pnl - Profit/loss in USD
    * @param timestamp - Unix timestamp in milliseconds
@@ -46,7 +46,7 @@ export class PerformanceTracker {
     pnl: number,
     timestamp: number,
     symbol?: string,
-    side?: 'BUY' | 'SELL'
+    side?: 'BUY' | 'SELL',
   ): Promise<void> {
     if (!this.db) {
       throw new Error('Database not configured for PerformanceTracker');
@@ -55,22 +55,18 @@ export class PerformanceTracker {
     await this.db.query(
       `INSERT INTO phase_trades (phase_id, timestamp, pnl, symbol, side)
        VALUES ($1, $2, $3, $4, $5)`,
-      [phaseId, timestamp, pnl, symbol ?? null, side ?? null]
+      [phaseId, timestamp, pnl, symbol ?? null, side ?? null],
     );
   }
 
-
   /**
    * Get trade records for a phase within a time window
-   * 
+   *
    * @param phaseId - The phase to query
    * @param windowDays - Number of days to look back
    * @returns Array of trade records
    */
-  async getTradesInWindow(
-    phaseId: PhaseId,
-    windowDays: number
-  ): Promise<TradeRecord[]> {
+  async getTradesInWindow(phaseId: PhaseId, windowDays: number): Promise<TradeRecord[]> {
     if (!this.db) {
       return [];
     }
@@ -89,7 +85,7 @@ export class PerformanceTracker {
        FROM phase_trades
        WHERE phase_id = $1 AND timestamp >= $2
        ORDER BY timestamp ASC`,
-      [phaseId, windowStart]
+      [phaseId, windowStart],
     );
 
     return result.rows.map((row) => ({
@@ -104,7 +100,7 @@ export class PerformanceTracker {
 
   /**
    * Get the number of trades for a phase within a time window
-   * 
+   *
    * @param phaseId - The phase to query
    * @param windowDays - Number of days to look back
    * @returns Number of trades
@@ -120,7 +116,7 @@ export class PerformanceTracker {
       `SELECT COUNT(*) as count
        FROM phase_trades
        WHERE phase_id = $1 AND timestamp >= $2`,
-      [phaseId, windowStart]
+      [phaseId, windowStart],
     );
 
     return parseInt(result.rows[0]?.count ?? '0', 10);
@@ -128,18 +124,15 @@ export class PerformanceTracker {
 
   /**
    * Calculate the rolling Sharpe Ratio for a phase
-   * 
+   *
    * Sharpe Ratio = (Mean Return - Risk Free Rate) / Std Dev of Returns
    * We assume risk-free rate = 0 for simplicity
-   * 
+   *
    * @param phaseId - The phase to calculate for
    * @param windowDays - Rolling window in days (default: config.windowDays)
    * @returns Sharpe ratio (annualized), or 0 if insufficient data
    */
-  async getSharpeRatio(
-    phaseId: PhaseId,
-    windowDays?: number
-  ): Promise<number> {
+  async getSharpeRatio(phaseId: PhaseId, windowDays?: number): Promise<number> {
     const window = windowDays ?? this.config.windowDays;
     const trades = await this.getTradesInWindow(phaseId, window);
 
@@ -149,7 +142,7 @@ export class PerformanceTracker {
   /**
    * Calculate Sharpe ratio from an array of PnL values
    * Pure function for testability
-   * 
+   *
    * @param pnlValues - Array of PnL values
    * @returns Annualized Sharpe ratio
    */
@@ -194,16 +187,15 @@ export class PerformanceTracker {
     return Math.sqrt(variance);
   }
 
-
   /**
    * Get the performance modifier for a phase based on Sharpe ratio
-   * 
+   *
    * Modifier logic:
    * - Sharpe < malusThreshold (0): Apply malusMultiplier (0.5x)
    * - Sharpe > bonusThreshold (2.0): Apply bonusMultiplier (1.2x)
    * - Otherwise: 1.0x (no modification)
    * - Insufficient trades (< minTradeCount): 1.0x (no modification)
-   * 
+   *
    * @param phaseId - The phase to get modifier for
    * @returns Performance modifier between 0.5 and 1.2
    */
@@ -223,7 +215,7 @@ export class PerformanceTracker {
   /**
    * Calculate modifier from Sharpe ratio
    * Pure function for testability
-   * 
+   *
    * @param sharpeRatio - The Sharpe ratio
    * @returns Modifier between malusMultiplier and bonusMultiplier
    */
@@ -244,7 +236,7 @@ export class PerformanceTracker {
 
   /**
    * Get full performance metrics for a phase
-   * 
+   *
    * @param phaseId - The phase to get metrics for
    * @returns PhasePerformance object with all metrics
    */
@@ -264,9 +256,7 @@ export class PerformanceTracker {
 
     const sharpeRatio = this.calculateSharpeRatio(pnlValues);
     const modifier =
-      tradeCount >= this.config.minTradeCount
-        ? this.calculateModifier(sharpeRatio)
-        : 1.0;
+      tradeCount >= this.config.minTradeCount ? this.calculateModifier(sharpeRatio) : 1.0;
 
     return {
       phaseId,
@@ -282,7 +272,7 @@ export class PerformanceTracker {
 
   /**
    * Get performance metrics for all phases
-   * 
+   *
    * @returns Array of PhasePerformance for all phases
    */
   async getAllPhasePerformance(): Promise<PhasePerformance[]> {
@@ -293,7 +283,7 @@ export class PerformanceTracker {
   /**
    * Persist performance metrics snapshot to database
    * Called periodically (every 24 hours per Requirement 2.6)
-   * 
+   *
    * @param phaseId - The phase to persist metrics for
    */
   async persistPerformanceSnapshot(phaseId: PhaseId): Promise<void> {
@@ -315,7 +305,7 @@ export class PerformanceTracker {
         performance.tradeCount,
         performance.sharpeRatio,
         performance.modifier,
-      ]
+      ],
     );
   }
 

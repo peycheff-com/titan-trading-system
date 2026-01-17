@@ -1,14 +1,11 @@
 /**
  * Manual Override Service
  * Handles manual allocation overrides with operator authentication
- * 
+ *
  * Requirements: 9.7, 9.8
  */
 
-import {
-  AllocationVector,
-  PhaseId,
-} from '../types/index.js';
+import { AllocationVector, PhaseId } from '../types/index.js';
 import { DatabaseManager } from '../db/DatabaseManager.js';
 
 export interface ManualOverride {
@@ -67,7 +64,7 @@ export class ManualOverrideService {
   /**
    * Authenticate an operator
    * Requirement 9.7: Implement operator authentication
-   * 
+   *
    * @param operatorId - Operator identifier
    * @param password - Operator password
    * @returns True if authentication successful
@@ -88,8 +85,8 @@ export class ManualOverrideService {
       }
 
       // Check permissions
-      const hasRequiredPermissions = this.config.requiredPermissions.every(
-        perm => credentials.permissions.includes(perm)
+      const hasRequiredPermissions = this.config.requiredPermissions.every((perm) =>
+        credentials.permissions.includes(perm),
       );
 
       if (!hasRequiredPermissions) {
@@ -99,7 +96,7 @@ export class ManualOverrideService {
 
       // Update last login
       await this.updateLastLogin(operatorId);
-      
+
       console.log(`Operator ${operatorId} authenticated successfully`);
       return true;
     } catch (error) {
@@ -111,7 +108,7 @@ export class ManualOverrideService {
   /**
    * Create a manual allocation override
    * Requirement 9.7: Create admin endpoint for allocation override
-   * 
+   *
    * @param request - Override request with operator credentials
    * @returns Created override or null if failed
    */
@@ -133,9 +130,9 @@ export class ManualOverrideService {
       // Calculate expiration time
       const durationHours = Math.min(
         request.durationHours || this.config.maxOverrideDurationHours,
-        this.config.maxOverrideDurationHours
+        this.config.maxOverrideDurationHours,
       );
-      const expiresAt = Date.now() + (durationHours * 60 * 60 * 1000);
+      const expiresAt = Date.now() + durationHours * 60 * 60 * 1000;
 
       // Create override record
       const override: ManualOverride = {
@@ -156,7 +153,9 @@ export class ManualOverrideService {
       this.activateWarningBanner();
 
       console.log(`Manual override created by operator ${request.operatorId}`);
-      console.log(`Override allocation: w1=${request.allocation.w1}, w2=${request.allocation.w2}, w3=${request.allocation.w3}`);
+      console.log(
+        `Override allocation: w1=${request.allocation.w1}, w2=${request.allocation.w2}, w3=${request.allocation.w3}`,
+      );
       console.log(`Expires at: ${new Date(expiresAt).toISOString()}`);
 
       return savedOverride;
@@ -168,7 +167,7 @@ export class ManualOverrideService {
 
   /**
    * Deactivate the current manual override
-   * 
+   *
    * @param operatorId - Operator deactivating the override
    * @returns True if successfully deactivated
    */
@@ -182,7 +181,7 @@ export class ManualOverrideService {
       // Update override status in database
       await this.db.query(
         `UPDATE manual_overrides SET active = false, deactivated_by = $1, deactivated_at = $2 WHERE id = $3`,
-        [operatorId, Date.now(), this.currentOverride.id]
+        [operatorId, Date.now(), this.currentOverride.id],
       );
 
       // Clear current override
@@ -202,12 +201,16 @@ export class ManualOverrideService {
 
   /**
    * Get the current active override
-   * 
+   *
    * @returns Current override or null if none active
    */
   getCurrentOverride(): ManualOverride | null {
     // Check if override has expired
-    if (this.currentOverride && this.currentOverride.expiresAt && Date.now() > this.currentOverride.expiresAt) {
+    if (
+      this.currentOverride &&
+      this.currentOverride.expiresAt &&
+      Date.now() > this.currentOverride.expiresAt
+    ) {
       this.expireOverride();
       return null;
     }
@@ -217,13 +220,13 @@ export class ManualOverrideService {
 
   /**
    * Get the effective allocation (override if active, otherwise normal)
-   * 
+   *
    * @param normalAllocation - Normal calculated allocation
    * @returns Effective allocation to use
    */
   getEffectiveAllocation(normalAllocation: AllocationVector): AllocationVector {
     const override = this.getCurrentOverride();
-    
+
     if (override && override.active) {
       console.log('Using manual override allocation');
       return override.overrideAllocation;
@@ -235,7 +238,7 @@ export class ManualOverrideService {
   /**
    * Check if warning banner should be displayed
    * Requirement 9.8: Implement warning banner flag
-   * 
+   *
    * @returns True if warning banner should be shown
    */
   isWarningBannerActive(): boolean {
@@ -244,7 +247,7 @@ export class ManualOverrideService {
 
   /**
    * Get override history for an operator
-   * 
+   *
    * @param operatorId - Operator to get history for
    * @param limit - Maximum number of records to return
    * @returns Array of historical overrides
@@ -263,7 +266,7 @@ export class ManualOverrideService {
       params.push(limit);
 
       const rows = await this.db.queryAll<any>(query, params);
-      return rows.map(row => this.mapRowToOverride(row));
+      return rows.map((row) => this.mapRowToOverride(row));
     } catch (error) {
       console.error('Error getting override history:', error);
       return [];
@@ -272,7 +275,7 @@ export class ManualOverrideService {
 
   /**
    * Get override statistics
-   * 
+   *
    * @returns Override usage statistics
    */
   async getOverrideStats(): Promise<{
@@ -284,13 +287,13 @@ export class ManualOverrideService {
     try {
       // Get total count
       const totalResult = await this.db.queryOne<{ count: string }>(
-        `SELECT COUNT(*) as count FROM manual_overrides`
+        `SELECT COUNT(*) as count FROM manual_overrides`,
       );
       const totalOverrides = parseInt(totalResult?.count || '0', 10);
 
       // Get active count
       const activeResult = await this.db.queryOne<{ count: string }>(
-        `SELECT COUNT(*) as count FROM manual_overrides WHERE active = true`
+        `SELECT COUNT(*) as count FROM manual_overrides WHERE active = true`,
       );
       const activeOverrides = parseInt(activeResult?.count || '0', 10);
 
@@ -298,7 +301,7 @@ export class ManualOverrideService {
       const durationResult = await this.db.queryOne<{ avg_duration: string }>(
         `SELECT AVG(COALESCE(deactivated_at, expires_at) - timestamp) / 3600000 as avg_duration 
          FROM manual_overrides 
-         WHERE expires_at IS NOT NULL`
+         WHERE expires_at IS NOT NULL`,
       );
       const averageDurationHours = parseFloat(durationResult?.avg_duration || '0');
 
@@ -308,9 +311,9 @@ export class ManualOverrideService {
          FROM manual_overrides 
          GROUP BY operator_id 
          ORDER BY count DESC 
-         LIMIT 10`
+         LIMIT 10`,
       );
-      const topOperators = operatorRows.map(row => ({
+      const topOperators = operatorRows.map((row) => ({
         operatorId: row.operator_id,
         count: parseInt(row.count, 10),
       }));
@@ -334,7 +337,7 @@ export class ManualOverrideService {
 
   /**
    * Create a new operator account
-   * 
+   *
    * @param operatorId - Unique operator identifier
    * @param password - Operator password
    * @param permissions - Array of permissions
@@ -343,15 +346,15 @@ export class ManualOverrideService {
   async createOperator(
     operatorId: string,
     password: string,
-    permissions: string[]
+    permissions: string[],
   ): Promise<boolean> {
     try {
       const hashedPassword = this.hashPassword(password);
-      
+
       await this.db.query(
         `INSERT INTO operators (operator_id, hashed_password, permissions, created_at)
          VALUES ($1, $2, $3, $4)`,
-        [operatorId, hashedPassword, JSON.stringify(permissions), Date.now()]
+        [operatorId, hashedPassword, JSON.stringify(permissions), Date.now()],
       );
 
       console.log(`Operator ${operatorId} created with permissions:`, permissions);
@@ -370,12 +373,12 @@ export class ManualOverrideService {
   private async loadActiveOverride(): Promise<void> {
     try {
       const row = await this.db.queryOne<any>(
-        `SELECT * FROM manual_overrides WHERE active = true ORDER BY timestamp DESC LIMIT 1`
+        `SELECT * FROM manual_overrides WHERE active = true ORDER BY timestamp DESC LIMIT 1`,
       );
 
       if (row) {
         this.currentOverride = this.mapRowToOverride(row);
-        
+
         // Check if override has expired
         if (this.currentOverride.expiresAt && Date.now() > this.currentOverride.expiresAt) {
           await this.expireOverride();
@@ -394,10 +397,9 @@ export class ManualOverrideService {
    */
   private async getOperatorCredentials(operatorId: string): Promise<OperatorCredentials | null> {
     try {
-      const row = await this.db.queryOne<any>(
-        `SELECT * FROM operators WHERE operator_id = $1`,
-        [operatorId]
-      );
+      const row = await this.db.queryOne<any>(`SELECT * FROM operators WHERE operator_id = $1`, [
+        operatorId,
+      ]);
 
       if (!row) return null;
 
@@ -418,10 +420,10 @@ export class ManualOverrideService {
    */
   private async updateLastLogin(operatorId: string): Promise<void> {
     try {
-      await this.db.query(
-        `UPDATE operators SET last_login = $1 WHERE operator_id = $2`,
-        [Date.now(), operatorId]
-      );
+      await this.db.query(`UPDATE operators SET last_login = $1 WHERE operator_id = $2`, [
+        Date.now(),
+        operatorId,
+      ]);
     } catch (error) {
       console.error('Error updating last login:', error);
     }
@@ -433,7 +435,7 @@ export class ManualOverrideService {
   private async getCurrentAllocation(): Promise<AllocationVector> {
     try {
       const row = await this.db.queryOne<any>(
-        `SELECT * FROM allocation_history ORDER BY timestamp DESC LIMIT 1`
+        `SELECT * FROM allocation_history ORDER BY timestamp DESC LIMIT 1`,
       );
 
       if (row) {
@@ -505,8 +507,9 @@ export class ManualOverrideService {
    */
   private validateAllocationVector(allocation: AllocationVector): boolean {
     const sum = allocation.w1 + allocation.w2 + allocation.w3;
-    return Math.abs(sum - 1.0) < 0.001 && 
-           allocation.w1 >= 0 && allocation.w2 >= 0 && allocation.w3 >= 0;
+    return (
+      Math.abs(sum - 1.0) < 0.001 && allocation.w1 >= 0 && allocation.w2 >= 0 && allocation.w3 >= 0
+    );
   }
 
   /**
@@ -516,7 +519,7 @@ export class ManualOverrideService {
     if (this.currentOverride && this.currentOverride.id) {
       await this.db.query(
         `UPDATE manual_overrides SET active = false, expired_at = $1 WHERE id = $2`,
-        [Date.now(), this.currentOverride.id]
+        [Date.now(), this.currentOverride.id],
       );
     }
 
@@ -530,7 +533,7 @@ export class ManualOverrideService {
    */
   private activateWarningBanner(): void {
     this.warningBannerActive = true;
-    
+
     // Auto-deactivate after timeout
     setTimeout(() => {
       if (!this.getCurrentOverride()) {
@@ -552,6 +555,9 @@ export class ManualOverrideService {
   private hashPassword(password: string): string {
     // In production, use bcrypt or similar
     const crypto = require('crypto');
-    return crypto.createHash('sha256').update(password + 'titan_salt').digest('hex');
+    return crypto
+      .createHash('sha256')
+      .update(password + 'titan_salt')
+      .digest('hex');
   }
 }

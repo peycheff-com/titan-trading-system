@@ -1,6 +1,6 @@
 /**
  * Titan Brain Monitoring - Barrel Export
- * 
+ *
  * Exports Prometheus metrics and structured logging components.
  */
 

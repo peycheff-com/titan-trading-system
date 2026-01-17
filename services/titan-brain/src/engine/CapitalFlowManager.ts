@@ -1,7 +1,7 @@
 /**
  * CapitalFlowManager - Manages profit sweeping from futures to spot wallet
  * Implements ratchet mechanism to lock in profits
- * 
+ *
  * Requirements: 4.1, 4.2, 4.3, 4.4, 4.5
  */
 
@@ -24,7 +24,9 @@ export interface ExchangeWalletAPI {
   /** Get spot wallet balance */
   getSpotBalance(): Promise<number>;
   /** Transfer funds from futures to spot wallet */
-  transferToSpot(amount: number): Promise<{ success: boolean; transactionId?: string; error?: string }>;
+  transferToSpot(
+    amount: number,
+  ): Promise<{ success: boolean; transactionId?: string; error?: string }>;
 }
 
 /**
@@ -36,7 +38,7 @@ export interface SweepNotifier {
     fromWallet: string,
     toWallet: string,
     reason: string,
-    newBalance: number
+    newBalance: number,
   ): Promise<void>;
 }
 
@@ -48,7 +50,7 @@ export class CapitalFlowManager {
   private readonly config: CapitalFlowConfig;
   private readonly db: DatabaseManager | null;
   private readonly exchangeAPI: ExchangeWalletAPI | null;
-  
+
   /** Cached high watermark value */
   private highWatermark: number = 0;
   /** Cached total swept amount */
@@ -58,11 +60,7 @@ export class CapitalFlowManager {
   /** Sweep notifier */
   private sweepNotifier: SweepNotifier | null = null;
 
-  constructor(
-    config: CapitalFlowConfig,
-    db?: DatabaseManager,
-    exchangeAPI?: ExchangeWalletAPI
-  ) {
+  constructor(config: CapitalFlowConfig, db?: DatabaseManager, exchangeAPI?: ExchangeWalletAPI) {
     this.config = config;
     this.db = db ?? null;
     this.exchangeAPI = exchangeAPI ?? null;
@@ -85,7 +83,6 @@ export class CapitalFlowManager {
     }
   }
 
-
   /**
    * Load high watermark from database
    */
@@ -93,7 +90,7 @@ export class CapitalFlowManager {
     if (!this.db) return;
 
     const result = await this.db.query<{ value: string }>(
-      `SELECT value FROM high_watermark ORDER BY updated_at DESC LIMIT 1`
+      `SELECT value FROM high_watermark ORDER BY updated_at DESC LIMIT 1`,
     );
 
     if (result.rows.length > 0) {
@@ -110,7 +107,7 @@ export class CapitalFlowManager {
     const result = await this.db.query<{ total: string }>(
       `SELECT COALESCE(SUM(amount), 0) as total 
        FROM treasury_operations 
-       WHERE operation_type = 'SWEEP' AND to_wallet = 'SPOT'`
+       WHERE operation_type = 'SWEEP' AND to_wallet = 'SPOT'`,
     );
 
     if (result.rows.length > 0) {
@@ -121,7 +118,7 @@ export class CapitalFlowManager {
   /**
    * Set the target allocation for futures wallet
    * This is typically set by the Brain based on current equity and allocation
-   * 
+   *
    * @param amount - Target allocation in USD
    */
   setTargetAllocation(amount: number): void {
@@ -130,7 +127,7 @@ export class CapitalFlowManager {
 
   /**
    * Get the current high watermark
-   * 
+   *
    * @returns High watermark value in USD
    */
   getHighWatermark(): number {
@@ -139,7 +136,7 @@ export class CapitalFlowManager {
 
   /**
    * Set high watermark value (for state recovery)
-   * 
+   *
    * @param value - High watermark value in USD
    */
   async setHighWatermark(value: number): Promise<void> {
@@ -152,10 +149,10 @@ export class CapitalFlowManager {
 
     // Persist to database
     if (this.db) {
-      await this.db.query(
-        `INSERT INTO high_watermark (value, updated_at) VALUES ($1, $2)`,
-        [value, Date.now()]
-      );
+      await this.db.query(`INSERT INTO high_watermark (value, updated_at) VALUES ($1, $2)`, [
+        value,
+        Date.now(),
+      ]);
     }
 
     console.log(`High watermark set to $${value}`);
@@ -164,9 +161,9 @@ export class CapitalFlowManager {
   /**
    * Update the high watermark if equity exceeds current watermark
    * Requirement 4.1: Track High Watermark for Futures Wallet balance
-   * 
+   *
    * Property 10: High Watermark Monotonicity - watermark should never decrease
-   * 
+   *
    * @param equity - Current equity in USD
    * @returns true if watermark was updated
    */
@@ -181,10 +178,10 @@ export class CapitalFlowManager {
 
     // Persist to database
     if (this.db) {
-      await this.db.query(
-        `INSERT INTO high_watermark (value, updated_at) VALUES ($1, $2)`,
-        [equity, Date.now()]
-      );
+      await this.db.query(`INSERT INTO high_watermark (value, updated_at) VALUES ($1, $2)`, [
+        equity,
+        Date.now(),
+      ]);
     }
 
     return true;
@@ -193,16 +190,16 @@ export class CapitalFlowManager {
   /**
    * Check if sweep conditions are met
    * Requirement 4.2: Sweep when Futures Wallet exceeds Target Allocation by 20%
-   * 
+   *
    * @returns SweepDecision with sweep details
    */
   async checkSweepConditions(): Promise<SweepDecision> {
     // Get current futures balance
     const futuresBalance = await this.getFuturesBalance();
-    
+
     // Calculate threshold (target allocation * sweep threshold)
     const sweepTriggerLevel = this.targetAllocation * this.config.sweepThreshold;
-    
+
     // Check if we exceed the threshold
     if (futuresBalance <= sweepTriggerLevel) {
       return {
@@ -216,11 +213,11 @@ export class CapitalFlowManager {
 
     // Requirement 4.3: Calculate excess profit
     const excessAmount = futuresBalance - sweepTriggerLevel;
-    
+
     // Requirement 4.5: Ensure reserve limit is maintained
     // Property 5: Reserve Limit Protection - remaining balance >= reserveLimit
     const maxSweepable = futuresBalance - this.config.reserveLimit;
-    
+
     if (maxSweepable <= 0) {
       return {
         shouldSweep: false,
@@ -233,7 +230,7 @@ export class CapitalFlowManager {
 
     // Sweep amount is the minimum of excess and max sweepable
     const sweepAmount = Math.min(excessAmount, maxSweepable);
-    
+
     if (sweepAmount <= 0) {
       return {
         shouldSweep: false,
@@ -253,14 +250,13 @@ export class CapitalFlowManager {
     };
   }
 
-
   /**
    * Execute a profit sweep from futures to spot wallet
    * Requirement 4.4: Transfer excess USDT to Spot Wallet
    * Requirement 4.8: Retry up to 3 times with exponential backoff
-   * 
+   *
    * Property 4: Sweep Monotonicity - totalSwept should only increase
-   * 
+   *
    * @param amount - Amount to sweep in USD
    * @returns SweepResult with transaction details
    */
@@ -280,7 +276,7 @@ export class CapitalFlowManager {
     // Check reserve limit before sweep
     const futuresBalance = await this.getFuturesBalance();
     const remainingAfterSweep = futuresBalance - amount;
-    
+
     if (remainingAfterSweep < this.config.reserveLimit) {
       return {
         success: false,
@@ -292,15 +288,15 @@ export class CapitalFlowManager {
 
     // Execute transfer with retry logic
     let lastError: string | undefined;
-    
+
     for (let attempt = 1; attempt <= this.config.maxRetries; attempt++) {
       try {
         const result = await this.executeTransfer(amount);
-        
+
         if (result.success) {
           // Update total swept (monotonically increasing)
           this.totalSwept += amount;
-          
+
           // Log the operation
           await this.logTreasuryOperation({
             timestamp,
@@ -321,7 +317,7 @@ export class CapitalFlowManager {
                 'FUTURES',
                 'SPOT',
                 `Automated profit sweep (attempt ${attempt})`,
-                newBalance
+                newBalance,
               );
             } catch (error) {
               console.error('Failed to send sweep notification:', error);
@@ -335,7 +331,7 @@ export class CapitalFlowManager {
             timestamp,
           };
         }
-        
+
         lastError = result.error;
       } catch (error) {
         lastError = error instanceof Error ? error.message : 'Unknown error';
@@ -360,7 +356,7 @@ export class CapitalFlowManager {
    * Execute the actual transfer via exchange API
    */
   private async executeTransfer(
-    amount: number
+    amount: number,
   ): Promise<{ success: boolean; transactionId?: string; error?: string }> {
     if (!this.exchangeAPI) {
       // Mock success for testing without exchange API
@@ -376,7 +372,7 @@ export class CapitalFlowManager {
   /**
    * Get current treasury status
    * Requirement 8.1-8.7: Treasury management visibility
-   * 
+   *
    * @returns TreasuryStatus with all wallet balances and metrics
    */
   async getTreasuryStatus(): Promise<TreasuryStatus> {
@@ -415,7 +411,6 @@ export class CapitalFlowManager {
     return this.exchangeAPI.getSpotBalance();
   }
 
-
   /**
    * Log a treasury operation to the database
    * Requirement 4.7: Log all sweep transactions
@@ -435,13 +430,13 @@ export class CapitalFlowManager {
         operation.toWallet,
         operation.reason ?? null,
         operation.highWatermark,
-      ]
+      ],
     );
   }
 
   /**
    * Get sweep history from database
-   * 
+   *
    * @param limit - Maximum number of records to return
    * @returns Array of treasury operations
    */
@@ -463,7 +458,7 @@ export class CapitalFlowManager {
        WHERE operation_type = 'SWEEP'
        ORDER BY timestamp DESC
        LIMIT $1`,
-      [limit]
+      [limit],
     );
 
     return result.rows.map((row) => ({
@@ -480,7 +475,7 @@ export class CapitalFlowManager {
 
   /**
    * Calculate the next sweep trigger level
-   * 
+   *
    * @returns The futures balance level that would trigger a sweep
    */
   getNextSweepTriggerLevel(): number {
@@ -489,7 +484,7 @@ export class CapitalFlowManager {
 
   /**
    * Get the total amount swept since inception
-   * 
+   *
    * @returns Total swept amount in USD
    */
   getTotalSwept(): number {
@@ -498,7 +493,7 @@ export class CapitalFlowManager {
 
   /**
    * Get the current target allocation
-   * 
+   *
    * @returns Target allocation in USD
    */
   getTargetAllocation(): number {
@@ -507,7 +502,7 @@ export class CapitalFlowManager {
 
   /**
    * Get the reserve limit
-   * 
+   *
    * @returns Reserve limit in USD
    */
   getReserveLimit(): number {
@@ -531,30 +526,27 @@ export class CapitalFlowManager {
   /**
    * Check if a sweep should be triggered based on equity increase
    * Requirement 4.6: Sweep after trades that increase equity by > 10%
-   * 
+   *
    * @param previousEquity - Equity before the trade
    * @param currentEquity - Equity after the trade
    * @returns true if equity increased by more than 10%
    */
-  shouldTriggerSweepOnEquityIncrease(
-    previousEquity: number,
-    currentEquity: number
-  ): boolean {
+  shouldTriggerSweepOnEquityIncrease(previousEquity: number, currentEquity: number): boolean {
     if (previousEquity <= 0) return false;
-    
+
     const percentIncrease = (currentEquity - previousEquity) / previousEquity;
-    return percentIncrease > 0.10; // 10% threshold
+    return percentIncrease > 0.1; // 10% threshold
   }
 
   /**
    * Perform a full sweep check and execution if conditions are met
    * Convenience method that combines checkSweepConditions and executeSweep
-   * 
+   *
    * @returns SweepResult if sweep was attempted, null if conditions not met
    */
   async performSweepIfNeeded(): Promise<SweepResult | null> {
     const decision = await this.checkSweepConditions();
-    
+
     if (!decision.shouldSweep) {
       return null;
     }

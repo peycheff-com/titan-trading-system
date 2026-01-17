@@ -36,6 +36,7 @@ ufw default allow outgoing
 ufw allow ssh
 ufw allow http
 ufw allow https
+ufw allow 3100/tcp comment 'Titan Brain API'
 ufw --force enable
 
 # =============================================================================

@@ -2,10 +2,10 @@
   "port": 3100,
   "logLevel": "info",
   "database": {
-    "host": "localhost",
-    "port": 5432,
-    "name": "titan_brain",
-    "user": "titan",
+    "host": "${TITAN_DB_HOST}",
+    "port": "${TITAN_DB_PORT}",
+    "name": "${TITAN_DB_NAME}",
+    "user": "${TITAN_DB_USER}",
     "password": "${TITAN_DB_PASSWORD}",
     "ssl": false
   },

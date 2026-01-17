@@ -1,8 +1,14 @@
 import type { Config } from "tailwindcss";
+import tailwindcssAnimate from "tailwindcss-animate";
 
 export default {
   darkMode: ["class"],
-  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  content: [
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}",
+  ],
   prefix: "",
   theme: {
     container: {
@@ -14,8 +20,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+        sans: ["Inter", "system-ui", "sans-serif"],
+        mono: ["JetBrains Mono", "ui-monospace", "monospace"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -97,11 +103,11 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       fontSize: {
-        'xxs': ['0.625rem', { lineHeight: '0.875rem' }],
+        "xxs": ["0.625rem", { lineHeight: "0.875rem" }],
       },
       spacing: {
-        '18': '4.5rem',
-        '88': '22rem',
+        "18": "4.5rem",
+        "88": "22rem",
       },
       keyframes: {
         "accordion-down": {
@@ -121,7 +127,9 @@ export default {
           to: { opacity: "1", transform: "translateX(0)" },
         },
         "pulse-glow": {
-          "0%, 100%": { boxShadow: "0 0 20px -5px hsl(var(--titan-glow) / 0.3)" },
+          "0%, 100%": {
+            boxShadow: "0 0 20px -5px hsl(var(--titan-glow) / 0.3)",
+          },
           "50%": { boxShadow: "0 0 30px -5px hsl(var(--titan-glow) / 0.5)" },
         },
       },
@@ -134,5 +142,5 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [tailwindcssAnimate],
 } satisfies Config;

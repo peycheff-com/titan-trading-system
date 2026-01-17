@@ -1,9 +1,9 @@
 /**
  * Credential Manager for Titan Phase 2 - The Hunter
- * 
+ *
  * Provides secure credential storage using AES-256-GCM encryption.
  * Credentials are encrypted with a master password and stored in ~/.titan-scanner/secrets.enc
- * 
+ *
  * Requirements: Encrypted credential storage
  */
 
@@ -58,7 +58,7 @@ export class CredentialManager {
   constructor() {
     this.credentialsDir = join(homedir(), '.titan-scanner');
     this.credentialsPath = join(this.credentialsDir, 'secrets.enc');
-    
+
     // Ensure credentials directory exists
     if (!existsSync(this.credentialsDir)) {
       mkdirSync(this.credentialsDir, { recursive: true, mode: 0o700 });
@@ -74,9 +74,11 @@ export class CredentialManager {
     } else {
       // Try to get from environment variable
       this.masterPassword = process.env.TITAN_MASTER_PASSWORD || null;
-      
+
       if (!this.masterPassword) {
-        throw new Error('Master password not provided. Set TITAN_MASTER_PASSWORD environment variable or pass password directly.');
+        throw new Error(
+          'Master password not provided. Set TITAN_MASTER_PASSWORD environment variable or pass password directly.'
+        );
       }
     }
   }
@@ -118,17 +120,16 @@ export class CredentialManager {
         iv: iv.toString('hex'),
         salt: salt.toString('hex'),
         version: 1,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       // Write to file with restricted permissions
       writeFileSync(this.credentialsPath, JSON.stringify(encryptedData, null, 2), {
         encoding: 'utf8',
-        mode: 0o600 // Read/write for owner only
+        mode: 0o600, // Read/write for owner only
       });
 
       console.log('🔐 Credentials saved successfully');
-
     } catch (error) {
       console.error('❌ Failed to save credentials:', error);
       throw error;
@@ -170,7 +171,7 @@ export class CredentialManager {
 
       // Parse and validate decrypted credentials
       const credentials: ExchangeCredentials = JSON.parse(decrypted);
-      
+
       const validation = this.validateCredentials(credentials);
       if (!validation.isValid) {
         throw new Error(`Corrupted credentials: ${validation.errors.join(', ')}`);
@@ -178,7 +179,6 @@ export class CredentialManager {
 
       console.log('🔓 Credentials loaded successfully');
       return credentials;
-
     } catch (error) {
       console.error('❌ Failed to load credentials:', error);
       throw new Error('Failed to decrypt credentials. Check master password and file integrity.');
@@ -202,10 +202,10 @@ export class CredentialManager {
         const fileSize = readFileSync(this.credentialsPath).length;
         const randomData = randomBytes(fileSize);
         writeFileSync(this.credentialsPath, randomData);
-        
+
         // Delete file
         require('fs').unlinkSync(this.credentialsPath);
-        
+
         console.log('🗑️ Credentials deleted successfully');
       } catch (error) {
         console.error('❌ Failed to delete credentials:', error);
@@ -217,7 +217,11 @@ export class CredentialManager {
   /**
    * Update specific exchange credentials
    */
-  updateExchangeCredentials(exchange: 'binance' | 'bybit', apiKey: string, apiSecret: string): void {
+  updateExchangeCredentials(
+    exchange: 'binance' | 'bybit',
+    apiKey: string,
+    apiSecret: string
+  ): void {
     let credentials: ExchangeCredentials;
 
     try {
@@ -226,14 +230,14 @@ export class CredentialManager {
     } catch (error) {
       // If no credentials exist, create new structure with valid placeholder values
       credentials = {
-        binance: { 
-          apiKey: 'placeholder_binance_api_key_32_chars', 
-          apiSecret: 'placeholder_binance_api_secret_64_characters_long_for_testing_purposes' 
+        binance: {
+          apiKey: 'placeholder_binance_api_key_32_chars',
+          apiSecret: 'placeholder_binance_api_secret_64_characters_long_for_testing_purposes',
         },
-        bybit: { 
-          apiKey: 'placeholder_bybit_api_key_24', 
-          apiSecret: 'placeholder_bybit_api_secret_48_characters_long' 
-        }
+        bybit: {
+          apiKey: 'placeholder_bybit_api_key_24',
+          apiSecret: 'placeholder_bybit_api_secret_48_characters_long',
+        },
       };
     }
 
@@ -302,7 +306,7 @@ export class CredentialManager {
     return {
       isValid: errors.length === 0,
       errors,
-      warnings
+      warnings,
     };
   }
 
@@ -320,7 +324,7 @@ export class CredentialManager {
     const exists = this.hasCredentials();
     const info: any = {
       exists,
-      path: this.credentialsPath
+      path: this.credentialsPath,
     };
 
     if (exists) {

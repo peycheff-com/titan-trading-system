@@ -1,9 +1,9 @@
 /**
  * Binance Spot Client for CVD Data Source
- * 
+ *
  * Provides tick-level trade data via WebSocket for Cumulative Volume Delta calculation.
  * Includes reconnection logic and callback system for trade events.
- * 
+ *
  * Requirements: 4.1 (CVD Monitoring)
  */
 
@@ -14,17 +14,17 @@ import { Trade } from '../types';
 const fetch = require('node-fetch');
 
 export interface BinanceAggTrade {
-  e: string;      // Event type
-  E: number;      // Event time
-  s: string;      // Symbol
-  a: number;      // Aggregate trade ID
-  p: string;      // Price
-  q: string;      // Quantity
-  f: number;      // First trade ID
-  l: number;      // Last trade ID
-  T: number;      // Trade time
-  m: boolean;     // Is the buyer the market maker?
-  M: boolean;     // Ignore
+  e: string; // Event type
+  E: number; // Event time
+  s: string; // Symbol
+  a: number; // Aggregate trade ID
+  p: string; // Price
+  q: string; // Quantity
+  f: number; // First trade ID
+  l: number; // Last trade ID
+  T: number; // Trade time
+  m: boolean; // Is the buyer the market maker?
+  M: boolean; // Ignore
 }
 
 export interface BinanceSpotPrice {
@@ -48,7 +48,7 @@ export class BinanceSpotClient {
   private heartbeatInterval: NodeJS.Timeout | null = null;
   private lastPongTime = 0;
   private isInitialized = false;
-  
+
   // Callbacks
   private errorCallbacks = new Set<ErrorCallback>();
   private reconnectCallbacks = new Set<ReconnectCallback>();
@@ -68,16 +68,15 @@ export class BinanceSpotClient {
 
     try {
       console.log('📡 Initializing Binance Spot Client...');
-      
+
       // Test connection by fetching server time
       const response = await fetch(`${this.baseUrl}/api/v3/time`);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      
+
       this.isInitialized = true;
       console.log('✅ Binance Spot Client initialized');
-      
     } catch (error) {
       console.error('❌ Failed to initialize Binance client:', error);
       throw error;
@@ -94,27 +93,26 @@ export class BinanceSpotClient {
 
     try {
       console.log('📡 Disconnecting Binance Spot Client...');
-      
+
       // Close WebSocket connection
       if (this.ws) {
         this.ws.close();
         this.ws = null;
       }
-      
+
       // Clear heartbeat interval
       if (this.heartbeatInterval) {
         clearInterval(this.heartbeatInterval);
         this.heartbeatInterval = null;
       }
-      
+
       // Clear subscriptions
       this.subscriptions.clear();
       this.errorCallbacks.clear();
       this.reconnectCallbacks.clear();
-      
+
       this.isInitialized = false;
       console.log('✅ Binance Spot Client disconnected');
-      
     } catch (error) {
       console.error('❌ Error disconnecting Binance client:', error);
       throw error;
@@ -128,7 +126,7 @@ export class BinanceSpotClient {
    */
   public subscribeAggTrades(symbol: string, callback: TradeCallback): void {
     const normalizedSymbol = symbol.toLowerCase();
-    
+
     // Add callback to subscriptions
     if (!this.subscriptions.has(normalizedSymbol)) {
       this.subscriptions.set(normalizedSymbol, new Set());
@@ -152,10 +150,10 @@ export class BinanceSpotClient {
   public unsubscribeAggTrades(symbol: string, callback: TradeCallback): void {
     const normalizedSymbol = symbol.toLowerCase();
     const callbacks = this.subscriptions.get(normalizedSymbol);
-    
+
     if (callbacks) {
       callbacks.delete(callback);
-      
+
       // If no more callbacks for this symbol, unsubscribe from stream
       if (callbacks.size === 0) {
         this.subscriptions.delete(normalizedSymbol);
@@ -171,13 +169,15 @@ export class BinanceSpotClient {
    */
   public async getSpotPrice(symbol: string): Promise<number> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/v3/ticker/price?symbol=${symbol.toUpperCase()}`);
-      
+      const response = await fetch(
+        `${this.baseUrl}/api/v3/ticker/price?symbol=${symbol.toUpperCase()}`
+      );
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const data = await response.json() as BinanceSpotPrice;
+      const data = (await response.json()) as BinanceSpotPrice;
       return parseFloat(data.price);
     } catch (error) {
       const errorMsg = `Failed to get spot price for ${symbol}: ${error instanceof Error ? error.message : 'Unknown error'}`;
@@ -224,13 +224,18 @@ export class BinanceSpotClient {
    */
   public getConnectionStatus(): 'CONNECTING' | 'OPEN' | 'CLOSING' | 'CLOSED' {
     if (!this.ws) return 'CLOSED';
-    
+
     switch (this.ws.readyState) {
-      case WebSocket.CONNECTING: return 'CONNECTING';
-      case WebSocket.OPEN: return 'OPEN';
-      case WebSocket.CLOSING: return 'CLOSING';
-      case WebSocket.CLOSED: return 'CLOSED';
-      default: return 'CLOSED';
+      case WebSocket.CONNECTING:
+        return 'CONNECTING';
+      case WebSocket.OPEN:
+        return 'OPEN';
+      case WebSocket.CLOSING:
+        return 'CLOSING';
+      case WebSocket.CLOSED:
+        return 'CLOSED';
+      default:
+        return 'CLOSED';
     }
   }
 
@@ -264,9 +269,7 @@ export class BinanceSpotClient {
     try {
       // Build stream URL with all subscribed symbols
       const streams = Array.from(this.subscriptions.keys()).map(symbol => `${symbol}@aggTrade`);
-      const streamUrl = streams.length > 0 
-        ? `${this.wsUrl}/${streams.join('/')}`
-        : this.wsUrl;
+      const streamUrl = streams.length > 0 ? `${this.wsUrl}/${streams.join('/')}` : this.wsUrl;
 
       this.ws = new WebSocket(streamUrl);
       this.lastPongTime = Date.now();
@@ -275,7 +278,7 @@ export class BinanceSpotClient {
         console.log('🔗 Binance WebSocket connected');
         this.reconnectAttempts = 0;
         this.isReconnecting = false;
-        
+
         // Subscribe to all existing symbols
         Array.from(this.subscriptions.keys()).forEach(symbol => {
           this.subscribeToStream(symbol);
@@ -287,7 +290,11 @@ export class BinanceSpotClient {
           const message = JSON.parse(data.toString());
           this.handleMessage(message);
         } catch (error) {
-          this.emitError(new Error(`Failed to parse WebSocket message: ${error instanceof Error ? error.message : 'Unknown error'}`));
+          this.emitError(
+            new Error(
+              `Failed to parse WebSocket message: ${error instanceof Error ? error.message : 'Unknown error'}`
+            )
+          );
         }
       });
 
@@ -303,15 +310,18 @@ export class BinanceSpotClient {
       this.ws.on('close', (code: number, reason: Buffer) => {
         console.log(`🔌 Binance WebSocket closed: ${code} ${reason.toString()}`);
         this.ws = null;
-        
+
         // Attempt reconnection if we have active subscriptions
         if (this.subscriptions.size > 0 && !this.isReconnecting) {
           this.attemptReconnect();
         }
       });
-
     } catch (error) {
-      this.emitError(new Error(`Failed to connect to Binance WebSocket: ${error instanceof Error ? error.message : 'Unknown error'}`));
+      this.emitError(
+        new Error(
+          `Failed to connect to Binance WebSocket: ${error instanceof Error ? error.message : 'Unknown error'}`
+        )
+      );
     }
   }
 
@@ -324,7 +334,7 @@ export class BinanceSpotClient {
     const subscribeMessage = {
       method: 'SUBSCRIBE',
       params: [`${symbol}@aggTrade`],
-      id: Date.now()
+      id: Date.now(),
     };
 
     this.ws.send(JSON.stringify(subscribeMessage));
@@ -339,7 +349,7 @@ export class BinanceSpotClient {
     const unsubscribeMessage = {
       method: 'UNSUBSCRIBE',
       params: [`${symbol}@aggTrade`],
-      id: Date.now()
+      id: Date.now(),
     };
 
     this.ws.send(JSON.stringify(unsubscribeMessage));
@@ -357,7 +367,7 @@ export class BinanceSpotClient {
         quantity: parseFloat(aggTrade.q),
         side: aggTrade.m ? 'SELL' : 'BUY', // m=true means buyer is market maker (sell order filled)
         timestamp: aggTrade.T,
-        isBuyerMaker: aggTrade.m // true = sell order hit buy limit, false = buy order hit sell limit
+        isBuyerMaker: aggTrade.m, // true = sell order hit buy limit, false = buy order hit sell limit
       };
 
       // Emit to all callbacks for this symbol
@@ -367,12 +377,16 @@ export class BinanceSpotClient {
           try {
             callback(trade);
           } catch (error) {
-            this.emitError(new Error(`Trade callback error: ${error instanceof Error ? error.message : 'Unknown error'}`));
+            this.emitError(
+              new Error(
+                `Trade callback error: ${error instanceof Error ? error.message : 'Unknown error'}`
+              )
+            );
           }
         });
       }
     }
-    
+
     // Handle subscription confirmations and errors
     if (message.result === null && message.id) {
       // Subscription successful
@@ -388,7 +402,9 @@ export class BinanceSpotClient {
   private attemptReconnect(): void {
     if (this.isReconnecting || this.reconnectAttempts >= this.maxReconnectAttempts) {
       if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-        this.emitError(new Error(`Max reconnection attempts (${this.maxReconnectAttempts}) reached`));
+        this.emitError(
+          new Error(`Max reconnection attempts (${this.maxReconnectAttempts}) reached`)
+        );
       }
       return;
     }
@@ -397,7 +413,9 @@ export class BinanceSpotClient {
     this.reconnectAttempts++;
 
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1); // Exponential backoff
-    console.log(`🔄 Attempting to reconnect to Binance WebSocket (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}) in ${delay}ms`);
+    console.log(
+      `🔄 Attempting to reconnect to Binance WebSocket (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}) in ${delay}ms`
+    );
 
     setTimeout(() => {
       this.connect();
@@ -413,7 +431,8 @@ export class BinanceSpotClient {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
         // Check if we received a pong recently
         const timeSinceLastPong = Date.now() - this.lastPongTime;
-        if (timeSinceLastPong > 30000) { // 30 seconds timeout
+        if (timeSinceLastPong > 30000) {
+          // 30 seconds timeout
           console.warn('⚠️ Binance WebSocket heartbeat timeout, closing connection');
           this.ws.close();
           return;

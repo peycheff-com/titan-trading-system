@@ -1,19 +1,15 @@
 /**
  * Polymarket API Client for Titan Phase 2 - 2026 Modernization
- * 
+ *
  * Provides REST API integration with Polymarket prediction markets
  * with authentication and rate limiting support.
- * 
+ *
  * Requirement 1.1: Connect to Polymarket API and fetch active prediction markets
  * for BTC price targets, Fed rate decisions, and major crypto regulatory events
  */
 
 import { EventEmitter } from 'events';
-import {
-  PredictionMarketEvent,
-  EventCategory,
-  ImpactLevel
-} from '../types';
+import { PredictionMarketEvent, EventCategory, ImpactLevel } from '../types';
 
 // ============================================================================
 // INTERFACES
@@ -84,7 +80,7 @@ interface RequestOptions {
 
 /**
  * Polymarket API Client
- * 
+ *
  * Handles all communication with the Polymarket prediction market API
  * including authentication, rate limiting, and error handling.
  */
@@ -116,7 +112,7 @@ export class PolymarketClient extends EventEmitter {
       tokens: maxRequestsPerSecond,
       lastRefill: Date.now(),
       maxTokens: maxRequestsPerSecond,
-      refillRate: maxRequestsPerSecond
+      refillRate: maxRequestsPerSecond,
     };
   }
 
@@ -149,7 +145,7 @@ export class PolymarketClient extends EventEmitter {
   getConnectionStatus(): { connected: boolean; lastError: Error | null } {
     return {
       connected: this.isConnected,
-      lastError: this.lastError
+      lastError: this.lastError,
     };
   }
 
@@ -165,7 +161,7 @@ export class PolymarketClient extends EventEmitter {
     const now = Date.now();
     const elapsed = (now - this.rateLimiter.lastRefill) / 1000;
     const tokensToAdd = elapsed * this.rateLimiter.refillRate;
-    
+
     this.rateLimiter.tokens = Math.min(
       this.rateLimiter.maxTokens,
       this.rateLimiter.tokens + tokensToAdd
@@ -174,7 +170,7 @@ export class PolymarketClient extends EventEmitter {
 
     // Wait if no tokens available
     if (this.rateLimiter.tokens < 1) {
-      const waitTime = (1 - this.rateLimiter.tokens) / this.rateLimiter.refillRate * 1000;
+      const waitTime = ((1 - this.rateLimiter.tokens) / this.rateLimiter.refillRate) * 1000;
       this.emit('rateLimited', { waitTime });
       await this.sleep(waitTime);
       return this.acquireRateLimitToken();
@@ -190,7 +186,7 @@ export class PolymarketClient extends EventEmitter {
   getRateLimiterStatus(): { availableTokens: number; maxTokens: number } {
     return {
       availableTokens: Math.floor(this.rateLimiter.tokens),
-      maxTokens: this.rateLimiter.maxTokens
+      maxTokens: this.rateLimiter.maxTokens,
     };
   }
 
@@ -233,10 +229,10 @@ export class PolymarketClient extends EventEmitter {
 
     try {
       const market = await this.makeRequest<PolymarketMarket>(`/markets/${marketId}`);
-      
+
       // Update cache
       this.marketCache.set(marketId, { data: market, timestamp: Date.now() });
-      
+
       return market;
     } catch (error) {
       if ((error as Error).message.includes('404')) {
@@ -347,10 +343,10 @@ export class PolymarketClient extends EventEmitter {
   convertToPredictionEvent(market: PolymarketMarket): PredictionMarketEvent {
     // Determine category based on tags and question
     const category = this.categorizeMarket(market);
-    
+
     // Determine impact level based on volume and liquidity
     const impact = this.assessImpactLevel(market);
-    
+
     // Get the "Yes" probability (first outcome price)
     const probability = parseFloat(market.outcomePrices[0] || '0') * 100;
 
@@ -365,7 +361,7 @@ export class PolymarketClient extends EventEmitter {
       impact,
       resolution: new Date(market.endDate),
       lastUpdate: new Date(),
-      source: 'polymarket'
+      source: 'polymarket',
     };
   }
 
@@ -373,30 +369,53 @@ export class PolymarketClient extends EventEmitter {
    * Categorize market based on content
    */
   private categorizeMarket(market: PolymarketMarket): EventCategory {
-    const text = `${market.question} ${market.description || ''} ${market.tags?.join(' ') || ''}`.toLowerCase();
+    const text =
+      `${market.question} ${market.description || ''} ${market.tags?.join(' ') || ''}`.toLowerCase();
 
-    if (text.includes('bitcoin') || text.includes('btc') || text.includes('ethereum') || 
-        text.includes('eth') || text.includes('crypto')) {
+    if (
+      text.includes('bitcoin') ||
+      text.includes('btc') ||
+      text.includes('ethereum') ||
+      text.includes('eth') ||
+      text.includes('crypto')
+    ) {
       return EventCategory.CRYPTO_PRICE;
     }
 
-    if (text.includes('fed') || text.includes('federal reserve') || 
-        text.includes('interest rate') || text.includes('fomc')) {
+    if (
+      text.includes('fed') ||
+      text.includes('federal reserve') ||
+      text.includes('interest rate') ||
+      text.includes('fomc')
+    ) {
       return EventCategory.FED_POLICY;
     }
 
-    if (text.includes('sec') || text.includes('regulation') || 
-        text.includes('etf') || text.includes('approval') || text.includes('ban')) {
+    if (
+      text.includes('sec') ||
+      text.includes('regulation') ||
+      text.includes('etf') ||
+      text.includes('approval') ||
+      text.includes('ban')
+    ) {
       return EventCategory.REGULATORY;
     }
 
-    if (text.includes('gdp') || text.includes('inflation') || 
-        text.includes('recession') || text.includes('unemployment')) {
+    if (
+      text.includes('gdp') ||
+      text.includes('inflation') ||
+      text.includes('recession') ||
+      text.includes('unemployment')
+    ) {
       return EventCategory.MACRO_ECONOMIC;
     }
 
-    if (text.includes('war') || text.includes('election') || 
-        text.includes('sanction') || text.includes('geopolitical')) {
+    if (
+      text.includes('war') ||
+      text.includes('election') ||
+      text.includes('sanction') ||
+      text.includes('geopolitical')
+    ) {
       return EventCategory.GEOPOLITICAL;
     }
 
@@ -433,17 +452,14 @@ export class PolymarketClient extends EventEmitter {
   /**
    * Make an authenticated API request with rate limiting and retries
    */
-  private async makeRequest<T>(
-    endpoint: string,
-    options: RequestOptions = {}
-  ): Promise<T> {
+  private async makeRequest<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
     // Acquire rate limit token
     await this.acquireRateLimitToken();
 
     const url = `${this.baseUrl}${endpoint}`;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers
+      ...options.headers,
     };
 
     // Add API key if configured
@@ -459,7 +475,7 @@ export class PolymarketClient extends EventEmitter {
           method: options.method || 'GET',
           headers,
           body: options.body,
-          timeout: options.timeout || this.timeout
+          timeout: options.timeout || this.timeout,
         });
 
         if (!response.ok) {
@@ -477,7 +493,6 @@ export class PolymarketClient extends EventEmitter {
         const data = await response.json();
         this.isConnected = true;
         return data as T;
-
       } catch (error) {
         lastError = error as Error;
         this.emit('requestError', { endpoint, attempt, error });
@@ -508,7 +523,7 @@ export class PolymarketClient extends EventEmitter {
     try {
       const response = await fetch(url, {
         ...fetchOptions,
-        signal: controller.signal
+        signal: controller.signal,
       });
       return response;
     } finally {
@@ -540,7 +555,7 @@ export class PolymarketClient extends EventEmitter {
   getCacheStats(): { size: number; ttl: number } {
     return {
       size: this.marketCache.size,
-      ttl: this.cacheTTL
+      ttl: this.cacheTTL,
     };
   }
 

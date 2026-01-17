@@ -7,10 +7,10 @@
  * Requirements: 1.7, 7.5
  */
 
-import { EventEmitter } from "events";
-import { IntentSignal, PhaseId, Position } from "../types/index.js";
-import { ExecutionEngineClient as IExecutionEngineClient } from "../engine/TitanBrain.js";
-import { getNatsClient, NatsClient } from "@titan/shared";
+import { EventEmitter } from 'events';
+import { IntentSignal, PhaseId, Position } from '../types/index.js';
+import { ExecutionEngineClient as IExecutionEngineClient } from '../engine/TitanBrain.js';
+import { getNatsClient, NatsClient } from '@titan/shared';
 
 /**
  * Configuration for Execution Engine Client
@@ -35,7 +35,7 @@ export interface FillConfirmation {
   signalId: string;
   orderId: string;
   symbol: string;
-  side: "BUY" | "SELL";
+  side: 'BUY' | 'SELL';
   fillPrice: number;
   fillSize: number;
   requestedSize: number;
@@ -47,8 +47,7 @@ export interface FillConfirmation {
 /**
  * ExecutionEngineClient handles communication with the Titan Execution Engine via NATS
  */
-export class ExecutionEngineClient extends EventEmitter
-  implements IExecutionEngineClient {
+export class ExecutionEngineClient extends EventEmitter implements IExecutionEngineClient {
   private readonly config: ExecutionEngineConfig;
   private nats: NatsClient;
   private connected: boolean = false;
@@ -63,19 +62,19 @@ export class ExecutionEngineClient extends EventEmitter
    * Initialize the client
    */
   async initialize(): Promise<void> {
-    console.log("🔗 Connecting to Execution Engine (NATS)...");
+    console.log('🔗 Connecting to Execution Engine (NATS)...');
 
     // We assume NATS is already connected by shared lib or we wait for it
     // The shared getNatsClient() returns a singleton that should be connected by Brain's startup
     try {
       this.connected = this.nats.isConnected();
       if (this.connected) {
-        console.log("✅ Execution Engine NATS client ready");
+        console.log('✅ Execution Engine NATS client ready');
       } else {
-        console.warn("⚠️ NATS not connected yet, will retry on use");
+        console.warn('⚠️ NATS not connected yet, will retry on use');
       }
     } catch (error) {
-      console.error("❌ Failed to initialize NATS client:", error);
+      console.error('❌ Failed to initialize NATS client:', error);
     }
   }
 
@@ -84,7 +83,7 @@ export class ExecutionEngineClient extends EventEmitter
    */
   async shutdown(): Promise<void> {
     this.connected = false;
-    console.log("🔌 Execution Engine client disconnected");
+    console.log('🔌 Execution Engine client disconnected');
   }
 
   /**
@@ -94,10 +93,7 @@ export class ExecutionEngineClient extends EventEmitter
    * @param signal - Intent signal to forward
    * @param authorizedSize - Size authorized by the Brain
    */
-  async forwardSignal(
-    signal: IntentSignal,
-    authorizedSize: number,
-  ): Promise<void> {
+  async forwardSignal(signal: IntentSignal, authorizedSize: number): Promise<void> {
     const startTime = Date.now();
 
     // Map to Rust Intent structure
@@ -107,13 +103,13 @@ export class ExecutionEngineClient extends EventEmitter
     const payload = {
       signal_id: signal.signalId,
       symbol: signal.symbol,
-      direction: signal.side === "BUY" ? 1 : -1, // Rust: 1=Long, -1=Short
-      type: signal.side === "BUY" ? "BUY_SETUP" : "SELL_SETUP", // Defaulting based on side
+      direction: signal.side === 'BUY' ? 1 : -1, // Rust: 1=Long, -1=Short
+      type: signal.side === 'BUY' ? 'BUY_SETUP' : 'SELL_SETUP', // Defaulting based on side
       entry_zone: [], // Default empty
       stop_loss: 0, // Default zero
       take_profits: [], // Default empty
       size: authorizedSize,
-      status: "VALIDATED", // Brain has validated this
+      status: 'VALIDATED', // Brain has validated this
       received_at: new Date(signal.timestamp).toISOString(),
       rejection_reason: null,
       regime_state: null,
@@ -130,22 +126,19 @@ export class ExecutionEngineClient extends EventEmitter
       );
 
       // Emit forwarded event
-      this.emit("signal:forwarded", {
+      this.emit('signal:forwarded', {
         signalId: signal.signalId,
         symbol: signal.symbol,
         authorizedSize,
         latency,
       });
     } catch (error) {
-      console.error(
-        `❌ Failed to forward signal ${signal.signalId} to NATS:`,
-        error,
-      );
+      console.error(`❌ Failed to forward signal ${signal.signalId} to NATS:`, error);
 
-      this.emit("signal:forward_failed", {
+      this.emit('signal:forward_failed', {
         signalId: signal.signalId,
         symbol: signal.symbol,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
 
       throw error;
@@ -157,41 +150,39 @@ export class ExecutionEngineClient extends EventEmitter
    * Called by Circuit Breaker for emergency flatten
    */
   async closeAllPositions(): Promise<void> {
-    console.log(
-      "🚨 Requesting emergency position closure from Execution Engine...",
-    );
+    console.log('🚨 Requesting emergency position closure from Execution Engine...');
 
     try {
       // Send a general CLOSE intent or specific close all command
       // Since Rust implementation is partial, we send a metadata command to the brain channel
-      const subject = "titan.execution.intent.brain";
+      const subject = 'titan.execution.intent.brain';
       const payload = {
         signal_id: `flatten-${Date.now()}`,
-        symbol: "ALL",
+        symbol: 'ALL',
         direction: 0,
-        type: "CLOSE",
+        type: 'CLOSE',
         entry_zone: [],
         stop_loss: 0,
         take_profits: [],
         size: 0,
-        status: "VALIDATED",
+        status: 'VALIDATED',
         received_at: new Date().toISOString(),
         metadata: {
-          command: "FLATTEN_ALL",
-          reason: "BRAIN_CIRCUIT_BREAKER",
+          command: 'FLATTEN_ALL',
+          reason: 'BRAIN_CIRCUIT_BREAKER',
         },
       };
 
       await this.nats.publish(subject, payload);
-      console.log("✅ Emergency flatten request published");
+      console.log('✅ Emergency flatten request published');
 
-      this.emit("positions:flattened", {
+      this.emit('positions:flattened', {
         closedCount: -1, // Unknown async
-        reason: "BRAIN_CIRCUIT_BREAKER",
+        reason: 'BRAIN_CIRCUIT_BREAKER',
         timestamp: Date.now(),
       });
     } catch (error) {
-      console.error("❌ Failed to publish close all positions:", error);
+      console.error('❌ Failed to publish close all positions:', error);
       throw error;
     }
   }
@@ -202,7 +193,7 @@ export class ExecutionEngineClient extends EventEmitter
    */
   async getPositions(): Promise<Position[]> {
     // TODO: Implement NATS request-reply for positions when supported by Rust
-    console.warn("⚠️ getPositions not implemented for NATS yet");
+    console.warn('⚠️ getPositions not implemented for NATS yet');
     return [];
   }
 
@@ -233,7 +224,7 @@ export class ExecutionEngineClient extends EventEmitter
    * Called when Execution Engine confirms an order fill
    */
   onFillConfirmation(callback: (fill: FillConfirmation) => void): void {
-    this.on("fill:confirmed", callback);
+    this.on('fill:confirmed', callback);
   }
 
   /**
@@ -242,7 +233,7 @@ export class ExecutionEngineClient extends EventEmitter
    */
   handleFillConfirmation(fill: FillConfirmation): void {
     console.log(`✅ Fill confirmed: ${fill.signalId} @ ${fill.fillPrice}`);
-    this.emit("fill:confirmed", fill);
+    this.emit('fill:confirmed', fill);
   }
 
   /**
@@ -250,14 +241,14 @@ export class ExecutionEngineClient extends EventEmitter
    */
   private mapPhaseIdToSource(phaseId: PhaseId): string {
     switch (phaseId) {
-      case "phase1":
-        return "scavenger";
-      case "phase2":
-        return "hunter";
-      case "phase3":
-        return "sentinel";
+      case 'phase1':
+        return 'scavenger';
+      case 'phase2':
+        return 'hunter';
+      case 'phase3':
+        return 'sentinel';
       default:
-        return "unknown";
+        return 'unknown';
     }
   }
 }
@@ -269,7 +260,7 @@ export interface FillConfirmation {
   signalId: string;
   orderId: string;
   symbol: string;
-  side: "BUY" | "SELL";
+  side: 'BUY' | 'SELL';
   fillPrice: number;
   fillSize: number;
   requestedSize: number;
@@ -283,7 +274,7 @@ export interface FillConfirmation {
  */
 export interface ExecutionPosition {
   symbol: string;
-  side: "LONG" | "SHORT";
+  side: 'LONG' | 'SHORT';
   size: number;
   entryPrice: number;
   unrealizedPnl: number;

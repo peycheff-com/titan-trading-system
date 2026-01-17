@@ -24,17 +24,20 @@ import {
   TimeframeState,
   TrendState,
   VetoResult,
-} from "../types";
-import { FractalMath } from "./FractalMath";
-import { BybitPerpsClient } from "../exchanges/BybitPerpsClient";
+} from '../types';
+import { FractalMath } from './FractalMath';
+import { BybitPerpsClient } from '../exchanges/BybitPerpsClient';
+import { InstitutionalFlowClassifier } from '../flow/InstitutionalFlowClassifier';
 
 export class HologramEngine {
   private bybitClient: BybitPerpsClient;
+  private flowClassifier: InstitutionalFlowClassifier;
   private cache = new Map<string, { data: OHLCV[]; timestamp: number }>();
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-  constructor(bybitClient: BybitPerpsClient) {
+  constructor(bybitClient: BybitPerpsClient, flowClassifier: InstitutionalFlowClassifier) {
     this.bybitClient = bybitClient;
+    this.flowClassifier = flowClassifier;
   }
 
   /**
@@ -48,9 +51,9 @@ export class HologramEngine {
     try {
       // Fetch OHLCV data for all 3 timeframes in parallel
       const [dailyCandles, h4Candles, m15Candles] = await Promise.all([
-        this.fetchCachedOHLCV(symbol, "1D", 100),
-        this.fetchCachedOHLCV(symbol, "4h", 200),
-        this.fetchCachedOHLCV(symbol, "15m", 500),
+        this.fetchCachedOHLCV(symbol, '1D', 100),
+        this.fetchCachedOHLCV(symbol, '4h', 200),
+        this.fetchCachedOHLCV(symbol, '15m', 500),
       ]);
 
       // Validate data
@@ -59,18 +62,22 @@ export class HologramEngine {
       FractalMath.validateCandles(m15Candles, 5);
 
       // Calculate fractal state for each timeframe
-      const daily = this.analyzeTimeframe(dailyCandles, "1D");
-      const h4 = this.analyzeTimeframe(h4Candles, "4H");
-      const m15 = this.analyzeTimeframe(m15Candles, "15m");
+      const daily = this.analyzeTimeframe(dailyCandles, '1D');
+      const h4 = this.analyzeTimeframe(h4Candles, '4H');
+      const m15 = this.analyzeTimeframe(m15Candles, '15m');
 
-      // Calculate alignment score using weighted formula
-      const alignmentScore = this.calcAlignmentScore(daily, h4, m15);
+      // Get latest flow classification
+      const flowResult = this.flowClassifier.getLatestClassification(symbol);
+      const flowScore = flowResult ? flowResult.breakdown.footprintScore : 50; // Default output neutral 50
+
+      // Calculate alignment score including flow
+      const alignmentScore = this.calcAlignmentScore(daily, h4, m15, flowScore);
 
       // Calculate Volatility (ATR-based)
       const volatility = this.calcVolatility(h4Candles);
 
-      // Apply veto logic with Dynamic Thresholds
-      const veto = this.applyVetoLogic(daily, h4, volatility);
+      // Apply veto logic with Dynamic Thresholds & Flow Checks
+      const veto = this.applyVetoLogic(daily, h4, volatility, flowResult);
 
       // Determine hologram status based on score and veto
       const status = this.getHologramStatus(alignmentScore, veto);
@@ -91,13 +98,18 @@ export class HologramEngine {
         status,
         veto,
         rsScore,
+        flowScore: flowScore,
+        flowAnalysis: flowResult || undefined,
         realizedExpectancy,
+        direction:
+          veto.direction ||
+          (daily.trend === 'BULL' ? 'LONG' : daily.trend === 'BEAR' ? 'SHORT' : null),
       };
     } catch (error) {
       throw new Error(
         `Failed to analyze hologram for ${symbol}: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+          error instanceof Error ? error.message : 'Unknown error'
+        }`
       );
     }
   }
@@ -110,10 +122,7 @@ export class HologramEngine {
    * @param timeframe - Timeframe identifier
    * @returns TimeframeState with all analysis results
    */
-  private analyzeTimeframe(
-    candles: OHLCV[],
-    timeframe: "1D" | "4H" | "15m",
-  ): TimeframeState {
+  private analyzeTimeframe(candles: OHLCV[], timeframe: '1D' | '4H' | '15m'): TimeframeState {
     // Detect fractals using Bill Williams definition
     const fractals = FractalMath.detectFractals(candles);
 
@@ -125,7 +134,7 @@ export class HologramEngine {
 
     // Detect Market Structure Shift (only for 15m timeframe as trigger)
     let mss: MSS | null = null;
-    if (timeframe === "15m" && bos.length > 0) {
+    if (timeframe === '15m' && bos.length > 0) {
       mss = FractalMath.detectMSS(candles, fractals, trend);
     }
 
@@ -151,100 +160,130 @@ export class HologramEngine {
   }
 
   /**
-   * Calculate alignment score using weighted formula
-   * Daily 50%, 4H 30%, 15m 20% - emphasizes higher timeframe bias
+   * Calculate alignment score using weighted formula with Flow Integration
+   * Daily 40%, 4H 25%, 15m 15%, Flow 20%
    *
    * @param daily - Daily timeframe state
    * @param h4 - 4H timeframe state
    * @param m15 - 15m timeframe state
+   * @param flowScore - Flow score (0-100)
    * @returns Alignment score (0-100)
    */
   public calcAlignmentScore(
     daily: TimeframeState,
     h4: TimeframeState,
     m15: TimeframeState,
+    flowScore: number = 50
   ): number {
     let score = 0;
 
-    // Daily-4H agreement (50 points) - Most important
-    if (daily.trend === h4.trend && daily.trend !== "RANGE") {
-      score += 50;
+    // Daily-4H agreement (40 points)
+    if (daily.trend === h4.trend && daily.trend !== 'RANGE') {
+      score += 40;
+    } else if (daily.trend !== 'RANGE') {
+      // Partial credit if daily is strong but 4H correction
+      score += 10;
     }
 
-    // 4H-15m agreement (30 points) - Secondary importance
-    if (h4.trend === m15.trend && h4.trend !== "RANGE") {
-      score += 30;
+    // 4H-15m agreement (25 points)
+    if (h4.trend === m15.trend && h4.trend !== 'RANGE') {
+      score += 25;
     }
 
-    // 15m MSS confirmation (20 points) - Trigger confirmation
+    // 15m MSS confirmation (15 points)
     if (m15.mss !== null) {
-      score += 20;
+      score += 15;
+    }
+
+    // Flow Confirmation (20 points)
+    // Flow Score > 60 is bullish, < 40 is bearish
+    // We map flow score to alignment based on trend direction
+    const trendDirection = daily.trend;
+
+    if (trendDirection === 'BULL') {
+      if (flowScore > 60)
+        score += 20; // Bullish flow confirms Bull trend
+      else if (flowScore > 45) score += 10; // Neutral flow
+      // Bearish flow adds 0
+    } else if (trendDirection === 'BEAR') {
+      if (flowScore < 40)
+        score += 20; // Bearish flow confirms Bear trend
+      else if (flowScore < 55) score += 10; // Neutral flow
+    } else {
+      // Range conditions, flow score less impactful or requires specific range logic
+      score += 5;
     }
 
     return Math.min(100, score);
   }
 
   /**
-   * Apply veto logic for Premium/Discount zones with Dynamic Volatility Thresholds
-   * VETO RULE: Don't buy expensive (Premium), don't sell cheap (Discount)
-   * 2026 UPDATE: Widens equilibrium zone during high volatility
+   * Apply veto logic including Flow Veto
    *
-   * @param daily - Daily timeframe state (bias)
-   * @param h4 - 4H timeframe state (narrative/location)
-   * @param volatility - ATR-based volatility (0-100 normalized)
-   * @returns VetoResult with veto decision and reason
+   * @param daily - Daily timeframe state
+   * @param h4 - 4H timeframe state
+   * @param volatility - ATR-based volatility
+   * @param flowResult - Flow classification result
+   * @returns VetoResult
    */
   public applyVetoLogic(
     daily: TimeframeState,
     h4: TimeframeState,
     volatility: number = 0,
+    flowResult?: any // Typed as any to avoid import issues if not available, but effectively FlowClassificationResult
   ): VetoResult {
     // Dynamic Threshold Adjustment
     // If High Volatility (>50), we widen the "Equilibrium" no-trade zone
-    // Standard Premium is > 0.5. High Vol might require > 0.6
-
-    let premiumThreshold = h4.dealingRange.premiumThreshold;
-    let discountThreshold = h4.dealingRange.discountThreshold;
-
-    if (volatility > 50) {
-      // High Volatility: Require deeper retracements
-      // This effectively simulates requiring OTE (Optimal Trade Entry) in high vol
-      // We can't easily change the absolute price levels here without recalculating dealing range,
-      // but we can adjust the logic checks below.
-      // For simplicity, we'll assume logic checks rely on 'location' enum, which is static.
-      // So we strictly VETO if location is 'EQUILIBRIUM' in High Vol?
-      // Or we check standard location.
-    }
 
     // VETO: Daily BULLISH but 4H in PREMIUM → Don't buy expensive
-    if (daily.trend === "BULL" && h4.location === "PREMIUM") {
+    if (daily.trend === 'BULL' && h4.location === 'PREMIUM') {
       return {
         vetoed: true,
-        reason: "Daily BULLISH but 4H in PREMIUM (too expensive to buy)",
-        direction: "LONG",
+        reason: 'Daily BULLISH but 4H in PREMIUM (too expensive to buy)',
+        direction: 'LONG',
       };
     }
 
     // VETO: Daily BEARISH but 4H in DISCOUNT → Don't sell cheap
-    // VETO: Daily BEARISH but 4H in DISCOUNT → Don't sell cheap
-    if (daily.trend === "BEAR" && h4.location === "DISCOUNT") {
+    if (daily.trend === 'BEAR' && h4.location === 'DISCOUNT') {
       return {
         vetoed: true,
-        reason: "Daily BEARISH but 4H in DISCOUNT (too cheap to sell)",
-        direction: "SHORT",
+        reason: 'Daily BEARISH but 4H in DISCOUNT (too cheap to sell)',
+        direction: 'SHORT',
       };
     }
 
     // 2026: Dynamic Veto for High Volatility
-    // If Volatility is Extreme (>80), veto EQUILIBRIUM trades (require Premium/Discount)
-    if (volatility > 80 && h4.location === "EQUILIBRIUM") {
+    if (volatility > 80 && h4.location === 'EQUILIBRIUM') {
       return {
         vetoed: true,
-        reason: `Extreme Volatility (${
-          volatility.toFixed(0)
-        }) requires Premium/Discount location`,
+        reason: `Extreme Volatility (${volatility.toFixed(0)}) requires Premium/Discount location`,
         direction: null,
       };
+    }
+
+    // FLOW VETO: Aggressive Pushing against Trend
+    if (flowResult && flowResult.flowType === 'aggressive_pushing') {
+      const isBullishFlow =
+        flowResult.breakdown.cvdScore > 60 || flowResult.breakdown.footprintScore > 60;
+      const isBearishFlow =
+        flowResult.breakdown.cvdScore < 40 || flowResult.breakdown.footprintScore < 40;
+
+      if (daily.trend === 'BULL' && isBearishFlow && flowResult.confidence > 70) {
+        return {
+          vetoed: true,
+          reason: 'Heavy Institutional Selling detected against Bull Trend',
+          direction: 'LONG',
+        };
+      }
+
+      if (daily.trend === 'BEAR' && isBullishFlow && flowResult.confidence > 70) {
+        return {
+          vetoed: true,
+          reason: 'Heavy Institutional Buying detected against Bear Trend',
+          direction: 'SHORT',
+        };
+      }
     }
 
     // No veto - alignment is valid
@@ -269,21 +308,21 @@ export class HologramEngine {
   public getHologramStatus(score: number, veto: VetoResult): HologramStatus {
     // If vetoed, return NO_PLAY regardless of score
     if (veto.vetoed) {
-      return "NO_PLAY";
+      return 'NO_PLAY';
     }
 
     // A+ Alignment: Score >= 80 (full confluence)
     if (score >= 80) {
-      return "A+";
+      return 'A+';
     }
 
     // B Alignment: Score 60-79 (partial confluence)
     if (score >= 60) {
-      return "B";
+      return 'B';
     }
 
     // Conflict: Score < 60 (timeframes disagree)
-    return "CONFLICT";
+    return 'CONFLICT';
   }
 
   /**
@@ -297,14 +336,14 @@ export class HologramEngine {
   public async calcRelativeStrength(symbol: string): Promise<number> {
     try {
       // Skip RS calculation for BTC itself
-      if (symbol.toUpperCase() === "BTCUSDT") {
+      if (symbol.toUpperCase() === 'BTCUSDT') {
         return 0;
       }
 
       // Fetch 4-hour data for both asset and BTC (last 2 candles)
       const [assetCandles, btcCandles] = await Promise.all([
-        this.fetchCachedOHLCV(symbol, "4h", 2),
-        this.fetchCachedOHLCV("BTCUSDT", "4h", 2),
+        this.fetchCachedOHLCV(symbol, '4h', 2),
+        this.fetchCachedOHLCV('BTCUSDT', '4h', 2),
       ]);
 
       // Validate we have enough data
@@ -314,10 +353,8 @@ export class HologramEngine {
       }
 
       // Calculate % change over 4 hours (current vs previous)
-      const assetChange = (assetCandles[1].close - assetCandles[0].close) /
-        assetCandles[0].close;
-      const btcChange = (btcCandles[1].close - btcCandles[0].close) /
-        btcCandles[0].close;
+      const assetChange = (assetCandles[1].close - assetCandles[0].close) / assetCandles[0].close;
+      const btcChange = (btcCandles[1].close - btcCandles[0].close) / btcCandles[0].close;
 
       // RS Score = Asset % change - BTC % change
       const rsScore = assetChange - btcChange;
@@ -327,8 +364,8 @@ export class HologramEngine {
     } catch (error) {
       console.warn(
         `⚠️ Failed to calculate RS for ${symbol}: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+          error instanceof Error ? error.message : 'Unknown error'
+        }`
       );
       return 0; // Return neutral RS on error
     }
@@ -346,7 +383,7 @@ export class HologramEngine {
   private async fetchCachedOHLCV(
     symbol: string,
     interval: string,
-    limit: number,
+    limit: number
   ): Promise<OHLCV[]> {
     const cacheKey = `${symbol}-${interval}-${limit}`;
     const cached = this.cache.get(cacheKey);
@@ -385,11 +422,7 @@ export class HologramEngine {
       const low = candles[idx].low;
       const prevClose = candles[idx - 1].close;
 
-      const tr = Math.max(
-        high - low,
-        Math.abs(high - prevClose),
-        Math.abs(low - prevClose),
-      );
+      const tr = Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
       sumTr += tr;
     }
 
@@ -438,43 +471,39 @@ export class HologramEngine {
    * @returns true if valid, throws error if invalid
    */
   public static validateHologramState(hologram: HologramState): boolean {
-    if (!hologram.symbol || typeof hologram.symbol !== "string") {
-      throw new Error("Invalid hologram: missing or invalid symbol");
+    if (!hologram.symbol || typeof hologram.symbol !== 'string') {
+      throw new Error('Invalid hologram: missing or invalid symbol');
     }
 
-    if (!hologram.timestamp || typeof hologram.timestamp !== "number") {
-      throw new Error("Invalid hologram: missing or invalid timestamp");
+    if (!hologram.timestamp || typeof hologram.timestamp !== 'number') {
+      throw new Error('Invalid hologram: missing or invalid timestamp');
     }
 
     if (hologram.alignmentScore < 0 || hologram.alignmentScore > 100) {
-      throw new Error("Invalid hologram: alignment score must be 0-100");
+      throw new Error('Invalid hologram: alignment score must be 0-100');
     }
 
-    if (!["A+", "B", "CONFLICT", "NO_PLAY"].includes(hologram.status)) {
-      throw new Error("Invalid hologram: invalid status");
+    if (!['A+', 'B', 'CONFLICT', 'NO_PLAY'].includes(hologram.status)) {
+      throw new Error('Invalid hologram: invalid status');
     }
 
     // Validate timeframe states
     const timeframes = [hologram.daily, hologram.h4, hologram.m15];
     for (const tf of timeframes) {
       if (!tf.fractals || !Array.isArray(tf.fractals)) {
-        throw new Error(
-          `Invalid hologram: missing fractals for ${tf.timeframe}`,
-        );
+        throw new Error(`Invalid hologram: missing fractals for ${tf.timeframe}`);
       }
 
       if (!tf.bos || !Array.isArray(tf.bos)) {
         throw new Error(`Invalid hologram: missing BOS for ${tf.timeframe}`);
       }
 
-      if (!["BULL", "BEAR", "RANGE"].includes(tf.trend)) {
+      if (!['BULL', 'BEAR', 'RANGE'].includes(tf.trend)) {
         throw new Error(`Invalid hologram: invalid trend for ${tf.timeframe}`);
       }
 
-      if (!["PREMIUM", "DISCOUNT", "EQUILIBRIUM"].includes(tf.location)) {
-        throw new Error(
-          `Invalid hologram: invalid location for ${tf.timeframe}`,
-        );
+      if (!['PREMIUM', 'DISCOUNT', 'EQUILIBRIUM'].includes(tf.location)) {
+        throw new Error(`Invalid hologram: invalid location for ${tf.timeframe}`);
       }
     }
 
@@ -489,23 +518,24 @@ export class HologramEngine {
    * @returns Formatted summary string
    */
   public static getHologramSummary(hologram: HologramState): string {
-    const { symbol, status, alignmentScore, rsScore, daily, h4, m15 } =
-      hologram;
+    const { symbol, status, alignmentScore, rsScore, daily, h4, m15 } = hologram;
 
     const statusEmoji = {
-      "A+": "🟢",
-      "B": "🟡",
-      "CONFLICT": "🔴",
-      "NO_PLAY": "⚫",
+      'A+': '🟢',
+      B: '🟡',
+      CONFLICT: '🔴',
+      NO_PLAY: '⚫',
     }[status];
 
-    const rsEmoji = rsScore > 0.02 ? "📈" : rsScore < -0.02 ? "📉" : "➡️";
+    const rsEmoji = rsScore > 0.02 ? '📈' : rsScore < -0.02 ? '📉' : '➡️';
 
-    return `${statusEmoji} ${symbol} | Score: ${alignmentScore} | RS: ${
-      (rsScore * 100).toFixed(1)
-    }% ${rsEmoji} | ` +
+    return (
+      `${statusEmoji} ${symbol} | Score: ${alignmentScore} | RS: ${(rsScore * 100).toFixed(
+        1
+      )}% ${rsEmoji} | ` +
       `Daily: ${daily.trend}/${daily.location} | 4H: ${h4.trend}/${h4.location} | 15m: ${m15.trend}${
-        m15.mss ? "/MSS" : ""
-      }`;
+        m15.mss ? '/MSS' : ''
+      }`
+    );
   }
 }

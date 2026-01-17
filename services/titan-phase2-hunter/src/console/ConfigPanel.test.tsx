@@ -1,7 +1,7 @@
 /**
  * ConfigPanel Component Tests
  * Tests for the F1 configuration modal overlay
- * 
+ *
  * Requirements: 18.1-18.8 (Runtime Configuration)
  */
 
@@ -12,30 +12,30 @@ describe('ConfigPanel Component', () => {
     alignmentWeights: {
       daily: 50,
       h4: 30,
-      m15: 20
+      m15: 20,
     },
     rsConfig: {
       threshold: 2.0,
-      lookbackPeriod: 4.0
+      lookbackPeriod: 4.0,
     },
     riskConfig: {
       maxLeverage: 4.0,
       stopLossPercent: 1.5,
-      targetPercent: 4.5
+      targetPercent: 4.5,
     },
     portfolioConfig: {
       maxConcurrentPositions: 5,
       maxPortfolioHeat: 15.0,
-      correlationThreshold: 0.7
+      correlationThreshold: 0.7,
     },
     forwardTestConfig: {
       enabled: false,
       duration: 24,
       logSignalsOnly: false,
-      compareToBacktest: false
+      compareToBacktest: false,
     },
     version: 1,
-    lastModified: Date.now()
+    lastModified: Date.now(),
   };
 
   const mockOnSave = jest.fn();
@@ -47,10 +47,11 @@ describe('ConfigPanel Component', () => {
 
   describe('Configuration Validation', () => {
     it('should validate alignment weights sum to 100%', () => {
-      const total = mockConfig.alignmentWeights.daily + 
-                   mockConfig.alignmentWeights.h4 + 
-                   mockConfig.alignmentWeights.m15;
-      
+      const total =
+        mockConfig.alignmentWeights.daily +
+        mockConfig.alignmentWeights.h4 +
+        mockConfig.alignmentWeights.m15;
+
       expect(total).toBe(100);
     });
 
@@ -109,7 +110,7 @@ describe('ConfigPanel Component', () => {
         dailyBias: 'BULLISH',
         fourHourLocation: 'PREMIUM',
         fifteenMinTrigger: 'VALID',
-        alignmentScore: 85
+        alignmentScore: 85,
       };
 
       expect(hologramState).toHaveProperty('dailyBias');
@@ -126,7 +127,7 @@ describe('ConfigPanel Component', () => {
         confidence: 95,
         entry: 50000,
         stopLoss: 49250,
-        takeProfit: 52250
+        takeProfit: 52250,
       };
 
       expect(signal).toHaveProperty('symbol');

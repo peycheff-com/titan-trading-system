@@ -1,28 +1,28 @@
 /**
  * Portfolio Types for Titan Phase 3 - The Sentinel
- * 
+ *
  * Defines position tracking, risk management, and performance metrics.
  */
 
 /**
  * Position type classification
  */
-export type PositionType = 'CORE' | 'SATELLITE' | 'VACUUM';
+export type PositionType = "CORE" | "SATELLITE" | "VACUUM";
 
 /**
  * Risk status levels
  */
-export type RiskStatusLevel = 'HEALTHY' | 'WARNING' | 'CRITICAL';
+export type RiskStatusLevel = "HEALTHY" | "WARNING" | "CRITICAL";
 
 /**
  * Trade type classification
  */
-export type TradeType = 'BASIS_SCALP' | 'VACUUM_ARB' | 'REBALANCE';
+export type TradeType = "BASIS_SCALP" | "VACUUM_ARB" | "REBALANCE";
 
 /**
  * Rebalance action type
  */
-export type RebalanceAction = 'TIER1' | 'TIER2' | 'COMPOUND' | 'NONE';
+export type RebalanceAction = "TIER1" | "TIER2" | "COMPOUND" | "NONE";
 
 /**
  * Portfolio position
@@ -100,10 +100,10 @@ export interface MarginThresholds {
  * Default margin thresholds
  */
 export const DEFAULT_MARGIN_THRESHOLDS: MarginThresholds = {
-  tier1Trigger: 0.30,
-  tier2Trigger: 0.30,
+  tier1Trigger: 0.3,
+  tier2Trigger: 0.3,
   compoundTrigger: 0.05,
-  criticalLevel: 0.50,
+  criticalLevel: 0.5,
 };
 
 /**
@@ -134,9 +134,9 @@ export const DEFAULT_RISK_LIMITS: RiskLimits = {
   criticalDelta: 0.05,
   maxPositionSize: 50000,
   maxLeverage: 3,
-  stopLossThreshold: 0.10,
+  stopLossThreshold: 0.1,
   dailyDrawdownLimit: 0.05,
-  criticalDrawdown: 0.10,
+  criticalDrawdown: 0.1,
 };
 
 /**
@@ -169,6 +169,8 @@ export interface Trade {
   entryTime: number;
   /** Exit timestamp */
   exitTime: number;
+  /** Entry Price */
+  entryPrice: number;
   /** Basis at entry */
   entryBasis: number;
   /** Basis at exit */

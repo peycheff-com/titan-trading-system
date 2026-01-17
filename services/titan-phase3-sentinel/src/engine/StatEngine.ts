@@ -7,18 +7,10 @@
  * @module engine/StatEngine
  */
 
-import type {
-  Signal,
-  SignalAction,
-  SignalThresholds,
-} from "../types/signals.js";
-import type {
-  BasisStats,
-  OrderBook,
-  RollingStatsConfig,
-} from "../types/statistics.js";
-import { DEFAULT_SIGNAL_THRESHOLDS } from "../types/signals.js";
-import { DEFAULT_ROLLING_STATS_CONFIG } from "../types/statistics.js";
+import type { Signal, SignalAction, SignalThresholds } from '../types/signals.js';
+import type { BasisStats, OrderBook, RollingStatsConfig } from '../types/statistics.js';
+import { DEFAULT_SIGNAL_THRESHOLDS } from '../types/signals.js';
+import { DEFAULT_ROLLING_STATS_CONFIG } from '../types/statistics.js';
 
 /**
  * Generic circular buffer for efficient rolling window operations
@@ -62,10 +54,7 @@ export class CircularBuffer<T> {
       return this.buffer.slice(0, this.count);
     }
     // Return items in order from oldest to newest
-    return [
-      ...this.buffer.slice(this.index),
-      ...this.buffer.slice(0, this.index),
-    ];
+    return [...this.buffer.slice(this.index), ...this.buffer.slice(0, this.index)];
   }
 
   /**
@@ -236,10 +225,7 @@ export class BasisCalculator {
   /**
    * Calculate VWAP for a given size through order book levels
    */
-  private calculateVwap(
-    levels: Array<[price: number, size: number]>,
-    targetSize: number,
-  ): number {
+  private calculateVwap(levels: Array<[price: number, size: number]>, targetSize: number): number {
     let remainingSize = targetSize;
     let totalCost = 0;
     let totalFilled = 0;
@@ -306,7 +292,7 @@ export class SignalGenerator {
   getSignal(symbol: string): Signal {
     const stats = this.stats.get(symbol);
     if (!stats || !stats.hasMinSamples()) {
-      return this.createSignal(symbol, "HOLD", 0, 0, 0);
+      return this.createSignal(symbol, 'HOLD', 0, 0, 0);
     }
 
     const history = stats.getHistory();
@@ -314,11 +300,11 @@ export class SignalGenerator {
     const zScore = stats.getZScore(currentBasis);
     const confidence = this.calculateConfidence(stats);
 
-    let action: SignalAction = "HOLD";
+    let action: SignalAction = 'HOLD';
     if (zScore >= this.thresholds.expandZScore) {
-      action = "EXPAND";
+      action = 'EXPAND';
     } else if (zScore <= this.thresholds.contractZScore) {
-      action = "CONTRACT";
+      action = 'CONTRACT';
     }
 
     return this.createSignal(symbol, action, currentBasis, zScore, confidence);
@@ -329,8 +315,7 @@ export class SignalGenerator {
    */
   shouldExpand(symbol: string): boolean {
     const signal = this.getSignal(symbol);
-    return signal.action === "EXPAND" &&
-      signal.confidence >= this.thresholds.minConfidence;
+    return signal.action === 'EXPAND' && signal.confidence >= this.thresholds.minConfidence;
   }
 
   /**
@@ -338,8 +323,7 @@ export class SignalGenerator {
    */
   shouldContract(symbol: string): boolean {
     const signal = this.getSignal(symbol);
-    return signal.action === "CONTRACT" &&
-      signal.confidence >= this.thresholds.minConfidence;
+    return signal.action === 'CONTRACT' && signal.confidence >= this.thresholds.minConfidence;
   }
 
   /**

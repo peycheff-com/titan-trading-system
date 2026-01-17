@@ -1,30 +1,44 @@
 /**
  * AdvancedFlowValidator - Main Integration Component
- * 
+ *
  * Purpose: Integrate all flow analysis components with Phase 2 signal validation.
  * Provides a unified interface for footprint analysis, sweep detection,
  * iceberg detection, and institutional flow classification.
- * 
+ *
  * Key Features:
  * - Connect footprint analysis to existing POI validation
  * - Enhance CVD confirmation with institutional flow detection
  * - Add flow validation events and logging
- * 
+ *
  * Requirements: 2.7 (Integration with Phase 2 signal validation)
  */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from "events";
 import {
   FlowValidation,
   FootprintData,
+  IcebergAnalysis,
   SweepPattern,
-  IcebergAnalysis
-} from '../types';
-import { CVDTrade, OHLCV, POI, FVG, OrderBlock, LiquidityPool, Absorption, Distribution } from '../types';
-import { FootprintAnalyzer, CandleFootprint, FootprintAnalysisResult } from './FootprintAnalyzer';
-import { SweepDetector, SweepDetectionResult } from './SweepDetector';
-import { IcebergDetector, OrderBlockLiquidityResult } from './IcebergDetector';
-import { InstitutionalFlowClassifier, FlowClassificationResult, CVDIntegrationResult } from './InstitutionalFlowClassifier';
+} from "../types";
+import {
+  Absorption,
+  CVDTrade,
+  Distribution,
+  FVG,
+  LiquidityPool,
+  OHLCV,
+  OrderBlock,
+  POI,
+} from "../types";
+import {
+  CandleFootprint,
+  FootprintAnalysisResult,
+  FootprintAnalyzer,
+} from "./FootprintAnalyzer";
+import { SweepDetectionResult, SweepDetector } from "./SweepDetector";
+import { IcebergDetector, OrderBlockLiquidityResult } from "./IcebergDetector";
+import { InstitutionalFlowClassifier } from "./InstitutionalFlowClassifier";
+import { CVDIntegrationResult, FlowClassificationResult } from "../types";
 
 // ============================================================================
 // INTERFACES
@@ -67,7 +81,7 @@ export interface POIFlowValidation {
   veto: {
     vetoed: boolean;
     reason: string | null;
-    type: 'iceberg' | 'flow_conflict' | 'low_confidence' | null;
+    type: "iceberg" | "flow_conflict" | "low_confidence" | null;
   };
   recommendation: string;
 }
@@ -78,7 +92,7 @@ export interface POIFlowValidation {
 export interface FlowValidationEvent {
   symbol: string;
   timestamp: Date;
-  flowType: 'passive_absorption' | 'aggressive_pushing' | 'neutral';
+  flowType: "passive_absorption" | "aggressive_pushing" | "neutral";
   confidence: number;
   institutionalProbability: number;
   sweepCount: number;
@@ -108,7 +122,7 @@ const DEFAULT_CONFIG: AdvancedFlowValidatorConfig = {
   minInstitutionalProbability: 40,
   enableIcebergVeto: true,
   requireSweepConfirmation: false,
-  analysisWindow: 60000 // 1 minute
+  analysisWindow: 60000, // 1 minute
 };
 
 // ============================================================================
@@ -117,7 +131,7 @@ const DEFAULT_CONFIG: AdvancedFlowValidatorConfig = {
 
 /**
  * AdvancedFlowValidator - Unified flow analysis for Phase 2
- * 
+ *
  * Integrates footprint analysis, sweep detection, iceberg detection,
  * and institutional flow classification with existing Phase 2 components.
  */
@@ -146,7 +160,7 @@ export class AdvancedFlowValidator extends EventEmitter {
       {},
       this.footprintAnalyzer,
       this.sweepDetector,
-      this.icebergDetector
+      this.icebergDetector,
     );
 
     // Forward events from components
@@ -157,17 +171,25 @@ export class AdvancedFlowValidator extends EventEmitter {
    * Setup event forwarding from sub-components
    */
   private setupEventForwarding(): void {
-    this.footprintAnalyzer.on('footprintBuilt', (data) => 
-      this.emit('footprintBuilt', data));
-    
-    this.sweepDetector.on('sweepDetected', (data) => 
-      this.emit('sweepDetected', data));
-    
-    this.icebergDetector.on('icebergWarning', (data) => 
-      this.emit('icebergWarning', data));
-    
-    this.flowClassifier.on('flowClassified', (data) => 
-      this.emit('flowClassified', data));
+    this.footprintAnalyzer.on(
+      "footprintBuilt",
+      (data) => this.emit("footprintBuilt", data),
+    );
+
+    this.sweepDetector.on(
+      "sweepDetected",
+      (data) => this.emit("sweepDetected", data),
+    );
+
+    this.icebergDetector.on(
+      "icebergWarning",
+      (data) => this.emit("icebergWarning", data),
+    );
+
+    this.flowClassifier.on(
+      "flowClassified",
+      (data: any) => this.emit("flowClassified", data),
+    );
   }
 
   // ============================================================================
@@ -182,7 +204,7 @@ export class AdvancedFlowValidator extends EventEmitter {
     symbol: string,
     poi: POI,
     trades: CVDTrade[],
-    candle?: OHLCV
+    candle?: OHLCV,
   ): POIFlowValidation {
     if (!this.config.enabled) {
       return this.createDisabledResult(poi);
@@ -194,7 +216,11 @@ export class AdvancedFlowValidator extends EventEmitter {
     // Build footprint if candle provided
     let footprintAnalysis: FootprintAnalysisResult | null = null;
     if (candle) {
-      const footprint = this.footprintAnalyzer.buildFootprint(symbol, candle, trades);
+      const footprint = this.footprintAnalyzer.buildFootprint(
+        symbol,
+        candle,
+        trades,
+      );
       footprintAnalysis = this.footprintAnalyzer.analyzeFootprint(footprint);
     }
 
@@ -205,21 +231,29 @@ export class AdvancedFlowValidator extends EventEmitter {
     const icebergAnalysis = this.icebergDetector.calculateIcebergDensity(
       symbol,
       priceLevel,
-      trades
+      trades,
     );
 
     // Get flow classification
-    const flowClassification = this.flowClassifier.classifyFlow(symbol, trades, priceLevel);
+    const flowClassification = this.flowClassifier.classifyFlow(
+      symbol,
+      trades,
+      priceLevel,
+    );
 
     // Build flow validation
-    const flowValidation = this.flowClassifier.buildFlowValidationScore(symbol, trades, priceLevel);
+    const flowValidation = this.flowClassifier.buildFlowValidationScore(
+      symbol,
+      trades,
+      priceLevel,
+    );
 
     // Calculate adjustments
     const adjustments = this.calculateAdjustments(
       poi,
       flowClassification,
       icebergAnalysis,
-      sweepAnalysis
+      sweepAnalysis,
     );
 
     // Check for veto conditions
@@ -227,23 +261,24 @@ export class AdvancedFlowValidator extends EventEmitter {
       poi,
       flowValidation,
       icebergAnalysis,
-      flowClassification
+      flowClassification,
     );
 
     // Determine overall validity
-    const isValid = !veto.vetoed && 
-                    flowValidation.confidence >= this.config.minConfidence;
+    const isValid = !veto.vetoed &&
+      flowValidation.confidence >= this.config.minConfidence;
 
     // Calculate final confidence
-    const confidence = veto.vetoed ? 0 : 
-      flowValidation.confidence + adjustments.confidenceAdjustment;
+    const confidence = veto.vetoed
+      ? 0
+      : flowValidation.confidence + adjustments.confidenceAdjustment;
 
     // Generate recommendation
     const recommendation = this.generateRecommendation(
       poi,
       flowClassification,
       veto,
-      isValid
+      isValid,
     );
 
     const result: POIFlowValidation = {
@@ -256,7 +291,7 @@ export class AdvancedFlowValidator extends EventEmitter {
       confidence: Math.max(0, Math.min(100, confidence)),
       adjustments,
       veto,
-      recommendation
+      recommendation,
     };
 
     // Update statistics
@@ -272,14 +307,14 @@ export class AdvancedFlowValidator extends EventEmitter {
    * Get price level from POI
    */
   private getPOIPriceLevel(poi: POI): number {
-    if ('midpoint' in poi) {
+    if ("midpoint" in poi) {
       // FVG
       return (poi as FVG).midpoint;
-    } else if ('high' in poi && 'low' in poi) {
+    } else if ("high" in poi && "low" in poi) {
       // OrderBlock
       const ob = poi as OrderBlock;
       return (ob.high + ob.low) / 2;
-    } else if ('price' in poi) {
+    } else if ("price" in poi) {
       // LiquidityPool
       return (poi as LiquidityPool).price;
     }
@@ -293,7 +328,7 @@ export class AdvancedFlowValidator extends EventEmitter {
     poi: POI,
     flowClassification: FlowClassificationResult,
     icebergAnalysis: IcebergAnalysis,
-    sweepAnalysis: SweepDetectionResult
+    sweepAnalysis: SweepDetectionResult,
   ): {
     confidenceAdjustment: number;
     positionSizeMultiplier: number;
@@ -306,7 +341,7 @@ export class AdvancedFlowValidator extends EventEmitter {
     // Passive absorption boosts confidence for bullish POIs
     if (flowClassification.signals.passiveAbsorption) {
       const poiType = this.getPOIType(poi);
-      if (poiType === 'BULLISH') {
+      if (poiType === "BULLISH") {
         confidenceAdjustment += 20;
         positionSizeMultiplier *= 1.2;
       }
@@ -315,7 +350,7 @@ export class AdvancedFlowValidator extends EventEmitter {
     // Aggressive pushing adjusts based on direction
     if (flowClassification.signals.aggressivePushing) {
       const poiType = this.getPOIType(poi);
-      if (poiType === 'BEARISH') {
+      if (poiType === "BEARISH") {
         confidenceAdjustment += 15;
       } else {
         confidenceAdjustment -= 10;
@@ -334,31 +369,37 @@ export class AdvancedFlowValidator extends EventEmitter {
     }
 
     // High institutional probability boosts confidence
-    if (flowClassification.institutionalProbability >= this.config.minInstitutionalProbability) {
+    if (
+      flowClassification.institutionalProbability >=
+        this.config.minInstitutionalProbability
+    ) {
       confidenceAdjustment += 10;
     }
 
     return {
       confidenceAdjustment,
-      positionSizeMultiplier: Math.max(0.5, Math.min(1.5, positionSizeMultiplier)),
-      stopLossAdjustment
+      positionSizeMultiplier: Math.max(
+        0.5,
+        Math.min(1.5, positionSizeMultiplier),
+      ),
+      stopLossAdjustment,
     };
   }
 
   /**
    * Get POI type (BULLISH/BEARISH)
    */
-  private getPOIType(poi: POI): 'BULLISH' | 'BEARISH' | 'NEUTRAL' {
-    if ('type' in poi) {
+  private getPOIType(poi: POI): "BULLISH" | "BEARISH" | "NEUTRAL" {
+    if ("type" in poi) {
       const type = (poi as FVG | OrderBlock).type;
-      return type === 'BULLISH' ? 'BULLISH' : 'BEARISH';
+      return type === "BULLISH" ? "BULLISH" : "BEARISH";
     }
-    if ('strength' in poi) {
+    if ("strength" in poi) {
       // LiquidityPool
       const lp = poi as LiquidityPool;
-      return lp.type === 'HIGH' ? 'BEARISH' : 'BULLISH';
+      return lp.type === "HIGH" ? "BEARISH" : "BULLISH";
     }
-    return 'NEUTRAL';
+    return "NEUTRAL";
   }
 
   /**
@@ -369,42 +410,55 @@ export class AdvancedFlowValidator extends EventEmitter {
     poi: POI,
     flowValidation: FlowValidation,
     icebergAnalysis: IcebergAnalysis,
-    flowClassification: FlowClassificationResult
+    flowClassification: FlowClassificationResult,
   ): {
     vetoed: boolean;
     reason: string | null;
-    type: 'iceberg' | 'flow_conflict' | 'low_confidence' | null;
+    type: "iceberg" | "flow_conflict" | "low_confidence" | null;
   } {
     const poiType = this.getPOIType(poi);
 
     // Iceberg veto for Long setups
-    if (this.config.enableIcebergVeto && 
-        icebergAnalysis.isIceberg && 
-        poiType === 'BULLISH') {
+    if (
+      this.config.enableIcebergVeto && icebergAnalysis.isIceberg &&
+      poiType === "BULLISH"
+    ) {
       return {
         vetoed: true,
-        reason: `ICEBERG_SELL detected at POI level (density: ${icebergAnalysis.density.toFixed(1)}%). Long setup cancelled.`,
-        type: 'iceberg'
+        reason: `ICEBERG_SELL detected at POI level (density: ${
+          icebergAnalysis.density.toFixed(1)
+        }%). Long setup cancelled.`,
+        type: "iceberg",
       };
     }
 
     // Flow conflict veto
-    if (flowClassification.flowType === 'aggressive_pushing' && poiType === 'BULLISH') {
+    if (
+      flowClassification.flowType === "aggressive_pushing" &&
+      poiType === "BULLISH"
+    ) {
       if (flowClassification.confidence >= 70) {
         return {
           vetoed: true,
-          reason: `Aggressive selling detected (confidence: ${flowClassification.confidence.toFixed(1)}%). Conflicts with bullish POI.`,
-          type: 'flow_conflict'
+          reason: `Aggressive selling detected (confidence: ${
+            flowClassification.confidence.toFixed(1)
+          }%). Conflicts with bullish POI.`,
+          type: "flow_conflict",
         };
       }
     }
 
-    if (flowClassification.flowType === 'passive_absorption' && poiType === 'BEARISH') {
+    if (
+      flowClassification.flowType === "passive_absorption" &&
+      poiType === "BEARISH"
+    ) {
       if (flowClassification.confidence >= 70) {
         return {
           vetoed: true,
-          reason: `Passive absorption detected (confidence: ${flowClassification.confidence.toFixed(1)}%). Conflicts with bearish POI.`,
-          type: 'flow_conflict'
+          reason: `Passive absorption detected (confidence: ${
+            flowClassification.confidence.toFixed(1)
+          }%). Conflicts with bearish POI.`,
+          type: "flow_conflict",
         };
       }
     }
@@ -413,15 +467,17 @@ export class AdvancedFlowValidator extends EventEmitter {
     if (flowValidation.confidence < this.config.minConfidence) {
       return {
         vetoed: true,
-        reason: `Flow confidence too low (${flowValidation.confidence.toFixed(1)}% < ${this.config.minConfidence}%)`,
-        type: 'low_confidence'
+        reason: `Flow confidence too low (${
+          flowValidation.confidence.toFixed(1)
+        }% < ${this.config.minConfidence}%)`,
+        type: "low_confidence",
       };
     }
 
     return {
       vetoed: false,
       reason: null,
-      type: null
+      type: null,
     };
   }
 
@@ -432,32 +488,38 @@ export class AdvancedFlowValidator extends EventEmitter {
     poi: POI,
     flowClassification: FlowClassificationResult,
     veto: { vetoed: boolean; reason: string | null },
-    isValid: boolean
+    isValid: boolean,
   ): string {
     if (veto.vetoed) {
       return `VETO: ${veto.reason}`;
     }
 
     if (!isValid) {
-      return 'INVALID: Flow analysis does not confirm POI validity';
+      return "INVALID: Flow analysis does not confirm POI validity";
     }
 
     const poiType = this.getPOIType(poi);
     const flowType = flowClassification.flowType;
 
-    if (flowType === 'passive_absorption' && poiType === 'BULLISH') {
-      return `STRONG CONFIRMATION: Passive absorption supports bullish POI (${flowClassification.confidence.toFixed(1)}% confidence)`;
+    if (flowType === "passive_absorption" && poiType === "BULLISH") {
+      return `STRONG CONFIRMATION: Passive absorption supports bullish POI (${
+        flowClassification.confidence.toFixed(1)
+      }% confidence)`;
     }
 
-    if (flowType === 'aggressive_pushing' && poiType === 'BEARISH') {
-      return `STRONG CONFIRMATION: Aggressive selling supports bearish POI (${flowClassification.confidence.toFixed(1)}% confidence)`;
+    if (flowType === "aggressive_pushing" && poiType === "BEARISH") {
+      return `STRONG CONFIRMATION: Aggressive selling supports bearish POI (${
+        flowClassification.confidence.toFixed(1)
+      }% confidence)`;
     }
 
     if (flowClassification.signals.sweepDetected) {
       return `CONFIRMED: Sweep pattern detected, institutional activity likely`;
     }
 
-    return `VALID: Flow analysis confirms POI (${flowClassification.confidence.toFixed(1)}% confidence)`;
+    return `VALID: Flow analysis confirms POI (${
+      flowClassification.confidence.toFixed(1)
+    }% confidence)`;
   }
 
   // ============================================================================
@@ -473,14 +535,14 @@ export class AdvancedFlowValidator extends EventEmitter {
     trades: CVDTrade[],
     cvdValue: number,
     absorption?: Absorption | null,
-    distribution?: Distribution | null
+    distribution?: Distribution | null,
   ): CVDIntegrationResult {
     return this.flowClassifier.integrateWithCVD(
       symbol,
       trades,
       cvdValue,
       absorption,
-      distribution
+      distribution,
     );
   }
 
@@ -522,19 +584,27 @@ export class AdvancedFlowValidator extends EventEmitter {
       institutionalProbability: result.flowValidation.institutionalProbability,
       sweepCount: result.flowValidation.sweepCount,
       icebergDetected: result.icebergAnalysis?.isIceberg || false,
-      cvdConfirmed: result.flowValidation.isValid
+      cvdConfirmed: result.flowValidation.isValid,
     };
 
-    this.emit('flowValidated', event);
+    this.emit("flowValidated", event);
 
     // Log validation
-    console.log(`🔍 Flow Validation [${symbol}]: ${result.flowValidation.flowType} ` +
-                `(${result.confidence.toFixed(1)}% confidence, ` +
-                `${result.flowValidation.institutionalProbability.toFixed(1)}% institutional)`);
+    console.log(
+      `🔍 Flow Validation [${symbol}]: ${result.flowValidation.flowType} ` +
+        `(${result.confidence.toFixed(1)}% confidence, ` +
+        `${
+          result.flowValidation.institutionalProbability.toFixed(1)
+        }% institutional)`,
+    );
 
     if (result.veto.vetoed) {
       console.log(`⛔ VETO: ${result.veto.reason}`);
-      this.emit('flowVeto', { symbol, reason: result.veto.reason, type: result.veto.type });
+      this.emit("flowVeto", {
+        symbol,
+        reason: result.veto.reason,
+        type: result.veto.type,
+      });
     }
   }
 
@@ -565,9 +635,9 @@ export class AdvancedFlowValidator extends EventEmitter {
       lastValidation: this.lastValidation,
       totalValidations: this.validationCount,
       vetoCount: this.vetoCount,
-      avgConfidence: this.validationCount > 0 
-        ? this.confidenceSum / this.validationCount 
-        : 0
+      avgConfidence: this.validationCount > 0
+        ? this.confidenceSum / this.validationCount
+        : 0,
     };
   }
 
@@ -576,17 +646,17 @@ export class AdvancedFlowValidator extends EventEmitter {
    */
   getStats(): {
     state: AdvancedFlowValidatorState;
-    footprint: ReturnType<FootprintAnalyzer['getStats']>;
-    sweep: ReturnType<SweepDetector['getStats']>;
-    iceberg: ReturnType<IcebergDetector['getStats']>;
-    classifier: ReturnType<InstitutionalFlowClassifier['getStats']>;
+    footprint: ReturnType<FootprintAnalyzer["getStats"]>;
+    sweep: ReturnType<SweepDetector["getStats"]>;
+    iceberg: ReturnType<IcebergDetector["getStats"]>;
+    classifier: ReturnType<InstitutionalFlowClassifier["getStats"]>;
   } {
     return {
       state: this.getState(),
       footprint: this.footprintAnalyzer.getStats(),
       sweep: this.sweepDetector.getStats(),
       iceberg: this.icebergDetector.getStats(),
-      classifier: this.flowClassifier.getStats()
+      classifier: this.flowClassifier.getStats(),
     };
   }
 
@@ -603,11 +673,11 @@ export class AdvancedFlowValidator extends EventEmitter {
       flowValidation: {
         isValid: true,
         confidence: 100,
-        flowType: 'neutral',
+        flowType: "neutral",
         sweepCount: 0,
         icebergDensity: 0,
         institutionalProbability: 0,
-        timestamp: new Date()
+        timestamp: new Date(),
       },
       footprintAnalysis: null,
       sweepAnalysis: null,
@@ -617,14 +687,15 @@ export class AdvancedFlowValidator extends EventEmitter {
       adjustments: {
         confidenceAdjustment: 0,
         positionSizeMultiplier: 1.0,
-        stopLossAdjustment: 0
+        stopLossAdjustment: 0,
       },
       veto: {
         vetoed: false,
         reason: null,
-        type: null
+        type: null,
       },
-      recommendation: 'Advanced Flow Validator disabled - using default validation'
+      recommendation:
+        "Advanced Flow Validator disabled - using default validation",
     };
   }
 
@@ -637,7 +708,8 @@ export class AdvancedFlowValidator extends EventEmitter {
     // Check if we have recent validations
     if (this.lastValidation) {
       const staleness = Date.now() - this.lastValidation.getTime();
-      if (staleness > 300000) { // 5 minutes
+      if (staleness > 300000) {
+        // 5 minutes
         return false;
       }
     }
@@ -654,7 +726,7 @@ export class AdvancedFlowValidator extends EventEmitter {
    */
   updateConfig(config: Partial<AdvancedFlowValidatorConfig>): void {
     this.config = { ...this.config, ...config };
-    this.emit('configUpdated', this.config);
+    this.emit("configUpdated", this.config);
   }
 
   /**
@@ -677,7 +749,7 @@ export class AdvancedFlowValidator extends EventEmitter {
       footprint: this.footprintAnalyzer,
       sweep: this.sweepDetector,
       iceberg: this.icebergDetector,
-      classifier: this.flowClassifier
+      classifier: this.flowClassifier,
     };
   }
 

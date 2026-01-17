@@ -1,13 +1,13 @@
 /**
  * AllocationEngine - Calculates base allocation weights for each phase
  * Uses sigmoid transition functions for smooth phase transitions
- * 
+ *
  * Requirements: 1.2, 1.3, 1.4, 1.5, 1.6, 3.4
  */
 
 import {
-  AllocationVector,
   AllocationEngineConfig,
+  AllocationVector,
   EquityTier,
   LeverageCaps,
   TransitionPoints,
@@ -39,13 +39,13 @@ export class AllocationEngine {
 
   /**
    * Calculate allocation weights for each phase based on current equity
-   * 
+   *
    * Transition logic:
    * - Below $1,500: 100% Phase 1
    * - $1,500 - $5,000: Sigmoid transition from Phase 1 to Phase 2
    * - $5,000 - $25,000: 20% Phase 1, 80% Phase 2
    * - Above $25,000: Begin transition to Phase 3
-   * 
+   *
    * @param equity - Current account equity in USD
    * @returns AllocationVector with weights summing to 1.0
    */
@@ -66,9 +66,9 @@ export class AllocationEngine {
       // Sigmoid transition from 100% P1 to 20% P1 / 80% P2
       const transitionMidpoint = (startP2 + fullP2) / 2;
       const progress = this.sigmoid(safeEquity, transitionMidpoint, 0.003);
-      
+
       // w1 goes from 1.0 to 0.2, w2 goes from 0.0 to 0.8
-      const w1 = 1.0 - (0.8 * progress);
+      const w1 = 1.0 - 0.8 * progress;
       const w2 = 0.8 * progress;
       const w3 = 0.0;
 
@@ -101,7 +101,7 @@ export class AllocationEngine {
    */
   private normalizeWeights(vector: AllocationVector): AllocationVector {
     const sum = vector.w1 + vector.w2 + vector.w3;
-    
+
     if (sum === 0) {
       // Fallback to Phase 1 only if all weights are 0
       return { w1: 1.0, w2: 0.0, w3: 0.0, timestamp: vector.timestamp };
@@ -117,14 +117,14 @@ export class AllocationEngine {
 
   /**
    * Determine the equity tier based on current equity
-   * 
+   *
    * Tier boundaries:
    * - MICRO: < $1,500
    * - SMALL: $1,500 - $5,000
    * - MEDIUM: $5,000 - $25,000
    * - LARGE: $25,000 - $50,000
    * - INSTITUTIONAL: > $50,000
-   * 
+   *
    * @param equity - Current account equity in USD
    * @returns EquityTier classification
    */
@@ -148,14 +148,14 @@ export class AllocationEngine {
 
   /**
    * Get maximum allowed leverage for the current equity tier
-   * 
+   *
    * Leverage caps by tier:
    * - MICRO: 20x
    * - SMALL: 10x
    * - MEDIUM: 5x
    * - LARGE: 3x
    * - INSTITUTIONAL: 2x
-   * 
+   *
    * @param equity - Current account equity in USD
    * @returns Maximum leverage multiplier
    */
@@ -176,5 +176,64 @@ export class AllocationEngine {
    */
   getLeverageCaps(): LeverageCaps {
     return { ...this.leverageCaps };
+  }
+
+  /**
+   * Calculate adaptive weights using Multi-Armed Bandit logic (Softmax)
+   * Blends base Sigmoid weights (Safety) with Performance weights (Exploitation)
+   *
+   * @param equity - Current equity
+   * @param performances - Array of performance metrics for each phase
+   * @param explorationWeight - Weight given to base safety curve (0.0 to 1.0). Default 0.7 (70% Safety)
+   */
+  getAdaptiveWeights(
+    equity: number,
+    performances: { phaseId: string; sharpeRatio: number }[],
+    explorationWeight: number = 0.7,
+  ): AllocationVector {
+    const baseWeights = this.getWeights(equity);
+    const timestamp = Date.now();
+
+    // If equity is low (Phase 1 only), force base weights to protect capital
+    if (baseWeights.w1 === 1.0) {
+      return baseWeights;
+    }
+
+    // If no performance data, fallback to base weights (Safety)
+    if (!performances || performances.length === 0) {
+      return baseWeights;
+    }
+
+    // 1. Calculate Softmax of Sharpe Ratios for Performance Weights
+    // Filter for phases 1, 2, 3 in order
+    const phases = ['phase1', 'phase2', 'phase3'];
+    const sharpes = phases.map((id) => {
+      const p = performances.find((p) => p.phaseId === id);
+      return p ? Math.max(0, p.sharpeRatio) : 0; // Floor at 0 for softmax
+    });
+
+    // Temperature for Softmax (higher = more uniform, lower = more winner-takes-all)
+    const temperature = 1.0;
+    const expSharpes = sharpes.map((s) => Math.exp(s / temperature));
+    const sumExp = expSharpes.reduce((a, b) => a + b, 0);
+
+    // If sum is 0 or invalid, fallback to base weights
+    if (sumExp === 0 || !isFinite(sumExp)) {
+      return baseWeights;
+    }
+
+    const perfW1 = expSharpes[0] / sumExp;
+    const perfW2 = expSharpes[1] / sumExp;
+    const perfW3 = expSharpes[2] / sumExp;
+
+    // 2. Blend Base Weights with Performance Weights
+    // Final = (Base * Exploration) + (Perf * Exploitation)
+    const exploitationWeight = 1.0 - explorationWeight;
+
+    const w1 = baseWeights.w1 * explorationWeight + perfW1 * exploitationWeight;
+    const w2 = baseWeights.w2 * explorationWeight + perfW2 * exploitationWeight;
+    const w3 = baseWeights.w3 * explorationWeight + perfW3 * exploitationWeight;
+
+    return this.normalizeWeights({ w1, w2, w3, timestamp });
   }
 }

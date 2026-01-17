@@ -1,26 +1,26 @@
 /**
  * Risk Management Module Exports
- * 
+ *
  * Exports all risk management components for Titan Phase 2 Hunter
  */
 
 export { PositionManager } from './PositionManager';
 export type { PositionManagerConfig, PositionManagerEvents } from './PositionManager';
 export { CorrelationManager } from './CorrelationManager';
-export type { 
-  CorrelationManagerConfig, 
+export type {
+  CorrelationManagerConfig,
   CorrelationManagerEvents,
   CorrelationData,
   CorrelationMatrix,
   CorrelationResult,
-  HighBetaState
+  HighBetaState,
 } from './CorrelationManager';
 export { DrawdownProtector } from './DrawdownProtector';
-export type { 
-  DrawdownProtectorConfig, 
+export type {
+  DrawdownProtectorConfig,
   DrawdownProtectorEvents,
   TradeRecord,
-  DrawdownState
+  DrawdownState,
 } from './DrawdownProtector';
 export { PortfolioManager } from './PortfolioManager';
 export type {
@@ -28,7 +28,7 @@ export type {
   PortfolioManagerEvents,
   PortfolioState,
   RankedSignal,
-  RiskAllocation
+  RiskAllocation,
 } from './PortfolioManager';
 
 // Enhanced Risk Management (2026 Modernization)
@@ -40,5 +40,5 @@ export type {
   RiskCondition,
   RiskAdjustments,
   ExchangeStatus,
-  EnhancedRiskState
+  EnhancedRiskState,
 } from './EnhancedRiskManager';

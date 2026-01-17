@@ -1,14 +1,18 @@
 /**
  * MultiExchangeManager - Manages connections to multiple exchanges
- * 
+ *
  * Coordinates WebSocket connections to Binance, Coinbase, and Kraken
  * with unified trade stream and connection health monitoring.
- * 
+ *
  * Requirements: 4.1, 4.6 (Global Liquidity Aggregation)
  */
 
 import { EventEmitter } from 'events';
-import { ExchangeWebSocketClient, ExchangeTrade, ConnectionHealth } from './ExchangeWebSocketClient';
+import {
+  ExchangeWebSocketClient,
+  ExchangeTrade,
+  ConnectionHealth,
+} from './ExchangeWebSocketClient';
 import { ConnectionStatus, ExchangeFlow } from '../types';
 
 /**
@@ -45,12 +49,12 @@ const DEFAULT_CONFIG: MultiExchangeManagerConfig = {
   reconnectInterval: 5000,
   maxReconnectAttempts: 10,
   heartbeatInterval: 30000,
-  messageTimeout: 60000
+  messageTimeout: 60000,
 };
 
 /**
  * MultiExchangeManager - Unified multi-exchange WebSocket manager
- * 
+ *
  * Emits events:
  * - 'trade': ExchangeTrade - Trade from any exchange
  * - 'exchangeConnected': exchange - Single exchange connected
@@ -93,7 +97,7 @@ export class MultiExchangeManager extends EventEmitter {
         reconnectInterval: this.config.reconnectInterval,
         maxReconnectAttempts: this.config.maxReconnectAttempts,
         heartbeatInterval: this.config.heartbeatInterval,
-        messageTimeout: this.config.messageTimeout
+        messageTimeout: this.config.messageTimeout,
       });
 
       this.setupClientListeners(client, exchange);
@@ -133,12 +137,10 @@ export class MultiExchangeManager extends EventEmitter {
   async disconnect(): Promise<void> {
     console.log('🔌 Disconnecting from all exchanges...');
 
-    const disconnectPromises = Array.from(this.clients.values()).map(
-      client => client.disconnect()
-    );
+    const disconnectPromises = Array.from(this.clients.values()).map(client => client.disconnect());
 
     await Promise.all(disconnectPromises);
-    
+
     this.clients.clear();
     this.healthMetrics.clear();
     this.isInitialized = false;
@@ -154,7 +156,7 @@ export class MultiExchangeManager extends EventEmitter {
     const statuses: Record<'binance' | 'coinbase' | 'kraken', ConnectionStatus> = {
       binance: ConnectionStatus.DISCONNECTED,
       coinbase: ConnectionStatus.DISCONNECTED,
-      kraken: ConnectionStatus.DISCONNECTED
+      kraken: ConnectionStatus.DISCONNECTED,
     };
 
     let connectedCount = 0;
@@ -172,7 +174,7 @@ export class MultiExchangeManager extends EventEmitter {
       connectedCount,
       totalExchanges: this.config.exchanges.length,
       allConnected: connectedCount === this.config.exchanges.length,
-      anyConnected: connectedCount > 0
+      anyConnected: connectedCount > 0,
     };
   }
 
@@ -210,7 +212,7 @@ export class MultiExchangeManager extends EventEmitter {
    */
   getConnectedExchanges(): ('binance' | 'coinbase' | 'kraken')[] {
     const connected: ('binance' | 'coinbase' | 'kraken')[] = [];
-    
+
     for (const [exchange, client] of this.clients) {
       if (client.getStatus() === ConnectionStatus.CONNECTED) {
         connected.push(exchange);
@@ -232,7 +234,7 @@ export class MultiExchangeManager extends EventEmitter {
    */
   updateSymbols(symbols: string[]): void {
     this.config.symbols = symbols;
-    
+
     for (const client of this.clients.values()) {
       client.updateSymbols(symbols);
     }
@@ -242,7 +244,7 @@ export class MultiExchangeManager extends EventEmitter {
    * Setup event listeners for a client
    */
   private setupClientListeners(
-    client: ExchangeWebSocketClient, 
+    client: ExchangeWebSocketClient,
     exchange: 'binance' | 'coinbase' | 'kraken'
   ): void {
     // Forward trade events
@@ -267,7 +269,7 @@ export class MultiExchangeManager extends EventEmitter {
       this.emit('exchangeDisconnected', exchange);
       this.emit('connectionLost', {
         exchange,
-        remainingCount: this.getConnectedCount()
+        remainingCount: this.getConnectedCount(),
       });
       this.emitStatusChange();
     });

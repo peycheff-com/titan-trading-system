@@ -1,19 +1,15 @@
 /**
  * Forward Test Mode for Titan Phase 2 - The Hunter
- * 
+ *
  * Runs paper trading with live data to validate strategy performance
  * without risking real capital. Logs all signals without execution
  * and compares results to backtest validation.
- * 
+ *
  * Requirements: 17.7 (Forward Testing)
  */
 
 import { EventEmitter } from 'events';
-import { 
-  SignalData, 
-  SessionType, 
-  Metrics
-} from '../types';
+import { SignalData, SessionType, Metrics } from '../types';
 import { BacktestEngine, BacktestResults, BacktestMetrics } from './BacktestEngine';
 import { BybitPerpsClient } from '../exchanges/BybitPerpsClient';
 import { HologramEngine } from '../engine/HologramEngine';
@@ -80,9 +76,9 @@ export interface ForwardTestMetrics extends Metrics {
   };
   hologramStatusDistribution: {
     'A+': number;
-    'B': number;
-    'CONFLICT': number;
-    'NO_PLAY': number;
+    B: number;
+    CONFLICT: number;
+    NO_PLAY: number;
   };
 }
 
@@ -110,7 +106,7 @@ export class ForwardTestMode extends EventEmitter {
   private sessionProfiler: SessionProfiler;
   private configManager: ConfigManager;
   private backtestEngine: BacktestEngine;
-  
+
   private config: ForwardTestConfig;
   private isRunning = false;
   private startTime = 0;
@@ -128,7 +124,7 @@ export class ForwardTestMode extends EventEmitter {
     backtestEngine: BacktestEngine
   ) {
     super();
-    
+
     this.bybitClient = bybitClient;
     this.hologramEngine = hologramEngine;
     this.sessionProfiler = sessionProfiler;
@@ -145,7 +141,7 @@ export class ForwardTestMode extends EventEmitter {
       maxConcurrentPositions: 3,
       logSignalsOnly: false,
       compareToBacktest: false,
-      backtestReference: null
+      backtestReference: null,
     };
 
     this.currentEquity = this.config.initialEquity;
@@ -155,13 +151,15 @@ export class ForwardTestMode extends EventEmitter {
    * Run paper trading with live data
    * Requirements: 17.7
    */
-  public async runPaperTrading(config: Partial<ForwardTestConfig> = {}): Promise<ForwardTestResults> {
+  public async runPaperTrading(
+    config: Partial<ForwardTestConfig> = {}
+  ): Promise<ForwardTestResults> {
     if (this.isRunning) {
       throw new Error('Forward test is already running');
     }
 
     this.config = { ...this.config, ...config };
-    
+
     if (!this.config.enabled) {
       throw new Error('Paper trading is disabled in configuration');
     }
@@ -196,7 +194,6 @@ export class ForwardTestMode extends EventEmitter {
       console.log(`🎯 Final Equity: ${results.metrics.finalEquity.toLocaleString()}`);
 
       return results;
-
     } catch (error) {
       console.error('❌ Forward test failed:', error);
       throw error;
@@ -239,22 +236,23 @@ export class ForwardTestMode extends EventEmitter {
           takeProfit: signal.takeProfit,
           positionSize: signal.positionSize,
           leverage: signal.leverage,
-          timestamp: signal.timestamp
-        }
+          timestamp: signal.timestamp,
+        },
       });
 
       // Emit event
       this.emit('signalLogged', signal);
 
-      console.log(`📝 Signal logged: ${signal.symbol} ${signal.direction} @ ${signal.entryPrice} (${signal.hologramStatus})`);
-
+      console.log(
+        `📝 Signal logged: ${signal.symbol} ${signal.direction} @ ${signal.entryPrice} (${signal.hologramStatus})`
+      );
     } catch (error) {
       console.error('❌ Failed to log signal:', error);
       logError('ERROR', 'Failed to log signal without execution', {
         component: 'ForwardTestMode',
         function: 'logSignalsWithoutExecution',
         stack: (error as Error).stack,
-        data: { signal }
+        data: { signal },
       });
     }
   }
@@ -277,7 +275,7 @@ export class ForwardTestMode extends EventEmitter {
         profitFactorDiff: forwardMetrics.profitFactor - backtestMetrics.profitFactor,
         sharpeRatioDiff: forwardMetrics.sharpeRatio - backtestMetrics.sharpeRatio,
         maxDrawdownDiff: forwardMetrics.maxDrawdown - backtestMetrics.maxDrawdown,
-        avgHoldTimeDiff: forwardMetrics.averageWin - backtestMetrics.averageWin // Using averageWin as proxy for hold time
+        avgHoldTimeDiff: forwardMetrics.averageWin - backtestMetrics.averageWin, // Using averageWin as proxy for hold time
       };
 
       // Validation logic
@@ -287,28 +285,36 @@ export class ForwardTestMode extends EventEmitter {
 
       // Check win rate deviation (should be within ±10%)
       if (Math.abs(deviations.winRateDiff) > 0.1) {
-        warnings.push(`Win rate deviation: ${(deviations.winRateDiff * 100).toFixed(1)}% (expected ±10%)`);
+        warnings.push(
+          `Win rate deviation: ${(deviations.winRateDiff * 100).toFixed(1)}% (expected ±10%)`
+        );
         confidence -= 20;
         recommendations.push('Review signal generation logic for consistency');
       }
 
       // Check profit factor deviation (should be within ±0.5)
       if (Math.abs(deviations.profitFactorDiff) > 0.5) {
-        warnings.push(`Profit factor deviation: ${deviations.profitFactorDiff.toFixed(2)} (expected ±0.5)`);
+        warnings.push(
+          `Profit factor deviation: ${deviations.profitFactorDiff.toFixed(2)} (expected ±0.5)`
+        );
         confidence -= 15;
         recommendations.push('Check execution simulation accuracy');
       }
 
       // Check Sharpe ratio deviation (should be within ±0.3)
       if (Math.abs(deviations.sharpeRatioDiff) > 0.3) {
-        warnings.push(`Sharpe ratio deviation: ${deviations.sharpeRatioDiff.toFixed(2)} (expected ±0.3)`);
+        warnings.push(
+          `Sharpe ratio deviation: ${deviations.sharpeRatioDiff.toFixed(2)} (expected ±0.3)`
+        );
         confidence -= 10;
         recommendations.push('Analyze risk-adjusted return consistency');
       }
 
       // Check drawdown deviation (should be within ±5%)
       if (Math.abs(deviations.maxDrawdownDiff) > 0.05) {
-        warnings.push(`Max drawdown deviation: ${(deviations.maxDrawdownDiff * 100).toFixed(1)}% (expected ±5%)`);
+        warnings.push(
+          `Max drawdown deviation: ${(deviations.maxDrawdownDiff * 100).toFixed(1)}% (expected ±5%)`
+        );
         confidence -= 15;
         recommendations.push('Review risk management parameters');
       }
@@ -338,8 +344,8 @@ export class ForwardTestMode extends EventEmitter {
           isValid,
           confidence: Math.max(0, confidence),
           warnings,
-          recommendations
-        }
+          recommendations,
+        },
       };
 
       // Log comparison results
@@ -351,23 +357,24 @@ export class ForwardTestMode extends EventEmitter {
           confidence,
           deviations,
           warningsCount: warnings.length,
-          recommendationsCount: recommendations.length
-        }
+          recommendationsCount: recommendations.length,
+        },
       });
 
-      console.log(`📊 Backtest comparison completed - Valid: ${isValid}, Confidence: ${confidence}%`);
+      console.log(
+        `📊 Backtest comparison completed - Valid: ${isValid}, Confidence: ${confidence}%`
+      );
       if (warnings.length > 0) {
         console.warn('⚠️ Validation warnings:', warnings);
       }
 
       return comparison;
-
     } catch (error) {
       console.error('❌ Failed to compare to backtest:', error);
       logError('ERROR', 'Failed to compare forward test to backtest', {
         component: 'ForwardTestMode',
         function: 'compareToBacktest',
-        stack: (error as Error).stack
+        stack: (error as Error).stack,
       });
       throw error;
     }
@@ -378,13 +385,16 @@ export class ForwardTestMode extends EventEmitter {
    */
   private async startMonitoring(): Promise<void> {
     // Start hologram scan cycle (every 5 minutes)
-    this.scanInterval = setInterval(async () => {
-      try {
-        await this.runHologramScan();
-      } catch (error) {
-        console.error('❌ Hologram scan error:', error);
-      }
-    }, 5 * 60 * 1000);
+    this.scanInterval = setInterval(
+      async () => {
+        try {
+          await this.runHologramScan();
+        } catch (error) {
+          console.error('❌ Hologram scan error:', error);
+        }
+      },
+      5 * 60 * 1000
+    );
 
     // Start price update cycle (every 30 seconds)
     this.priceUpdateInterval = setInterval(async () => {
@@ -445,13 +455,12 @@ export class ForwardTestMode extends EventEmitter {
           await this.simulatePaperTrade(signal);
         }
       }
-
     } catch (error) {
       console.error('❌ Hologram scan error:', error);
       logError('ERROR', 'Hologram scan failed in forward test', {
         component: 'ForwardTestMode',
         function: 'runHologramScan',
-        stack: (error as Error).stack
+        stack: (error as Error).stack,
       });
     }
   }
@@ -467,7 +476,7 @@ export class ForwardTestMode extends EventEmitter {
 
       // Analyze hologram state
       const hologramState = await this.hologramEngine.analyze(symbol);
-      
+
       // Check if signal conditions are met
       if (hologramState.status === 'NO_PLAY' || hologramState.status === 'CONFLICT') {
         return null;
@@ -480,15 +489,12 @@ export class ForwardTestMode extends EventEmitter {
       }
 
       // Simple signal generation (would be more sophisticated in real implementation)
-      if (Math.random() < 0.1) { // 10% chance of signal
+      if (Math.random() < 0.1) {
+        // 10% chance of signal
         const currentPrice = candles[candles.length - 1].close;
         const direction = hologramState.rsScore > 0 ? 'LONG' : 'SHORT';
-        const stopLoss = direction === 'LONG' 
-          ? currentPrice * 0.985 
-          : currentPrice * 1.015;
-        const takeProfit = direction === 'LONG' 
-          ? currentPrice * 1.045 
-          : currentPrice * 0.955;
+        const stopLoss = direction === 'LONG' ? currentPrice * 0.985 : currentPrice * 1.015;
+        const takeProfit = direction === 'LONG' ? currentPrice * 1.045 : currentPrice * 0.955;
 
         const positionSize = this.calculatePositionSize(currentPrice, stopLoss);
 
@@ -507,12 +513,11 @@ export class ForwardTestMode extends EventEmitter {
           takeProfit,
           positionSize,
           leverage: this.config.maxLeverage,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         };
       }
 
       return null;
-
     } catch (error) {
       console.error(`❌ Failed to generate signal for ${symbol}:`, error);
       return null;
@@ -543,7 +548,7 @@ export class ForwardTestMode extends EventEmitter {
         exitReason: null,
         signal,
         rValue: null,
-        status: 'OPEN'
+        status: 'OPEN',
       };
 
       // Add to open positions
@@ -552,15 +557,16 @@ export class ForwardTestMode extends EventEmitter {
       // Emit event
       this.emit('paperTradeOpened', paperTrade);
 
-      console.log(`📈 Paper trade opened: ${signal.symbol} ${signal.direction} @ ${signal.entryPrice}`);
-
+      console.log(
+        `📈 Paper trade opened: ${signal.symbol} ${signal.direction} @ ${signal.entryPrice}`
+      );
     } catch (error) {
       console.error('❌ Failed to simulate paper trade:', error);
       logError('ERROR', 'Failed to simulate paper trade', {
         component: 'ForwardTestMode',
         function: 'simulatePaperTrade',
         stack: (error as Error).stack,
-        data: { signal }
+        data: { signal },
       });
     }
   }
@@ -570,17 +576,18 @@ export class ForwardTestMode extends EventEmitter {
    */
   private async updatePaperTrades(): Promise<void> {
     const openTrades = Array.from(this.paperTrades.values()).filter(t => t.status === 'OPEN');
-    
+
     for (const trade of openTrades) {
       try {
         // Get current price
         const currentPrice = await this.bybitClient.getCurrentPrice(trade.symbol);
-        
+
         // Update unrealized PnL
-        const pnlMultiplier = trade.direction === 'LONG' 
-          ? (currentPrice - trade.entryPrice) / trade.entryPrice
-          : (trade.entryPrice - currentPrice) / trade.entryPrice;
-        
+        const pnlMultiplier =
+          trade.direction === 'LONG'
+            ? (currentPrice - trade.entryPrice) / trade.entryPrice
+            : (trade.entryPrice - currentPrice) / trade.entryPrice;
+
         trade.unrealizedPnL = trade.quantity * trade.entryPrice * pnlMultiplier * trade.leverage;
 
         // Check exit conditions
@@ -588,7 +595,6 @@ export class ForwardTestMode extends EventEmitter {
         if (shouldExit.shouldExit) {
           await this.closePaperTrade(trade, currentPrice, shouldExit.reason);
         }
-
       } catch (error) {
         console.error(`❌ Failed to update paper trade ${trade.id}:`, error);
       }
@@ -599,11 +605,11 @@ export class ForwardTestMode extends EventEmitter {
    * Check if paper trade should be exited
    */
   private checkPaperTradeExit(
-    trade: PaperTrade, 
+    trade: PaperTrade,
     currentPrice: number
   ): { shouldExit: boolean; reason: 'STOP_LOSS' | 'TAKE_PROFIT' | 'TIMEOUT' } {
     const signal = trade.signal;
-    
+
     // Check stop loss
     if (trade.direction === 'LONG' && currentPrice <= signal.stopLoss) {
       return { shouldExit: true, reason: 'STOP_LOSS' };
@@ -611,7 +617,7 @@ export class ForwardTestMode extends EventEmitter {
     if (trade.direction === 'SHORT' && currentPrice >= signal.stopLoss) {
       return { shouldExit: true, reason: 'STOP_LOSS' };
     }
-    
+
     // Check take profit
     if (trade.direction === 'LONG' && currentPrice >= signal.takeProfit) {
       return { shouldExit: true, reason: 'TAKE_PROFIT' };
@@ -619,13 +625,13 @@ export class ForwardTestMode extends EventEmitter {
     if (trade.direction === 'SHORT' && currentPrice <= signal.takeProfit) {
       return { shouldExit: true, reason: 'TAKE_PROFIT' };
     }
-    
+
     // Check timeout (72 hours max hold)
     const maxHoldTime = 72 * 60 * 60 * 1000;
     if (Date.now() - trade.entryTime > maxHoldTime) {
       return { shouldExit: true, reason: 'TIMEOUT' };
     }
-    
+
     return { shouldExit: false, reason: 'STOP_LOSS' };
   }
 
@@ -633,8 +639,8 @@ export class ForwardTestMode extends EventEmitter {
    * Close paper trade
    */
   private async closePaperTrade(
-    trade: PaperTrade, 
-    exitPrice: number, 
+    trade: PaperTrade,
+    exitPrice: number,
     reason: 'STOP_LOSS' | 'TAKE_PROFIT' | 'TIMEOUT'
   ): Promise<void> {
     try {
@@ -646,12 +652,14 @@ export class ForwardTestMode extends EventEmitter {
       trade.status = 'CLOSED';
 
       // Calculate final PnL
-      const pnlMultiplier = trade.direction === 'LONG' 
-        ? (exitPrice - trade.entryPrice) / trade.entryPrice
-        : (trade.entryPrice - exitPrice) / trade.entryPrice;
-      
+      const pnlMultiplier =
+        trade.direction === 'LONG'
+          ? (exitPrice - trade.entryPrice) / trade.entryPrice
+          : (trade.entryPrice - exitPrice) / trade.entryPrice;
+
       trade.realizedPnL = trade.quantity * trade.entryPrice * pnlMultiplier * trade.leverage;
-      trade.rValue = trade.realizedPnL / (Math.abs(trade.entryPrice - trade.signal.stopLoss) * trade.quantity);
+      trade.rValue =
+        trade.realizedPnL / (Math.abs(trade.entryPrice - trade.signal.stopLoss) * trade.quantity);
 
       // Update equity
       this.currentEquity += trade.realizedPnL - trade.fees - trade.slippage;
@@ -659,15 +667,16 @@ export class ForwardTestMode extends EventEmitter {
       // Emit event
       this.emit('paperTradeClosed', trade);
 
-      console.log(`📉 Paper trade closed: ${trade.symbol} ${trade.direction} @ ${exitPrice} (${reason}) - PnL: ${trade.realizedPnL?.toFixed(2)}`);
-
+      console.log(
+        `📉 Paper trade closed: ${trade.symbol} ${trade.direction} @ ${exitPrice} (${reason}) - PnL: ${trade.realizedPnL?.toFixed(2)}`
+      );
     } catch (error) {
       console.error('❌ Failed to close paper trade:', error);
       logError('ERROR', 'Failed to close paper trade', {
         component: 'ForwardTestMode',
         function: 'closePaperTrade',
         stack: (error as Error).stack,
-        data: { tradeId: trade.id }
+        data: { tradeId: trade.id },
       });
     }
   }
@@ -678,13 +687,13 @@ export class ForwardTestMode extends EventEmitter {
   private async generateResults(): Promise<ForwardTestResults> {
     const endTime = Date.now();
     const duration = endTime - this.startTime;
-    
+
     // Get all paper trades
     const paperTrades = Array.from(this.paperTrades.values());
-    
+
     // Calculate metrics
     const metrics = this.calculateForwardTestMetrics(paperTrades, duration);
-    
+
     // Generate backtest comparison if enabled
     let backtestComparison: BacktestComparison | null = null;
     if (this.config.compareToBacktest && this.config.backtestReference) {
@@ -696,9 +705,9 @@ export class ForwardTestMode extends EventEmitter {
         paperTrades,
         signalsLogged: this.signalsLogged,
         metrics,
-        backtestComparison: null
+        backtestComparison: null,
       };
-      
+
       backtestComparison = this.compareToBacktest(forwardResults, this.config.backtestReference);
     }
 
@@ -710,36 +719,39 @@ export class ForwardTestMode extends EventEmitter {
       paperTrades,
       signalsLogged: this.signalsLogged,
       metrics,
-      backtestComparison
+      backtestComparison,
     };
   }
 
   /**
    * Calculate forward test metrics
    */
-  private calculateForwardTestMetrics(paperTrades: PaperTrade[], duration: number): ForwardTestMetrics {
+  private calculateForwardTestMetrics(
+    paperTrades: PaperTrade[],
+    duration: number
+  ): ForwardTestMetrics {
     const closedTrades = paperTrades.filter(t => t.status === 'CLOSED');
     const winningTrades = closedTrades.filter(t => (t.realizedPnL || 0) > 0);
     const losingTrades = closedTrades.filter(t => (t.realizedPnL || 0) < 0);
-    
+
     const winRate = closedTrades.length > 0 ? winningTrades.length / closedTrades.length : 0;
     const grossProfit = winningTrades.reduce((sum, t) => sum + (t.realizedPnL || 0), 0);
     const grossLoss = Math.abs(losingTrades.reduce((sum, t) => sum + (t.realizedPnL || 0), 0));
     const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0;
-    
-    const averageWin = winningTrades.length > 0 
-      ? winningTrades.reduce((sum, t) => sum + (t.realizedPnL || 0), 0) / winningTrades.length 
-      : 0;
-    const averageLoss = losingTrades.length > 0 
-      ? losingTrades.reduce((sum, t) => sum + (t.realizedPnL || 0), 0) / losingTrades.length 
-      : 0;
 
-    const largestWin = winningTrades.length > 0 
-      ? Math.max(...winningTrades.map(t => t.realizedPnL || 0)) 
-      : 0;
-    const largestLoss = losingTrades.length > 0 
-      ? Math.min(...losingTrades.map(t => t.realizedPnL || 0)) 
-      : 0;
+    const averageWin =
+      winningTrades.length > 0
+        ? winningTrades.reduce((sum, t) => sum + (t.realizedPnL || 0), 0) / winningTrades.length
+        : 0;
+    const averageLoss =
+      losingTrades.length > 0
+        ? losingTrades.reduce((sum, t) => sum + (t.realizedPnL || 0), 0) / losingTrades.length
+        : 0;
+
+    const largestWin =
+      winningTrades.length > 0 ? Math.max(...winningTrades.map(t => t.realizedPnL || 0)) : 0;
+    const largestLoss =
+      losingTrades.length > 0 ? Math.min(...losingTrades.map(t => t.realizedPnL || 0)) : 0;
 
     // Calculate consecutive wins/losses
     let maxConsecutiveWins = 0;
@@ -764,15 +776,15 @@ export class ForwardTestMode extends EventEmitter {
       ASIAN: 0,
       LONDON: 0,
       NY: 0,
-      DEAD_ZONE: 0
+      DEAD_ZONE: 0,
     };
 
     // Calculate hologram status distribution
     const hologramStatusDistribution = {
       'A+': 0,
-      'B': 0,
-      'CONFLICT': 0,
-      'NO_PLAY': 0
+      B: 0,
+      CONFLICT: 0,
+      NO_PLAY: 0,
     };
 
     for (const signal of this.signalsLogged) {
@@ -780,20 +792,24 @@ export class ForwardTestMode extends EventEmitter {
       hologramStatusDistribution[signal.hologramStatus]++;
     }
 
-    const averageSignalConfidence = this.signalsLogged.length > 0
-      ? this.signalsLogged.reduce((sum, s) => sum + s.confidence, 0) / this.signalsLogged.length
-      : 0;
+    const averageSignalConfidence =
+      this.signalsLogged.length > 0
+        ? this.signalsLogged.reduce((sum, s) => sum + s.confidence, 0) / this.signalsLogged.length
+        : 0;
 
-    const executionRate = this.signalsLogged.length > 0 
-      ? (paperTrades.length / this.signalsLogged.length) * 100 
-      : 0;
+    const executionRate =
+      this.signalsLogged.length > 0 ? (paperTrades.length / this.signalsLogged.length) * 100 : 0;
 
     // Simple Sharpe ratio calculation
-    const returns = closedTrades.map(t => ((t.realizedPnL || 0) / this.config.initialEquity));
-    const avgReturn = returns.length > 0 ? returns.reduce((sum, r) => sum + r, 0) / returns.length : 0;
-    const returnStdDev = returns.length > 1 
-      ? Math.sqrt(returns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / returns.length)
-      : 0;
+    const returns = closedTrades.map(t => (t.realizedPnL || 0) / this.config.initialEquity);
+    const avgReturn =
+      returns.length > 0 ? returns.reduce((sum, r) => sum + r, 0) / returns.length : 0;
+    const returnStdDev =
+      returns.length > 1
+        ? Math.sqrt(
+            returns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / returns.length
+          )
+        : 0;
     const sharpeRatio = returnStdDev > 0 ? (avgReturn / returnStdDev) * Math.sqrt(252) : 0;
 
     // Simple max drawdown calculation
@@ -802,7 +818,7 @@ export class ForwardTestMode extends EventEmitter {
     let maxDrawdown = 0;
 
     for (const trade of closedTrades) {
-      runningEquity += (trade.realizedPnL || 0);
+      runningEquity += trade.realizedPnL || 0;
       if (runningEquity > maxEquity) {
         maxEquity = runningEquity;
       } else {
@@ -813,7 +829,8 @@ export class ForwardTestMode extends EventEmitter {
       }
     }
 
-    const totalReturn = (this.currentEquity - this.config.initialEquity) / this.config.initialEquity;
+    const totalReturn =
+      (this.currentEquity - this.config.initialEquity) / this.config.initialEquity;
 
     return {
       startTime: this.startTime,
@@ -838,7 +855,7 @@ export class ForwardTestMode extends EventEmitter {
       largestWin,
       largestLoss,
       consecutiveWins: maxConsecutiveWins,
-      consecutiveLosses: maxConsecutiveLosses
+      consecutiveLosses: maxConsecutiveLosses,
     };
   }
 
@@ -850,7 +867,9 @@ export class ForwardTestMode extends EventEmitter {
   }
 
   private hasOpenPosition(symbol: string): boolean {
-    return Array.from(this.paperTrades.values()).some(t => t.symbol === symbol && t.status === 'OPEN');
+    return Array.from(this.paperTrades.values()).some(
+      t => t.symbol === symbol && t.status === 'OPEN'
+    );
   }
 
   private calculatePositionSize(entryPrice: number, stopLoss: number): number {
@@ -894,11 +913,11 @@ export class ForwardTestMode extends EventEmitter {
     // Add paper trading configuration to the config manager
     // This would extend the Phase2Config interface to include forward test settings
     console.log('📝 Paper trading toggle added to configuration');
-    
+
     // Emit event to notify configuration change
     this.emit('configUpdated', {
       section: 'forwardTest',
-      enabled: this.config.enabled
+      enabled: this.config.enabled,
     });
   }
 

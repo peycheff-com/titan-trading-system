@@ -1,14 +1,14 @@
 /**
  * SweepDetector - Sweep Pattern Detection System
- * 
+ *
  * Purpose: Identify aggressive orders that clear multiple price levels,
  * indicating urgent institutional flow.
- * 
+ *
  * Key Features:
  * - Detect single aggressive orders clearing 5+ price levels
  * - Classify urgency (low/medium/high) based on speed and volume
  * - Validate and score sweep patterns
- * 
+ *
  * Requirements: 2.2 (Identify Sweep Patterns)
  */
 
@@ -73,7 +73,7 @@ const DEFAULT_CONFIG: SweepDetectorConfig = {
   minSweepVolume: 1000, // $1000 minimum
   tickSize: 0.01,
   highUrgencySpeed: 10, // 10 levels/second
-  mediumUrgencySpeed: 5 // 5 levels/second
+  mediumUrgencySpeed: 5, // 5 levels/second
 };
 
 // ============================================================================
@@ -82,7 +82,7 @@ const DEFAULT_CONFIG: SweepDetectorConfig = {
 
 /**
  * SweepDetector - Identifies aggressive sweep patterns
- * 
+ *
  * Sweeps indicate urgent institutional flow where a single aggressive
  * order clears multiple price levels in rapid succession.
  */
@@ -136,14 +136,14 @@ export class SweepDetector extends EventEmitter {
           volume: trade.qty * trade.price,
           trades: [trade],
           levelsCleared: new Set([priceLevel]),
-          direction: isAggressiveBuy ? 'up' : 'down'
+          direction: isAggressiveBuy ? 'up' : 'down',
         };
         continue;
       }
 
       // Check if trade continues the sweep
       const timeDiff = trade.time - currentCandidate.endTime;
-      const sameDirection = 
+      const sameDirection =
         (currentCandidate.direction === 'up' && isAggressiveBuy) ||
         (currentCandidate.direction === 'down' && isAggressiveSell);
 
@@ -171,7 +171,7 @@ export class SweepDetector extends EventEmitter {
           volume: trade.qty * trade.price,
           trades: [trade],
           levelsCleared: new Set([priceLevel]),
-          direction: isAggressiveBuy ? 'up' : 'down'
+          direction: isAggressiveBuy ? 'up' : 'down',
         };
       }
     }
@@ -201,7 +201,7 @@ export class SweepDetector extends EventEmitter {
         totalSweepVolume: 0,
         dominantDirection: 'mixed',
         urgencyScore: 0,
-        institutionalProbability: 0
+        institutionalProbability: 0,
       };
     }
 
@@ -212,7 +212,7 @@ export class SweepDetector extends EventEmitter {
     const upSweeps = sweeps.filter(s => s.direction === 'up');
     const downSweeps = sweeps.filter(s => s.direction === 'down');
     let dominantDirection: 'up' | 'down' | 'mixed' = 'mixed';
-    
+
     if (upSweeps.length > downSweeps.length * 1.5) {
       dominantDirection = 'up';
     } else if (downSweeps.length > upSweeps.length * 1.5) {
@@ -230,7 +230,7 @@ export class SweepDetector extends EventEmitter {
       totalSweepVolume,
       dominantDirection,
       urgencyScore,
-      institutionalProbability
+      institutionalProbability,
     };
 
     this.emit('sweepsAnalyzed', result);
@@ -248,7 +248,7 @@ export class SweepDetector extends EventEmitter {
    */
   classifyUrgency(sweep: SweepPattern): 'low' | 'medium' | 'high' {
     // Calculate speed (levels per second)
-    const duration = (sweep.timestamp.getTime() - sweep.timestamp.getTime()) || 1;
+    const duration = sweep.timestamp.getTime() - sweep.timestamp.getTime() || 1;
     const speed = (sweep.levelsCleared / duration) * 1000;
 
     if (speed >= this.config.highUrgencySpeed) {
@@ -313,7 +313,9 @@ export class SweepDetector extends EventEmitter {
       score += 25;
       reasons.push(`Volume $${sweep.volume.toFixed(0)} meets threshold`);
     } else {
-      reasons.push(`Insufficient volume: $${sweep.volume.toFixed(0)} < $${this.config.minSweepVolume}`);
+      reasons.push(
+        `Insufficient volume: $${sweep.volume.toFixed(0)} < $${this.config.minSweepVolume}`
+      );
     }
 
     // Score urgency
@@ -338,13 +340,14 @@ export class SweepDetector extends EventEmitter {
       reasons.push('Large sweep (10+ levels)');
     }
 
-    const isValid = sweep.levelsCleared >= this.config.minLevelsCleared &&
-                    sweep.volume >= this.config.minSweepVolume;
+    const isValid =
+      sweep.levelsCleared >= this.config.minLevelsCleared &&
+      sweep.volume >= this.config.minSweepVolume;
 
     return {
       isValid,
       score: Math.min(100, score),
-      reasons
+      reasons,
     };
   }
 
@@ -390,8 +393,10 @@ export class SweepDetector extends EventEmitter {
    * Check if candidate qualifies as a sweep
    */
   private qualifiesAsSweep(candidate: SweepCandidate): boolean {
-    return candidate.levelsCleared.size >= this.config.minLevelsCleared &&
-           candidate.volume >= this.config.minSweepVolume;
+    return (
+      candidate.levelsCleared.size >= this.config.minLevelsCleared &&
+      candidate.volume >= this.config.minSweepVolume
+    );
   }
 
   /**
@@ -415,7 +420,7 @@ export class SweepDetector extends EventEmitter {
       volume: candidate.volume,
       timestamp: new Date(candidate.startTime),
       direction: candidate.direction,
-      urgency
+      urgency,
     };
   }
 
@@ -556,7 +561,7 @@ export class SweepDetector extends EventEmitter {
     return {
       symbolsTracked: this.tradeBuffer.size,
       totalTrades,
-      totalSweeps
+      totalSweeps,
     };
   }
 

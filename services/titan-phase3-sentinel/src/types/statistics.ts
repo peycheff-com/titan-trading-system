@@ -1,6 +1,6 @@
 /**
  * Statistics Types for Titan Phase 3 - The Sentinel
- * 
+ *
  * Defines statistical analysis structures for basis monitoring.
  */
 

@@ -1,9 +1,9 @@
 /**
  * Bybit Perpetuals Client for Execution Target
- * 
+ *
  * Provides REST API methods for order execution, data fetching, and account management.
  * Includes HMAC signature generation, caching, and retry logic.
- * 
+ *
  * Requirements: 7.1-7.7 (Execution), 11.1-11.7 (Multi-Timeframe Data)
  */
 
@@ -155,10 +155,10 @@ export class BybitPerpsClient {
 
     try {
       console.log('📡 Initializing Bybit Perps Client...');
-      
+
       // Test connection by fetching server time
       await this.makeRequest('GET', '/v5/market/time');
-      
+
       // If API keys are provided, test authentication
       if (this.apiKey && this.apiSecret) {
         try {
@@ -170,10 +170,9 @@ export class BybitPerpsClient {
       } else {
         console.log('ℹ️ Bybit running in read-only mode (no API keys)');
       }
-      
+
       this.isInitialized = true;
       console.log('✅ Bybit Perps Client initialized');
-      
     } catch (error) {
       console.error('❌ Failed to initialize Bybit client:', error);
       throw error;
@@ -190,13 +189,12 @@ export class BybitPerpsClient {
 
     try {
       console.log('📡 Disconnecting Bybit Perps Client...');
-      
+
       // Clear cache
       this.cache.clear();
-      
+
       this.isInitialized = false;
       console.log('✅ Bybit Perps Client disconnected');
-      
     } catch (error) {
       console.error('❌ Error disconnecting Bybit client:', error);
       throw error;
@@ -214,7 +212,7 @@ export class BybitPerpsClient {
 
     try {
       const response = await this.makeRequest('GET', '/v5/market/tickers', {
-        category: 'linear'
+        category: 'linear',
       });
 
       if (response.retCode !== 0) {
@@ -232,7 +230,9 @@ export class BybitPerpsClient {
       this.setCache(cacheKey, sortedSymbols, this.CACHE_TTL);
       return sortedSymbols;
     } catch (error) {
-      throw new Error(`Failed to fetch top symbols: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to fetch top symbols: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -251,12 +251,12 @@ export class BybitPerpsClient {
     try {
       // Convert interval to Bybit format
       const bybitInterval = this.convertInterval(interval);
-      
+
       const response = await this.makeRequest('GET', '/v5/market/kline', {
         category: 'linear',
         symbol: symbol.toUpperCase(),
         interval: bybitInterval,
-        limit: Math.min(limit, 1000).toString()
+        limit: Math.min(limit, 1000).toString(),
       });
 
       if (response.retCode !== 0) {
@@ -270,7 +270,7 @@ export class BybitPerpsClient {
         high: parseFloat(candle[2]),
         low: parseFloat(candle[3]),
         close: parseFloat(candle[4]),
-        volume: parseFloat(candle[5])
+        volume: parseFloat(candle[5]),
       }));
 
       // Sort by timestamp (oldest first)
@@ -279,7 +279,9 @@ export class BybitPerpsClient {
       this.setCache(cacheKey, ohlcv, this.CACHE_TTL);
       return ohlcv;
     } catch (error) {
-      throw new Error(`Failed to fetch OHLCV for ${symbol}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to fetch OHLCV for ${symbol}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -292,7 +294,7 @@ export class BybitPerpsClient {
     try {
       const response = await this.makeRequest('GET', '/v5/market/tickers', {
         category: 'linear',
-        symbol: symbol.toUpperCase()
+        symbol: symbol.toUpperCase(),
       });
 
       if (response.retCode !== 0) {
@@ -306,7 +308,9 @@ export class BybitPerpsClient {
 
       return parseFloat(ticker.lastPrice);
     } catch (error) {
-      throw new Error(`Failed to get current price for ${symbol}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to get current price for ${symbol}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -316,9 +320,14 @@ export class BybitPerpsClient {
    */
   public async getEquity(): Promise<number> {
     try {
-      const response = await this.makeRequest('GET', '/v5/account/wallet-balance', {
-        accountType: 'UNIFIED'
-      }, true);
+      const response = await this.makeRequest(
+        'GET',
+        '/v5/account/wallet-balance',
+        {
+          accountType: 'UNIFIED',
+        },
+        true
+      );
 
       if (response.retCode !== 0) {
         throw new Error(`Bybit API error: ${response.retMsg}`);
@@ -331,7 +340,9 @@ export class BybitPerpsClient {
 
       return parseFloat(account.totalEquity);
     } catch (error) {
-      throw new Error(`Failed to get equity: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to get equity: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -346,9 +357,10 @@ export class BybitPerpsClient {
         category: 'linear',
         symbol: params.symbol.toUpperCase(),
         side: params.side,
-        orderType: params.type === 'POST_ONLY' ? 'Limit' : params.type === 'LIMIT' ? 'Limit' : 'Market',
+        orderType:
+          params.type === 'POST_ONLY' ? 'Limit' : params.type === 'LIMIT' ? 'Limit' : 'Market',
         qty: params.qty.toString(),
-        timeInForce: params.type === 'POST_ONLY' ? 'PostOnly' : 'GTC'
+        timeInForce: params.type === 'POST_ONLY' ? 'PostOnly' : 'GTC',
       };
 
       // Add price for limit orders
@@ -374,7 +386,7 @@ export class BybitPerpsClient {
       }
 
       const orderData = response.result as BybitOrderResponse;
-      
+
       return {
         orderId: orderData.orderId,
         symbol: orderData.symbol,
@@ -382,10 +394,12 @@ export class BybitPerpsClient {
         qty: parseFloat(orderData.qty),
         price: parseFloat(orderData.price || orderData.avgPrice || '0'),
         status: this.mapOrderStatus(orderData.orderStatus),
-        timestamp: parseInt(orderData.createTime)
+        timestamp: parseInt(orderData.createTime),
       };
     } catch (error) {
-      throw new Error(`Failed to place order: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to place order: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -395,7 +409,10 @@ export class BybitPerpsClient {
    * @param maxRetries - Maximum retry attempts (default: 2)
    * @returns Promise with order result
    */
-  public async placeOrderWithRetry(params: OrderParams, maxRetries: number = 2): Promise<OrderResult> {
+  public async placeOrderWithRetry(
+    params: OrderParams,
+    maxRetries: number = 2
+  ): Promise<OrderResult> {
     let lastError: Error;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -407,11 +424,11 @@ export class BybitPerpsClient {
 
         const orderPromise = this.placeOrder(params);
         const result = await Promise.race([orderPromise, timeoutPromise]);
-        
+
         return result;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error('Unknown error');
-        
+
         if (attempt < maxRetries) {
           console.warn(`⚠️ Order attempt ${attempt + 1} failed, retrying: ${lastError.message}`);
           await this.sleep(this.RETRY_DELAY);
@@ -430,12 +447,17 @@ export class BybitPerpsClient {
    */
   public async setLeverage(symbol: string, leverage: number): Promise<boolean> {
     try {
-      const response = await this.makeRequest('POST', '/v5/position/set-leverage', {
-        category: 'linear',
-        symbol: symbol.toUpperCase(),
-        buyLeverage: leverage.toString(),
-        sellLeverage: leverage.toString()
-      }, true);
+      const response = await this.makeRequest(
+        'POST',
+        '/v5/position/set-leverage',
+        {
+          category: 'linear',
+          symbol: symbol.toUpperCase(),
+          buyLeverage: leverage.toString(),
+          sellLeverage: leverage.toString(),
+        },
+        true
+      );
 
       if (response.retCode !== 0) {
         throw new Error(`Bybit API error: ${response.retMsg}`);
@@ -443,7 +465,9 @@ export class BybitPerpsClient {
 
       return true;
     } catch (error) {
-      throw new Error(`Failed to set leverage for ${symbol}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to set leverage for ${symbol}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -454,14 +478,23 @@ export class BybitPerpsClient {
    * @param positionIdx - Position index (0 for one-way mode)
    * @returns Promise with success status
    */
-  public async setStopLoss(symbol: string, stopLoss: number, positionIdx: number = 0): Promise<boolean> {
+  public async setStopLoss(
+    symbol: string,
+    stopLoss: number,
+    positionIdx: number = 0
+  ): Promise<boolean> {
     try {
-      const response = await this.makeRequest('POST', '/v5/position/trading-stop', {
-        category: 'linear',
-        symbol: symbol.toUpperCase(),
-        stopLoss: stopLoss.toString(),
-        positionIdx: positionIdx.toString()
-      }, true);
+      const response = await this.makeRequest(
+        'POST',
+        '/v5/position/trading-stop',
+        {
+          category: 'linear',
+          symbol: symbol.toUpperCase(),
+          stopLoss: stopLoss.toString(),
+          positionIdx: positionIdx.toString(),
+        },
+        true
+      );
 
       if (response.retCode !== 0) {
         throw new Error(`Bybit API error: ${response.retMsg}`);
@@ -469,7 +502,9 @@ export class BybitPerpsClient {
 
       return true;
     } catch (error) {
-      throw new Error(`Failed to set stop loss for ${symbol}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to set stop loss for ${symbol}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -480,14 +515,23 @@ export class BybitPerpsClient {
    * @param positionIdx - Position index (0 for one-way mode)
    * @returns Promise with success status
    */
-  public async setTakeProfit(symbol: string, takeProfit: number, positionIdx: number = 0): Promise<boolean> {
+  public async setTakeProfit(
+    symbol: string,
+    takeProfit: number,
+    positionIdx: number = 0
+  ): Promise<boolean> {
     try {
-      const response = await this.makeRequest('POST', '/v5/position/trading-stop', {
-        category: 'linear',
-        symbol: symbol.toUpperCase(),
-        takeProfit: takeProfit.toString(),
-        positionIdx: positionIdx.toString()
-      }, true);
+      const response = await this.makeRequest(
+        'POST',
+        '/v5/position/trading-stop',
+        {
+          category: 'linear',
+          symbol: symbol.toUpperCase(),
+          takeProfit: takeProfit.toString(),
+          positionIdx: positionIdx.toString(),
+        },
+        true
+      );
 
       if (response.retCode !== 0) {
         throw new Error(`Bybit API error: ${response.retMsg}`);
@@ -495,7 +539,9 @@ export class BybitPerpsClient {
 
       return true;
     } catch (error) {
-      throw new Error(`Failed to set take profit for ${symbol}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to set take profit for ${symbol}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -507,11 +553,16 @@ export class BybitPerpsClient {
    */
   public async getOrderStatus(orderId: string, symbol: string): Promise<OrderStatus> {
     try {
-      const response = await this.makeRequest('GET', '/v5/order/realtime', {
-        category: 'linear',
-        orderId: orderId,
-        symbol: symbol.toUpperCase()
-      }, true);
+      const response = await this.makeRequest(
+        'GET',
+        '/v5/order/realtime',
+        {
+          category: 'linear',
+          orderId: orderId,
+          symbol: symbol.toUpperCase(),
+        },
+        true
+      );
 
       if (response.retCode !== 0) {
         throw new Error(`Bybit API error: ${response.retMsg}`);
@@ -524,7 +575,9 @@ export class BybitPerpsClient {
 
       return this.mapOrderStatus(orders[0].orderStatus);
     } catch (error) {
-      throw new Error(`Failed to get order status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to get order status: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -536,11 +589,16 @@ export class BybitPerpsClient {
    */
   public async cancelOrder(orderId: string, symbol: string): Promise<boolean> {
     try {
-      const response = await this.makeRequest('POST', '/v5/order/cancel', {
-        category: 'linear',
-        orderId: orderId,
-        symbol: symbol.toUpperCase()
-      }, true);
+      const response = await this.makeRequest(
+        'POST',
+        '/v5/order/cancel',
+        {
+          category: 'linear',
+          orderId: orderId,
+          symbol: symbol.toUpperCase(),
+        },
+        true
+      );
 
       if (response.retCode !== 0) {
         throw new Error(`Bybit API error: ${response.retMsg}`);
@@ -548,7 +606,9 @@ export class BybitPerpsClient {
 
       return true;
     } catch (error) {
-      throw new Error(`Failed to cancel order: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to cancel order: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -559,10 +619,15 @@ export class BybitPerpsClient {
    */
   public async getPositionInfo(symbol: string): Promise<BybitPositionInfo | null> {
     try {
-      const response = await this.makeRequest('GET', '/v5/position/list', {
-        category: 'linear',
-        symbol: symbol.toUpperCase()
-      }, true);
+      const response = await this.makeRequest(
+        'GET',
+        '/v5/position/list',
+        {
+          category: 'linear',
+          symbol: symbol.toUpperCase(),
+        },
+        true
+      );
 
       if (response.retCode !== 0) {
         throw new Error(`Bybit API error: ${response.retMsg}`);
@@ -571,7 +636,9 @@ export class BybitPerpsClient {
       const positions = response.result.list as BybitPositionInfo[];
       return positions.length > 0 ? positions[0] : null;
     } catch (error) {
-      throw new Error(`Failed to get position info: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to get position info: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -583,7 +650,12 @@ export class BybitPerpsClient {
    * @param signed - Whether to sign the request
    * @returns Promise with API response
    */
-  private async makeRequest(method: 'GET' | 'POST', endpoint: string, params: any = {}, signed: boolean = false): Promise<any> {
+  private async makeRequest(
+    method: 'GET' | 'POST',
+    endpoint: string,
+    params: any = {},
+    signed: boolean = false
+  ): Promise<any> {
     const timestamp = Date.now().toString();
     let url = `${this.baseUrl}${endpoint}`;
     let body = '';
@@ -592,7 +664,7 @@ export class BybitPerpsClient {
     const headers: any = {
       'Content-Type': 'application/json',
       'X-BAPI-TIMESTAMP': timestamp,
-      'X-BAPI-RECV-WINDOW': '5000'
+      'X-BAPI-RECV-WINDOW': '5000',
     };
 
     if (signed) {
@@ -611,8 +683,14 @@ export class BybitPerpsClient {
 
     // Generate signature for authenticated requests
     if (signed) {
-      const signaturePayload = timestamp + this.apiKey + '5000' + (method === 'GET' ? new URLSearchParams(params).toString() : body);
-      headers['X-BAPI-SIGN'] = createHmac('sha256', this.apiSecret).update(signaturePayload).digest('hex');
+      const signaturePayload =
+        timestamp +
+        this.apiKey +
+        '5000' +
+        (method === 'GET' ? new URLSearchParams(params).toString() : body);
+      headers['X-BAPI-SIGN'] = createHmac('sha256', this.apiSecret)
+        .update(signaturePayload)
+        .digest('hex');
     }
 
     try {
@@ -623,7 +701,7 @@ export class BybitPerpsClient {
         method,
         headers,
         body: method === 'POST' ? body : undefined,
-        signal: controller.signal
+        signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
@@ -637,7 +715,9 @@ export class BybitPerpsClient {
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      throw new Error(`Request failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Request failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -657,7 +737,7 @@ export class BybitPerpsClient {
       '1d': 'D',
       '1D': 'D',
       '1w': 'W',
-      '1W': 'W'
+      '1W': 'W',
     };
 
     return intervalMap[interval] || interval;
@@ -670,13 +750,13 @@ export class BybitPerpsClient {
    */
   private mapOrderStatus(bybitStatus: string): OrderStatus {
     const statusMap: { [key: string]: OrderStatus } = {
-      'New': 'NEW',
-      'PartiallyFilled': 'PARTIALLY_FILLED',
-      'Filled': 'FILLED',
-      'Cancelled': 'CANCELLED',
-      'Rejected': 'REJECTED',
-      'PartiallyFilledCanceled': 'CANCELLED',
-      'Deactivated': 'CANCELLED'
+      New: 'NEW',
+      PartiallyFilled: 'PARTIALLY_FILLED',
+      Filled: 'FILLED',
+      Cancelled: 'CANCELLED',
+      Rejected: 'REJECTED',
+      PartiallyFilledCanceled: 'CANCELLED',
+      Deactivated: 'CANCELLED',
     };
 
     return statusMap[bybitStatus] || 'NEW';
@@ -710,7 +790,7 @@ export class BybitPerpsClient {
     this.cache.set(key, {
       data,
       timestamp: Date.now(),
-      ttl
+      ttl,
     });
   }
 

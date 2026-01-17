@@ -1,21 +1,15 @@
 /**
  * SessionProfiler - Time & Price Dynamics Engine
- * 
- * Exploits the "Judas Swing" (false moves) at London/NY opens to catch 
- * manipulation-to-distribution transitions. Identifies session-based 
+ *
+ * Exploits the "Judas Swing" (false moves) at London/NY opens to catch
+ * manipulation-to-distribution transitions. Identifies session-based
  * trading opportunities and manages time-based logic.
- * 
+ *
  * Requirements: 2.1-2.7 (Session Profiler)
  */
 
 import { EventEmitter } from 'events';
-import { 
-  SessionType, 
-  SessionState, 
-  AsianRange, 
-  JudasSwing,
-  OHLCV 
-} from '../types';
+import { SessionType, SessionState, AsianRange, JudasSwing, OHLCV } from '../types';
 
 export class SessionProfiler extends EventEmitter {
   private asianRange: AsianRange | null = null;
@@ -70,7 +64,7 @@ export class SessionProfiler extends EventEmitter {
     if (sessionType === 'DEAD_ZONE') {
       // Handle overnight session
       if (currentTime >= 21) {
-        timeRemaining = (24 - currentTime) + 1; // Until 01:00 next day
+        timeRemaining = 24 - currentTime + 1; // Until 01:00 next day
       } else {
         timeRemaining = 1 - currentTime; // Until 01:00
       }
@@ -82,7 +76,7 @@ export class SessionProfiler extends EventEmitter {
       type: sessionType,
       startTime,
       endTime,
-      timeRemaining: Math.max(0, timeRemaining)
+      timeRemaining: Math.max(0, timeRemaining),
     };
 
     // Check for session transition
@@ -103,7 +97,7 @@ export class SessionProfiler extends EventEmitter {
    */
   isKillzone(): boolean {
     const sessionState = this.getSessionState();
-    
+
     // Only London and NY sessions are killzones
     return sessionState.type === 'LONDON' || sessionState.type === 'NY';
   }
@@ -125,7 +119,7 @@ export class SessionProfiler extends EventEmitter {
     for (const candle of ohlcvData) {
       const candleDate = new Date(candle.timestamp);
       const utcHour = candleDate.getUTCHours();
-      
+
       // Check if candle is within Asian session
       if (utcHour >= 0 && utcHour < 6) {
         if (candle.high > high) {
@@ -142,7 +136,7 @@ export class SessionProfiler extends EventEmitter {
       this.asianRange = {
         high,
         low,
-        timestamp
+        timestamp,
       };
     }
   }
@@ -161,10 +155,10 @@ export class SessionProfiler extends EventEmitter {
           sweptPrice: this.asianRange.high,
           reversalPrice: this.asianRange.low,
           direction: 'SHORT', // Expect reversal down after sweep
-          confidence: 75
+          confidence: 75,
         };
       }
-      
+
       // Check for sweep of Asian Low
       if (currentPrice < this.asianRange.low) {
         return {
@@ -172,7 +166,7 @@ export class SessionProfiler extends EventEmitter {
           sweptPrice: this.asianRange.low,
           reversalPrice: this.asianRange.high,
           direction: 'LONG', // Expect reversal up after sweep
-          confidence: 75
+          confidence: 75,
         };
       }
     }
@@ -186,10 +180,10 @@ export class SessionProfiler extends EventEmitter {
           sweptPrice: this.londonRange.high,
           reversalPrice: this.londonRange.low,
           direction: 'SHORT',
-          confidence: 80 // Higher confidence for NY session
+          confidence: 80, // Higher confidence for NY session
         };
       }
-      
+
       // Check for sweep of London Low
       if (currentPrice < this.londonRange.low) {
         return {
@@ -197,7 +191,7 @@ export class SessionProfiler extends EventEmitter {
           sweptPrice: this.londonRange.low,
           reversalPrice: this.londonRange.high,
           direction: 'LONG',
-          confidence: 80
+          confidence: 80,
         };
       }
     }
@@ -235,7 +229,7 @@ export class SessionProfiler extends EventEmitter {
     for (const candle of ohlcvData) {
       const candleDate = new Date(candle.timestamp);
       const utcHour = candleDate.getUTCHours();
-      
+
       // Check if candle is within London session
       if (utcHour >= 7 && utcHour < 10) {
         if (candle.high > high) {
@@ -252,7 +246,7 @@ export class SessionProfiler extends EventEmitter {
       this.londonRange = {
         high,
         low,
-        timestamp
+        timestamp,
       };
     }
   }
@@ -277,13 +271,13 @@ export class SessionProfiler extends EventEmitter {
     isKillzone: boolean;
   } {
     const sessionState = this.getSessionState();
-    
+
     return {
       currentSession: sessionState.type,
       timeRemaining: sessionState.timeRemaining,
       asianRange: this.asianRange,
       londonRange: this.londonRange,
-      isKillzone: this.isKillzone()
+      isKillzone: this.isKillzone(),
     };
   }
 
@@ -293,14 +287,14 @@ export class SessionProfiler extends EventEmitter {
    */
   private handleSessionTransition(newSession: SessionState): void {
     const previousSession = this.currentSession?.type;
-    
+
     // Emit session change event with reference levels
     this.emit('SESSION_CHANGE', {
       previousSession,
       newSession: newSession.type,
       asianRange: this.asianRange,
       londonRange: this.londonRange,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     // Special handling for session-specific logic
@@ -308,7 +302,7 @@ export class SessionProfiler extends EventEmitter {
       // London opening - prepare for Asian range manipulation
       this.emit('LONDON_OPEN', {
         asianRange: this.asianRange,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }
 
@@ -316,14 +310,14 @@ export class SessionProfiler extends EventEmitter {
       // NY opening - prepare for London range manipulation
       this.emit('NY_OPEN', {
         londonRange: this.londonRange,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }
 
     if (newSession.type === 'DEAD_ZONE') {
       // Dead zone - disable new entries
       this.emit('DEAD_ZONE_START', {
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }
   }

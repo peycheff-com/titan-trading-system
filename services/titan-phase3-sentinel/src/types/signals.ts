@@ -1,6 +1,6 @@
 /**
  * Signal Types for Titan Phase 3 - The Sentinel
- * 
+ *
  * Defines trading signals, thresholds, and basis classification types.
  */
 

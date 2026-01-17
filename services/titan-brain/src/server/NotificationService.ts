@@ -11,7 +11,7 @@ import { PhaseId } from '../types/performance.js';
  */
 export enum NotificationType {
   CIRCUIT_BREAKER = 'CIRCUIT_BREAKER',
-  HIGH_CORRELATION = 'HIGH_CORRELATION', 
+  HIGH_CORRELATION = 'HIGH_CORRELATION',
   SWEEP_NOTIFICATION = 'SWEEP_NOTIFICATION',
   VETO_NOTIFICATION = 'VETO_NOTIFICATION',
   SYSTEM_ERROR = 'SYSTEM_ERROR',
@@ -198,7 +198,7 @@ export class NotificationService {
 
     const telegramMessage = this.formatTelegramMessage(message);
     const url = `https://api.telegram.org/bot${this.config.telegram.botToken}/sendMessage`;
-    
+
     const payload = {
       chat_id: this.config.telegram.chatId,
       text: telegramMessage,
@@ -299,7 +299,7 @@ Reason: ${data.reason}`;
   private formatTelegramMessage(message: NotificationMessage): string {
     const priorityEmoji = {
       LOW: '🔵',
-      MEDIUM: '🟡', 
+      MEDIUM: '🟡',
       HIGH: '🟠',
       CRITICAL: '🔴',
     };
@@ -323,17 +323,19 @@ _${new Date(message.timestamp).toISOString()}_`;
         return; // Success
       } catch (error) {
         lastError = error as Error;
-        
+
         if (attempt < this.retryAttempts) {
           // Exponential backoff
           const delay = this.retryDelay * Math.pow(2, attempt - 1);
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
     }
 
     // All retries failed
-    throw new Error(`Notification failed after ${this.retryAttempts} attempts: ${lastError?.message}`);
+    throw new Error(
+      `Notification failed after ${this.retryAttempts} attempts: ${lastError?.message}`,
+    );
   }
 
   /**

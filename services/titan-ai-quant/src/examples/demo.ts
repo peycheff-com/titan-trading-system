@@ -54,10 +54,12 @@ async function runEnhancedAIDemo(): Promise<void> {
 
   aiIntegration.on("strategySelectionUpdated", (event) => {
     console.log(`🎯 Strategy selection updated for ${event.symbol}:`);
-    event.selection.selectedStrategies.forEach((strategy) => {
+    event.selection.selectedStrategies.forEach((strategy: any) => {
       console.log(
         `   ${strategy.strategy}: ${
-          (strategy.allocation * 100).toFixed(1)
+          (strategy.allocation * 100).toFixed(
+            1,
+          )
         }% (conf: ${(strategy.confidence * 100).toFixed(0)}%)`,
       );
     });
@@ -68,10 +70,12 @@ async function runEnhancedAIDemo(): Promise<void> {
     console.log(
       `⚠️ Risk adjustment applied (score: ${event.riskScore.toFixed(1)}/100):`,
     );
-    event.adjustments.forEach((adj) => {
+    event.adjustments.forEach((adj: any) => {
       console.log(
         `   ${adj.trigger}: ${adj.currentRisk.toFixed(3)} → ${
-          adj.recommendedRisk.toFixed(3)
+          adj.recommendedRisk.toFixed(
+            3,
+          )
         } (${adj.urgency})`,
       );
     });
@@ -140,11 +144,9 @@ async function runEnhancedAIDemo(): Promise<void> {
 
   for (let i = 0; i < 30; i++) {
     const symbol = symbols[Math.floor(Math.random() * symbols.length)];
-    const trapType = [
-      "oi_wipeout",
-      "funding_spike",
-      "liquidity_sweep",
-    ][Math.floor(Math.random() * 3)] as any;
+    const trapType = ["oi_wipeout", "funding_spike", "liquidity_sweep"][
+      Math.floor(Math.random() * 3)
+    ] as any;
     const isWinning = Math.random() > 0.4; // 60% win rate
 
     const trade: Trade = {
@@ -175,7 +177,9 @@ async function runEnhancedAIDemo(): Promise<void> {
     const status = aiIntegration.getStatus();
     console.log(
       `📈 Performance Score: ${
-        status.performanceScore.toFixed(1)
+        status.performanceScore.toFixed(
+          1,
+        )
       }/100 | Risk Level: ${status.riskLevel.toUpperCase()}`,
     );
     console.log(
@@ -207,8 +211,8 @@ async function runEnhancedAIDemo(): Promise<void> {
 }
 
 // Run the demo if this file is executed directly
-if (require.main === module) {
-  runEnhancedAIDemo().catch(console.error);
-}
+// if (import.meta.url === `file://${process.argv[1]}`) {
+//   runEnhancedAIDemo().catch(console.error);
+// }
 
 export { runEnhancedAIDemo };

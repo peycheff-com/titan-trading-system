@@ -1,20 +1,16 @@
 /**
  * Event Mapper for Titan Phase 2 - 2026 Modernization
- * 
+ *
  * Maps trading symbols to relevant prediction market events and
  * calculates relevance scores for each event.
- * 
+ *
  * Requirements:
  * - 1.1: Connect trading symbols with prediction markets
  * - 1.2: Compute weighted sentiment score
  */
 
 import { EventEmitter } from 'events';
-import {
-  PredictionMarketEvent,
-  EventCategory,
-  ImpactLevel
-} from '../types';
+import { PredictionMarketEvent, EventCategory, ImpactLevel } from '../types';
 
 // ============================================================================
 // INTERFACES
@@ -65,36 +61,36 @@ const DEFAULT_SYMBOL_MAPPINGS: SymbolEventMapping[] = [
     keywords: ['bitcoin', 'btc', 'crypto', 'digital asset', 'cryptocurrency'],
     categories: [EventCategory.CRYPTO_PRICE, EventCategory.REGULATORY, EventCategory.FED_POLICY],
     directEvents: [],
-    correlatedSymbols: ['ETHUSDT', 'SOLUSDT']
+    correlatedSymbols: ['ETHUSDT', 'SOLUSDT'],
   },
   {
     symbol: 'ETHUSDT',
     keywords: ['ethereum', 'eth', 'crypto', 'defi', 'smart contract'],
     categories: [EventCategory.CRYPTO_PRICE, EventCategory.REGULATORY],
     directEvents: [],
-    correlatedSymbols: ['BTCUSDT', 'SOLUSDT']
+    correlatedSymbols: ['BTCUSDT', 'SOLUSDT'],
   },
   {
     symbol: 'SOLUSDT',
     keywords: ['solana', 'sol', 'crypto', 'blockchain'],
     categories: [EventCategory.CRYPTO_PRICE, EventCategory.REGULATORY],
     directEvents: [],
-    correlatedSymbols: ['BTCUSDT', 'ETHUSDT']
+    correlatedSymbols: ['BTCUSDT', 'ETHUSDT'],
   },
   {
     symbol: 'BNBUSDT',
     keywords: ['binance', 'bnb', 'crypto', 'exchange'],
     categories: [EventCategory.CRYPTO_PRICE, EventCategory.REGULATORY],
     directEvents: [],
-    correlatedSymbols: ['BTCUSDT']
+    correlatedSymbols: ['BTCUSDT'],
   },
   {
     symbol: 'XRPUSDT',
     keywords: ['ripple', 'xrp', 'crypto', 'sec', 'lawsuit'],
     categories: [EventCategory.CRYPTO_PRICE, EventCategory.REGULATORY],
     directEvents: [],
-    correlatedSymbols: ['BTCUSDT']
-  }
+    correlatedSymbols: ['BTCUSDT'],
+  },
 ];
 
 /**
@@ -109,7 +105,7 @@ const BTC_CRASH_PATTERNS = [
   'bitcoin drop',
   'crypto crash',
   'bitcoin bear',
-  'btc bear market'
+  'btc bear market',
 ];
 
 const BTC_ATH_PATTERNS = [
@@ -120,7 +116,7 @@ const BTC_ATH_PATTERNS = [
   'bitcoin new high',
   'bitcoin all time high',
   'btc all time high',
-  'bitcoin bull'
+  'bitcoin bull',
 ];
 
 // ============================================================================
@@ -129,7 +125,7 @@ const BTC_ATH_PATTERNS = [
 
 /**
  * Event Mapper
- * 
+ *
  * Maps trading symbols to relevant prediction market events and
  * calculates relevance scores based on keyword matching, category
  * alignment, and direct event associations.
@@ -207,12 +203,9 @@ export class EventMapper extends EventEmitter {
    * Map events to a specific symbol
    * Requirement 1.1, 1.2: Connect symbols with prediction markets
    */
-  mapEventsToSymbol(
-    symbol: string,
-    events: PredictionMarketEvent[]
-  ): SymbolMappingResult {
+  mapEventsToSymbol(symbol: string, events: PredictionMarketEvent[]): SymbolMappingResult {
     const mapping = this.symbolMappings.get(symbol);
-    
+
     if (!mapping) {
       // Create a basic mapping for unknown symbols
       return this.createBasicMapping(symbol, events);
@@ -231,10 +224,7 @@ export class EventMapper extends EventEmitter {
     relevantEvents.sort((a, b) => b.relevanceScore - a.relevanceScore);
 
     // Calculate total relevance
-    const totalRelevance = relevantEvents.reduce(
-      (sum, r) => sum + r.relevanceScore,
-      0
-    );
+    const totalRelevance = relevantEvents.reduce((sum, r) => sum + r.relevanceScore, 0);
 
     // Determine dominant category
     const dominantCategory = this.findDominantCategory(relevantEvents);
@@ -243,7 +233,7 @@ export class EventMapper extends EventEmitter {
       symbol,
       events: relevantEvents,
       totalRelevance,
-      dominantCategory
+      dominantCategory,
     };
   }
 
@@ -268,7 +258,7 @@ export class EventMapper extends EventEmitter {
     // Check keyword matches
     const eventText = `${event.title} ${event.description}`.toLowerCase();
     let keywordMatches = 0;
-    
+
     for (const keyword of mapping.keywords) {
       if (eventText.includes(keyword.toLowerCase())) {
         keywordMatches++;
@@ -309,32 +299,29 @@ export class EventMapper extends EventEmitter {
       symbol: mapping.symbol,
       relevanceScore,
       matchType,
-      matchDetails
+      matchDetails,
     };
   }
 
   /**
    * Create basic mapping for unknown symbols
    */
-  private createBasicMapping(
-    symbol: string,
-    events: PredictionMarketEvent[]
-  ): SymbolMappingResult {
+  private createBasicMapping(symbol: string, events: PredictionMarketEvent[]): SymbolMappingResult {
     // Extract base asset from symbol (e.g., BTC from BTCUSDT)
     const baseAsset = symbol.replace(/USDT|USD|BUSD|USDC/i, '').toLowerCase();
-    
+
     const relevantEvents: EventRelevance[] = [];
 
     for (const event of events) {
       const eventText = `${event.title} ${event.description}`.toLowerCase();
-      
+
       if (eventText.includes(baseAsset)) {
         relevantEvents.push({
           event,
           symbol,
           relevanceScore: 30,
           matchType: 'keyword',
-          matchDetails: [`Base asset match: ${baseAsset}`]
+          matchDetails: [`Base asset match: ${baseAsset}`],
         });
       } else if (event.category === EventCategory.CRYPTO_PRICE) {
         relevantEvents.push({
@@ -342,7 +329,7 @@ export class EventMapper extends EventEmitter {
           symbol,
           relevanceScore: 10,
           matchType: 'category',
-          matchDetails: ['General crypto category']
+          matchDetails: ['General crypto category'],
         });
       }
     }
@@ -353,7 +340,7 @@ export class EventMapper extends EventEmitter {
       symbol,
       events: relevantEvents,
       totalRelevance: relevantEvents.reduce((sum, r) => sum + r.relevanceScore, 0),
-      dominantCategory: EventCategory.CRYPTO_PRICE
+      dominantCategory: EventCategory.CRYPTO_PRICE,
     };
   }
 
@@ -517,7 +504,7 @@ export class EventMapper extends EventEmitter {
     return {
       totalSymbols: this.symbolMappings.size,
       cachedEvents: this.eventCache.size,
-      cachedRelevances: this.relevanceCache.size
+      cachedRelevances: this.relevanceCache.size,
     };
   }
 

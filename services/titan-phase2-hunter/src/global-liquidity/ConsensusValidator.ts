@@ -7,7 +7,7 @@
  * Requirements: 4.4 (Cross-Exchange Consensus)
  */
 
-import { EventEmitter } from "events";
+import { EventEmitter } from 'events';
 import {
   ConnectionStatus,
   ConsensusData,
@@ -16,7 +16,7 @@ import {
   GlobalCVDData,
   SignalDirection,
   SignalValidationResponse,
-} from "../types";
+} from '../types';
 
 export interface ConsensusValidatorConfig {
   consensusThreshold: number; // Minimum ratio of exchanges that must agree (default: 0.67 = 2/3)
@@ -38,7 +38,7 @@ export type { ExchangeVote, SignalDirection, SignalValidationResponse };
  */
 export interface SignalValidationRequest {
   symbol: string;
-  direction: "LONG" | "SHORT";
+  direction: 'LONG' | 'SHORT';
   globalCVD: GlobalCVDData;
   technicalConfidence: number;
 }
@@ -81,13 +81,13 @@ export class ConsensusValidator extends EventEmitter {
 
     // Filter to connected exchanges with trades
     const connectedFlows = exchangeFlows.filter(
-      (f) => f.status === ConnectionStatus.CONNECTED && f.trades > 0,
+      f => f.status === ConnectionStatus.CONNECTED && f.trades > 0
     );
 
     // Check minimum connected exchanges
     if (connectedFlows.length < this.config.minConnectedExchanges) {
       reasoning.push(
-        `Insufficient connected exchanges: ${connectedFlows.length}/${this.config.minConnectedExchanges} required`,
+        `Insufficient connected exchanges: ${connectedFlows.length}/${this.config.minConnectedExchanges} required`
       );
       return this.createFailedConsensus(exchangeFlows, reasoning);
     }
@@ -114,7 +114,7 @@ export class ConsensusValidator extends EventEmitter {
     }
 
     // Determine consensus direction (majority vote)
-    let consensusDirection: SignalDirection = "neutral";
+    let consensusDirection: SignalDirection = 'neutral';
     let maxVotes = 0;
 
     for (const [direction, count] of Object.entries(directionCounts)) {
@@ -129,26 +129,22 @@ export class ConsensusValidator extends EventEmitter {
     const hasConsensus = agreementRatio >= this.config.consensusThreshold;
 
     // Calculate confidence
-    const confidence = this.calculateConsensusConfidence(
-      votes,
-      hasConsensus,
-      agreementRatio,
-    );
+    const confidence = this.calculateConsensusConfidence(votes, hasConsensus, agreementRatio);
 
     // Build reasoning
     if (hasConsensus) {
       reasoning.push(
-        `Consensus reached: ${maxVotes}/${connectedFlows.length} exchanges agree on ${consensusDirection}`,
+        `Consensus reached: ${maxVotes}/${connectedFlows.length} exchanges agree on ${consensusDirection}`
       );
       reasoning.push(`Agreement ratio: ${(agreementRatio * 100).toFixed(0)}%`);
     } else {
       reasoning.push(
-        `No consensus: ${maxVotes}/${connectedFlows.length} exchanges agree (need ${
-          (this.config.consensusThreshold * 100).toFixed(0)
-        }%)`,
+        `No consensus: ${maxVotes}/${connectedFlows.length} exchanges agree (need ${(
+          this.config.consensusThreshold * 100
+        ).toFixed(0)}%)`
       );
       reasoning.push(
-        `Votes: Bullish=${directionCounts.bullish}, Bearish=${directionCounts.bearish}, Neutral=${directionCounts.neutral}`,
+        `Votes: Bullish=${directionCounts.bullish}, Bearish=${directionCounts.bearish}, Neutral=${directionCounts.neutral}`
       );
     }
 
@@ -166,9 +162,9 @@ export class ConsensusValidator extends EventEmitter {
 
     // Emit appropriate event
     if (hasConsensus) {
-      this.emit("consensusReached", result);
+      this.emit('consensusReached', result);
     } else {
-      this.emit("consensusFailed", result);
+      this.emit('consensusFailed', result);
     }
 
     return result;
@@ -186,15 +182,13 @@ export class ConsensusValidator extends EventEmitter {
     const consensusResult = this.validateConsensus(globalCVD.exchangeFlows);
 
     // Determine expected CVD direction based on signal
-    const expectedDirection: SignalDirection = direction === "LONG"
-      ? "bullish"
-      : "bearish";
+    const expectedDirection: SignalDirection = direction === 'LONG' ? 'bullish' : 'bearish';
 
     // Check if consensus aligns with signal direction
-    const consensusAligns =
-      consensusResult.consensusDirection === expectedDirection;
-    const consensusConflicts = consensusResult.hasConsensus &&
-      consensusResult.consensusDirection !== "neutral" &&
+    const consensusAligns = consensusResult.consensusDirection === expectedDirection;
+    const consensusConflicts =
+      consensusResult.hasConsensus &&
+      consensusResult.consensusDirection !== 'neutral' &&
       !consensusAligns;
 
     // Calculate adjusted confidence
@@ -204,39 +198,39 @@ export class ConsensusValidator extends EventEmitter {
       // Consensus supports signal - boost confidence
       adjustedConfidence += this.config.confidenceBoostOnConsensus;
       reasoning.push(
-        `Consensus supports ${direction} signal: +${this.config.confidenceBoostOnConsensus} confidence`,
+        `Consensus supports ${direction} signal: +${this.config.confidenceBoostOnConsensus} confidence`
       );
     } else if (consensusConflicts) {
       // Consensus conflicts with signal - reduce confidence
       adjustedConfidence -= this.config.confidencePenaltyOnConflict;
       reasoning.push(
-        `Consensus conflicts with ${direction} signal: -${this.config.confidencePenaltyOnConflict} confidence`,
+        `Consensus conflicts with ${direction} signal: -${this.config.confidencePenaltyOnConflict} confidence`
       );
     } else if (!consensusResult.hasConsensus) {
       // No consensus - slight penalty
       adjustedConfidence -= 10;
-      reasoning.push("No exchange consensus: -10 confidence");
+      reasoning.push('No exchange consensus: -10 confidence');
     }
 
     // Cap confidence at 0-100
     adjustedConfidence = Math.max(0, Math.min(100, adjustedConfidence));
 
     // Determine recommendation
-    let recommendation: "proceed" | "reduce_size" | "veto";
+    let recommendation: 'proceed' | 'reduce_size' | 'veto';
     let isValid: boolean;
 
     if (consensusConflicts && consensusResult.confidence > 70) {
-      recommendation = "veto";
+      recommendation = 'veto';
       isValid = false;
-      reasoning.push("Strong consensus against signal direction - VETO");
+      reasoning.push('Strong consensus against signal direction - VETO');
     } else if (consensusConflicts || !consensusResult.hasConsensus) {
-      recommendation = "reduce_size";
+      recommendation = 'reduce_size';
       isValid = true;
-      reasoning.push("Weak or conflicting consensus - reduce position size");
+      reasoning.push('Weak or conflicting consensus - reduce position size');
     } else {
-      recommendation = "proceed";
+      recommendation = 'proceed';
       isValid = true;
-      reasoning.push("Consensus supports signal - proceed with full size");
+      reasoning.push('Consensus supports signal - proceed with full size');
     }
 
     const response: SignalValidationResponse = {
@@ -247,7 +241,7 @@ export class ConsensusValidator extends EventEmitter {
       reasoning,
     };
 
-    this.emit("signalValidated", response);
+    this.emit('signalValidated', response);
     return response;
   }
 
@@ -256,16 +250,14 @@ export class ConsensusValidator extends EventEmitter {
    * Requirement 6.2: Check Coinbase and Kraken for confirmation
    */
   checkExchangeAgreement(
-    primaryExchange: "binance" | "coinbase" | "kraken",
-    exchangeFlows: ExchangeFlow[],
+    primaryExchange: 'binance' | 'coinbase' | 'kraken',
+    exchangeFlows: ExchangeFlow[]
   ): { agrees: boolean; agreementCount: number; totalExchanges: number } {
     const connectedFlows = exchangeFlows.filter(
-      (f) => f.status === ConnectionStatus.CONNECTED && f.trades > 0,
+      f => f.status === ConnectionStatus.CONNECTED && f.trades > 0
     );
 
-    const primaryFlow = connectedFlows.find((f) =>
-      f.exchange === primaryExchange
-    );
+    const primaryFlow = connectedFlows.find(f => f.exchange === primaryExchange);
     if (!primaryFlow) {
       return {
         agrees: false,
@@ -297,7 +289,7 @@ export class ConsensusValidator extends EventEmitter {
   private calculateVotes(flows: ExchangeFlow[]): ExchangeVote[] {
     const totalVolume = flows.reduce((sum, f) => sum + f.volume, 0);
 
-    return flows.map((flow) => ({
+    return flows.map(flow => ({
       exchange: flow.exchange,
       direction: this.determineDirection(flow.cvd),
       cvd: flow.cvd,
@@ -311,9 +303,9 @@ export class ConsensusValidator extends EventEmitter {
    * Determine direction from CVD value
    */
   private determineDirection(cvd: number): SignalDirection {
-    if (cvd > this.config.cvdDirectionThreshold) return "bullish";
-    if (cvd < -this.config.cvdDirectionThreshold) return "bearish";
-    return "neutral";
+    if (cvd > this.config.cvdDirectionThreshold) return 'bullish';
+    if (cvd < -this.config.cvdDirectionThreshold) return 'bearish';
+    return 'neutral';
   }
 
   /**
@@ -335,7 +327,7 @@ export class ConsensusValidator extends EventEmitter {
   private calculateConsensusConfidence(
     votes: ExchangeVote[],
     hasConsensus: boolean,
-    agreementRatio: number,
+    agreementRatio: number
   ): number {
     if (!hasConsensus) {
       return Math.max(0, agreementRatio * 50); // Max 50% confidence without consensus
@@ -345,8 +337,7 @@ export class ConsensusValidator extends EventEmitter {
     let confidence = agreementRatio * 60;
 
     // Add weighted vote confidence
-    const avgVoteConfidence = votes.reduce((sum, v) => sum + v.confidence, 0) /
-      votes.length;
+    const avgVoteConfidence = votes.reduce((sum, v) => sum + v.confidence, 0) / votes.length;
     confidence += avgVoteConfidence * 0.4;
 
     return Math.min(100, confidence);
@@ -357,16 +348,14 @@ export class ConsensusValidator extends EventEmitter {
    */
   private createFailedConsensus(
     exchangeFlows: ExchangeFlow[],
-    reasoning: string[],
+    reasoning: string[]
   ): ConsensusValidationResult {
-    const connectedFlows = exchangeFlows.filter(
-      (f) => f.status === ConnectionStatus.CONNECTED,
-    );
+    const connectedFlows = exchangeFlows.filter(f => f.status === ConnectionStatus.CONNECTED);
 
     return {
       isValid: false,
       hasConsensus: false,
-      consensusDirection: "neutral",
+      consensusDirection: 'neutral',
       confidence: 0,
       votes: [],
       agreementRatio: 0,
@@ -396,7 +385,7 @@ export class ConsensusValidator extends EventEmitter {
    */
   calculateConsensusScore(exchangeFlows: ExchangeFlow[]): number {
     const connectedFlows = exchangeFlows.filter(
-      (f) => f.status === ConnectionStatus.CONNECTED && f.trades > 0,
+      f => f.status === ConnectionStatus.CONNECTED && f.trades > 0
     );
 
     if (connectedFlows.length === 0) return 0;
@@ -406,9 +395,7 @@ export class ConsensusValidator extends EventEmitter {
     let weightedCVD = 0;
 
     for (const flow of connectedFlows) {
-      const weight = totalVolume > 0
-        ? flow.volume / totalVolume
-        : 1 / connectedFlows.length;
+      const weight = totalVolume > 0 ? flow.volume / totalVolume : 1 / connectedFlows.length;
       weightedCVD += flow.cvd * weight;
     }
 

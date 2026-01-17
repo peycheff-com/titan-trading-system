@@ -7,10 +7,10 @@
  * Requirements: 1.1, 1.2, 1.6
  */
 
-import * as fs from "fs";
-import * as readline from "readline";
-import * as path from "path";
-import { RegimeSnapshot, Trade } from "../types/index.js";
+import * as fs from 'fs';
+import * as readline from 'readline';
+import * as path from 'path';
+import { RegimeSnapshot, Trade } from '../types/index.js';
 
 /**
  * Maps trend state to human-readable string
@@ -18,13 +18,13 @@ import { RegimeSnapshot, Trade } from "../types/index.js";
 function trendStateToString(state: -1 | 0 | 1): string {
   switch (state) {
     case 1:
-      return "Bull";
+      return 'Bull';
     case 0:
-      return "Range";
+      return 'Range';
     case -1:
-      return "Bear";
+      return 'Bear';
     default:
-      return "Unknown";
+      return 'Unknown';
   }
 }
 
@@ -34,13 +34,13 @@ function trendStateToString(state: -1 | 0 | 1): string {
 function volStateToString(state: 0 | 1 | 2): string {
   switch (state) {
     case 0:
-      return "Low-Vol";
+      return 'Low-Vol';
     case 1:
-      return "Normal-Vol";
+      return 'Normal-Vol';
     case 2:
-      return "Extreme-Vol";
+      return 'Extreme-Vol';
     default:
-      return "Unknown-Vol";
+      return 'Unknown-Vol';
   }
 }
 
@@ -50,13 +50,13 @@ function volStateToString(state: 0 | 1 | 2): string {
 function regimeStateToString(state: -1 | 0 | 1): string {
   switch (state) {
     case 1:
-      return "Risk-On";
+      return 'Risk-On';
     case 0:
-      return "Neutral";
+      return 'Neutral';
     case -1:
-      return "Risk-Off";
+      return 'Risk-Off';
     default:
-      return "Unknown";
+      return 'Unknown';
   }
 }
 
@@ -67,12 +67,8 @@ export class Journal {
   private regimeLoaded: boolean = false;
 
   constructor(
-    tradesFilePath: string = path.join(process.cwd(), "logs", "trades.jsonl"),
-    regimeFilePath: string = path.join(
-      process.cwd(),
-      "logs",
-      "regime_snapshots.jsonl",
-    ),
+    tradesFilePath: string = path.join(process.cwd(), 'logs', 'trades.jsonl'),
+    regimeFilePath: string = path.join(process.cwd(), 'logs', 'regime_snapshots.jsonl'),
   ) {
     this.tradesFilePath = tradesFilePath;
     this.regimeFilePath = regimeFilePath;
@@ -164,16 +160,16 @@ export class Journal {
    * Validate that a trade object has all required fields
    */
   private isValidTrade(trade: unknown): trade is Trade {
-    if (typeof trade !== "object" || trade === null) return false;
+    if (typeof trade !== 'object' || trade === null) return false;
 
     const t = trade as Record<string, unknown>;
     return (
-      typeof t.timestamp === "number" &&
-      typeof t.symbol === "string" &&
-      typeof t.trapType === "string" &&
-      typeof t.pnl === "number" &&
-      typeof t.duration === "number" &&
-      typeof t.slippage === "number"
+      typeof t.timestamp === 'number' &&
+      typeof t.symbol === 'string' &&
+      typeof t.trapType === 'string' &&
+      typeof t.pnl === 'number' &&
+      typeof t.duration === 'number' &&
+      typeof t.slippage === 'number'
     );
   }
 
@@ -185,13 +181,13 @@ export class Journal {
    */
   summarizeTrade(trade: Trade, regime: RegimeSnapshot): string {
     const resultPercent = (trade.pnlPercent * 100).toFixed(2);
-    const resultSign = trade.pnlPercent >= 0 ? "+" : "";
+    const resultSign = trade.pnlPercent >= 0 ? '+' : '';
     const durationSec = Math.round(trade.duration / 1000);
     const slippagePercent = (trade.slippage * 100).toFixed(2);
 
-    const regimeStr = `${regimeStateToString(regime.regimeState)}/${
-      volStateToString(regime.volState)
-    }`;
+    const regimeStr = `${regimeStateToString(regime.regimeState)}/${volStateToString(
+      regime.volState,
+    )}`;
     const trendStr = trendStateToString(regime.trendState);
 
     return `Symbol: ${trade.symbol}, Type: ${trade.trapType.toUpperCase()}, Result: ${resultSign}${resultPercent}%, Duration: ${durationSec}s, Slippage: ${slippagePercent}%, Regime: ${regimeStr}, Trend: ${trendStr}`;

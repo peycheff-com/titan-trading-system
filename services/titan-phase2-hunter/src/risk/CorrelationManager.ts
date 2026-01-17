@@ -1,9 +1,9 @@
 /**
  * Correlation Manager for Titan Phase 2 - The Hunter
- * 
+ *
  * Manages correlation-based position limits to avoid overexposure to correlated assets.
  * Implements 24-hour rolling correlation calculations and enforces correlation thresholds.
- * 
+ *
  * Requirements: 14.1-14.7 (Correlation-Based Position Limits)
  */
 
@@ -53,7 +53,12 @@ export interface CorrelationManagerEvents {
   'correlation:updated': (matrix: CorrelationMatrix) => void;
   'correlation:high_beta': (state: HighBetaState) => void;
   'correlation:reject': (symbol: string, correlation: number, conflictSymbol: string) => void;
-  'correlation:reduce': (symbol: string, correlation: number, originalSize: number, adjustedSize: number) => void;
+  'correlation:reduce': (
+    symbol: string,
+    correlation: number,
+    originalSize: number,
+    adjustedSize: number
+  ) => void;
   'correlation:exposure_limit': (totalExposure: number, maxExposure: number) => void;
 }
 
@@ -67,7 +72,7 @@ export class CorrelationManager extends EventEmitter {
 
   constructor(bybitClient: BybitPerpsClient, config?: Partial<CorrelationManagerConfig>) {
     super();
-    
+
     this.bybitClient = bybitClient;
     this.config = {
       correlationThreshold: 0.7,
@@ -78,7 +83,7 @@ export class CorrelationManager extends EventEmitter {
       highBetaReduction: 0.3,
       rollingWindowHours: 24,
       updateIntervalMs: 300000, // 5 minutes
-      ...config
+      ...config,
     };
 
     // Start correlation monitoring
@@ -96,11 +101,13 @@ export class CorrelationManager extends EventEmitter {
       // Get 24-hour price data for both symbols
       const [data1, data2] = await Promise.all([
         this.getPriceHistory(symbol1),
-        this.getPriceHistory(symbol2)
+        this.getPriceHistory(symbol2),
       ]);
 
       if (data1.length < 24 || data2.length < 24) {
-        console.warn(`⚠️ Insufficient data for correlation: ${symbol1} (${data1.length}), ${symbol2} (${data2.length})`);
+        console.warn(
+          `⚠️ Insufficient data for correlation: ${symbol1} (${data1.length}), ${symbol2} (${data2.length})`
+        );
         return 0;
       }
 
@@ -136,8 +143,8 @@ export class CorrelationManager extends EventEmitter {
    * @returns Correlation result with allowed status and adjusted size
    */
   public async checkCorrelationLimit(
-    candidateSymbol: string, 
-    openPositions: Position[], 
+    candidateSymbol: string,
+    openPositions: Position[],
     proposedSize: number
   ): Promise<CorrelationResult> {
     try {
@@ -149,7 +156,7 @@ export class CorrelationManager extends EventEmitter {
         if (position.symbol === candidateSymbol) continue;
 
         const correlation = Math.abs(await this.calcCorrelation(candidateSymbol, position.symbol));
-        
+
         if (correlation > maxCorrelation) {
           maxCorrelation = correlation;
           conflictSymbol = position.symbol;
@@ -159,33 +166,43 @@ export class CorrelationManager extends EventEmitter {
       // Check rejection threshold (0.85)
       if (maxCorrelation >= this.config.rejectThreshold) {
         this.emit('correlation:reject', candidateSymbol, maxCorrelation, conflictSymbol);
-        console.log(`🚫 Signal rejected: ${candidateSymbol} correlation ${maxCorrelation.toFixed(3)} with ${conflictSymbol} exceeds ${this.config.rejectThreshold}`);
-        
+        console.log(
+          `🚫 Signal rejected: ${candidateSymbol} correlation ${maxCorrelation.toFixed(3)} with ${conflictSymbol} exceeds ${this.config.rejectThreshold}`
+        );
+
         return {
           allowed: false,
           reason: `CORRELATION_REJECT: ${maxCorrelation.toFixed(3)} with ${conflictSymbol}`,
-          correlation: maxCorrelation
+          correlation: maxCorrelation,
         };
       }
 
       // Check reduction threshold (0.7)
       if (maxCorrelation >= this.config.correlationThreshold) {
         const adjustedSize = proposedSize * 0.5; // Reduce by 50%
-        this.emit('correlation:reduce', candidateSymbol, maxCorrelation, proposedSize, adjustedSize);
-        console.log(`📉 Position size reduced: ${candidateSymbol} ${proposedSize} → ${adjustedSize} (correlation ${maxCorrelation.toFixed(3)} with ${conflictSymbol})`);
-        
+        this.emit(
+          'correlation:reduce',
+          candidateSymbol,
+          maxCorrelation,
+          proposedSize,
+          adjustedSize
+        );
+        console.log(
+          `📉 Position size reduced: ${candidateSymbol} ${proposedSize} → ${adjustedSize} (correlation ${maxCorrelation.toFixed(3)} with ${conflictSymbol})`
+        );
+
         return {
           allowed: true,
           adjustedSize,
           reason: `CORRELATION_REDUCE: ${maxCorrelation.toFixed(3)} with ${conflictSymbol}`,
-          correlation: maxCorrelation
+          correlation: maxCorrelation,
         };
       }
 
       // No correlation issues
       return {
         allowed: true,
-        correlation: maxCorrelation
+        correlation: maxCorrelation,
       };
     } catch (error) {
       console.error(`❌ Failed to check correlation limit for ${candidateSymbol}:`, error);
@@ -199,11 +216,16 @@ export class CorrelationManager extends EventEmitter {
    * @param totalEquity - Total account equity
    * @returns Total correlated exposure as percentage of equity
    */
-  public async calcTotalCorrelatedExposure(openPositions: Position[], totalEquity: number): Promise<number> {
+  public async calcTotalCorrelatedExposure(
+    openPositions: Position[],
+    totalEquity: number
+  ): Promise<number> {
     try {
       if (openPositions.length < 2) return 0;
 
-      const correlationMatrix = await this.generateCorrelationMatrix(openPositions.map(p => p.symbol));
+      const correlationMatrix = await this.generateCorrelationMatrix(
+        openPositions.map(p => p.symbol)
+      );
       const symbols = correlationMatrix.symbols;
       const matrix = correlationMatrix.matrix;
 
@@ -255,7 +277,9 @@ export class CorrelationManager extends EventEmitter {
 
       if (exposurePercentage > maxExposure) {
         this.emit('correlation:exposure_limit', exposurePercentage, maxExposure);
-        console.warn(`⚠️ Correlated exposure ${(exposurePercentage * 100).toFixed(1)}% exceeds limit ${(maxExposure * 100).toFixed(1)}%`);
+        console.warn(
+          `⚠️ Correlated exposure ${(exposurePercentage * 100).toFixed(1)}% exceeds limit ${(maxExposure * 100).toFixed(1)}%`
+        );
       }
 
       return exposurePercentage;
@@ -289,9 +313,10 @@ export class CorrelationManager extends EventEmitter {
       }
 
       // Calculate average BTC correlation
-      const avgBtcCorrelation = correlations.length > 0 
-        ? correlations.reduce((sum, corr) => sum + corr, 0) / correlations.length 
-        : 0;
+      const avgBtcCorrelation =
+        correlations.length > 0
+          ? correlations.reduce((sum, corr) => sum + corr, 0) / correlations.length
+          : 0;
 
       const isHighBeta = avgBtcCorrelation >= this.config.highBetaThreshold;
 
@@ -299,7 +324,7 @@ export class CorrelationManager extends EventEmitter {
         isHighBeta,
         btcCorrelation: avgBtcCorrelation,
         affectedSymbols,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       // Update state and emit event if changed
@@ -308,9 +333,13 @@ export class CorrelationManager extends EventEmitter {
         this.emit('correlation:high_beta', highBetaState);
 
         if (isHighBeta) {
-          console.warn(`🔴 HIGH BETA market detected: BTC correlation ${avgBtcCorrelation.toFixed(3)}, ${affectedSymbols.length} symbols affected`);
+          console.warn(
+            `🔴 HIGH BETA market detected: BTC correlation ${avgBtcCorrelation.toFixed(3)}, ${affectedSymbols.length} symbols affected`
+          );
         } else {
-          console.log(`🟢 Normal market conditions: BTC correlation ${avgBtcCorrelation.toFixed(3)}`);
+          console.log(
+            `🟢 Normal market conditions: BTC correlation ${avgBtcCorrelation.toFixed(3)}`
+          );
         }
       }
 
@@ -321,7 +350,7 @@ export class CorrelationManager extends EventEmitter {
         isHighBeta: false,
         btcCorrelation: 0,
         affectedSymbols: [],
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
     }
   }
@@ -334,7 +363,9 @@ export class CorrelationManager extends EventEmitter {
   public async generateCorrelationMatrix(symbols: string[]): Promise<CorrelationMatrix> {
     try {
       const n = symbols.length;
-      const matrix: number[][] = Array(n).fill(null).map(() => Array(n).fill(0));
+      const matrix: number[][] = Array(n)
+        .fill(null)
+        .map(() => Array(n).fill(0));
 
       // Calculate correlation for each pair
       for (let i = 0; i < n; i++) {
@@ -353,7 +384,7 @@ export class CorrelationManager extends EventEmitter {
       const correlationMatrix: CorrelationMatrix = {
         symbols,
         matrix,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       this.emit('correlation:updated', correlationMatrix);
@@ -363,7 +394,7 @@ export class CorrelationManager extends EventEmitter {
       return {
         symbols: [],
         matrix: [],
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
     }
   }
@@ -380,7 +411,7 @@ export class CorrelationManager extends EventEmitter {
       if (cached && cached.length > 0) {
         const latestTime = cached[cached.length - 1].timestamp;
         const hoursSinceUpdate = (Date.now() - latestTime) / (1000 * 60 * 60);
-        
+
         if (hoursSinceUpdate < 1) {
           return cached; // Use cached data if less than 1 hour old
         }
@@ -389,7 +420,7 @@ export class CorrelationManager extends EventEmitter {
       // Fetch fresh 24-hour data (hourly candles)
       const data = await this.bybitClient.fetchOHLCV(symbol, '1h', 24);
       this.priceHistory.set(symbol, data);
-      
+
       return data;
     } catch (error) {
       console.error(`❌ Failed to get price history for ${symbol}:`, error);
@@ -403,9 +434,12 @@ export class CorrelationManager extends EventEmitter {
    * @param data2 - Second symbol's price data
    * @returns Aligned price data
    */
-  private alignPriceData(data1: OHLCV[], data2: OHLCV[]): { timestamp: number; price1: number; price2: number }[] {
+  private alignPriceData(
+    data1: OHLCV[],
+    data2: OHLCV[]
+  ): { timestamp: number; price1: number; price2: number }[] {
     const aligned: { timestamp: number; price1: number; price2: number }[] = [];
-    
+
     // Create maps for faster lookup
     const map1 = new Map(data1.map(d => [d.timestamp, d.close]));
     const map2 = new Map(data2.map(d => [d.timestamp, d.close]));
@@ -419,7 +453,7 @@ export class CorrelationManager extends EventEmitter {
     for (const timestamp of commonTimestamps.sort()) {
       const price1 = map1.get(timestamp);
       const price2 = map2.get(timestamp);
-      
+
       if (price1 !== undefined && price2 !== undefined) {
         aligned.push({ timestamp, price1, price2 });
       }
@@ -435,12 +469,12 @@ export class CorrelationManager extends EventEmitter {
    */
   private calculateReturns(prices: number[]): number[] {
     const returns: number[] = [];
-    
+
     for (let i = 1; i < prices.length; i++) {
       const returnValue = (prices[i] - prices[i - 1]) / prices[i - 1];
       returns.push(returnValue);
     }
-    
+
     return returns;
   }
 
@@ -456,7 +490,7 @@ export class CorrelationManager extends EventEmitter {
     }
 
     const n = x.length;
-    
+
     // Calculate means
     const meanX = x.reduce((sum, val) => sum + val, 0) / n;
     const meanY = y.reduce((sum, val) => sum + val, 0) / n;
@@ -469,14 +503,14 @@ export class CorrelationManager extends EventEmitter {
     for (let i = 0; i < n; i++) {
       const xDiff = x[i] - meanX;
       const yDiff = y[i] - meanY;
-      
+
       numerator += xDiff * yDiff;
       sumXSquared += xDiff * xDiff;
       sumYSquared += yDiff * yDiff;
     }
 
     const denominator = Math.sqrt(sumXSquared * sumYSquared);
-    
+
     if (denominator === 0) {
       return 0; // No correlation if no variance
     }
@@ -492,7 +526,7 @@ export class CorrelationManager extends EventEmitter {
    */
   private cacheCorrelation(symbol1: string, symbol2: string, correlation: number): void {
     const key = [symbol1, symbol2].sort().join('-');
-    
+
     if (!this.correlationCache.has(key)) {
       this.correlationCache.set(key, []);
     }
@@ -502,12 +536,15 @@ export class CorrelationManager extends EventEmitter {
       symbol1,
       symbol2,
       correlation,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     // Keep only last 24 hours of data
-    const cutoff = Date.now() - (this.config.rollingWindowHours * 60 * 60 * 1000);
-    this.correlationCache.set(key, cache.filter(c => c.timestamp > cutoff));
+    const cutoff = Date.now() - this.config.rollingWindowHours * 60 * 60 * 1000;
+    this.correlationCache.set(
+      key,
+      cache.filter(c => c.timestamp > cutoff)
+    );
   }
 
   /**
@@ -522,7 +559,9 @@ export class CorrelationManager extends EventEmitter {
       await this.updateCorrelations();
     }, this.config.updateIntervalMs);
 
-    console.log(`📊 Correlation Manager: Started monitoring (${this.config.updateIntervalMs / 1000}s interval)`);
+    console.log(
+      `📊 Correlation Manager: Started monitoring (${this.config.updateIntervalMs / 1000}s interval)`
+    );
   }
 
   /**
@@ -542,8 +581,8 @@ export class CorrelationManager extends EventEmitter {
   private async updateCorrelations(): Promise<void> {
     try {
       // Clean old cache entries
-      const cutoff = Date.now() - (this.config.rollingWindowHours * 60 * 60 * 1000);
-      
+      const cutoff = Date.now() - this.config.rollingWindowHours * 60 * 60 * 1000;
+
       for (const [key, cache] of Array.from(this.correlationCache.entries())) {
         const filtered = cache.filter(c => c.timestamp > cutoff);
         if (filtered.length === 0) {
@@ -563,7 +602,9 @@ export class CorrelationManager extends EventEmitter {
         }
       }
 
-      console.log(`📊 Correlation cache updated: ${this.correlationCache.size} pairs, ${this.priceHistory.size} symbols`);
+      console.log(
+        `📊 Correlation cache updated: ${this.correlationCache.size} pairs, ${this.priceHistory.size} symbols`
+      );
     } catch (error) {
       console.error(`❌ Failed to update correlations:`, error);
     }
@@ -591,7 +632,7 @@ export class CorrelationManager extends EventEmitter {
       cachedPairs: this.correlationCache.size,
       cachedSymbols: this.priceHistory.size,
       highBetaActive: this.highBetaState?.isHighBeta || false,
-      avgBtcCorrelation: this.highBetaState?.btcCorrelation || 0
+      avgBtcCorrelation: this.highBetaState?.btcCorrelation || 0,
     };
   }
 
@@ -627,6 +668,12 @@ export class CorrelationManager extends EventEmitter {
 
 // Export event interface for TypeScript
 export declare interface CorrelationManager {
-  on<U extends keyof CorrelationManagerEvents>(event: U, listener: CorrelationManagerEvents[U]): this;
-  emit<U extends keyof CorrelationManagerEvents>(event: U, ...args: Parameters<CorrelationManagerEvents[U]>): boolean;
+  on<U extends keyof CorrelationManagerEvents>(
+    event: U,
+    listener: CorrelationManagerEvents[U]
+  ): this;
+  emit<U extends keyof CorrelationManagerEvents>(
+    event: U,
+    ...args: Parameters<CorrelationManagerEvents[U]>
+  ): boolean;
 }

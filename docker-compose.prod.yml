@@ -54,8 +54,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: titan-redis
-    ports:
-      - "6379:6379"
+    # Ports removed for security (internal access only)
     volumes:
       - titan-redis-data:/data
     networks:
@@ -65,6 +64,27 @@ services:
       test: [ "CMD", "redis-cli", "ping" ]
       interval: 30s
       timeout: 10s
+      retries: 5
+
+  # =============================================================================
+  # POSTGRES - Database
+  # =============================================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: titan-postgres
+    environment:
+      POSTGRES_USER: ${TITAN_DB_USER:-titan}
+      POSTGRES_PASSWORD: ${TITAN_DB_PASSWORD:-titan_secret}
+      POSTGRES_DB: ${TITAN_DB_NAME:-titan_brain}
+    volumes:
+      - titan-db-data:/var/lib/postgresql/data
+    networks:
+      - titan-network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${TITAN_DB_USER:-titan}" ]
+      interval: 10s
+      timeout: 5s
       retries: 5
 
   # =============================================================================
@@ -79,7 +99,11 @@ services:
       - NODE_ENV=production
       - PORT=3100
       - HOST=0.0.0.0
-      - DATABASE_URL=${DATABASE_URL}
+      - TITAN_DB_HOST=titan-postgres
+      - TITAN_DB_PORT=5432
+      - TITAN_DB_NAME=${TITAN_DB_NAME:-titan_brain}
+      - TITAN_DB_USER=${TITAN_DB_USER:-titan}
+      - TITAN_DB_PASSWORD=${TITAN_DB_PASSWORD:-titan_secret}
       - REDIS_URL=${REDIS_URL:-redis://titan-redis:6379}
       - NATS_URL=nats://nats:4222
       - HMAC_SECRET=${HMAC_SECRET}
@@ -96,9 +120,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD", "wget", "-qO-", "http://localhost:3100/health" ]
+      test: [ "CMD", "curl", "-f", "http://localhost:3100/health" ]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -288,4 +314,6 @@ volumes:
   titan-ai-data:
     driver: local
   titan-redis-data:
+    driver: local
+  titan-db-data:
     driver: local

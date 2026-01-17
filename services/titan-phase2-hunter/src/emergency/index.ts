@@ -1,8 +1,8 @@
 /**
  * Emergency Protocols Module
- * 
+ *
  * Exports all emergency protocol components for the 2026 modernization.
- * 
+ *
  * Task 8: Emergency Protocols and Failsafe Systems
  */
 
@@ -16,5 +16,5 @@ export type {
   SystemHealthAssessment,
   EmergencyNotification,
   EmergencyLogEntry,
-  EmergencyProtocolEvents
+  EmergencyProtocolEvents,
 } from './EmergencyProtocolManager';

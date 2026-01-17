@@ -22,26 +22,24 @@ import {
   RiskDecision,
   RiskMetrics,
   TreasuryStatus,
-} from "../types/index.js";
-import { AllocationEngine } from "./AllocationEngine.js";
-import { PerformanceTracker } from "./PerformanceTracker.js";
-import { HighCorrelationNotifier, RiskGuardian } from "./RiskGuardian.js";
-import { CapitalFlowManager, SweepNotifier } from "./CapitalFlowManager.js";
+} from '../types/index.js';
+import { AllocationEngine } from './AllocationEngine.js';
+import { PerformanceTracker } from './PerformanceTracker.js';
+import { HighCorrelationNotifier, RiskGuardian } from './RiskGuardian.js';
+import { CapitalFlowManager, SweepNotifier } from './CapitalFlowManager.js';
 import {
   BreakerEventPersistence,
   CircuitBreaker,
   NotificationHandler,
   PositionClosureHandler,
-} from "./CircuitBreaker.js";
-import {
-  RecoveredState,
-  StateRecoveryService,
-} from "./StateRecoveryService.js";
-import { getMetrics } from "../monitoring/PrometheusMetrics.js";
-import { ManualOverrideService } from "./ManualOverrideService.js";
-import { DatabaseManager } from "../db/DatabaseManager.js";
-import { getNatsPublisher, NatsPublisher } from "../server/NatsPublisher.js";
-import { ActiveInferenceEngine } from "./ActiveInferenceEngine.js";
+} from './CircuitBreaker.js';
+import { GovernanceEngine, SystemHealth } from './GovernanceEngine.js';
+import { RecoveredState, StateRecoveryService } from './StateRecoveryService.js';
+import { getMetrics } from '../monitoring/PrometheusMetrics.js';
+import { ManualOverrideService } from './ManualOverrideService.js';
+import { DatabaseManager } from '../db/DatabaseManager.js';
+import { getNatsPublisher, NatsPublisher } from '../server/NatsPublisher.js';
+import { ActiveInferenceEngine } from './ActiveInferenceEngine.js';
 
 /**
  * Phase priority for signal processing
@@ -72,14 +70,14 @@ export interface PhaseNotifier {
 /**
  * TitanBrain orchestrates all components and processes signals
  */
-export class TitanBrain
-  implements PositionClosureHandler, BreakerEventPersistence {
+export class TitanBrain implements PositionClosureHandler, BreakerEventPersistence {
   private readonly config: BrainConfig;
   private readonly allocationEngine: AllocationEngine;
   private readonly performanceTracker: PerformanceTracker;
   private readonly riskGuardian: RiskGuardian;
   private readonly capitalFlowManager: CapitalFlowManager;
   private readonly circuitBreaker: CircuitBreaker;
+  private readonly governanceEngine: GovernanceEngine;
   private readonly activeInferenceEngine: ActiveInferenceEngine;
   private readonly stateRecoveryService: StateRecoveryService | null;
   private readonly manualOverrideService: ManualOverrideService | null;
@@ -127,6 +125,7 @@ export class TitanBrain
     capitalFlowManager: CapitalFlowManager,
     circuitBreaker: CircuitBreaker,
     activeInferenceEngine: ActiveInferenceEngine,
+    governanceEngine: GovernanceEngine,
     db?: DatabaseManager,
     stateRecoveryService?: StateRecoveryService,
     manualOverrideService?: ManualOverrideService,
@@ -138,6 +137,7 @@ export class TitanBrain
     this.capitalFlowManager = capitalFlowManager;
     this.circuitBreaker = circuitBreaker;
     this.activeInferenceEngine = activeInferenceEngine;
+    this.governanceEngine = governanceEngine;
     this.db = db ?? null;
     this.stateRecoveryService = stateRecoveryService ?? null;
     this.manualOverrideService = manualOverrideService ?? null;
@@ -152,18 +152,18 @@ export class TitanBrain
    * Requirement 9.4, 9.5: Load state and recalculate metrics on startup
    */
   async initialize(): Promise<void> {
-    console.log("🧠 Initializing Titan Brain...");
+    console.log('🧠 Initializing Titan Brain...');
 
     // Recover system state on startup
     if (this.stateRecoveryService) {
-      console.log("📊 Recovering system state...");
+      console.log('📊 Recovering system state...');
       const recoveredState = await this.stateRecoveryService.recoverState();
 
       // Validate recovered state
       if (!this.stateRecoveryService.validateRecoveredState(recoveredState)) {
-        console.warn("⚠️ Recovered state validation failed, using defaults");
+        console.warn('⚠️ Recovered state validation failed, using defaults');
       } else {
-        console.log("✅ State recovery completed successfully");
+        console.log('✅ State recovery completed successfully');
 
         // Apply recovered allocation if available
         if (recoveredState.allocation) {
@@ -174,24 +174,16 @@ export class TitanBrain
 
         // Apply recovered high watermark
         if (recoveredState.highWatermark > 0) {
-          await this.capitalFlowManager.setHighWatermark(
-            recoveredState.highWatermark,
-          );
-          console.log(
-            `💰 Restored high watermark: $${recoveredState.highWatermark}`,
-          );
+          await this.capitalFlowManager.setHighWatermark(recoveredState.highWatermark);
+          console.log(`💰 Restored high watermark: $${recoveredState.highWatermark}`);
         }
 
         // Apply recovered performance metrics
-        for (
-          const [phaseId, performance] of Object.entries(
-            recoveredState.performance,
-          )
-        ) {
+        for (const [phaseId, performance] of Object.entries(recoveredState.performance)) {
           console.log(
-            `📊 Restored performance for ${phaseId}: Sharpe=${
-              performance.sharpeRatio.toFixed(2)
-            }, Modifier=${performance.modifier.toFixed(2)}`,
+            `📊 Restored performance for ${phaseId}: Sharpe=${performance.sharpeRatio.toFixed(
+              2,
+            )}, Modifier=${performance.modifier.toFixed(2)}`,
           );
         }
       }
@@ -199,19 +191,19 @@ export class TitanBrain
       // Recalculate risk metrics with current positions
       // Requirement 9.5: Recalculate all risk metrics before accepting new signals
       if (this.currentPositions.length > 0) {
-        console.log("🔍 Recalculating risk metrics with current positions...");
+        console.log('🔍 Recalculating risk metrics with current positions...');
         const riskMetrics = this.stateRecoveryService.recalculateRiskMetrics(
           this.currentPositions,
           this.currentEquity,
         );
-        console.log("✅ Risk metrics recalculated");
+        console.log('✅ Risk metrics recalculated');
       }
     }
 
     // Initialize manual override service
     if (this.manualOverrideService) {
       await this.manualOverrideService.initialize();
-      console.log("🔧 Manual override service initialized");
+      console.log('🔧 Manual override service initialized');
     }
 
     // Initialize capital flow manager
@@ -224,7 +216,7 @@ export class TitanBrain
     // Start periodic metric updates
     this.startMetricUpdates();
 
-    console.log("🧠 Titan Brain initialization completed");
+    console.log('🧠 Titan Brain initialization completed');
   }
 
   /**
@@ -259,12 +251,12 @@ export class TitanBrain
     this.circuitBreaker.setNotificationHandler(handler);
 
     // Set correlation notifier if handler supports it
-    if ("sendHighCorrelationWarning" in handler) {
+    if ('sendHighCorrelationWarning' in handler) {
       this.riskGuardian.setCorrelationNotifier(handler as any);
     }
 
     // Set sweep notifier if handler supports it
-    if ("sendSweepNotification" in handler) {
+    if ('sendSweepNotification' in handler) {
       this.capitalFlowManager.setSweepNotifier(handler as any);
     }
   }
@@ -315,7 +307,7 @@ export class TitanBrain
     if (this.circuitBreaker.isActive()) {
       const decision = this.createVetoDecision(
         signal,
-        "Circuit breaker active: all signals rejected",
+        'Circuit breaker active: all signals rejected',
         timestamp,
       );
       await this.recordDecision(decision, signal);
@@ -330,9 +322,9 @@ export class TitanBrain
     if (cortisol > FREEZE_THRESHOLD) {
       const decision = this.createVetoDecision(
         signal,
-        `High Cortisol/Surprise Level (${
-          cortisol.toFixed(2)
-        } > ${FREEZE_THRESHOLD}): Market Freeze`,
+        `High Cortisol/Surprise Level (${cortisol.toFixed(
+          2,
+        )} > ${FREEZE_THRESHOLD}): Market Freeze`,
         timestamp,
       );
       await this.recordDecision(decision, signal);
@@ -361,9 +353,7 @@ export class TitanBrain
     const allocation = this.getAllocation();
 
     // Get performance modifier for the phase
-    const performance = await this.performanceTracker.getPhasePerformance(
-      signal.phaseId,
-    );
+    const performance = await this.performanceTracker.getPhasePerformance(signal.phaseId);
 
     // Calculate base allocation for this phase
     const phaseWeight = this.getPhaseWeight(signal.phaseId, allocation);
@@ -374,10 +364,7 @@ export class TitanBrain
     const maxPositionSize = this.currentEquity * adjustedWeight;
 
     // Check risk constraints
-    const riskDecision = this.riskGuardian.checkSignal(
-      signal,
-      this.currentPositions,
-    );
+    const riskDecision = await this.riskGuardian.checkSignal(signal, this.currentPositions);
 
     // Determine final authorized size
     let authorizedSize: number;
@@ -391,26 +378,21 @@ export class TitanBrain
       reason = riskDecision.reason;
     } else {
       // Apply all constraints
-      const riskAdjustedSize = riskDecision.adjustedSize ??
-        signal.requestedSize;
-      authorizedSize = Math.min(
-        signal.requestedSize,
-        maxPositionSize,
-        riskAdjustedSize,
-      );
+      const riskAdjustedSize = riskDecision.adjustedSize ?? signal.requestedSize;
+      authorizedSize = Math.min(signal.requestedSize, maxPositionSize, riskAdjustedSize);
 
       // Requirement 1.7: Position size consistency
       if (authorizedSize <= 0) {
         approved = false;
         authorizedSize = 0;
-        reason = "Authorized size is zero after applying constraints";
+        reason = 'Authorized size is zero after applying constraints';
       } else {
         approved = true;
         reason = this.buildApprovalReason(
           signal.requestedSize,
           authorizedSize,
           maxPositionSize,
-          riskDecision,
+          riskDecision, // Now passing the value, not the promise
         );
       }
     }
@@ -422,7 +404,7 @@ export class TitanBrain
       reason,
       allocation,
       performance,
-      risk: riskDecision,
+      risk: riskDecision, // Now passing the value
       timestamp,
     };
 
@@ -438,18 +420,11 @@ export class TitanBrain
     } else if (!approved) {
       // Requirement 7.6: Notify originating phase of veto
       if (this.phaseNotifier) {
-        await this.phaseNotifier.notifyVeto(
-          signal.phaseId,
-          signal.signalId,
-          reason,
-        );
+        await this.phaseNotifier.notifyVeto(signal.phaseId, signal.signalId, reason);
       }
 
       // Send veto notification via notification service
-      if (
-        this.notificationHandler &&
-        "sendVetoNotification" in this.notificationHandler
-      ) {
+      if (this.notificationHandler && 'sendVetoNotification' in this.notificationHandler) {
         try {
           await (this.notificationHandler as any).sendVetoNotification(
             signal.phaseId,
@@ -459,7 +434,7 @@ export class TitanBrain
             signal.requestedSize,
           );
         } catch (error) {
-          console.error("Failed to send veto notification:", error);
+          console.error('Failed to send veto notification:', error);
         }
       }
     }
@@ -544,11 +519,21 @@ export class TitanBrain
    */
   async updateMetrics(): Promise<void> {
     // Update allocation
-    const allocation = this.allocationEngine.getWeights(this.currentEquity);
+    // Gather performance metrics for Bandit Allocator
+    const performances = await this.performanceTracker.getAllPhasePerformance();
+    const metricsForBandit = performances.map((p) => ({
+      phaseId: p.phaseId,
+      sharpeRatio: p.sharpeRatio,
+    }));
+
+    // Use adaptive weights (70% exploration/safety, 30% exploitation/performance)
+    const allocation = this.allocationEngine.getAdaptiveWeights(
+      this.currentEquity,
+      metricsForBandit,
+    );
 
     // Update capital flow target allocation
-    const futuresAllocation = this.currentEquity *
-      (allocation.w1 + allocation.w2);
+    const futuresAllocation = this.currentEquity * (allocation.w1 + allocation.w2);
     this.capitalFlowManager.setTargetAllocation(futuresAllocation);
 
     // Update high watermark
@@ -568,23 +553,25 @@ export class TitanBrain
     metrics.updateHighWatermark(this.capitalFlowManager.getHighWatermark());
 
     // Update daily drawdown
-    const dailyDrawdown = this.dailyStartEquity > 0
-      ? ((this.dailyStartEquity - this.currentEquity) / this.dailyStartEquity) *
-        100
-      : 0;
+    const dailyDrawdown =
+      this.dailyStartEquity > 0
+        ? ((this.dailyStartEquity - this.currentEquity) / this.dailyStartEquity) * 100
+        : 0;
     metrics.updateDailyDrawdown(Math.max(0, dailyDrawdown));
 
     // Update phase performance metrics
-    for (const phaseId of ["phase1", "phase2", "phase3"] as PhaseId[]) {
-      const performance = await this.performanceTracker.getPhasePerformance(
-        phaseId,
-      );
-      metrics.updatePhasePerformance(
-        phaseId,
-        performance.sharpeRatio,
-        performance.modifier,
-      );
+    for (const phaseId of ['phase1', 'phase2', 'phase3'] as PhaseId[]) {
+      const performance = await this.performanceTracker.getPhasePerformance(phaseId);
+      metrics.updatePhasePerformance(phaseId, performance.sharpeRatio, performance.modifier);
     }
+
+    // Update Governance Health
+    const health: SystemHealth = {
+      latency_ms: 100, // TODO: Get tracking from Metrics
+      error_rate_5m: 0.0, // TODO: Get from error tracking
+      drawdown_pct: dailyDrawdown,
+    };
+    this.governanceEngine.updateHealth(health);
   }
 
   /**
@@ -592,39 +579,30 @@ export class TitanBrain
    * Updates positions and calculates Realized PnL
    */
   async handleExecutionReport(report: ExecutionReport): Promise<void> {
-    console.log(
-      `🧠 Processing execution report for ${report.symbol} (${report.side})`,
-    );
+    console.log(`🧠 Processing execution report for ${report.symbol} (${report.side})`);
 
     // Find existing position
-    const existingPosIndex = this.currentPositions.findIndex((p) =>
-      p.symbol === report.symbol
-    );
-    const existingPos = existingPosIndex >= 0
-      ? this.currentPositions[existingPosIndex]
-      : null;
+    const existingPosIndex = this.currentPositions.findIndex((p) => p.symbol === report.symbol);
+    const existingPos = existingPosIndex >= 0 ? this.currentPositions[existingPosIndex] : null;
 
     if (!existingPos) {
       // Open new position
       this.currentPositions.push({
         symbol: report.symbol,
-        side: report.side === "BUY" ? "LONG" : "SHORT",
+        side: report.side === 'BUY' ? 'LONG' : 'SHORT',
         size: report.qty,
         entryPrice: report.price,
         unrealizedPnL: 0,
         leverage: 1, // Default or from report
         phaseId: report.phaseId, // Added missing phaseId
       });
-      console.log(
-        `Positions updated: New position opened for ${report.symbol}`,
-      );
+      console.log(`Positions updated: New position opened for ${report.symbol}`);
     } else {
       // Update existing position
-      const reportSide = report.side === "BUY" ? "LONG" : "SHORT";
+      const reportSide = report.side === 'BUY' ? 'LONG' : 'SHORT';
       if (existingPos.side === reportSide) {
         // Increase Position (Weighted Average Price)
-        const totalValue = (existingPos.size * existingPos.entryPrice) +
-          (report.qty * report.price);
+        const totalValue = existingPos.size * existingPos.entryPrice + report.qty * report.price;
         const totalSize = existingPos.size + report.qty;
         existingPos.entryPrice = totalValue / totalSize;
         existingPos.size = totalSize;
@@ -637,32 +615,29 @@ export class TitanBrain
         // Long: (Exit - Entry) * Size
         // Short: (Entry - Exit) * Size
         let realizedPnL = 0;
-        if (existingPos.side === "LONG") {
+        if (existingPos.side === 'LONG') {
           realizedPnL = (report.price - existingPos.entryPrice) * closeSize;
         } else {
           realizedPnL = (existingPos.entryPrice - report.price) * closeSize;
         }
 
-        console.log(
-          `💰 Realized PnL for ${report.symbol}: $${realizedPnL.toFixed(2)}`,
-        );
+        console.log(`💰 Realized PnL for ${report.symbol}: $${realizedPnL.toFixed(2)}`);
 
         // Record Trade
         await this.recordTrade(
           report.phaseId,
           realizedPnL,
           report.symbol,
-          reportSide === "LONG" ? "SELL" : "BUY",
+          reportSide === 'LONG' ? 'SELL' : 'BUY',
         );
 
         // Update remaining size
         existingPos.size -= closeSize;
 
-        if (existingPos.size <= 0.00000001) { // Floating point tolerance
+        if (existingPos.size <= 0.00000001) {
+          // Floating point tolerance
           this.currentPositions.splice(existingPosIndex, 1);
-          console.log(
-            `Positions updated: Closed position for ${report.symbol}`,
-          );
+          console.log(`Positions updated: Closed position for ${report.symbol}`);
         } else {
           // Determine if flip (net opposite) - For simplicty, assuming reduce-only or flip handling logic separate
           // If remaining report qty > 0, we flip.
@@ -685,18 +660,12 @@ export class TitanBrain
     phaseId: PhaseId,
     pnl: number,
     symbol?: string,
-    side?: "BUY" | "SELL",
+    side?: 'BUY' | 'SELL',
   ): Promise<void> {
     const timestamp = Date.now();
 
     // Record in performance tracker
-    await this.performanceTracker.recordTrade(
-      phaseId,
-      pnl,
-      timestamp,
-      symbol,
-      side,
-    );
+    await this.performanceTracker.recordTrade(phaseId, pnl, timestamp, symbol, side);
 
     // Record for circuit breaker
     this.recentTrades.push({ pnl, timestamp });
@@ -704,9 +673,7 @@ export class TitanBrain
 
     // Clean up old trades (keep last hour)
     const oneHourAgo = timestamp - 3600000;
-    this.recentTrades = this.recentTrades.filter((t) =>
-      t.timestamp >= oneHourAgo
-    );
+    this.recentTrades = this.recentTrades.filter((t) => t.timestamp >= oneHourAgo);
 
     // Check if AI optimization should be triggered
     await this.checkAIOptimizationTrigger(phaseId, pnl);
@@ -719,42 +686,30 @@ export class TitanBrain
    * Check if AI optimization should be triggered based on phase performance
    * Triggers when Sharpe drops below threshold with cooldown to prevent spam
    */
-  private async checkAIOptimizationTrigger(
-    phaseId: PhaseId,
-    lastPnl: number,
-  ): Promise<void> {
+  private async checkAIOptimizationTrigger(phaseId: PhaseId, lastPnl: number): Promise<void> {
     const now = Date.now();
 
     // Check cooldown
-    if (
-      now - this.lastAIOptimizationTrigger < this.AI_OPTIMIZATION_COOLDOWN_MS
-    ) {
+    if (now - this.lastAIOptimizationTrigger < this.AI_OPTIMIZATION_COOLDOWN_MS) {
       return;
     }
 
     // Get phase performance
-    const performance = await this.performanceTracker.getPhasePerformance(
-      phaseId,
-    );
+    const performance = await this.performanceTracker.getPhasePerformance(phaseId);
 
     // Trigger if Sharpe is below threshold and we have enough trades
-    if (
-      performance.sharpeRatio < this.AI_TRIGGER_SHARPE_THRESHOLD &&
-      performance.tradeCount >= 5
-    ) {
+    if (performance.sharpeRatio < this.AI_TRIGGER_SHARPE_THRESHOLD && performance.tradeCount >= 5) {
       console.log(
-        `🤖 AI Optimization triggered for ${phaseId}: Sharpe=${
-          performance.sharpeRatio.toFixed(2)
-        }`,
+        `🤖 AI Optimization triggered for ${phaseId}: Sharpe=${performance.sharpeRatio.toFixed(2)}`,
       );
 
       try {
         const publisher = getNatsPublisher();
         await publisher.triggerAIOptimization({
-          reason: `Poor performance detected: Sharpe ratio ${
-            performance.sharpeRatio.toFixed(2)
-          } below threshold`,
-          triggeredBy: "titan-brain",
+          reason: `Poor performance detected: Sharpe ratio ${performance.sharpeRatio.toFixed(
+            2,
+          )} below threshold`,
+          triggeredBy: 'titan-brain',
           phaseId,
           metrics: {
             sharpeRatio: performance.sharpeRatio,
@@ -766,7 +721,7 @@ export class TitanBrain
 
         this.lastAIOptimizationTrigger = now;
       } catch (err) {
-        console.error("Failed to trigger AI optimization:", err);
+        console.error('Failed to trigger AI optimization:', err);
       }
     }
   }
@@ -828,12 +783,12 @@ export class TitanBrain
       lastUpdated: Date.now(),
       manualOverride: manualOverride
         ? {
-          active: true,
-          operatorId: manualOverride.operatorId,
-          reason: manualOverride.reason,
-          allocation: manualOverride.overrideAllocation,
-          expiresAt: manualOverride.expiresAt,
-        }
+            active: true,
+            operatorId: manualOverride.operatorId,
+            reason: manualOverride.reason,
+            allocation: manualOverride.overrideAllocation,
+            expiresAt: manualOverride.expiresAt,
+          }
         : null,
       warningBannerActive,
     };
@@ -866,14 +821,10 @@ export class TitanBrain
     // Check database
     if (this.db) {
       try {
-        await this.db.query("SELECT 1");
+        await this.db.query('SELECT 1');
         components.database = true;
       } catch (error) {
-        errors.push(
-          `Database: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`,
-        );
+        errors.push(`Database: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     } else {
       // For Railway deployment without database, consider it healthy
@@ -887,9 +838,7 @@ export class TitanBrain
         components.executionEngine = true;
       } catch (error) {
         errors.push(
-          `Execution Engine: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`,
+          `Execution Engine: ${error instanceof Error ? error.message : 'Unknown error'}`,
         );
       }
     } else {
@@ -899,17 +848,13 @@ export class TitanBrain
 
     // Check phase approval rates
     // Requirement 7.8: Flag for review if approval rate < 50%
-    for (const phaseId of ["phase1", "phase2", "phase3"] as PhaseId[]) {
+    for (const phaseId of ['phase1', 'phase2', 'phase3'] as PhaseId[]) {
       const stats = this.signalStats[phaseId];
       if (stats.total > 0) {
         const approvalRate = stats.approved / stats.total;
         components.phases[phaseId] = approvalRate >= 0.5;
         if (approvalRate < 0.5) {
-          errors.push(
-            `${phaseId}: Approval rate ${
-              (approvalRate * 100).toFixed(1)
-            }% < 50%`,
-          );
+          errors.push(`${phaseId}: Approval rate ${(approvalRate * 100).toFixed(1)}% < 50%`);
         }
       } else {
         components.phases[phaseId] = true; // No signals yet
@@ -917,12 +862,12 @@ export class TitanBrain
     }
 
     // For production deployment, be more lenient with health checks
-    const isProduction = process.env.NODE_ENV === "production";
+    const isProduction = process.env.NODE_ENV === 'production';
     const healthy = isProduction
-      // Production: Just check that the service is running (phases are healthy)
-      ? Object.values(components.phases).every(Boolean)
-      // Local: Check all components
-      : components.database &&
+      ? // Production: Just check that the service is running (phases are healthy)
+        Object.values(components.phases).every(Boolean)
+      : // Local: Check all components
+        components.database &&
         components.executionEngine &&
         Object.values(components.phases).every(Boolean);
 
@@ -952,9 +897,9 @@ export class TitanBrain
    */
   getAllApprovalRates(): Record<PhaseId, number> {
     return {
-      phase1: this.getApprovalRate("phase1"),
-      phase2: this.getApprovalRate("phase2"),
-      phase3: this.getApprovalRate("phase3"),
+      phase1: this.getApprovalRate('phase1'),
+      phase2: this.getApprovalRate('phase2'),
+      phase3: this.getApprovalRate('phase3'),
     };
   }
 
@@ -974,15 +919,11 @@ export class TitanBrain
    * Requirement 9.7: Support manual override of allocation weights
    */
   getAllocation(): AllocationVector {
-    const normalAllocation = this.allocationEngine.getWeights(
-      this.currentEquity,
-    );
+    const normalAllocation = this.allocationEngine.getWeights(this.currentEquity);
 
     // Apply manual override if active
     if (this.manualOverrideService) {
-      return this.manualOverrideService.getEffectiveAllocation(
-        normalAllocation,
-      );
+      return this.manualOverrideService.getEffectiveAllocation(normalAllocation);
     }
 
     return normalAllocation;
@@ -1045,7 +986,7 @@ export class TitanBrain
     durationHours?: number,
   ): Promise<boolean> {
     if (!this.manualOverrideService) {
-      console.error("Manual override service not available");
+      console.error('Manual override service not available');
       return false;
     }
 
@@ -1055,9 +996,7 @@ export class TitanBrain
       password,
     );
     if (!authenticated) {
-      console.warn(
-        `Manual override rejected: authentication failed for operator ${operatorId}`,
-      );
+      console.warn(`Manual override rejected: authentication failed for operator ${operatorId}`);
       return false;
     }
 
@@ -1092,12 +1031,9 @@ export class TitanBrain
    * @param password - Operator password
    * @returns True if successfully deactivated
    */
-  async deactivateManualOverride(
-    operatorId: string,
-    password: string,
-  ): Promise<boolean> {
+  async deactivateManualOverride(operatorId: string, password: string): Promise<boolean> {
     if (!this.manualOverrideService) {
-      console.error("Manual override service not available");
+      console.error('Manual override service not available');
       return false;
     }
 
@@ -1113,9 +1049,7 @@ export class TitanBrain
       return false;
     }
 
-    const success = await this.manualOverrideService.deactivateOverride(
-      operatorId,
-    );
+    const success = await this.manualOverrideService.deactivateOverride(operatorId);
 
     if (success) {
       console.log(`✅ Manual override deactivated by operator ${operatorId}`);
@@ -1174,15 +1108,11 @@ export class TitanBrain
     permissions: string[],
   ): Promise<boolean> {
     if (!this.manualOverrideService) {
-      console.error("Manual override service not available");
+      console.error('Manual override service not available');
       return false;
     }
 
-    return this.manualOverrideService.createOperator(
-      operatorId,
-      password,
-      permissions,
-    );
+    return this.manualOverrideService.createOperator(operatorId, password, permissions);
   }
 
   // ============ PositionClosureHandler Implementation ============
@@ -1204,7 +1134,7 @@ export class TitanBrain
    */
   async persistEvent(event: {
     timestamp: number;
-    eventType: "TRIGGER" | "RESET";
+    eventType: 'TRIGGER' | 'RESET';
     breakerType?: string;
     reason: string;
     equity: number;
@@ -1242,7 +1172,7 @@ export class TitanBrain
       try {
         await this.updateMetrics();
       } catch (error) {
-        console.error("Error updating metrics:", error);
+        console.error('Error updating metrics:', error);
       }
     }, this.config.metricUpdateInterval);
   }
@@ -1250,16 +1180,13 @@ export class TitanBrain
   /**
    * Get phase weight from allocation vector
    */
-  private getPhaseWeight(
-    phaseId: PhaseId,
-    allocation: AllocationVector,
-  ): number {
+  private getPhaseWeight(phaseId: PhaseId, allocation: AllocationVector): number {
     switch (phaseId) {
-      case "phase1":
+      case 'phase1':
         return allocation.w1;
-      case "phase2":
+      case 'phase2':
         return allocation.w2;
-      case "phase3":
+      case 'phase3':
         return allocation.w3;
       default:
         return 0;
@@ -1311,38 +1238,31 @@ export class TitanBrain
     maxPositionSize: number,
     riskDecision: RiskDecision,
   ): string {
-    const parts: string[] = ["Signal approved"];
+    const parts: string[] = ['Signal approved'];
 
     if (authorizedSize < requestedSize) {
       const reductions: string[] = [];
 
-      if (
-        authorizedSize <= maxPositionSize && requestedSize > maxPositionSize
-      ) {
+      if (authorizedSize <= maxPositionSize && requestedSize > maxPositionSize) {
         reductions.push(`allocation cap (${maxPositionSize.toFixed(2)})`);
       }
 
-      if (
-        riskDecision.adjustedSize && riskDecision.adjustedSize < requestedSize
-      ) {
+      if (riskDecision.adjustedSize && riskDecision.adjustedSize < requestedSize) {
         reductions.push(`risk adjustment`);
       }
 
       if (reductions.length > 0) {
-        parts.push(`with size reduction due to ${reductions.join(", ")}`);
+        parts.push(`with size reduction due to ${reductions.join(', ')}`);
       }
     }
 
-    return parts.join(" ");
+    return parts.join(' ');
   }
 
   /**
    * Record a decision to database and memory
    */
-  private async recordDecision(
-    decision: BrainDecision,
-    signal: IntentSignal,
-  ): Promise<void> {
+  private async recordDecision(decision: BrainDecision, signal: IntentSignal): Promise<void> {
     // Add to recent decisions
     this.recentDecisions.push(decision);
 
@@ -1400,13 +1320,14 @@ export class TitanBrain
    * @param signals - Array of signals for the same asset
    * @returns Net position size and direction
    */
-  calculateNetPosition(
-    signals: IntentSignal[],
-  ): { netSize: number; side: "BUY" | "SELL" | "NEUTRAL" } {
+  calculateNetPosition(signals: IntentSignal[]): {
+    netSize: number;
+    side: 'BUY' | 'SELL' | 'NEUTRAL';
+  } {
     let netSize = 0;
 
     for (const signal of signals) {
-      if (signal.side === "BUY") {
+      if (signal.side === 'BUY') {
         netSize += signal.requestedSize;
       } else {
         netSize -= signal.requestedSize;
@@ -1414,11 +1335,11 @@ export class TitanBrain
     }
 
     if (netSize > 0) {
-      return { netSize, side: "BUY" };
+      return { netSize, side: 'BUY' };
     } else if (netSize < 0) {
-      return { netSize: Math.abs(netSize), side: "SELL" };
+      return { netSize: Math.abs(netSize), side: 'SELL' };
     } else {
-      return { netSize: 0, side: "NEUTRAL" };
+      return { netSize: 0, side: 'NEUTRAL' };
     }
   }
 
@@ -1489,7 +1410,7 @@ export class TitanBrain
 
     // Feed Active Inference Engine with market proxy
     // Using BTCUSDT as the representative market signal for "Surprise" calculation
-    if (symbol === "BTCUSDT") {
+    if (symbol === 'BTCUSDT') {
       this.activeInferenceEngine.processUpdate({
         price,
         volume: 0, // not used for surprise calculation currently

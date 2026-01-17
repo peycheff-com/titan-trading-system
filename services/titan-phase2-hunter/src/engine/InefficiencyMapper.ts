@@ -7,15 +7,7 @@
  * Requirements: 3.1-3.7 (Inefficiency Mapper), 10.1-10.7 (Liquidity Pool Detection)
  */
 
-import {
-  BOS,
-  Fractal,
-  FVG,
-  LiquidityPool,
-  OHLCV,
-  OrderBlock,
-  POI,
-} from "../types";
+import { BOS, Fractal, FVG, LiquidityPool, OHLCV, OrderBlock, POI } from '../types';
 
 export class InefficiencyMapper {
   /**
@@ -45,7 +37,7 @@ export class InefficiencyMapper {
         const midpoint = (top + bottom) / 2;
 
         fvgs.push({
-          type: "BULLISH",
+          type: 'BULLISH',
           top,
           bottom,
           midpoint,
@@ -63,7 +55,7 @@ export class InefficiencyMapper {
         const midpoint = (top + bottom) / 2;
 
         fvgs.push({
-          type: "BEARISH",
+          type: 'BEARISH',
           top,
           bottom,
           midpoint,
@@ -98,7 +90,7 @@ export class InefficiencyMapper {
       if (bosBarIndex < 1) continue;
 
       // For Bullish BOS, find last down-candle (red candle)
-      if (bosEvent.direction === "BULLISH") {
+      if (bosEvent.direction === 'BULLISH') {
         for (let i = bosBarIndex - 1; i >= 0; i--) {
           const candle = candles[i];
           if (!candle) continue;
@@ -109,10 +101,10 @@ export class InefficiencyMapper {
             const candleSize = Math.abs(candle.close - candle.open);
             const avgVolume = this.calculateAverageVolume(candles, i, 20);
             const volumeRatio = candle.volume / avgVolume;
-            const baseConfidence = Math.min(90, 60 + (volumeRatio * 15));
+            const baseConfidence = Math.min(90, 60 + volumeRatio * 15);
 
             orderBlocks.push({
-              type: "BULLISH",
+              type: 'BULLISH',
               high: candle.high,
               low: candle.low,
               barIndex: i,
@@ -126,7 +118,7 @@ export class InefficiencyMapper {
       }
 
       // For Bearish BOS, find last up-candle (green candle)
-      if (bosEvent.direction === "BEARISH") {
+      if (bosEvent.direction === 'BEARISH') {
         for (let i = bosBarIndex - 1; i >= 0; i--) {
           const candle = candles[i];
           if (!candle) continue;
@@ -137,10 +129,10 @@ export class InefficiencyMapper {
             const candleSize = Math.abs(candle.close - candle.open);
             const avgVolume = this.calculateAverageVolume(candles, i, 20);
             const volumeRatio = candle.volume / avgVolume;
-            const baseConfidence = Math.min(90, 60 + (volumeRatio * 15));
+            const baseConfidence = Math.min(90, 60 + volumeRatio * 15);
 
             orderBlocks.push({
-              type: "BEARISH",
+              type: 'BEARISH',
               high: candle.high,
               low: candle.low,
               barIndex: i,
@@ -183,20 +175,16 @@ export class InefficiencyMapper {
       const ageFactor = Math.max(0, 100 - (ageHours / 72) * 50);
 
       // Volume factor: Compare to average volume
-      const avgVolume = this.calculateAverageVolume(
-        candles,
-        fractal.barIndex,
-        50,
-      );
+      const avgVolume = this.calculateAverageVolume(candles, fractal.barIndex, 50);
       const volumeFactor = Math.min(100, (candle.volume / avgVolume) * 50);
 
       // Combine factors with weights: age 60%, volume 40%
-      const strength = (ageFactor * 0.6) + (volumeFactor * 0.4);
+      const strength = ageFactor * 0.6 + volumeFactor * 0.4;
 
       // Only create pools with meaningful strength (> 20)
       if (strength > 20) {
         pools.push({
-          type: fractal.type === "HIGH" ? "HIGH" : "LOW",
+          type: fractal.type === 'HIGH' ? 'HIGH' : 'LOW',
           price: fractal.price,
           strength,
           barIndex: fractal.barIndex,
@@ -222,59 +210,53 @@ export class InefficiencyMapper {
    */
   validatePOI(poi: POI, currentPrice: number): boolean {
     // Check if already marked as mitigated/swept
-    if ("mitigated" in poi && poi.mitigated) return false;
-    if ("swept" in poi && poi.swept) return false;
+    if ('mitigated' in poi && poi.mitigated) return false;
+    if ('swept' in poi && poi.swept) return false;
 
     // FVG validation
-    if ("midpoint" in poi) {
+    if ('midpoint' in poi) {
       const fvg = poi as FVG;
 
       // Bullish FVG is mitigated if price fills the gap (goes below bottom)
-      if (fvg.type === "BULLISH" && currentPrice <= fvg.bottom) {
+      if (fvg.type === 'BULLISH' && currentPrice <= fvg.bottom) {
         (fvg as any).mitigated = true;
         return false;
       }
 
       // Bearish FVG is mitigated if price fills the gap (goes above top)
-      if (fvg.type === "BEARISH" && currentPrice >= fvg.top) {
+      if (fvg.type === 'BEARISH' && currentPrice >= fvg.top) {
         (fvg as any).mitigated = true;
         return false;
       }
 
       // Update fill percentage for partial mitigation
-      if (fvg.type === "BULLISH") {
+      if (fvg.type === 'BULLISH') {
         const fillPercent = Math.max(
           0,
-          Math.min(
-            100,
-            ((fvg.top - currentPrice) / (fvg.top - fvg.bottom)) * 100,
-          ),
+          Math.min(100, ((fvg.top - currentPrice) / (fvg.top - fvg.bottom)) * 100)
         );
         (fvg as any).fillPercent = fillPercent;
       } else {
         const fillPercent = Math.max(
           0,
-          Math.min(
-            100,
-            ((currentPrice - fvg.bottom) / (fvg.top - fvg.bottom)) * 100,
-          ),
+          Math.min(100, ((currentPrice - fvg.bottom) / (fvg.top - fvg.bottom)) * 100)
         );
         (fvg as any).fillPercent = fillPercent;
       }
     }
 
     // Order Block validation
-    if ("high" in poi && "low" in poi && !("midpoint" in poi)) {
+    if ('high' in poi && 'low' in poi && !('midpoint' in poi)) {
       const ob = poi as OrderBlock;
 
       // Bullish OB is mitigated if price closes below the low
-      if (ob.type === "BULLISH" && currentPrice < ob.low) {
+      if (ob.type === 'BULLISH' && currentPrice < ob.low) {
         (ob as any).mitigated = true;
         return false;
       }
 
       // Bearish OB is mitigated if price closes above the high
-      if (ob.type === "BEARISH" && currentPrice > ob.high) {
+      if (ob.type === 'BEARISH' && currentPrice > ob.high) {
         (ob as any).mitigated = true;
         return false;
       }
@@ -282,27 +264,23 @@ export class InefficiencyMapper {
       // Apply age decay to confidence
       const age = Date.now() - ob.timestamp;
       const ageHours = age / (1000 * 60 * 60);
-      const decayFactor = Math.max(0.3, 1 - (ageHours / 168)); // Decay over 1 week
+      const decayFactor = Math.max(0.3, 1 - ageHours / 168); // Decay over 1 week
       (ob as any).confidence = ob.confidence * decayFactor;
     }
 
     // Liquidity Pool validation
-    if ("strength" in poi && "price" in poi && !("high" in poi)) {
+    if ('strength' in poi && 'price' in poi && !('high' in poi)) {
       const pool = poi as LiquidityPool;
 
       // Pool is swept if price moves through it significantly
       const sweepThreshold = 0.001; // 0.1% threshold
 
-      if (
-        pool.type === "HIGH" && currentPrice > pool.price * (1 + sweepThreshold)
-      ) {
+      if (pool.type === 'HIGH' && currentPrice > pool.price * (1 + sweepThreshold)) {
         (pool as any).swept = true;
         return false;
       }
 
-      if (
-        pool.type === "LOW" && currentPrice < pool.price * (1 - sweepThreshold)
-      ) {
+      if (pool.type === 'LOW' && currentPrice < pool.price * (1 - sweepThreshold)) {
         (pool as any).swept = true;
         return false;
       }
@@ -310,7 +288,7 @@ export class InefficiencyMapper {
       // Apply age decay to strength
       const age = Date.now() - pool.timestamp;
       const ageHours = age / (1000 * 60 * 60);
-      const decayFactor = Math.max(0.2, 1 - (ageHours / 72)); // Decay over 3 days
+      const decayFactor = Math.max(0.2, 1 - ageHours / 72); // Decay over 3 days
       (pool as any).strength = pool.strength * decayFactor;
     }
 
@@ -325,11 +303,7 @@ export class InefficiencyMapper {
    * @param period Number of periods to average
    * @returns Average volume
    */
-  private calculateAverageVolume(
-    candles: OHLCV[],
-    index: number,
-    period: number,
-  ): number {
+  private calculateAverageVolume(candles: OHLCV[], index: number, period: number): number {
     const start = Math.max(0, index - period + 1);
     const end = Math.min(candles.length, index + 1);
 
@@ -378,18 +352,11 @@ export class InefficiencyMapper {
 
       // Merge nearby pools
       if (nearbyPools.length > 1) {
-        const totalStrength = nearbyPools.reduce(
-          (sum, p) => sum + p.strength,
-          0,
-        );
-        const avgPrice = nearbyPools.reduce((sum, p) => sum + p.price, 0) /
-          nearbyPools.length;
-        const oldestTimestamp = Math.min(
-          ...nearbyPools.map((p) => p.timestamp),
-        );
-        const oldestBarIndex = nearbyPools.find((p) =>
-          p.timestamp === oldestTimestamp
-        )?.barIndex || pool.barIndex;
+        const totalStrength = nearbyPools.reduce((sum, p) => sum + p.strength, 0);
+        const avgPrice = nearbyPools.reduce((sum, p) => sum + p.price, 0) / nearbyPools.length;
+        const oldestTimestamp = Math.min(...nearbyPools.map(p => p.timestamp));
+        const oldestBarIndex =
+          nearbyPools.find(p => p.timestamp === oldestTimestamp)?.barIndex || pool.barIndex;
 
         merged.push({
           type: pool.type,
@@ -420,7 +387,7 @@ export class InefficiencyMapper {
     candles: OHLCV[],
     bos: BOS[],
     fractals: Fractal[],
-    currentPrice: number,
+    currentPrice: number
   ): {
     fvgs: FVG[];
     orderBlocks: OrderBlock[];
@@ -436,18 +403,12 @@ export class InefficiencyMapper {
     const allPOIs: POI[] = [...fvgs, ...orderBlocks, ...liquidityPools];
 
     // Filter for valid POIs only
-    const validPOIs = allPOIs.filter((poi) =>
-      this.validatePOI(poi, currentPrice)
-    );
+    const validPOIs = allPOIs.filter(poi => this.validatePOI(poi, currentPrice));
 
     return {
-      fvgs: fvgs.filter((fvg) => this.validatePOI(fvg, currentPrice)),
-      orderBlocks: orderBlocks.filter((ob) =>
-        this.validatePOI(ob, currentPrice)
-      ),
-      liquidityPools: liquidityPools.filter((pool) =>
-        this.validatePOI(pool, currentPrice)
-      ),
+      fvgs: fvgs.filter(fvg => this.validatePOI(fvg, currentPrice)),
+      orderBlocks: orderBlocks.filter(ob => this.validatePOI(ob, currentPrice)),
+      liquidityPools: liquidityPools.filter(pool => this.validatePOI(pool, currentPrice)),
       validPOIs,
     };
   }
@@ -500,9 +461,9 @@ export class InefficiencyMapper {
    * @returns Representative price
    */
   private getPOIPrice(poi: POI): number {
-    if ("midpoint" in poi) {
+    if ('midpoint' in poi) {
       return poi.midpoint; // FVG
-    } else if ("high" in poi && "low" in poi) {
+    } else if ('high' in poi && 'low' in poi) {
       return (poi.high + poi.low) / 2; // Order Block
     } else {
       return poi.price; // Liquidity Pool

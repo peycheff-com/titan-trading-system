@@ -1,8 +1,8 @@
 /**
  * Console Module Exports
- * 
+ *
  * Contains Ink/React terminal dashboard components.
- * 
+ *
  * @module console
  */
 

@@ -4,4 +4,4 @@
  * @module engine
  */
 
-export * from "./StatEngine.js";
+export * from './StatEngine.js';

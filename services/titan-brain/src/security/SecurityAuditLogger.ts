@@ -1,20 +1,20 @@
 /**
  * SecurityAuditLogger - Comprehensive security audit logging
- * 
+ *
  * Implements security event logging, threat detection, and audit trails
  * for all critical operations in the Titan trading system.
- * 
+ *
  * Requirements: 6.1, 6.2 - Security audit logging and monitoring
  */
 
-import { writeFileSync, appendFileSync, existsSync, mkdirSync } from 'fs';
+import { appendFileSync, existsSync, mkdirSync, renameSync, statSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { getLogger } from '../monitoring/StructuredLogger.js';
 
 /**
  * Security event types
  */
-export type SecurityEventType = 
+export type SecurityEventType =
   | 'AUTH_SUCCESS'
   | 'AUTH_FAILURE'
   | 'VALIDATION_FAILURE'
@@ -83,8 +83,8 @@ const DEFAULT_CONFIG: SecurityAuditConfig = {
   alertThresholds: {
     authFailuresPerMinute: 5,
     validationFailuresPerMinute: 20,
-    suspiciousActivityPerHour: 10
-  }
+    suspiciousActivityPerHour: 10,
+  },
 };
 
 /**
@@ -95,32 +95,32 @@ const THREAT_PATTERNS: ThreatPattern[] = [
     name: 'SQL_INJECTION',
     pattern: /(union|select|insert|update|delete|drop|exec|script)/i,
     severity: 'CRITICAL',
-    description: 'Potential SQL injection attempt'
+    description: 'Potential SQL injection attempt',
   },
   {
     name: 'XSS_ATTEMPT',
     pattern: /<script|javascript:|on\w+\s*=/i,
     severity: 'CRITICAL',
-    description: 'Potential XSS attack attempt'
+    description: 'Potential XSS attack attempt',
   },
   {
     name: 'PATH_TRAVERSAL',
-    pattern: /\.\.[\/\\]/,
+    pattern: /\.\.[\/\\]/, // eslint-disable-line no-useless-escape
     severity: 'CRITICAL',
-    description: 'Potential path traversal attempt'
+    description: 'Potential path traversal attempt',
   },
   {
     name: 'COMMAND_INJECTION',
     pattern: /[;&|`$(){}]/,
     severity: 'WARNING',
-    description: 'Potential command injection attempt'
+    description: 'Potential command injection attempt',
   },
   {
     name: 'EXCESSIVE_SIZE',
     pattern: /.{10000,}/,
     severity: 'WARNING',
-    description: 'Unusually large input detected'
-  }
+    description: 'Unusually large input detected',
+  },
 ];
 
 /**
@@ -139,22 +139,29 @@ export class SecurityAuditLogger {
   /**
    * Log a security audit event
    */
-  logSecurityEvent(event: Omit<SecurityAuditEvent, 'timestamp'>, skipThreatDetection: boolean = false): void {
+  logSecurityEvent(
+    event: Omit<SecurityAuditEvent, 'timestamp'>,
+    skipThreatDetection: boolean = false,
+  ): void {
     const auditEvent: SecurityAuditEvent = {
       ...event,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
 
     // Log to structured logger
     this.logger.warn('Security audit event', {
-      securityEvent: auditEvent
+      securityEvent: auditEvent,
     });
 
     // Write to security audit file
     this.writeToAuditFile(auditEvent);
 
     // Perform threat detection (but not for suspicious activity events to prevent recursion)
-    if (this.config.enableThreatDetection && !skipThreatDetection && event.eventType !== 'SUSPICIOUS_ACTIVITY') {
+    if (
+      this.config.enableThreatDetection &&
+      !skipThreatDetection &&
+      event.eventType !== 'SUSPICIOUS_ACTIVITY'
+    ) {
       this.detectThreats(auditEvent);
     }
 
@@ -169,7 +176,7 @@ export class SecurityAuditLogger {
     clientIp: string,
     operatorId: string,
     endpoint: string,
-    userAgent?: string
+    userAgent?: string,
   ): void {
     this.logSecurityEvent({
       eventType: 'AUTH_SUCCESS',
@@ -180,8 +187,8 @@ export class SecurityAuditLogger {
       userAgent,
       details: {
         action: 'authentication_success',
-        operatorId
-      }
+        operatorId,
+      },
     });
   }
 
@@ -193,7 +200,7 @@ export class SecurityAuditLogger {
     operatorId: string,
     reason: string,
     endpoint: string,
-    userAgent?: string
+    userAgent?: string,
   ): void {
     this.logSecurityEvent({
       eventType: 'AUTH_FAILURE',
@@ -205,8 +212,8 @@ export class SecurityAuditLogger {
       details: {
         action: 'authentication_failure',
         operatorId,
-        reason
-      }
+        reason,
+      },
     });
 
     // Increment failure count for rate limiting
@@ -221,7 +228,7 @@ export class SecurityAuditLogger {
     endpoint: string,
     errors: string[],
     requestData?: unknown,
-    userAgent?: string
+    userAgent?: string,
   ): void {
     this.logSecurityEvent({
       eventType: 'VALIDATION_FAILURE',
@@ -234,8 +241,8 @@ export class SecurityAuditLogger {
         errors,
         hasRequestData: !!requestData,
         // Don't log sensitive request data
-        requestDataType: requestData ? typeof requestData : 'none'
-      }
+        requestDataType: requestData ? typeof requestData : 'none',
+      },
     });
 
     // Increment failure count
@@ -245,12 +252,7 @@ export class SecurityAuditLogger {
   /**
    * Log HMAC signature failure
    */
-  logHmacFailure(
-    clientIp: string,
-    endpoint: string,
-    reason: string,
-    userAgent?: string
-  ): void {
+  logHmacFailure(clientIp: string, endpoint: string, reason: string, userAgent?: string): void {
     this.logSecurityEvent({
       eventType: 'HMAC_FAILURE',
       severity: 'CRITICAL',
@@ -259,8 +261,8 @@ export class SecurityAuditLogger {
       userAgent,
       details: {
         action: 'hmac_verification_failure',
-        reason
-      }
+        reason,
+      },
     });
   }
 
@@ -272,7 +274,7 @@ export class SecurityAuditLogger {
     endpoint: string,
     requestCount: number,
     timeWindow: number,
-    userAgent?: string
+    userAgent?: string,
   ): void {
     this.logSecurityEvent({
       eventType: 'RATE_LIMIT_EXCEEDED',
@@ -283,8 +285,8 @@ export class SecurityAuditLogger {
       details: {
         action: 'rate_limit_exceeded',
         requestCount,
-        timeWindowMs: timeWindow
-      }
+        timeWindowMs: timeWindow,
+      },
     });
   }
 
@@ -296,20 +298,23 @@ export class SecurityAuditLogger {
     activityType: string,
     details: Record<string, unknown>,
     endpoint?: string,
-    userAgent?: string
+    userAgent?: string,
   ): void {
-    this.logSecurityEvent({
-      eventType: 'SUSPICIOUS_ACTIVITY',
-      severity: 'CRITICAL',
-      clientIp,
-      endpoint,
-      userAgent,
-      details: {
-        action: 'suspicious_activity',
-        activityType,
-        ...details
-      }
-    }, true); // Skip threat detection to prevent recursion
+    this.logSecurityEvent(
+      {
+        eventType: 'SUSPICIOUS_ACTIVITY',
+        severity: 'CRITICAL',
+        clientIp,
+        endpoint,
+        userAgent,
+        details: {
+          action: 'suspicious_activity',
+          activityType,
+          ...details,
+        },
+      },
+      true,
+    ); // Skip threat detection to prevent recursion
 
     // Increment suspicious activity count
     this.incrementEventCount(`suspicious_${clientIp}`);
@@ -323,7 +328,7 @@ export class SecurityAuditLogger {
     operatorId: string,
     attemptedAction: string,
     endpoint: string,
-    userAgent?: string
+    userAgent?: string,
   ): void {
     this.logSecurityEvent({
       eventType: 'PRIVILEGE_ESCALATION',
@@ -335,8 +340,8 @@ export class SecurityAuditLogger {
       details: {
         action: 'privilege_escalation_attempt',
         operatorId,
-        attemptedAction
-      }
+        attemptedAction,
+      },
     });
   }
 
@@ -349,7 +354,7 @@ export class SecurityAuditLogger {
     dataType: string,
     endpoint: string,
     success: boolean,
-    userAgent?: string
+    userAgent?: string,
   ): void {
     this.logSecurityEvent({
       eventType: 'DATA_ACCESS',
@@ -362,8 +367,8 @@ export class SecurityAuditLogger {
         action: 'data_access',
         operatorId,
         dataType,
-        success
-      }
+        success,
+      },
     });
   }
 
@@ -376,7 +381,7 @@ export class SecurityAuditLogger {
     configType: string,
     changes: Record<string, unknown>,
     endpoint: string,
-    userAgent?: string
+    userAgent?: string,
   ): void {
     this.logSecurityEvent({
       eventType: 'CONFIG_CHANGE',
@@ -389,8 +394,8 @@ export class SecurityAuditLogger {
         action: 'configuration_change',
         operatorId,
         configType,
-        changes
-      }
+        changes,
+      },
     });
   }
 
@@ -403,7 +408,7 @@ export class SecurityAuditLogger {
     actionType: string,
     details: Record<string, unknown>,
     endpoint: string,
-    userAgent?: string
+    userAgent?: string,
   ): void {
     this.logSecurityEvent({
       eventType: 'EMERGENCY_ACTION',
@@ -416,8 +421,8 @@ export class SecurityAuditLogger {
         action: 'emergency_action',
         operatorId,
         actionType,
-        ...details
-      }
+        ...details,
+      },
     });
   }
 
@@ -436,10 +441,10 @@ export class SecurityAuditLogger {
             threatPattern: pattern.name,
             description: pattern.description,
             detectedIn: 'audit_event_details',
-            originalEventType: event.eventType
+            originalEventType: event.eventType,
           },
           event.endpoint,
-          event.userAgent
+          event.userAgent,
         );
       }
     }
@@ -462,7 +467,7 @@ export class SecurityAuditLogger {
           clientIp: event.clientIp,
           count,
           threshold: this.config.alertThresholds.authFailuresPerMinute,
-          timeWindow: 'per_minute'
+          timeWindow: 'per_minute',
         });
       }
     }
@@ -476,7 +481,7 @@ export class SecurityAuditLogger {
           clientIp: event.clientIp,
           count,
           threshold: this.config.alertThresholds.validationFailuresPerMinute,
-          timeWindow: 'per_minute'
+          timeWindow: 'per_minute',
         });
       }
     }
@@ -490,7 +495,7 @@ export class SecurityAuditLogger {
           clientIp: event.clientIp,
           count,
           threshold: this.config.alertThresholds.suspiciousActivityPerHour,
-          timeWindow: 'per_hour'
+          timeWindow: 'per_hour',
         });
       }
     }
@@ -503,7 +508,7 @@ export class SecurityAuditLogger {
     this.logger.error('Security alert triggered', {
       alertType,
       details,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
 
     // In production, this would integrate with alerting systems like PagerDuty, Slack, etc.
@@ -517,7 +522,8 @@ export class SecurityAuditLogger {
     const now = Date.now();
     const existing = this.eventCounts.get(key);
 
-    if (!existing || now - existing.lastReset > 60000) { // Reset every minute
+    if (!existing || now - existing.lastReset > 60000) {
+      // Reset every minute
       this.eventCounts.set(key, { count: 1, lastReset: now });
     } else {
       existing.count++;
@@ -571,16 +577,16 @@ export class SecurityAuditLogger {
    */
   private rotateLogFileIfNeeded(filepath: string): void {
     try {
-      const stats = require('fs').statSync(filepath);
+      const stats = statSync(filepath);
       if (stats.size > this.config.maxLogFileSize) {
         const timestamp = Date.now();
         const rotatedPath = `${filepath}.${timestamp}`;
-        require('fs').renameSync(filepath, rotatedPath);
-        
+        renameSync(filepath, rotatedPath);
+
         this.logger.info('Security audit log rotated', {
           originalPath: filepath,
           rotatedPath,
-          size: stats.size
+          size: stats.size,
         });
       }
     } catch (error) {
@@ -595,16 +601,16 @@ export class SecurityAuditLogger {
     // This would typically query the audit logs
     // For now, return current in-memory counts
     const stats: Record<string, number> = {};
-    
+
     for (const [key, value] of this.eventCounts.entries()) {
       const now = Date.now();
       const timeWindow = timeRangeHours * 60 * 60 * 1000;
-      
+
       if (now - value.lastReset <= timeWindow) {
         stats[key] = value.count;
       }
     }
-    
+
     return stats;
   }
 }

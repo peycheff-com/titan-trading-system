@@ -1,9 +1,9 @@
 /**
  * PerformanceReporter - Comprehensive Performance Reporting
- * 
+ *
  * Generates detailed performance reports and optimization suggestions
  * for the 2026 enhancement layers.
- * 
+ *
  * Requirements:
  * - 15.4: Compare Oracle Score predictions with actual outcomes
  * - 15.5: Track performance impact of Conviction Multipliers
@@ -20,7 +20,7 @@ import {
   OracleEffectivenessMetrics,
   GlobalCVDEffectivenessMetrics,
   BotTrapEffectivenessMetrics,
-  PredictionAccuracyMetrics
+  PredictionAccuracyMetrics,
 } from './PerformanceAnalytics';
 
 // ============================================================================
@@ -78,7 +78,7 @@ export const DEFAULT_REPORTER_CONFIG: PerformanceReporterConfig = {
   minTradesForReport: 20,
   targetWinRate: 55,
   targetSharpeRatio: 1.5,
-  enableAutoSuggestions: true
+  enableAutoSuggestions: true,
 };
 
 // ============================================================================
@@ -87,7 +87,7 @@ export const DEFAULT_REPORTER_CONFIG: PerformanceReporterConfig = {
 
 /**
  * PerformanceReporter - Generates comprehensive performance reports
- * 
+ *
  * Requirements:
  * - 15.6: Show contribution of each enhancement layer to overall results
  * - 15.7: Suggest optimization priorities based on enhancement effectiveness
@@ -96,10 +96,7 @@ export class PerformanceReporter extends EventEmitter {
   private config: PerformanceReporterConfig;
   private analytics: PerformanceAnalytics;
 
-  constructor(
-    analytics: PerformanceAnalytics,
-    config: Partial<PerformanceReporterConfig> = {}
-  ) {
+  constructor(analytics: PerformanceAnalytics, config: Partial<PerformanceReporterConfig> = {}) {
     super();
     this.analytics = analytics;
     this.config = { ...DEFAULT_REPORTER_CONFIG, ...config };
@@ -116,7 +113,7 @@ export class PerformanceReporter extends EventEmitter {
   generateReport(windowDays?: number): PerformanceReport {
     const trades = this.analytics.getTradeRecords();
     const days = windowDays || 30;
-    
+
     // Filter trades by window
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - days);
@@ -147,7 +144,10 @@ export class PerformanceReporter extends EventEmitter {
 
     // Calculate layer contributions
     const oracleContribution = this.calculateOracleContribution(oracleMetrics, enhancedTrades);
-    const globalCVDContribution = this.calculateGlobalCVDContribution(globalCVDMetrics, enhancedTrades);
+    const globalCVDContribution = this.calculateGlobalCVDContribution(
+      globalCVDMetrics,
+      enhancedTrades
+    );
     const botTrapContribution = this.calculateBotTrapContribution(botTrapMetrics);
 
     // Generate optimization suggestions
@@ -169,7 +169,7 @@ export class PerformanceReporter extends EventEmitter {
       period: {
         start: cutoff,
         end: new Date(),
-        tradingDays
+        tradingDays,
       },
       totalTrades: windowTrades.length,
       enhancedTrades: enhancedTrades.length,
@@ -191,7 +191,7 @@ export class PerformanceReporter extends EventEmitter {
       botTrapMetrics,
       predictionMetrics,
       suggestions,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
     this.emit('reportGenerated', report);
@@ -224,7 +224,7 @@ export class PerformanceReporter extends EventEmitter {
           priority: 'high',
           suggestion: 'Adjust Oracle veto threshold - current veto effectiveness is low',
           expectedImprovement: 5,
-          reasoning: `Veto effectiveness is ${oracleMetrics.vetoEffectiveness.toFixed(1)}%, consider lowering the conflict threshold to catch more losing trades`
+          reasoning: `Veto effectiveness is ${oracleMetrics.vetoEffectiveness.toFixed(1)}%, consider lowering the conflict threshold to catch more losing trades`,
         });
       }
 
@@ -234,7 +234,7 @@ export class PerformanceReporter extends EventEmitter {
           priority: 'medium',
           suggestion: 'Review Oracle alignment criteria - win rate improvement is minimal',
           expectedImprovement: 3,
-          reasoning: `Aligned trades only show ${oracleMetrics.winRateImprovement.toFixed(1)}% better win rate than conflicting trades`
+          reasoning: `Aligned trades only show ${oracleMetrics.winRateImprovement.toFixed(1)}% better win rate than conflicting trades`,
         });
       }
 
@@ -244,7 +244,7 @@ export class PerformanceReporter extends EventEmitter {
           priority: 'high',
           suggestion: 'Conviction multiplier is hurting performance - higher multipliers on losses',
           expectedImprovement: 8,
-          reasoning: `Average multiplier on losses (${oracleMetrics.avgMultiplierOnLosses.toFixed(2)}x) exceeds wins (${oracleMetrics.avgMultiplierOnWins.toFixed(2)}x)`
+          reasoning: `Average multiplier on losses (${oracleMetrics.avgMultiplierOnLosses.toFixed(2)}x) exceeds wins (${oracleMetrics.avgMultiplierOnWins.toFixed(2)}x)`,
         });
       }
     }
@@ -257,7 +257,7 @@ export class PerformanceReporter extends EventEmitter {
           priority: 'medium',
           suggestion: 'Increase Global CVD consensus threshold for better false signal filtering',
           expectedImprovement: 4,
-          reasoning: `Only ${globalCVDMetrics.falseSignalReductionRate.toFixed(1)}% of rejected signals would have been losses`
+          reasoning: `Only ${globalCVDMetrics.falseSignalReductionRate.toFixed(1)}% of rejected signals would have been losses`,
         });
       }
 
@@ -267,7 +267,7 @@ export class PerformanceReporter extends EventEmitter {
           priority: 'low',
           suggestion: 'Multi-exchange confirmation providing minimal benefit',
           expectedImprovement: 2,
-          reasoning: `Multi-exchange win rate only ${globalCVDMetrics.multiExchangeImprovement.toFixed(1)}% better than single exchange`
+          reasoning: `Multi-exchange win rate only ${globalCVDMetrics.multiExchangeImprovement.toFixed(1)}% better than single exchange`,
         });
       }
     }
@@ -280,7 +280,7 @@ export class PerformanceReporter extends EventEmitter {
           priority: 'high',
           suggestion: 'Reduce Bot Trap precision threshold - too many false positives',
           expectedImprovement: 6,
-          reasoning: `False positive rate is ${botTrapMetrics.falsePositiveRate.toFixed(1)}%, missing profitable patterns`
+          reasoning: `False positive rate is ${botTrapMetrics.falsePositiveRate.toFixed(1)}%, missing profitable patterns`,
         });
       }
 
@@ -290,7 +290,7 @@ export class PerformanceReporter extends EventEmitter {
           priority: 'medium',
           suggestion: 'Increase Bot Trap sensitivity - missing trap patterns',
           expectedImprovement: 4,
-          reasoning: `False negative rate is ${botTrapMetrics.falseNegativeRate.toFixed(1)}%, some traps are not being detected`
+          reasoning: `False negative rate is ${botTrapMetrics.falseNegativeRate.toFixed(1)}%, some traps are not being detected`,
         });
       }
 
@@ -300,7 +300,7 @@ export class PerformanceReporter extends EventEmitter {
           priority: 'low',
           suggestion: 'Bot Trap detection is working well - consider maintaining current settings',
           expectedImprovement: 0,
-          reasoning: `Avoided ${botTrapMetrics.avoidedLosses} losses averaging ${botTrapMetrics.avgAvoidedLossPercent.toFixed(1)}% each`
+          reasoning: `Avoided ${botTrapMetrics.avoidedLosses} losses averaging ${botTrapMetrics.avgAvoidedLossPercent.toFixed(1)}% each`,
         });
       }
     }
@@ -313,7 +313,7 @@ export class PerformanceReporter extends EventEmitter {
           priority: 'medium',
           suggestion: 'Oracle sentiment predictions underperforming - review event mapping',
           expectedImprovement: 3,
-          reasoning: `Sentiment accuracy is only ${predictionMetrics.sentimentAccuracy.toFixed(1)}%`
+          reasoning: `Sentiment accuracy is only ${predictionMetrics.sentimentAccuracy.toFixed(1)}%`,
         });
       }
 
@@ -323,7 +323,7 @@ export class PerformanceReporter extends EventEmitter {
           priority: 'high',
           suggestion: 'High conviction trades performing worse than low conviction',
           expectedImprovement: 7,
-          reasoning: `High conviction win rate (${predictionMetrics.highConvictionWinRate.toFixed(1)}%) < low conviction (${predictionMetrics.lowConvictionWinRate.toFixed(1)}%)`
+          reasoning: `High conviction win rate (${predictionMetrics.highConvictionWinRate.toFixed(1)}%) < low conviction (${predictionMetrics.lowConvictionWinRate.toFixed(1)}%)`,
         });
       }
     }
@@ -335,7 +335,7 @@ export class PerformanceReporter extends EventEmitter {
         priority: 'high',
         suggestion: `Win rate below target (${this.config.targetWinRate}%) - review signal quality`,
         expectedImprovement: 5,
-        reasoning: `Current win rate is ${currentWinRate.toFixed(1)}%, ${(this.config.targetWinRate - currentWinRate).toFixed(1)}% below target`
+        reasoning: `Current win rate is ${currentWinRate.toFixed(1)}%, ${(this.config.targetWinRate - currentWinRate).toFixed(1)}% below target`,
       });
     }
 
@@ -345,7 +345,7 @@ export class PerformanceReporter extends EventEmitter {
         priority: 'medium',
         suggestion: `Sharpe ratio below target (${this.config.targetSharpeRatio}) - consider risk adjustment`,
         expectedImprovement: 3,
-        reasoning: `Current Sharpe is ${currentSharpe.toFixed(2)}, ${(this.config.targetSharpeRatio - currentSharpe).toFixed(2)} below target`
+        reasoning: `Current Sharpe is ${currentSharpe.toFixed(2)}, ${(this.config.targetSharpeRatio - currentSharpe).toFixed(2)} below target`,
       });
     }
 
@@ -369,7 +369,7 @@ export class PerformanceReporter extends EventEmitter {
   generateComparativeAnalysis(windowDays?: number): ComparativeAnalysis {
     const trades = this.analytics.getTradeRecords();
     const days = windowDays || 30;
-    
+
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - days);
     const windowTrades = trades.filter(t => t.timestamp >= cutoff);
@@ -398,7 +398,7 @@ export class PerformanceReporter extends EventEmitter {
       sharpeDifference: enhancedSharpe - classicSharpe,
       enhancedMaxDrawdown,
       classicMaxDrawdown,
-      drawdownImprovement: classicMaxDrawdown - enhancedMaxDrawdown
+      drawdownImprovement: classicMaxDrawdown - enhancedMaxDrawdown,
     };
   }
 
@@ -427,7 +427,7 @@ export class PerformanceReporter extends EventEmitter {
           oracleMetrics.winRateImprovement,
           oracleMetrics.vetoEffectiveness,
           oracleMetrics.multiplierProfitContribution
-        )
+        ),
       },
       {
         layer: 'Global CVD',
@@ -438,7 +438,7 @@ export class PerformanceReporter extends EventEmitter {
           globalCVDMetrics.multiExchangeImprovement,
           globalCVDMetrics.falseSignalReductionRate,
           globalCVDMetrics.consensusAccuracy
-        )
+        ),
       },
       {
         layer: 'Bot Trap',
@@ -449,8 +449,8 @@ export class PerformanceReporter extends EventEmitter {
           botTrapMetrics.detectionAccuracy,
           100 - botTrapMetrics.falsePositiveRate,
           botTrapMetrics.avoidedLossAmount
-        )
-      }
+        ),
+      },
     ];
   }
 
@@ -479,18 +479,19 @@ export class PerformanceReporter extends EventEmitter {
    */
   private calculateSharpeRatio(trades: EnhancedTradeRecord[]): number {
     if (trades.length < 2) return 0;
-    
+
     const returns = trades.map(t => t.pnlPercent);
     const avgReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
-    const variance = returns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / returns.length;
+    const variance =
+      returns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / returns.length;
     const stdDev = Math.sqrt(variance);
-    
+
     if (stdDev === 0) return 0;
-    
+
     // Annualize assuming 252 trading days
     const annualizedReturn = avgReturn * 252;
     const annualizedStdDev = stdDev * Math.sqrt(252);
-    
+
     return annualizedReturn / annualizedStdDev;
   }
 
@@ -499,11 +500,11 @@ export class PerformanceReporter extends EventEmitter {
    */
   private calculateMaxDrawdown(trades: EnhancedTradeRecord[]): number {
     if (trades.length === 0) return 0;
-    
+
     let peak = 0;
     let maxDrawdown = 0;
     let cumulative = 0;
-    
+
     for (const trade of trades) {
       cumulative += trade.pnlPercent;
       if (cumulative > peak) {
@@ -514,7 +515,7 @@ export class PerformanceReporter extends EventEmitter {
         maxDrawdown = drawdown;
       }
     }
-    
+
     return maxDrawdown;
   }
 
@@ -523,11 +524,9 @@ export class PerformanceReporter extends EventEmitter {
    */
   private calculateTradingDays(trades: EnhancedTradeRecord[]): number {
     if (trades.length === 0) return 0;
-    
-    const uniqueDays = new Set(
-      trades.map(t => t.timestamp.toISOString().split('T')[0])
-    );
-    
+
+    const uniqueDays = new Set(trades.map(t => t.timestamp.toISOString().split('T')[0]));
+
     return uniqueDays.size;
   }
 
@@ -543,7 +542,7 @@ export class PerformanceReporter extends EventEmitter {
     const avoidedLosses = vetoedSignals
       .filter(v => !v.wouldHaveWon)
       .reduce((sum, v) => sum + Math.abs(v.potentialPnlPercent), 0);
-    
+
     return metrics.multiplierProfitContribution + avoidedLosses;
   }
 
@@ -555,11 +554,13 @@ export class PerformanceReporter extends EventEmitter {
     trades: EnhancedTradeRecord[]
   ): number {
     // Contribution = avoided false signals
-    const vetoedSignals = this.analytics.getVetoedSignals().filter(v => v.vetoSource === 'globalCVD');
+    const vetoedSignals = this.analytics
+      .getVetoedSignals()
+      .filter(v => v.vetoSource === 'globalCVD');
     const avoidedLosses = vetoedSignals
       .filter(v => !v.wouldHaveWon)
       .reduce((sum, v) => sum + Math.abs(v.potentialPnlPercent), 0);
-    
+
     return avoidedLosses;
   }
 
@@ -580,7 +581,7 @@ export class PerformanceReporter extends EventEmitter {
   ): number {
     // Weighted score: 40% win rate, 30% risk reduction, 30% profit contribution
     const normalizedProfit = Math.min(profitContrib / 10, 100); // Normalize profit to 0-100
-    return (winRateContrib * 0.4) + (riskReduction * 0.3) + (normalizedProfit * 0.3);
+    return winRateContrib * 0.4 + riskReduction * 0.3 + normalizedProfit * 0.3;
   }
 
   // ============================================================================
@@ -633,16 +634,19 @@ export class PerformanceReporter extends EventEmitter {
       `   High Conviction Win Rate: ${report.predictionMetrics.highConvictionWinRate.toFixed(1)}%`,
       `   Low Conviction Win Rate: ${report.predictionMetrics.lowConvictionWinRate.toFixed(1)}%`,
       `   Conviction Correlation: ${report.predictionMetrics.convictionCorrelation.toFixed(3)}`,
-      ''
+      '',
     ];
 
     if (report.suggestions.length > 0) {
       lines.push('💡 OPTIMIZATION SUGGESTIONS');
       lines.push('───────────────────────────────────────────────────────────────');
-      
+
       for (const suggestion of report.suggestions) {
-        const priorityIcon = suggestion.priority === 'high' ? '🔴' : suggestion.priority === 'medium' ? '🟡' : '🟢';
-        lines.push(`   ${priorityIcon} [${suggestion.layer.toUpperCase()}] ${suggestion.suggestion}`);
+        const priorityIcon =
+          suggestion.priority === 'high' ? '🔴' : suggestion.priority === 'medium' ? '🟡' : '🟢';
+        lines.push(
+          `   ${priorityIcon} [${suggestion.layer.toUpperCase()}] ${suggestion.suggestion}`
+        );
         lines.push(`      Expected improvement: ${suggestion.expectedImprovement}%`);
         lines.push(`      Reasoning: ${suggestion.reasoning}`);
         lines.push('');

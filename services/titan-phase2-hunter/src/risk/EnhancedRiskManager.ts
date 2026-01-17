@@ -1,13 +1,13 @@
 /**
  * Enhanced Risk Manager for Titan Phase 2 - 2026 Modernization
- * 
+ *
  * Implements prediction-aware risk management with:
  * - High-impact event detection and response (Requirement 8.1)
  * - Prediction market volatility assessment (Requirement 8.2)
  * - Time-based risk adjustments for scheduled events (Requirement 8.4, 8.5)
  * - Multi-exchange failure protocols (Requirement 8.6)
  * - Enhanced monitoring and alerting (Requirement 8.3, 8.7)
- * 
+ *
  * Task 7: Enhanced Risk Management System
  */
 
@@ -20,7 +20,7 @@ import {
   ImpactLevel,
   EmergencyType,
   EmergencyState,
-  ConnectionStatus
+  ConnectionStatus,
 } from '../types';
 
 // ============================================================================
@@ -34,7 +34,7 @@ export interface EnhancedRiskManagerConfig {
   // High-impact event thresholds (Requirement 8.1)
   highImpactEventThreshold: number; // Default: 70%
   highImpactPositionReduction: number; // Default: 0.5 (50% reduction)
-  
+
   // Prediction market volatility (Requirement 8.2)
   extremeUncertaintyThreshold: number; // Default: 50% (probability near 50%)
   uncertaintyStopLossReduction: number; // Default: 0.01 (1% from 1.5%)
@@ -42,23 +42,23 @@ export interface EnhancedRiskManagerConfig {
   // Time-based risk adjustments (Requirement 8.4, 8.5)
   scheduledEventHours: number; // Default: 24 hours
   scheduledEventPositionReduction: number; // Default: 0.3 (30% reduction)
-  
+
   // Global CVD divergence monitoring (Requirement 8.3)
   cvdDivergenceThreshold: number; // Default: 50 (divergence score)
   cvdMonitoringFrequency: number; // Default: 5000ms (5 seconds)
-  
+
   // Bot trap frequency monitoring (Requirement 8.3)
   botTrapFrequencyThreshold: number; // Default: 0.5 (50% of signals)
   botTrapPrecisionIncrease: number; // Default: 0.25 (25% increase)
-  
+
   // Multi-exchange failure (Requirement 8.6)
   minExchangesRequired: number; // Default: 2
   exchangeOfflineGracePeriod: number; // Default: 30000ms (30 seconds)
-  
+
   // Oracle connection stability (Requirement 8.5)
   oracleStabilityThreshold: number; // Default: 3 (failures before unstable)
   oracleUnstablePositionReduction: number; // Default: 0.5 (50% reduction)
-  
+
   // Monitoring
   monitoringEnabled: boolean;
   monitoringInterval: number; // Default: 10000ms (10 seconds)
@@ -67,7 +67,7 @@ export interface EnhancedRiskManagerConfig {
 /**
  * Risk condition types
  */
-export type RiskConditionType = 
+export type RiskConditionType =
   | 'HIGH_IMPACT_EVENT'
   | 'EXTREME_UNCERTAINTY'
   | 'SCHEDULED_EVENT'
@@ -139,7 +139,6 @@ export interface EnhancedRiskManagerEvents {
   'monitoring:update': (state: EnhancedRiskState) => void;
 }
 
-
 // ============================================================================
 // DEFAULT CONFIGURATION
 // ============================================================================
@@ -148,34 +147,34 @@ export const DEFAULT_ENHANCED_RISK_CONFIG: EnhancedRiskManagerConfig = {
   // High-impact event thresholds
   highImpactEventThreshold: 70,
   highImpactPositionReduction: 0.5,
-  
+
   // Prediction market volatility
   extremeUncertaintyThreshold: 50,
   uncertaintyStopLossReduction: 0.01,
-  
+
   // Time-based risk adjustments
   scheduledEventHours: 24,
   scheduledEventPositionReduction: 0.3,
-  
+
   // Global CVD divergence monitoring
   cvdDivergenceThreshold: 50,
   cvdMonitoringFrequency: 5000,
-  
+
   // Bot trap frequency monitoring
   botTrapFrequencyThreshold: 0.5,
   botTrapPrecisionIncrease: 0.25,
-  
+
   // Multi-exchange failure
   minExchangesRequired: 2,
   exchangeOfflineGracePeriod: 30000,
-  
+
   // Oracle connection stability
   oracleStabilityThreshold: 3,
   oracleUnstablePositionReduction: 0.5,
-  
+
   // Monitoring
   monitoringEnabled: true,
-  monitoringInterval: 10000
+  monitoringInterval: 10000,
 };
 
 // ============================================================================
@@ -184,7 +183,7 @@ export const DEFAULT_ENHANCED_RISK_CONFIG: EnhancedRiskManagerConfig = {
 
 /**
  * Enhanced Risk Manager
- * 
+ *
  * Provides prediction-aware risk management for the 2026 modernization.
  * Monitors prediction markets, exchange connectivity, and bot trap patterns
  * to dynamically adjust risk parameters.
@@ -193,7 +192,7 @@ export class EnhancedRiskManager extends EventEmitter {
   private config: EnhancedRiskManagerConfig;
   private state: EnhancedRiskState;
   private monitoringInterval: NodeJS.Timeout | null = null;
-  
+
   // Tracking for bot trap rate calculation
   private recentSignals: { timestamp: number; isBotTrap: boolean }[] = [];
   private readonly SIGNAL_WINDOW = 20; // Last 20 signals for rate calculation
@@ -201,7 +200,7 @@ export class EnhancedRiskManager extends EventEmitter {
   constructor(config?: Partial<EnhancedRiskManagerConfig>) {
     super();
     this.config = { ...DEFAULT_ENHANCED_RISK_CONFIG, ...config };
-    
+
     this.state = {
       activeConditions: [],
       exchangeStatuses: new Map(),
@@ -211,13 +210,12 @@ export class EnhancedRiskManager extends EventEmitter {
       aggregatedAdjustments: this.getDefaultAdjustments(),
       isEmergencyMode: false,
       emergencyState: null,
-      lastUpdate: new Date()
+      lastUpdate: new Date(),
     };
-    
+
     // Initialize exchange statuses
     this.initializeExchangeStatuses();
   }
-
 
   // ============================================================================
   // INITIALIZATION
@@ -248,7 +246,7 @@ export class EnhancedRiskManager extends EventEmitter {
         exchange,
         status: ConnectionStatus.DISCONNECTED,
         lastSeen: new Date(),
-        failureCount: 0
+        failureCount: 0,
       });
     }
   }
@@ -262,7 +260,7 @@ export class EnhancedRiskManager extends EventEmitter {
       stopLossAdjustment: 0,
       leverageReduction: 1.0,
       haltNewEntries: false,
-      flattenPositions: false
+      flattenPositions: false,
     };
   }
 
@@ -280,8 +278,8 @@ export class EnhancedRiskManager extends EventEmitter {
     }
 
     // Find high-impact events with probability above threshold
-    const highImpactEvents = oracleScore.events.filter(event => 
-      event.impact === ImpactLevel.HIGH || event.impact === ImpactLevel.EXTREME
+    const highImpactEvents = oracleScore.events.filter(
+      event => event.impact === ImpactLevel.HIGH || event.impact === ImpactLevel.EXTREME
     );
 
     for (const event of highImpactEvents) {
@@ -295,10 +293,10 @@ export class EnhancedRiskManager extends EventEmitter {
             stopLossAdjustment: 0,
             leverageReduction: 0.5,
             haltNewEntries: event.impact === ImpactLevel.EXTREME,
-            flattenPositions: false
+            flattenPositions: false,
           },
           triggeredAt: new Date(),
-          expiresAt: event.resolution
+          expiresAt: event.resolution,
         };
 
         this.activateCondition(condition);
@@ -308,7 +306,6 @@ export class EnhancedRiskManager extends EventEmitter {
 
     return null;
   }
-
 
   // ============================================================================
   // PREDICTION MARKET VOLATILITY (Requirement 8.2)
@@ -330,8 +327,8 @@ export class EnhancedRiskManager extends EventEmitter {
     });
 
     // If multiple high-impact events are uncertain, trigger condition
-    const highImpactUncertain = uncertainEvents.filter(e => 
-      e.impact === ImpactLevel.HIGH || e.impact === ImpactLevel.EXTREME
+    const highImpactUncertain = uncertainEvents.filter(
+      e => e.impact === ImpactLevel.HIGH || e.impact === ImpactLevel.EXTREME
     );
 
     if (highImpactUncertain.length >= 2) {
@@ -344,9 +341,9 @@ export class EnhancedRiskManager extends EventEmitter {
           stopLossAdjustment: -this.config.uncertaintyStopLossReduction,
           leverageReduction: 0.75,
           haltNewEntries: false,
-          flattenPositions: false
+          flattenPositions: false,
         },
-        triggeredAt: new Date()
+        triggeredAt: new Date(),
       };
 
       this.activateCondition(condition);
@@ -370,17 +367,20 @@ export class EnhancedRiskManager extends EventEmitter {
     }
 
     const now = new Date();
-    const thresholdTime = new Date(now.getTime() + this.config.scheduledEventHours * 60 * 60 * 1000);
+    const thresholdTime = new Date(
+      now.getTime() + this.config.scheduledEventHours * 60 * 60 * 1000
+    );
 
     // Find high-impact events scheduled within threshold
     const imminentEvents = oracleScore.events.filter(event => {
-      const isHighImpact = event.impact === ImpactLevel.HIGH || event.impact === ImpactLevel.EXTREME;
+      const isHighImpact =
+        event.impact === ImpactLevel.HIGH || event.impact === ImpactLevel.EXTREME;
       const isImminent = event.resolution <= thresholdTime;
       return isHighImpact && isImminent;
     });
 
     if (imminentEvents.length > 0) {
-      const nearestEvent = imminentEvents.reduce((nearest, event) => 
+      const nearestEvent = imminentEvents.reduce((nearest, event) =>
         event.resolution < nearest.resolution ? event : nearest
       );
 
@@ -395,10 +395,10 @@ export class EnhancedRiskManager extends EventEmitter {
           stopLossAdjustment: 0,
           leverageReduction: hoursUntil < 6 ? 0.5 : 0.75,
           haltNewEntries: hoursUntil < 1,
-          flattenPositions: false
+          flattenPositions: false,
         },
         triggeredAt: new Date(),
-        expiresAt: nearestEvent.resolution
+        expiresAt: nearestEvent.resolution,
       };
 
       this.activateCondition(condition);
@@ -407,7 +407,6 @@ export class EnhancedRiskManager extends EventEmitter {
 
     return null;
   }
-
 
   // ============================================================================
   // GLOBAL CVD DIVERGENCE MONITORING (Requirement 8.3)
@@ -434,9 +433,9 @@ export class EnhancedRiskManager extends EventEmitter {
           stopLossAdjustment: 0,
           leverageReduction: 0.75,
           haltNewEntries: globalCVD.manipulation.detected,
-          flattenPositions: false
+          flattenPositions: false,
         },
-        triggeredAt: new Date()
+        triggeredAt: new Date(),
       };
 
       this.activateCondition(condition);
@@ -458,7 +457,7 @@ export class EnhancedRiskManager extends EventEmitter {
   recordSignal(isBotTrap: boolean): void {
     this.recentSignals.push({
       timestamp: Date.now(),
-      isBotTrap
+      isBotTrap,
     });
 
     // Keep only last N signals
@@ -502,9 +501,9 @@ export class EnhancedRiskManager extends EventEmitter {
           stopLossAdjustment: -0.005, // Tighter stops
           leverageReduction: 0.5,
           haltNewEntries: this.state.botTrapRate >= 0.8,
-          flattenPositions: false
+          flattenPositions: false,
         },
-        triggeredAt: new Date()
+        triggeredAt: new Date(),
       };
 
       this.activateCondition(condition);
@@ -516,7 +515,6 @@ export class EnhancedRiskManager extends EventEmitter {
     return null;
   }
 
-
   // ============================================================================
   // MULTI-EXCHANGE FAILURE PROTOCOLS (Requirement 8.6)
   // ============================================================================
@@ -526,7 +524,7 @@ export class EnhancedRiskManager extends EventEmitter {
    */
   updateExchangeStatus(exchange: string, status: ConnectionStatus): void {
     const current = this.state.exchangeStatuses.get(exchange);
-    
+
     if (current) {
       const wasOffline = current.status !== ConnectionStatus.CONNECTED;
       const isNowOffline = status !== ConnectionStatus.CONNECTED;
@@ -568,9 +566,9 @@ export class EnhancedRiskManager extends EventEmitter {
           stopLossAdjustment: 0,
           leverageReduction: 0.75,
           haltNewEntries: false,
-          flattenPositions: false
+          flattenPositions: false,
         },
-        triggeredAt: new Date()
+        triggeredAt: new Date(),
       };
 
       this.activateCondition(condition);
@@ -588,9 +586,9 @@ export class EnhancedRiskManager extends EventEmitter {
           stopLossAdjustment: 0,
           leverageReduction: 0,
           haltNewEntries: true,
-          flattenPositions: false // Don't auto-flatten, just halt
+          flattenPositions: false, // Don't auto-flatten, just halt
         },
-        triggeredAt: new Date()
+        triggeredAt: new Date(),
       };
 
       this.activateCondition(condition);
@@ -638,9 +636,9 @@ export class EnhancedRiskManager extends EventEmitter {
           stopLossAdjustment: 0,
           leverageReduction: 1.0, // No leverage change
           haltNewEntries: false,
-          flattenPositions: false
+          flattenPositions: false,
         },
-        triggeredAt: new Date()
+        triggeredAt: new Date(),
       };
 
       this.activateCondition(condition);
@@ -652,7 +650,6 @@ export class EnhancedRiskManager extends EventEmitter {
     return null;
   }
 
-
   // ============================================================================
   // CONDITION MANAGEMENT
   // ============================================================================
@@ -663,7 +660,7 @@ export class EnhancedRiskManager extends EventEmitter {
   private activateCondition(condition: RiskCondition): void {
     // Check if condition of this type already exists
     const existingIndex = this.state.activeConditions.findIndex(c => c.type === condition.type);
-    
+
     if (existingIndex >= 0) {
       // Update existing condition
       this.state.activeConditions[existingIndex] = condition;
@@ -683,13 +680,13 @@ export class EnhancedRiskManager extends EventEmitter {
    */
   private deactivateConditionByType(type: RiskConditionType): void {
     const index = this.state.activeConditions.findIndex(c => c.type === type);
-    
+
     if (index >= 0) {
       const condition = this.state.activeConditions[index];
       this.state.activeConditions.splice(index, 1);
       this.emit('condition:deactivated', condition);
       this.logRiskCondition(condition, 'DEACTIVATED');
-      
+
       // Recalculate aggregated adjustments
       this.recalculateAggregatedAdjustments();
     }
@@ -700,8 +697,8 @@ export class EnhancedRiskManager extends EventEmitter {
    */
   private cleanupExpiredConditions(): void {
     const now = new Date();
-    const expiredConditions = this.state.activeConditions.filter(c => 
-      c.expiresAt && c.expiresAt <= now
+    const expiredConditions = this.state.activeConditions.filter(
+      c => c.expiresAt && c.expiresAt <= now
     );
 
     for (const condition of expiredConditions) {
@@ -735,16 +732,17 @@ export class EnhancedRiskManager extends EventEmitter {
       );
 
       // Halt if any condition requires it
-      adjustments.haltNewEntries = adjustments.haltNewEntries || condition.adjustments.haltNewEntries;
+      adjustments.haltNewEntries =
+        adjustments.haltNewEntries || condition.adjustments.haltNewEntries;
 
       // Flatten if any condition requires it
-      adjustments.flattenPositions = adjustments.flattenPositions || condition.adjustments.flattenPositions;
+      adjustments.flattenPositions =
+        adjustments.flattenPositions || condition.adjustments.flattenPositions;
     }
 
     this.state.aggregatedAdjustments = adjustments;
     this.emit('adjustments:updated', adjustments);
   }
-
 
   // ============================================================================
   // COMPREHENSIVE EVALUATION
@@ -788,7 +786,7 @@ export class EnhancedRiskManager extends EventEmitter {
     return {
       ...this.state,
       exchangeStatuses: new Map(this.state.exchangeStatuses),
-      activeConditions: [...this.state.activeConditions]
+      activeConditions: [...this.state.activeConditions],
     };
   }
 
@@ -840,7 +838,9 @@ export class EnhancedRiskManager extends EventEmitter {
       this.emit('monitoring:update', this.getState());
     }, this.config.monitoringInterval);
 
-    console.log(`🛡️ Enhanced Risk Manager: Started monitoring (${this.config.monitoringInterval}ms interval)`);
+    console.log(
+      `🛡️ Enhanced Risk Manager: Started monitoring (${this.config.monitoringInterval}ms interval)`
+    );
   }
 
   /**
@@ -853,7 +853,6 @@ export class EnhancedRiskManager extends EventEmitter {
     }
     console.log(`🛡️ Enhanced Risk Manager: Stopped monitoring`);
   }
-
 
   // ============================================================================
   // LOGGING (Requirement 8.7)
@@ -871,11 +870,11 @@ export class EnhancedRiskManager extends EventEmitter {
       condition: {
         type: condition.type,
         severity: condition.severity,
-        description: condition.description
+        description: condition.description,
       },
       adjustments: condition.adjustments,
       activeConditionCount: this.state.activeConditions.length,
-      aggregatedAdjustments: this.state.aggregatedAdjustments
+      aggregatedAdjustments: this.state.aggregatedAdjustments,
     };
 
     console.log(`🛡️ ENHANCED_RISK_${action}:`, JSON.stringify(logEntry));
@@ -929,8 +928,9 @@ export class EnhancedRiskManager extends EventEmitter {
       conditionsByType[condition.type] = (conditionsByType[condition.type] || 0) + 1;
     }
 
-    const exchangeOnlineCount = Array.from(this.state.exchangeStatuses.values())
-      .filter(s => s.status === ConnectionStatus.CONNECTED).length;
+    const exchangeOnlineCount = Array.from(this.state.exchangeStatuses.values()).filter(
+      s => s.status === ConnectionStatus.CONNECTED
+    ).length;
 
     return {
       activeConditionCount: this.state.activeConditions.length,
@@ -940,7 +940,7 @@ export class EnhancedRiskManager extends EventEmitter {
       botTrapRate: this.state.botTrapRate,
       lastCVDDivergence: this.state.lastCVDDivergence,
       positionSizeMultiplier: this.state.aggregatedAdjustments.positionSizeMultiplier,
-      isHalted: this.state.aggregatedAdjustments.haltNewEntries
+      isHalted: this.state.aggregatedAdjustments.haltNewEntries,
     };
   }
 
@@ -961,7 +961,7 @@ export class EnhancedRiskManager extends EventEmitter {
       aggregatedAdjustments: this.getDefaultAdjustments(),
       isEmergencyMode: false,
       emergencyState: null,
-      lastUpdate: new Date()
+      lastUpdate: new Date(),
     };
     this.recentSignals = [];
     this.initializeExchangeStatuses();
@@ -980,6 +980,12 @@ export class EnhancedRiskManager extends EventEmitter {
 
 // Export event interface for TypeScript
 export declare interface EnhancedRiskManager {
-  on<U extends keyof EnhancedRiskManagerEvents>(event: U, listener: EnhancedRiskManagerEvents[U]): this;
-  emit<U extends keyof EnhancedRiskManagerEvents>(event: U, ...args: Parameters<EnhancedRiskManagerEvents[U]>): boolean;
+  on<U extends keyof EnhancedRiskManagerEvents>(
+    event: U,
+    listener: EnhancedRiskManagerEvents[U]
+  ): this;
+  emit<U extends keyof EnhancedRiskManagerEvents>(
+    event: U,
+    ...args: Parameters<EnhancedRiskManagerEvents[U]>
+  ): boolean;
 }

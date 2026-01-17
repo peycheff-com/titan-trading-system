@@ -23,6 +23,7 @@ import { HologramScanner } from "./engine/HologramScanner";
 import { SessionProfiler } from "./engine/SessionProfiler";
 import { InefficiencyMapper } from "./engine/InefficiencyMapper";
 import { CVDValidator } from "./engine/CVDValidator";
+import { InstitutionalFlowClassifier } from "./flow/InstitutionalFlowClassifier";
 import { BybitPerpsClient } from "./exchanges/BybitPerpsClient";
 import { BinanceSpotClient } from "./exchanges/BinanceSpotClient";
 import { startHunterApp } from "./console/HunterApp";
@@ -53,6 +54,7 @@ class HunterApplication {
   private sessionProfiler: SessionProfiler;
   private inefficiencyMapper: InefficiencyMapper;
   private cvdValidator: CVDValidator;
+  private institutionalFlowClassifier: InstitutionalFlowClassifier;
   private executionClient: ExecutionClient;
   private logger = getLogger();
 
@@ -89,7 +91,11 @@ class HunterApplication {
     this.binanceClient = new BinanceSpotClient();
 
     // Initialize core engines
-    this.hologramEngine = new HologramEngine(this.bybitClient);
+    this.institutionalFlowClassifier = new InstitutionalFlowClassifier();
+    this.hologramEngine = new HologramEngine(
+      this.bybitClient,
+      this.institutionalFlowClassifier,
+    );
     this.hologramScanner = new HologramScanner(this.bybitClient);
     this.sessionProfiler = new SessionProfiler();
     this.inefficiencyMapper = new InefficiencyMapper();
@@ -548,13 +554,18 @@ class HunterApplication {
       // Subscribe to Binance spot trades for CVD calculation
       this.binanceClient.subscribeAggTrades(hologram.symbol, (trade) => {
         // Record trade for CVD calculation
-        this.cvdValidator.recordTrade({
+        const cvdTrade = {
           symbol: hologram.symbol,
           price: trade.price,
           qty: trade.quantity,
           time: trade.timestamp,
           isBuyerMaker: trade.isBuyerMaker,
-        });
+        };
+
+        this.cvdValidator.recordTrade(cvdTrade);
+
+        // Record trade for Institutional Flow Classification
+        this.institutionalFlowClassifier.recordTrade(cvdTrade);
       });
     }
   }

@@ -1,9 +1,9 @@
 /**
  * PrometheusMetrics - Prometheus metrics exporter for Titan Brain
- * 
+ *
  * Implements signal processing latency, decision approval rate,
  * database query time, and cache hit rate metrics.
- * 
+ *
  * Requirements: 7.7
  */
 
@@ -70,115 +70,64 @@ export class PrometheusMetrics {
     this.defineHistogram(
       'signal_processing_latency_ms',
       'Signal processing latency in milliseconds',
-      ['phase_id', 'approved']
+      ['phase_id', 'approved'],
     );
 
     // Decision approval rate counter
-    this.defineCounter(
-      'decisions_total',
-      'Total number of decisions made',
-      ['phase_id', 'approved']
-    );
+    this.defineCounter('decisions_total', 'Total number of decisions made', [
+      'phase_id',
+      'approved',
+    ]);
 
     // Database query time histogram
-    this.defineHistogram(
-      'database_query_duration_ms',
-      'Database query duration in milliseconds',
-      ['operation', 'table']
-    );
+    this.defineHistogram('database_query_duration_ms', 'Database query duration in milliseconds', [
+      'operation',
+      'table',
+    ]);
 
     // Cache hit rate counters
-    this.defineCounter(
-      'cache_requests_total',
-      'Total cache requests',
-      ['cache_name', 'result']
-    );
+    this.defineCounter('cache_requests_total', 'Total cache requests', ['cache_name', 'result']);
 
     // Current equity gauge
-    this.defineGauge(
-      'current_equity',
-      'Current equity value',
-      []
-    );
+    this.defineGauge('current_equity', 'Current equity value', []);
 
     // Allocation weights gauge
-    this.defineGauge(
-      'allocation_weight',
-      'Current allocation weight per phase',
-      ['phase_id']
-    );
+    this.defineGauge('allocation_weight', 'Current allocation weight per phase', ['phase_id']);
 
     // Circuit breaker status gauge
     this.defineGauge(
       'circuit_breaker_active',
       'Circuit breaker active status (1=active, 0=inactive)',
-      []
+      [],
     );
 
     // Open positions gauge
-    this.defineGauge(
-      'open_positions_count',
-      'Number of open positions',
-      ['phase_id']
-    );
+    this.defineGauge('open_positions_count', 'Number of open positions', ['phase_id']);
 
     // Signal queue size gauge
-    this.defineGauge(
-      'signal_queue_size',
-      'Current signal queue size',
-      []
-    );
+    this.defineGauge('signal_queue_size', 'Current signal queue size', []);
 
     // High watermark gauge
-    this.defineGauge(
-      'high_watermark',
-      'Current high watermark value',
-      []
-    );
+    this.defineGauge('high_watermark', 'Current high watermark value', []);
 
     // Daily drawdown gauge
-    this.defineGauge(
-      'daily_drawdown_percent',
-      'Current daily drawdown percentage',
-      []
-    );
+    this.defineGauge('daily_drawdown_percent', 'Current daily drawdown percentage', []);
 
     // Leverage gauge
-    this.defineGauge(
-      'current_leverage',
-      'Current combined leverage',
-      []
-    );
+    this.defineGauge('current_leverage', 'Current combined leverage', []);
 
     // Performance modifier gauge
-    this.defineGauge(
-      'performance_modifier',
-      'Performance modifier per phase',
-      ['phase_id']
-    );
+    this.defineGauge('performance_modifier', 'Performance modifier per phase', ['phase_id']);
 
     // Sharpe ratio gauge
-    this.defineGauge(
-      'sharpe_ratio',
-      'Rolling Sharpe ratio per phase',
-      ['phase_id']
-    );
+    this.defineGauge('sharpe_ratio', 'Rolling Sharpe ratio per phase', ['phase_id']);
 
     // Sweep operations counter
-    this.defineCounter(
-      'sweep_operations_total',
-      'Total sweep operations',
-      ['status']
-    );
+    this.defineCounter('sweep_operations_total', 'Total sweep operations', ['status']);
 
     // Notification counter
-    this.defineCounter(
-      'notifications_sent_total',
-      'Total notifications sent',
-      ['channel', 'type']
-    );
+    this.defineCounter('notifications_sent_total', 'Total notifications sent', ['channel', 'type']);
   }
-
 
   /**
    * Define a counter metric
@@ -253,10 +202,10 @@ export class PrometheusMetrics {
 
     const key = this.getLabelKey(labels);
     let data = histogram.get(key);
-    
+
     if (!data) {
       data = {
-        buckets: new Map(LATENCY_BUCKETS.map(b => [b, 0])),
+        buckets: new Map(LATENCY_BUCKETS.map((b) => [b, 0])),
         sum: 0,
         count: 0,
       };
@@ -388,7 +337,6 @@ export class PrometheusMetrics {
     this.incrementCounter('notifications_sent_total', { channel, type });
   }
 
-
   // ============ Export Methods ============
 
   /**
@@ -438,13 +386,13 @@ export class PrometheusMetrics {
       }
       for (const [labelKey, data] of values) {
         const baseLabels = labelKey ? `${labelKey},` : '';
-        
+
         // Export buckets
         for (const [bucket, count] of data.buckets) {
           lines.push(`${name}_bucket{${baseLabels}le="${bucket}"} ${count}`);
         }
         lines.push(`${name}_bucket{${baseLabels}le="+Inf"} ${data.count}`);
-        
+
         // Export sum and count
         const sumLabels = labelKey ? `{${labelKey}}` : '';
         lines.push(`${name}_sum${sumLabels} ${data.sum}`);
@@ -515,7 +463,7 @@ export class PrometheusMetrics {
 
     const hitKey = this.getLabelKey({ cache_name: cacheName, result: 'hit' });
     const missKey = this.getLabelKey({ cache_name: cacheName, result: 'miss' });
-    
+
     const hits = counter.get(hitKey) || 0;
     const misses = counter.get(missKey) || 0;
     const total = hits + misses;
@@ -556,7 +504,7 @@ export class PrometheusMetrics {
 
     for (const [labelKey, value] of counter) {
       if (phaseId && !labelKey.includes(`phase_id="${phaseId}"`)) continue;
-      
+
       if (labelKey.includes('approved="true"')) {
         approved += value;
       }

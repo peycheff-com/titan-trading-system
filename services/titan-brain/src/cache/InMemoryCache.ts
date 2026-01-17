@@ -1,9 +1,9 @@
 /**
  * InMemoryCache - High-performance in-memory cache with TTL support
- * 
+ *
  * Provides fast in-memory caching with automatic expiration and LRU eviction.
  * Used as fallback when Redis is unavailable.
- * 
+ *
  * Requirements: 3.2.1, 3.2.2, 3.2.3
  */
 
@@ -50,7 +50,7 @@ export class InMemoryCache extends EventEmitter {
     hits: 0,
     misses: 0,
     evictions: 0,
-    expired: 0
+    expired: 0,
   };
 
   constructor(maxSize: number = 1000, defaultTtlMs: number = 300000) {
@@ -113,7 +113,7 @@ export class InMemoryCache extends EventEmitter {
 
     // Sort entries by last accessed time (ascending)
     const entries = Array.from(this.cache.entries()).sort(
-      ([, a], [, b]) => a.lastAccessed - b.lastAccessed
+      ([, a], [, b]) => a.lastAccessed - b.lastAccessed,
     );
 
     // Remove the oldest entries
@@ -132,7 +132,7 @@ export class InMemoryCache extends EventEmitter {
    */
   get<T = any>(key: string): T | undefined {
     const entry = this.cache.get(key);
-    
+
     if (!entry) {
       this.stats.misses++;
       this.emit('miss', { key });
@@ -152,7 +152,7 @@ export class InMemoryCache extends EventEmitter {
     entry.accessCount++;
     entry.lastAccessed = Date.now();
     this.stats.hits++;
-    
+
     this.emit('hit', { key, accessCount: entry.accessCount });
     return entry.value as T;
   }
@@ -177,14 +177,14 @@ export class InMemoryCache extends EventEmitter {
       value,
       expiresAt,
       accessCount: 0,
-      lastAccessed: now
+      lastAccessed: now,
     });
 
-    this.emit('set', { 
-      key, 
-      ttlMs: effectiveTtl, 
+    this.emit('set', {
+      key,
+      ttlMs: effectiveTtl,
       size: this.cache.size,
-      expiresAt: new Date(expiresAt).toISOString()
+      expiresAt: new Date(expiresAt).toISOString(),
     });
   }
 
@@ -193,11 +193,11 @@ export class InMemoryCache extends EventEmitter {
    */
   delete(key: string): boolean {
     const existed = this.cache.delete(key);
-    
+
     if (existed) {
       this.emit('delete', { key, remainingSize: this.cache.size });
     }
-    
+
     return existed;
   }
 
@@ -206,7 +206,7 @@ export class InMemoryCache extends EventEmitter {
    */
   has(key: string): boolean {
     const entry = this.cache.get(key);
-    
+
     if (!entry) {
       return false;
     }
@@ -226,14 +226,14 @@ export class InMemoryCache extends EventEmitter {
    */
   getMultiple<T = any>(keys: string[]): Map<string, T> {
     const result = new Map<string, T>();
-    
+
     for (const key of keys) {
       const value = this.get<T>(key);
       if (value !== undefined) {
         result.set(key, value);
       }
     }
-    
+
     return result;
   }
 
@@ -251,13 +251,13 @@ export class InMemoryCache extends EventEmitter {
    */
   deleteMultiple(keys: string[]): number {
     let deletedCount = 0;
-    
+
     for (const key of keys) {
       if (this.delete(key)) {
         deletedCount++;
       }
     }
-    
+
     return deletedCount;
   }
 
@@ -267,15 +267,15 @@ export class InMemoryCache extends EventEmitter {
   clear(): void {
     const previousSize = this.cache.size;
     this.cache.clear();
-    
+
     // Reset stats
     this.stats = {
       hits: 0,
       misses: 0,
       evictions: 0,
-      expired: 0
+      expired: 0,
     };
-    
+
     this.emit('clear', { previousSize });
   }
 
@@ -285,13 +285,13 @@ export class InMemoryCache extends EventEmitter {
   keys(): string[] {
     const now = Date.now();
     const validKeys: string[] = [];
-    
+
     for (const [key, entry] of this.cache.entries()) {
       if (entry.expiresAt > now) {
         validKeys.push(key);
       }
     }
-    
+
     return validKeys;
   }
 
@@ -301,7 +301,7 @@ export class InMemoryCache extends EventEmitter {
   getStats(): InMemoryCacheStats {
     const totalRequests = this.stats.hits + this.stats.misses;
     const hitRate = totalRequests > 0 ? (this.stats.hits / totalRequests) * 100 : 0;
-    
+
     // Estimate memory usage (rough calculation)
     let estimatedMemoryUsage = 0;
     for (const [key, entry] of this.cache.entries()) {
@@ -319,14 +319,16 @@ export class InMemoryCache extends EventEmitter {
       evictions: this.stats.evictions,
       expired: this.stats.expired,
       hitRate,
-      memoryUsage: estimatedMemoryUsage
+      memoryUsage: estimatedMemoryUsage,
     };
   }
 
   /**
    * Get entries that will expire soon
    */
-  getExpiringEntries(withinMs: number = 60000): Array<{ key: string; expiresAt: number; timeLeft: number }> {
+  getExpiringEntries(
+    withinMs: number = 60000,
+  ): Array<{ key: string; expiresAt: number; timeLeft: number }> {
     const now = Date.now();
     const threshold = now + withinMs;
     const expiringEntries: Array<{ key: string; expiresAt: number; timeLeft: number }> = [];
@@ -336,7 +338,7 @@ export class InMemoryCache extends EventEmitter {
         expiringEntries.push({
           key,
           expiresAt: entry.expiresAt,
-          timeLeft: entry.expiresAt - now
+          timeLeft: entry.expiresAt - now,
         });
       }
     }
@@ -347,12 +349,14 @@ export class InMemoryCache extends EventEmitter {
   /**
    * Get most accessed entries
    */
-  getMostAccessed(limit: number = 10): Array<{ key: string; accessCount: number; lastAccessed: number }> {
+  getMostAccessed(
+    limit: number = 10,
+  ): Array<{ key: string; accessCount: number; lastAccessed: number }> {
     const entries = Array.from(this.cache.entries())
       .map(([key, entry]) => ({
         key,
         accessCount: entry.accessCount,
-        lastAccessed: entry.lastAccessed
+        lastAccessed: entry.lastAccessed,
       }))
       .sort((a, b) => b.accessCount - a.accessCount)
       .slice(0, limit);
@@ -365,7 +369,7 @@ export class InMemoryCache extends EventEmitter {
    */
   updateTTL(key: string, ttlMs: number): boolean {
     const entry = this.cache.get(key);
-    
+
     if (!entry) {
       return false;
     }
@@ -379,13 +383,13 @@ export class InMemoryCache extends EventEmitter {
 
     // Update expiration time
     entry.expiresAt = Date.now() + ttlMs;
-    
-    this.emit('ttl_updated', { 
-      key, 
-      newTtlMs: ttlMs, 
-      expiresAt: new Date(entry.expiresAt).toISOString() 
+
+    this.emit('ttl_updated', {
+      key,
+      newTtlMs: ttlMs,
+      expiresAt: new Date(entry.expiresAt).toISOString(),
     });
-    
+
     return true;
   }
 
@@ -394,13 +398,13 @@ export class InMemoryCache extends EventEmitter {
    */
   getTTL(key: string): number | null {
     const entry = this.cache.get(key);
-    
+
     if (!entry) {
       return null;
     }
 
     const now = Date.now();
-    
+
     // Check if entry has expired
     if (entry.expiresAt <= now) {
       this.cache.delete(key);

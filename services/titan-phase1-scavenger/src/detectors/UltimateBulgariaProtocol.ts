@@ -16,8 +16,9 @@
  * - Highest win rate (98% confidence)
  */
 
-import { BinanceSpotClient } from "../exchanges/BinanceSpotClient";
-import { OIWipeoutDetector } from "./OIWipeoutDetector";
+import { BinanceSpotClient } from "../exchanges/BinanceSpotClient.js";
+import { OIWipeoutDetector } from "./OIWipeoutDetector.js";
+import { OrderFlowImbalanceCalculator } from "../calculators/OrderFlowImbalanceCalculator.js";
 
 import { Tripwire } from "../types/index.js";
 export { Tripwire };
@@ -26,6 +27,7 @@ export class UltimateBulgariaProtocol {
   private bybitClient: any; // Will be null when using titan-execution service
   private binanceClient: BinanceSpotClient;
   private oiDetector: OIWipeoutDetector;
+  private ofiCalculator: OrderFlowImbalanceCalculator;
 
   constructor(
     bybitClient: any, // Can be null when using titan-execution service
@@ -35,6 +37,7 @@ export class UltimateBulgariaProtocol {
     this.bybitClient = bybitClient;
     this.binanceClient = binanceClient;
     this.oiDetector = oiDetector;
+    this.ofiCalculator = new OrderFlowImbalanceCalculator(50);
   }
 
   /**
@@ -60,6 +63,19 @@ export class UltimateBulgariaProtocol {
       // 2. Check if OI nuked -20% (sellers are dead)
       const oiWipeout = await this.oiDetector.detectWipeout(symbol);
       if (!oiWipeout) continue;
+
+      // 2.5 Check micro-structure pressure via OFI
+      // Sampling BBO 5 times over ~1 second to gauge immediate flow
+      const ofiScore = await this.sampleOFI(symbol);
+      if (ofiScore <= 0) {
+        console.log(
+          `   OFI Check Failed: ${ofiScore.toFixed(4)} (Buying Pressure Low)`,
+        );
+        continue;
+      }
+      console.log(
+        `   OFI Confirmed: ${ofiScore.toFixed(4)} (Buying Pressure Detected)`,
+      );
 
       // 3. Set Leader-Follower trap on Binance Spot
       // When Binance starts V-Shape recovery, fire Long on Bybit
@@ -133,5 +149,32 @@ export class UltimateBulgariaProtocol {
     }
 
     return crashes;
+  }
+
+  /**
+   * Sample Order Flow Imbalance (OFI)
+   * Fetches BBO 5 times with 200ms delay to compute flow pressure.
+   */
+  private async sampleOFI(symbol: string): Promise<number> {
+    this.ofiCalculator.reset();
+
+    // 5 samples * 200ms = 1 second window
+    for (let i = 0; i < 5; i++) {
+      try {
+        const ticker = await this.bybitClient.getTicker(symbol);
+        this.ofiCalculator.update(
+          parseFloat(ticker.bid1Price),
+          parseFloat(ticker.bid1Size),
+          parseFloat(ticker.ask1Price),
+          parseFloat(ticker.ask1Size),
+        );
+
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      } catch (e) {
+        // Ignore single fetch errors
+      }
+    }
+
+    return this.ofiCalculator.getSmoothedOFI();
   }
 }

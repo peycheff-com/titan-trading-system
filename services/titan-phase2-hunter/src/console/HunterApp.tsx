@@ -1,7 +1,7 @@
 /**
  * Hunter Application - Main React Component
  * Manages the state between HunterHUD and ConfigPanel modal overlay
- * 
+ *
  * Requirements: 18.1 (Display configuration panel overlay when user presses F1 key)
  */
 
@@ -25,9 +25,9 @@ interface AppState {
 export function HunterApp() {
   const [appState, setAppState] = useState<AppState>({
     showConfigPanel: false,
-    config: new ConfigManager().getConfig()
+    config: new ConfigManager().getConfig(),
   });
-  
+
   const [configManager] = useState(() => new ConfigManager());
 
   /**
@@ -37,7 +37,7 @@ export function HunterApp() {
     setAppState(prev => ({
       ...prev,
       showConfigPanel: true,
-      config: configManager.getConfig() // Reload latest config
+      config: configManager.getConfig(), // Reload latest config
     }));
   };
 
@@ -51,7 +51,7 @@ export function HunterApp() {
       setAppState(prev => ({
         ...prev,
         showConfigPanel: false,
-        config: newConfig
+        config: newConfig,
       }));
       console.log('✅ Configuration saved successfully');
     } catch (error) {
@@ -66,7 +66,7 @@ export function HunterApp() {
   const handleConfigCancel = () => {
     setAppState(prev => ({
       ...prev,
-      showConfigPanel: false
+      showConfigPanel: false,
     }));
   };
 
@@ -81,12 +81,12 @@ export function HunterApp() {
   // Setup config manager
   useEffect(() => {
     configManager.startWatching();
-    
+
     // Listen for config changes
     configManager.on('configChanged', () => {
       setAppState(prev => ({
         ...prev,
-        config: configManager.getConfig()
+        config: configManager.getConfig(),
       }));
     });
 
@@ -106,7 +106,7 @@ export function HunterApp() {
           onCancel={handleConfigCancel}
         />
       ) : (
-        <HunterHUDDisplay 
+        <HunterHUDDisplay
           onConfig={handleShowConfig}
           onExit={handleExit}
           config={appState.config}
@@ -120,10 +120,10 @@ export function HunterApp() {
  * HUD Display Component (Non-React wrapper for HunterHUD)
  * This component bridges the React world with the non-React HunterHUD
  */
-function HunterHUDDisplay({ 
-  onConfig, 
-  onExit, 
-  config 
+function HunterHUDDisplay({
+  onConfig,
+  onExit,
+  config,
 }: {
   onConfig: () => void;
   onExit: () => void;
@@ -137,18 +137,28 @@ function HunterHUDDisplay({
     console.log('📊 Holographic Market Structure Engine');
     console.log('');
     console.log('Current Configuration:');
-    console.log(`📊 Alignment: Daily ${config.alignmentWeights.daily}%, 4H ${config.alignmentWeights.h4}%, 15m ${config.alignmentWeights.m15}%`);
-    console.log(`📈 RS: Threshold ${config.rsConfig.threshold}%, Lookback ${config.rsConfig.lookbackPeriod}h`);
-    console.log(`⚡ Risk: Leverage ${config.riskConfig.maxLeverage}x, Stop ${config.riskConfig.stopLossPercent}%, Target ${config.riskConfig.targetPercent}%`);
-    console.log(`💼 Portfolio: Max ${config.portfolioConfig.maxConcurrentPositions} positions, Heat ${config.portfolioConfig.maxPortfolioHeat}%, Correlation ${config.portfolioConfig.correlationThreshold}`);
+    console.log(
+      `📊 Alignment: Daily ${config.alignmentWeights.daily}%, 4H ${config.alignmentWeights.h4}%, 15m ${config.alignmentWeights.m15}%`
+    );
+    console.log(
+      `📈 RS: Threshold ${config.rsConfig.threshold}%, Lookback ${config.rsConfig.lookbackPeriod}h`
+    );
+    console.log(
+      `⚡ Risk: Leverage ${config.riskConfig.maxLeverage}x, Stop ${config.riskConfig.stopLossPercent}%, Target ${config.riskConfig.targetPercent}%`
+    );
+    console.log(
+      `💼 Portfolio: Max ${config.portfolioConfig.maxConcurrentPositions} positions, Heat ${config.portfolioConfig.maxPortfolioHeat}%, Correlation ${config.portfolioConfig.correlationThreshold}`
+    );
     console.log('');
     console.log('[F1] CONFIG  [Q] QUIT');
-    
+
     // Setup keyboard handling
     const handleKeyPress = (key: string) => {
-      if (key === '\u0003' || key === 'q') { // Ctrl+C or 'q'
+      if (key === '\u0003' || key === 'q') {
+        // Ctrl+C or 'q'
         onExit();
-      } else if (key === '\u001b[11~') { // F1
+      } else if (key === '\u001b[11~') {
+        // F1
         onConfig();
       }
     };

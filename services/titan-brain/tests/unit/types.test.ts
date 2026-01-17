@@ -4,30 +4,31 @@
  */
 
 import {
-  EquityTier,
   AllocationVector,
-  PhaseId,
-  IntentSignal,
-  Position,
-  BreakerType,
-  BreakerStatus,
-  TreasuryStatus,
   BrainDecision,
-} from '../../src/types/index.js';
+  BreakerAction,
+  BreakerStatus,
+  BreakerType,
+  EquityTier,
+  IntentSignal,
+  PhaseId,
+  Position,
+  TreasuryStatus,
+} from "../../src/types/index.js";
 
-describe('Types', () => {
-  describe('EquityTier', () => {
-    it('should have all expected tiers', () => {
-      expect(EquityTier.MICRO).toBe('MICRO');
-      expect(EquityTier.SMALL).toBe('SMALL');
-      expect(EquityTier.MEDIUM).toBe('MEDIUM');
-      expect(EquityTier.LARGE).toBe('LARGE');
-      expect(EquityTier.INSTITUTIONAL).toBe('INSTITUTIONAL');
+describe("Types", () => {
+  describe("EquityTier", () => {
+    it("should have all expected tiers", () => {
+      expect(EquityTier.MICRO).toBe("MICRO");
+      expect(EquityTier.SMALL).toBe("SMALL");
+      expect(EquityTier.MEDIUM).toBe("MEDIUM");
+      expect(EquityTier.LARGE).toBe("LARGE");
+      expect(EquityTier.INSTITUTIONAL).toBe("INSTITUTIONAL");
     });
   });
 
-  describe('AllocationVector', () => {
-    it('should create valid allocation vector', () => {
+  describe("AllocationVector", () => {
+    it("should create valid allocation vector", () => {
       const vector: AllocationVector = {
         w1: 0.5,
         w2: 0.3,
@@ -39,59 +40,60 @@ describe('Types', () => {
     });
   });
 
-  describe('PhaseId', () => {
-    it('should accept valid phase IDs', () => {
-      const phases: PhaseId[] = ['phase1', 'phase2', 'phase3'];
+  describe("PhaseId", () => {
+    it("should accept valid phase IDs", () => {
+      const phases: PhaseId[] = ["phase1", "phase2", "phase3"];
       expect(phases).toHaveLength(3);
     });
   });
 
-  describe('IntentSignal', () => {
-    it('should create valid intent signal', () => {
+  describe("IntentSignal", () => {
+    it("should create valid intent signal", () => {
       const signal: IntentSignal = {
-        signalId: 'sig_123',
-        phaseId: 'phase1',
-        symbol: 'BTCUSDT',
-        side: 'BUY',
+        signalId: "sig_123",
+        phaseId: "phase1",
+        symbol: "BTCUSDT",
+        side: "BUY",
         requestedSize: 1000,
         timestamp: Date.now(),
       };
 
-      expect(signal.signalId).toBe('sig_123');
-      expect(signal.phaseId).toBe('phase1');
-      expect(signal.side).toBe('BUY');
+      expect(signal.signalId).toBe("sig_123");
+      expect(signal.phaseId).toBe("phase1");
+      expect(signal.side).toBe("BUY");
     });
   });
 
-  describe('Position', () => {
-    it('should create valid position', () => {
+  describe("Position", () => {
+    it("should create valid position", () => {
       const position: Position = {
-        symbol: 'BTCUSDT',
-        side: 'LONG',
+        symbol: "BTCUSDT",
+        side: "LONG",
         size: 5000,
         entryPrice: 50000,
         unrealizedPnL: 100,
         leverage: 10,
-        phaseId: 'phase1',
+        phaseId: "phase1",
       };
 
-      expect(position.symbol).toBe('BTCUSDT');
-      expect(position.side).toBe('LONG');
+      expect(position.symbol).toBe("BTCUSDT");
+      expect(position.side).toBe("LONG");
       expect(position.leverage).toBe(10);
     });
   });
 
-  describe('BreakerType', () => {
-    it('should have HARD and SOFT types', () => {
-      expect(BreakerType.HARD).toBe('HARD');
-      expect(BreakerType.SOFT).toBe('SOFT');
+  describe("BreakerType", () => {
+    it("should have HARD and SOFT types", () => {
+      expect(BreakerType.HARD).toBe("HARD");
+      expect(BreakerType.SOFT).toBe("SOFT");
     });
   });
 
-  describe('BreakerStatus', () => {
-    it('should create valid breaker status', () => {
+  describe("BreakerStatus", () => {
+    it("should create valid breaker status", () => {
       const status: BreakerStatus = {
         active: false,
+        action: BreakerAction.NONE,
         dailyDrawdown: 0.05,
         consecutiveLosses: 1,
         equityLevel: 1000,
@@ -101,11 +103,12 @@ describe('Types', () => {
       expect(status.dailyDrawdown).toBe(0.05);
     });
 
-    it('should create active breaker status', () => {
+    it("should create active breaker status", () => {
       const status: BreakerStatus = {
         active: true,
         type: BreakerType.HARD,
-        reason: 'Daily drawdown exceeded',
+        action: BreakerAction.FULL_HALT,
+        reason: "Daily drawdown exceeded",
         triggeredAt: Date.now(),
         dailyDrawdown: 0.16,
         consecutiveLosses: 0,
@@ -117,8 +120,8 @@ describe('Types', () => {
     });
   });
 
-  describe('TreasuryStatus', () => {
-    it('should create valid treasury status', () => {
+  describe("TreasuryStatus", () => {
+    it("should create valid treasury status", () => {
       const status: TreasuryStatus = {
         futuresWallet: 1000,
         spotWallet: 500,
@@ -134,13 +137,13 @@ describe('Types', () => {
     });
   });
 
-  describe('BrainDecision', () => {
-    it('should create valid brain decision', () => {
+  describe("BrainDecision", () => {
+    it("should create valid brain decision", () => {
       const decision: BrainDecision = {
-        signalId: 'sig_123',
+        signalId: "sig_123",
         approved: true,
         authorizedSize: 800,
-        reason: 'Signal approved with size reduction',
+        reason: "Signal approved with size reduction",
         allocation: {
           w1: 0.8,
           w2: 0.2,
@@ -148,7 +151,7 @@ describe('Types', () => {
           timestamp: Date.now(),
         },
         performance: {
-          phaseId: 'phase1',
+          phaseId: "phase1",
           sharpeRatio: 1.5,
           totalPnL: 500,
           tradeCount: 20,
@@ -159,7 +162,7 @@ describe('Types', () => {
         },
         risk: {
           approved: true,
-          reason: 'Within risk limits',
+          reason: "Within risk limits",
           adjustedSize: 800,
           riskMetrics: {
             currentLeverage: 5,

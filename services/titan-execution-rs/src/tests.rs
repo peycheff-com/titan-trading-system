@@ -2,15 +2,17 @@
 mod tests {
     use crate::model::{Intent, IntentType, IntentStatus, Side};
     use crate::order_manager::{OrderManager, OrderManagerConfig, TakerAction};
+    use crate::market_data::engine::MarketDataEngine;
     use crate::shadow_state::ShadowState;
-    use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use chrono::Utc;
+    use std::sync::Arc;
 
     #[test]
     fn test_fee_analysis_maker_profitable() {
         let config = OrderManagerConfig::default();
-        let om = OrderManager::new(Some(config));
+        let md = Arc::new(MarketDataEngine::new());
+        let om = OrderManager::new(Some(config), md);
 
         // Expected profit 1.0%
         // Maker fee 0.02% -> Profit 0.98%
@@ -26,7 +28,8 @@ mod tests {
     #[test]
     fn test_taker_conversion_unprofitable() {
         let config = OrderManagerConfig::default();
-        let om = OrderManager::new(Some(config));
+        let md = Arc::new(MarketDataEngine::new());
+        let om = OrderManager::new(Some(config), md);
 
         // Expected profit 0.04%
         // Taker fee 0.05% -> Loss -0.01%
@@ -39,7 +42,8 @@ mod tests {
     #[test]
     fn test_taker_conversion_wait() {
         let config = OrderManagerConfig::default(); // default chase 2000ms
-        let om = OrderManager::new(Some(config));
+        let md = Arc::new(MarketDataEngine::new());
+        let om = OrderManager::new(Some(config), md);
 
         // Profitable but not enough time passed
         let result = om.evaluate_taker_conversion("sig-1", dec!(1.0), 1000);

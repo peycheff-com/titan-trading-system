@@ -1,6 +1,6 @@
 /**
  * Polymarket Types for Titan Phase 3 - The Sentinel
- * 
+ *
  * Defines types for Polymarket latency arbitrage engine.
  */
 
@@ -175,7 +175,10 @@ export interface PolymarketArbConfig {
 /**
  * Default Polymarket arbitrage configuration
  */
-export const DEFAULT_POLYMARKET_ARB_CONFIG: Omit<PolymarketArbConfig, 'polygonRpcUrl' | 'privateKey'> = {
+export const DEFAULT_POLYMARKET_ARB_CONFIG: Omit<
+  PolymarketArbConfig,
+  'polygonRpcUrl' | 'privateKey'
+> = {
   triggerConditions: DEFAULT_ARB_TRIGGER,
   maxPositionSize: 1000,
   minLiquidity: 10000,

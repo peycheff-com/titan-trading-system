@@ -1,10 +1,10 @@
 /**
  * GlobalLiquidityAggregator - Main Integration Component
- * 
+ *
  * Integrates multi-exchange WebSocket connections, CVD aggregation,
  * manipulation detection, and consensus validation into a unified
  * Global Liquidity analysis system.
- * 
+ *
  * Requirements: 4.1-4.7, 6.1-6.7 (Global Liquidity Aggregation)
  */
 
@@ -13,12 +13,12 @@ import { MultiExchangeManager, ExchangeStatusSummary } from './MultiExchangeMana
 import { ExchangeTrade, ConnectionHealth } from './ExchangeWebSocketClient';
 import { GlobalCVDAggregator } from './GlobalCVDAggregator';
 import { ManipulationDetector, ComprehensiveManipulationAnalysis } from './ManipulationDetector';
-import { ConsensusValidator, ConsensusValidationResult, SignalValidationResponse } from './ConsensusValidator';
-import { 
-  ConnectionStatus, 
-  GlobalCVDData,
-  EnhancedErrorType 
-} from '../types';
+import {
+  ConsensusValidator,
+  ConsensusValidationResult,
+  SignalValidationResponse,
+} from './ConsensusValidator';
+import { ConnectionStatus, GlobalCVDData, EnhancedErrorType } from '../types';
 import { Logger } from '../logging/Logger';
 
 /**
@@ -72,19 +72,19 @@ const DEFAULT_CONFIG: GlobalLiquidityAggregatorConfig = {
   exchangeWeights: {
     binance: 40,
     coinbase: 35,
-    kraken: 25
+    kraken: 25,
   },
   weightingMethod: 'volume',
   consensusThreshold: 0.67,
   manipulationSensitivity: 70,
   reconnectInterval: 5000,
   updateInterval: 1000,
-  fallbackToSingleExchange: true
+  fallbackToSingleExchange: true,
 };
 
 /**
  * GlobalLiquidityAggregator - Unified Global Liquidity Analysis System
- * 
+ *
  * Requirements:
  * - 4.1: Establish WebSocket connections to Binance, Coinbase, and Kraken
  * - 4.2: Aggregate buy/sell volume with volume-weighted averaging
@@ -94,7 +94,7 @@ const DEFAULT_CONFIG: GlobalLiquidityAggregatorConfig = {
  * - 4.6: Continue with remaining exchanges on connection failure
  * - 4.7: Emit GLOBAL_FLOW_UPDATE with individual exchange CVD and aggregated score
  * - 6.1-6.7: Advanced CVD Validation with Multi-Exchange Confirmation
- * 
+ *
  * Emits events:
  * - 'globalCVDUpdate': GlobalCVDUpdateEvent
  * - 'exchangeConnected': exchange
@@ -117,7 +117,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
     active: false,
     reason: '',
     fallbackExchange: null,
-    activatedAt: null
+    activatedAt: null,
   };
   private updateTimer: NodeJS.Timeout | null = null;
   private lastGlobalCVD: Map<string, GlobalCVDData> = new Map();
@@ -131,21 +131,21 @@ export class GlobalLiquidityAggregator extends EventEmitter {
     this.exchangeManager = new MultiExchangeManager({
       symbols: this.config.symbols,
       exchanges: this.config.exchanges,
-      reconnectInterval: this.config.reconnectInterval
+      reconnectInterval: this.config.reconnectInterval,
     });
 
     this.cvdAggregator = new GlobalCVDAggregator({
       exchangeWeights: this.config.exchangeWeights,
       weightingMethod: this.config.weightingMethod,
-      updateInterval: this.config.updateInterval
+      updateInterval: this.config.updateInterval,
     });
 
     this.manipulationDetector = new ManipulationDetector({
-      divergenceThreshold: this.config.manipulationSensitivity
+      divergenceThreshold: this.config.manipulationSensitivity,
     });
 
     this.consensusValidator = new ConsensusValidator({
-      consensusThreshold: this.config.consensusThreshold
+      consensusThreshold: this.config.consensusThreshold,
     });
 
     this.setupEventListeners();
@@ -182,14 +182,13 @@ export class GlobalLiquidityAggregator extends EventEmitter {
       this.isInitialized = true;
       console.log('✅ Global Liquidity Aggregator initialized');
       this.logInfo('Global Liquidity Aggregator initialized successfully');
-
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       console.error('❌ Failed to initialize Global Liquidity Aggregator:', errorMsg);
       this.logError('Failed to initialize Global Liquidity Aggregator', errorMsg);
-      this.emit('error', { 
-        type: EnhancedErrorType.EXCHANGE_CONNECTION_LOST, 
-        message: errorMsg 
+      this.emit('error', {
+        type: EnhancedErrorType.EXCHANGE_CONNECTION_LOST,
+        message: errorMsg,
       });
       throw error;
     }
@@ -254,10 +253,10 @@ export class GlobalLiquidityAggregator extends EventEmitter {
           agreementRatio: 0,
           connectedExchanges: 0,
           reasoning: ['No Global CVD data available'],
-          timestamp: new Date()
+          timestamp: new Date(),
         },
         recommendation: 'veto',
-        reasoning: ['Global CVD data unavailable - cannot validate signal']
+        reasoning: ['Global CVD data unavailable - cannot validate signal'],
       };
     }
 
@@ -266,7 +265,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
       symbol,
       direction,
       globalCVD,
-      technicalConfidence
+      technicalConfidence,
     });
 
     // Log validation result
@@ -373,10 +372,15 @@ export class GlobalLiquidityAggregator extends EventEmitter {
     });
 
     // Manipulation detector events
-    this.manipulationDetector.on('manipulationDetected', (analysis: ComprehensiveManipulationAnalysis) => {
-      this.emit('manipulationDetected', analysis);
-      this.logWarning(`Manipulation detected: ${analysis.pattern} on ${analysis.suspectExchange}`);
-    });
+    this.manipulationDetector.on(
+      'manipulationDetected',
+      (analysis: ComprehensiveManipulationAnalysis) => {
+        this.emit('manipulationDetected', analysis);
+        this.logWarning(
+          `Manipulation detected: ${analysis.pattern} on ${analysis.suspectExchange}`
+        );
+      }
+    );
 
     // Consensus validator events
     this.consensusValidator.on('consensusReached', (result: ConsensusValidationResult) => {
@@ -408,7 +412,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
       globalCVD,
       manipulation,
       consensus,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
     this.emit('globalCVDUpdate', updateEvent);
@@ -438,7 +442,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
 
     // Find the connected exchange
     let fallbackExchange: 'binance' | 'coinbase' | 'kraken' | null = null;
-    
+
     if (status.binance === ConnectionStatus.CONNECTED) {
       fallbackExchange = 'binance';
     } else if (status.coinbase === ConnectionStatus.CONNECTED) {
@@ -451,15 +455,15 @@ export class GlobalLiquidityAggregator extends EventEmitter {
       active: true,
       reason: `Only ${status.connectedCount} exchange(s) connected`,
       fallbackExchange,
-      activatedAt: new Date()
+      activatedAt: new Date(),
     };
 
     this.emit('fallbackActivated', this.fallbackState);
     this.logWarning(`Fallback activated: using ${fallbackExchange || 'none'} only`);
-    
+
     this.emit('error', {
       type: EnhancedErrorType.EXCHANGE_CONNECTION_LOST,
-      message: `Multiple exchanges offline, falling back to ${fallbackExchange}`
+      message: `Multiple exchanges offline, falling back to ${fallbackExchange}`,
     });
   }
 
@@ -473,7 +477,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
       active: false,
       reason: '',
       fallbackExchange: null,
-      activatedAt: null
+      activatedAt: null,
     };
 
     this.emit('fallbackDeactivated');
@@ -501,7 +505,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
     return {
       ...globalCVD,
       confidence: Math.max(0, globalCVD.confidence - 30), // Reduce confidence in fallback mode
-      consensus: 'neutral' // Cannot determine consensus with single exchange
+      consensus: 'neutral', // Cannot determine consensus with single exchange
     };
   }
 
@@ -537,7 +541,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
    */
   private logInfo(message: string): void {
     this.logger.logError('WARNING', message, {
-      component: 'GlobalLiquidityAggregator'
+      component: 'GlobalLiquidityAggregator',
     });
   }
 
@@ -546,7 +550,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
    */
   private logWarning(message: string): void {
     this.logger.logError('WARNING', message, {
-      component: 'GlobalLiquidityAggregator'
+      component: 'GlobalLiquidityAggregator',
     });
   }
 
@@ -555,7 +559,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
    */
   private logError(message: string, details: string): void {
     this.logger.logError('ERROR', `${message}: ${details}`, {
-      component: 'GlobalLiquidityAggregator'
+      component: 'GlobalLiquidityAggregator',
     });
   }
 
@@ -569,9 +573,11 @@ export class GlobalLiquidityAggregator extends EventEmitter {
     response: SignalValidationResponse
   ): void {
     const { consensusResult, recommendation, adjustedConfidence } = response;
-    
+
     console.log(`📊 Global CVD Validation: ${symbol} ${direction}`);
-    console.log(`   Consensus: ${consensusResult.consensusDirection} (${consensusResult.confidence.toFixed(0)}%)`);
+    console.log(
+      `   Consensus: ${consensusResult.consensusDirection} (${consensusResult.confidence.toFixed(0)}%)`
+    );
     console.log(`   Agreement: ${(consensusResult.agreementRatio * 100).toFixed(0)}%`);
     console.log(`   Recommendation: ${recommendation}`);
     console.log(`   Adjusted Confidence: ${adjustedConfidence.toFixed(0)}%`);
@@ -602,7 +608,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
    */
   updateConfig(config: Partial<GlobalLiquidityAggregatorConfig>): void {
     this.config = { ...this.config, ...config };
-    
+
     // Update component configs
     if (config.exchangeWeights) {
       this.cvdAggregator.updateExchangeWeights(config.exchangeWeights);
@@ -611,7 +617,9 @@ export class GlobalLiquidityAggregator extends EventEmitter {
       this.consensusValidator.updateConfig({ consensusThreshold: config.consensusThreshold });
     }
     if (config.manipulationSensitivity !== undefined) {
-      this.manipulationDetector.updateConfig({ divergenceThreshold: config.manipulationSensitivity });
+      this.manipulationDetector.updateConfig({
+        divergenceThreshold: config.manipulationSensitivity,
+      });
     }
   }
 

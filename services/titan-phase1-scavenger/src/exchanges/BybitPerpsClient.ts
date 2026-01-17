@@ -395,6 +395,41 @@ export class BybitPerpsClient {
     }
 
     /**
+     * Get full ticker info (BBO) for a symbol
+     * @param symbol - Trading symbol
+     * @returns Promise with ticker info
+     */
+    public async getTicker(symbol: string): Promise<BybitTickerInfo> {
+        try {
+            const response = await this.makeRequest(
+                "GET",
+                "/v5/market/tickers",
+                {
+                    category: "linear",
+                    symbol: symbol.toUpperCase(),
+                },
+            );
+
+            if (response.retCode !== 0) {
+                throw new Error(`Bybit API error: ${response.retMsg}`);
+            }
+
+            const ticker = response.result.list[0] as BybitTickerInfo;
+            if (!ticker) {
+                throw new Error(`No ticker data found for ${symbol}`);
+            }
+
+            return ticker;
+        } catch (error) {
+            throw new Error(
+                `Failed to get ticker for ${symbol}: ${
+                    error instanceof Error ? error.message : "Unknown error"
+                }`,
+            );
+        }
+    }
+
+    /**
      * Get account equity
      * @returns Promise with total equity in USDT
      */

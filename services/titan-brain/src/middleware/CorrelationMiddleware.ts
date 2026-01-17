@@ -7,8 +7,8 @@
  * Requirements: 4.1.2, 4.1.5
  */
 
-import { FastifyReply, FastifyRequest, HookHandlerDoneFunction } from "fastify";
-import { Logger } from "../logging/Logger.js";
+import { FastifyReply, FastifyRequest, HookHandlerDoneFunction } from 'fastify';
+import { Logger } from '../logging/Logger.js';
 
 /**
  * Correlation ID configuration
@@ -25,11 +25,11 @@ export interface CorrelationConfig {
  * Default correlation configuration
  */
 export const DEFAULT_CORRELATION_CONFIG: CorrelationConfig = {
-  headerName: "x-correlation-id",
+  headerName: 'x-correlation-id',
   generateIfMissing: true,
   logRequests: true,
   logResponses: true,
-  excludePaths: ["/health", "/status", "/metrics"],
+  excludePaths: ['/health', '/status', '/metrics'],
 };
 
 /**
@@ -62,8 +62,7 @@ export function createCorrelationMiddleware(
     }
 
     // Get or generate correlation ID
-    let correlationId = request
-      .headers[finalConfig.headerName.toLowerCase()] as string;
+    let correlationId = request.headers[finalConfig.headerName.toLowerCase()] as string;
 
     if (!correlationId && finalConfig.generateIfMissing) {
       correlationId = Logger.generateCorrelationId();
@@ -89,13 +88,11 @@ export function createCorrelationMiddleware(
         0, // Duration not available yet
         correlationId,
         {
-          userAgent: request.headers["user-agent"],
-          contentType: request.headers["content-type"],
-          contentLength: request.headers["content-length"],
+          userAgent: request.headers['user-agent'],
+          contentType: request.headers['content-type'],
+          contentLength: request.headers['content-length'],
           remoteAddress: request.ip,
-          query: Object.keys(request.query || {}).length > 0
-            ? request.query
-            : undefined,
+          query: Object.keys(request.query || {}).length > 0 ? request.query : undefined,
         },
       );
     }
@@ -129,15 +126,12 @@ export async function correlationPlugin(
     config?: Partial<CorrelationConfig>;
   },
 ): Promise<void> {
-  const middleware = createCorrelationMiddleware(
-    options.logger,
-    options.config,
-  );
+  const middleware = createCorrelationMiddleware(options.logger, options.config);
 
-  fastify.addHook("preHandler", middleware);
+  fastify.addHook('preHandler', middleware);
 
   // Add helper to get correlation ID
-  fastify.decorate("getCorrelationId", (request: FastifyRequest) => {
+  fastify.decorate('getCorrelationId', (request: FastifyRequest) => {
     return getCorrelationId(request);
   });
 }
@@ -152,16 +146,9 @@ export function createCorrelationLogger(
   debug: (message: string, metadata?: Record<string, any>) => void;
   info: (message: string, metadata?: Record<string, any>) => void;
   warn: (message: string, metadata?: Record<string, any>) => void;
-  error: (
-    message: string,
-    error?: Error,
-    metadata?: Record<string, any>,
-  ) => void;
+  error: (message: string, error?: Error, metadata?: Record<string, any>) => void;
   startTimer: (operation: string, metadata?: Record<string, any>) => string;
-  endTimer: (
-    timerId: string,
-    additionalMetadata?: Record<string, any>,
-  ) => number | null;
+  endTimer: (timerId: string, additionalMetadata?: Record<string, any>) => number | null;
 } {
   const correlationId = getCorrelationId(request);
 

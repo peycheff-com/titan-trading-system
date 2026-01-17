@@ -2,11 +2,7 @@
  * Configuration Module Exports
  */
 
-export {
-  defaultConfig,
-  loadConfigFromEnv,
-  mergeConfig,
-} from './defaults.js';
+export { defaultConfig, loadConfigFromEnv, mergeConfig } from './defaults.js';
 
 export {
   ConfigLoader,
@@ -19,8 +15,4 @@ export {
   resetConfigLoader,
 } from './ConfigLoader.js';
 
-export type {
-  ConfigLoaderOptions,
-  ConfigLoaderResult,
-  ValidationResult,
-} from './ConfigLoader.js';
+export type { ConfigLoaderOptions, ConfigLoaderResult, ValidationResult } from './ConfigLoader.js';

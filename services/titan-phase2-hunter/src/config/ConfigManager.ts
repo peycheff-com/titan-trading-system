@@ -7,16 +7,9 @@
  * Requirements: 18.1-18.8 (Runtime Configuration)
  */
 
-import { EventEmitter } from "events";
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  unwatchFile,
-  watchFile,
-  writeFileSync,
-} from "fs";
-import { dirname, join } from "path";
+import { EventEmitter } from 'events';
+import { existsSync, mkdirSync, readFileSync, unwatchFile, watchFile, writeFileSync } from 'fs';
+import { dirname, join } from 'path';
 
 /**
  * Alignment weight configuration
@@ -136,9 +129,9 @@ export class ConfigManager extends EventEmitter {
   private configPath: string;
   private isWatching: boolean = false;
 
-  constructor(configDirectory: string = "./config") {
+  constructor(configDirectory: string = './config') {
     super();
-    this.configPath = join(configDirectory, "phase2.config.json");
+    this.configPath = join(configDirectory, 'phase2.config.json');
     this.config = this.loadConfig();
   }
 
@@ -149,20 +142,20 @@ export class ConfigManager extends EventEmitter {
   loadConfig(): Phase2Config {
     try {
       if (!existsSync(this.configPath)) {
-        console.log("📋 No config file found, creating default configuration");
+        console.log('📋 No config file found, creating default configuration');
         this.saveConfig(DEFAULT_CONFIG);
         return { ...DEFAULT_CONFIG };
       }
 
-      const fileContent = readFileSync(this.configPath, "utf8");
+      const fileContent = readFileSync(this.configPath, 'utf8');
       const loadedConfig = JSON.parse(fileContent) as Phase2Config;
 
       // Validate loaded configuration
       const validation = this.validateConfig(loadedConfig);
       if (!validation.isValid) {
-        console.error("❌ CONFIG_CORRUPTED: Invalid configuration file");
-        console.error("Errors:", validation.errors);
-        console.log("📋 Loading default configuration");
+        console.error('❌ CONFIG_CORRUPTED: Invalid configuration file');
+        console.error('Errors:', validation.errors);
+        console.log('📋 Loading default configuration');
 
         // Backup corrupted config
         const backupPath = `${this.configPath}.corrupted.${Date.now()}`;
@@ -177,18 +170,15 @@ export class ConfigManager extends EventEmitter {
       // Merge with defaults to ensure all fields are present
       const mergedConfig = this.mergeWithDefaults(loadedConfig);
 
-      console.log("✅ Configuration loaded successfully");
+      console.log('✅ Configuration loaded successfully');
       if (validation.warnings.length > 0) {
-        console.warn("⚠️ Configuration warnings:", validation.warnings);
+        console.warn('⚠️ Configuration warnings:', validation.warnings);
       }
 
       return mergedConfig;
     } catch (error) {
-      console.error(
-        "❌ CONFIG_CORRUPTED: Failed to load configuration:",
-        error,
-      );
-      console.log("📋 Loading default configuration");
+      console.error('❌ CONFIG_CORRUPTED: Failed to load configuration:', error);
+      console.log('📋 Loading default configuration');
 
       // Save defaults
       this.saveConfig(DEFAULT_CONFIG);
@@ -209,9 +199,7 @@ export class ConfigManager extends EventEmitter {
       // Validate before saving
       const validation = this.validateConfig(config);
       if (!validation.isValid) {
-        throw new Error(
-          `Invalid configuration: ${validation.errors.join(", ")}`,
-        );
+        throw new Error(`Invalid configuration: ${validation.errors.join(', ')}`);
       }
 
       // Ensure directory exists
@@ -221,23 +209,23 @@ export class ConfigManager extends EventEmitter {
       }
 
       // Write to file immediately
-      writeFileSync(this.configPath, JSON.stringify(config, null, 2), "utf8");
+      writeFileSync(this.configPath, JSON.stringify(config, null, 2), 'utf8');
 
       // Update internal config
       const oldConfig = { ...this.config };
       this.config = { ...config };
 
       // Emit change event
-      this.emit("configChanged", {
-        section: "all",
+      this.emit('configChanged', {
+        section: 'all',
         oldValue: oldConfig,
         newValue: config,
         timestamp: Date.now(),
       } as unknown as ConfigChangeEvent);
 
-      console.log("💾 Configuration saved successfully");
+      console.log('💾 Configuration saved successfully');
     } catch (error) {
-      console.error("❌ Failed to save configuration:", error);
+      console.error('❌ Failed to save configuration:', error);
       throw error;
     }
   }
@@ -360,27 +348,27 @@ export class ConfigManager extends EventEmitter {
 
     watchFile(this.configPath, { interval: 1000 }, (curr, prev) => {
       if (curr.mtime !== prev.mtime) {
-        console.log("🔄 Configuration file changed, reloading...");
+        console.log('🔄 Configuration file changed, reloading...');
         try {
           const newConfig = this.loadConfig();
           const oldConfig = { ...this.config };
           this.config = newConfig;
 
-          this.emit("configReloaded", {
-            section: "all",
+          this.emit('configReloaded', {
+            section: 'all',
             oldValue: oldConfig,
             newValue: newConfig,
             timestamp: Date.now(),
           } as unknown as ConfigChangeEvent);
 
-          console.log("✅ Configuration reloaded successfully");
+          console.log('✅ Configuration reloaded successfully');
         } catch (error) {
-          console.error("❌ Failed to reload configuration:", error);
+          console.error('❌ Failed to reload configuration:', error);
         }
       }
     });
 
-    console.log("👁️ Started watching configuration file for changes");
+    console.log('👁️ Started watching configuration file for changes');
   }
 
   /**
@@ -393,7 +381,7 @@ export class ConfigManager extends EventEmitter {
 
     unwatchFile(this.configPath);
     this.isWatching = false;
-    console.log("👁️ Stopped watching configuration file");
+    console.log('👁️ Stopped watching configuration file');
   }
 
   /**
@@ -405,7 +393,7 @@ export class ConfigManager extends EventEmitter {
 
     // Validate alignment weights
     if (!config.alignmentWeights) {
-      errors.push("Missing alignmentWeights");
+      errors.push('Missing alignmentWeights');
     } else {
       const { daily, h4, m15 } = config.alignmentWeights;
 
@@ -427,7 +415,7 @@ export class ConfigManager extends EventEmitter {
 
     // Validate RS config
     if (!config.rsConfig) {
-      errors.push("Missing rsConfig");
+      errors.push('Missing rsConfig');
     } else {
       const { threshold, lookbackPeriod } = config.rsConfig;
 
@@ -435,15 +423,13 @@ export class ConfigManager extends EventEmitter {
         errors.push(`RS threshold must be 0-5%, got ${threshold}%`);
       }
       if (lookbackPeriod < 2 || lookbackPeriod > 8) {
-        errors.push(
-          `RS lookback period must be 2-8 hours, got ${lookbackPeriod} hours`,
-        );
+        errors.push(`RS lookback period must be 2-8 hours, got ${lookbackPeriod} hours`);
       }
     }
 
     // Validate risk config
     if (!config.riskConfig) {
-      errors.push("Missing riskConfig");
+      errors.push('Missing riskConfig');
     } else {
       const { maxLeverage, stopLossPercent, targetPercent } = config.riskConfig;
 
@@ -461,54 +447,47 @@ export class ConfigManager extends EventEmitter {
       const rrRatio = targetPercent / stopLossPercent;
       if (rrRatio < 2.5) {
         warnings.push(
-          `R:R ratio is ${
-            rrRatio.toFixed(1)
-          }:1, consider increasing target or decreasing stop`,
+          `R:R ratio is ${rrRatio.toFixed(1)}:1, consider increasing target or decreasing stop`
         );
       }
     }
 
     // Validate portfolio config
     if (!config.portfolioConfig) {
-      errors.push("Missing portfolioConfig");
+      errors.push('Missing portfolioConfig');
     } else {
       const { maxConcurrentPositions, maxPortfolioHeat, correlationThreshold } =
         config.portfolioConfig;
 
       if (maxConcurrentPositions < 3 || maxConcurrentPositions > 8) {
-        errors.push(
-          `Max concurrent positions must be 3-8, got ${maxConcurrentPositions}`,
-        );
+        errors.push(`Max concurrent positions must be 3-8, got ${maxConcurrentPositions}`);
       }
       if (maxPortfolioHeat < 10 || maxPortfolioHeat > 20) {
-        errors.push(
-          `Max portfolio heat must be 10-20%, got ${maxPortfolioHeat}%`,
-        );
+        errors.push(`Max portfolio heat must be 10-20%, got ${maxPortfolioHeat}%`);
       }
       if (correlationThreshold < 0.6 || correlationThreshold > 0.9) {
-        errors.push(
-          `Correlation threshold must be 0.6-0.9, got ${correlationThreshold}`,
-        );
+        errors.push(`Correlation threshold must be 0.6-0.9, got ${correlationThreshold}`);
       }
     }
 
     // Validate forward test config
     if (!config.forwardTestConfig) {
-      errors.push("Missing forwardTestConfig");
+      errors.push('Missing forwardTestConfig');
     } else {
       const { enabled, duration, logSignalsOnly, compareToBacktest } = config.forwardTestConfig;
 
       if (typeof enabled !== 'boolean') {
-        errors.push("Forward test enabled must be boolean");
+        errors.push('Forward test enabled must be boolean');
       }
-      if (duration < 1 || duration > 168) { // 1 hour to 1 week
+      if (duration < 1 || duration > 168) {
+        // 1 hour to 1 week
         errors.push(`Forward test duration must be 1-168 hours, got ${duration} hours`);
       }
       if (typeof logSignalsOnly !== 'boolean') {
-        errors.push("Forward test logSignalsOnly must be boolean");
+        errors.push('Forward test logSignalsOnly must be boolean');
       }
       if (typeof compareToBacktest !== 'boolean') {
-        errors.push("Forward test compareToBacktest must be boolean");
+        errors.push('Forward test compareToBacktest must be boolean');
       }
     }
 
@@ -553,7 +532,7 @@ export class ConfigManager extends EventEmitter {
    * Reset configuration to defaults
    */
   resetToDefaults(): void {
-    console.log("🔄 Resetting configuration to defaults");
+    console.log('🔄 Resetting configuration to defaults');
     this.saveConfig({ ...DEFAULT_CONFIG });
   }
 
@@ -568,7 +547,7 @@ export class ConfigManager extends EventEmitter {
       `⚡ Risk: Leverage ${config.riskConfig.maxLeverage}x, Stop ${config.riskConfig.stopLossPercent}%, Target ${config.riskConfig.targetPercent}%`,
       `💼 Portfolio: Max ${config.portfolioConfig.maxConcurrentPositions} positions, Heat ${config.portfolioConfig.maxPortfolioHeat}%, Correlation ${config.portfolioConfig.correlationThreshold}`,
       `🧪 Forward Test: ${config.forwardTestConfig.enabled ? 'Enabled' : 'Disabled'}, Duration ${config.forwardTestConfig.duration}h, Signals Only: ${config.forwardTestConfig.logSignalsOnly}`,
-    ].join("\n");
+    ].join('\n');
   }
 
   /**

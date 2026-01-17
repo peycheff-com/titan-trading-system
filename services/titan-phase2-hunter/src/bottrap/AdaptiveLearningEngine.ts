@@ -1,17 +1,14 @@
 /**
  * AdaptiveLearningEngine - Pattern Outcome Learning System
- * 
+ *
  * Tracks pattern outcomes and adjusts detection parameters based on
  * historical success/failure rates. Implements adaptive learning to
  * reduce false positives and improve trap detection accuracy.
- * 
+ *
  * Requirements: 13.1-13.7 (Adaptive Learning from Bot Trap Patterns)
  */
 
-import {
-  TradeOutcome,
-  PatternPrecision
-} from '../types';
+import { TradeOutcome, PatternPrecision } from '../types';
 import { PrecisionAnalysisResult, TechnicalPattern } from './PatternPrecisionAnalyzer';
 
 /**
@@ -38,7 +35,7 @@ export const DEFAULT_ADAPTIVE_LEARNING_CONFIG: AdaptiveLearningConfig = {
   learningRate: 0.1,
   maxThresholdAdjustment: 0.2, // Max 20% adjustment
   sampleDecayFactor: 0.95, // 5% decay per day
-  recentWindowHours: 168 // 1 week
+  recentWindowHours: 168, // 1 week
 };
 
 /**
@@ -103,7 +100,7 @@ export interface ParameterAdjustment {
 
 /**
  * AdaptiveLearningEngine - Learns from pattern outcomes
- * 
+ *
  * Requirement 13.1: Track subsequent price action for validation
  * Requirement 13.2: Reduce precision threshold for successful SUSPECT_TRAP patterns
  * Requirement 13.3: Reinforce current detection parameters for correct predictions
@@ -132,54 +129,49 @@ export class AdaptiveLearningEngine {
 
   /**
    * Record a pattern detection for tracking
-   * 
+   *
    * Requirement 13.1: Track subsequent price action for validation
    */
-  recordPatternDetection(
-    analysis: PrecisionAnalysisResult,
-    wasFlagged: boolean
-  ): string {
+  recordPatternDetection(analysis: PrecisionAnalysisResult, wasFlagged: boolean): string {
     const recordId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     const record: PatternOutcomeRecord = {
       analysis,
       outcome: null,
       wasFlagged,
       flagCorrect: null,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
-    
+
     this.outcomeRecords.push(record);
-    
+
     // Clean old records
     this.cleanOldRecords();
-    
+
     return recordId;
   }
 
   /**
    * Record trade outcome for a pattern
-   * 
+   *
    * Requirement 13.1: Track subsequent price action for validation
    */
-  recordOutcome(
-    analysis: PrecisionAnalysisResult,
-    outcome: TradeOutcome
-  ): void {
+  recordOutcome(analysis: PrecisionAnalysisResult, outcome: TradeOutcome): void {
     // Find matching record
     const record = this.outcomeRecords.find(
-      r => r.analysis.pattern.barIndex === analysis.pattern.barIndex &&
-           r.analysis.pattern.type === analysis.pattern.type &&
-           r.outcome === null
+      r =>
+        r.analysis.pattern.barIndex === analysis.pattern.barIndex &&
+        r.analysis.pattern.type === analysis.pattern.type &&
+        r.outcome === null
     );
-    
+
     if (record) {
       record.outcome = outcome;
-      
+
       // Determine if flag was correct
       // A trap is confirmed if the trade resulted in a loss (stop loss hit)
       const wasLoss = outcome.exitReason === 'stop_loss' || outcome.pnl < 0;
-      
+
       if (record.wasFlagged) {
         // Pattern was flagged as suspect
         // Flag is correct if it would have been a loss (trap confirmed)
@@ -189,7 +181,7 @@ export class AdaptiveLearningEngine {
         // Flag is correct (not flagging) if it was profitable
         record.flagCorrect = !wasLoss;
       }
-      
+
       // Check if we should update parameters
       this.checkForParameterUpdate();
     }
@@ -203,28 +195,29 @@ export class AdaptiveLearningEngine {
     subsequentPriceAction: { wouldHaveLost: boolean }
   ): void {
     const record = this.outcomeRecords.find(
-      r => r.analysis.pattern.barIndex === analysis.pattern.barIndex &&
-           r.analysis.pattern.type === analysis.pattern.type &&
-           r.outcome === null
+      r =>
+        r.analysis.pattern.barIndex === analysis.pattern.barIndex &&
+        r.analysis.pattern.type === analysis.pattern.type &&
+        r.outcome === null
     );
-    
+
     if (record) {
       // For avoided patterns, we infer the outcome
       record.flagCorrect = subsequentPriceAction.wouldHaveLost;
-      
+
       this.checkForParameterUpdate();
     }
   }
 
   /**
    * Check if parameter update is needed
-   * 
+   *
    * Requirement 13.5: Update algorithm after 100 samples
    */
   private checkForParameterUpdate(): void {
     const recentRecords = this.getRecentRecords();
     const recordsWithOutcome = recentRecords.filter(r => r.flagCorrect !== null);
-    
+
     if (recordsWithOutcome.length >= this.config.minSamplesForUpdate) {
       this.updateParameters(recordsWithOutcome);
     }
@@ -232,28 +225,28 @@ export class AdaptiveLearningEngine {
 
   /**
    * Update detection parameters based on learning
-   * 
+   *
    * Requirement 13.2: Reduce precision threshold for successful SUSPECT_TRAP
    * Requirement 13.3: Reinforce current parameters for correct predictions
    * Requirement 13.4: Adjust precision tolerance to reduce false positives
    */
   private updateParameters(records: PatternOutcomeRecord[]): void {
     const stats = this.calculateStatistics(records);
-    
+
     // Calculate adjustment direction and magnitude
     let adjustment = 0;
     let reason = '';
-    
+
     // High false positive rate - need to increase threshold (be more selective)
     if (stats.falsePositives > stats.truePositives * 0.3) {
       // Requirement 13.4: Reduce false positives
       adjustment = this.config.learningRate * 2; // Increase threshold
-      reason = `High false positive rate (${(stats.falsePositives / (stats.truePositives + stats.falsePositives) * 100).toFixed(1)}%)`;
+      reason = `High false positive rate (${((stats.falsePositives / (stats.truePositives + stats.falsePositives)) * 100).toFixed(1)}%)`;
     }
     // High false negative rate - need to decrease threshold (catch more traps)
     else if (stats.falseNegatives > stats.trueNegatives * 0.2) {
       adjustment = -this.config.learningRate; // Decrease threshold
-      reason = `High false negative rate (${(stats.falseNegatives / (stats.trueNegatives + stats.falseNegatives) * 100).toFixed(1)}%)`;
+      reason = `High false negative rate (${((stats.falseNegatives / (stats.trueNegatives + stats.falseNegatives)) * 100).toFixed(1)}%)`;
     }
     // Good performance - reinforce current parameters
     else if (stats.f1Score > 0.7) {
@@ -267,24 +260,25 @@ export class AdaptiveLearningEngine {
       adjustment = -this.config.learningRate * 0.5;
       reason = 'High true positive rate - slightly reducing threshold';
     }
-    
+
     // Apply adjustment with limits
     if (adjustment !== 0) {
       const maxAdjustment = this.currentPrecisionThreshold * this.config.maxThresholdAdjustment;
       adjustment = Math.max(-maxAdjustment, Math.min(maxAdjustment, adjustment));
-      
+
       const previousThreshold = this.currentPrecisionThreshold;
-      this.currentPrecisionThreshold = Math.max(70, Math.min(99, 
-        this.currentPrecisionThreshold + adjustment
-      ));
-      
+      this.currentPrecisionThreshold = Math.max(
+        70,
+        Math.min(99, this.currentPrecisionThreshold + adjustment)
+      );
+
       // Record adjustment
       this.parameterHistory.push({
         parameter: 'precisionThreshold',
         previousValue: previousThreshold,
         newValue: this.currentPrecisionThreshold,
         reason,
-        timestamp: new Date()
+        timestamp: new Date(),
       });
     }
   }
@@ -302,25 +296,23 @@ export class AdaptiveLearningEngine {
    */
   private cleanOldRecords(): void {
     const cutoff = Date.now() - this.config.recentWindowHours * 2 * 60 * 60 * 1000;
-    this.outcomeRecords = this.outcomeRecords.filter(
-      r => r.timestamp.getTime() > cutoff
-    );
+    this.outcomeRecords = this.outcomeRecords.filter(r => r.timestamp.getTime() > cutoff);
   }
 
   /**
    * Calculate learning statistics
-   * 
+   *
    * Requirement 13.7: Log learning statistics
    */
   calculateStatistics(records?: PatternOutcomeRecord[]): LearningStatistics {
     const targetRecords = records || this.getRecentRecords();
     const recordsWithOutcome = targetRecords.filter(r => r.flagCorrect !== null);
-    
+
     let truePositives = 0;
     let falsePositives = 0;
     let trueNegatives = 0;
     let falseNegatives = 0;
-    
+
     for (const record of recordsWithOutcome) {
       if (record.wasFlagged) {
         if (record.flagCorrect) {
@@ -336,19 +328,15 @@ export class AdaptiveLearningEngine {
         }
       }
     }
-    
-    const precision = truePositives + falsePositives > 0
-      ? truePositives / (truePositives + falsePositives)
-      : 0;
-    
-    const recall = truePositives + falseNegatives > 0
-      ? truePositives / (truePositives + falseNegatives)
-      : 0;
-    
-    const f1Score = precision + recall > 0
-      ? 2 * (precision * recall) / (precision + recall)
-      : 0;
-    
+
+    const precision =
+      truePositives + falsePositives > 0 ? truePositives / (truePositives + falsePositives) : 0;
+
+    const recall =
+      truePositives + falseNegatives > 0 ? truePositives / (truePositives + falseNegatives) : 0;
+
+    const f1Score = precision + recall > 0 ? (2 * (precision * recall)) / (precision + recall) : 0;
+
     return {
       totalPatterns: targetRecords.length,
       flaggedPatterns: targetRecords.filter(r => r.wasFlagged).length,
@@ -360,7 +348,7 @@ export class AdaptiveLearningEngine {
       recall,
       f1Score,
       currentPrecisionThreshold: this.currentPrecisionThreshold,
-      lastUpdate: new Date()
+      lastUpdate: new Date(),
     };
   }
 
@@ -373,7 +361,7 @@ export class AdaptiveLearningEngine {
 
   /**
    * Get parameter adjustment history
-   * 
+   *
    * Requirement 13.7: Log parameter adjustments
    */
   getParameterHistory(): ParameterAdjustment[] {
@@ -382,7 +370,7 @@ export class AdaptiveLearningEngine {
 
   /**
    * Validate proposed changes against historical data
-   * 
+   *
    * Requirement 13.6: Validate changes against historical data before deployment
    */
   validateProposedThreshold(proposedThreshold: number): {
@@ -391,25 +379,25 @@ export class AdaptiveLearningEngine {
     recommendation: string;
   } {
     const records = this.getRecentRecords().filter(r => r.flagCorrect !== null);
-    
+
     if (records.length < 50) {
       return {
         valid: false,
         projectedStats: this.calculateStatistics(),
-        recommendation: 'Insufficient data for validation (need at least 50 samples)'
+        recommendation: 'Insufficient data for validation (need at least 50 samples)',
       };
     }
-    
+
     // Simulate what would have happened with proposed threshold
     let projectedTP = 0;
     let projectedFP = 0;
     let projectedTN = 0;
     let projectedFN = 0;
-    
+
     for (const record of records) {
       const wouldFlag = record.analysis.precision.precision >= proposedThreshold;
       const wasActualTrap = record.wasFlagged ? record.flagCorrect : !record.flagCorrect;
-      
+
       if (wouldFlag) {
         if (wasActualTrap) projectedTP++;
         else projectedFP++;
@@ -418,22 +406,22 @@ export class AdaptiveLearningEngine {
         else projectedTN++;
       }
     }
-    
-    const projectedPrecision = projectedTP + projectedFP > 0
-      ? projectedTP / (projectedTP + projectedFP)
-      : 0;
-    
-    const projectedRecall = projectedTP + projectedFN > 0
-      ? projectedTP / (projectedTP + projectedFN)
-      : 0;
-    
-    const projectedF1 = projectedPrecision + projectedRecall > 0
-      ? 2 * (projectedPrecision * projectedRecall) / (projectedPrecision + projectedRecall)
-      : 0;
-    
+
+    const projectedPrecision =
+      projectedTP + projectedFP > 0 ? projectedTP / (projectedTP + projectedFP) : 0;
+
+    const projectedRecall =
+      projectedTP + projectedFN > 0 ? projectedTP / (projectedTP + projectedFN) : 0;
+
+    const projectedF1 =
+      projectedPrecision + projectedRecall > 0
+        ? (2 * (projectedPrecision * projectedRecall)) / (projectedPrecision + projectedRecall)
+        : 0;
+
     const projectedStats: LearningStatistics = {
       totalPatterns: records.length,
-      flaggedPatterns: records.filter(r => r.analysis.precision.precision >= proposedThreshold).length,
+      flaggedPatterns: records.filter(r => r.analysis.precision.precision >= proposedThreshold)
+        .length,
       truePositives: projectedTP,
       falsePositives: projectedFP,
       trueNegatives: projectedTN,
@@ -442,14 +430,14 @@ export class AdaptiveLearningEngine {
       recall: projectedRecall,
       f1Score: projectedF1,
       currentPrecisionThreshold: proposedThreshold,
-      lastUpdate: new Date()
+      lastUpdate: new Date(),
     };
-    
+
     const currentStats = this.calculateStatistics();
-    
+
     // Validate: new threshold should improve or maintain F1 score
     const valid = projectedF1 >= currentStats.f1Score * 0.95; // Allow 5% degradation
-    
+
     let recommendation: string;
     if (projectedF1 > currentStats.f1Score) {
       recommendation = `Proposed threshold improves F1 score from ${(currentStats.f1Score * 100).toFixed(1)}% to ${(projectedF1 * 100).toFixed(1)}%`;
@@ -458,7 +446,7 @@ export class AdaptiveLearningEngine {
     } else {
       recommendation = `Proposed threshold degrades performance significantly (F1: ${(projectedF1 * 100).toFixed(1)}% vs current ${(currentStats.f1Score * 100).toFixed(1)}%)`;
     }
-    
+
     return { valid, projectedStats, recommendation };
   }
 
@@ -467,16 +455,16 @@ export class AdaptiveLearningEngine {
    */
   forceParameterUpdate(newThreshold: number, reason: string): void {
     const validation = this.validateProposedThreshold(newThreshold);
-    
+
     const previousThreshold = this.currentPrecisionThreshold;
     this.currentPrecisionThreshold = newThreshold;
-    
+
     this.parameterHistory.push({
       parameter: 'precisionThreshold',
       previousValue: previousThreshold,
       newValue: newThreshold,
       reason: `Manual update: ${reason} (Validation: ${validation.valid ? 'passed' : 'failed'})`,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
   }
 
@@ -491,7 +479,7 @@ export class AdaptiveLearningEngine {
     return {
       statistics: this.calculateStatistics(),
       parameterHistory: this.getParameterHistory(),
-      recentRecords: this.getRecentRecords()
+      recentRecords: this.getRecentRecords(),
     };
   }
 

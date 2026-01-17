@@ -1,10 +1,10 @@
 /**
  * Backtest Module Exports
- * 
+ *
  * Exports all backtesting components for Titan Phase 2 - The Hunter
  */
 
-export { 
+export {
   BacktestEngine,
   type BacktestConfig,
   type BacktestResults,
@@ -15,7 +15,7 @@ export {
   type EquityPoint,
   type DrawdownPoint,
   type LosingPeriod,
-  type MarketConditionAnalysis
+  type MarketConditionAnalysis,
 } from './BacktestEngine';
 
 export {
@@ -24,5 +24,5 @@ export {
   type ForwardTestResults,
   type ForwardTestMetrics,
   type PaperTrade,
-  type BacktestComparison
+  type BacktestComparison,
 } from './ForwardTestMode';

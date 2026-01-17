@@ -4,18 +4,18 @@
  * Defines exchange gateway interfaces and routing types.
  */
 
-import type { Order, OrderResult } from "./orders.js";
-import type { OrderBook } from "./statistics.js";
+import type { Order, OrderResult } from './orders.js';
+import type { OrderBook } from './statistics.js';
 
 /**
  * Supported exchanges
  */
-export type ExchangeName = "binance" | "bybit";
+export type ExchangeName = 'binance' | 'bybit';
 
 /**
  * Market type
  */
-export type MarketType = "SPOT" | "PERP";
+export type MarketType = 'SPOT' | 'PERP';
 
 /**
  * Exchange gateway interface
@@ -87,16 +87,10 @@ export interface Route {
  */
 export interface TransferManager {
   /** Transfer from spot to futures wallet */
-  transferSpotToFutures(
-    exchange: ExchangeName,
-    amount: number,
-  ): Promise<boolean>;
+  transferSpotToFutures(exchange: ExchangeName, amount: number): Promise<boolean>;
 
   /** Transfer from futures to spot wallet */
-  transferFuturesToSpot(
-    exchange: ExchangeName,
-    amount: number,
-  ): Promise<boolean>;
+  transferFuturesToSpot(exchange: ExchangeName, amount: number): Promise<boolean>;
 
   /** Withdraw to another exchange */
   withdrawToExchange(

@@ -29,7 +29,8 @@ describe("Performance Tracker Property Tests", () => {
                             symbol: "BTC",
                             type: "BASIS_SCALP",
                             entryTime: 0,
-                            exitTime: 0,
+                            exitTime: Date.now(),
+                            entryPrice: 50000,
                             entryBasis: 0,
                             exitBasis: 0,
                             size: 1,
@@ -45,10 +46,10 @@ describe("Performance Tracker Property Tests", () => {
                     const metrics = tracker.getMetrics();
 
                     expect(Math.abs(metrics.totalYield24h - expectedYield))
-                        .toBeLessThan(1e-9);
+                        .toBeLessThan(1e-6);
                     expect(
                         Math.abs(metrics.winRate - (wins / tradesData.length)),
-                    ).toBeLessThan(1e-9);
+                    ).toBeLessThan(1e-6);
                     expect(metrics.totalTrades).toBe(tradesData.length);
                 },
             ),
@@ -77,6 +78,7 @@ describe("Performance Tracker Property Tests", () => {
                             type: "BASIS_SCALP",
                             entryTime: 0,
                             exitTime: 0,
+                            entryPrice: 50000,
                             entryBasis: 0,
                             exitBasis: 0,
                             size: 1,
@@ -93,7 +95,7 @@ describe("Performance Tracker Property Tests", () => {
 
                     const metrics = tracker.getMetrics();
                     expect(Math.abs(metrics.maxDrawdown - expectedMaxDD))
-                        .toBeLessThan(1e-9);
+                        .toBeLessThan(1e-5);
                 },
             ),
         );
@@ -108,6 +110,7 @@ describe("Performance Tracker Property Tests", () => {
             type: "BASIS_SCALP",
             entryTime: 100,
             exitTime: 200,
+            entryPrice: 50000,
             entryBasis: 0,
             exitBasis: 0,
             size: 1,

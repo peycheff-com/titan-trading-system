@@ -1,9 +1,9 @@
 /**
  * DatabaseManager - Reliable database connection pooling with health monitoring
- * 
+ *
  * Provides robust database connectivity with connection pooling, health monitoring,
  * automatic reconnection, and comprehensive error handling for Railway deployment.
- * 
+ *
  * Requirements: 3.1.1, 3.1.2, 3.1.3, 3.1.4, 3.1.5
  */
 
@@ -20,14 +20,14 @@ export interface DatabaseConfig {
   user: string;
   password: string;
   ssl?: boolean | object;
-  
+
   // Connection pool settings
   min: number;
   max: number;
   idleTimeoutMillis: number;
   connectionTimeoutMillis: number;
   acquireTimeoutMillis: number;
-  
+
   // Health check settings
   healthCheckIntervalMs: number;
   healthCheckTimeoutMs: number;
@@ -93,7 +93,7 @@ export class DatabaseManager extends EventEmitter {
       averageQueryTime: 0,
       connectionErrors: 0,
       lastHealthCheck: 0,
-      isHealthy: false
+      isHealthy: false,
     };
   }
 
@@ -114,7 +114,7 @@ export class DatabaseManager extends EventEmitter {
           database: url.pathname.slice(1), // Remove leading slash
           user: url.username,
           password: url.password,
-          ssl: url.searchParams.get('sslmode') !== 'disable'
+          ssl: url.searchParams.get('sslmode') !== 'disable',
         };
       } catch (error) {
         console.warn('Failed to parse DATABASE_URL, falling back to individual env vars');
@@ -127,20 +127,20 @@ export class DatabaseManager extends EventEmitter {
       database: parsedConfig.database || process.env.DB_NAME || 'titan_brain',
       user: parsedConfig.user || process.env.DB_USER || 'postgres',
       password: parsedConfig.password || process.env.DB_PASSWORD || '',
-      ssl: parsedConfig.ssl !== undefined ? parsedConfig.ssl : (process.env.DB_SSL === 'true'),
-      
+      ssl: parsedConfig.ssl !== undefined ? parsedConfig.ssl : process.env.DB_SSL === 'true',
+
       // Connection pool settings
       min: parseInt(process.env.DB_POOL_MIN || '2'),
       max: parseInt(process.env.DB_POOL_MAX || '10'),
       idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000'),
       connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '10000'),
       acquireTimeoutMillis: parseInt(process.env.DB_ACQUIRE_TIMEOUT || '5000'),
-      
+
       // Health check settings
       healthCheckIntervalMs: parseInt(process.env.DB_HEALTH_CHECK_INTERVAL || '30000'),
       healthCheckTimeoutMs: parseInt(process.env.DB_HEALTH_CHECK_TIMEOUT || '5000'),
       maxReconnectAttempts: parseInt(process.env.DB_MAX_RECONNECT_ATTEMPTS || '5'),
-      reconnectDelayMs: parseInt(process.env.DB_RECONNECT_DELAY || '5000')
+      reconnectDelayMs: parseInt(process.env.DB_RECONNECT_DELAY || '5000'),
     };
   }
 
@@ -162,7 +162,7 @@ export class DatabaseManager extends EventEmitter {
       min: this.config.min,
       max: this.config.max,
       idleTimeoutMillis: this.config.idleTimeoutMillis,
-      connectionTimeoutMillis: this.config.connectionTimeoutMillis
+      connectionTimeoutMillis: this.config.connectionTimeoutMillis,
     };
 
     this.pool = new Pool(poolConfig);
@@ -206,8 +206,11 @@ export class DatabaseManager extends EventEmitter {
     this.pool.on('error', (error, client) => {
       this.metrics.connectionErrors++;
       this.metrics.isHealthy = false;
-      this.emit('connection:error', { error: error.message, connectionErrors: this.metrics.connectionErrors });
-      
+      this.emit('connection:error', {
+        error: error.message,
+        connectionErrors: this.metrics.connectionErrors,
+      });
+
       // Attempt reconnection if not shutting down
       if (!this.isShuttingDown) {
         this.attemptReconnection();
@@ -264,13 +267,16 @@ export class DatabaseManager extends EventEmitter {
     if (this.isShuttingDown) return;
 
     const startTime = Date.now();
-    
+
     try {
       await Promise.race([
         this.testConnection(),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Health check timeout')), this.config.healthCheckTimeoutMs)
-        )
+        new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error('Health check timeout')),
+            this.config.healthCheckTimeoutMs,
+          ),
+        ),
       ]);
 
       this.metrics.lastHealthCheck = Date.now();
@@ -279,9 +285,9 @@ export class DatabaseManager extends EventEmitter {
     } catch (error) {
       this.metrics.lastHealthCheck = Date.now();
       this.metrics.isHealthy = false;
-      this.emit('health:check:failure', { 
+      this.emit('health:check:failure', {
         error: error instanceof Error ? error.message : 'Unknown error',
-        duration: Date.now() - startTime
+        duration: Date.now() - startTime,
       });
 
       // Attempt reconnection on health check failure
@@ -299,11 +305,11 @@ export class DatabaseManager extends EventEmitter {
 
     this.reconnectAttempts++;
     const delay = this.config.reconnectDelayMs * Math.pow(2, this.reconnectAttempts - 1);
-    
-    this.emit('reconnection:attempt', { 
-      attempt: this.reconnectAttempts, 
+
+    this.emit('reconnection:attempt', {
+      attempt: this.reconnectAttempts,
       maxAttempts: this.config.maxReconnectAttempts,
-      delay 
+      delay,
     });
 
     setTimeout(async () => {
@@ -312,11 +318,11 @@ export class DatabaseManager extends EventEmitter {
         this.emit('reconnection:success', { attempts: this.reconnectAttempts });
         this.reconnectAttempts = 0;
       } catch (error) {
-        this.emit('reconnection:failure', { 
+        this.emit('reconnection:failure', {
           attempt: this.reconnectAttempts,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : 'Unknown error',
         });
-        
+
         // Continue attempting if we haven't reached max attempts
         if (this.reconnectAttempts < this.config.maxReconnectAttempts) {
           this.attemptReconnection();
@@ -345,33 +351,33 @@ export class DatabaseManager extends EventEmitter {
     try {
       const result = await this.pool.query(text, params);
       const duration = Date.now() - startTime;
-      
+
       // Update metrics
       this.metrics.successfulQueries++;
       this.updateQueryTimeMetrics(duration);
-      
-      this.emit('query:success', { 
+
+      this.emit('query:success', {
         command: result.command,
         rowCount: result.rowCount,
-        duration 
+        duration,
       });
 
       return {
         rows: result.rows,
         rowCount: result.rowCount || 0,
         duration,
-        command: result.command || 'UNKNOWN'
+        command: result.command || 'UNKNOWN',
       };
     } catch (error) {
       const duration = Date.now() - startTime;
       this.metrics.failedQueries++;
-      
-      this.emit('query:failure', { 
+
+      this.emit('query:failure', {
         error: error instanceof Error ? error.message : 'Unknown error',
         duration,
-        query: text.substring(0, 100) // Log first 100 chars for debugging
+        query: text.substring(0, 100), // Log first 100 chars for debugging
       });
-      
+
       throw error;
     }
   }
@@ -379,40 +385,44 @@ export class DatabaseManager extends EventEmitter {
   /**
    * Execute a query with a specific client (for transactions)
    */
-  async queryWithClient<T = any>(client: PoolClient, text: string, params?: any[]): Promise<QueryResult<T>> {
+  async queryWithClient<T = any>(
+    client: PoolClient,
+    text: string,
+    params?: any[],
+  ): Promise<QueryResult<T>> {
     const startTime = Date.now();
     this.metrics.totalQueries++;
 
     try {
       const result = await client.query(text, params);
       const duration = Date.now() - startTime;
-      
+
       // Update metrics
       this.metrics.successfulQueries++;
       this.updateQueryTimeMetrics(duration);
-      
-      this.emit('query:success', { 
+
+      this.emit('query:success', {
         command: result.command,
         rowCount: result.rowCount,
-        duration 
+        duration,
       });
 
       return {
         rows: result.rows,
         rowCount: result.rowCount || 0,
         duration,
-        command: result.command || 'UNKNOWN'
+        command: result.command || 'UNKNOWN',
       };
     } catch (error) {
       const duration = Date.now() - startTime;
       this.metrics.failedQueries++;
-      
-      this.emit('query:failure', { 
+
+      this.emit('query:failure', {
         error: error instanceof Error ? error.message : 'Unknown error',
         duration,
-        query: text.substring(0, 100)
+        query: text.substring(0, 100),
       });
-      
+
       throw error;
     }
   }
@@ -437,18 +447,18 @@ export class DatabaseManager extends EventEmitter {
    */
   async transaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
     const client = await this.getClient();
-    
+
     try {
       await client.query('BEGIN');
       const result = await callback(client);
       await client.query('COMMIT');
-      
+
       this.emit('transaction:success');
       return result;
     } catch (error) {
       await client.query('ROLLBACK');
-      this.emit('transaction:rollback', { 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      this.emit('transaction:rollback', {
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
       throw error;
     } finally {
@@ -461,14 +471,15 @@ export class DatabaseManager extends EventEmitter {
    */
   private updateQueryTimeMetrics(duration: number): void {
     this.queryHistory.push(duration);
-    
+
     // Keep only last 100 queries for average calculation
     if (this.queryHistory.length > 100) {
       this.queryHistory.shift();
     }
-    
+
     // Calculate average query time
-    this.metrics.averageQueryTime = this.queryHistory.reduce((sum, time) => sum + time, 0) / this.queryHistory.length;
+    this.metrics.averageQueryTime =
+      this.queryHistory.reduce((sum, time) => sum + time, 0) / this.queryHistory.length;
   }
 
   /**
@@ -500,7 +511,7 @@ export class DatabaseManager extends EventEmitter {
       totalConnections: this.metrics.totalConnections,
       idleConnections: this.metrics.idleConnections,
       waitingClients: this.metrics.waitingClients,
-      isHealthy: this.metrics.isHealthy
+      isHealthy: this.metrics.isHealthy,
     };
   }
 

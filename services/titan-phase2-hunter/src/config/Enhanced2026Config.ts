@@ -10,17 +10,10 @@
  * Requirements: 16.1-16.7 (Configuration Management for Enhanced Features)
  */
 
-import { EventEmitter } from "events";
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  unwatchFile,
-  watchFile,
-  writeFileSync,
-} from "fs";
-import { dirname, join } from "path";
-import { EventCategory } from "../types";
+import { EventEmitter } from 'events';
+import { existsSync, mkdirSync, readFileSync, unwatchFile, watchFile, writeFileSync } from 'fs';
+import { dirname, join } from 'path';
+import { EventCategory } from '../types';
 
 // ============================================================================
 // CONFIGURATION INTERFACES
@@ -78,13 +71,13 @@ export interface BotTrapConfig {
  */
 export interface GlobalAggregatorConfig {
   enabled: boolean;
-  exchanges: ("binance" | "coinbase" | "kraken")[];
+  exchanges: ('binance' | 'coinbase' | 'kraken')[];
   exchangeWeights: {
     binance: number; // 20-50%
     coinbase: number; // 20-50%
     kraken: number; // 20-50%
   };
-  weightingMethod: "volume" | "liquidity" | "hybrid";
+  weightingMethod: 'volume' | 'liquidity' | 'hybrid';
   consensusThreshold: number; // 0.5-1.0 (2 out of 3 = 0.67)
   manipulationSensitivity: number; // 0-100
   reconnectInterval: number; // milliseconds
@@ -159,7 +152,7 @@ export interface Enhanced2026ValidationResult {
  * Configuration change event
  */
 export interface Enhanced2026ConfigChangeEvent {
-  section: keyof Enhanced2026Config | "all";
+  section: keyof Enhanced2026Config | 'all';
   oldValue: unknown;
   newValue: unknown;
   timestamp: number;
@@ -175,7 +168,7 @@ export interface Enhanced2026ConfigChangeEvent {
 export const DEFAULT_ENHANCED_2026_CONFIG: Enhanced2026Config = {
   oracle: {
     enabled: true,
-    polymarketApiKey: "",
+    polymarketApiKey: '',
     vetoThreshold: 40, // 40% conflict threshold for veto
     convictionMultiplierMax: 1.5,
     eventCategories: [
@@ -210,13 +203,13 @@ export const DEFAULT_ENHANCED_2026_CONFIG: Enhanced2026Config = {
   },
   globalAggregator: {
     enabled: true,
-    exchanges: ["binance", "coinbase", "kraken"],
+    exchanges: ['binance', 'coinbase', 'kraken'],
     exchangeWeights: {
       binance: 40,
       coinbase: 35,
       kraken: 25,
     },
-    weightingMethod: "volume",
+    weightingMethod: 'volume',
     consensusThreshold: 0.67, // Requirement 4.4: 2 out of 3
     manipulationSensitivity: 70,
     reconnectInterval: 5000,
@@ -268,9 +261,9 @@ export class Enhanced2026ConfigManager extends EventEmitter {
   private configPath: string;
   private isWatching: boolean = false;
 
-  constructor(configDirectory: string = "./config") {
+  constructor(configDirectory: string = './config') {
     super();
-    this.configPath = join(configDirectory, "enhanced-2026.config.json");
+    this.configPath = join(configDirectory, 'enhanced-2026.config.json');
     this.config = this.loadConfig();
   }
 
@@ -281,24 +274,20 @@ export class Enhanced2026ConfigManager extends EventEmitter {
   loadConfig(): Enhanced2026Config {
     try {
       if (!existsSync(this.configPath)) {
-        console.log(
-          "📋 No enhanced 2026 config found, creating default configuration",
-        );
+        console.log('📋 No enhanced 2026 config found, creating default configuration');
         this.saveConfig(DEFAULT_ENHANCED_2026_CONFIG);
         return { ...DEFAULT_ENHANCED_2026_CONFIG };
       }
 
-      const fileContent = readFileSync(this.configPath, "utf8");
+      const fileContent = readFileSync(this.configPath, 'utf8');
       const loadedConfig = JSON.parse(fileContent) as Enhanced2026Config;
 
       // Validate loaded configuration
       const validation = this.validateConfig(loadedConfig);
       if (!validation.isValid) {
-        console.error(
-          "❌ ENHANCED_CONFIG_CORRUPTED: Invalid configuration file",
-        );
-        console.error("Errors:", validation.errors);
-        console.log("📋 Loading default enhanced configuration");
+        console.error('❌ ENHANCED_CONFIG_CORRUPTED: Invalid configuration file');
+        console.error('Errors:', validation.errors);
+        console.log('📋 Loading default enhanced configuration');
 
         // Backup corrupted config
         const backupPath = `${this.configPath}.corrupted.${Date.now()}`;
@@ -312,18 +301,15 @@ export class Enhanced2026ConfigManager extends EventEmitter {
       // Merge with defaults to ensure all fields are present
       const mergedConfig = this.mergeWithDefaults(loadedConfig);
 
-      console.log("✅ Enhanced 2026 configuration loaded successfully");
+      console.log('✅ Enhanced 2026 configuration loaded successfully');
       if (validation.warnings.length > 0) {
-        console.warn("⚠️ Configuration warnings:", validation.warnings);
+        console.warn('⚠️ Configuration warnings:', validation.warnings);
       }
 
       return mergedConfig;
     } catch (error) {
-      console.error(
-        "❌ ENHANCED_CONFIG_CORRUPTED: Failed to load configuration:",
-        error,
-      );
-      console.log("📋 Loading default enhanced configuration");
+      console.error('❌ ENHANCED_CONFIG_CORRUPTED: Failed to load configuration:', error);
+      console.log('📋 Loading default enhanced configuration');
       this.saveConfig(DEFAULT_ENHANCED_2026_CONFIG);
       return { ...DEFAULT_ENHANCED_2026_CONFIG };
     }
@@ -342,9 +328,7 @@ export class Enhanced2026ConfigManager extends EventEmitter {
       // Validate before saving
       const validation = this.validateConfig(config);
       if (!validation.isValid) {
-        throw new Error(
-          `Invalid configuration: ${validation.errors.join(", ")}`,
-        );
+        throw new Error(`Invalid configuration: ${validation.errors.join(', ')}`);
       }
 
       // Ensure directory exists
@@ -354,23 +338,23 @@ export class Enhanced2026ConfigManager extends EventEmitter {
       }
 
       // Write to file
-      writeFileSync(this.configPath, JSON.stringify(config, null, 2), "utf8");
+      writeFileSync(this.configPath, JSON.stringify(config, null, 2), 'utf8');
 
       // Update internal config
       const oldConfig = { ...this.config };
       this.config = { ...config };
 
       // Emit change event
-      this.emit("configChanged", {
-        section: "all",
+      this.emit('configChanged', {
+        section: 'all',
         oldValue: oldConfig,
         newValue: config,
         timestamp: Date.now(),
       } as Enhanced2026ConfigChangeEvent);
 
-      console.log("💾 Enhanced 2026 configuration saved successfully");
+      console.log('💾 Enhanced 2026 configuration saved successfully');
     } catch (error) {
-      console.error("❌ Failed to save enhanced configuration:", error);
+      console.error('❌ Failed to save enhanced configuration:', error);
       throw error;
     }
   }
@@ -447,9 +431,7 @@ export class Enhanced2026ConfigManager extends EventEmitter {
    * Update Global Aggregator configuration
    * Requirement 16.4: Allow weighting adjustment for each exchange (20-50%)
    */
-  updateGlobalAggregatorConfig(
-    aggregatorConfig: Partial<GlobalAggregatorConfig>,
-  ): void {
+  updateGlobalAggregatorConfig(aggregatorConfig: Partial<GlobalAggregatorConfig>): void {
     const newAggregatorConfig = {
       ...this.config.globalAggregator,
       ...aggregatorConfig,
@@ -480,29 +462,27 @@ export class Enhanced2026ConfigManager extends EventEmitter {
 
     watchFile(this.configPath, { interval: 1000 }, (curr, prev) => {
       if (curr.mtime !== prev.mtime) {
-        console.log(
-          "🔄 Enhanced 2026 configuration file changed, reloading...",
-        );
+        console.log('🔄 Enhanced 2026 configuration file changed, reloading...');
         try {
           const newConfig = this.loadConfig();
           const oldConfig = { ...this.config };
           this.config = newConfig;
 
-          this.emit("configReloaded", {
-            section: "all",
+          this.emit('configReloaded', {
+            section: 'all',
             oldValue: oldConfig,
             newValue: newConfig,
             timestamp: Date.now(),
           } as Enhanced2026ConfigChangeEvent);
 
-          console.log("✅ Enhanced 2026 configuration reloaded successfully");
+          console.log('✅ Enhanced 2026 configuration reloaded successfully');
         } catch (error) {
-          console.error("❌ Failed to reload enhanced configuration:", error);
+          console.error('❌ Failed to reload enhanced configuration:', error);
         }
       }
     });
 
-    console.log("👁️ Started watching enhanced 2026 configuration file");
+    console.log('👁️ Started watching enhanced 2026 configuration file');
   }
 
   /**
@@ -512,7 +492,7 @@ export class Enhanced2026ConfigManager extends EventEmitter {
     if (!this.isWatching) return;
     unwatchFile(this.configPath);
     this.isWatching = false;
-    console.log("👁️ Stopped watching enhanced 2026 configuration file");
+    console.log('👁️ Stopped watching enhanced 2026 configuration file');
   }
 
   /**
@@ -525,68 +505,59 @@ export class Enhanced2026ConfigManager extends EventEmitter {
 
     // Validate Oracle config
     if (config.oracle) {
-      const { vetoThreshold, convictionMultiplierMax, updateInterval } =
-        config.oracle;
+      const { vetoThreshold, convictionMultiplierMax, updateInterval } = config.oracle;
 
       // Requirement 16.1: Veto threshold 30-70%
       if (isNaN(vetoThreshold) || vetoThreshold < 30 || vetoThreshold > 70) {
-        errors.push(
-          `Oracle veto threshold must be 30-70%, got ${vetoThreshold}%`,
-        );
+        errors.push(`Oracle veto threshold must be 30-70%, got ${vetoThreshold}%`);
       }
 
       if (
-        isNaN(convictionMultiplierMax) || convictionMultiplierMax < 1.0 ||
+        isNaN(convictionMultiplierMax) ||
+        convictionMultiplierMax < 1.0 ||
         convictionMultiplierMax > 2.0
       ) {
         errors.push(
-          `Oracle conviction multiplier max must be 1.0-2.0, got ${convictionMultiplierMax}`,
+          `Oracle conviction multiplier max must be 1.0-2.0, got ${convictionMultiplierMax}`
         );
       }
 
       if (updateInterval < 10 || updateInterval > 300) {
         warnings.push(
-          `Oracle update interval ${updateInterval}s may be suboptimal (recommended: 10-300s)`,
+          `Oracle update interval ${updateInterval}s may be suboptimal (recommended: 10-300s)`
         );
       }
     } else {
-      errors.push("Missing oracle configuration");
+      errors.push('Missing oracle configuration');
     }
 
     // Validate Flow Validator config
     if (config.flowValidator) {
-      const {
-        sweepThreshold,
-        icebergDensityThreshold,
-        institutionalThreshold,
-      } = config.flowValidator;
+      const { sweepThreshold, icebergDensityThreshold, institutionalThreshold } =
+        config.flowValidator;
 
       // Requirement 16.2: Sweep threshold 3-10 levels
       if (isNaN(sweepThreshold) || sweepThreshold < 3 || sweepThreshold > 10) {
-        errors.push(
-          `Flow validator sweep threshold must be 3-10 levels, got ${sweepThreshold}`,
-        );
+        errors.push(`Flow validator sweep threshold must be 3-10 levels, got ${sweepThreshold}`);
       }
 
       if (
-        isNaN(icebergDensityThreshold) || icebergDensityThreshold < 0 ||
+        isNaN(icebergDensityThreshold) ||
+        icebergDensityThreshold < 0 ||
         icebergDensityThreshold > 100
       ) {
-        errors.push(
-          `Iceberg density threshold must be 0-100, got ${icebergDensityThreshold}`,
-        );
+        errors.push(`Iceberg density threshold must be 0-100, got ${icebergDensityThreshold}`);
       }
 
       if (
-        isNaN(institutionalThreshold) || institutionalThreshold < 0 ||
+        isNaN(institutionalThreshold) ||
+        institutionalThreshold < 0 ||
         institutionalThreshold > 100
       ) {
-        errors.push(
-          `Institutional threshold must be 0-100, got ${institutionalThreshold}`,
-        );
+        errors.push(`Institutional threshold must be 0-100, got ${institutionalThreshold}`);
       }
     } else {
-      errors.push("Missing flowValidator configuration");
+      errors.push('Missing flowValidator configuration');
     }
 
     // Validate Bot Trap config
@@ -595,34 +566,23 @@ export class Enhanced2026ConfigManager extends EventEmitter {
         config.botTrapDetector;
 
       // Requirement 16.3: Precision tolerance 0.1-1%
-      if (
-        isNaN(precisionThreshold) || precisionThreshold < 0.1 ||
-        precisionThreshold > 1.0
-      ) {
-        errors.push(
-          `Bot trap precision threshold must be 0.1-1.0%, got ${precisionThreshold}%`,
-        );
+      if (isNaN(precisionThreshold) || precisionThreshold < 0.1 || precisionThreshold > 1.0) {
+        errors.push(`Bot trap precision threshold must be 0.1-1.0%, got ${precisionThreshold}%`);
+      }
+
+      if (isNaN(suspicionThreshold) || suspicionThreshold < 0 || suspicionThreshold > 100) {
+        errors.push(`Suspicion threshold must be 0-100, got ${suspicionThreshold}`);
       }
 
       if (
-        isNaN(suspicionThreshold) || suspicionThreshold < 0 ||
-        suspicionThreshold > 100
-      ) {
-        errors.push(
-          `Suspicion threshold must be 0-100, got ${suspicionThreshold}`,
-        );
-      }
-
-      if (
-        isNaN(positionSizeReduction) || positionSizeReduction < 0.1 ||
+        isNaN(positionSizeReduction) ||
+        positionSizeReduction < 0.1 ||
         positionSizeReduction > 1.0
       ) {
-        errors.push(
-          `Position size reduction must be 0.1-1.0, got ${positionSizeReduction}`,
-        );
+        errors.push(`Position size reduction must be 0.1-1.0, got ${positionSizeReduction}`);
       }
     } else {
-      errors.push("Missing botTrapDetector configuration");
+      errors.push('Missing botTrapDetector configuration');
     }
 
     // Validate Global Aggregator config
@@ -632,28 +592,21 @@ export class Enhanced2026ConfigManager extends EventEmitter {
       // Requirement 16.4: Exchange weights 20-50%
       for (const [exchange, weight] of Object.entries(exchangeWeights)) {
         if (weight < 20 || weight > 50) {
-          errors.push(
-            `Exchange weight for ${exchange} must be 20-50%, got ${weight}%`,
-          );
+          errors.push(`Exchange weight for ${exchange} must be 20-50%, got ${weight}%`);
         }
       }
 
       // Validate weights sum to 100%
-      const totalWeight = Object.values(exchangeWeights).reduce(
-        (sum, w) => sum + w,
-        0,
-      );
+      const totalWeight = Object.values(exchangeWeights).reduce((sum, w) => sum + w, 0);
       if (Math.abs(totalWeight - 100) > 0.1) {
         errors.push(`Exchange weights must sum to 100%, got ${totalWeight}%`);
       }
 
       if (consensusThreshold < 0.5 || consensusThreshold > 1.0) {
-        errors.push(
-          `Consensus threshold must be 0.5-1.0, got ${consensusThreshold}`,
-        );
+        errors.push(`Consensus threshold must be 0.5-1.0, got ${consensusThreshold}`);
       }
     } else {
-      errors.push("Missing globalAggregator configuration");
+      errors.push('Missing globalAggregator configuration');
     }
 
     // Validate Conviction config
@@ -662,68 +615,52 @@ export class Enhanced2026ConfigManager extends EventEmitter {
 
       // Requirement 16.5: Range 1.0x-2.0x
       if (isNaN(minMultiplier) || minMultiplier < 0.5 || minMultiplier > 1.5) {
-        errors.push(
-          `Min conviction multiplier must be 0.5-1.5, got ${minMultiplier}`,
-        );
+        errors.push(`Min conviction multiplier must be 0.5-1.5, got ${minMultiplier}`);
       }
 
       if (isNaN(maxMultiplier) || maxMultiplier < 1.0 || maxMultiplier > 2.0) {
-        errors.push(
-          `Max conviction multiplier must be 1.0-2.0, got ${maxMultiplier}`,
-        );
+        errors.push(`Max conviction multiplier must be 1.0-2.0, got ${maxMultiplier}`);
       }
 
       if (minMultiplier >= maxMultiplier) {
-        errors.push(
-          `Min multiplier (${minMultiplier}) must be less than max (${maxMultiplier})`,
-        );
+        errors.push(`Min multiplier (${minMultiplier}) must be less than max (${maxMultiplier})`);
       }
     } else {
-      errors.push("Missing conviction configuration");
+      errors.push('Missing conviction configuration');
     }
 
     // Validate Enhanced Risk config
     if (config.enhancedRisk) {
-      const { highImpactEventThreshold, highImpactPositionReduction } =
-        config.enhancedRisk;
+      const { highImpactEventThreshold, highImpactPositionReduction } = config.enhancedRisk;
 
       if (highImpactEventThreshold < 50 || highImpactEventThreshold > 95) {
-        warnings.push(
-          `High impact event threshold ${highImpactEventThreshold}% may be suboptimal`,
-        );
+        warnings.push(`High impact event threshold ${highImpactEventThreshold}% may be suboptimal`);
       }
 
-      if (
-        highImpactPositionReduction < 20 || highImpactPositionReduction > 80
-      ) {
+      if (highImpactPositionReduction < 20 || highImpactPositionReduction > 80) {
         warnings.push(
-          `Position reduction ${highImpactPositionReduction}% may be too aggressive or too lenient`,
+          `Position reduction ${highImpactPositionReduction}% may be too aggressive or too lenient`
         );
       }
     } else {
-      errors.push("Missing enhancedRisk configuration");
+      errors.push('Missing enhancedRisk configuration');
     }
 
     // Validate Emergency config
     if (config.emergency) {
-      const { predictionEmergencyThreshold, trapSaturationThreshold } =
-        config.emergency;
+      const { predictionEmergencyThreshold, trapSaturationThreshold } = config.emergency;
 
-      if (
-        predictionEmergencyThreshold < 80 || predictionEmergencyThreshold > 99
-      ) {
+      if (predictionEmergencyThreshold < 80 || predictionEmergencyThreshold > 99) {
         warnings.push(
-          `Prediction emergency threshold ${predictionEmergencyThreshold}% may trigger too often or too rarely`,
+          `Prediction emergency threshold ${predictionEmergencyThreshold}% may trigger too often or too rarely`
         );
       }
 
       if (trapSaturationThreshold < 60 || trapSaturationThreshold > 95) {
-        warnings.push(
-          `Trap saturation threshold ${trapSaturationThreshold}% may be suboptimal`,
-        );
+        warnings.push(`Trap saturation threshold ${trapSaturationThreshold}% may be suboptimal`);
       }
     } else {
-      errors.push("Missing emergency configuration");
+      errors.push('Missing emergency configuration');
     }
 
     return {
@@ -736,9 +673,7 @@ export class Enhanced2026ConfigManager extends EventEmitter {
   /**
    * Merge loaded config with defaults to ensure all fields are present
    */
-  private mergeWithDefaults(
-    loadedConfig: Partial<Enhanced2026Config>,
-  ): Enhanced2026Config {
+  private mergeWithDefaults(loadedConfig: Partial<Enhanced2026Config>): Enhanced2026Config {
     return {
       oracle: {
         ...DEFAULT_ENHANCED_2026_CONFIG.oracle,
@@ -781,7 +716,7 @@ export class Enhanced2026ConfigManager extends EventEmitter {
    * Reset configuration to defaults
    */
   resetToDefaults(): void {
-    console.log("🔄 Resetting enhanced 2026 configuration to defaults");
+    console.log('🔄 Resetting enhanced 2026 configuration to defaults');
     this.saveConfig({ ...DEFAULT_ENHANCED_2026_CONFIG });
   }
 
@@ -792,24 +727,22 @@ export class Enhanced2026ConfigManager extends EventEmitter {
     const config = this.config;
     return [
       `🔮 Oracle: ${
-        config.oracle.enabled ? "Enabled" : "Disabled"
+        config.oracle.enabled ? 'Enabled' : 'Disabled'
       }, Veto: ${config.oracle.vetoThreshold}%`,
       `📊 Flow Validator: ${
-        config.flowValidator.enabled ? "Enabled" : "Disabled"
+        config.flowValidator.enabled ? 'Enabled' : 'Disabled'
       }, Sweep: ${config.flowValidator.sweepThreshold} levels`,
       `🤖 Bot Trap: ${
-        config.botTrapDetector.enabled ? "Enabled" : "Disabled"
+        config.botTrapDetector.enabled ? 'Enabled' : 'Disabled'
       }, Precision: ${config.botTrapDetector.precisionThreshold}%`,
-      `🌐 Global CVD: ${
-        config.globalAggregator.enabled ? "Enabled" : "Disabled"
-      }, Consensus: ${
-        (config.globalAggregator.consensusThreshold * 100).toFixed(0)
-      }%`,
+      `🌐 Global CVD: ${config.globalAggregator.enabled ? 'Enabled' : 'Disabled'}, Consensus: ${(
+        config.globalAggregator.consensusThreshold * 100
+      ).toFixed(0)}%`,
       `💪 Conviction: ${
-        config.conviction.enabled ? "Enabled" : "Disabled"
+        config.conviction.enabled ? 'Enabled' : 'Disabled'
       }, Max: ${config.conviction.maxMultiplier}x`,
       `⚠️ Emergency: Prediction ${config.emergency.predictionEmergencyThreshold}%, Trap ${config.emergency.trapSaturationThreshold}%`,
-    ].join("\n");
+    ].join('\n');
   }
 
   /**
@@ -830,11 +763,11 @@ export class Enhanced2026ConfigManager extends EventEmitter {
    */
   getEnabledEnhancements(): string[] {
     const enabled: string[] = [];
-    if (this.config.oracle.enabled) enabled.push("Oracle");
-    if (this.config.flowValidator.enabled) enabled.push("FlowValidator");
-    if (this.config.botTrapDetector.enabled) enabled.push("BotTrapDetector");
-    if (this.config.globalAggregator.enabled) enabled.push("GlobalAggregator");
-    if (this.config.conviction.enabled) enabled.push("Conviction");
+    if (this.config.oracle.enabled) enabled.push('Oracle');
+    if (this.config.flowValidator.enabled) enabled.push('FlowValidator');
+    if (this.config.botTrapDetector.enabled) enabled.push('BotTrapDetector');
+    if (this.config.globalAggregator.enabled) enabled.push('GlobalAggregator');
+    if (this.config.conviction.enabled) enabled.push('Conviction');
     return enabled;
   }
 

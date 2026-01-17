@@ -1,22 +1,19 @@
 /**
  * FootprintAnalyzer - Intra-Candle Footprint Analysis
- * 
+ *
  * Purpose: Analyze volume distribution at each price level within candles
  * to detect genuine institutional flow vs painted signals.
- * 
+ *
  * Key Features:
  * - Build footprint data structure for price-level volume distribution
  * - Create footprint calculation engine for OHLCV data
  * - Implement aggressive vs passive volume classification
- * 
+ *
  * Requirements: 2.1 (Implement intra-candle footprinting)
  */
 
 import { EventEmitter } from 'events';
-import {
-  FootprintData,
-  TradeFootprint
-} from '../types';
+import { FootprintData, TradeFootprint } from '../types';
 import { OHLCV, CVDTrade } from '../types';
 
 // ============================================================================
@@ -80,7 +77,7 @@ const DEFAULT_CONFIG: FootprintConfig = {
   tickSize: 0.01, // Default tick size (will be adjusted per symbol)
   minSignificantVolume: 100, // Minimum volume to consider
   analysisWindow: 60000, // 1 minute
-  aggressiveThreshold: 0.6 // 60% threshold for aggressive classification
+  aggressiveThreshold: 0.6, // 60% threshold for aggressive classification
 };
 
 // ============================================================================
@@ -89,7 +86,7 @@ const DEFAULT_CONFIG: FootprintConfig = {
 
 /**
  * FootprintAnalyzer - Intra-candle volume distribution analysis
- * 
+ *
  * Analyzes trade data to build footprint charts showing volume
  * distribution at each price level within a candle.
  */
@@ -112,15 +109,10 @@ export class FootprintAnalyzer extends EventEmitter {
    * Build footprint data from trades within a candle
    * Requirement 2.1: Implement intra-candle footprinting
    */
-  buildFootprint(
-    symbol: string,
-    candle: OHLCV,
-    trades: CVDTrade[]
-  ): CandleFootprint {
+  buildFootprint(symbol: string, candle: OHLCV, trades: CVDTrade[]): CandleFootprint {
     // Filter trades within candle timeframe
-    const candleTrades = trades.filter(t => 
-      t.time >= candle.timestamp && 
-      t.time < candle.timestamp + this.config.analysisWindow
+    const candleTrades = trades.filter(
+      t => t.time >= candle.timestamp && t.time < candle.timestamp + this.config.analysisWindow
     );
 
     // Calculate tick size based on price
@@ -137,7 +129,7 @@ export class FootprintAnalyzer extends EventEmitter {
     for (const trade of candleTrades) {
       // Round price to tick level
       const priceLevel = this.roundToTick(trade.price, tickSize);
-      
+
       // Get or create price level data
       let levelData = priceLevelMap.get(priceLevel);
       if (!levelData) {
@@ -148,7 +140,7 @@ export class FootprintAnalyzer extends EventEmitter {
           trades: 0,
           aggressiveVolume: 0,
           passiveVolume: 0,
-          delta: 0
+          delta: 0,
         };
         priceLevelMap.set(priceLevel, levelData);
       }
@@ -179,8 +171,9 @@ export class FootprintAnalyzer extends EventEmitter {
     passiveVolume = totalBuyVolume + totalSellVolume - aggressiveVolume;
 
     // Convert map to sorted array
-    const priceLevels = Array.from(priceLevelMap.values())
-      .sort((a, b) => b.priceLevel - a.priceLevel); // High to low
+    const priceLevels = Array.from(priceLevelMap.values()).sort(
+      (a, b) => b.priceLevel - a.priceLevel
+    ); // High to low
 
     // Calculate ratios
     const totalVolume = totalBuyVolume + totalSellVolume;
@@ -189,9 +182,7 @@ export class FootprintAnalyzer extends EventEmitter {
 
     // Calculate imbalance score (-100 to +100)
     const delta = totalBuyVolume - totalSellVolume;
-    const imbalanceScore = totalVolume > 0 
-      ? (delta / totalVolume) * 100 
-      : 0;
+    const imbalanceScore = totalVolume > 0 ? (delta / totalVolume) * 100 : 0;
 
     const footprint: CandleFootprint = {
       symbol,
@@ -207,7 +198,7 @@ export class FootprintAnalyzer extends EventEmitter {
       priceLevels,
       aggressiveRatio,
       passiveRatio,
-      imbalanceScore
+      imbalanceScore,
     };
 
     // Cache the footprint
@@ -242,16 +233,13 @@ export class FootprintAnalyzer extends EventEmitter {
 
     // Detect institutional signature
     // Institutions typically show: high volume concentration, consistent delta, aggressive activity
-    const institutionalSignature = 
-      volumeConcentration > 60 &&
-      Math.abs(deltaStrength) > 30 &&
-      aggressiveActivity > 50;
+    const institutionalSignature =
+      volumeConcentration > 60 && Math.abs(deltaStrength) > 30 && aggressiveActivity > 50;
 
     // Calculate confidence
-    const confidence = Math.min(100, 
-      (volumeConcentration * 0.3) +
-      (Math.abs(deltaStrength) * 0.4) +
-      (aggressiveActivity * 0.3)
+    const confidence = Math.min(
+      100,
+      volumeConcentration * 0.3 + Math.abs(deltaStrength) * 0.4 + aggressiveActivity * 0.3
     );
 
     const result: FootprintAnalysisResult = {
@@ -262,8 +250,8 @@ export class FootprintAnalyzer extends EventEmitter {
       analysis: {
         volumeConcentration,
         deltaStrength,
-        aggressiveActivity
-      }
+        aggressiveActivity,
+      },
     };
 
     this.emit('footprintAnalyzed', result);
@@ -310,7 +298,7 @@ export class FootprintAnalyzer extends EventEmitter {
     return {
       aggressive: { buy: aggressiveBuy, sell: aggressiveSell },
       passive: { buy: passiveBuy, sell: passiveSell },
-      ratio: total > 0 ? totalAggressive / total : 0
+      ratio: total > 0 ? totalAggressive / total : 0,
     };
   }
 
@@ -328,9 +316,8 @@ export class FootprintAnalyzer extends EventEmitter {
     // Check for volume concentration at key levels
     const topLevels = footprint.priceLevels.slice(0, 3);
     const topLevelVolume = topLevels.reduce((sum, l) => sum + l.bidVolume + l.askVolume, 0);
-    const concentrationRatio = footprint.totalVolume > 0 
-      ? topLevelVolume / footprint.totalVolume 
-      : 0;
+    const concentrationRatio =
+      footprint.totalVolume > 0 ? topLevelVolume / footprint.totalVolume : 0;
 
     if (concentrationRatio > 0.5) {
       patterns.push('volume_concentration');
@@ -338,13 +325,11 @@ export class FootprintAnalyzer extends EventEmitter {
     }
 
     // Check for consistent delta direction
-    const consistentDelta = footprint.priceLevels.filter(l => 
-      (footprint.delta > 0 && l.delta > 0) || 
-      (footprint.delta < 0 && l.delta < 0)
+    const consistentDelta = footprint.priceLevels.filter(
+      l => (footprint.delta > 0 && l.delta > 0) || (footprint.delta < 0 && l.delta < 0)
     ).length;
-    const deltaConsistency = footprint.priceLevels.length > 0 
-      ? consistentDelta / footprint.priceLevels.length 
-      : 0;
+    const deltaConsistency =
+      footprint.priceLevels.length > 0 ? consistentDelta / footprint.priceLevels.length : 0;
 
     if (deltaConsistency > 0.7) {
       patterns.push('consistent_delta');
@@ -366,7 +351,7 @@ export class FootprintAnalyzer extends EventEmitter {
     return {
       isInstitutional: score >= 50,
       confidence: Math.min(100, score),
-      pattern: patterns.join(', ') || 'none'
+      pattern: patterns.join(', ') || 'none',
     };
   }
 
@@ -377,52 +362,36 @@ export class FootprintAnalyzer extends EventEmitter {
   /**
    * Get footprint data for a specific price level
    */
-  getFootprintAtLevel(
-    footprint: CandleFootprint,
-    priceLevel: number
-  ): FootprintData | null {
+  getFootprintAtLevel(footprint: CandleFootprint, priceLevel: number): FootprintData | null {
     const tickSize = this.calculateTickSize(priceLevel);
     const roundedLevel = this.roundToTick(priceLevel, tickSize);
-    
-    return footprint.priceLevels.find(l => 
-      Math.abs(l.priceLevel - roundedLevel) < tickSize
-    ) || null;
+
+    return (
+      footprint.priceLevels.find(l => Math.abs(l.priceLevel - roundedLevel) < tickSize) || null
+    );
   }
 
   /**
    * Find price levels with highest volume
    */
-  findHighVolumelevels(
-    footprint: CandleFootprint,
-    count: number = 3
-  ): FootprintData[] {
+  findHighVolumelevels(footprint: CandleFootprint, count: number = 3): FootprintData[] {
     return [...footprint.priceLevels]
-      .sort((a, b) => (b.bidVolume + b.askVolume) - (a.bidVolume + a.askVolume))
+      .sort((a, b) => b.bidVolume + b.askVolume - (a.bidVolume + a.askVolume))
       .slice(0, count);
   }
 
   /**
    * Find price levels with highest delta (buying pressure)
    */
-  findHighDeltaLevels(
-    footprint: CandleFootprint,
-    count: number = 3
-  ): FootprintData[] {
-    return [...footprint.priceLevels]
-      .sort((a, b) => b.delta - a.delta)
-      .slice(0, count);
+  findHighDeltaLevels(footprint: CandleFootprint, count: number = 3): FootprintData[] {
+    return [...footprint.priceLevels].sort((a, b) => b.delta - a.delta).slice(0, count);
   }
 
   /**
    * Find price levels with lowest delta (selling pressure)
    */
-  findLowDeltaLevels(
-    footprint: CandleFootprint,
-    count: number = 3
-  ): FootprintData[] {
-    return [...footprint.priceLevels]
-      .sort((a, b) => a.delta - b.delta)
-      .slice(0, count);
+  findLowDeltaLevels(footprint: CandleFootprint, count: number = 3): FootprintData[] {
+    return [...footprint.priceLevels].sort((a, b) => a.delta - b.delta).slice(0, count);
   }
 
   // ============================================================================
@@ -495,7 +464,7 @@ export class FootprintAnalyzer extends EventEmitter {
     // Calculate volume at each level
     const volumes = footprint.priceLevels.map(l => l.bidVolume + l.askVolume);
     const totalVolume = volumes.reduce((sum, v) => sum + v, 0);
-    
+
     if (totalVolume === 0) return 0;
 
     // Calculate Herfindahl-Hirschman Index (HHI) for concentration
@@ -586,7 +555,7 @@ export class FootprintAnalyzer extends EventEmitter {
     return {
       symbolsTracked: this.tradeBuffer.size,
       totalTrades,
-      cachedFootprints
+      cachedFootprints,
     };
   }
 

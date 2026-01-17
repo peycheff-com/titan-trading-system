@@ -9,7 +9,7 @@
 
 import React, { useState } from 'react';
 import { Box, Text } from 'ink';
-import { TrapConfig } from '../config/ConfigManager';
+import { TrapConfig } from '../config/ConfigManager.js';
 
 /**
  * ConfigPanel props
@@ -39,7 +39,7 @@ export function ConfigPanel({ config, onSave, onCancel }: ConfigPanelProps) {
    * Update a config value
    */
   const updateValue = (key: keyof TrapConfig, value: any) => {
-    setEditedConfig(prev => ({
+    setEditedConfig((prev: any) => ({
       ...prev,
       [key]: value,
     }));
@@ -49,7 +49,7 @@ export function ConfigPanel({ config, onSave, onCancel }: ConfigPanelProps) {
    * Update exchange setting
    */
   const updateExchange = (exchange: 'bybit' | 'mexc', key: 'enabled' | 'executeOn', value: boolean) => {
-    setEditedConfig(prev => ({
+    setEditedConfig((prev: any) => ({
       ...prev,
       exchanges: {
         ...prev.exchanges,
