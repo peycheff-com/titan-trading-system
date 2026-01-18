@@ -7,36 +7,37 @@
  * Requirements: 3.2, 3.4 - Configuration encryption and hot-reload without downtime
  */
 
-import { EventEmitter } from "eventemitter3";
+import { EventEmitter } from 'eventemitter3';
 import {
   existsSync,
   readFileSync,
   Stats,
+  statSync,
   unwatchFile,
   watchFile,
   writeFileSync,
-} from "fs";
-import { join } from "path";
-import { ConfigEncryption, getConfigEncryption } from "./ConfigEncryption";
+} from 'fs';
+import { join } from 'path';
+import { ConfigEncryption, getConfigEncryption } from './ConfigEncryption';
 import {
   ConfigHierarchyOptions,
   ConfigLoadResult,
   HierarchicalConfigLoader,
-} from "./HierarchicalConfigLoader";
+} from './HierarchicalConfigLoader';
 import {
   BrainConfig,
   ConfigValidator,
   Environment,
   PhaseConfig,
   ValidationResult,
-} from "./ConfigSchema";
+} from './ConfigSchema';
 
 /**
  * Hot-reload event types
  */
 export interface HotReloadEvent {
-  type: "config-changed" | "config-error" | "encryption-changed";
-  configType: "brain" | "phase" | "service";
+  type: 'config-changed' | 'config-error' | 'encryption-changed';
+  configType: 'brain' | 'phase' | 'service';
   configKey: string;
   oldValue?: any;
   newValue?: any;
@@ -76,7 +77,7 @@ export interface HotReloadOptions extends Partial<ConfigHierarchyOptions> {
  */
 interface ConfigBackup {
   timestamp: number;
-  configType: "brain" | "phase" | "service";
+  configType: 'brain' | 'phase' | 'service';
   configKey: string;
   data: any;
   encrypted: boolean;
@@ -98,17 +99,17 @@ export class HotReloadConfigManager extends EventEmitter {
     super();
 
     this.options = {
-      configDirectory: "./config",
-      environment: (process.env.NODE_ENV as Environment) || "development",
+      configDirectory: './config',
+      environment: (process.env.NODE_ENV as Environment) || 'development',
       enableEnvironmentVariables: true,
       enableEnvironmentFiles: true,
       validateSchema: true,
       enableEncryption: true,
       encryptedFields: {
         brain: [],
-        phase: ["exchanges.*.apiKey", "exchanges.*.apiSecret"],
+        phase: ['exchanges.*.apiKey', 'exchanges.*.apiSecret'],
         service: {
-          "titan-brain": ["database.password"],
+          'titan-brain': ['database.password'],
           // titan-execution-rs uses Rust-native configuration
         },
       },
@@ -139,7 +140,7 @@ export class HotReloadConfigManager extends EventEmitter {
       this.configEncryption.initialize(masterPassword);
     }
 
-    console.log("🔥 Hot-Reload Configuration Manager initialized");
+    console.log('🔥 Hot-Reload Configuration Manager initialized');
   }
 
   /**
@@ -150,20 +151,17 @@ export class HotReloadConfigManager extends EventEmitter {
     let config = result.config;
 
     // Decrypt encrypted fields if present
-    if (
-      this.options.enableEncryption &&
-      this.configEncryption.hasEncryptedFields(config)
-    ) {
+    if (this.options.enableEncryption && this.configEncryption.hasEncryptedFields(config)) {
       config = this.configEncryption.decryptFields(config);
     }
 
     // Store current config and backup
-    this.currentConfigs.set("brain", config);
-    this.createBackup("brain", "brain", config, false);
+    this.currentConfigs.set('brain', config);
+    this.createBackup('brain', 'brain', config, false);
 
     // Watch configuration files
     for (const source of result.sources) {
-      if (source.path && source.source !== "environment") {
+      if (source.path && source.source !== 'environment') {
         this.watchConfigFile(source.path, () => this.reloadBrainConfig());
       }
     }
@@ -179,20 +177,17 @@ export class HotReloadConfigManager extends EventEmitter {
     let config = result.config;
 
     // Decrypt encrypted fields if present
-    if (
-      this.options.enableEncryption &&
-      this.configEncryption.hasEncryptedFields(config)
-    ) {
+    if (this.options.enableEncryption && this.configEncryption.hasEncryptedFields(config)) {
       config = this.configEncryption.decryptFields(config);
     }
 
     // Store current config and backup
     this.currentConfigs.set(phase, config);
-    this.createBackup("phase", phase, config, false);
+    this.createBackup('phase', phase, config, false);
 
     // Watch configuration files
     for (const source of result.sources) {
-      if (source.path && source.source !== "environment") {
+      if (source.path && source.source !== 'environment') {
         this.watchConfigFile(source.path, () => this.reloadPhaseConfig(phase));
       }
     }
@@ -208,24 +203,18 @@ export class HotReloadConfigManager extends EventEmitter {
     let config = result.config;
 
     // Decrypt encrypted fields if present
-    if (
-      this.options.enableEncryption &&
-      this.configEncryption.hasEncryptedFields(config)
-    ) {
+    if (this.options.enableEncryption && this.configEncryption.hasEncryptedFields(config)) {
       config = this.configEncryption.decryptFields(config);
     }
 
     // Store current config and backup
     this.currentConfigs.set(service, config);
-    this.createBackup("service", service, config, false);
+    this.createBackup('service', service, config, false);
 
     // Watch configuration files
     for (const source of result.sources) {
-      if (source.path && source.source !== "environment") {
-        this.watchConfigFile(
-          source.path,
-          () => this.reloadServiceConfig(service),
-        );
+      if (source.path && source.source !== 'environment') {
+        this.watchConfigFile(source.path, () => this.reloadServiceConfig(service));
       }
     }
 
@@ -236,88 +225,68 @@ export class HotReloadConfigManager extends EventEmitter {
    * Hot-reload brain configuration
    */
   async reloadBrainConfig(): Promise<void> {
-    if (this.reloadInProgress.has("brain")) {
+    if (this.reloadInProgress.has('brain')) {
       return; // Reload already in progress
     }
 
-    this.reloadInProgress.add("brain");
+    this.reloadInProgress.add('brain');
 
     try {
-      const oldConfig = this.currentConfigs.get("brain");
+      const oldConfig = this.currentConfigs.get('brain');
       const result = await this.hierarchicalLoader.loadBrainConfig();
       let newConfig = result.config;
 
       // Decrypt encrypted fields if present
-      if (
-        this.options.enableEncryption &&
-        this.configEncryption.hasEncryptedFields(newConfig)
-      ) {
+      if (this.options.enableEncryption && this.configEncryption.hasEncryptedFields(newConfig)) {
         newConfig = this.configEncryption.decryptFields(newConfig);
       }
 
       // Validate configuration change
-      const changeValidation = this.validateConfigChange(
-        "brain",
-        "brain",
-        oldConfig,
-        newConfig,
-      );
+      const changeValidation = this.validateConfigChange('brain', 'brain', oldConfig, newConfig);
 
       if (!changeValidation.valid) {
         if (this.options.rollbackOnError) {
-          console.warn(
-            "⚠️ Invalid brain config change, rolling back:",
-            changeValidation.errors,
-          );
+          console.warn('⚠️ Invalid brain config change, rolling back:', changeValidation.errors);
           return;
         } else {
-          throw new Error(
-            `Invalid brain configuration: ${
-              changeValidation.errors.join(", ")
-            }`,
-          );
+          throw new Error(`Invalid brain configuration: ${changeValidation.errors.join(', ')}`);
         }
       }
 
       // Update current config and create backup
-      this.currentConfigs.set("brain", newConfig);
-      this.createBackup("brain", "brain", newConfig, false);
+      this.currentConfigs.set('brain', newConfig);
+      this.createBackup('brain', 'brain', newConfig, false);
 
       // Emit hot-reload event
-      this.emit("hotReload", {
-        type: "config-changed",
-        configType: "brain",
-        configKey: "brain",
+      this.emit('hotReload', {
+        type: 'config-changed',
+        configType: 'brain',
+        configKey: 'brain',
         oldValue: oldConfig,
         newValue: newConfig,
         timestamp: Date.now(),
         encrypted: this.configEncryption.hasEncryptedFields(result.config),
       } as HotReloadEvent);
 
-      console.log("🔥 Brain configuration hot-reloaded successfully");
+      console.log('🔥 Brain configuration hot-reloaded successfully');
 
       if (changeValidation.warnings.length > 0) {
-        console.warn("⚠️ Configuration warnings:", changeValidation.warnings);
+        console.warn('⚠️ Configuration warnings:', changeValidation.warnings);
       }
     } catch (error) {
-      const errorMessage = error instanceof Error
-        ? error.message
-        : "Unknown error";
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-      this.emit("hotReload", {
-        type: "config-error",
-        configType: "brain",
-        configKey: "brain",
+      this.emit('hotReload', {
+        type: 'config-error',
+        configType: 'brain',
+        configKey: 'brain',
         error: errorMessage,
         timestamp: Date.now(),
       } as HotReloadEvent);
 
-      console.error(
-        "❌ Failed to hot-reload brain configuration:",
-        errorMessage,
-      );
+      console.error('❌ Failed to hot-reload brain configuration:', errorMessage);
     } finally {
-      this.reloadInProgress.delete("brain");
+      this.reloadInProgress.delete('brain');
     }
   }
 
@@ -337,45 +306,30 @@ export class HotReloadConfigManager extends EventEmitter {
       let newConfig = result.config;
 
       // Decrypt encrypted fields if present
-      if (
-        this.options.enableEncryption &&
-        this.configEncryption.hasEncryptedFields(newConfig)
-      ) {
+      if (this.options.enableEncryption && this.configEncryption.hasEncryptedFields(newConfig)) {
         newConfig = this.configEncryption.decryptFields(newConfig);
       }
 
       // Validate configuration change
-      const changeValidation = this.validateConfigChange(
-        "phase",
-        phase,
-        oldConfig,
-        newConfig,
-      );
+      const changeValidation = this.validateConfigChange('phase', phase, oldConfig, newConfig);
 
       if (!changeValidation.valid) {
         if (this.options.rollbackOnError) {
-          console.warn(
-            `⚠️ Invalid ${phase} config change, rolling back:`,
-            changeValidation.errors,
-          );
+          console.warn(`⚠️ Invalid ${phase} config change, rolling back:`, changeValidation.errors);
           return;
         } else {
-          throw new Error(
-            `Invalid ${phase} configuration: ${
-              changeValidation.errors.join(", ")
-            }`,
-          );
+          throw new Error(`Invalid ${phase} configuration: ${changeValidation.errors.join(', ')}`);
         }
       }
 
       // Update current config and create backup
       this.currentConfigs.set(phase, newConfig);
-      this.createBackup("phase", phase, newConfig, false);
+      this.createBackup('phase', phase, newConfig, false);
 
       // Emit hot-reload event
-      this.emit("hotReload", {
-        type: "config-changed",
-        configType: "phase",
+      this.emit('hotReload', {
+        type: 'config-changed',
+        configType: 'phase',
         configKey: phase,
         oldValue: oldConfig,
         newValue: newConfig,
@@ -386,25 +340,20 @@ export class HotReloadConfigManager extends EventEmitter {
       console.log(`🔥 ${phase} configuration hot-reloaded successfully`);
 
       if (changeValidation.warnings.length > 0) {
-        console.warn("⚠️ Configuration warnings:", changeValidation.warnings);
+        console.warn('⚠️ Configuration warnings:', changeValidation.warnings);
       }
     } catch (error) {
-      const errorMessage = error instanceof Error
-        ? error.message
-        : "Unknown error";
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-      this.emit("hotReload", {
-        type: "config-error",
-        configType: "phase",
+      this.emit('hotReload', {
+        type: 'config-error',
+        configType: 'phase',
         configKey: phase,
         error: errorMessage,
         timestamp: Date.now(),
       } as HotReloadEvent);
 
-      console.error(
-        `❌ Failed to hot-reload ${phase} configuration:`,
-        errorMessage,
-      );
+      console.error(`❌ Failed to hot-reload ${phase} configuration:`, errorMessage);
     } finally {
       this.reloadInProgress.delete(phase);
     }
@@ -426,20 +375,12 @@ export class HotReloadConfigManager extends EventEmitter {
       let newConfig = result.config;
 
       // Decrypt encrypted fields if present
-      if (
-        this.options.enableEncryption &&
-        this.configEncryption.hasEncryptedFields(newConfig)
-      ) {
+      if (this.options.enableEncryption && this.configEncryption.hasEncryptedFields(newConfig)) {
         newConfig = this.configEncryption.decryptFields(newConfig);
       }
 
       // Validate configuration change
-      const changeValidation = this.validateConfigChange(
-        "service",
-        service,
-        oldConfig,
-        newConfig,
-      );
+      const changeValidation = this.validateConfigChange('service', service, oldConfig, newConfig);
 
       if (!changeValidation.valid) {
         if (this.options.rollbackOnError) {
@@ -450,21 +391,19 @@ export class HotReloadConfigManager extends EventEmitter {
           return;
         } else {
           throw new Error(
-            `Invalid ${service} configuration: ${
-              changeValidation.errors.join(", ")
-            }`,
+            `Invalid ${service} configuration: ${changeValidation.errors.join(', ')}`,
           );
         }
       }
 
       // Update current config and create backup
       this.currentConfigs.set(service, newConfig);
-      this.createBackup("service", service, newConfig, false);
+      this.createBackup('service', service, newConfig, false);
 
       // Emit hot-reload event
-      this.emit("hotReload", {
-        type: "config-changed",
-        configType: "service",
+      this.emit('hotReload', {
+        type: 'config-changed',
+        configType: 'service',
         configKey: service,
         oldValue: oldConfig,
         newValue: newConfig,
@@ -475,25 +414,20 @@ export class HotReloadConfigManager extends EventEmitter {
       console.log(`🔥 ${service} configuration hot-reloaded successfully`);
 
       if (changeValidation.warnings.length > 0) {
-        console.warn("⚠️ Configuration warnings:", changeValidation.warnings);
+        console.warn('⚠️ Configuration warnings:', changeValidation.warnings);
       }
     } catch (error) {
-      const errorMessage = error instanceof Error
-        ? error.message
-        : "Unknown error";
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-      this.emit("hotReload", {
-        type: "config-error",
-        configType: "service",
+      this.emit('hotReload', {
+        type: 'config-error',
+        configType: 'service',
         configKey: service,
         error: errorMessage,
         timestamp: Date.now(),
       } as HotReloadEvent);
 
-      console.error(
-        `❌ Failed to hot-reload ${service} configuration:`,
-        errorMessage,
-      );
+      console.error(`❌ Failed to hot-reload ${service} configuration:`, errorMessage);
     } finally {
       this.reloadInProgress.delete(service);
     }
@@ -503,7 +437,7 @@ export class HotReloadConfigManager extends EventEmitter {
    * Save configuration with encryption
    */
   async saveConfigWithEncryption(
-    configType: "brain" | "phase" | "service",
+    configType: 'brain' | 'phase' | 'service',
     configKey: string,
     config: any,
   ): Promise<void> {
@@ -513,10 +447,7 @@ export class HotReloadConfigManager extends EventEmitter {
     if (this.options.enableEncryption) {
       const fieldsToEncrypt = this.getFieldsToEncrypt(configType, configKey);
       if (fieldsToEncrypt.length > 0) {
-        configToSave = this.configEncryption.encryptFields(
-          configToSave,
-          fieldsToEncrypt,
-        );
+        configToSave = this.configEncryption.encryptFields(configToSave, fieldsToEncrypt);
       }
     }
 
@@ -524,18 +455,16 @@ export class HotReloadConfigManager extends EventEmitter {
     const configPath = this.getConfigFilePath(configType, configKey);
 
     // Write configuration file
-    writeFileSync(configPath, JSON.stringify(configToSave, null, 2), "utf8");
+    writeFileSync(configPath, JSON.stringify(configToSave, null, 2), 'utf8');
 
-    console.log(
-      `💾 ${configType} configuration saved with encryption: ${configKey}`,
-    );
+    console.log(`💾 ${configType} configuration saved with encryption: ${configKey}`);
   }
 
   /**
    * Rollback configuration to previous version
    */
   rollbackConfig(
-    configType: "brain" | "phase" | "service",
+    configType: 'brain' | 'phase' | 'service',
     configKey: string,
     steps: number = 1,
   ): boolean {
@@ -543,9 +472,7 @@ export class HotReloadConfigManager extends EventEmitter {
     const backups = this.configBackups.get(backupKey);
 
     if (!backups || backups.length < steps) {
-      console.warn(
-        `⚠️ Not enough backups to rollback ${steps} steps for ${configKey}`,
-      );
+      console.warn(`⚠️ Not enough backups to rollback ${steps} steps for ${configKey}`);
       return false;
     }
 
@@ -556,8 +483,8 @@ export class HotReloadConfigManager extends EventEmitter {
     this.currentConfigs.set(configKey, backupToRestore.data);
 
     // Emit rollback event
-    this.emit("hotReload", {
-      type: "config-changed",
+    this.emit('hotReload', {
+      type: 'config-changed',
       configType,
       configKey,
       oldValue: this.currentConfigs.get(configKey),
@@ -579,10 +506,7 @@ export class HotReloadConfigManager extends EventEmitter {
   /**
    * Get configuration backup history
    */
-  getConfigHistory(
-    configType: "brain" | "phase" | "service",
-    configKey: string,
-  ): ConfigBackup[] {
+  getConfigHistory(configType: 'brain' | 'phase' | 'service', configKey: string): ConfigBackup[] {
     const backupKey = `${configType}:${configKey}`;
     return this.configBackups.get(backupKey) || [];
   }
@@ -599,33 +523,29 @@ export class HotReloadConfigManager extends EventEmitter {
       return; // File doesn't exist
     }
 
-    const stats = require("fs").statSync(filePath);
+    const stats = statSync(filePath);
     this.watchedFiles.set(filePath, {
       mtime: stats.mtime,
       size: stats.size,
     });
 
-    watchFile(
-      filePath,
-      { interval: this.options.watchInterval },
-      (curr: Stats, prev: Stats) => {
-        if (curr.mtime !== prev.mtime || curr.size !== prev.size) {
-          console.log(`📁 Configuration file changed: ${filePath}`);
+    watchFile(filePath, { interval: this.options.watchInterval }, (curr: Stats, prev: Stats) => {
+      if (curr.mtime !== prev.mtime || curr.size !== prev.size) {
+        console.log(`📁 Configuration file changed: ${filePath}`);
 
-          // Debounce rapid changes
-          setTimeout(() => {
-            callback();
-          }, 100);
-        }
-      },
-    );
+        // Debounce rapid changes
+        setTimeout(() => {
+          callback();
+        }, 100);
+      }
+    });
   }
 
   /**
    * Validate configuration change
    */
   private validateConfigChange(
-    configType: "brain" | "phase" | "service",
+    configType: 'brain' | 'phase' | 'service',
     configKey: string,
     oldConfig: any,
     newConfig: any,
@@ -637,9 +557,9 @@ export class HotReloadConfigManager extends EventEmitter {
 
     // Schema validation
     let validation: ValidationResult;
-    if (configType === "brain") {
+    if (configType === 'brain') {
       validation = ConfigValidator.validateBrainConfig(newConfig);
-    } else if (configType === "phase") {
+    } else if (configType === 'phase') {
       validation = ConfigValidator.validatePhaseConfig(newConfig);
     } else {
       validation = ConfigValidator.validateServiceConfig(configKey, newConfig);
@@ -652,8 +572,8 @@ export class HotReloadConfigManager extends EventEmitter {
     warnings.push(...validation.warnings);
 
     // Check for changes that require restart
-    if (configType === "service") {
-      const criticalFields = ["port", "database", "redis"];
+    if (configType === 'service') {
+      const criticalFields = ['port', 'database', 'redis'];
       for (const field of criticalFields) {
         if (oldConfig?.[field] !== newConfig?.[field]) {
           requiresRestart = true;
@@ -676,7 +596,7 @@ export class HotReloadConfigManager extends EventEmitter {
    * Create configuration backup
    */
   private createBackup(
-    configType: "brain" | "phase" | "service",
+    configType: 'brain' | 'phase' | 'service',
     configKey: string,
     data: any,
     encrypted: boolean,
@@ -708,12 +628,12 @@ export class HotReloadConfigManager extends EventEmitter {
    * Get fields to encrypt for configuration type
    */
   private getFieldsToEncrypt(
-    configType: "brain" | "phase" | "service",
+    configType: 'brain' | 'phase' | 'service',
     configKey: string,
   ): string[] {
-    if (configType === "brain") {
+    if (configType === 'brain') {
       return this.options.encryptedFields.brain || [];
-    } else if (configType === "phase") {
+    } else if (configType === 'phase') {
       return this.options.encryptedFields.phase || [];
     } else {
       return this.options.encryptedFields.service?.[configKey] || [];
@@ -723,10 +643,7 @@ export class HotReloadConfigManager extends EventEmitter {
   /**
    * Get configuration file path
    */
-  private getConfigFilePath(
-    configType: "brain" | "phase" | "service",
-    configKey: string,
-  ): string {
+  private getConfigFilePath(configType: 'brain' | 'phase' | 'service', configKey: string): string {
     return join(this.options.configDirectory!, `${configKey}.config.json`);
   }
 
@@ -745,7 +662,7 @@ export class HotReloadConfigManager extends EventEmitter {
     this.reloadInProgress.clear();
     this.removeAllListeners();
 
-    console.log("🛑 Hot-Reload Configuration Manager destroyed");
+    console.log('🛑 Hot-Reload Configuration Manager destroyed');
   }
 }
 

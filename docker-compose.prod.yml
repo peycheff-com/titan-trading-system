@@ -284,6 +284,8 @@ services:
       - PORT=8082
       - NATS_URL=nats://nats:4222
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - WEAVIATE_HOST=${WEAVIATE_HOST:-localhost:8080}
+      - WEAVIATE_API_KEY=${WEAVIATE_API_KEY}
       - SERVICE_NAME=titan-ai-quant
     volumes:
       - titan-ipc:/tmp

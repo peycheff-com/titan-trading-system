@@ -1,5 +1,9 @@
-import type { HealthReport, Position, RiskStatusLevel } from '../types/portfolio.js';
-import type { IExchangeGateway } from '../exchanges/interfaces.js';
+import type {
+  HealthReport,
+  Position,
+  RiskStatusLevel,
+} from "../types/portfolio.js";
+import type { IExchangeGateway } from "../exchanges/interfaces.js";
 
 /**
  * Tracks portfolio positions and aggregates health metrics.
@@ -25,7 +29,9 @@ export class PositionTracker {
           currentPrice = p;
           break;
         }
-      } catch (e) {}
+      } catch (e) {
+        // ignore error
+      }
     }
 
     let pos = this.positions.get(symbol);
@@ -39,7 +45,7 @@ export class PositionTracker {
         entryBasis: 0,
         currentBasis: 0,
         unrealizedPnL: 0,
-        type: 'CORE',
+        type: "CORE",
       };
     }
 
@@ -67,7 +73,12 @@ export class PositionTracker {
   /**
    * Manually update position size (e.g. after execution)
    */
-  updateSize(symbol: string, spotDelta: number, perpDelta: number, price: number): void {
+  updateSize(
+    symbol: string,
+    spotDelta: number,
+    perpDelta: number,
+    price: number,
+  ): void {
     let pos = this.positions.get(symbol);
     if (!pos) {
       pos = {
@@ -79,7 +90,7 @@ export class PositionTracker {
         entryBasis: 0,
         currentBasis: 0,
         unrealizedPnL: 0,
-        type: 'CORE',
+        type: "CORE",
       };
     }
 
@@ -116,7 +127,7 @@ export class PositionTracker {
       nav: totalNav,
       delta: totalDelta,
       marginUtilization: 0, // Placeholder
-      riskStatus: 'HEALTHY',
+      riskStatus: "HEALTHY",
       positions: Array.from(this.positions.values()),
       alerts: [],
     };

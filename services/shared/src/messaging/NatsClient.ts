@@ -8,15 +8,15 @@ import {
   NatsConnection,
   StringCodec,
   Subscription,
-} from "nats";
-import { EventEmitter } from "eventemitter3";
+} from 'nats';
+import { EventEmitter } from 'eventemitter3';
 
 export enum TitanSubject {
-  SIGNALS = "signals",
-  EXECUTION_REPORTS = "execution.reports",
-  MARKET_DATA = "market_data",
-  DASHBOARD_UPDATES = "dashboard.updates",
-  AI_OPTIMIZATION_REQUESTS = "ai.optimization.requests",
+  SIGNALS = 'signals',
+  EXECUTION_REPORTS = 'execution.reports',
+  MARKET_DATA = 'market_data',
+  DASHBOARD_UPDATES = 'dashboard.updates',
+  AI_OPTIMIZATION_REQUESTS = 'ai.optimization.requests',
 }
 
 export interface NatsConfig {
@@ -51,9 +51,7 @@ export class NatsClient extends EventEmitter {
     return NatsClient.instance;
   }
 
-  public async connect(
-    config: NatsConfig = { servers: ["nats://localhost:4222"] },
-  ): Promise<void> {
+  public async connect(config: NatsConfig = { servers: ['nats://localhost:4222'] }): Promise<void> {
     if (this.nc) {
       return;
     }
@@ -78,10 +76,10 @@ export class NatsClient extends EventEmitter {
       this.nc.closed().then((err) => {
         if (err) {
           console.error(`NATS connection closed with error: ${err.message}`);
-          this.emit("error", err);
+          this.emit('error', err);
         } else {
-          console.log("NATS connection closed");
-          this.emit("closed");
+          console.log('NATS connection closed');
+          this.emit('closed');
         }
         this.nc = null;
         this.js = null;
@@ -98,14 +96,14 @@ export class NatsClient extends EventEmitter {
 
     const streams = [
       {
-        name: "TITAN_TRADING",
-        subjects: ["execution.>", "signals", "ai.>"],
-        storage: "file" as const, // Durable storage
+        name: 'TITAN_TRADING',
+        subjects: ['execution.>', 'signals', 'ai.>'],
+        storage: 'file' as const, // Durable storage
       },
       {
-        name: "TITAN_DATA",
-        subjects: ["market_data", "dashboard.>"],
-        storage: "memory" as const, // Faster, non-durable
+        name: 'TITAN_DATA',
+        subjects: ['market_data', 'dashboard.>'],
+        storage: 'memory' as const, // Faster, non-durable
         max_age: 10 * 1000 * 1000 * 1000, // 10 seconds retention (nans)
       },
     ];
@@ -117,7 +115,7 @@ export class NatsClient extends EventEmitter {
       } catch (err: any) {
         // If stream explicitly exists but with different config, we might want to update it
         // For now, logging error if it's not just "already exists" (which 'add' handles by updating/idempotency usually, but NATS can be strict)
-        if (!err.message.includes("already in use")) {
+        if (!err.message.includes('already in use')) {
           try {
             // Try update if add failed
             await this.jsm.streams.update(stream.name, stream as any);
@@ -129,17 +127,12 @@ export class NatsClient extends EventEmitter {
     }
   }
 
-  public async publish<T>(
-    subject: TitanSubject | string,
-    data: T,
-  ): Promise<void> {
+  public async publish<T>(subject: TitanSubject | string, data: T): Promise<void> {
     if (!this.nc) {
-      throw new Error("NATS client not connected");
+      throw new Error('NATS client not connected');
     }
 
-    const payload = typeof data === "string"
-      ? this.sc.encode(data)
-      : this.jc.encode(data);
+    const payload = typeof data === 'string' ? this.sc.encode(data) : this.jc.encode(data);
 
     // Use JetStream for durable subjects, Core NATS for others
     if (this.js && this.DURABLE_SUBJECTS.has(subject as TitanSubject)) {
@@ -155,21 +148,18 @@ export class NatsClient extends EventEmitter {
     durableName?: string, // If provided, creates a durable consumer
   ): Subscription {
     if (!this.nc) {
-      throw new Error("NATS client not connected");
+      throw new Error('NATS client not connected');
     }
 
     // If it's a durable subject and we have a durableName, use JetStream push consumer
-    if (
-      this.js && this.DURABLE_SUBJECTS.has(subject as TitanSubject) &&
-      durableName
-    ) {
+    if (this.js && this.DURABLE_SUBJECTS.has(subject as TitanSubject) && durableName) {
       // NOTE: This simplistically uses a push consumer via standard logic or pull.
       // For simplicity and alignment with node-nats examples:
       const opts = consumerOpts();
       opts.durable(durableName);
       opts.manualAck();
       opts.ackExplicit();
-      opts.deliverTo(durableName + "_DELIVERY"); // Create a delivery subject for push
+      opts.deliverTo(durableName + '_DELIVERY'); // Create a delivery subject for push
 
       // This is complex to wrap simply in a callback style for the user without exposing 'msg.ack()'.
       // For now, we revert to standard subscribe for Core, and simple 'subscribe' for JS without manual ACK exposed in this signature.

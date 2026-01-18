@@ -115,23 +115,23 @@ async function main(): Promise<void> {
   // Initialize metrics for later use
   getMetrics();
 
-  console.log("");
-  console.log(
+  logger.info("");
+  logger.info(
     "╔═══════════════════════════════════════════════════════════════╗",
   );
-  console.log(
+  logger.info(
     "║                    TITAN BRAIN - Phase 5                       ║",
   );
-  console.log(
+  logger.info(
     "║                   Master Orchestrator v1.0                     ║",
   );
-  console.log(
+  logger.info(
     "║                  Production Deployment                         ║",
   );
-  console.log(
+  logger.info(
     "╚═══════════════════════════════════════════════════════════════╝",
   );
-  console.log("");
+  logger.info("");
 
   try {
     // Initialize startup manager
@@ -531,17 +531,17 @@ async function main(): Promise<void> {
  */
 function displayStartupSummary(config: BrainConfig): void {
   const logger = getLogger();
-  console.log("");
-  console.log(
+  logger.info("");
+  logger.info(
     "═══════════════════════════════════════════════════════════════",
   );
-  console.log(
+  logger.info(
     "                    TITAN BRAIN ONLINE                          ",
   );
-  console.log(
+  logger.info(
     "═══════════════════════════════════════════════════════════════",
   );
-  console.log("");
+  logger.info("");
 
   const allocation = brain!.getAllocation();
   logger.info("📊 Current Allocation:", { allocation });
@@ -579,7 +579,7 @@ function displayStartupSummary(config: BrainConfig): void {
  */
 async function shutdown(signal: string): Promise<void> {
   const logger = getLogger();
-  console.log("");
+  logger.info("");
   logger.info(`🛑 Received ${signal}, shutting down gracefully...`);
 
   if (startupManager) {

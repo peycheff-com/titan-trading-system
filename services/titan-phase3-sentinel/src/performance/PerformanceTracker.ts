@@ -1,5 +1,5 @@
-import type { PerformanceMetrics, Trade } from "../types/portfolio.js";
-import { RollingStatistics } from "../engine/StatEngine.js"; // Re-use for Sharpe? Or simple calc.
+import type { PerformanceMetrics, Trade } from '../types/portfolio.js';
+import { RollingStatistics } from '../engine/StatEngine.js'; // Re-use for Sharpe? Or simple calc.
 
 /**
  * Tracks trading performance and calculates metrics.
@@ -38,12 +38,7 @@ export class PerformanceTracker {
   /**
    * Close an active trade and realize PnL
    */
-  closeTrade(
-    tradeId: string,
-    exitPrice: number,
-    exitTime: number,
-    exitBasis: number,
-  ): void {
+  closeTrade(tradeId: string, exitPrice: number, exitTime: number, exitBasis: number): void {
     const trade = this.trades.find((t) => t.id === tradeId);
     if (!trade) return;
 
@@ -53,7 +48,7 @@ export class PerformanceTracker {
     // Calculate PnL based on Strategy Type
     let grossPnL = 0;
 
-    if (trade.type === "BASIS_SCALP") {
+    if (trade.type === 'BASIS_SCALP') {
       // Profit from Basis Conversion (Entry - Exit)
       // Assuming EntryBasis was positive (Contango) and we are shorting the spread
       grossPnL = (trade.entryBasis - exitBasis) * trade.size;
@@ -87,8 +82,7 @@ export class PerformanceTracker {
     }
 
     // Update Max Drawdown
-    const currentDrawdown = (this.highWaterMark - this.currentEquity) /
-      this.highWaterMark;
+    const currentDrawdown = (this.highWaterMark - this.currentEquity) / this.highWaterMark;
     if (currentDrawdown > this.maxDrawdown) {
       this.maxDrawdown = currentDrawdown;
     }
@@ -107,7 +101,7 @@ export class PerformanceTracker {
       if (netPnL > 0) winningTrades++;
       totalYield += netPnL;
 
-      if (t.type === "BASIS_SCALP") {
+      if (t.type === 'BASIS_SCALP') {
         basisScalpPnL += netPnL;
       }
     }
@@ -117,10 +111,9 @@ export class PerformanceTracker {
     // Sharpe Calcs
     let sharpe = 0;
     if (this.returns.length > 1) {
-      const meanReturn = this.returns.reduce((a, b) => a + b, 0) /
-        this.returns.length;
-      const variance = this.returns.reduce((a, b) =>
-        a + Math.pow(b - meanReturn, 2), 0) /
+      const meanReturn = this.returns.reduce((a, b) => a + b, 0) / this.returns.length;
+      const variance =
+        this.returns.reduce((a, b) => a + Math.pow(b - meanReturn, 2), 0) /
         (this.returns.length - 1); // Sample variance
       const stdDev = Math.sqrt(variance);
       sharpe = stdDev > 0 ? meanReturn / stdDev : 0;
