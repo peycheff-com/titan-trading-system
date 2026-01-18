@@ -119,6 +119,10 @@ npm run build --workspaces
 
 # Build Rust execution engine
 cd services/titan-execution-rs && cargo build --release
+
+# Quality Checks
+npm run lint:all    # Lint all services
+npm run test:all    # Test all services
 ```
 
 ## Configuration
@@ -131,7 +135,14 @@ NODE_ENV=production
 DEPLOYMENT_ENVIRONMENT=production
 
 # Database
-DATABASE_URL=postgresql://user:pass@host:5432/titan
+# Database (Connection String or Individual Vars)
+TITAN_DB_HOST=titan-postgres
+TITAN_DB_PORT=5432
+TITAN_DB_NAME=titan_brain
+TITAN_DB_USER=titan
+TITAN_DB_PASSWORD=titan_secret
+# Legacy support
+DATABASE_URL=postgresql://titan:titan_secret@localhost:5432/titan_brain
 
 # NATS
 NATS_URL=nats://localhost:4222

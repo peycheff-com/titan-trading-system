@@ -6,16 +6,16 @@
  */
 
 export {
-    type AbortResponse,
-    type ConfirmResponse,
-    ConnectionState,
-    FastPathClient,
-    type FillReport,
-    type IntentSignal,
-    type IPCClientConfig,
-    type IPCMetrics,
-    type LatencyProfile,
-    type PrepareResponse,
-    RegimeState,
-    type SignalSource,
-} from "./FastPathClient.js";
+  type AbortResponse,
+  type ConfirmResponse,
+  ConnectionState,
+  FastPathClient,
+  type FillReport,
+  type IntentSignal,
+  type IPCClientConfig,
+  type IPCMetrics,
+  type LatencyProfile,
+  type PrepareResponse,
+  RegimeState,
+  type SignalSource,
+} from './FastPathClient.js';

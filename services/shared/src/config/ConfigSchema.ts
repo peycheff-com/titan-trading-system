@@ -7,16 +7,12 @@
  * Requirements: 3.1, 3.3 - Configuration schema validation and environment-specific loading
  */
 
-import { z } from "zod";
+import { z } from 'zod';
 
 /**
  * Environment types
  */
-export const EnvironmentSchema = z.enum([
-  "development",
-  "staging",
-  "production",
-]);
+export const EnvironmentSchema = z.enum(['development', 'staging', 'production']);
 export type Environment = z.infer<typeof EnvironmentSchema>;
 
 /**
@@ -45,18 +41,21 @@ export const PhaseConfigSchema = z.object({
   parameters: z.record(z.string(), z.unknown()).optional(),
 
   // Environment-specific overrides
-  environments: z.record(
-    z.string(),
-    z.object({
-      maxLeverage: z.number().min(1).max(200).optional(),
-      maxDrawdown: z.number().min(0.01).max(1).optional(),
-      maxPositionSize: z.number().min(0.01).max(1).optional(),
-      riskPerTrade: z.number().min(0.001).max(0.1).optional(),
-      exchanges: z.record(z.string(), ExchangeConfigSchema.partial())
-        .optional(),
-      parameters: z.record(z.string(), z.unknown()).optional(),
-    }).partial(),
-  ).optional(),
+  environments: z
+    .record(
+      z.string(),
+      z
+        .object({
+          maxLeverage: z.number().min(1).max(200).optional(),
+          maxDrawdown: z.number().min(0.01).max(1).optional(),
+          maxPositionSize: z.number().min(0.01).max(1).optional(),
+          riskPerTrade: z.number().min(0.001).max(0.1).optional(),
+          exchanges: z.record(z.string(), ExchangeConfigSchema.partial()).optional(),
+          parameters: z.record(z.string(), z.unknown()).optional(),
+        })
+        .partial(),
+    )
+    .optional(),
 });
 
 /**
@@ -76,19 +75,26 @@ export const BrainConfigSchema = z.object({
   overrides: z.record(z.string(), PhaseConfigSchema.partial()).optional(),
 
   // Environment-specific brain settings
-  environments: z.record(
-    z.string(),
-    z.object({
-      maxTotalLeverage: z.number().min(1).max(500).optional(),
-      maxGlobalDrawdown: z.number().min(0.01).max(1).optional(),
-      emergencyFlattenThreshold: z.number().min(0.01).max(1).optional(),
-      phaseTransitionRules: z.object({
-        phase1ToPhase2: z.number().min(100).optional(),
-        phase2ToPhase3: z.number().min(1000).optional(),
-      }).partial().optional(),
-      overrides: z.record(z.string(), PhaseConfigSchema.partial()).optional(),
-    }).partial(),
-  ).optional(),
+  environments: z
+    .record(
+      z.string(),
+      z
+        .object({
+          maxTotalLeverage: z.number().min(1).max(500).optional(),
+          maxGlobalDrawdown: z.number().min(0.01).max(1).optional(),
+          emergencyFlattenThreshold: z.number().min(0.01).max(1).optional(),
+          phaseTransitionRules: z
+            .object({
+              phase1ToPhase2: z.number().min(100).optional(),
+              phase2ToPhase3: z.number().min(1000).optional(),
+            })
+            .partial()
+            .optional(),
+          overrides: z.record(z.string(), PhaseConfigSchema.partial()).optional(),
+        })
+        .partial(),
+    )
+    .optional(),
 });
 
 /**
@@ -123,19 +129,23 @@ export const InfrastructureConfigSchema = z.object({
 
   security: z.object({
     firewall: z.object({
-      defaultIncoming: z.enum(["allow", "deny"]),
-      defaultOutgoing: z.enum(["allow", "deny"]),
-      allowedPorts: z.array(z.object({
-        port: z.number().min(1).max(65535),
-        protocol: z.enum(["tcp", "udp"]),
-        comment: z.string(),
-      })),
-      restrictedPorts: z.array(z.object({
-        port: z.number().min(1).max(65535),
-        protocol: z.enum(["tcp", "udp"]),
-        allowFrom: z.string(),
-        comment: z.string(),
-      })),
+      defaultIncoming: z.enum(['allow', 'deny']),
+      defaultOutgoing: z.enum(['allow', 'deny']),
+      allowedPorts: z.array(
+        z.object({
+          port: z.number().min(1).max(65535),
+          protocol: z.enum(['tcp', 'udp']),
+          comment: z.string(),
+        }),
+      ),
+      restrictedPorts: z.array(
+        z.object({
+          port: z.number().min(1).max(65535),
+          protocol: z.enum(['tcp', 'udp']),
+          allowFrom: z.string(),
+          comment: z.string(),
+        }),
+      ),
     }),
 
     ssl: z.object({
@@ -154,22 +164,41 @@ export const InfrastructureConfigSchema = z.object({
   }),
 
   // Environment-specific infrastructure settings
-  environments: z.record(
-    z.string(),
-    z.object({
-      server: z.object({
-        minRAM: z.string().regex(/^\d+GB$/).optional(),
-        minCPU: z.number().min(1).optional(),
-        minDisk: z.string().regex(/^\d+GB$/).optional(),
-      }).partial().optional(),
-      security: z.object({
-        ssl: z.object({
-          enabled: z.boolean().optional(),
-          domains: z.array(z.string()).optional(),
-        }).partial().optional(),
-      }).partial().optional(),
-    }).partial(),
-  ).optional(),
+  environments: z
+    .record(
+      z.string(),
+      z
+        .object({
+          server: z
+            .object({
+              minRAM: z
+                .string()
+                .regex(/^\d+GB$/)
+                .optional(),
+              minCPU: z.number().min(1).optional(),
+              minDisk: z
+                .string()
+                .regex(/^\d+GB$/)
+                .optional(),
+            })
+            .partial()
+            .optional(),
+          security: z
+            .object({
+              ssl: z
+                .object({
+                  enabled: z.boolean().optional(),
+                  domains: z.array(z.string()).optional(),
+                })
+                .partial()
+                .optional(),
+            })
+            .partial()
+            .optional(),
+        })
+        .partial(),
+    )
+    .optional(),
 });
 
 /**
@@ -203,7 +232,7 @@ export const DeploymentConfigSchema = z.object({
     metricsPort: z.number().min(1).max(65535),
     alerting: z.object({
       enabled: z.boolean(),
-      channels: z.array(z.enum(["email", "slack", "webhook", "sms"])),
+      channels: z.array(z.enum(['email', 'slack', 'webhook', 'sms'])),
     }),
   }),
 
@@ -216,7 +245,7 @@ export const DeploymentConfigSchema = z.object({
     }),
     encryption: z.object({
       enabled: z.boolean(),
-      algorithm: z.enum(["AES-256-GCM", "AES-256-CBC"]),
+      algorithm: z.enum(['AES-256-GCM', 'AES-256-CBC']),
     }),
   }),
 });
@@ -225,9 +254,9 @@ export const DeploymentConfigSchema = z.object({
  * Service-specific configuration schemas
  */
 export const ServiceConfigSchemas: Record<string, z.ZodSchema<any>> = {
-  "titan-brain": z.object({
+  'titan-brain': z.object({
     port: z.number().min(1).max(65535),
-    logLevel: z.enum(["debug", "info", "warn", "error"]),
+    logLevel: z.enum(['debug', 'info', 'warn', 'error']),
     database: z.object({
       host: z.string(),
       port: z.number().min(1).max(65535),
@@ -273,9 +302,7 @@ export class ConfigValidator {
           data: result.data,
         };
       } else {
-        const errors = result.error.issues.map((err) =>
-          `${err.path.join(".")}: ${err.message}`
-        );
+        const errors = result.error.issues.map((err) => `${err.path.join('.')}: ${err.message}`);
 
         return {
           valid: false,
@@ -286,11 +313,7 @@ export class ConfigValidator {
     } catch (error) {
       return {
         valid: false,
-        errors: [
-          `Validation error: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`,
-        ],
+        errors: [`Validation error: ${error instanceof Error ? error.message : 'Unknown error'}`],
         warnings: [],
       };
     }
@@ -327,10 +350,7 @@ export class ConfigValidator {
   /**
    * Validate service configuration
    */
-  static validateServiceConfig(
-    service: string,
-    data: unknown,
-  ): ValidationResult {
+  static validateServiceConfig(service: string, data: unknown): ValidationResult {
     const schema = ServiceConfigSchemas[service];
 
     if (!schema) {

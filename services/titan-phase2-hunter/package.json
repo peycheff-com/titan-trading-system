@@ -15,6 +15,7 @@
     "test:property": "jest --selectProjects property",
     "test:console": "jest --selectProjects console",
     "test:ci": "jest --ci --coverage --watchAll=false --maxWorkers=2",
+    "lint": "npm run lint:check",
     "lint:check": "eslint src/**/*.ts src/**/*.tsx",
     "lint:fix": "eslint src/**/*.ts src/**/*.tsx --fix",
     "format:check": "prettier --check 'src/**/*.{ts,tsx}'",

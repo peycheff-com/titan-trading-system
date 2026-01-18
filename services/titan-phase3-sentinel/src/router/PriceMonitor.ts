@@ -1,5 +1,5 @@
-import { Logger } from "@titan/shared";
-import type { IExchangeGateway } from "../exchanges/interfaces.js";
+import { Logger } from '@titan/shared';
+import type { IExchangeGateway } from '../exchanges/interfaces.js';
 
 export interface PriceQuote {
   exchange: string;
@@ -16,7 +16,7 @@ export interface PriceQuote {
  */
 export class PriceMonitor {
   private gateways: Map<string, IExchangeGateway>;
-  private logger = Logger.getInstance("PriceMonitor");
+  private logger = Logger.getInstance('PriceMonitor');
 
   constructor(gateways: Record<string, IExchangeGateway>) {
     this.gateways = new Map(Object.entries(gateways));
@@ -27,15 +27,12 @@ export class PriceMonitor {
    * BUY: Lowest price required
    * SELL: Highest price required
    */
-  async getBestPrice(
-    symbol: string,
-    side: "BUY" | "SELL",
-  ): Promise<PriceQuote | null> {
+  async getBestPrice(symbol: string, side: 'BUY' | 'SELL'): Promise<PriceQuote | null> {
     const quotes = await this.getAllPrices(symbol);
     if (quotes.length === 0) return null;
 
     return quotes.reduce((best, current) => {
-      if (side === "BUY") {
+      if (side === 'BUY') {
         return current.price < best.price ? current : best;
       } else {
         return current.price > best.price ? current : best;
@@ -51,7 +48,7 @@ export class PriceMonitor {
       async ([name, gateway]): Promise<PriceQuote | null> => {
         try {
           // Try getTicker first for depth info
-          if (typeof gateway.getTicker === "function") {
+          if (typeof gateway.getTicker === 'function') {
             const ticker = await gateway.getTicker(symbol);
             return {
               exchange: name,

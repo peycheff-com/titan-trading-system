@@ -10,7 +10,8 @@
     "start:headless": "npm run build && node dist/index.js --headless",
     "dev": "tsc && node --watch dist/index.js",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "lint": "eslint src/**/*.ts"
   },
   "keywords": [
     "trading",
