@@ -43,7 +43,9 @@ import { ManualOverrideService } from "./ManualOverrideService.js";
 import { DatabaseManager } from "../db/DatabaseManager.js";
 import { getNatsPublisher, NatsPublisher } from "../server/NatsPublisher.js";
 import { ActiveInferenceEngine } from "./ActiveInferenceEngine.js";
+import { FillsRepository } from "../db/repositories/FillsRepository.js";
 import { logger } from "../utils/Logger.js";
+import { IngestionQueue } from "../queue/IngestionQueue.js";
 
 /**
  * Phase priority for signal processing
@@ -87,6 +89,7 @@ export class TitanBrain
   private readonly stateRecoveryService: StateRecoveryService | null;
   private readonly manualOverrideService: ManualOverrideService | null;
   private readonly db: DatabaseManager | null;
+  private readonly fillsRepository: FillsRepository | null;
 
   /** External integrations */
   private executionEngine: ExecutionEngineClient | null = null;
@@ -96,7 +99,11 @@ export class TitanBrain
   /** Signal queue for priority processing */
   private signalQueue: QueuedSignal[] = [];
 
+  /** Ingestion queue for high throughput writes */
+  private ingestionQueue: IngestionQueue | null = null;
+
   /** Current state */
+
   private currentEquity: number = 0;
   private currentPositions: Position[] = [];
   private recentDecisions: BrainDecision[] = [];
@@ -134,6 +141,8 @@ export class TitanBrain
     db?: DatabaseManager,
     stateRecoveryService?: StateRecoveryService,
     manualOverrideService?: ManualOverrideService,
+    fillsRepository?: FillsRepository,
+    ingestionQueue?: IngestionQueue,
   ) {
     this.config = config;
     this.allocationEngine = allocationEngine;
@@ -146,6 +155,8 @@ export class TitanBrain
     this.db = db ?? null;
     this.stateRecoveryService = stateRecoveryService ?? null;
     this.manualOverrideService = manualOverrideService ?? null;
+    this.fillsRepository = fillsRepository ?? null;
+    this.ingestionQueue = ingestionQueue ?? null;
 
     // Wire up circuit breaker handlers
     this.circuitBreaker.setPositionHandler(this);
@@ -623,6 +634,31 @@ export class TitanBrain
     logger.info(
       `🧠 Processing execution report for ${report.symbol} (${report.side})`,
     );
+
+    // Persist raw fill data first (Audit Trail)
+    if (this.ingestionQueue) {
+      this.ingestionQueue.enqueue({
+        type: "FILL",
+        payload: report,
+        timestamp: Date.now(),
+      });
+      // logger.info is handled by worker or we can log "Enqueued"
+    } else if (this.fillsRepository) {
+      try {
+        await this.fillsRepository.createFill(report);
+        logger.info(`Recorded fill for ${report.symbol} in ledger`);
+      } catch (error) {
+        logger.error(
+          `Failed to record fill for ${report.symbol}`,
+          error as Error,
+        );
+        // We continue execution even if logging fails, but this is a critical consistency error
+      }
+    } else {
+      logger.warn(
+        "FillsRepository not configured - Fill not persisted to database!",
+      );
+    }
 
     // Find existing position
     const existingPosIndex = this.currentPositions.findIndex((p) =>

@@ -19,6 +19,7 @@
 import { config } from "dotenv";
 import { ConfigManager } from "./config/ConfigManager";
 import { HologramEngine } from "./engine/HologramEngine";
+import { EnhancedHolographicEngine } from "./engine/enhanced/EnhancedHolographicEngine";
 import { HologramScanner } from "./engine/HologramScanner";
 import { SessionProfiler } from "./engine/SessionProfiler";
 import { InefficiencyMapper } from "./engine/InefficiencyMapper";
@@ -36,7 +37,11 @@ import {
   SignalData,
 } from "./types";
 import { getLogger, logError } from "./logging/Logger";
-import { ExecutionClient, type IntentSignal } from "@titan/shared";
+import {
+  ExecutionClient,
+  getNatsClient,
+  type IntentSignal,
+} from "@titan/shared";
 
 // Load environment variables
 config();
@@ -49,7 +54,9 @@ class HunterApplication {
   private configManager: ConfigManager;
   private bybitClient: BybitPerpsClient;
   private binanceClient: BinanceSpotClient;
+
   private hologramEngine: HologramEngine;
+  private enhancedEngine: EnhancedHolographicEngine;
   private hologramScanner: HologramScanner;
   private sessionProfiler: SessionProfiler;
   private inefficiencyMapper: InefficiencyMapper;
@@ -96,6 +103,8 @@ class HunterApplication {
       this.bybitClient,
       this.institutionalFlowClassifier,
     );
+    this.enhancedEngine = new EnhancedHolographicEngine();
+    this.enhancedEngine.setHologramEngine(this.hologramEngine);
     this.hologramScanner = new HologramScanner(this.bybitClient);
     this.sessionProfiler = new SessionProfiler();
     this.inefficiencyMapper = new InefficiencyMapper();
@@ -291,6 +300,7 @@ class HunterApplication {
       this.logEvent("INFO", "📡 Initializing exchange clients...");
       await this.bybitClient.initialize();
       await this.binanceClient.initialize();
+      await this.enhancedEngine.initialize();
 
       // Initialize IPC connection to execution engine
       this.logEvent("INFO", "🔗 Connecting to execution engine via NATS...");
@@ -305,8 +315,24 @@ class HunterApplication {
         );
       }
 
+      // Initialize NATS subscription for market regime
+      this.logEvent("INFO", "🔗 Subscribing to Market Regime updates...");
+      const nats = getNatsClient();
+      if (!nats.isConnected()) {
+        await nats.connect();
+      }
+      nats.subscribe("titan.ai.regime.update", (data: any) => {
+        this.logEvent(
+          "INFO",
+          `🧠 Market Regime Update: ${data.regime} (α=${data.alpha})`,
+        );
+        this.enhancedEngine.updateMarketRegime(data.regime, data.alpha);
+      });
+
       // Start configuration watching
-      this.configManager.startWatching();
+      // await this.configManager.startWatching(); - Deprecated
+      await this.configManager.initialize();
+      console.log("✅ Configuration initialized and validated");
 
       this.logEvent("INFO", "✅ All components initialized successfully");
     } catch (error) {

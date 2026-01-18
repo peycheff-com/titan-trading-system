@@ -28,6 +28,8 @@ hmac = "0.12.1"
 sha2 = "0.10.9"
 hex = "0.4.3"
 url = "2.5.8"
+dashmap = "5.5"
+parking_lot = "0.12"
 
 [dev-dependencies]
 tokio-test = "0.4"

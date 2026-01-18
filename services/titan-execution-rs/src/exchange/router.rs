@@ -1,5 +1,6 @@
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use parking_lot::RwLock;
 use crate::exchange::adapter::{ExchangeAdapter, OrderRequest, OrderResponse, ExchangeError};
 use crate::model::Intent;
 use tracing::{info, warn, error};
@@ -16,13 +17,13 @@ impl ExecutionRouter {
     }
 
     pub fn register(&self, name: &str, adapter: Arc<dyn ExchangeAdapter + Send + Sync>) {
-        let mut map = self.adapters.write().unwrap();
+        let mut map = self.adapters.write();
         map.insert(name.to_lowercase(), adapter);
         info!("🔌 Registered Adapter: {}", name);
     }
 
     pub fn get_adapter(&self, name: &str) -> Option<Arc<dyn ExchangeAdapter + Send + Sync>> {
-        let map = self.adapters.read().unwrap();
+        let map = self.adapters.read();
         map.get(&name.to_lowercase()).cloned()
     }
 
@@ -30,7 +31,7 @@ impl ExecutionRouter {
     // Returns a list of (ExchangeName, Adapter)
     pub fn resolve_routes(&self, intent: &Intent) -> Vec<(String, Arc<dyn ExchangeAdapter + Send + Sync>)> {
         let mut targets = Vec::new();
-        let map = self.adapters.read().unwrap();
+        let map = self.adapters.read();
 
         // 1. Explicit Routing (Future proofing: if intent has target_exchanges field)
         // For now, check source

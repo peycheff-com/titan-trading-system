@@ -1,0 +1,34 @@
+[
+  {
+    "version": 1,
+    "timestamp": 1768752637724,
+    "configType": "phase",
+    "configKey": "phase2-hunter",
+    "data": {
+      "enabled": true,
+      "maxLeverage": 20,
+      "maxDrawdown": 0.07,
+      "maxPositionSize": 0.5,
+      "riskPerTrade": 0.02,
+      "exchanges": {
+        "bybit": {
+          "enabled": true,
+          "executeOn": true,
+          "testnet": false,
+          "rateLimit": 10,
+          "timeout": 5000
+        },
+        "mexc": {
+          "enabled": false,
+          "executeOn": false,
+          "testnet": false,
+          "rateLimit": 10,
+          "timeout": 5000
+        }
+      }
+    },
+    "hash": "e4e4c3ca28d5a15f8ec63904c0e4869f6086e9c27429814eefb78758abeb38d3",
+    "author": "system",
+    "comment": "Configuration loaded"
+  }
+]

@@ -120,47 +120,38 @@ The Titan Brain implements a hierarchical decision-making architecture where pha
 
 ## Quick Start
 
-```bash
-# 1. Navigate to the service
-cd services/titan-brain
+### Full System (Recommended)
 
-# 2. Install dependencies
+For running the complete Titan system (Brain, Execution, Console, DB), use the root Docker Compose:
+
+```bash
+cd ../..
+docker compose up -d
+```
+
+### Local Development (Service Only)
+
+To run **Titan Brain** in isolation (e.g. for debugging logic):
+
+```bash
+# 1. Install dependencies
 npm install
 
-# 3. Set up environment
+# 2. Start Support Services (DB/Redis) via Docker
+docker compose up -d postgres redis
+
+# 3. Configure
 cp .env.example .env
-# Edit .env with your database credentials
 
-# 4. Start PostgreSQL and Redis (using Docker)
-docker-compose up -d postgres redis
-
-# 5. Build TypeScript
-npm run build
-
-# 6. Run database migrations
+# 4. Run Migrations
 npm run migrate
 
-# 7. Start the Brain
-npm start
+# 5. Start in Dev Mode
+npm run dev
 ```
 
-The Brain will start and display:
-- Webhook server URL (default: `http://localhost:3100`)
-- Current allocation weights
-- Available API endpoints
+The Brain will start on port **3100**.
 
-### Using Docker Compose (Recommended)
-
-```bash
-# Start all services (Brain + PostgreSQL + Redis)
-docker-compose up -d
-
-# Check logs
-docker-compose logs -f titan-brain
-
-# Verify health
-curl http://localhost:3100/status
-```
 
 ---
 

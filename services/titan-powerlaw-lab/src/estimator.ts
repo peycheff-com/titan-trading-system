@@ -1,0 +1,109 @@
+import { connect, JetStreamClient, NatsConnection, StringCodec } from "nats";
+import { HillEstimator } from "./tail-estimators.js";
+import { POTEstimator } from "./tail-estimators.js";
+import { VolatilityClusterDetector } from "./volatility-cluster.js";
+
+export interface PowerLawMetrics {
+    symbol: string;
+    tailExponent: number; // Hill alpha
+    tailConfidence: number;
+    exceedanceProbability: number; // POT
+    volatilityCluster: {
+        state: string;
+        persistence: number;
+        sigma: number;
+    };
+    timestamp: number;
+}
+
+export class PowerLawEstimator {
+    private nats: NatsConnection | null = null;
+    private js: JetStreamClient | null = null;
+    private histories = new Map<string, number[]>(); // Rolling close prices
+    private sc = StringCodec();
+
+    private hill = new HillEstimator();
+    private pot = new POTEstimator();
+    private volCluster = new VolatilityClusterDetector();
+
+    constructor(private natsUrl: string = "nats://localhost:4222") {}
+
+    async connect() {
+        try {
+            this.nats = await connect({ servers: this.natsUrl });
+            this.js = this.nats.jetstream();
+            console.log(`Connected to NATS at ${this.natsUrl}`);
+        } catch (error) {
+            console.error("Failed to connect to NATS:", error);
+            throw error;
+        }
+    }
+
+    /**
+     * Process a new trade/ticket to update rolling statistics
+     */
+    async onTick(symbol: string, price: number) {
+        this.updateHistory(symbol, price);
+
+        const history = this.histories.get(symbol);
+        if (!history || history.length < 100) return; // Warmup
+
+        // Calculate returns: r_t = ln(p_t / p_{t-1})
+        const returns: number[] = [];
+        for (let i = 1; i < history.length; i++) {
+            returns.push(Math.log(history[i] / history[i - 1]));
+        }
+
+        if (returns.length < 50) return;
+
+        // Compute Metrics
+        const tailEst = this.hill.estimate(returns);
+        // Typical crypto "crash" threshold is daily vol, approx 3-4%?
+        // Let's use 2.5 standard deviations as the threshold for POT
+        const sigma = this.calculateSigma(returns);
+        const potThreshold = sigma * 2.5;
+
+        const exceedProb = this.pot.exceedanceProbability(
+            returns,
+            potThreshold,
+        );
+        const volState = this.volCluster.getState(returns);
+
+        const metrics: PowerLawMetrics = {
+            symbol,
+            tailExponent: tailEst.alpha,
+            tailConfidence: tailEst.confidence,
+            exceedanceProbability: exceedProb,
+            volatilityCluster: volState,
+            timestamp: Date.now(),
+        };
+
+        await this.publish(metrics);
+    }
+
+    private updateHistory(symbol: string, price: number) {
+        if (!this.histories.has(symbol)) {
+            this.histories.set(symbol, []);
+        }
+        const arr = this.histories.get(symbol)!;
+        arr.push(price);
+        if (arr.length > 1000) {
+            arr.shift(); // Keep last 1000 points
+        }
+    }
+
+    private calculateSigma(returns: number[]): number {
+        const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
+        const variance =
+            returns.reduce((sum, x) => sum + Math.pow(x - mean, 2), 0) /
+            returns.length;
+        return Math.sqrt(variance);
+    }
+
+    private async publish(metrics: PowerLawMetrics) {
+        if (!this.nats) return;
+        const subject = `powerlaw.metrics.${metrics.symbol}`;
+        this.nats.publish(subject, this.sc.encode(JSON.stringify(metrics)));
+        // console.log(`Published ${subject}: alpha=${metrics.tailExponent.toFixed(2)} vol=${metrics.volatilityCluster.state}`);
+    }
+}

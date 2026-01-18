@@ -22,22 +22,33 @@ async function main() {
   });
 
   // 1. Configuration
+  // Dynamic import if needed or use standard import if build allows. 
+  // Assuming @titan/shared is available as per checking NatsClient
+  const { getConfigManager, TitanSubject, getNatsClient } = await import("@titan/shared");
+  
+  // Initialize shared manager to load environment variables/files
+  getConfigManager();
+  
+  const configManager = {
+    get: (key: string) => process.env[key]
+  };
+  
   const config: SentinelConfig = {
-    symbol: process.env.SYMBOL || "BTCUSDT",
-    updateIntervalMs: Number(process.env.UPDATE_INTERVAL_MS) || 1000,
-    initialCapital: Number(process.env.INITIAL_CAPITAL) || 10000,
+    symbol: configManager.get("SYMBOL") || "BTCUSDT",
+    updateIntervalMs: Number(configManager.get("UPDATE_INTERVAL_MS")) || 1000,
+    initialCapital: Number(configManager.get("INITIAL_CAPITAL")) || 10000,
     riskLimits: {
-      maxDrawdown: Number(process.env.MAX_DRAWDOWN) || 0.15,
-      maxLeverage: Number(process.env.MAX_LEVERAGE) || 3.0,
-      maxDelta: Number(process.env.MAX_DELTA) || 5000,
+      maxDrawdown: Number(configManager.get("MAX_DRAWDOWN")) || 0.15,
+      maxLeverage: Number(configManager.get("MAX_LEVERAGE")) || 3.0,
+      maxDelta: Number(configManager.get("MAX_DELTA")) || 5000,
     },
   };
 
     // 2. Initialize Gateways
-    const binanceKey = process.env.BINANCE_API_KEY;
-    const binanceSecret = process.env.BINANCE_API_SECRET;
-    const bybitKey = process.env.BYBIT_API_KEY;
-    const bybitSecret = process.env.BYBIT_API_SECRET;
+    const binanceKey = configManager.get("BINANCE_API_KEY");
+    const binanceSecret = configManager.get("BINANCE_API_SECRET");
+    const bybitKey = configManager.get("BYBIT_API_KEY");
+    const bybitSecret = configManager.get("BYBIT_API_SECRET");
 
     if (!binanceKey || !binanceSecret) {
         console.warn("⚠️ Missing BINANCE_API_KEY or BINANCE_API_SECRET. Gateway may fail.");
@@ -51,6 +62,25 @@ async function main() {
 
   // 3. Start Core
   const core = new SentinelCore(config, gateways);
+
+  // 3a. Start NATS Subscription (Regime Awareness)
+  try {
+      const nats = await getNatsClient();
+      console.log("Connected to NATS for Regime Updates");
+      
+      const sub = nats.subscribe<{ regime: string; alpha: number }>(
+          TitanSubject.REGIME_UPDATE,
+          (data) => {
+              try {
+                  core.updateRegime(data.regime, data.alpha);
+              } catch (err) {
+                  console.error("Error processing regime update:", err);
+              }
+          }
+      );
+  } catch (err) {
+      console.warn("⚠️ Failed to connect to NATS. Sentinel will run in STABLE usage.", err);
+  }
 
   // 3b. Start Market Monitor (Polymarket)
   const marketMonitor = new MarketMonitor();

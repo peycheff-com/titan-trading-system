@@ -1,5 +1,6 @@
-use crate::model::{FeeAnalysis, OrderDecision, OrderParams, Side, OrderType};
+use crate::impact_calculator::{ImpactCalculator, OrderRouting};
 use crate::market_data::engine::MarketDataEngine;
+use crate::model::{FeeAnalysis, OrderDecision, OrderParams, OrderType, Side};
 use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
 use std::sync::Arc;
@@ -10,6 +11,9 @@ pub const DEFAULT_MAKER_FEE_PCT: &str = "0.02";
 pub const DEFAULT_TAKER_FEE_PCT: &str = "0.05";
 pub const DEFAULT_CHASE_TIMEOUT_MS: u64 = 2000;
 pub const MIN_PROFIT_MARGIN: &str = "0.001"; // 0.1%
+                                             // Taker sniping thresholds
+pub const IMBALANCE_THRESHOLD_BUY: &str = "0.6";
+pub const IMBALANCE_THRESHOLD_SELL: &str = "-0.6";
 
 #[derive(Debug, Clone)]
 pub struct OrderManagerConfig {
@@ -22,10 +26,13 @@ pub struct OrderManagerConfig {
 impl Default for OrderManagerConfig {
     fn default() -> Self {
         Self {
-            maker_fee_pct: Decimal::from_str(DEFAULT_MAKER_FEE_PCT).unwrap(),
-            taker_fee_pct: Decimal::from_str(DEFAULT_TAKER_FEE_PCT).unwrap(),
+            maker_fee_pct: Decimal::from_str(DEFAULT_MAKER_FEE_PCT)
+                .expect("Invalid maker fee constant"),
+            taker_fee_pct: Decimal::from_str(DEFAULT_TAKER_FEE_PCT)
+                .expect("Invalid taker fee constant"),
             chase_timeout_ms: DEFAULT_CHASE_TIMEOUT_MS,
-            min_profit_margin: Decimal::from_str(MIN_PROFIT_MARGIN).unwrap(),
+            min_profit_margin: Decimal::from_str(MIN_PROFIT_MARGIN)
+                .expect("Invalid min profit constant"),
         }
     }
 }
@@ -34,12 +41,13 @@ impl Default for OrderManagerConfig {
 pub struct OrderManager {
     config: OrderManagerConfig,
     market_data: Arc<MarketDataEngine>,
+    impact_calculator: ImpactCalculator,
 }
 
 impl OrderManager {
     pub fn new(config: Option<OrderManagerConfig>, market_data: Arc<MarketDataEngine>) -> Self {
         let config = config.unwrap_or_default();
-        
+
         info!(
             maker_fee_pct = %config.maker_fee_pct,
             taker_fee_pct = %config.taker_fee_pct,
@@ -47,7 +55,11 @@ impl OrderManager {
             "OrderManager initialized"
         );
 
-        Self { config, market_data }
+        Self {
+            config,
+            market_data,
+            impact_calculator: ImpactCalculator::new(),
+        }
     }
 
     /// Assess liquidity quality for a symbol
@@ -56,31 +68,33 @@ impl OrderManager {
     /// Positive = Buy Pressure, Negative = Sell Pressure
     pub fn assess_liquidity_quality(&self, symbol: &str) -> Option<(Decimal, Decimal)> {
         let ticker = self.market_data.get_ticker(symbol)?;
-        
+
         let mid_price = (ticker.best_bid + ticker.best_ask) / Decimal::from(2);
-        if mid_price.is_zero() { return None; }
-        
+        if mid_price.is_zero() {
+            return None;
+        }
+
         // Spread BPS
         let spread_diff = ticker.best_ask - ticker.best_bid;
         let spread_bps = (spread_diff / mid_price) * Decimal::from(10000);
-        
+
         // Imbalance
         let total_qty = ticker.best_bid_qty + ticker.best_ask_qty;
         let diff_qty = ticker.best_bid_qty - ticker.best_ask_qty;
-        
+
         let imbalance = if total_qty.is_zero() {
             Decimal::ZERO
         } else {
             diff_qty / total_qty
         };
-        
+
         Some((spread_bps, imbalance))
     }
 
     pub fn analyze_fees(&self, expected_profit_pct: Decimal) -> FeeAnalysis {
         let profit_after_maker = expected_profit_pct - self.config.maker_fee_pct;
         let profit_after_taker = expected_profit_pct - self.config.taker_fee_pct;
-        
+
         FeeAnalysis {
             maker_fee_pct: self.config.maker_fee_pct,
             taker_fee_pct: self.config.taker_fee_pct,
@@ -95,9 +109,11 @@ impl OrderManager {
         match signal_type {
             Some(t) => {
                 let upper = t.to_uppercase();
-                upper.contains("CLOSE") || upper.contains("EXIT") || 
-                upper == "STOP_LOSS" || upper == "TAKE_PROFIT"
-            },
+                upper.contains("CLOSE")
+                    || upper.contains("EXIT")
+                    || upper == "STOP_LOSS"
+                    || upper == "TAKE_PROFIT"
+            }
             None => false,
         }
     }
@@ -115,9 +131,56 @@ impl OrderManager {
             fee_analysis: None,
         };
 
+        // --- IMPACT ANALYSIS ---
+        // Simplified notional calculation (size * price). using Limit price if available or best ask
+        let exec_price = params.limit_price.unwrap_or(Decimal::ZERO); // Simplified, ideally gets mid price if market
+        let notional = if !exec_price.is_zero() {
+            (params.size * exec_price).to_f64().unwrap_or(0.0)
+        } else {
+            // Fallback if no price known, assume 0 impact
+            0.0
+        };
+
+        if notional > 0.0 {
+            let impact_est = self.impact_calculator.estimate_impact(
+                &params.symbol,
+                notional,
+                None, // VolState not yet available in Rust
+            );
+
+            if !impact_est.feasible {
+                decision.reason = format!("REJECTED_IMPACT: {:.1}bps", impact_est.impact_bps);
+                decision.order_type = OrderType::Limit; // Default to Limit but caller should check reason
+                warn!("Impact Rejection: {}", decision.reason);
+                // In a real system we might return a Result or Option, but here we flag via reason.
+                // Or force PostOnly to be safe
+                decision.post_only = true;
+                return decision;
+            }
+
+            // Enforce routing based on impact
+            match impact_est.recommended_routing {
+                OrderRouting::PostOnly => {
+                    decision.post_only = true;
+                    // decision.reason += " (Impact: PostOnly)";
+                }
+                OrderRouting::Limit => {
+                    // Standard
+                }
+                OrderRouting::IOC => {
+                    if decision.order_type == OrderType::Market {
+                        // Allowed to be IOC/Market
+                    }
+                }
+                OrderRouting::Rejected => {
+                    decision.post_only = true; // Fallback
+                }
+            }
+        }
+
         // --- EXECUTION ALPHA: LIQUIDITY SNIPING ---
         if let Some((spread_bps, imbalance)) = self.assess_liquidity_quality(&params.symbol) {
-             info!(
+            info!(
                 symbol = %params.symbol,
                 spread_bps = %spread_bps,
                 imbalance = %imbalance,
@@ -135,15 +198,19 @@ impl OrderManager {
             // 2. Imbalance Sniping (FOMO / Panic)
             // If we are Buying and Imbalance > 0.6 (Strong Buy Pressure), liquidity is fleeting.
             // Switch to TAKER (Market or Aggressive Limit) to swipe before it's gone.
-            if params.side == Side::Buy && imbalance > Decimal::from_f32(0.6).unwrap() {
+            let imb_buy_thresh =
+                Decimal::from_str(IMBALANCE_THRESHOLD_BUY).unwrap_or(Decimal::new(6, 1));
+            if params.side == Side::Buy && imbalance > imb_buy_thresh {
                 decision.order_type = OrderType::Market;
                 decision.post_only = false;
                 decision.reason = format!("IMBALANCE_SNIPE_BUY: Imb {}", imbalance);
                 return decision;
             }
-            
+
             // If we are Selling and Imbalance < -0.6 (Strong Sell Pressure)
-            if params.side == Side::Sell && imbalance < Decimal::from_f32(-0.6).unwrap() {
+            let imb_sell_thresh =
+                Decimal::from_str(IMBALANCE_THRESHOLD_SELL).unwrap_or(Decimal::new(-6, 1));
+            if params.side == Side::Sell && imbalance < imb_sell_thresh {
                 decision.order_type = OrderType::Market;
                 decision.post_only = false;
                 decision.reason = format!("IMBALANCE_SNIPE_SELL: Imb {}", imbalance);
@@ -152,18 +219,18 @@ impl OrderManager {
         }
 
         // If no expected profit provided, use maker order
-        if params.expected_profit_pct.is_none() {
+        let expected_profit = if let Some(p) = params.expected_profit_pct {
+            p
+        } else {
             info!(
                 signal_id = %params.signal_id,
                 symbol = %params.symbol,
                 "Using default maker order (no profit estimate)"
             );
             return decision;
-        }
-
-        let expected_profit = params.expected_profit_pct.unwrap();
+        };
         let fee_analysis = self.analyze_fees(expected_profit);
-        
+
         info!(
             signal_id = %params.signal_id,
             symbol = %params.symbol,
@@ -173,22 +240,25 @@ impl OrderManager {
             taker_profitable = fee_analysis.taker_profitable,
             "Fee analysis completed"
         );
-        
+
         decision.fee_analysis = Some(fee_analysis);
         decision
     }
 
     pub fn evaluate_taker_conversion(
-        &self, 
-        signal_id: &str, 
-        expected_profit_pct: Decimal, 
-        elapsed_ms: u64
+        &self,
+        signal_id: &str,
+        expected_profit_pct: Decimal,
+        elapsed_ms: u64,
     ) -> TakerConversionResult {
         // If not past chase timeout, wait
         if elapsed_ms < self.config.chase_timeout_ms {
             return TakerConversionResult {
                 action: TakerAction::Wait,
-                reason: format!("Chase timeout not reached ({}ms < {}ms)", elapsed_ms, self.config.chase_timeout_ms),
+                reason: format!(
+                    "Chase timeout not reached ({}ms < {}ms)",
+                    elapsed_ms, self.config.chase_timeout_ms
+                ),
                 fee_analysis: None,
             };
         }
@@ -206,7 +276,10 @@ impl OrderManager {
 
             return TakerConversionResult {
                 action: TakerAction::ConvertToTaker,
-                reason: format!("Taker profitable: {}% after fees", fee_analysis.profit_after_taker),
+                reason: format!(
+                    "Taker profitable: {}% after fees",
+                    fee_analysis.profit_after_taker
+                ),
                 fee_analysis: Some(fee_analysis),
             };
         }
@@ -222,7 +295,7 @@ impl OrderManager {
         TakerConversionResult {
             action: TakerAction::Cancel,
             reason: format!(
-                "INSUFFICIENT_PROFIT_FOR_TAKER: {}% < {}%", 
+                "INSUFFICIENT_PROFIT_FOR_TAKER: {}% < {}%",
                 fee_analysis.profit_after_taker, self.config.min_profit_margin
             ),
             fee_analysis: Some(fee_analysis),

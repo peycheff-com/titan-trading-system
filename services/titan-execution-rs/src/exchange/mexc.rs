@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use rust_decimal::Decimal;
 use crate::exchange::adapter::{ExchangeAdapter, ExchangeError, OrderRequest, OrderResponse};
 use crate::model::{Side, OrderType};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 use hex;
@@ -14,6 +14,8 @@ type HmacSha256 = Hmac<Sha256>;
 
 const BASE_URL: &str = "https://contract.mexc.com";
 
+use crate::config::ExchangeConfig;
+
 pub struct MexcAdapter {
     client: Client,
     api_key: String,
@@ -21,16 +23,22 @@ pub struct MexcAdapter {
 }
 
 impl MexcAdapter {
-    pub fn new() -> Self {
-        let api_key = env::var("MEXC_API_KEY").unwrap_or_default();
-        let api_secret = env::var("MEXC_SECRET_KEY").unwrap_or_default();
+    pub fn new(config: Option<&ExchangeConfig>) -> Result<Self, ExchangeError> {
+        let api_key = config.and_then(|c| c.get_api_key())
+            .or_else(|| env::var("MEXC_API_KEY").ok())
+            .ok_or_else(|| ExchangeError::Config("MEXC_API_KEY not set".to_string()))?;
+            
+        let api_secret = config.and_then(|c| c.get_secret_key())
+            .or_else(|| env::var("MEXC_SECRET_KEY").ok())
+            .ok_or_else(|| ExchangeError::Config("MEXC_SECRET_KEY not set".to_string()))?;
         
-        Self {
+        Ok(Self {
             client: Client::new(),
             api_key,
             api_secret,
-        }
+        })
     }
+
 
     fn sign(&self, timestamp: &str, body: &str) -> Result<String, ExchangeError> {
         // MEXC Contract V1 Signature: HMAC-SHA256(api_key + timestamp + body, secret)
@@ -55,7 +63,7 @@ impl MexcAdapter {
     ) -> Result<T, ExchangeError> {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .expect("System time before UNIX EPOCH")
             .as_millis()
             .to_string();
 

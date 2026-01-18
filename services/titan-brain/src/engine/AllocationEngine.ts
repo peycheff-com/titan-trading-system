@@ -11,7 +11,7 @@ import {
   EquityTier,
   LeverageCaps,
   TransitionPoints,
-} from '../types/index.js';
+} from "../types/index.js";
 
 /**
  * AllocationEngine calculates capital allocation across Titan phases
@@ -33,7 +33,11 @@ export class AllocationEngine {
    * @param midpoint - Center of transition
    * @param steepness - How sharp the transition is (higher = sharper)
    */
-  private sigmoid(x: number, midpoint: number, steepness: number = 0.002): number {
+  private sigmoid(
+    x: number,
+    midpoint: number,
+    steepness: number = 0.002,
+  ): number {
     return 1 / (1 + Math.exp(-steepness * (x - midpoint)));
   }
 
@@ -206,7 +210,7 @@ export class AllocationEngine {
 
     // 1. Calculate Softmax of Sharpe Ratios for Performance Weights
     // Filter for phases 1, 2, 3 in order
-    const phases = ['phase1', 'phase2', 'phase3'];
+    const phases = ["phase1", "phase2", "phase3"];
     const sharpes = phases.map((id) => {
       const p = performances.find((p) => p.phaseId === id);
       return p ? Math.max(0, p.sharpeRatio) : 0; // Floor at 0 for softmax
@@ -235,5 +239,33 @@ export class AllocationEngine {
     const w3 = baseWeights.w3 * explorationWeight + perfW3 * exploitationWeight;
 
     return this.normalizeWeights({ w1, w2, w3, timestamp });
+  }
+
+  /**
+   * Calculate Risk-Constrained Fractional Kelly Multiplier
+   * Adapts the Kelly Fraction based on the tail index (Alpha) of the market.
+   *
+   * Logic:
+   * - Alpha < 2.0 (Wild/Infinite Variance): 0.2x Kelly (Survival Mode)
+   * - Alpha 2.0-3.0 (Transition): Linear blend 0.2x -> 0.5x
+   * - Alpha > 3.0 (Stable): 0.5x Kelly (Aggressive)
+   * - Max Cap: 0.8x Kelly (Never Full Kelly in Crypto)
+   */
+  getKellyFraction(alpha: number): number {
+    if (alpha <= 1.5) return 0.1; // Extreme
+    if (alpha < 2.0) return 0.2; // Wild
+
+    // Linear interpolation between 2.0 and 3.0
+    // 2.0 -> 0.2
+    // 3.0 -> 0.5
+    if (alpha <= 3.0) {
+      const t = alpha - 2.0; // 0 to 1
+      return 0.2 + t * 0.3; // 0.2 to 0.5
+    }
+
+    // Alpha > 3.0
+    // Cap at 0.5 normally, maybe up to 0.8 if extremely stable (>4.5)
+    if (alpha > 4.5) return 0.8;
+    return 0.5;
   }
 }

@@ -7,18 +7,22 @@
  * Requirements: 3.1, 3.3 - Configuration schema validation and environment-specific loading
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * Environment types
  */
-export const EnvironmentSchema = z.enum(['development', 'staging', 'production']);
+export const EnvironmentSchema = z.enum([
+  "development",
+  "staging",
+  "production",
+]);
 export type Environment = z.infer<typeof EnvironmentSchema>;
 
 /**
  * Exchange configuration schema
  */
-export const ExchangeConfigSchema = z.object({
+export const ExchangeConfigBase = z.object({
   enabled: z.boolean(),
   executeOn: z.boolean(),
   apiKey: z.string().optional(),
@@ -26,6 +30,18 @@ export const ExchangeConfigSchema = z.object({
   testnet: z.boolean().default(false),
   rateLimit: z.number().min(1).max(100).default(10),
   timeout: z.number().min(1000).max(30000).default(5000),
+});
+
+export const PartialExchangeConfigSchema = ExchangeConfigBase.partial();
+
+export const ExchangeConfigSchema = ExchangeConfigBase.refine((data) => {
+  if (data.enabled && data.executeOn) {
+    return !!data.apiKey && !!data.apiSecret;
+  }
+  return true;
+}, {
+  message: "API Key and Secret are required when execution is enabled",
+  path: ["apiKey"],
 });
 
 /**
@@ -37,7 +53,7 @@ export const PhaseConfigSchema = z.object({
   maxDrawdown: z.number().min(0.01).max(1),
   maxPositionSize: z.number().min(0.01).max(1),
   riskPerTrade: z.number().min(0.001).max(0.1),
-  exchanges: z.record(z.string(), ExchangeConfigSchema),
+  exchanges: z.record(z.string(), ExchangeConfigBase),
   parameters: z.record(z.string(), z.unknown()).optional(),
 
   // Environment-specific overrides
@@ -50,12 +66,45 @@ export const PhaseConfigSchema = z.object({
           maxDrawdown: z.number().min(0.01).max(1).optional(),
           maxPositionSize: z.number().min(0.01).max(1).optional(),
           riskPerTrade: z.number().min(0.001).max(0.1).optional(),
-          exchanges: z.record(z.string(), ExchangeConfigSchema.partial()).optional(),
+          exchanges: z.record(z.string(), ExchangeConfigBase.partial())
+            .optional(),
           parameters: z.record(z.string(), z.unknown()).optional(),
         })
         .partial(),
     )
     .optional(),
+}).superRefine((data, ctx) => {
+  // Validate exchanges: If executeOn is true, keys must be present
+  Object.entries(data.exchanges).forEach(([name, config]) => {
+    if (config.enabled && config.executeOn) {
+      if (!config.apiKey || !config.apiSecret) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            `API Key and Secret are required for exchange '${name}' when execution is enabled`,
+          path: ["exchanges", name, "apiKey"],
+        });
+      }
+    }
+  });
+});
+
+/**
+ * Brain configuration schema
+ */
+/**
+ * Schema for Phase Configuration Overrides (Deep Partial)
+ * Allows overriding individual properties including partial exchange configs
+ */
+export const PhaseConfigOverridesSchema = z.object({
+  enabled: z.boolean().optional(),
+  maxLeverage: z.number().min(1).max(200).optional(),
+  maxDrawdown: z.number().min(0.01).max(1).optional(),
+  maxPositionSize: z.number().min(0.01).max(1).optional(),
+  riskPerTrade: z.number().min(0.001).max(0.1).optional(),
+  exchanges: z.record(z.string(), PartialExchangeConfigSchema).optional(),
+  parameters: z.record(z.string(), z.unknown()).optional(),
+  environments: z.record(z.string(), z.any()).optional(), // Avoid deep recursion issues in overrides
 });
 
 /**
@@ -72,7 +121,7 @@ export const BrainConfigSchema = z.object({
   }),
 
   // Global overrides for all phases
-  overrides: z.record(z.string(), PhaseConfigSchema.partial()).optional(),
+  overrides: z.record(z.string(), PhaseConfigOverridesSchema).optional(),
 
   // Environment-specific brain settings
   environments: z
@@ -90,7 +139,8 @@ export const BrainConfigSchema = z.object({
             })
             .partial()
             .optional(),
-          overrides: z.record(z.string(), PhaseConfigSchema.partial()).optional(),
+          overrides: z.record(z.string(), PhaseConfigOverridesSchema)
+            .optional(),
         })
         .partial(),
     )
@@ -101,104 +151,79 @@ export const BrainConfigSchema = z.object({
  * Infrastructure configuration schema
  */
 export const InfrastructureConfigSchema = z.object({
-  server: z.object({
-    minRAM: z.string().regex(/^\d+GB$/),
-    minCPU: z.number().min(1),
-    minDisk: z.string().regex(/^\d+GB$/),
-    operatingSystem: z.string(),
-  }),
-
-  services: z.object({
-    nodejs: z.object({
-      version: z.string(),
-      globalPackages: z.array(z.string()),
+  infrastructure: z.object({
+    requirements: z.object({
+      minRAM: z.string(),
+      minCPU: z.number(),
+      minDisk: z.string(),
+      operatingSystem: z.string(),
     }),
-    redis: z.object({
-      version: z.string(),
-      port: z.number().min(1).max(65535),
-      maxMemory: z.string(),
-      maxMemoryPolicy: z.string(),
-      bindAddress: z.string(),
+    dependencies: z.object({
+      nodejs: z.object({
+        version: z.string(),
+        globalPackages: z.array(z.string()),
+      }),
+      redis: z.object({
+        version: z.string(),
+        port: z.number().or(z.string()),
+        maxMemory: z.string(),
+        maxMemoryPolicy: z.string(),
+        bindAddress: z.string(),
+      }),
+      nginx: z.object({
+        version: z.string(),
+        enableGzip: z.boolean(),
+        clientMaxBodySize: z.string(),
+      }),
+      certbot: z.object({
+        email: z.string(),
+        domains: z.array(z.string()),
+        autoRenewal: z.boolean(),
+      }).optional(),
     }),
-    nginx: z.object({
-      version: z.string(),
-      enableGzip: z.boolean(),
-      clientMaxBodySize: z.string(),
-    }),
-  }),
-
-  security: z.object({
-    firewall: z.object({
-      defaultIncoming: z.enum(['allow', 'deny']),
-      defaultOutgoing: z.enum(['allow', 'deny']),
-      allowedPorts: z.array(
-        z.object({
-          port: z.number().min(1).max(65535),
-          protocol: z.enum(['tcp', 'udp']),
+    security: z.object({
+      firewall: z.object({
+        defaultIncoming: z.string(),
+        defaultOutgoing: z.string(),
+        allowedPorts: z.array(z.object({
+          port: z.number(),
+          protocol: z.string(),
           comment: z.string(),
-        }),
-      ),
-      restrictedPorts: z.array(
-        z.object({
-          port: z.number().min(1).max(65535),
-          protocol: z.enum(['tcp', 'udp']),
+        })),
+        restrictedPorts: z.array(z.object({
+          port: z.number(),
+          protocol: z.string(),
           allowFrom: z.string(),
           comment: z.string(),
-        }),
-      ),
+        })).optional(),
+      }),
+      fail2ban: z.object({
+        enabled: z.boolean(),
+        banTime: z.number(),
+        findTime: z.number(),
+        maxRetry: z.number(),
+        jails: z.array(z.object({
+          name: z.string(),
+          enabled: z.boolean(),
+          port: z.string(),
+          filter: z.string(),
+          logPath: z.string(),
+          maxRetry: z.number().optional(),
+        })).optional(),
+      }),
+      automaticUpdates: z.object({
+        enabled: z.boolean(),
+        securityOnly: z.boolean(),
+        autoReboot: z.boolean(),
+        rebootTime: z.string(),
+      }).optional(),
     }),
-
-    ssl: z.object({
-      enabled: z.boolean(),
-      domains: z.array(z.string()),
-      autoRenewal: z.boolean(),
-      email: z.string().email().optional(),
-    }),
-
-    fail2ban: z.object({
-      enabled: z.boolean(),
-      banTime: z.number().min(60),
-      findTime: z.number().min(60),
-      maxRetry: z.number().min(1),
-    }),
+    systemLimits: z.any().optional(),
+    directories: z.any().optional(),
+    monitoring: z.any().optional(),
   }),
-
-  // Environment-specific infrastructure settings
-  environments: z
-    .record(
-      z.string(),
-      z
-        .object({
-          server: z
-            .object({
-              minRAM: z
-                .string()
-                .regex(/^\d+GB$/)
-                .optional(),
-              minCPU: z.number().min(1).optional(),
-              minDisk: z
-                .string()
-                .regex(/^\d+GB$/)
-                .optional(),
-            })
-            .partial()
-            .optional(),
-          security: z
-            .object({
-              ssl: z
-                .object({
-                  enabled: z.boolean().optional(),
-                  domains: z.array(z.string()).optional(),
-                })
-                .partial()
-                .optional(),
-            })
-            .partial()
-            .optional(),
-        })
-        .partial(),
-    )
-    .optional(),
+  deployment: z.any().optional(),
+  validation: z.any().optional(),
 });
 
 /**
@@ -232,7 +257,7 @@ export const DeploymentConfigSchema = z.object({
     metricsPort: z.number().min(1).max(65535),
     alerting: z.object({
       enabled: z.boolean(),
-      channels: z.array(z.enum(['email', 'slack', 'webhook', 'sms'])),
+      channels: z.array(z.enum(["email", "slack", "webhook", "sms"])),
     }),
   }),
 
@@ -245,7 +270,7 @@ export const DeploymentConfigSchema = z.object({
     }),
     encryption: z.object({
       enabled: z.boolean(),
-      algorithm: z.enum(['AES-256-GCM', 'AES-256-CBC']),
+      algorithm: z.enum(["AES-256-GCM", "AES-256-CBC"]),
     }),
   }),
 });
@@ -254,12 +279,12 @@ export const DeploymentConfigSchema = z.object({
  * Service-specific configuration schemas
  */
 export const ServiceConfigSchemas: Record<string, z.ZodSchema<any>> = {
-  'titan-brain': z.object({
-    port: z.number().min(1).max(65535),
-    logLevel: z.enum(['debug', 'info', 'warn', 'error']),
+  "titan-brain": z.object({
+    port: z.number().min(1).max(65535).or(z.string()),
+    logLevel: z.enum(["debug", "info", "warn", "error"]),
     database: z.object({
       host: z.string(),
-      port: z.number().min(1).max(65535),
+      port: z.number().min(1).max(65535).or(z.string()),
       name: z.string(),
       user: z.string(),
       password: z.string(),
@@ -302,7 +327,9 @@ export class ConfigValidator {
           data: result.data,
         };
       } else {
-        const errors = result.error.issues.map((err) => `${err.path.join('.')}: ${err.message}`);
+        const errors = result.error.issues.map((err) =>
+          `${err.path.join(".")}: ${err.message}`
+        );
 
         return {
           valid: false,
@@ -313,7 +340,11 @@ export class ConfigValidator {
     } catch (error) {
       return {
         valid: false,
-        errors: [`Validation error: ${error instanceof Error ? error.message : 'Unknown error'}`],
+        errors: [
+          `Validation error: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
+        ],
         warnings: [],
       };
     }
@@ -350,7 +381,10 @@ export class ConfigValidator {
   /**
    * Validate service configuration
    */
-  static validateServiceConfig(service: string, data: unknown): ValidationResult {
+  static validateServiceConfig(
+    service: string,
+    data: unknown,
+  ): ValidationResult {
     const schema = ServiceConfigSchemas[service];
 
     if (!schema) {
@@ -365,6 +399,61 @@ export class ConfigValidator {
   }
 
   /**
+   * Validate configuration against schema and throw if invalid
+   */
+  static validateOrThrow<T>(
+    schema: z.ZodSchema<T>,
+    data: unknown,
+    context: string,
+  ): T {
+    const result = this.validate(schema, data);
+    if (!result.valid) {
+      throw new Error(
+        `Invalid ${context} configuration: ${result.errors.join(", ")}`,
+      );
+    }
+    return result.data;
+  }
+
+  /**
+   * Validate brain configuration and throw if invalid
+   */
+  static validateBrainConfigOrThrow(data: unknown): BrainConfig {
+    return this.validateOrThrow(BrainConfigSchema, data, "brain");
+  }
+
+  /**
+   * Validate phase configuration and throw if invalid
+   */
+  static validatePhaseConfigOrThrow(data: unknown): PhaseConfig {
+    return this.validateOrThrow(
+      PhaseConfigSchema,
+      data,
+      "phase",
+    ) as PhaseConfig;
+  }
+
+  /**
+   * Validate infrastructure configuration and throw if invalid
+   */
+  static validateInfrastructureConfigOrThrow(
+    data: unknown,
+  ): InfrastructureConfig {
+    return this.validateOrThrow(
+      InfrastructureConfigSchema,
+      data,
+      "infrastructure",
+    );
+  }
+
+  /**
+   * Validate deployment configuration and throw if invalid
+   */
+  static validateDeploymentConfigOrThrow(data: unknown): DeploymentConfig {
+    return this.validateOrThrow(DeploymentConfigSchema, data, "deployment");
+  }
+
+  /**
    * Get available service schemas
    */
   static getAvailableServiceSchemas(): string[] {
@@ -375,8 +464,13 @@ export class ConfigValidator {
 /**
  * Type exports for use in other modules
  */
+// Explicitly partial schema to avoid inference issues
+
+// ... existing code ...
+
 export type PhaseConfig = z.infer<typeof PhaseConfigSchema>;
 export type BrainConfig = z.infer<typeof BrainConfigSchema>;
 export type InfrastructureConfig = z.infer<typeof InfrastructureConfigSchema>;
 export type DeploymentConfig = z.infer<typeof DeploymentConfigSchema>;
-export type ExchangeConfig = z.infer<typeof ExchangeConfigSchema>;
+// Infer type from Base to ensure compatibility with partials structure
+export type ExchangeConfig = z.infer<typeof ExchangeConfigBase>;

@@ -21,7 +21,7 @@ import { OIWipeoutDetector } from "./OIWipeoutDetector.js";
 import { OrderFlowImbalanceCalculator } from "../calculators/OrderFlowImbalanceCalculator.js";
 
 import { Tripwire } from "../types/index.js";
-export { Tripwire };
+export type { Tripwire };
 
 export class UltimateBulgariaProtocol {
   private bybitClient: any; // Will be null when using titan-execution service
@@ -98,6 +98,13 @@ export class UltimateBulgariaProtocol {
     return null;
   }
 
+  // Power Law Metrics Cache
+  private metrics: Map<string, any> = new Map();
+
+  updatePowerLawMetrics(symbol: string, data: any) {
+    this.metrics.set(symbol, data);
+  }
+
   /**
    * Detect idiosyncratic crashes
    *
@@ -105,8 +112,9 @@ export class UltimateBulgariaProtocol {
    * CRITICAL: Filter for idiosyncratic crashes (not market-wide)
    *
    * Only flag if:
-   * - Symbol drops > 3%
+   * - Symbol drops > Dynamic Threshold (Z > 2.5 or Alpha-based)
    * - BTC is flat (< 0.5%)
+   * - Power Law Regime supports it (Alpha < 3.0 usually implies heavy tails)
    *
    * This filters out market-wide crashes (beta) and finds liquidation cascades (alpha)
    *
@@ -132,14 +140,46 @@ export class UltimateBulgariaProtocol {
         const priceNow = ohlcv[ohlcv.length - 1].close;
         const drop = (priceStart - priceNow) / priceStart;
 
-        // Only flag if drop > 3% AND BTC is flat (< 0.5%)
+        // Get Power Law Metrics
+        const metric = this.metrics.get(symbol);
+
+        // Default Thresholds (fallback)
+        let dropThreshold = 0.03; // 3%
+
+        if (metric) {
+          // Adaptive Threshold based on Alpha
+          // If Alpha is low (1.5 - 2.5), tails are heavy -> huge drops are more common (normal).
+          // We want *abnormal* drops even for the regime.
+          // Or maybe: If Alpha is low, we expect mean-reversion? No, low alpha = trending/infinite variance.
+          // If Alpha is high (> 3.0), Gaussian -> any drop is significant.
+
+          // Logic:
+          // High Alpha (> 3): Stable. A 3% drop is HUGE. Signal is strong.
+          // Low Alpha (< 2): Wild. A 3% drop is noise. Need 5%+.
+
+          if (metric.alpha < 2.0) {
+            dropThreshold = 0.05; // Ignore noise in wild assets
+          } else if (metric.alpha > 3.0) {
+            dropThreshold = 0.025; // Catch rare anomalies in stable assets
+          }
+
+          // Volatility Cluster check
+          // If in high volatility cluster, maybe require deeper drop?
+          if (metric.volatility_cluster) {
+            dropThreshold *= 1.2; // Increase threshold by 20%
+          }
+        }
+
+        // Only flag if drop > threshold AND BTC is flat (< 0.5%)
         // This filters out market-wide crashes (beta) and finds liquidation cascades (alpha)
-        if (drop > 0.03 && btcDrop < 0.005) {
+        if (drop > dropThreshold && btcDrop < 0.005) {
           crashes.push(symbol);
           console.log(
             `💀 Idiosyncratic crash detected: ${symbol} (-${
               (drop * 100).toFixed(1)
-            }%) vs BTC (-${(btcDrop * 100).toFixed(1)}%)`,
+            }%) vs BTC (-${(btcDrop * 100).toFixed(1)}%) | Regime: ${
+              metric ? metric.alpha.toFixed(2) : "N/A"
+            }`,
           );
         }
       } catch (error) {

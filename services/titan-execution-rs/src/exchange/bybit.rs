@@ -2,21 +2,20 @@ use async_trait::async_trait;
 use rust_decimal::Decimal;
 use crate::exchange::adapter::{ExchangeAdapter, ExchangeError, OrderRequest, OrderResponse};
 use crate::model::{Side, OrderType};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 use hex;
 use std::env;
-use std::collections::BTreeMap;
 use reqwest::{Client, Method};
-use tracing::{info, error};
+
+use crate::rate_limiter::TokenBucket;
+use crate::config::ExchangeConfig;
 
 type HmacSha256 = Hmac<Sha256>;
 
 const BASE_URL: &str = "https://api.bybit.com";
 const RECV_WINDOW: &str = "5000";
-
-use crate::rate_limiter::TokenBucket;
 
 pub struct BybitAdapter {
     client: Client,
@@ -27,28 +26,37 @@ pub struct BybitAdapter {
 }
 
 impl BybitAdapter {
-    pub fn new() -> Self {
-        let api_key = env::var("BYBIT_API_KEY").unwrap_or_default();
-        let api_secret = env::var("BYBIT_SECRET_KEY").unwrap_or_default();
+    pub fn new(config: Option<&ExchangeConfig>) -> Result<Self, ExchangeError> {
+        let api_key = config.and_then(|c| c.get_api_key())
+            .or_else(|| env::var("BYBIT_API_KEY").ok())
+            .ok_or_else(|| ExchangeError::Config("BYBIT_API_KEY not set".to_string()))?;
+            
+        let api_secret = config.and_then(|c| c.get_secret_key())
+            .or_else(|| env::var("BYBIT_SECRET_KEY").ok())
+            .ok_or_else(|| ExchangeError::Config("BYBIT_SECRET_KEY not set".to_string()))?;
         
         let order_rps = env::var("BYBIT_ORDER_RPS")
             .unwrap_or("10".to_string())
             .parse::<f64>()
             .unwrap_or(10.0);
+        
+        // Use config rate limit if set, otherwise env/default
+        let order_rps = config.and_then(|c| c.rate_limit).map(|r| r as f64).unwrap_or(order_rps);
 
         let query_rps = env::var("BYBIT_QUERY_RPS")
-            .unwrap_or("50".to_string()) // Higher default for queries
+            .unwrap_or("50".to_string())
             .parse::<f64>()
             .unwrap_or(50.0);
             
-        Self {
+        Ok(Self {
             client: Client::new(),
             api_key,
             api_secret,
             order_limiter: TokenBucket::new(20, order_rps), // Burst 20, Custom RPS
             query_limiter: TokenBucket::new(50, query_rps), // Burst 50, Higher RPS
-        }
+        })
     }
+
 
     fn sign(&self, timestamp: &str, params: &str) -> Result<String, ExchangeError> {
         let payload = format!("{}{}{}{}", timestamp, self.api_key, RECV_WINDOW, params);

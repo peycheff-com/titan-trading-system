@@ -1,0 +1,15 @@
+{
+  "name": "titan-execution-rs",
+  "version": "0.1.0",
+  "description": "Rust Execution Engine for Titan Trading System",
+  "private": true,
+  "scripts": {
+    "build": "cargo build --release",
+    "test": "cargo test",
+    "start": "cargo run --release",
+    "lint": "cargo clippy",
+    "format": "cargo fmt"
+  },
+  "author": "Titan Team",
+  "license": "ISC"
+}

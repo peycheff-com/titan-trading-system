@@ -13,6 +13,7 @@
     "start:scavenger": "npm start -w services/titan-phase1-scavenger",
     "start:hunter": "npm start -w services/titan-phase2-hunter",
     "start:sentinel": "npm start -w services/titan-phase3-sentinel",
+    "start:powerlaw-lab": "npm start -w services/titan-powerlaw-lab",
     "start:ai-quant": "npm start -w services/titan-ai-quant",
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test:all",
@@ -20,7 +21,8 @@
     "lint:all": "npm run lint --workspaces --if-present",
     "lint:fix": "npm run lint:fix --workspaces --if-present",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "validate:config": "npx ts-node scripts/validate-configs.ts"
   },
   "engines": {
     "node": ">=20.0.0"

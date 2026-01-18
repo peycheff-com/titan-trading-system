@@ -1,9 +1,9 @@
 use crate::model::{Intent, IntentStatus, IntentType, Position, Side, TradeRecord};
+use chrono::Utc;
 use rust_decimal::Decimal;
-use std::collections::HashMap;
-use chrono::{Utc};
-use tracing::{info, warn};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use tracing::{info, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ExecutionEvent {
@@ -41,11 +41,12 @@ impl ShadowState {
     pub fn process_intent(&mut self, mut intent: Intent) -> Intent {
         intent.t_ingress = Some(Utc::now().timestamp_millis());
         intent.status = IntentStatus::Pending;
-        
+
         // Clone for storage and return
         let stored_intent = intent.clone();
-        self.pending_intents.insert(intent.signal_id.clone(), stored_intent);
-        
+        self.pending_intents
+            .insert(intent.signal_id.clone(), stored_intent);
+
         info!(
             signal_id = %intent.signal_id,
             intent_type = ?intent.intent_type,
@@ -70,14 +71,14 @@ impl ShadowState {
         if let Some(intent) = self.pending_intents.get_mut(signal_id) {
             intent.status = IntentStatus::Rejected;
             intent.rejection_reason = Some(reason.clone());
-            
+
             warn!(
-                signal_id = %signal_id, 
+                signal_id = %signal_id,
                 reason = %reason,
                 symbol = %intent.symbol,
                 "REJECTED - Intent rejected, position state NOT updated"
             );
-            
+
             return Some(intent.clone());
         }
         warn!(signal_id = %signal_id, "Intent not found for rejection");
@@ -85,27 +86,26 @@ impl ShadowState {
     }
 
     pub fn confirm_execution(
-        &mut self, 
-        signal_id: &str, 
-        fill_price: Decimal, 
-        fill_size: Decimal, 
-        filled: bool
+        &mut self,
+        signal_id: &str,
+        fill_price: Decimal,
+        fill_size: Decimal,
+        filled: bool,
     ) -> Option<ExecutionEvent> {
         // We need to clone the intent ID first to avoid borrow check issues if we removed it,
-        // but here we just get a mutable reference. 
+        // but here we just get a mutable reference.
         // Logic: Get intent -> Check status -> Update -> Logic
-        
+
         // Temporarily get intent details needed for logic, to avoid holding mutable borrow on `pending_intents` too long if possible.
         // Actually, we can just use the mutable reference since we are mostly operating on `positions` map which is separate.
-        
-        let intent_opt = self.pending_intents.get_mut(signal_id);
-        
-        if intent_opt.is_none() {
-            warn!(signal_id = %signal_id, "Intent not found for execution confirmation");
-            return None;
-        }
 
-        let intent = intent_opt.unwrap();
+        let intent = match self.pending_intents.get_mut(signal_id) {
+            Some(i) => i,
+            None => {
+                warn!(signal_id = %signal_id, "Intent not found for execution confirmation");
+                return None;
+            }
+        };
 
         if !filled {
             intent.status = IntentStatus::Rejected;
@@ -127,12 +127,22 @@ impl ShadowState {
         // Handle close intents
         match intent_type {
             IntentType::CloseLong | IntentType::CloseShort | IntentType::Close => {
-                return self.close_position(signal_id, &symbol, fill_price, "MANUAL".to_string(), Some(fill_size));
+                return self.close_position(
+                    signal_id,
+                    &symbol,
+                    fill_price,
+                    "MANUAL".to_string(),
+                    Some(fill_size),
+                );
             }
             _ => {}
         }
 
-        let side = if direction == 1 { Side::Long } else { Side::Short };
+        let side = if direction == 1 {
+            Side::Long
+        } else {
+            Side::Short
+        };
 
         // Check for existing position
         if let Some(existing_position) = self.positions.get_mut(&symbol) {
@@ -188,39 +198,53 @@ impl ShadowState {
         Some(ExecutionEvent::Opened(position))
     }
 
-    fn calculate_pnl(side: &Side, entry_price: Decimal, exit_price: Decimal, size: Decimal) -> (Decimal, Decimal) {
+    fn calculate_pnl(
+        side: &Side,
+        entry_price: Decimal,
+        exit_price: Decimal,
+        size: Decimal,
+    ) -> (Decimal, Decimal) {
         match side {
             Side::Long => {
                 let pnl = (exit_price - entry_price) * size;
                 // Avoid division by zero
-                let pnl_pct = if entry_price.is_zero() { Decimal::ZERO } else { (exit_price - entry_price) / entry_price * Decimal::from(100) };
+                let pnl_pct = if entry_price.is_zero() {
+                    Decimal::ZERO
+                } else {
+                    (exit_price - entry_price) / entry_price * Decimal::from(100)
+                };
                 (pnl, pnl_pct)
-            },
+            }
             Side::Short => {
                 let pnl = (entry_price - exit_price) * size;
-                let pnl_pct = if entry_price.is_zero() { Decimal::ZERO } else { (entry_price - exit_price) / entry_price * Decimal::from(100) };
+                let pnl_pct = if entry_price.is_zero() {
+                    Decimal::ZERO
+                } else {
+                    (entry_price - exit_price) / entry_price * Decimal::from(100)
+                };
                 (pnl, pnl_pct)
-            },
-            _ => (Decimal::ZERO, Decimal::ZERO) // Should not happen for positions usually
+            }
+            _ => (Decimal::ZERO, Decimal::ZERO), // Should not happen for positions usually
         }
     }
 
     fn close_position(
-        &mut self, 
-        signal_id: &str, 
-        symbol: &str, 
-        exit_price: Decimal, 
-        close_reason: String, 
-        close_size: Option<Decimal>
+        &mut self,
+        signal_id: &str,
+        symbol: &str,
+        exit_price: Decimal,
+        close_reason: String,
+        close_size: Option<Decimal>,
     ) -> Option<ExecutionEvent> {
-        let position_opt = self.positions.get_mut(symbol);
-        if position_opt.is_none() {
-            warn!(signal_id = %signal_id, symbol = %symbol, "No position to close");
-            return None;
-        }
+        // Use if let to avoid getting mutable ref twice or unwrapping
+        let position = match self.positions.get_mut(symbol) {
+            Some(p) => p,
+            None => {
+                warn!(signal_id = %signal_id, symbol = %symbol, "No position to close");
+                return None;
+            }
+        };
 
-        let position = position_opt.unwrap();
-        
         if position.size.is_zero() {
             warn!(signal_id = %signal_id, symbol = %symbol, "Position has zero size, removing");
             self.positions.remove(symbol);
@@ -229,11 +253,20 @@ impl ShadowState {
 
         let actual_close_size = close_size.unwrap_or(position.size);
         // Ensure we don't close more than we have
-        let actual_close_size = if actual_close_size > position.size { position.size } else { actual_close_size };
-        
+        let actual_close_size = if actual_close_size > position.size {
+            position.size
+        } else {
+            actual_close_size
+        };
+
         let is_partial_close = actual_close_size < position.size;
 
-        let (pnl, pnl_pct) = Self::calculate_pnl(&position.side, position.entry_price, exit_price, actual_close_size);
+        let (pnl, pnl_pct) = Self::calculate_pnl(
+            &position.side,
+            position.entry_price,
+            exit_price,
+            actual_close_size,
+        );
 
         let trade_record = TradeRecord {
             signal_id: position.signal_id.clone(),

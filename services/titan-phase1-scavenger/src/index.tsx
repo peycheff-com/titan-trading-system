@@ -10,6 +10,11 @@
  * Requirements: 1.1-1.7 (Three-Layer Trap Architecture)
  */
 
+import { NatsClient } from './transport/NatsClient.js';
+
+// ... imports
+
+
 import React from 'react';
 import { render } from 'ink';
 import { TitanTrap } from './engine/TitanTrap.js';
@@ -59,6 +64,7 @@ class TitanScavengerApp {
   private logger!: Logger;
   private eventEmitter!: EventEmitter;
   private consoleClient!: ConsoleClient;
+  private natsClient!: NatsClient;
   
   // Calculators
   private tripwireCalculators!: TripwireCalculators;
@@ -123,6 +129,7 @@ class TitanScavengerApp {
       // 1. Initialize configuration
       this.addLiveEvent('INFO', 'Loading configuration...');
       this.configManager = new ConfigManager();
+      await this.configManager.initialize();
       const config = this.configManager.getConfig();
       console.log('✅ Configuration loaded');
       
@@ -154,6 +161,15 @@ class TitanScavengerApp {
       if (consoleUrl) {
         await this.consoleClient.connect();
       }
+
+      // 4.6 Initialize NATS Client (Power Law Metrics)
+      this.addLiveEvent('INFO', 'Connecting to NATS (Metrics)...');
+      this.natsClient = new NatsClient({
+        servers: process.env.NATS_URL || 'nats://localhost:4222',
+        name: 'titan-scavenger-metrics'
+      });
+      await this.natsClient.connect();
+      console.log('✅ NATS Client connected');
       
       // 5. Initialize exchange clients
       this.addLiveEvent('INFO', 'Connecting to Binance Spot...');
@@ -193,6 +209,12 @@ class TitanScavengerApp {
         this.oiDetector
       );
       console.log('✅ Structural flaw detectors initialized');
+
+      // Subscribe to Power Law Metrics after protocol is initialized
+      await this.natsClient.subscribeToPowerLawMetrics((symbol: string, data: any) => {
+          // Forward to UltimateBulgariaProtocol
+          this.ultimateProtocol.updatePowerLawMetrics(symbol, data);
+      });
       
       // 8. Initialize TitanTrap engine
       this.addLiveEvent('INFO', 'Initializing TitanTrap engine...');
@@ -297,6 +319,11 @@ class TitanScavengerApp {
       // Stop health server
       if (this.healthServer) {
         await this.healthServer.stop();
+      }
+
+      // Stop NATS Client
+      if (this.natsClient) {
+          await this.natsClient.close();
       }
       
       // Unmount Ink UI

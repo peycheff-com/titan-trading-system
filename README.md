@@ -1,7 +1,8 @@
 # Titan Trading System
 
 **Bio-Mimetic Trading Organism** — A 5-phase algorithmic trading system that
-evolves with capital growth.
+evolves its behavior based on available capital, orchestrated by a central "Brain"
+and executed via specialized microservices with sub-millisecond latency.
 
 [![DigitalOcean](https://img.shields.io/badge/DigitalOcean-Droplet-0080FF)](https://digitalocean.com)
 [![Node.js](https://img.shields.io/badge/Node.js-22+-43853D)](https://nodejs.org)
@@ -41,26 +42,27 @@ evolves with capital growth.
 
 ## Trading Phases
 
-| Phase | Name      | Capital Range | Strategy                     | Leverage |
-| ----- | --------- | ------------- | ---------------------------- | -------- |
-| 1     | Scavenger | $200 – $5K    | Predestination trap system   | 15-20x   |
-| 2     | Hunter    | $2.5K – $50K  | Holographic market structure | 3-5x     |
-| 3     | Sentinel  | $50K+         | Market-neutral basis arb     | 1-3x     |
-| 4     | AI Quant  | —             | Gemini AI parameter tuning   | —        |
-| 5     | Brain     | All           | Master orchestrator          | —        |
+| Phase | Name      | Capital Range | Description                                 | Leverage |
+| ----- | --------- | ------------- | ------------------------------------------- | -------- |
+| 1     | Scavenger | $200 – $5K    | High leverage trap system / Scalping        | 15-20x   |
+| 2     | Hunter    | $2.5K – $50K  | Holographic market structure analysis       | 3-5x     |
+| 3     | Sentinel  | $50K+         | Market-neutral basis arbitrage              | 1-3x     |
+| 4     | AI Quant  | —             | Gemini AI parameter optimization & Research | —        |
+| 5     | Brain     | All           | Master orchestrator & Risk Management       | —        |
 
 ## Services
 
-| Service                  | Description                            | Technology                      |
-| ------------------------ | -------------------------------------- | ------------------------------- |
-| `titan-brain`            | Central orchestrator & risk management | TypeScript, Fastify, PostgreSQL |
-| `titan-execution-rs`     | High-performance order execution       | **Rust**, Actix, NATS           |
-| `titan-phase1-scavenger` | Trap detection & signal generation     | TypeScript                      |
-| `titan-phase2-hunter`    | Holographic analysis engine            | TypeScript                      |
-| `titan-phase3-sentinel`  | Basis arbitrage engine                 | TypeScript                      |
-| `titan-ai-quant`         | AI parameter optimization              | TypeScript, Gemini AI           |
-| `titan-console`          | Web monitoring dashboard               | React, Vite, TailwindCSS        |
-| `@titan/shared`          | Common infrastructure library          | TypeScript                      |
+| Service                   | Description                            | Technology                      |
+| ------------------------- | -------------------------------------- | ------------------------------- |
+| `titan-brain`             | Central orchestrator & risk management | TypeScript, Fastify, PostgreSQL |
+| `titan-execution-rs`      | High-performance order execution       | **Rust**, Actix, NATS           |
+| `titan-phase1-scavenger`  | Trap detection & signal generation     | TypeScript                      |
+| `titan-phase2-hunter`     | Holographic analysis engine            | TypeScript                      |
+| `titan-phase3-sentinel`   | Basis arbitrage engine                 | TypeScript                      |
+| `titan-ai-quant`          | AI parameter optimization              | TypeScript, Gemini AI           |
+| `titan-powerlaw-lab`      | Power Law research & fractal analysis  | TypeScript / Experimental       |
+| `titan-console`           | Web monitoring dashboard               | React, Vite, TailwindCSS        |
+| `@titan/shared`           | Common infrastructure library          | TypeScript                      |
 
 ## Technology Stack
 
@@ -69,7 +71,7 @@ evolves with capital growth.
 | **Execution Engine** | Rust (sub-millisecond latency)              |
 | **Backend Services** | Node.js 22+, TypeScript, Fastify            |
 | **Event Bus**        | NATS JetStream                              |
-| **Database**         | PostgreSQL (Supabase)                       |
+| **Database**         | PostgreSQL (Self-hosted on VPS)             |
 | **Frontend**         | React, Vite, TailwindCSS                    |
 | **AI/ML**            | Google Gemini 2.0 Flash                     |
 | **Deployment**       | DigitalOcean Droplet (VPS) + Docker Compose |
@@ -79,10 +81,10 @@ evolves with capital growth.
 
 ### Prerequisites
 
-- Node.js 22+
-- Rust 1.75+ (for execution engine)
-- PostgreSQL or Supabase account
-- NATS Server (optional, for event streaming)
+- **Node.js:** v22+
+- **Rust:** 1.75+ (for execution engine)
+- **PostgreSQL:** Local instance or VPS
+- **NATS Server:** JetStream enabled (optional for local dev if using Docker)
 
 ### Installation
 
@@ -91,24 +93,25 @@ evolves with capital growth.
 git clone https://github.com/peycheff-com/titan-trading-system.git
 cd titan-trading-system
 
-# Install all dependencies
+# Install all dependencies (Monorepo)
 npm install
 
 # Configure environment
 cp .env.example .env
-# Edit .env with your credentials
+# Edit .env with your credentials (DB, NATS, Exchanges)
 ```
 
 ### Development
 
 ```bash
-# Start all services locally
-./start-titan.sh
+# Start all services locally (via Docker Compose)
+# This spins up Postgres, NATS, Brain, Execution, Console, etc.
+docker compose up -d
 
-# Or start individual services
-npm run start:brain      # Titan Brain on :3100
-npm run start:execution  # Rust Engine on :3002
-npm run start:console    # Dashboard on :5173
+# Or start individual services for development
+npm run start:brain       # Titan Brain on :3100
+npm run start:execution   # Rust Engine on :3002
+npm run start:console     # Dashboard on :5173
 ```
 
 ### Build
@@ -129,20 +132,19 @@ npm run test:all    # Test all services
 
 ### Environment Variables
 
+Configuration is primarily managed via `.env` files. Access is unified via `@titan/shared`.
+
 ```bash
 # Core
 NODE_ENV=production
 DEPLOYMENT_ENVIRONMENT=production
 
-# Database
-# Database (Connection String or Individual Vars)
+# Database (Self-Hosted)
 TITAN_DB_HOST=titan-postgres
 TITAN_DB_PORT=5432
 TITAN_DB_NAME=titan_brain
 TITAN_DB_USER=titan
 TITAN_DB_PASSWORD=titan_secret
-# Legacy support
-DATABASE_URL=postgresql://titan:titan_secret@localhost:5432/titan_brain
 
 # NATS
 NATS_URL=nats://localhost:4222
@@ -162,7 +164,7 @@ BYBIT_API_SECRET=your_secret
 - **Rate Limiting** — Adaptive rate limiting per IP
 - **Input Validation** — Zod schema validation on all inputs
 - **TLS Encryption** — All external traffic encrypted
-- **Circuit Breakers** — Automatic failsafes on error thresholds
+- **Visual Confirmation** — "Truth Layer" verification of trade execution
 
 ## Monitoring
 
@@ -174,7 +176,7 @@ BYBIT_API_SECRET=your_secret
 
 ## Deployment
 
-Deployment is managed manually via SSH on a DigitalOcean Droplet.
+Deployment is managed **manually** on a DigitalOcean Droplet (VPS) using Docker Compose. We have migrated away from DigitalOcean App Platform.
 
 1. **SSH into the server**:
    ```bash
@@ -192,9 +194,6 @@ Deployment is managed manually via SSH on a DigitalOcean Droplet.
    docker-compose -f docker-compose.prod.yml up -d --build --remove-orphans
    ```
 
-Configuration is managed via `.env` file and `docker-compose.prod.yml` on the
-server.
-
 ## Project Structure
 
 ```
@@ -206,6 +205,7 @@ titan/
 │   ├── titan-phase2-hunter/
 │   ├── titan-phase3-sentinel/
 │   ├── titan-ai-quant/
+│   ├── titan-powerlaw-lab/    # Power Law Research & Experiments
 │   ├── titan-console/         # React dashboard
 │   └── shared/                # Common library
 ├── config/                    # Configuration files
