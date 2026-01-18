@@ -14,7 +14,7 @@ export interface OHLCV {
 
 // Fractal Types
 export interface Fractal {
-  type: 'HIGH' | 'LOW';
+  type: "HIGH" | "LOW";
   price: number;
   barIndex: number;
   timestamp: number;
@@ -22,7 +22,7 @@ export interface Fractal {
 }
 
 export interface BOS {
-  direction: 'BULLISH' | 'BEARISH';
+  direction: "BULLISH" | "BEARISH";
   price: number;
   barIndex: number;
   timestamp: number;
@@ -30,7 +30,7 @@ export interface BOS {
 }
 
 export interface MSS {
-  direction: 'BULLISH' | 'BEARISH';
+  direction: "BULLISH" | "BEARISH";
   price: number;
   barIndex: number;
   timestamp: number;
@@ -46,15 +46,15 @@ export interface DealingRange {
   range: number;
 }
 
-export type TrendState = 'BULL' | 'BEAR' | 'RANGE';
+export type TrendState = "BULL" | "BEAR" | "RANGE";
 
 // Hologram Types
 export interface TimeframeState {
-  timeframe: '1D' | '4H' | '15m';
+  timeframe: "1D" | "4H" | "15m";
   trend: TrendState;
   dealingRange: DealingRange;
   currentPrice: number;
-  location: 'PREMIUM' | 'DISCOUNT' | 'EQUILIBRIUM';
+  location: "PREMIUM" | "DISCOUNT" | "EQUILIBRIUM";
   fractals: Fractal[];
   bos: BOS[];
   mss: MSS | null;
@@ -73,19 +73,19 @@ export interface HologramState {
   flowScore?: number; // Added for Phase 4
   flowAnalysis?: FlowClassificationResult; // Added for Phase 4
   realizedExpectancy?: number; // 2026: Feedback loop
-  direction: 'LONG' | 'SHORT' | null; // Explicit direction derived from state
+  direction: "LONG" | "SHORT" | null; // Explicit direction derived from state
 }
 
-export type HologramStatus = 'A+' | 'B' | 'CONFLICT' | 'NO_PLAY';
+export type HologramStatus = "A+" | "B" | "CONFLICT" | "NO_PLAY";
 
 export interface VetoResult {
   vetoed: boolean;
   reason: string | null;
-  direction: 'LONG' | 'SHORT' | null;
+  direction: "LONG" | "SHORT" | null;
 }
 
 // Session Types
-export type SessionType = 'ASIAN' | 'LONDON' | 'NY' | 'DEAD_ZONE';
+export type SessionType = "ASIAN" | "LONDON" | "NY" | "DEAD_ZONE";
 
 export interface SessionState {
   type: SessionType;
@@ -101,16 +101,16 @@ export interface AsianRange {
 }
 
 export interface JudasSwing {
-  type: 'SWEEP_HIGH' | 'SWEEP_LOW';
+  type: "SWEEP_HIGH" | "SWEEP_LOW";
   sweptPrice: number;
   reversalPrice: number;
-  direction: 'LONG' | 'SHORT';
+  direction: "LONG" | "SHORT";
   confidence: number; // 0-100
 }
 
 // POI Types
 export interface FVG {
-  type: 'BULLISH' | 'BEARISH';
+  type: "BULLISH" | "BEARISH";
   top: number;
   bottom: number;
   midpoint: number;
@@ -122,7 +122,7 @@ export interface FVG {
 }
 
 export interface OrderBlock {
-  type: 'BULLISH' | 'BEARISH';
+  type: "BULLISH" | "BEARISH";
   high: number;
   low: number;
   barIndex: number;
@@ -133,7 +133,7 @@ export interface OrderBlock {
 }
 
 export interface LiquidityPool {
-  type: 'HIGH' | 'LOW';
+  type: "HIGH" | "LOW";
   price: number;
   strength: number; // 0-100
   barIndex: number;
@@ -148,7 +148,7 @@ export type POI = FVG | OrderBlock | LiquidityPool;
 export interface Trade {
   price: number;
   quantity: number;
-  side: 'BUY' | 'SELL';
+  side: "BUY" | "SELL";
   timestamp: number;
   isBuyerMaker: boolean; // true = sell order hit buy limit, false = buy order hit sell limit
 }
@@ -177,10 +177,10 @@ export interface Distribution {
 
 // Order Types
 export interface OrderParams {
-  phase: 'phase2';
+  phase: "phase2";
   symbol: string;
-  side: 'Buy' | 'Sell';
-  type: 'MARKET' | 'LIMIT' | 'POST_ONLY';
+  side: "Buy" | "Sell";
+  type: "MARKET" | "LIMIT" | "POST_ONLY";
   price?: number;
   qty: number;
   leverage: number;
@@ -191,24 +191,29 @@ export interface OrderParams {
 export interface OrderResult {
   orderId: string;
   symbol: string;
-  side: 'Buy' | 'Sell';
+  side: "Buy" | "Sell";
   qty: number;
   price: number;
   status: OrderStatus;
   timestamp: number;
 }
 
-export type OrderStatus = 'NEW' | 'PARTIALLY_FILLED' | 'FILLED' | 'CANCELLED' | 'REJECTED';
+export type OrderStatus =
+  | "NEW"
+  | "PARTIALLY_FILLED"
+  | "FILLED"
+  | "CANCELLED"
+  | "REJECTED";
 
 // Signal Types
 export interface SignalData {
   symbol: string;
-  direction: 'LONG' | 'SHORT';
+  direction: "LONG" | "SHORT";
   hologramStatus: HologramStatus;
   alignmentScore: number;
   rsScore: number;
   sessionType: SessionType;
-  poiType: 'FVG' | 'ORDER_BLOCK' | 'LIQUIDITY_POOL';
+  poiType: "FVG" | "ORDER_BLOCK" | "LIQUIDITY_POOL";
   cvdConfirmation: boolean;
   confidence: number; // 0-100
   entryPrice: number;
@@ -223,7 +228,7 @@ export interface ExecutionData {
   signalId: string;
   orderId: string;
   symbol: string;
-  side: 'Buy' | 'Sell';
+  side: "Buy" | "Sell";
   qty: number;
   fillPrice: number;
   slippage: number;
@@ -273,7 +278,7 @@ export interface TimeRange {
 export interface Position {
   id: string;
   symbol: string;
-  side: 'LONG' | 'SHORT';
+  side: "LONG" | "SHORT";
   entryPrice: number;
   currentPrice: number;
   quantity: number;
@@ -283,7 +288,7 @@ export interface Position {
   unrealizedPnL: number;
   realizedPnL: number;
   entryTime: number;
-  status: 'OPEN' | 'CLOSED';
+  status: "OPEN" | "CLOSED";
   rValue: number; // Current R value (profit/loss in R multiples)
   atr: number; // ATR at entry for trailing calculations
 }
@@ -344,21 +349,21 @@ export interface PartialProfitConfig {
  * Event categories for prediction market events
  */
 export enum EventCategory {
-  CRYPTO_PRICE = 'crypto_price',
-  FED_POLICY = 'fed_policy',
-  REGULATORY = 'regulatory',
-  MACRO_ECONOMIC = 'macro_economic',
-  GEOPOLITICAL = 'geopolitical',
+  CRYPTO_PRICE = "crypto_price",
+  FED_POLICY = "fed_policy",
+  REGULATORY = "regulatory",
+  MACRO_ECONOMIC = "macro_economic",
+  GEOPOLITICAL = "geopolitical",
 }
 
 /**
  * Impact level for prediction market events
  */
 export enum ImpactLevel {
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-  EXTREME = 'extreme',
+  LOW = "low",
+  MEDIUM = "medium",
+  HIGH = "high",
+  EXTREME = "extreme",
 }
 
 /**
@@ -376,7 +381,7 @@ export interface PredictionMarketEvent {
   impact: ImpactLevel;
   resolution: Date;
   lastUpdate: Date;
-  source: 'polymarket' | 'augur' | 'gnosis';
+  source: "polymarket" | "augur" | "gnosis";
 }
 
 /**
@@ -398,8 +403,12 @@ export interface OracleScore {
  * Requirement 11.1: Event Monitoring and Alerting
  */
 export interface EventAlert {
-  type: 'probability_change' | 'threshold_crossing' | 'new_event' | 'resolution';
-  severity: 'info' | 'warning' | 'critical';
+  type:
+    | "probability_change"
+    | "threshold_crossing"
+    | "new_event"
+    | "resolution";
+  severity: "info" | "warning" | "critical";
   event: PredictionMarketEvent;
   details: string;
   timestamp: Date;
@@ -444,8 +453,8 @@ export interface SweepPattern {
   levelsCleared: number;
   volume: number;
   timestamp: Date;
-  direction: 'up' | 'down';
-  urgency: 'low' | 'medium' | 'high';
+  direction: "up" | "down";
+  urgency: "low" | "medium" | "high";
 }
 
 /**
@@ -468,7 +477,7 @@ export interface IcebergAnalysis {
 export interface FlowValidation {
   isValid: boolean;
   confidence: number; // 0-100
-  flowType: 'passive_absorption' | 'aggressive_pushing' | 'neutral';
+  flowType: "passive_absorption" | "aggressive_pushing" | "neutral";
   sweepCount: number;
   icebergDensity: number;
   institutionalProbability: number;
@@ -482,9 +491,9 @@ export interface TradeFootprint {
   timestamp: Date;
   price: number;
   volume: number;
-  side: 'buy' | 'sell';
-  aggressor: 'buyer' | 'seller';
-  orderType: 'market' | 'limit';
+  side: "buy" | "sell";
+  aggressor: "buyer" | "seller";
+  orderType: "market" | "limit";
   exchange: string;
 }
 
@@ -497,9 +506,9 @@ export interface TradeFootprint {
  * Requirement 3.1: Flag patterns with exact tick precision as SUSPECT_TRAP
  */
 export interface PatternPrecision {
-  type: 'equal_highs' | 'equal_lows' | 'fvg' | 'order_block' | 'liquidity_pool';
+  type: "equal_highs" | "equal_lows" | "fvg" | "order_block" | "liquidity_pool";
   precision: number; // 0-100 (100 = exact tick precision)
-  suspicionLevel: 'low' | 'medium' | 'high' | 'extreme';
+  suspicionLevel: "low" | "medium" | "high" | "extreme";
   characteristics: string[];
 }
 
@@ -520,7 +529,11 @@ export interface BotTrapAnalysis {
  * Requirement 3.5: Reduce position size by 50% and tighten stop loss to 1%
  */
 export interface TrapRecommendation {
-  action: 'avoid' | 'reduce_size' | 'require_confirmation' | 'proceed_cautiously';
+  action:
+    | "avoid"
+    | "reduce_size"
+    | "require_confirmation"
+    | "proceed_cautiously";
   reasoning: string;
   adjustments: {
     positionSizeMultiplier: number;
@@ -559,11 +572,11 @@ export interface PatternCharacteristics {
  * Exchange connection status
  */
 export enum ConnectionStatus {
-  CONNECTED = 'connected',
-  DISCONNECTED = 'disconnected',
-  RECONNECTING = 'reconnecting',
-  DELAYED = 'delayed',
-  ERROR = 'error',
+  CONNECTED = "connected",
+  DISCONNECTED = "disconnected",
+  RECONNECTING = "reconnecting",
+  DELAYED = "delayed",
+  ERROR = "error",
 }
 
 /**
@@ -571,7 +584,7 @@ export enum ConnectionStatus {
  * Requirement 4.1: Establish WebSocket connections to Binance, Coinbase, and Kraken
  */
 export interface ExchangeFlow {
-  exchange: 'binance' | 'coinbase' | 'kraken';
+  exchange: "binance" | "coinbase" | "kraken";
   cvd: number;
   volume: number;
   trades: number;
@@ -588,15 +601,19 @@ export interface ManipulationAnalysis {
   detected: boolean;
   suspectExchange: string | null;
   divergenceScore: number; // 0-100
-  pattern: 'single_exchange_outlier' | 'coordinated_manipulation' | 'none';
+  pattern: "single_exchange_outlier" | "coordinated_manipulation" | "none";
 }
 
 /**
  * Monitoring and Alerting Types
  */
 export interface EventAlert {
-  type: 'probability_change' | 'threshold_crossing' | 'new_event' | 'resolution';
-  severity: 'info' | 'warning' | 'critical';
+  type:
+    | "probability_change"
+    | "threshold_crossing"
+    | "new_event"
+    | "resolution";
+  severity: "info" | "warning" | "critical";
   event: PredictionMarketEvent;
   details: string;
   timestamp: Date;
@@ -611,15 +628,15 @@ export interface MonitoringConfig {
 
 export interface CompositeEventScore {
   score: number; // 0-100
-  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  riskLevel: "low" | "medium" | "high" | "critical";
   contributingEvents: string[];
   timestamp: Date;
 }
 
 export interface PredictionAnomaly {
   eventId: string;
-  type: 'flash_volatility' | 'stale_data' | 'irregular_volume';
-  severity: 'low' | 'medium' | 'high' | 'critical';
+  type: "flash_volatility" | "stale_data" | "irregular_volume";
+  severity: "low" | "medium" | "high" | "critical";
   description: string;
   timestamp: Date;
 }
@@ -631,7 +648,7 @@ export interface PredictionAnomaly {
 export interface GlobalCVDData {
   aggregatedCVD: number;
   exchangeFlows: ExchangeFlow[];
-  consensus: 'bullish' | 'bearish' | 'neutral' | 'conflicted';
+  consensus: "bullish" | "bearish" | "neutral" | "conflicted";
   confidence: number; // 0-100
   manipulation: ManipulationAnalysis;
   timestamp: Date;
@@ -662,9 +679,9 @@ export interface EnhancedHolographicState {
   // Classic Phase 2 components
   classicState: HologramState | null;
   symbol: string;
-  dailyBias: 'BULL' | 'BEAR' | 'RANGE';
-  fourHourLocation: 'PREMIUM' | 'DISCOUNT' | 'EQUILIBRIUM';
-  fifteenMinTrigger: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  dailyBias: "BULL" | "BEAR" | "RANGE";
+  fourHourLocation: "PREMIUM" | "DISCOUNT" | "EQUILIBRIUM";
+  fifteenMinTrigger: "BULLISH" | "BEARISH" | "NEUTRAL";
 
   // 2026 enhancements
   oracleScore: OracleScore | null;
@@ -675,13 +692,15 @@ export interface EnhancedHolographicState {
   // Enhanced scoring
   classicScore: number; // 0-100 (original Phase 2 score)
   enhancedScore: number; // 0-100 (with 2026 enhancements)
-  convictionLevel: 'low' | 'medium' | 'high' | 'extreme';
-  alignment: 'A+' | 'A' | 'B' | 'C' | 'VETO';
+  convictionLevel: "low" | "medium" | "high" | "extreme";
+  alignment: "A+" | "A" | "B" | "C" | "VETO";
   rsScore: number;
 
   // Metadata
   timestamp: Date;
   enhancementsActive: boolean;
+  regime: string; // 2026: Power Law Regime
+  alpha: number; // 2026: Power Law Alpha
 }
 
 /**
@@ -709,11 +728,11 @@ export interface ConvictionSizing {
  * Requirement 14.1-14.7: Emergency protocols for enhanced system
  */
 export enum EmergencyType {
-  PREDICTION_EMERGENCY = 'prediction_emergency',
-  LIQUIDITY_EMERGENCY = 'liquidity_emergency',
-  FLOW_EMERGENCY = 'flow_emergency',
-  TRAP_SATURATION = 'trap_saturation',
-  SYSTEM_DEGRADATION = 'system_degradation',
+  PREDICTION_EMERGENCY = "prediction_emergency",
+  LIQUIDITY_EMERGENCY = "liquidity_emergency",
+  FLOW_EMERGENCY = "flow_emergency",
+  TRAP_SATURATION = "trap_saturation",
+  SYSTEM_DEGRADATION = "system_degradation",
 }
 
 /**
@@ -732,7 +751,7 @@ export interface EmergencyState {
  * Requirement 14.6: Fall back to classic Phase 2 logic
  */
 export interface DegradationLevel {
-  level: 'none' | 'partial' | 'significant' | 'emergency';
+  level: "none" | "partial" | "significant" | "emergency";
   affectedComponents: string[];
   fallbackStrategy: string;
   performanceImpact: number; // 0-100%
@@ -747,29 +766,29 @@ export interface DegradationLevel {
  */
 export enum EnhancedErrorType {
   // Oracle Errors
-  ORACLE_CONNECTION_FAILED = 'oracle_connection_failed',
-  PREDICTION_DATA_STALE = 'prediction_data_stale',
-  ORACLE_API_RATE_LIMIT = 'oracle_api_rate_limit',
+  ORACLE_CONNECTION_FAILED = "oracle_connection_failed",
+  PREDICTION_DATA_STALE = "prediction_data_stale",
+  ORACLE_API_RATE_LIMIT = "oracle_api_rate_limit",
 
   // Flow Validator Errors
-  FOOTPRINT_ANALYSIS_FAILED = 'footprint_analysis_failed',
-  SWEEP_DETECTION_ERROR = 'sweep_detection_error',
-  ICEBERG_ANALYSIS_TIMEOUT = 'iceberg_analysis_timeout',
+  FOOTPRINT_ANALYSIS_FAILED = "footprint_analysis_failed",
+  SWEEP_DETECTION_ERROR = "sweep_detection_error",
+  ICEBERG_ANALYSIS_TIMEOUT = "iceberg_analysis_timeout",
 
   // Bot Trap Errors
-  PATTERN_ANALYSIS_FAILED = 'pattern_analysis_failed',
-  LEARNING_MODEL_ERROR = 'learning_model_error',
-  TRAP_DETECTION_TIMEOUT = 'trap_detection_timeout',
+  PATTERN_ANALYSIS_FAILED = "pattern_analysis_failed",
+  LEARNING_MODEL_ERROR = "learning_model_error",
+  TRAP_DETECTION_TIMEOUT = "trap_detection_timeout",
 
   // Global Aggregator Errors
-  EXCHANGE_CONNECTION_LOST = 'exchange_connection_lost',
-  CVD_AGGREGATION_FAILED = 'cvd_aggregation_failed',
-  MANIPULATION_DETECTION_ERROR = 'manipulation_detection_error',
+  EXCHANGE_CONNECTION_LOST = "exchange_connection_lost",
+  CVD_AGGREGATION_FAILED = "cvd_aggregation_failed",
+  MANIPULATION_DETECTION_ERROR = "manipulation_detection_error",
 
   // System Integration Errors
-  ENHANCEMENT_LAYER_CONFLICT = 'enhancement_layer_conflict',
-  FALLBACK_MODE_ACTIVATED = 'fallback_mode_activated',
-  EMERGENCY_PROTOCOL_TRIGGERED = 'emergency_protocol_triggered',
+  ENHANCEMENT_LAYER_CONFLICT = "enhancement_layer_conflict",
+  FALLBACK_MODE_ACTIVATED = "fallback_mode_activated",
+  EMERGENCY_PROTOCOL_TRIGGERED = "emergency_protocol_triggered",
 }
 
 // ============================================================================
@@ -781,19 +800,19 @@ export enum EnhancedErrorType {
  */
 export interface TechnicalSignal {
   symbol: string;
-  direction: 'LONG' | 'SHORT';
+  direction: "LONG" | "SHORT";
   confidence: number; // 0-100
   entryPrice: number;
   stopLoss: number;
   takeProfit: number;
   timestamp: Date;
-  source: 'hologram' | 'poi' | 'cvd' | 'session';
+  source: "hologram" | "poi" | "cvd" | "session";
 }
 
-export type SignalDirection = 'bullish' | 'bearish' | 'neutral';
+export type SignalDirection = "bullish" | "bearish" | "neutral";
 
 export interface ExchangeVote {
-  exchange: 'binance' | 'coinbase' | 'kraken';
+  exchange: "binance" | "coinbase" | "kraken";
   direction: SignalDirection;
   cvd: number;
   volume: number;
@@ -817,7 +836,7 @@ export interface SignalValidationResponse {
   isValid: boolean;
   adjustedConfidence: number;
   consensusResult: ConsensusData;
-  recommendation: 'proceed' | 'reduce_size' | 'veto';
+  recommendation: "proceed" | "reduce_size" | "veto";
   reasoning: string[];
 }
 
@@ -873,7 +892,7 @@ export interface TradeOutcome {
   pnl: number;
   pnlPercent: number;
   duration: number; // milliseconds
-  exitReason: 'take_profit' | 'stop_loss' | 'manual' | 'emergency';
+  exitReason: "take_profit" | "stop_loss" | "manual" | "emergency";
   timestamp: Date;
 }
 
@@ -905,7 +924,7 @@ export interface FlowClassifierConfig {
  * Flow classification result with detailed breakdown
  */
 export interface FlowClassificationResult {
-  flowType: 'passive_absorption' | 'aggressive_pushing' | 'neutral';
+  flowType: "passive_absorption" | "aggressive_pushing" | "neutral";
   confidence: number; // 0-100
   institutionalProbability: number; // 0-100
   breakdown: {
@@ -920,7 +939,7 @@ export interface FlowClassificationResult {
     icebergDetected: boolean;
     sweepDetected: boolean;
   };
-  recommendation: 'strong_buy' | 'buy' | 'neutral' | 'sell' | 'strong_sell';
+  recommendation: "strong_buy" | "buy" | "neutral" | "sell" | "strong_sell";
   reasoning: string[];
 }
 
@@ -930,7 +949,7 @@ export interface FlowClassificationResult {
 export interface CVDIntegrationResult {
   cvdConfirmed: boolean;
   cvdValue: number;
-  cvdDirection: 'bullish' | 'bearish' | 'neutral';
+  cvdDirection: "bullish" | "bearish" | "neutral";
   absorptionDetected: boolean;
   distributionDetected: boolean;
   confidenceAdjustment: number;

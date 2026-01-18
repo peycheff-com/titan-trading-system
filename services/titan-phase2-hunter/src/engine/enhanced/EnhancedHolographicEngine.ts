@@ -139,6 +139,27 @@ export class EnhancedHolographicEngine extends EventEmitter {
     this.hologramEngine = engine;
   }
 
+  // Regime tracking
+  private currentRegime: string = "STABLE";
+  private currentAlpha: number = 3.0;
+
+  /**
+   * Update market regime from Power Law Lab
+   */
+  updateMarketRegime(regime: string, alpha: number): void {
+    const changed = this.currentRegime !== regime ||
+      Math.abs(this.currentAlpha - alpha) > 0.1;
+    this.currentRegime = regime;
+    this.currentAlpha = alpha;
+
+    if (changed) {
+      this.logInfo(
+        `Market Regime Updated: ${regime} (Alpha: ${alpha.toFixed(2)})`,
+      );
+      this.emit("regimeUpdated", { regime, alpha });
+    }
+  }
+
   /**
    * Set the Oracle component
    */
@@ -249,6 +270,8 @@ export class EnhancedHolographicEngine extends EventEmitter {
       flowValidation,
       botTrapAnalysis,
       globalCVD,
+      this.currentRegime,
+      this.currentAlpha,
     );
 
     // Determine alignment and conviction
@@ -258,6 +281,8 @@ export class EnhancedHolographicEngine extends EventEmitter {
       botTrapAnalysis,
       globalCVD,
       flowValidation,
+      this.currentRegime,
+      this.currentAlpha,
     );
 
     const convictionLevel = this.scoringEngine.determineConvictionLevel(
@@ -288,6 +313,8 @@ export class EnhancedHolographicEngine extends EventEmitter {
       rsScore: classicHologram?.rsScore || 0,
       timestamp: new Date(),
       enhancementsActive: this.areEnhancementsActive(),
+      regime: this.currentRegime,
+      alpha: this.currentAlpha,
     };
 
     // Log enhanced state

@@ -11,7 +11,8 @@
 import "dotenv/config";
 
 import { StartupManager } from "./startup/StartupManager.js";
-import { BrainConfig, ConfigManager } from "./config/ConfigManager.js";
+import { BrainConfig } from "./config/BrainConfig.js";
+import { SharedConfigAdapter as ConfigManager } from "./config/SharedConfigAdapter.js";
 
 // Local implementation of standard init steps since it's not exported
 function createStandardInitSteps(): any[] {
@@ -94,8 +95,11 @@ import { getLogger, getMetrics } from "./monitoring/index.js";
 import { StateRecoveryService } from "./engine/StateRecoveryService.js";
 import { ManualOverrideService } from "./engine/ManualOverrideService.js";
 import { NatsConsumer } from "./server/NatsConsumer.js";
+import { IngestionQueue } from "./queue/IngestionQueue.js";
+import { IngestionWorker } from "./workers/IngestionWorker.js";
 
 // Global instances for cleanup
+
 let brain: TitanBrain | null = null;
 let webhookServer: WebhookServer | null = null;
 let signalQueue: ISignalQueue | null = null;
@@ -143,7 +147,12 @@ async function main(): Promise<void> {
     // Initialize configuration manager
     configManager = new ConfigManager();
 
+    // Initialize Ingestion Queue
+    const ingestionQueue = new IngestionQueue();
+    // We will initialize the worker after DB is ready
+
     // Set up initialization steps
+
     const initSteps = createStandardInitSteps();
 
     // Customize steps with actual implementations
@@ -301,7 +310,29 @@ async function main(): Promise<void> {
       const notificationService = new NotificationService(config.notifications);
       logger.info("   ✅ NotificationService initialized");
 
+      // Initialize FillsRepository (Audit Trail)
+      const { FillsRepository } = await import(
+        "./db/repositories/FillsRepository.js"
+      );
+      const fillsRepository = new FillsRepository(databaseManager!);
+      logger.info("   ✅ FillsRepository initialized");
+
+      // Initialize Ingestion Worker
+      const ingestionWorker = new IngestionWorker(
+        ingestionQueue,
+        databaseManager!,
+        fillsRepository,
+      );
+      ingestionWorker.start();
+      logger.info("   ✅ IngestionWorker initialized and started");
+
+      // Register shutdown for worker
+      startupManager!.registerShutdownHandler(async () => {
+        ingestionWorker.stop();
+      });
+
       // Create TitanBrain orchestrator
+
       logger.info("🧠 Creating TitanBrain orchestrator...");
       brain = new TitanBrain(
         config.brain,
@@ -315,6 +346,8 @@ async function main(): Promise<void> {
         databaseManager!,
         stateRecoveryService,
         manualOverrideService,
+        fillsRepository,
+        ingestionQueue,
       );
 
       // Set initial equity from environment or default
@@ -458,12 +491,18 @@ async function main(): Promise<void> {
         "./db/repositories/TreasuryRepository.js"
       );
       const treasuryRepository = new TreasuryRepository(databaseManager!);
+
       const { AccountingService } = await import(
         "./services/accounting/AccountingService.js"
       );
       const accountingService = new AccountingService(treasuryRepository);
       await accountingService.start();
       logger.info("   ✅ AccountingService (Phase 4) initialized");
+
+      // Inject FillsRepository into TitanBrain if already created (it was created above, so we might need to recreate or setter?)
+      // Actually TitanBrain is created BEFORE this block in step 3. I need to move FillsRepository creation earlier or pass it later.
+      // Wait, step 3 is where Brain is created. This is step 4.
+      // I should modify step 3 to include FillsRepository.
 
       // Mark startup as complete for health checks
       webhookServer.markStartupComplete(); // Wait webhookServer not created yet if I reordered?

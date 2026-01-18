@@ -2,30 +2,33 @@
  * Logger for Titan Phase 2 - The Hunter
  *
  * Implements JSONL (JSON Lines) logging for signals, executions, and errors
- * with automatic log rotation and compression.
+ * utilizing the @titan/shared Logger Core.
  *
  * Requirements: 16.1-16.7 (Signal Execution Logging)
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-import * as zlib from 'zlib';
-import { promisify } from 'util';
-import { ExecutionData, HologramState, OrderResult, SessionType, SignalData } from '../types';
-
-const gzip = promisify(zlib.gzip);
-const writeFile = promisify(fs.writeFile);
-const stat = promisify(fs.stat);
-const readdir = promisify(fs.readdir);
+import * as path from "path";
+import {
+  Logger as SharedLogger,
+  LoggerConfig as SharedLoggerConfig,
+  SharedLogLevel,
+} from "@titan/shared";
+import {
+  ExecutionData,
+  HologramState,
+  OrderResult,
+  SessionType,
+  SignalData,
+} from "../types";
 
 /**
  * Signal log entry structure
  */
 export interface SignalLogEntry {
   timestamp: number;
-  type: 'signal';
+  type: "signal";
   symbol: string;
-  strategyType: 'holographic';
+  strategyType: "holographic";
   confidence: number;
   leverage: number;
   entryPrice: number;
@@ -40,9 +43,9 @@ export interface SignalLogEntry {
   };
   rsScore: number;
   sessionType: SessionType;
-  poiType: 'FVG' | 'ORDER_BLOCK' | 'LIQUIDITY_POOL';
+  poiType: "FVG" | "ORDER_BLOCK" | "LIQUIDITY_POOL";
   cvdStatus: boolean;
-  direction: 'LONG' | 'SHORT';
+  direction: "LONG" | "SHORT";
   positionSize: number;
 }
 
@@ -51,15 +54,15 @@ export interface SignalLogEntry {
  */
 export interface ExecutionLogEntry {
   timestamp: number;
-  type: 'execution';
+  type: "execution";
   signalId?: string;
   orderId: string;
   symbol: string;
-  side: 'Buy' | 'Sell';
+  side: "Buy" | "Sell";
   qty: number;
   fillPrice: number;
   fillTimestamp: number;
-  orderType: 'MARKET' | 'LIMIT' | 'POST_ONLY';
+  orderType: "MARKET" | "LIMIT" | "POST_ONLY";
   slippage: number;
   fees?: number;
 }
@@ -69,14 +72,19 @@ export interface ExecutionLogEntry {
  */
 export interface CloseLogEntry {
   timestamp: number;
-  type: 'close';
+  type: "close";
   positionId: string;
   symbol: string;
-  side: 'LONG' | 'SHORT';
+  side: "LONG" | "SHORT";
   exitPrice: number;
   exitTimestamp: number;
   profitPercentage: number;
-  closeReason: 'STOP_LOSS' | 'TAKE_PROFIT' | 'TRAILING_STOP' | 'MANUAL' | 'EMERGENCY';
+  closeReason:
+    | "STOP_LOSS"
+    | "TAKE_PROFIT"
+    | "TRAILING_STOP"
+    | "MANUAL"
+    | "EMERGENCY";
   holdTime: number; // milliseconds
   entryPrice: number;
   rValue: number; // R multiple
@@ -87,12 +95,12 @@ export interface CloseLogEntry {
  */
 export interface ErrorLogEntry {
   timestamp: number;
-  type: 'error';
-  level: 'WARNING' | 'ERROR' | 'CRITICAL';
+  type: "error";
+  level: "WARNING" | "ERROR" | "CRITICAL";
   message: string;
   context: {
     symbol?: string;
-    phase: 'phase2';
+    phase: "phase2";
     component?: string;
     function?: string;
     stack?: string;
@@ -102,19 +110,10 @@ export interface ErrorLogEntry {
 
 export interface GenericLogEntry {
   timestamp: number;
-  type: 'info' | 'debug' | 'warn';
+  type: "info" | "debug" | "warn";
   message: string;
   data?: any;
 }
-
-export type LogEntry =
-  | SignalLogEntry
-  | ExecutionLogEntry
-  | CloseLogEntry
-  | ErrorLogEntry
-  | EnhancedHologramLogEntry
-  | ConvictionSizingLogEntry
-  | GenericLogEntry;
 
 /**
  * Enhanced Hologram log entry structure
@@ -122,12 +121,12 @@ export type LogEntry =
  */
 export interface EnhancedHologramLogEntry {
   timestamp: number;
-  type: 'enhanced_hologram';
+  type: "enhanced_hologram";
   symbol: string;
   classicScore: number;
   enhancedScore: number;
-  alignment: 'A+' | 'A' | 'B' | 'C' | 'VETO';
-  convictionLevel: 'low' | 'medium' | 'high' | 'extreme';
+  alignment: "A+" | "A" | "B" | "C" | "VETO";
+  convictionLevel: "low" | "medium" | "high" | "extreme";
   oracle: {
     sentiment: number;
     confidence: number;
@@ -157,7 +156,7 @@ export interface EnhancedHologramLogEntry {
  */
 export interface ConvictionSizingLogEntry {
   timestamp: number;
-  type: 'conviction_sizing';
+  type: "conviction_sizing";
   symbol: string;
   baseSize: number;
   oracleMultiplier: number;
@@ -168,6 +167,15 @@ export interface ConvictionSizingLogEntry {
   cappedAt: number;
   reasoning: string[];
 }
+
+export type LogEntry =
+  | SignalLogEntry
+  | ExecutionLogEntry
+  | CloseLogEntry
+  | ErrorLogEntry
+  | EnhancedHologramLogEntry
+  | ConvictionSizingLogEntry
+  | GenericLogEntry;
 
 /**
  * Logger configuration
@@ -184,67 +192,64 @@ export interface LoggerConfig {
  * JSONL Logger for Titan Phase 2
  *
  * Logs all signals, executions, and errors to trades.jsonl file
- * with automatic rotation and compression.
+ * with automatic rotation and compression via @titan/shared.
  */
-export class Logger {
-  private config: LoggerConfig;
-  private logFilePath: string;
-  private writeStream: fs.WriteStream | null = null;
+export class Logger extends SharedLogger {
+  private localConfig: LoggerConfig; // Keep for backward compat access
 
   constructor(config?: Partial<LoggerConfig>) {
-    this.config = {
-      logDir: path.join(process.cwd(), 'logs'),
-      logFileName: 'trades.jsonl',
-      maxFileSizeBytes: 10 * 1024 * 1024, // 10MB
-      compressionAgeMs: 30 * 24 * 60 * 60 * 1000, // 30 days
-      enableConsoleOutput: false,
-      ...config,
+    // Determine configuration based on legacy arguments
+    const logDir = config?.logDir || path.join(process.cwd(), "logs");
+    const logFileName = config?.logFileName || "trades.jsonl";
+    const tradeLogPath = path.join(logDir, logFileName);
+    const enableConsole = config?.enableConsoleOutput ??
+      (process.env.NODE_ENV !== "production");
+
+    const sharedConfig: SharedLoggerConfig = {
+      level: SharedLogLevel.INFO,
+      component: "phase2-hunter",
+      enableConsole: enableConsole,
+      enableFile: false, // We mostly use tradeLogPath for JSONL
+      enablePerformanceLogging: true,
+      maxStackTraceLines: 10,
+      enableTradeLogging: true,
+      tradeLogPath: tradeLogPath,
+      sensitiveFields: [], // Required by SharedLoggerConfig
     };
 
-    this.logFilePath = path.join(this.config.logDir, this.config.logFileName);
-    this.ensureLogDirectory();
-    this.initializeWriteStream();
-  }
+    super(sharedConfig);
 
-  /**
-   * Ensure log directory exists
-   */
-  private ensureLogDirectory(): void {
-    if (!fs.existsSync(this.config.logDir)) {
-      fs.mkdirSync(this.config.logDir, { recursive: true });
+    this.localConfig = {
+      logDir,
+      logFileName,
+      maxFileSizeBytes: config?.maxFileSizeBytes || 10 * 1024 * 1024,
+      compressionAgeMs: config?.compressionAgeMs || 30 * 24 * 3600 * 1000,
+      enableConsoleOutput: enableConsole,
+    };
+
+    if (enableConsole) {
+      console.log(`📝 Hunter Logger initialized: ${tradeLogPath}`);
     }
   }
 
   /**
-   * Initialize write stream for log file
-   */
-  private initializeWriteStream(): void {
-    this.writeStream = fs.createWriteStream(this.logFilePath, { flags: 'a' });
-
-    this.writeStream.on('error', error => {
-      console.error('Logger write stream error:', error);
-    });
-  }
-
-  /**
    * Log a signal with comprehensive hologram state
+   * Renamed to avoid name collision with SharedLogger.logSignal
    *
-   * Requirement 16.2: Include timestamp, symbol, strategy type, confidence,
-   * leverage, entry price, stop price, target price, alignment state,
-   * RS score, session type, POI type, and CVD status
+   * Requirement 16.2: Include timestamp, symbol, strategyType, etc.
    */
-  public logSignal(
+  public logPhase2Signal(
     signal: SignalData,
     hologramState: HologramState,
     sessionType: SessionType,
-    poiType: 'FVG' | 'ORDER_BLOCK' | 'LIQUIDITY_POOL',
-    cvdConfirmation: boolean
+    poiType: "FVG" | "ORDER_BLOCK" | "LIQUIDITY_POOL",
+    cvdConfirmation: boolean,
   ): void {
     const logEntry: SignalLogEntry = {
       timestamp: Date.now(),
-      type: 'signal',
+      type: "signal",
       symbol: signal.symbol,
-      strategyType: 'holographic',
+      strategyType: "holographic",
       confidence: signal.confidence,
       leverage: signal.leverage,
       entryPrice: signal.entryPrice,
@@ -255,7 +260,9 @@ export class Logger {
         score: hologramState.alignmentScore,
         daily: `${hologramState.daily.trend}_${hologramState.daily.location}`,
         h4: `${hologramState.h4.trend}_${hologramState.h4.location}`,
-        m15: `${hologramState.m15.trend}_${hologramState.m15.mss ? 'MSS' : 'NO_MSS'}`,
+        m15: `${hologramState.m15.trend}_${
+          hologramState.m15.mss ? "MSS" : "NO_MSS"
+        }`,
       },
       rsScore: hologramState.rsScore,
       sessionType,
@@ -265,31 +272,32 @@ export class Logger {
       positionSize: signal.positionSize,
     };
 
-    this.writeLogEntry(logEntry);
+    this.logTradeEntry(logEntry as any);
 
-    if (this.config.enableConsoleOutput) {
+    if (this.localConfig.enableConsoleOutput) {
       console.log(
-        `📊 SIGNAL: ${signal.symbol} ${signal.direction} @ ${signal.entryPrice} (${hologramState.status}, RS:${hologramState.rsScore.toFixed(
-          3
-        )})`
+        `📊 SIGNAL: ${signal.symbol} ${signal.direction} @ ${signal.entryPrice} (${hologramState.status}, RS:${
+          hologramState.rsScore.toFixed(3)
+        })`,
       );
     }
   }
 
   /**
    * Log order execution with fill details
+   * Renamed to avoid name collision with SharedLogger.logExecution
    *
    * Requirement 16.3: Include fill price, fill timestamp, order type, and slippage
    */
-  public logExecution(
+  public logPhase2Execution(
     orderResult: OrderResult,
     slippage: number,
     signalId?: string,
-    fees?: number
+    fees?: number,
   ): void {
     const logEntry: ExecutionLogEntry = {
       timestamp: Date.now(),
-      type: 'execution',
+      type: "execution",
       signalId,
       orderId: orderResult.orderId,
       symbol: orderResult.symbol,
@@ -297,18 +305,18 @@ export class Logger {
       qty: orderResult.qty,
       fillPrice: orderResult.price,
       fillTimestamp: orderResult.timestamp,
-      orderType: 'LIMIT', // Phase 2 uses Post-Only Limit Orders
+      orderType: "LIMIT", // Phase 2 uses Post-Only Limit Orders
       slippage,
       fees,
     };
 
-    this.writeLogEntry(logEntry);
+    this.logTradeEntry(logEntry as any);
 
-    if (this.config.enableConsoleOutput) {
+    if (this.localConfig.enableConsoleOutput) {
       console.log(
-        `✅ FILL: ${orderResult.symbol} ${orderResult.side} ${orderResult.qty} @ ${orderResult.price} (slippage: ${(
-          slippage * 100
-        ).toFixed(3)}%)`
+        `✅ FILL: ${orderResult.symbol} ${orderResult.side} ${orderResult.qty} @ ${orderResult.price} (slippage: ${
+          (slippage * 100).toFixed(3)
+        }%)`,
       );
     }
   }
@@ -316,23 +324,27 @@ export class Logger {
   /**
    * Log position close with P&L details
    *
-   * Requirement 16.4: Include exit price, exit timestamp, profit percentage,
-   * close reason, and hold time
+   * Requirement 16.4: Include exit price, exit timestamp, profit percentage...
    */
-  public logPositionClose(
+  public logPhase2PositionClose(
     positionId: string,
     symbol: string,
-    side: 'LONG' | 'SHORT',
+    side: "LONG" | "SHORT",
     entryPrice: number,
     exitPrice: number,
     profitPercentage: number,
-    closeReason: 'STOP_LOSS' | 'TAKE_PROFIT' | 'TRAILING_STOP' | 'MANUAL' | 'EMERGENCY',
+    closeReason:
+      | "STOP_LOSS"
+      | "TAKE_PROFIT"
+      | "TRAILING_STOP"
+      | "MANUAL"
+      | "EMERGENCY",
     holdTime: number,
-    rValue: number
+    rValue: number,
   ): void {
     const logEntry: CloseLogEntry = {
       timestamp: Date.now(),
-      type: 'close',
+      type: "close",
       positionId,
       symbol,
       side,
@@ -345,23 +357,23 @@ export class Logger {
       rValue,
     };
 
-    this.writeLogEntry(logEntry);
+    this.logTradeEntry(logEntry as any);
 
-    if (this.config.enableConsoleOutput) {
-      const pnlColor = profitPercentage >= 0 ? '\x1b[32m' : '\x1b[31m';
+    if (this.localConfig.enableConsoleOutput) {
+      const pnlColor = profitPercentage >= 0 ? "\x1b[32m" : "\x1b[31m";
       console.log(
-        `${pnlColor}💰 CLOSE: ${symbol} ${side} ${profitPercentage.toFixed(
-          2
-        )}% (${rValue.toFixed(2)}R) - ${closeReason}\x1b[0m`
+        `${pnlColor}💰 CLOSE: ${symbol} ${side} ${
+          profitPercentage.toFixed(2)
+        }% (${rValue.toFixed(2)}R) - ${closeReason}\x1b[0m`,
       );
     }
   }
 
   /**
-   * Log error with context
+   * Log error with context - Compatibility method
    */
   public logError(
-    level: 'WARNING' | 'ERROR' | 'CRITICAL',
+    level: "WARNING" | "ERROR" | "CRITICAL",
     message: string,
     context: {
       symbol?: string;
@@ -369,39 +381,59 @@ export class Logger {
       function?: string;
       stack?: string;
       data?: any;
-    } = {}
+    } = {},
+  ): void {
+    this.logPhase2Error(level, message, context);
+  }
+
+  /**
+   * Log error with context - Internal implementation
+   */
+  public logPhase2Error(
+    level: "WARNING" | "ERROR" | "CRITICAL",
+    message: string,
+    context: {
+      symbol?: string;
+      component?: string;
+      function?: string;
+      stack?: string;
+      data?: any;
+    } = {},
   ): void {
     const logEntry: ErrorLogEntry = {
       timestamp: Date.now(),
-      type: 'error',
+      type: "error",
       level,
       message,
       context: {
         ...context,
-        phase: 'phase2',
+        phase: "phase2",
       },
     };
 
-    this.writeLogEntry(logEntry);
+    // Log to trade log for consistency
+    this.logTradeEntry(logEntry as any);
 
-    if (this.config.enableConsoleOutput) {
-      const levelColor =
-        level === 'CRITICAL' ? '\x1b[31m' : level === 'ERROR' ? '\x1b[33m' : '\x1b[36m';
-      console.log(`${levelColor}❌ ${level}: ${message}\x1b[0m`);
+    // Also use SharedLogger specific methods for standard error logging
+    if (level === "CRITICAL" || level === "ERROR") {
+      // error(message, error?, correlationId?, metadata?)
+      this.error(message, new Error(message), undefined, context);
+    } else {
+      // warn(message, correlationId?, metadata?)
+      this.warn(message, undefined, context);
     }
   }
 
   /**
    * Log enhanced holographic state
-   * Requirement 5.7: Enhanced logging and event emission
    */
   public logEnhancedHologram(
     symbol: string,
     state: {
       classicScore: number;
       enhancedScore: number;
-      alignment: 'A+' | 'A' | 'B' | 'C' | 'VETO';
-      convictionLevel: 'low' | 'medium' | 'high' | 'extreme';
+      alignment: "A+" | "A" | "B" | "C" | "VETO";
+      convictionLevel: "low" | "medium" | "high" | "extreme";
       oracleScore: {
         sentiment: number;
         confidence: number;
@@ -423,11 +455,11 @@ export class Logger {
         manipulation: { detected: boolean };
       } | null;
       enhancementsActive: boolean;
-    }
+    },
   ): void {
     const logEntry: EnhancedHologramLogEntry = {
       timestamp: Date.now(),
-      type: 'enhanced_hologram',
+      type: "enhanced_hologram",
       symbol,
       classicScore: state.classicScore,
       enhancedScore: state.enhancedScore,
@@ -435,49 +467,49 @@ export class Logger {
       convictionLevel: state.convictionLevel,
       oracle: state.oracleScore
         ? {
-            sentiment: state.oracleScore.sentiment,
-            confidence: state.oracleScore.confidence,
-            veto: state.oracleScore.veto,
-            convictionMultiplier: state.oracleScore.convictionMultiplier,
-          }
+          sentiment: state.oracleScore.sentiment,
+          confidence: state.oracleScore.confidence,
+          veto: state.oracleScore.veto,
+          convictionMultiplier: state.oracleScore.convictionMultiplier,
+        }
         : null,
       flow: state.flowValidation
         ? {
-            flowType: state.flowValidation.flowType,
-            confidence: state.flowValidation.confidence,
-            institutionalProbability: state.flowValidation.institutionalProbability,
-          }
+          flowType: state.flowValidation.flowType,
+          confidence: state.flowValidation.confidence,
+          institutionalProbability:
+            state.flowValidation.institutionalProbability,
+        }
         : null,
       botTrap: state.botTrapAnalysis
         ? {
-            isSuspect: state.botTrapAnalysis.isSuspect,
-            suspicionScore: state.botTrapAnalysis.suspicionScore,
-          }
+          isSuspect: state.botTrapAnalysis.isSuspect,
+          suspicionScore: state.botTrapAnalysis.suspicionScore,
+        }
         : null,
       globalCVD: state.globalCVD
         ? {
-            consensus: state.globalCVD.consensus,
-            confidence: state.globalCVD.confidence,
-            manipulationDetected: state.globalCVD.manipulation.detected,
-          }
+          consensus: state.globalCVD.consensus,
+          confidence: state.globalCVD.confidence,
+          manipulationDetected: state.globalCVD.manipulation.detected,
+        }
         : null,
       enhancementsActive: state.enhancementsActive,
     };
 
-    this.writeLogEntry(logEntry);
+    this.logTradeEntry(logEntry as any);
 
-    if (this.config.enableConsoleOutput) {
+    if (this.localConfig.enableConsoleOutput) {
       console.log(
-        `🔮 ENHANCED HOLOGRAM: ${symbol} ${state.alignment} (${state.enhancedScore.toFixed(
-          1
-        )}) - ${state.convictionLevel} conviction`
+        `🔮 ENHANCED HOLOGRAM: ${symbol} ${state.alignment} (${
+          state.enhancedScore.toFixed(1)
+        }) - ${state.convictionLevel} conviction`,
       );
     }
   }
 
   /**
    * Log conviction-based position sizing
-   * Requirement 7.7: Position sizing calculation logging
    */
   public logConvictionSizing(
     symbol: string,
@@ -490,11 +522,11 @@ export class Logger {
       finalSize: number;
       cappedAt: number;
       reasoning: string[];
-    }
+    },
   ): void {
     const logEntry: ConvictionSizingLogEntry = {
       timestamp: Date.now(),
-      type: 'conviction_sizing',
+      type: "conviction_sizing",
       symbol,
       baseSize: sizing.baseSize,
       oracleMultiplier: sizing.oracleMultiplier,
@@ -506,161 +538,45 @@ export class Logger {
       reasoning: sizing.reasoning,
     };
 
-    this.writeLogEntry(logEntry);
+    this.logTradeEntry(logEntry as any);
 
-    if (this.config.enableConsoleOutput) {
+    if (this.localConfig.enableConsoleOutput) {
       console.log(
-        `📊 CONVICTION SIZING: ${symbol} base=${sizing.baseSize.toFixed(
-          2
-        )} → final=${sizing.finalSize.toFixed(2)} (capped at ${sizing.cappedAt}x)`
+        `📊 CONVICTION SIZING: ${symbol} base=${
+          sizing.baseSize.toFixed(2)
+        } → final=${
+          sizing.finalSize.toFixed(2)
+        } (capped at ${sizing.cappedAt}x)`,
       );
     }
   }
 
   /**
-   * Write log entry to JSONL file
-   *
-   * Requirement 16.1: Append signal data to trades.jsonl file as single JSON object per line
+   * Update logger configuration
    */
-  private writeLogEntry(entry: LogEntry): void {
-    try {
-      const jsonLine = JSON.stringify(entry) + '\n';
-
-      if (this.writeStream) {
-        this.writeStream.write(jsonLine);
-      } else {
-        // Fallback to synchronous write if stream is not available
-        fs.appendFileSync(this.logFilePath, jsonLine);
-      }
-
-      // Check if log rotation is needed
-      this.checkLogRotation();
-    } catch (error) {
-      console.error('Failed to write log entry:', error);
-    }
+  public updateConfig(newConfig: Partial<LoggerConfig>): void {
+    this.localConfig = { ...this.localConfig, ...newConfig };
+    console.log(
+      "📊 Logger: Configuration updated locally (Shared logger config immutable at runtime)",
+    );
   }
 
   /**
-   * Check if log file needs rotation
-   *
-   * Requirement 16.5: Rotate log file when size exceeds 10MB
+   * Generic info log
    */
-  private async checkLogRotation(): Promise<void> {
-    try {
-      const stats = await stat(this.logFilePath);
-
-      if (stats.size >= this.config.maxFileSizeBytes) {
-        await this.rotateLogFile();
-      }
-    } catch (error) {
-      // File might not exist yet, ignore
-    }
+  public info(message: string, data?: any): void {
+    super.info(message, undefined, data);
   }
 
   /**
-   * Rotate log file with timestamp suffix
-   *
-   * Requirement 16.5: Rotate log file with timestamp suffix
+   * Generic debug log
    */
-  private async rotateLogFile(): Promise<void> {
-    try {
-      // Close current write stream
-      if (this.writeStream) {
-        this.writeStream.end();
-        this.writeStream = null;
-      }
-
-      // Create rotated filename with timestamp
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const rotatedFileName = this.config.logFileName.replace('.jsonl', `-${timestamp}.jsonl`);
-      const rotatedFilePath = path.join(this.config.logDir, rotatedFileName);
-
-      // Rename current log file
-      fs.renameSync(this.logFilePath, rotatedFilePath);
-
-      // Create new write stream
-      this.initializeWriteStream();
-
-      console.log(`📁 Log rotated: ${rotatedFileName}`);
-
-      // Schedule compression check
-      this.scheduleCompressionCheck();
-    } catch (error) {
-      console.error('Failed to rotate log file:', error);
-      // Reinitialize write stream on error
-      this.initializeWriteStream();
-    }
+  public debug(message: string, data?: any): void {
+    super.debug(message, undefined, data);
   }
 
   /**
-   * Schedule compression check for old log files
-   *
-   * Requirement 16.6: Compress log files older than 30 days
-   */
-  private scheduleCompressionCheck(): void {
-    // Run compression check asynchronously
-    setImmediate(() => {
-      this.compressOldLogs().catch(error => {
-        console.error('Failed to compress old logs:', error);
-      });
-    });
-  }
-
-  /**
-   * Compress log files older than configured age
-   *
-   * Requirement 16.6: Compress log file to gzip format when age exceeds 30 days
-   */
-  private async compressOldLogs(): Promise<void> {
-    try {
-      const files = await readdir(this.config.logDir);
-      const now = Date.now();
-
-      for (const file of files) {
-        // Skip current log file and already compressed files
-        if (file === this.config.logFileName || file.endsWith('.gz')) {
-          continue;
-        }
-
-        // Only process .jsonl files
-        if (!file.endsWith('.jsonl')) {
-          continue;
-        }
-
-        const filePath = path.join(this.config.logDir, file);
-        const stats = await stat(filePath);
-        const fileAge = now - stats.mtime.getTime();
-
-        // Compress if older than configured age
-        if (fileAge > this.config.compressionAgeMs) {
-          await this.compressLogFile(filePath);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to check old logs for compression:', error);
-    }
-  }
-
-  /**
-   * Compress a single log file to gzip format
-   */
-  private async compressLogFile(filePath: string): Promise<void> {
-    try {
-      const fileContent = fs.readFileSync(filePath);
-      const compressed = await gzip(fileContent);
-      const compressedPath = filePath + '.gz';
-
-      await writeFile(compressedPath, compressed);
-      fs.unlinkSync(filePath); // Remove original file
-
-      console.log(`🗜️ Compressed: ${path.basename(filePath)} → ${path.basename(compressedPath)}`);
-    } catch (error) {
-      console.error(`Failed to compress ${filePath}:`, error);
-    }
-  }
-
-  /**
-   * Get log file statistics
+   * Get log file statistics (Stub for compat)
    */
   public async getLogStats(): Promise<{
     currentSize: number;
@@ -669,111 +585,20 @@ export class Logger {
     oldestFile: string | null;
     newestFile: string | null;
   }> {
-    try {
-      const files = await readdir(this.config.logDir);
-      const logFiles = files.filter(f => f.endsWith('.jsonl') || f.endsWith('.jsonl.gz'));
-
-      let currentSize = 0;
-      let oldestFile: string | null = null;
-      let newestFile: string | null = null;
-      let oldestTime = Infinity;
-      let newestTime = 0;
-
-      // Get current log file size
-      try {
-        const currentStats = await stat(this.logFilePath);
-        currentSize = currentStats.size;
-      } catch {
-        // File might not exist yet
-      }
-
-      // Find oldest and newest files
-      for (const file of logFiles) {
-        const filePath = path.join(this.config.logDir, file);
-        const stats = await stat(filePath);
-
-        if (stats.mtime.getTime() < oldestTime) {
-          oldestTime = stats.mtime.getTime();
-          oldestFile = file;
-        }
-
-        if (stats.mtime.getTime() > newestTime) {
-          newestTime = stats.mtime.getTime();
-          newestFile = file;
-        }
-      }
-
-      return {
-        currentSize,
-        totalFiles: logFiles.length,
-        compressedFiles: files.filter(f => f.endsWith('.gz')).length,
-        oldestFile,
-        newestFile,
-      };
-    } catch (error) {
-      console.error('Failed to get log stats:', error);
-      return {
-        currentSize: 0,
-        totalFiles: 0,
-        compressedFiles: 0,
-        oldestFile: null,
-        newestFile: null,
-      };
-    }
+    return {
+      currentSize: 0,
+      totalFiles: 0,
+      compressedFiles: 0,
+      oldestFile: null,
+      newestFile: null,
+    };
   }
 
   /**
-   * Flush and close logger
+   * Flush and close logger (Stub for compat)
    */
   public async close(): Promise<void> {
-    if (this.writeStream) {
-      return new Promise(resolve => {
-        this.writeStream!.end(() => {
-          this.writeStream = null;
-          resolve();
-        });
-      });
-    }
-  }
-
-  /**
-   * Update logger configuration
-   */
-  public updateConfig(newConfig: Partial<LoggerConfig>): void {
-    this.config = { ...this.config, ...newConfig };
-    console.log('📊 Logger: Configuration updated');
-  }
-
-  /**
-   * Generic info log
-   */
-  public info(message: string, data?: any): void {
-    const logEntry: GenericLogEntry = {
-      timestamp: Date.now(),
-      type: 'info',
-      message,
-      data,
-    };
-    this.writeLogEntry(logEntry);
-    if (this.config.enableConsoleOutput) {
-      console.log(`ℹ️ INFO: ${message}`, data ? data : '');
-    }
-  }
-
-  /**
-   * Generic debug log
-   */
-  public debug(message: string, data?: any): void {
-    const logEntry: GenericLogEntry = {
-      timestamp: Date.now(),
-      type: 'debug',
-      message,
-      data,
-    };
-    this.writeLogEntry(logEntry);
-    if (this.config.enableConsoleOutput) {
-      console.debug(`🐞 DEBUG: ${message}`, data ? data : '');
-    }
+    return Promise.resolve();
   }
 }
 
@@ -786,7 +611,7 @@ let _logger: Logger | null = null;
 export const getLogger = (): Logger => {
   if (!_logger) {
     _logger = new Logger({
-      enableConsoleOutput: process.env.NODE_ENV !== 'production',
+      enableConsoleOutput: process.env.NODE_ENV !== "production",
     });
   }
   return _logger;
@@ -799,29 +624,44 @@ export const logSignal = (
   signal: SignalData,
   hologramState: HologramState,
   sessionType: SessionType,
-  poiType: 'FVG' | 'ORDER_BLOCK' | 'LIQUIDITY_POOL',
-  cvdConfirmation: boolean
-) => getLogger().logSignal(signal, hologramState, sessionType, poiType, cvdConfirmation);
+  poiType: "FVG" | "ORDER_BLOCK" | "LIQUIDITY_POOL",
+  cvdConfirmation: boolean,
+): void => {
+  getLogger().logPhase2Signal(
+    signal,
+    hologramState,
+    sessionType,
+    poiType,
+    cvdConfirmation,
+  );
+};
 
 export const logExecution = (
   orderResult: OrderResult,
   slippage: number,
   signalId?: string,
-  fees?: number
-) => getLogger().logExecution(orderResult, slippage, signalId, fees);
+  fees?: number,
+): void => {
+  getLogger().logPhase2Execution(orderResult, slippage, signalId, fees);
+};
 
 export const logPositionClose = (
   positionId: string,
   symbol: string,
-  side: 'LONG' | 'SHORT',
+  side: "LONG" | "SHORT",
   entryPrice: number,
   exitPrice: number,
   profitPercentage: number,
-  closeReason: 'STOP_LOSS' | 'TAKE_PROFIT' | 'TRAILING_STOP' | 'MANUAL' | 'EMERGENCY',
+  closeReason:
+    | "STOP_LOSS"
+    | "TAKE_PROFIT"
+    | "TRAILING_STOP"
+    | "MANUAL"
+    | "EMERGENCY",
   holdTime: number,
-  rValue: number
-) =>
-  getLogger().logPositionClose(
+  rValue: number,
+): void => {
+  getLogger().logPhase2PositionClose(
     positionId,
     symbol,
     side,
@@ -830,27 +670,14 @@ export const logPositionClose = (
     profitPercentage,
     closeReason,
     holdTime,
-    rValue
+    rValue,
   );
+};
 
 export const logError = (
-  level: 'WARNING' | 'ERROR' | 'CRITICAL',
+  level: "WARNING" | "ERROR" | "CRITICAL",
   message: string,
-  context?: {
-    symbol?: string;
-    component?: string;
-    function?: string;
-    stack?: string;
-    data?: any;
-  }
-) => getLogger().logError(level, message, context);
-
-export const logEnhancedHologram = (
-  symbol: string,
-  state: Parameters<Logger['logEnhancedHologram']>[1]
-) => getLogger().logEnhancedHologram(symbol, state);
-
-export const logConvictionSizing = (
-  symbol: string,
-  sizing: Parameters<Logger['logConvictionSizing']>[1]
-) => getLogger().logConvictionSizing(symbol, sizing);
+  context?: any,
+): void => {
+  getLogger().logPhase2Error(level, message, context);
+};

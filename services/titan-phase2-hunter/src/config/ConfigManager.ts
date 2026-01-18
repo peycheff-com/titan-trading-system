@@ -1,15 +1,18 @@
 /**
  * Configuration Manager for Titan Phase 2 - The Hunter
  *
- * Provides runtime configuration management with hot-reload support,
- * default values, and validation for Phase 2 specific settings.
+ * Provides runtime configuration management via @titan/shared ConfigManager Core.
+ * Preserves existing Hunter public API for compatibility.
  *
  * Requirements: 18.1-18.8 (Runtime Configuration)
  */
 
-import { EventEmitter } from 'events';
-import { existsSync, mkdirSync, readFileSync, unwatchFile, watchFile, writeFileSync } from 'fs';
-import { dirname, join } from 'path';
+import { EventEmitter } from "events";
+import {
+  ConfigManager as SharedConfigManager,
+  getConfigManager,
+  PhaseConfig as SharedPhaseConfig,
+} from "@titan/shared";
 
 /**
  * Alignment weight configuration
@@ -58,15 +61,35 @@ export interface ForwardTestConfig {
 
 /**
  * Complete Phase 2 configuration
+ * Includes fields required by Shared PhaseConfigSchema AND Hunter specific fields
  */
 export interface Phase2Config {
+  // Shared Schema Requirements
+  enabled: boolean;
+  maxLeverage: number;
+  maxDrawdown: number;
+  maxPositionSize: number;
+  riskPerTrade: number;
+  exchanges: Record<string, {
+    enabled: boolean;
+    executeOn: boolean;
+    testnet: boolean;
+    rateLimit: number;
+    timeout: number;
+    apiKey?: string;
+    apiSecret?: string;
+  }>;
+  parameters?: Record<string, any>;
+
+  // Hunter Specifics
   alignmentWeights: AlignmentWeights;
   rsConfig: RSConfig;
-  riskConfig: RiskConfig;
+  riskConfig: RiskConfig; // Note: Overlaps conceptually with maxLeverage
   portfolioConfig: PortfolioConfig;
   forwardTestConfig: ForwardTestConfig;
   version: number;
   lastModified: number;
+  [key: string]: any;
 }
 
 /**
@@ -82,7 +105,7 @@ export interface ValidationResult {
  * Configuration change event
  */
 export interface ConfigChangeEvent {
-  section: keyof Phase2Config;
+  section: keyof Phase2Config | "all";
   oldValue: any;
   newValue: any;
   timestamp: number;
@@ -92,6 +115,15 @@ export interface ConfigChangeEvent {
  * Default configuration values
  */
 const DEFAULT_CONFIG: Phase2Config = {
+  // Shared Config Defaults
+  enabled: true,
+  maxLeverage: 5,
+  maxDrawdown: 0.2, // 20%
+  maxPositionSize: 1.0,
+  riskPerTrade: 0.015, // 1.5% matches stopLossPercent
+  exchanges: {},
+
+  // Hunter Config Defaults
   alignmentWeights: {
     daily: 50, // 50%
     h4: 30, // 30%
@@ -123,109 +155,128 @@ const DEFAULT_CONFIG: Phase2Config = {
 
 /**
  * Configuration Manager for Phase 2
+ * Refactored to use @titan/shared ConfigManager
  */
 export class ConfigManager extends EventEmitter {
   private config: Phase2Config;
-  private configPath: string;
-  private isWatching: boolean = false;
+  private sharedManager: SharedConfigManager;
+  private readonly phaseName = "phase2-hunter";
+  private environment: string;
 
-  constructor(configDirectory: string = './config') {
+  constructor(environment: string = process.env.NODE_ENV || "development") {
     super();
-    this.configPath = join(configDirectory, 'phase2.config.json');
-    this.config = this.loadConfig();
+    this.environment = environment;
+
+    // Initialize Shared Manager
+    this.sharedManager = getConfigManager(undefined, environment as any);
+
+    // Initialize with defaults synchronously
+    this.config = { ...DEFAULT_CONFIG };
   }
 
-  /**
-   * Load configuration from file with defaults
-   * Requirement 18.8: Load default configuration if file is corrupted
-   */
-  loadConfig(): Phase2Config {
-    try {
-      if (!existsSync(this.configPath)) {
-        console.log('📋 No config file found, creating default configuration');
-        this.saveConfig(DEFAULT_CONFIG);
-        return { ...DEFAULT_CONFIG };
-      }
+  public async initialize(): Promise<void> {
+    // Load configuration via Shared Manager
+    // This will throw if Schema validation fails
+    await this.sharedManager.loadPhaseConfig(this.phaseName);
 
-      const fileContent = readFileSync(this.configPath, 'utf8');
-      const loadedConfig = JSON.parse(fileContent) as Phase2Config;
+    const phaseConfig = this.sharedManager.getPhaseConfig(this.phaseName);
 
-      // Validate loaded configuration
-      const validation = this.validateConfig(loadedConfig);
+    if (!phaseConfig || Object.keys(phaseConfig).length === 0) {
+      console.log("📋 Initializing default configuration for Hunter...");
+      await this.saveConfig(this.config); // Save defaults
+    } else {
+      this.updateLocalState();
+
+      // Validate merged config against Hunter-specific rules
+      const validation = this.validateConfig(this.config);
       if (!validation.isValid) {
-        console.error('❌ CONFIG_CORRUPTED: Invalid configuration file');
-        console.error('Errors:', validation.errors);
-        console.log('📋 Loading default configuration');
-
-        // Backup corrupted config
-        const backupPath = `${this.configPath}.corrupted.${Date.now()}`;
-        writeFileSync(backupPath, fileContent);
-        console.log(`💾 Corrupted config backed up to: ${backupPath}`);
-
-        // Load defaults
-        this.saveConfig(DEFAULT_CONFIG);
-        return { ...DEFAULT_CONFIG };
+        throw new Error(
+          `Invalid configuration: ${validation.errors.join(", ")}`,
+        );
       }
 
-      // Merge with defaults to ensure all fields are present
-      const mergedConfig = this.mergeWithDefaults(loadedConfig);
+      console.log("✅ Configuration loaded successfully");
+    }
 
-      console.log('✅ Configuration loaded successfully');
-      if (validation.warnings.length > 0) {
-        console.warn('⚠️ Configuration warnings:', validation.warnings);
+    // Setup Event Listeners
+    this.sharedManager.on("configChanged", (event) => {
+      if (event.level === "phase" && event.key === this.phaseName) {
+        const oldConfig = { ...this.config };
+        this.updateLocalState();
+        this.emit("configReloaded", {
+          section: "all",
+          oldValue: oldConfig,
+          newValue: this.config,
+          timestamp: Date.now(),
+        } as ConfigChangeEvent);
       }
+    });
 
-      return mergedConfig;
-    } catch (error) {
-      console.error('❌ CONFIG_CORRUPTED: Failed to load configuration:', error);
-      console.log('📋 Loading default configuration');
+    this.sharedManager.on("configReloaded", () => {
+      // Full reload logic
+      const oldConfig = { ...this.config };
+      this.updateLocalState();
+      this.emit("configReloaded", {
+        section: "all",
+        oldValue: oldConfig,
+        newValue: this.config,
+        timestamp: Date.now(),
+        // Note: source information from shared manager could be passed here if needed
+      } as ConfigChangeEvent);
+    });
 
-      // Save defaults
-      this.saveConfig(DEFAULT_CONFIG);
-      return { ...DEFAULT_CONFIG };
+    console.log("✅ ConfigManager Adapter initialized via @titan/shared");
+  }
+
+  private updateLocalState() {
+    const rawConfig = this.sharedManager.getPhaseConfig(
+      this.phaseName,
+    ) as unknown as Phase2Config;
+    if (rawConfig) {
+      this.config = this.mergeWithDefaults(rawConfig);
     }
   }
 
   /**
-   * Save configuration to file with immediate write
-   * Requirement 18.6: Write configuration to config.json file and apply changes immediately
+   * Save configuration
    */
   saveConfig(config: Phase2Config): void {
     try {
-      // Update version and timestamp
+      // Update metadata
       config.version = (config.version || 0) + 1;
       config.lastModified = Date.now();
 
-      // Validate before saving
+      // Validate
       const validation = this.validateConfig(config);
       if (!validation.isValid) {
-        throw new Error(`Invalid configuration: ${validation.errors.join(', ')}`);
+        throw new Error(
+          `Invalid configuration: ${validation.errors.join(", ")}`,
+        );
       }
 
-      // Ensure directory exists
-      const configDir = dirname(this.configPath);
-      if (!existsSync(configDir)) {
-        mkdirSync(configDir, { recursive: true });
-      }
+      // Sync specific fields to shared fields
+      config.maxLeverage = config.riskConfig.maxLeverage;
+      // We could sync others (riskPerTrade etc) but we'll leave them to defaults or manual set
 
-      // Write to file immediately
-      writeFileSync(this.configPath, JSON.stringify(config, null, 2), 'utf8');
+      // Save via Shared Manager
+      // Cast to unknown first to avoid partial overlap issues if PhaseConfig definition is stricter or different
+      this.sharedManager.savePhaseConfig(
+        this.phaseName,
+        config as unknown as SharedPhaseConfig,
+      );
 
-      // Update internal config
+      // Update local state (optimistic)
       const oldConfig = { ...this.config };
       this.config = { ...config };
 
-      // Emit change event
-      this.emit('configChanged', {
-        section: 'all',
+      this.emit("configChanged", {
+        section: "all",
         oldValue: oldConfig,
         newValue: config,
         timestamp: Date.now(),
-      } as unknown as ConfigChangeEvent);
-
-      console.log('💾 Configuration saved successfully');
+      } as ConfigChangeEvent);
     } catch (error) {
-      console.error('❌ Failed to save configuration:', error);
+      console.error("❌ Failed to save configuration:", error);
       throw error;
     }
   }
@@ -239,149 +290,67 @@ export class ConfigManager extends EventEmitter {
 
   /**
    * Update alignment weights
-   * Requirement 18.2: Allow adjustment of Daily weight (30-60%), 4H weight (20-40%), 15m weight (10-30%)
    */
   updateAlignmentWeights(weights: Partial<AlignmentWeights>): void {
     const newWeights = { ...this.config.alignmentWeights, ...weights };
-
-    // Validate individual weight ranges first
-    if (newWeights.daily < 30 || newWeights.daily > 60) {
-      throw new Error(`Daily weight must be 30-60%, got ${newWeights.daily}%`);
-    }
-    if (newWeights.h4 < 20 || newWeights.h4 > 40) {
-      throw new Error(`4H weight must be 20-40%, got ${newWeights.h4}%`);
-    }
-    if (newWeights.m15 < 10 || newWeights.m15 > 30) {
-      throw new Error(`15m weight must be 10-30%, got ${newWeights.m15}%`);
-    }
-
-    // Validate weights sum to 100%
-    const total = newWeights.daily + newWeights.h4 + newWeights.m15;
-    if (Math.abs(total - 100) > 0.1) {
-      throw new Error(`Alignment weights must sum to 100%, got ${total}%`);
-    }
-
-    const newConfig = {
-      ...this.config,
-      alignmentWeights: newWeights,
-    };
-
-    this.saveConfig(newConfig);
+    this.updateLocalConfigSection({ alignmentWeights: newWeights });
   }
 
   /**
    * Update RS configuration
-   * Requirement 18.3: Allow adjustment of RS threshold (0-5%) and lookback period (2-8 hours)
    */
   updateRSConfig(rsConfig: Partial<RSConfig>): void {
     const newRSConfig = { ...this.config.rsConfig, ...rsConfig };
-
-    const newConfig = {
-      ...this.config,
-      rsConfig: newRSConfig,
-    };
-
-    this.saveConfig(newConfig);
+    this.updateLocalConfigSection({ rsConfig: newRSConfig });
   }
 
   /**
    * Update risk configuration
-   * Requirement 18.4: Allow adjustment of max leverage (3-5x), stop loss (1-3%), target (3-6%)
    */
   updateRiskConfig(riskConfig: Partial<RiskConfig>): void {
     const newRiskConfig = { ...this.config.riskConfig, ...riskConfig };
-
-    const newConfig = {
-      ...this.config,
-      riskConfig: newRiskConfig,
-    };
-
-    this.saveConfig(newConfig);
+    this.updateLocalConfigSection({ riskConfig: newRiskConfig });
   }
 
   /**
    * Update portfolio configuration
-   * Requirement 18.5: Allow adjustment of max positions (3-8), max heat (10-20%), correlation (0.6-0.9)
    */
   updatePortfolioConfig(portfolioConfig: Partial<PortfolioConfig>): void {
     const newPortfolioConfig = {
       ...this.config.portfolioConfig,
       ...portfolioConfig,
     };
-
-    const newConfig = {
-      ...this.config,
-      portfolioConfig: newPortfolioConfig,
-    };
-
-    this.saveConfig(newConfig);
+    this.updateLocalConfigSection({ portfolioConfig: newPortfolioConfig });
   }
 
   /**
    * Update forward test configuration
-   * Add paper trading toggle in config
    */
   updateForwardTestConfig(forwardTestConfig: Partial<ForwardTestConfig>): void {
     const newForwardTestConfig = {
       ...this.config.forwardTestConfig,
       ...forwardTestConfig,
     };
+    this.updateLocalConfigSection({ forwardTestConfig: newForwardTestConfig });
+  }
 
+  private updateLocalConfigSection(partialConfig: Partial<Phase2Config>): void {
     const newConfig = {
       ...this.config,
-      forwardTestConfig: newForwardTestConfig,
+      ...partialConfig,
     };
-
     this.saveConfig(newConfig);
   }
 
   /**
-   * Start watching configuration file for changes (hot-reload)
-   * Support hot-reload without restart
+   * Deprecated: Watch mechanism handled by SharedConfigManager
    */
   startWatching(): void {
-    if (this.isWatching) {
-      return;
-    }
-
-    this.isWatching = true;
-
-    watchFile(this.configPath, { interval: 1000 }, (curr, prev) => {
-      if (curr.mtime !== prev.mtime) {
-        console.log('🔄 Configuration file changed, reloading...');
-        try {
-          const newConfig = this.loadConfig();
-          const oldConfig = { ...this.config };
-          this.config = newConfig;
-
-          this.emit('configReloaded', {
-            section: 'all',
-            oldValue: oldConfig,
-            newValue: newConfig,
-            timestamp: Date.now(),
-          } as unknown as ConfigChangeEvent);
-
-          console.log('✅ Configuration reloaded successfully');
-        } catch (error) {
-          console.error('❌ Failed to reload configuration:', error);
-        }
-      }
-    });
-
-    console.log('👁️ Started watching configuration file for changes');
+    // console.log('👁️ startWatching is managed by SharedConfigManager (noop)');
   }
 
-  /**
-   * Stop watching configuration file
-   */
   stopWatching(): void {
-    if (!this.isWatching) {
-      return;
-    }
-
-    unwatchFile(this.configPath);
-    this.isWatching = false;
-    console.log('👁️ Stopped watching configuration file');
+    // noop
   }
 
   /**
@@ -393,7 +362,7 @@ export class ConfigManager extends EventEmitter {
 
     // Validate alignment weights
     if (!config.alignmentWeights) {
-      errors.push('Missing alignmentWeights');
+      errors.push("Missing alignmentWeights");
     } else {
       const { daily, h4, m15 } = config.alignmentWeights;
 
@@ -415,7 +384,7 @@ export class ConfigManager extends EventEmitter {
 
     // Validate RS config
     if (!config.rsConfig) {
-      errors.push('Missing rsConfig');
+      errors.push("Missing rsConfig");
     } else {
       const { threshold, lookbackPeriod } = config.rsConfig;
 
@@ -423,13 +392,15 @@ export class ConfigManager extends EventEmitter {
         errors.push(`RS threshold must be 0-5%, got ${threshold}%`);
       }
       if (lookbackPeriod < 2 || lookbackPeriod > 8) {
-        errors.push(`RS lookback period must be 2-8 hours, got ${lookbackPeriod} hours`);
+        errors.push(
+          `RS lookback period must be 2-8 hours, got ${lookbackPeriod} hours`,
+        );
       }
     }
 
     // Validate risk config
     if (!config.riskConfig) {
-      errors.push('Missing riskConfig');
+      errors.push("Missing riskConfig");
     } else {
       const { maxLeverage, stopLossPercent, targetPercent } = config.riskConfig;
 
@@ -447,47 +418,58 @@ export class ConfigManager extends EventEmitter {
       const rrRatio = targetPercent / stopLossPercent;
       if (rrRatio < 2.5) {
         warnings.push(
-          `R:R ratio is ${rrRatio.toFixed(1)}:1, consider increasing target or decreasing stop`
+          `R:R ratio is ${
+            rrRatio.toFixed(1)
+          }:1, consider increasing target or decreasing stop`,
         );
       }
     }
 
     // Validate portfolio config
     if (!config.portfolioConfig) {
-      errors.push('Missing portfolioConfig');
+      errors.push("Missing portfolioConfig");
     } else {
       const { maxConcurrentPositions, maxPortfolioHeat, correlationThreshold } =
         config.portfolioConfig;
 
       if (maxConcurrentPositions < 3 || maxConcurrentPositions > 8) {
-        errors.push(`Max concurrent positions must be 3-8, got ${maxConcurrentPositions}`);
+        errors.push(
+          `Max concurrent positions must be 3-8, got ${maxConcurrentPositions}`,
+        );
       }
       if (maxPortfolioHeat < 10 || maxPortfolioHeat > 20) {
-        errors.push(`Max portfolio heat must be 10-20%, got ${maxPortfolioHeat}%`);
+        errors.push(
+          `Max portfolio heat must be 10-20%, got ${maxPortfolioHeat}%`,
+        );
       }
       if (correlationThreshold < 0.6 || correlationThreshold > 0.9) {
-        errors.push(`Correlation threshold must be 0.6-0.9, got ${correlationThreshold}`);
+        errors.push(
+          `Correlation threshold must be 0.6-0.9, got ${correlationThreshold}`,
+        );
       }
     }
 
     // Validate forward test config
     if (!config.forwardTestConfig) {
-      errors.push('Missing forwardTestConfig');
+      errors.push("Missing forwardTestConfig");
     } else {
-      const { enabled, duration, logSignalsOnly, compareToBacktest } = config.forwardTestConfig;
+      const { enabled, duration, logSignalsOnly, compareToBacktest } =
+        config.forwardTestConfig;
 
-      if (typeof enabled !== 'boolean') {
-        errors.push('Forward test enabled must be boolean');
+      if (typeof enabled !== "boolean") {
+        errors.push("Forward test enabled must be boolean");
       }
       if (duration < 1 || duration > 168) {
         // 1 hour to 1 week
-        errors.push(`Forward test duration must be 1-168 hours, got ${duration} hours`);
+        errors.push(
+          `Forward test duration must be 1-168 hours, got ${duration} hours`,
+        );
       }
-      if (typeof logSignalsOnly !== 'boolean') {
-        errors.push('Forward test logSignalsOnly must be boolean');
+      if (typeof logSignalsOnly !== "boolean") {
+        errors.push("Forward test logSignalsOnly must be boolean");
       }
-      if (typeof compareToBacktest !== 'boolean') {
-        errors.push('Forward test compareToBacktest must be boolean');
+      if (typeof compareToBacktest !== "boolean") {
+        errors.push("Forward test compareToBacktest must be boolean");
       }
     }
 
@@ -503,28 +485,34 @@ export class ConfigManager extends EventEmitter {
    */
   private mergeWithDefaults(loadedConfig: Partial<Phase2Config>): Phase2Config {
     return {
+      ...DEFAULT_CONFIG,
+      ...loadedConfig,
       alignmentWeights: {
         ...DEFAULT_CONFIG.alignmentWeights,
-        ...loadedConfig.alignmentWeights,
+        ...(loadedConfig.alignmentWeights || {}),
       },
       rsConfig: {
         ...DEFAULT_CONFIG.rsConfig,
-        ...loadedConfig.rsConfig,
+        ...(loadedConfig.rsConfig || {}),
       },
       riskConfig: {
         ...DEFAULT_CONFIG.riskConfig,
-        ...loadedConfig.riskConfig,
+        ...(loadedConfig.riskConfig || {}),
       },
       portfolioConfig: {
         ...DEFAULT_CONFIG.portfolioConfig,
-        ...loadedConfig.portfolioConfig,
+        ...(loadedConfig.portfolioConfig || {}),
       },
       forwardTestConfig: {
         ...DEFAULT_CONFIG.forwardTestConfig,
-        ...loadedConfig.forwardTestConfig,
+        ...(loadedConfig.forwardTestConfig || {}),
       },
       version: loadedConfig.version || DEFAULT_CONFIG.version,
       lastModified: loadedConfig.lastModified || Date.now(),
+      exchanges: { // Deep merge exchanges if needed, but strict replacement is often safer
+        ...DEFAULT_CONFIG.exchanges,
+        ...(loadedConfig.exchanges || {}),
+      },
     };
   }
 
@@ -532,7 +520,7 @@ export class ConfigManager extends EventEmitter {
    * Reset configuration to defaults
    */
   resetToDefaults(): void {
-    console.log('🔄 Resetting configuration to defaults');
+    console.log("🔄 Resetting configuration to defaults");
     this.saveConfig({ ...DEFAULT_CONFIG });
   }
 
@@ -546,8 +534,10 @@ export class ConfigManager extends EventEmitter {
       `📈 RS: Threshold ${config.rsConfig.threshold}%, Lookback ${config.rsConfig.lookbackPeriod}h`,
       `⚡ Risk: Leverage ${config.riskConfig.maxLeverage}x, Stop ${config.riskConfig.stopLossPercent}%, Target ${config.riskConfig.targetPercent}%`,
       `💼 Portfolio: Max ${config.portfolioConfig.maxConcurrentPositions} positions, Heat ${config.portfolioConfig.maxPortfolioHeat}%, Correlation ${config.portfolioConfig.correlationThreshold}`,
-      `🧪 Forward Test: ${config.forwardTestConfig.enabled ? 'Enabled' : 'Disabled'}, Duration ${config.forwardTestConfig.duration}h, Signals Only: ${config.forwardTestConfig.logSignalsOnly}`,
-    ].join('\n');
+      `🧪 Forward Test: ${
+        config.forwardTestConfig.enabled ? "Enabled" : "Disabled"
+      }, Duration ${config.forwardTestConfig.duration}h, Signals Only: ${config.forwardTestConfig.logSignalsOnly}`,
+    ].join("\n");
   }
 
   /**

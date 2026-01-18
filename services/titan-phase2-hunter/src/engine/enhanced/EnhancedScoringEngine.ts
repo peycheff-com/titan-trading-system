@@ -124,6 +124,8 @@ export class EnhancedScoringEngine extends EventEmitter {
     flowValidation: FlowValidation | null,
     botTrapAnalysis: BotTrapAnalysis | null,
     globalCVD: GlobalCVDData | null,
+    regime: string = "STABLE",
+    alpha: number = 3.0,
   ): ScoringBreakdown {
     const reasoning: string[] = [];
 
@@ -383,8 +385,24 @@ export class EnhancedScoringEngine extends EventEmitter {
     botTrapAnalysis: BotTrapAnalysis | null,
     globalCVD: GlobalCVDData | null,
     flowValidation: FlowValidation | null,
+    regime: string = "STABLE", // "STABLE" | "VOLATILE" | "CRASH"
+    alpha: number = 3.0,
   ): "A+" | "A" | "B" | "C" | "VETO" {
     const { alignmentThresholds, vetoConditions } = this.config;
+
+    // 1. Regime-Based Dynamic Thresholds
+    // If regime is VOLATILE or Alpha is low (< 2.5), we demand higher quality
+    let thresholds = { ...alignmentThresholds };
+    if (regime === "VOLATILE" || regime === "CRASH" || alpha < 2.5) {
+      thresholds.aPlus += 5; // 80 -> 85
+      thresholds.a += 5; // 70 -> 75
+      thresholds.b += 5; // 60 -> 65
+      // C remains 50 or adjusts? C is usually "monitor", so maybe stays same.
+    }
+
+    // 2. Extreme Volatility Filter (Alpha < 2.0)
+    // In extreme tails (Alpha < 2), markets are wild. We discard 'B' setups entirely.
+    const isExtremeVolatility = alpha < 2.0 || regime === "CRASH";
 
     // Check veto conditions first
     if (vetoConditions.oracleVetoEnabled && oracleScore?.veto) {
@@ -412,11 +430,20 @@ export class EnhancedScoringEngine extends EventEmitter {
       return "VETO";
     }
 
-    // Determine alignment based on score
-    if (score >= alignmentThresholds.aPlus) return "A+";
-    if (score >= alignmentThresholds.a) return "A";
-    if (score >= alignmentThresholds.b) return "B";
-    if (score >= alignmentThresholds.c) return "C";
+    // Determine alignment based on adjusted thresholds
+    if (score >= thresholds.aPlus) return "A+";
+    if (score >= thresholds.a) return "A";
+
+    // For B setups, check extreme volatility
+    if (score >= thresholds.b) {
+      if (isExtremeVolatility) {
+        // Downgrade B to C (No Play) in extreme uncertainty
+        return "C";
+      }
+      return "B";
+    }
+
+    if (score >= thresholds.c) return "C";
 
     return "VETO"; // Score too low
   }

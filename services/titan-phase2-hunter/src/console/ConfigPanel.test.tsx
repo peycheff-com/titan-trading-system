@@ -9,6 +9,14 @@ import { Phase2Config } from '../config/ConfigManager';
 
 describe('ConfigPanel Component', () => {
   const mockConfig: Phase2Config = {
+    // Shared defaults
+    enabled: true,
+    maxLeverage: 5,
+    maxDrawdown: 0.2,
+    maxPositionSize: 1.0,
+    riskPerTrade: 0.015,
+    exchanges: {},
+
     alignmentWeights: {
       daily: 50,
       h4: 30,

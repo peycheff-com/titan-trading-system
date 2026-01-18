@@ -5,6 +5,10 @@ import { NatsAdapter } from "./messaging/NatsAdapter.js";
 
 const logger = console;
 
+import { configManager } from "./config/ConfigManager.js";
+
+// ... imports
+
 async function main() {
     logger.log("🚀 Starting Titan AI Quant Service...");
 
@@ -15,7 +19,7 @@ async function main() {
     logger.log("✅ Nightly Optimizer scheduled");
 
     // Start HTTP Server for Health Checks FIRST (before NATS)
-    const port = parseInt(process.env.PORT || "4000", 10);
+    const port = configManager.getPort();
     const host = "0.0.0.0";
 
     const server = http.createServer(async (req, res) => {
@@ -88,6 +92,13 @@ async function main() {
         const natsAdapter = new NatsAdapter(optimizer);
         await natsAdapter.init();
         logger.log("✅ NATS Adapter connected");
+
+        // Initialize Real-Time Optimizer
+        const { RealTimeOptimizer } = await import("./ai/RealTimeOptimizer.js");
+        const realTimeOptimizer = new RealTimeOptimizer();
+        realTimeOptimizer.setNatsAdapter(natsAdapter);
+        realTimeOptimizer.start();
+        logger.log("✅ Real-Time Optimizer started");
     } catch (error) {
         logger.warn(
             "⚠️ NATS connection failed, running without event bus:",

@@ -1,12 +1,14 @@
-pub mod model;
-pub mod order_manager;
-pub mod shadow_state;
 pub mod api;
 pub mod exchange;
+pub mod model;
+pub mod order_manager;
 pub mod rate_limiter;
+pub mod shadow_state;
 
 #[cfg(test)]
 mod tests;
 
+pub mod config;
+pub mod impact_calculator;
 pub mod market_data;
 pub mod simulation_engine;

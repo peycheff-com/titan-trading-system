@@ -68,6 +68,34 @@ export class NatsClient extends EventEmitter {
         this.nc.publish(subject, this.jc.encode(payload));
     }
 
+    async subscribeToPowerLawMetrics(
+        callback: (symbol: string, metrics: any) => void,
+    ) {
+        if (!this.nc) return;
+
+        // Wildcard subscription
+        const sub = this.nc.subscribe("powerlaw.metrics.>");
+
+        // Create async iterator loop
+        (async () => {
+            for await (const m of sub) {
+                try {
+                    const data = this.jc.decode(m.data);
+                    // Subject: powerlaw.metrics.<symbol>
+                    const parts = m.subject.split(".");
+                    if (parts.length >= 3) {
+                        const symbol = parts[2];
+                        callback(symbol, data);
+                    }
+                } catch (err) {
+                    console.error("Error decoding metrics:", err);
+                }
+            }
+        })();
+
+        console.log("✅ Subscribed to Power Law metrics");
+    }
+
     async close(): Promise<void> {
         if (this.nc) {
             await this.nc.drain();

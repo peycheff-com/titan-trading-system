@@ -20,26 +20,43 @@ pub struct BinanceAdapter {
     ws_limiter: TokenBucket,
 }
 
+use crate::config::ExchangeConfig;
+
 impl BinanceAdapter {
-    pub fn new() -> Self {
-        let api_key = env::var("BINANCE_API_KEY").expect("BINANCE_API_KEY not set");
-        let secret_key = env::var("BINANCE_SECRET_KEY").expect("BINANCE_SECRET_KEY not set");
-        let base_url = env::var("BINANCE_BASE_URL").unwrap_or_else(|_| "https://testnet.binancefuture.com".to_string());
+    pub fn new(config: Option<&ExchangeConfig>) -> Result<Self, ExchangeError> {
+        let api_key = config.and_then(|c| c.get_api_key())
+            .or_else(|| env::var("BINANCE_API_KEY").ok())
+            .ok_or_else(|| ExchangeError::Config("BINANCE_API_KEY not set (check config.json or env)".to_string()))?;
+            
+        let secret_key = config.and_then(|c| c.get_secret_key())
+            .or_else(|| env::var("BINANCE_SECRET_KEY").ok())
+            .ok_or_else(|| ExchangeError::Config("BINANCE_SECRET_KEY not set (check config.json or env)".to_string()))?;
+            
+        let base_url = env::var("BINANCE_BASE_URL")
+            .unwrap_or_else(|_| if config.map(|c| c.testnet).unwrap_or(true) {
+                "https://testnet.binancefuture.com".to_string()
+            } else {
+                "https://fapi.binance.com".to_string()
+            });
 
         // HTTP Limit: ~2400 req/min => 40 req/sec. Burst 50.
-        let http_limiter = TokenBucket::new(50, 40.0);
+        // Or overload from config
+        let rate_limit = config.and_then(|c| c.rate_limit).unwrap_or(40) as f64;
+        let http_limiter = TokenBucket::new(50, rate_limit);
+        
         // WS Limit: ~5 messages/sec (orders). Burst 10.
         let ws_limiter = TokenBucket::new(10, 5.0);
 
-        BinanceAdapter {
+        Ok(BinanceAdapter {
             api_key,
             secret_key,
             base_url,
             client: Client::new(),
             http_limiter,
             ws_limiter,
-        }
+        })
     }
+
 
     fn sign(&self, query: &str) -> String {
         let mut mac = Hmac::<Sha256>::new_from_slice(self.secret_key.as_bytes())

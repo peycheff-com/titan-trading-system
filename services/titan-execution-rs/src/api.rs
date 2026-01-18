@@ -1,7 +1,8 @@
 use actix_web::{web, HttpResponse, Responder};
 use serde::Serialize;
 use crate::shadow_state::ShadowState;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use parking_lot::RwLock;
 
 #[derive(Serialize)]
 pub struct HealthResponse {
@@ -17,7 +18,7 @@ pub async fn health_check() -> impl Responder {
 }
 
 pub async fn get_positions(data: web::Data<Arc<RwLock<ShadowState>>>) -> impl Responder {
-    let state = data.read().unwrap();
+    let state = data.read();
     // Assuming ShadowState has a method to get active positions or we expose the field
     // For now we might need to update ShadowState to expose this.
     // Let's assume we can clone the positions map or similar.

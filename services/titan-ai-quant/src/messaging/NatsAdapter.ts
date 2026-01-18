@@ -1,5 +1,5 @@
-import { getNatsClient, NatsClient, TitanSubject } from '@titan/shared';
-import { NightlyOptimize } from '../cron/NightlyOptimize.js';
+import { getNatsClient, NatsClient, TitanSubject } from "@titan/shared";
+import { NightlyOptimize } from "../cron/NightlyOptimize.js";
 
 const logger = console;
 
@@ -13,21 +13,34 @@ export class NatsAdapter {
   }
 
   /**
+   * Publish regime update
+   */
+  async publishRegimeUpdate(snapshot: any): Promise<void> {
+    try {
+      if (this.nats.isConnected()) {
+        await this.nats.publish(TitanSubject.REGIME_UPDATE, snapshot);
+      }
+    } catch (error) {
+      logger.error("Failed to publish regime update:", error);
+    }
+  }
+
+  /**
    * Initialize NATS connection and subscriptions
    */
   async init(): Promise<void> {
     try {
-      const natsUrl = process.env.NATS_URL || 'nats://localhost:4222';
+      const natsUrl = process.env.NATS_URL || "nats://localhost:4222";
       await this.nats.connect({
         servers: [natsUrl],
-        name: 'titan-ai-quant',
+        name: "titan-ai-quant",
       });
 
       this.subscribeToOptimizationRequests();
 
-      logger.log('✅ NatsAdapter initialized');
+      logger.log("✅ NatsAdapter initialized");
     } catch (error) {
-      logger.error('Failed to initialize NatsAdapter:', error);
+      logger.error("Failed to initialize NatsAdapter:", error);
       throw error;
     }
   }
@@ -47,9 +60,9 @@ export class NatsAdapter {
           // but for now we run the standard nightly cycle
           await this.optimizer.runNow();
 
-          logger.log('✅ Automated optimization completed via NATS trigger');
+          logger.log("✅ Automated optimization completed via NATS trigger");
         } catch (error) {
-          logger.error('❌ Validated optimization failed:', error);
+          logger.error("❌ Validated optimization failed:", error);
         }
       },
     );

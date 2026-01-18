@@ -140,40 +140,33 @@ export class ConfigManager extends EventEmitter {
       this.getDefaultConfig(),
       this.getDefaultBrainOverrides(),
     );
-
-    this.init();
   }
 
-  private async init() {
-    try {
-      // Load configurations via Shared Manager
-      await this.sharedManager.loadBrainConfig();
-      const phaseConfig = await this.sharedManager.loadPhaseConfig(
-        this.phaseName,
-      );
+  public async initialize(): Promise<void> {
+    // Load configurations via Shared Manager
+    await this.sharedManager.loadBrainConfig();
+    const phaseConfig = await this.sharedManager.loadPhaseConfig(
+      this.phaseName,
+    );
 
-      // If config is empty/missing, apply defaults
-      if (!phaseConfig || Object.keys(phaseConfig).length === 0) {
-        console.log("📝 Initializing default configuration for Scavenger...");
-        await this.savePhaseConfig(this.getDefaultConfig());
-      } else {
-        this.updateLocalState();
-      }
-
-      // Setup Event Listeners from Shared Manager
-      this.sharedManager.on("configChanged", (event) => {
-        this.handleSharedConfigChange(event);
-      });
-
-      this.sharedManager.on("configReloaded", (event) => {
-        this.handleSharedConfigChange(event);
-      });
-
-      console.log("✅ ConfigManager Adapter initialized via @titan/shared");
-    } catch (err) {
-      console.error("❌ ConfigManager loading failed:", err);
-      // Fallback to defaults already set in constructor
+    // If config is empty/missing, apply defaults
+    if (!phaseConfig || Object.keys(phaseConfig).length === 0) {
+      console.log("📝 Initializing default configuration for Scavenger...");
+      await this.savePhaseConfig(this.getDefaultConfig());
+    } else {
+      this.updateLocalState();
     }
+
+    // Setup Event Listeners from Shared Manager
+    this.sharedManager.on("configChanged", (event) => {
+      this.handleSharedConfigChange(event);
+    });
+
+    this.sharedManager.on("configReloaded", (event) => {
+      this.handleSharedConfigChange(event);
+    });
+
+    console.log("✅ ConfigManager Adapter initialized via @titan/shared");
   }
 
   private handleSharedConfigChange(event: any) {
