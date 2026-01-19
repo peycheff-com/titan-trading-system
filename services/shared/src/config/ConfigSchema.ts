@@ -47,7 +47,11 @@ export const ExchangeConfigSchema = ExchangeConfigBase.refine((data) => {
 /**
  * Phase configuration schema
  */
-export const PhaseConfigSchema = z.object({
+/**
+ * Phase configuration schema base (unrefined)
+ * Exported for extension by specific phases
+ */
+export const PhaseConfigBaseSchema = z.object({
   enabled: z.boolean().default(true),
   maxLeverage: z.number().min(1).max(200),
   maxDrawdown: z.number().min(0.01).max(1),
@@ -73,21 +77,25 @@ export const PhaseConfigSchema = z.object({
         .partial(),
     )
     .optional(),
-}).superRefine((data, ctx) => {
-  // Validate exchanges: If executeOn is true, keys must be present
-  Object.entries(data.exchanges).forEach(([name, config]) => {
-    if (config.enabled && config.executeOn) {
-      if (!config.apiKey || !config.apiSecret) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message:
-            `API Key and Secret are required for exchange '${name}' when execution is enabled`,
-          path: ["exchanges", name, "apiKey"],
-        });
-      }
-    }
-  });
 });
+
+export const PhaseConfigSchema = PhaseConfigBaseSchema.superRefine(
+  (data, ctx) => {
+    // Validate exchanges: If executeOn is true, keys must be present
+    Object.entries(data.exchanges).forEach(([name, config]) => {
+      if (config.enabled && config.executeOn) {
+        if (!config.apiKey || !config.apiSecret) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message:
+              `API Key and Secret are required for exchange '${name}' when execution is enabled`,
+            path: ["exchanges", name, "apiKey"],
+          });
+        }
+      }
+    });
+  },
+);
 
 /**
  * Brain configuration schema

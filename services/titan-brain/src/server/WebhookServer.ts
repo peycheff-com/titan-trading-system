@@ -444,6 +444,9 @@ export class WebhookServer {
     );
     this.server.post("/admin/operator", this.handleCreateOperator.bind(this));
 
+    // Metrics endpoint
+    this.server.get("/metrics", this.handleMetrics.bind(this));
+
     // Phase-specific webhook endpoints
     // Requirements: 7.4, 7.6 - Set up webhooks from Phase services
     this.server.post(
@@ -477,14 +480,8 @@ export class WebhookServer {
     // Phase notification endpoints (for phases to register/update)
     this.server.post("/phases/register", this.handlePhaseRegister.bind(this));
     this.server.get("/phases/status", this.handlePhasesStatus.bind(this));
-
-    // Prometheus metrics endpoint
-    this.server.get("/metrics", this.handleMetrics.bind(this));
   }
 
-  /**
-   * Mark startup as complete (called after successful initialization)
-   */
   markStartupComplete(): void {
     // The new HealthManager doesn't have this method, but we can emit an event
     this.healthManager.emit("startup:complete");
@@ -1602,7 +1599,7 @@ export class WebhookServer {
       } else {
         // Fallback to legacy metrics
         const metrics = getMetrics();
-        metricsText = metrics.export();
+        metricsText = await metrics.export();
       }
 
       reply.header("Content-Type", "text/plain; version=0.0.4; charset=utf-8")

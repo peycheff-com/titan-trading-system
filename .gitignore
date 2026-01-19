@@ -134,6 +134,8 @@ backups/
 # Monitoring and metrics
 prometheus/
 grafana/
+monitoring/*/data/
+monitoring/wal/
 
 # Rust build artifacts
 target/

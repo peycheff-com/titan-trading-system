@@ -203,32 +203,32 @@ We don't compete on speed. We exploit **structural imbalances** that take minute
 - Basis Arb: 1:1 R:R (high win rate compensates)
 - Ultimate Bulgaria: 2.5:1 R:R (highest confidence)
 
-## 🚀 Quick Start
+## 🚀 Quick Start (Production)
+
+### Full System (Recommended)
+
+Run as part of the full Titan stack:
+
+```bash
+cd ../..
+docker compose up -d
+```
+
+## 🛠 Local Development / Manual Run
 
 ### 1. Prerequisites
 
-Before installation, ensure you have:
-- **Node.js v18+** (check with `node --version`)
-- **npm v8+** (check with `npm --version`)
-- **API Keys** from:
-  - Binance (Spot trading enabled)
-  - Bybit (Perpetuals trading enabled)
-  - MEXC (Optional - Perpetuals trading enabled)
+- **Node.js v18+**
+- **npm v8+**
+- **API Keys** (Binance Spot, Bybit Perps)
 
 ### 2. Installation
 
 ```bash
-# Navigate to the project directory
-cd titan/services/titan-phase1-scavenger
-
-# Install dependencies
+cd services/titan-phase1-scavenger
 npm install
-
-# Verify installation
 npm test
 ```
-
-**Expected output**: All tests should pass. If any fail, check Node.js version and dependencies.
 
 ### 3. API Key Setup
 

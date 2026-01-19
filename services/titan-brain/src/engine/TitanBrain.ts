@@ -635,30 +635,9 @@ export class TitanBrain
       `🧠 Processing execution report for ${report.symbol} (${report.side})`,
     );
 
-    // Persist raw fill data first (Audit Trail)
-    if (this.ingestionQueue) {
-      this.ingestionQueue.enqueue({
-        type: "FILL",
-        payload: report,
-        timestamp: Date.now(),
-      });
-      // logger.info is handled by worker or we can log "Enqueued"
-    } else if (this.fillsRepository) {
-      try {
-        await this.fillsRepository.createFill(report);
-        logger.info(`Recorded fill for ${report.symbol} in ledger`);
-      } catch (error) {
-        logger.error(
-          `Failed to record fill for ${report.symbol}`,
-          error as Error,
-        );
-        // We continue execution even if logging fails, but this is a critical consistency error
-      }
-    } else {
-      logger.warn(
-        "FillsRepository not configured - Fill not persisted to database!",
-      );
-    }
+    let realizedPnL: number | undefined;
+
+    // Persistence logic moved to end of function to capture realizedPnL
 
     // Find existing position
     const existingPosIndex = this.currentPositions.findIndex((p) =>
@@ -700,7 +679,15 @@ export class TitanBrain
         // Calculate Realized PnL
         // Long: (Exit - Entry) * Size
         // Short: (Entry - Exit) * Size
-        let realizedPnL = 0;
+        // Long: (Exit - Entry) * Size
+        // Short: (Entry - Exit) * Size
+        // re-using outer variable if I declared it? No, I need to declare it.
+        // But TS won't let me redeclare if I just add `let` inside block.
+        // Effectively I need to change `let realizedPnL = 0;` to `realizedPnL = 0;` and declare it at top of function.
+        // But I can't easily see the top of function right now without another tool call.
+        // I will declare `let realizedPnL: number | undefined;` at the start of `handleExecutionReport` (which is line 633).
+
+        realizedPnL = 0;
         if (existingPos.side === "LONG") {
           realizedPnL = (report.price - existingPos.entryPrice) * closeSize;
         } else {

@@ -14,19 +14,19 @@
  * Requirements: 7.1-7.7 (Execution)
  */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from "events";
 import {
-  OrderParams,
-  OrderResult,
-  OrderStatus,
-  SignalData,
   ExecutionData,
   OHLCV,
   OrderBlock,
+  OrderParams,
+  OrderResult,
+  OrderStatus,
   Position,
-} from '../types';
-import { BybitPerpsClient } from '../exchanges/BybitPerpsClient';
-import { logExecution, logError } from '../logging/Logger';
+  SignalData,
+} from "../types";
+import { BybitPerpsClient } from "../exchanges/BybitPerpsClient";
+import { getLogger, logError, logExecution } from "../logging/Logger";
 
 export interface LimitOrderConfig {
   orderTimeout: number; // Timeout in milliseconds (default: 60000)
@@ -62,12 +62,16 @@ export interface OrderMonitoringState {
 }
 
 export interface LimitOrderExecutorEvents {
-  'order:placed': (orderId: string, symbol: string, price: number) => void;
-  'order:filled': (orderId: string, fillPrice: number, positionSize: number) => void;
-  'order:cancelled': (orderId: string, reason: string) => void;
-  'order:timeout': (orderId: string) => void;
-  'position:created': (position: Position) => void;
-  'execution:error': (error: Error, context: any) => void;
+  "order:placed": (orderId: string, symbol: string, price: number) => void;
+  "order:filled": (
+    orderId: string,
+    fillPrice: number,
+    positionSize: number,
+  ) => void;
+  "order:cancelled": (orderId: string, reason: string) => void;
+  "order:timeout": (orderId: string) => void;
+  "position:created": (position: Position) => void;
+  "execution:error": (error: Error, context: any) => void;
 }
 
 export class LimitOrderExecutor extends EventEmitter {
@@ -77,7 +81,10 @@ export class LimitOrderExecutor extends EventEmitter {
   private monitoringInterval: NodeJS.Timeout | null = null;
   private readonly MONITORING_FREQUENCY = 1000; // 1 second
 
-  constructor(bybitClient: BybitPerpsClient, config?: Partial<LimitOrderConfig>) {
+  constructor(
+    bybitClient: BybitPerpsClient,
+    config?: Partial<LimitOrderConfig>,
+  ) {
     super();
 
     this.bybitClient = bybitClient;
@@ -107,41 +114,45 @@ export class LimitOrderExecutor extends EventEmitter {
   public async placePostOnlyOrder(
     signal: SignalData,
     orderBlock: OrderBlock,
-    equity: number
+    equity: number,
   ): Promise<ExecutionResult> {
     try {
-      console.log(`🎯 Placing Post-Only order for ${signal.symbol} ${signal.direction}`);
+      getLogger().info(
+        `🎯 Placing Post-Only order for ${signal.symbol} ${signal.direction}`,
+      );
 
       // Calculate entry price at Order Block level
-      const entryPrice =
-        signal.direction === 'LONG'
-          ? orderBlock.low // Enter at OB bottom for longs
-          : orderBlock.high; // Enter at OB top for shorts
+      const entryPrice = signal.direction === "LONG"
+        ? orderBlock.low // Enter at OB bottom for longs
+        : orderBlock.high; // Enter at OB top for shorts
 
       // Calculate position size using Volatility-Adjusted Sizing
       const positionSize = await this.calcPositionSize(
         signal.symbol,
         entryPrice,
         equity,
-        signal.leverage
+        signal.leverage,
       );
 
       if (positionSize <= 0) {
         return {
           success: false,
-          error: 'Position size calculation failed or too small',
+          error: "Position size calculation failed or too small",
         };
       }
 
       // Calculate stop loss and take profit
-      const { stopLoss, takeProfit } = this.setStopAndTarget(entryPrice, signal.direction);
+      const { stopLoss, takeProfit } = this.setStopAndTarget(
+        entryPrice,
+        signal.direction,
+      );
 
       // Prepare order parameters
       const orderParams: OrderParams = {
-        phase: 'phase2',
+        phase: "phase2",
         symbol: signal.symbol,
-        side: signal.direction === 'LONG' ? 'Buy' : 'Sell',
-        type: 'POST_ONLY',
+        side: signal.direction === "LONG" ? "Buy" : "Sell",
+        type: "POST_ONLY",
         price: entryPrice,
         qty: positionSize,
         leverage: signal.leverage,
@@ -152,7 +163,7 @@ export class LimitOrderExecutor extends EventEmitter {
       // Place order with retry logic
       const orderResult = await this.bybitClient.placeOrderWithRetry(
         orderParams,
-        this.config.maxRetries
+        this.config.maxRetries,
       );
 
       if (orderResult.orderId) {
@@ -162,13 +173,18 @@ export class LimitOrderExecutor extends EventEmitter {
           signal.symbol,
           entryPrice,
           orderBlock,
-          signal.timestamp.toString()
+          signal.timestamp.toString(),
         );
 
-        this.emit('order:placed', orderResult.orderId, signal.symbol, entryPrice);
+        this.emit(
+          "order:placed",
+          orderResult.orderId,
+          signal.symbol,
+          entryPrice,
+        );
 
-        console.log(
-          `✅ Post-Only order placed: ${signal.symbol} @ ${entryPrice} (ID: ${orderResult.orderId})`
+        getLogger().info(
+          `✅ Post-Only order placed: ${signal.symbol} @ ${entryPrice} (ID: ${orderResult.orderId})`,
         );
 
         return {
@@ -182,21 +198,28 @@ export class LimitOrderExecutor extends EventEmitter {
 
       return {
         success: false,
-        error: 'Order placement failed - no order ID returned',
+        error: "Order placement failed - no order ID returned",
       };
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`❌ Failed to place Post-Only order for ${signal.symbol}:`, errorMsg);
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      console.error(
+        `❌ Failed to place Post-Only order for ${signal.symbol}:`,
+        errorMsg,
+      );
 
-      logError('ERROR', `Failed to place Post-Only order for ${signal.symbol}`, {
-        symbol: signal.symbol,
-        component: 'LimitOrderExecutor',
-        function: 'placePostOnlyOrder',
-        stack: (error as Error).stack,
-        data: { signal, orderBlock },
-      });
+      logError(
+        "ERROR",
+        `Failed to place Post-Only order for ${signal.symbol}`,
+        {
+          symbol: signal.symbol,
+          component: "LimitOrderExecutor",
+          function: "placePostOnlyOrder",
+          stack: (error as Error).stack,
+          data: { signal, orderBlock },
+        },
+      );
 
-      this.emit('execution:error', error as Error, { signal, orderBlock });
+      this.emit("execution:error", error as Error, { signal, orderBlock });
 
       return {
         success: false,
@@ -217,7 +240,7 @@ export class LimitOrderExecutor extends EventEmitter {
     symbol: string,
     entryPrice: number,
     orderBlock: OrderBlock,
-    signalId?: string
+    signalId?: string,
   ): void {
     const monitoringState: OrderMonitoringState = {
       orderId,
@@ -231,7 +254,7 @@ export class LimitOrderExecutor extends EventEmitter {
     };
 
     this.activeOrders.set(orderId, monitoringState);
-    console.log(`👁️ Started monitoring order ${orderId} for ${symbol}`);
+    getLogger().info(`👁️ Started monitoring order ${orderId} for ${symbol}`);
   }
 
   /**
@@ -240,34 +263,46 @@ export class LimitOrderExecutor extends EventEmitter {
    * @param currentPrice - Current market price
    * @returns Promise with cancellation result
    */
-  public async cancelIfPriceMoves(orderId: string, currentPrice: number): Promise<boolean> {
+  public async cancelIfPriceMoves(
+    orderId: string,
+    currentPrice: number,
+  ): Promise<boolean> {
     const orderState = this.activeOrders.get(orderId);
     if (!orderState || orderState.cancelled || orderState.filled) {
       return false;
     }
 
     // Calculate price movement from entry level
-    const priceMove = Math.abs(currentPrice - orderState.entryPrice) / orderState.entryPrice;
+    const priceMove = Math.abs(currentPrice - orderState.entryPrice) /
+      orderState.entryPrice;
 
     if (priceMove > this.config.priceMoveCancelThreshold) {
       console.log(
-        `📉 Price moved ${(priceMove * 100).toFixed(2)}% away from ${orderState.symbol} order, cancelling`
+        `📉 Price moved ${
+          (priceMove * 100).toFixed(2)
+        }% away from ${orderState.symbol} order, cancelling`,
       );
 
       try {
-        const success = await this.bybitClient.cancelOrder(orderId, orderState.symbol);
+        const success = await this.bybitClient.cancelOrder(
+          orderId,
+          orderState.symbol,
+        );
 
         if (success) {
           orderState.cancelled = true;
           this.activeOrders.set(orderId, orderState);
-          this.emit('order:cancelled', orderId, 'PRICE_MOVED_AWAY');
+          this.emit("order:cancelled", orderId, "PRICE_MOVED_AWAY");
 
           console.log(`✅ Order cancelled due to price movement: ${orderId}`);
           return true;
         }
       } catch (error) {
         console.error(`❌ Failed to cancel order ${orderId}:`, error);
-        this.emit('execution:error', error as Error, { orderId, reason: 'CANCEL_FAILED' });
+        this.emit("execution:error", error as Error, {
+          orderId,
+          reason: "CANCEL_FAILED",
+        });
       }
     }
 
@@ -280,7 +315,10 @@ export class LimitOrderExecutor extends EventEmitter {
    * @param currentCandle - Current OHLCV candle
    * @returns Promise with cancellation result
    */
-  public async cancelIfLevelFails(orderId: string, currentCandle: OHLCV): Promise<boolean> {
+  public async cancelIfLevelFails(
+    orderId: string,
+    currentCandle: OHLCV,
+  ): Promise<boolean> {
     const orderState = this.activeOrders.get(orderId);
     if (!orderState || orderState.cancelled || orderState.filled) {
       return false;
@@ -290,7 +328,7 @@ export class LimitOrderExecutor extends EventEmitter {
     let wickThrough = false;
     let wickPercent = 0;
 
-    if (orderBlock.type === 'BULLISH') {
+    if (orderBlock.type === "BULLISH") {
       // For bullish OB, check if price wicked below OB low
       if (currentCandle.low < orderBlock.low) {
         wickPercent = (orderBlock.low - currentCandle.low) / orderBlock.low;
@@ -306,23 +344,31 @@ export class LimitOrderExecutor extends EventEmitter {
 
     if (wickThrough) {
       console.log(
-        `💥 Order Block level failed for ${orderState.symbol} (${(wickPercent * 100).toFixed(2)}% wick), cancelling`
+        `💥 Order Block level failed for ${orderState.symbol} (${
+          (wickPercent * 100).toFixed(2)
+        }% wick), cancelling`,
       );
 
       try {
-        const success = await this.bybitClient.cancelOrder(orderId, orderState.symbol);
+        const success = await this.bybitClient.cancelOrder(
+          orderId,
+          orderState.symbol,
+        );
 
         if (success) {
           orderState.cancelled = true;
           this.activeOrders.set(orderId, orderState);
-          this.emit('order:cancelled', orderId, 'LEVEL_FAILED');
+          this.emit("order:cancelled", orderId, "LEVEL_FAILED");
 
           console.log(`✅ Order cancelled due to level failure: ${orderId}`);
           return true;
         }
       } catch (error) {
         console.error(`❌ Failed to cancel order ${orderId}:`, error);
-        this.emit('execution:error', error as Error, { orderId, reason: 'CANCEL_FAILED' });
+        this.emit("execution:error", error as Error, {
+          orderId,
+          reason: "CANCEL_FAILED",
+        });
       }
     }
 
@@ -341,15 +387,19 @@ export class LimitOrderExecutor extends EventEmitter {
     symbol: string,
     entryPrice: number,
     equity: number,
-    leverage: number
+    leverage: number,
   ): Promise<number> {
     try {
       // Fetch recent OHLCV data for ATR calculation
-      const candles = await this.bybitClient.fetchOHLCV(symbol, '1h', this.config.atrPeriod + 10);
+      const candles = await this.bybitClient.fetchOHLCV(
+        symbol,
+        "1h",
+        this.config.atrPeriod + 10,
+      );
 
       if (candles.length < this.config.atrPeriod) {
         throw new Error(
-          `Insufficient candle data for ATR calculation: ${candles.length} < ${this.config.atrPeriod}`
+          `Insufficient candle data for ATR calculation: ${candles.length} < ${this.config.atrPeriod}`,
         );
       }
 
@@ -380,18 +430,29 @@ export class LimitOrderExecutor extends EventEmitter {
       const finalPositionSize = Math.max(positionSize, minPositionSize);
 
       console.log(`📊 Position sizing for ${symbol}:`);
-      console.log(`   ATR: ${atr.toFixed(4)} (${(volatilityAdjustment * 100).toFixed(2)}%)`);
+      console.log(
+        `   ATR: ${atr.toFixed(4)} (${
+          (volatilityAdjustment * 100).toFixed(2)
+        }%)`,
+      );
       console.log(`   Risk Amount: $${riskAmount.toFixed(2)}`);
       console.log(
-        `   Stop Distance: ${stopDistance.toFixed(4)} (${(this.config.stopLossPercent * 100).toFixed(1)}%)`
+        `   Stop Distance: ${stopDistance.toFixed(4)} (${
+          (this.config.stopLossPercent * 100).toFixed(1)
+        }%)`,
       );
       console.log(`   Position Size: ${finalPositionSize.toFixed(4)}`);
 
       return finalPositionSize;
     } catch (error) {
-      console.error(`❌ Failed to calculate position size for ${symbol}:`, error);
+      console.error(
+        `❌ Failed to calculate position size for ${symbol}:`,
+        error,
+      );
       throw new Error(
-        `Position size calculation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Position size calculation failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
       );
     }
   }
@@ -404,7 +465,7 @@ export class LimitOrderExecutor extends EventEmitter {
    */
   public setStopAndTarget(
     entryPrice: number,
-    direction: 'LONG' | 'SHORT'
+    direction: "LONG" | "SHORT",
   ): {
     stopLoss: number;
     takeProfit: number;
@@ -415,7 +476,7 @@ export class LimitOrderExecutor extends EventEmitter {
     let stopLoss: number;
     let takeProfit: number;
 
-    if (direction === 'LONG') {
+    if (direction === "LONG") {
       stopLoss = entryPrice - stopDistance; // 1.5% below entry
       takeProfit = entryPrice + targetDistance; // 4.5% above entry
     } else {
@@ -425,12 +486,18 @@ export class LimitOrderExecutor extends EventEmitter {
 
     const riskReward = targetDistance / stopDistance;
 
-    console.log(`🎯 Stop & Target for ${direction} @ ${entryPrice.toFixed(4)}:`);
     console.log(
-      `   Stop Loss: ${stopLoss.toFixed(4)} (-${(this.config.stopLossPercent * 100).toFixed(1)}%)`
+      `🎯 Stop & Target for ${direction} @ ${entryPrice.toFixed(4)}:`,
     );
     console.log(
-      `   Take Profit: ${takeProfit.toFixed(4)} (+${(this.config.takeProfitPercent * 100).toFixed(1)}%)`
+      `   Stop Loss: ${stopLoss.toFixed(4)} (-${
+        (this.config.stopLossPercent * 100).toFixed(1)
+      }%)`,
+    );
+    console.log(
+      `   Take Profit: ${takeProfit.toFixed(4)} (+${
+        (this.config.takeProfitPercent * 100).toFixed(1)
+      }%)`,
     );
     console.log(`   Risk:Reward = 1:${riskReward.toFixed(1)}`);
 
@@ -446,7 +513,9 @@ export class LimitOrderExecutor extends EventEmitter {
   private calculateATR(candles: OHLCV[], period: number): number {
     if (candles.length < period + 1) {
       throw new Error(
-        `Insufficient data for ATR calculation: need ${period + 1}, got ${candles.length}`
+        `Insufficient data for ATR calculation: need ${
+          period + 1
+        }, got ${candles.length}`,
       );
     }
 
@@ -486,7 +555,7 @@ export class LimitOrderExecutor extends EventEmitter {
     }, this.MONITORING_FREQUENCY);
 
     console.log(
-      `👁️ Limit Order Executor: Started monitoring (${this.MONITORING_FREQUENCY}ms interval)`
+      `👁️ Limit Order Executor: Started monitoring (${this.MONITORING_FREQUENCY}ms interval)`,
     );
   }
 
@@ -511,11 +580,14 @@ export class LimitOrderExecutor extends EventEmitter {
         }
 
         // Check order status
-        const status = await this.bybitClient.getOrderStatus(orderId, orderState.symbol);
+        const status = await this.bybitClient.getOrderStatus(
+          orderId,
+          orderState.symbol,
+        );
 
-        if (status === 'FILLED') {
+        if (status === "FILLED") {
           await this.handleOrderFilled(orderId);
-        } else if (status === 'CANCELLED') {
+        } else if (status === "CANCELLED") {
           await this.handleOrderCancelled(orderId);
         } else {
           // Order still active, check cancellation conditions
@@ -523,7 +595,10 @@ export class LimitOrderExecutor extends EventEmitter {
         }
       } catch (error) {
         console.error(`❌ Error monitoring order ${orderId}:`, error);
-        this.emit('execution:error', error as Error, { orderId, action: 'MONITORING' });
+        this.emit("execution:error", error as Error, {
+          orderId,
+          action: "MONITORING",
+        });
       }
     }
   }
@@ -545,13 +620,16 @@ export class LimitOrderExecutor extends EventEmitter {
       orderState.cancelled = true;
       this.activeOrders.set(orderId, orderState);
 
-      this.emit('order:timeout', orderId);
-      this.emit('order:cancelled', orderId, 'TIMEOUT');
+      this.emit("order:timeout", orderId);
+      this.emit("order:cancelled", orderId, "TIMEOUT");
 
       console.log(`✅ Timed-out order cancelled: ${orderId}`);
     } catch (error) {
       console.error(`❌ Failed to cancel timed-out order ${orderId}:`, error);
-      this.emit('execution:error', error as Error, { orderId, reason: 'TIMEOUT_CANCEL_FAILED' });
+      this.emit("execution:error", error as Error, {
+        orderId,
+        reason: "TIMEOUT_CANCEL_FAILED",
+      });
     }
   }
 
@@ -563,7 +641,9 @@ export class LimitOrderExecutor extends EventEmitter {
     const orderState = this.activeOrders.get(orderId);
     if (!orderState) return;
 
-    console.log(`✅ Order filled: ${orderState.symbol} @ ${orderState.entryPrice}`);
+    console.log(
+      `✅ Order filled: ${orderState.symbol} @ ${orderState.entryPrice}`,
+    );
 
     try {
       // Get fill details (this would need to be implemented in BybitPerpsClient)
@@ -579,16 +659,16 @@ export class LimitOrderExecutor extends EventEmitter {
       const expectedPrice = orderState.entryPrice;
       const slippage = Math.abs(fillPrice - expectedPrice) / expectedPrice;
 
-      this.emit('order:filled', orderId, fillPrice, positionSize);
+      this.emit("order:filled", orderId, fillPrice, positionSize);
 
       // Log execution to structured logger
       const orderResult: OrderResult = {
         orderId,
         symbol: orderState.symbol,
-        side: orderState.symbol.includes('LONG') ? 'Buy' : 'Sell',
+        side: orderState.symbol.includes("LONG") ? "Buy" : "Sell",
         qty: positionSize,
         price: fillPrice,
-        status: 'FILLED',
+        status: "FILLED",
         timestamp: Date.now(),
       };
 
@@ -597,13 +677,13 @@ export class LimitOrderExecutor extends EventEmitter {
       // Create position object for position manager
       const { stopLoss, takeProfit } = this.setStopAndTarget(
         fillPrice,
-        orderState.symbol.includes('LONG') ? 'LONG' : 'SHORT' // Simplified direction detection
+        orderState.symbol.includes("LONG") ? "LONG" : "SHORT", // Simplified direction detection
       );
 
       const position: Position = {
         id: orderId,
         symbol: orderState.symbol,
-        side: orderState.symbol.includes('LONG') ? 'LONG' : 'SHORT', // Simplified
+        side: orderState.symbol.includes("LONG") ? "LONG" : "SHORT", // Simplified
         entryPrice: fillPrice,
         currentPrice: fillPrice,
         quantity: positionSize,
@@ -613,18 +693,21 @@ export class LimitOrderExecutor extends EventEmitter {
         unrealizedPnL: 0,
         realizedPnL: 0,
         entryTime: Date.now(),
-        status: 'OPEN',
+        status: "OPEN",
         rValue: 0,
         atr: await this.getATRForSymbol(orderState.symbol),
       };
 
-      this.emit('position:created', position);
+      this.emit("position:created", position);
 
       // Remove from active monitoring
       this.activeOrders.delete(orderId);
     } catch (error) {
       console.error(`❌ Error handling filled order ${orderId}:`, error);
-      this.emit('execution:error', error as Error, { orderId, reason: 'FILL_HANDLING_FAILED' });
+      this.emit("execution:error", error as Error, {
+        orderId,
+        reason: "FILL_HANDLING_FAILED",
+      });
     }
   }
 
@@ -641,7 +724,7 @@ export class LimitOrderExecutor extends EventEmitter {
     orderState.cancelled = true;
     this.activeOrders.set(orderId, orderState);
 
-    this.emit('order:cancelled', orderId, 'EXTERNAL_CANCEL');
+    this.emit("order:cancelled", orderId, "EXTERNAL_CANCEL");
 
     // Remove from active monitoring
     this.activeOrders.delete(orderId);
@@ -657,7 +740,9 @@ export class LimitOrderExecutor extends EventEmitter {
 
     try {
       // Get current price
-      const currentPrice = await this.bybitClient.getCurrentPrice(orderState.symbol);
+      const currentPrice = await this.bybitClient.getCurrentPrice(
+        orderState.symbol,
+      );
 
       // Check if price moved away > 0.2%
       await this.cancelIfPriceMoves(orderId, currentPrice);
@@ -665,7 +750,10 @@ export class LimitOrderExecutor extends EventEmitter {
       // Check if level failed (would need current candle data)
       // This is simplified - in practice, you'd need real-time candle data
     } catch (error) {
-      console.error(`❌ Error checking cancellation conditions for ${orderId}:`, error);
+      console.error(
+        `❌ Error checking cancellation conditions for ${orderId}:`,
+        error,
+      );
     }
   }
 
@@ -676,7 +764,11 @@ export class LimitOrderExecutor extends EventEmitter {
    */
   private async getATRForSymbol(symbol: string): Promise<number> {
     try {
-      const candles = await this.bybitClient.fetchOHLCV(symbol, '1h', this.config.atrPeriod + 10);
+      const candles = await this.bybitClient.fetchOHLCV(
+        symbol,
+        "1h",
+        this.config.atrPeriod + 10,
+      );
       return this.calculateATR(candles, this.config.atrPeriod);
     } catch (error) {
       console.error(`❌ Failed to get ATR for ${symbol}:`, error);
@@ -716,12 +808,15 @@ export class LimitOrderExecutor extends EventEmitter {
       if (!orderState) continue;
 
       try {
-        const result = await this.bybitClient.cancelOrder(orderId, orderState.symbol);
+        const result = await this.bybitClient.cancelOrder(
+          orderId,
+          orderState.symbol,
+        );
         if (result) {
           success++;
           orderState.cancelled = true;
           this.activeOrders.set(orderId, orderState);
-          this.emit('order:cancelled', orderId, 'MANUAL_CANCEL_ALL');
+          this.emit("order:cancelled", orderId, "MANUAL_CANCEL_ALL");
         } else {
           failed++;
         }
@@ -764,7 +859,7 @@ export class LimitOrderExecutor extends EventEmitter {
 export declare interface LimitOrderExecutor {
   on<U extends keyof LimitOrderExecutorEvents>(
     event: U,
-    listener: LimitOrderExecutorEvents[U]
+    listener: LimitOrderExecutorEvents[U],
   ): this;
   emit<U extends keyof LimitOrderExecutorEvents>(
     event: U,

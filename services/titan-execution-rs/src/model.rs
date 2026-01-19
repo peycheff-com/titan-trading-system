@@ -1,8 +1,7 @@
+use chrono::{DateTime, Utc};
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_json;
-use rust_decimal::Decimal;
-use chrono::{DateTime, Utc};
-
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum Side {
@@ -78,10 +77,10 @@ pub struct Intent {
     #[serde(default)]
     pub size: Decimal,
     pub status: IntentStatus,
-    
+
     // Time enforcement
     #[serde(alias = "timestamp")]
-    pub t_signal: i64, 
+    pub t_signal: i64,
     pub t_analysis: Option<i64>,
     pub t_decision: Option<i64>,
     pub t_ingress: Option<i64>,
@@ -143,6 +142,8 @@ pub struct FillReport {
     pub t_decision: i64,
     pub t_ack: i64,
     pub t_exchange: i64,
+    pub client_order_id: String,
+    pub execution_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

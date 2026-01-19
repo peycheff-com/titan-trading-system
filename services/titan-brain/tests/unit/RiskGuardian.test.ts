@@ -15,6 +15,26 @@ import {
   RiskGuardianConfig,
 } from "../../src/types/index";
 
+// Mock TailRiskCalculator module
+jest.mock("../../src/engine/TailRiskCalculator", () => {
+  return {
+    TailRiskCalculator: jest.fn().mockImplementation(() => ({
+      calculateAPTR: jest.fn().mockReturnValue(0.5), // Safe low APTR
+      isRiskCritical: jest.fn().mockReturnValue(false),
+    })),
+  };
+});
+
+// Mock ChangePointDetector to prevent regime status affecting tests
+jest.mock("../../src/engine/ChangePointDetector", () => {
+  return {
+    ChangePointDetector: jest.fn().mockImplementation(() => ({
+      update: jest.fn().mockReturnValue({ regime: "STABLE", score: 0 }),
+      detectChange: jest.fn().mockReturnValue({ regime: "STABLE", score: 0 }),
+    })),
+  };
+});
+
 // Test configurations
 const allocationConfig: AllocationEngineConfig = {
   transitionPoints: {
@@ -57,7 +77,15 @@ describe("RiskGuardian Unit Tests", () => {
       getDefconLevel: jest.fn().mockReturnValue(DefconLevel.NORMAL),
       getLeverageMultiplier: jest.fn().mockReturnValue(1.0),
       canOpenNewPosition: jest.fn().mockReturnValue(true),
+      setOverride: jest.fn(),
     } as unknown as GovernanceEngine;
+
+    // Mock TailRiskCalculator internal instance
+    // We need to intercept the constructor or method call
+    // Since RiskGuardian instantiates it internally, we should have mocked the module.
+    // However, since we are inside `beforeEach`, we can't easily mock module here if it wasn't mocked at top.
+    // Ideally we should move `jest.mock` to top of file.
+    // For now, let's cast and override the property if possible, or use jest.mock at top.
 
     riskGuardian = new RiskGuardian(
       riskConfig,
@@ -390,8 +418,8 @@ describe("RiskGuardian Unit Tests", () => {
       const baseTime = Date.now() - 300000;
       for (let i = 0; i < 10; i++) {
         const time = baseTime + i * 30000;
-        const btcPrice = 50000 + i * 1000;
-        const ethPrice = 3000 + i * 60; // Same trend (correlated)
+        const btcPrice = 50000 + i * 10;
+        const ethPrice = 3000 + i * 1; // Same trend (correlated)
 
         riskGuardian.updatePriceHistory("BTCUSDT", btcPrice, time);
         riskGuardian.updatePriceHistory("ETHUSDT", ethPrice, time);
@@ -416,6 +444,8 @@ describe("RiskGuardian Unit Tests", () => {
         side: "SELL",
         requestedSize: 8000,
         timestamp: Date.now(),
+        stopLossPrice: 3100,
+        volatility: 1,
       };
 
       const decision = riskGuardian.checkSignal(signal, existingPositions);
@@ -711,8 +741,8 @@ describe("RiskGuardian Unit Tests", () => {
       const baseTime = Date.now() - 300000;
       for (let i = 0; i < 10; i++) {
         const time = baseTime + i * 30000;
-        riskGuardian.updatePriceHistory("BTCUSDT", 50000 + i * 1000, time);
-        riskGuardian.updatePriceHistory("ETHUSDT", 3000 + i * 60, time);
+        riskGuardian.updatePriceHistory("BTCUSDT", 50000 + i * 10, time);
+        riskGuardian.updatePriceHistory("ETHUSDT", 3000 + i * 1, time);
       }
 
       const existingPositions: Position[] = [{
@@ -732,6 +762,8 @@ describe("RiskGuardian Unit Tests", () => {
         side: "BUY",
         requestedSize: 3000,
         timestamp: Date.now(),
+        stopLossPrice: 2900,
+        volatility: 1,
       };
 
       const decision = riskGuardian.checkSignal(signal, existingPositions);

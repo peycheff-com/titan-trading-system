@@ -12,6 +12,7 @@ import * as migration001 from "./migrations/001_initial_schema.js";
 import * as migration003 from "./migrations/003_disable_rls.js";
 import * as migration004 from "./migrations/004_precision_upgrade.js";
 import * as migration005 from "./migrations/005_split_system_state.js";
+import * as migration006 from "./migrations/006_add_fill_details.js";
 
 interface Migration {
   version: number;
@@ -26,6 +27,7 @@ const migrations: Migration[] = [
   migration003,
   migration004,
   migration005,
+  migration006,
 ];
 
 /**

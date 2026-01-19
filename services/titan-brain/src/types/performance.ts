@@ -79,5 +79,8 @@ export interface ExecutionReport {
   qty: number;
   fee?: number;
   feeCurrency?: string;
+  executionId?: string;
+  orderId?: string;
+  realizedPnL?: number;
   timestamp: number;
 }

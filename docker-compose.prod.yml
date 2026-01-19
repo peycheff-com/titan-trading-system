@@ -111,6 +111,42 @@ services:
       retries: 5
 
   # =============================================================================
+  # MONITORING
+  # =============================================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: titan-prometheus
+    volumes:
+      - ./monitoring/prometheus/config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus/config/alert-rules-comprehensive.yml:/etc/prometheus/alert-rules.yml
+      - titan-prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - '9090:9090'
+    networks:
+      - titan-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: titan-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${TITAN_MASTER_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - titan-grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    ports:
+      - '3000:3000'
+    networks:
+      - titan-network
+    restart: unless-stopped
+
+  # =============================================================================
   # TITAN BRAIN - Master Orchestrator
   # =============================================================================
   titan-brain:
@@ -341,4 +377,8 @@ volumes:
   titan-redis-data:
     driver: local
   titan-db-data:
+    driver: local
+  titan-prometheus-data:
+    driver: local
+  titan-grafana-data:
     driver: local

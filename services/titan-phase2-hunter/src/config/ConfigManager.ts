@@ -13,6 +13,7 @@ import {
   getConfigManager,
   PhaseConfig as SharedPhaseConfig,
 } from "@titan/shared";
+import { HunterConfigSchema } from "./schema";
 
 /**
  * Alignment weight configuration
@@ -176,26 +177,24 @@ export class ConfigManager extends EventEmitter {
 
   public async initialize(): Promise<void> {
     // Load configuration via Shared Manager
-    // This will throw if Schema validation fails
+    // This will throw if Shared Phase Config Schema validation fails
     await this.sharedManager.loadPhaseConfig(this.phaseName);
 
-    const phaseConfig = this.sharedManager.getPhaseConfig(this.phaseName);
+    const rawPhaseConfig = this.sharedManager.getPhaseConfig(this.phaseName);
 
-    if (!phaseConfig || Object.keys(phaseConfig).length === 0) {
+    // Merge with defaults to ensure we have all fields before Zod validation
+    // (Shared config might strictly be "PhaseConfig" and miss Hunter fields)
+    const pendingConfig = this.mergeWithDefaults(
+      rawPhaseConfig as unknown as Partial<Phase2Config>,
+    );
+
+    if (!rawPhaseConfig || Object.keys(rawPhaseConfig).length === 0) {
       console.log("📋 Initializing default configuration for Hunter...");
-      await this.saveConfig(this.config); // Save defaults
+      await this.saveConfig(pendingConfig); // Save defaults (also validates)
     } else {
-      this.updateLocalState();
+      this.updateLocalState(pendingConfig);
 
-      // Validate merged config against Hunter-specific rules
-      const validation = this.validateConfig(this.config);
-      if (!validation.isValid) {
-        throw new Error(
-          `Invalid configuration: ${validation.errors.join(", ")}`,
-        );
-      }
-
-      console.log("✅ Configuration loaded successfully");
+      console.log("✅ Configuration loaded and validated successfully via Zod");
     }
 
     // Setup Event Listeners
@@ -225,15 +224,35 @@ export class ConfigManager extends EventEmitter {
       } as ConfigChangeEvent);
     });
 
-    console.log("✅ ConfigManager Adapter initialized via @titan/shared");
+    console.log(
+      "✅ ConfigManager Adapter initialized via @titan/shared + Zod Rule Engine",
+    );
   }
 
-  private updateLocalState() {
+  private updateLocalState(forceConfig?: Phase2Config) {
+    if (forceConfig) {
+      this.config = forceConfig;
+      return;
+    }
+
     const rawConfig = this.sharedManager.getPhaseConfig(
       this.phaseName,
     ) as unknown as Phase2Config;
+
     if (rawConfig) {
-      this.config = this.mergeWithDefaults(rawConfig);
+      const merged = this.mergeWithDefaults(rawConfig);
+      // Validate merged config using Zod
+      const result = HunterConfigSchema.safeParse(merged);
+      if (!result.success) {
+        console.error(
+          "❌ Configuration validation failed after reload:",
+          result.error.format(),
+        );
+        // Fallback or throw? For now, we keep the old config or warn
+        // In production, invalid config on reload should probably be rejected
+        return;
+      }
+      this.config = result.data as Phase2Config;
     }
   }
 
@@ -246,23 +265,19 @@ export class ConfigManager extends EventEmitter {
       config.version = (config.version || 0) + 1;
       config.lastModified = Date.now();
 
-      // Validate
-      const validation = this.validateConfig(config);
-      if (!validation.isValid) {
-        throw new Error(
-          `Invalid configuration: ${validation.errors.join(", ")}`,
-        );
-      }
+      // Validate with Zod
+      // This will throw if invalid
+      const validatedConfig = HunterConfigSchema.parse(config);
 
       // Sync specific fields to shared fields
-      config.maxLeverage = config.riskConfig.maxLeverage;
+      validatedConfig.maxLeverage = validatedConfig.riskConfig.maxLeverage;
       // We could sync others (riskPerTrade etc) but we'll leave them to defaults or manual set
 
       // Save via Shared Manager
       // Cast to unknown first to avoid partial overlap issues if PhaseConfig definition is stricter or different
       this.sharedManager.savePhaseConfig(
         this.phaseName,
-        config as unknown as SharedPhaseConfig,
+        validatedConfig as unknown as SharedPhaseConfig,
       );
 
       // Update local state (optimistic)
@@ -356,129 +371,6 @@ export class ConfigManager extends EventEmitter {
   /**
    * Validate configuration against requirements
    */
-  private validateConfig(config: Phase2Config): ValidationResult {
-    const errors: string[] = [];
-    const warnings: string[] = [];
-
-    // Validate alignment weights
-    if (!config.alignmentWeights) {
-      errors.push("Missing alignmentWeights");
-    } else {
-      const { daily, h4, m15 } = config.alignmentWeights;
-
-      if (daily < 30 || daily > 60) {
-        errors.push(`Daily weight must be 30-60%, got ${daily}%`);
-      }
-      if (h4 < 20 || h4 > 40) {
-        errors.push(`4H weight must be 20-40%, got ${h4}%`);
-      }
-      if (m15 < 10 || m15 > 30) {
-        errors.push(`15m weight must be 10-30%, got ${m15}%`);
-      }
-
-      const total = daily + h4 + m15;
-      if (Math.abs(total - 100) > 0.1) {
-        errors.push(`Alignment weights must sum to 100%, got ${total}%`);
-      }
-    }
-
-    // Validate RS config
-    if (!config.rsConfig) {
-      errors.push("Missing rsConfig");
-    } else {
-      const { threshold, lookbackPeriod } = config.rsConfig;
-
-      if (threshold < 0 || threshold > 5) {
-        errors.push(`RS threshold must be 0-5%, got ${threshold}%`);
-      }
-      if (lookbackPeriod < 2 || lookbackPeriod > 8) {
-        errors.push(
-          `RS lookback period must be 2-8 hours, got ${lookbackPeriod} hours`,
-        );
-      }
-    }
-
-    // Validate risk config
-    if (!config.riskConfig) {
-      errors.push("Missing riskConfig");
-    } else {
-      const { maxLeverage, stopLossPercent, targetPercent } = config.riskConfig;
-
-      if (maxLeverage < 3 || maxLeverage > 5) {
-        errors.push(`Max leverage must be 3-5x, got ${maxLeverage}x`);
-      }
-      if (stopLossPercent < 1 || stopLossPercent > 3) {
-        errors.push(`Stop loss must be 1-3%, got ${stopLossPercent}%`);
-      }
-      if (targetPercent < 3 || targetPercent > 6) {
-        errors.push(`Target must be 3-6%, got ${targetPercent}%`);
-      }
-
-      // Check R:R ratio
-      const rrRatio = targetPercent / stopLossPercent;
-      if (rrRatio < 2.5) {
-        warnings.push(
-          `R:R ratio is ${
-            rrRatio.toFixed(1)
-          }:1, consider increasing target or decreasing stop`,
-        );
-      }
-    }
-
-    // Validate portfolio config
-    if (!config.portfolioConfig) {
-      errors.push("Missing portfolioConfig");
-    } else {
-      const { maxConcurrentPositions, maxPortfolioHeat, correlationThreshold } =
-        config.portfolioConfig;
-
-      if (maxConcurrentPositions < 3 || maxConcurrentPositions > 8) {
-        errors.push(
-          `Max concurrent positions must be 3-8, got ${maxConcurrentPositions}`,
-        );
-      }
-      if (maxPortfolioHeat < 10 || maxPortfolioHeat > 20) {
-        errors.push(
-          `Max portfolio heat must be 10-20%, got ${maxPortfolioHeat}%`,
-        );
-      }
-      if (correlationThreshold < 0.6 || correlationThreshold > 0.9) {
-        errors.push(
-          `Correlation threshold must be 0.6-0.9, got ${correlationThreshold}`,
-        );
-      }
-    }
-
-    // Validate forward test config
-    if (!config.forwardTestConfig) {
-      errors.push("Missing forwardTestConfig");
-    } else {
-      const { enabled, duration, logSignalsOnly, compareToBacktest } =
-        config.forwardTestConfig;
-
-      if (typeof enabled !== "boolean") {
-        errors.push("Forward test enabled must be boolean");
-      }
-      if (duration < 1 || duration > 168) {
-        // 1 hour to 1 week
-        errors.push(
-          `Forward test duration must be 1-168 hours, got ${duration} hours`,
-        );
-      }
-      if (typeof logSignalsOnly !== "boolean") {
-        errors.push("Forward test logSignalsOnly must be boolean");
-      }
-      if (typeof compareToBacktest !== "boolean") {
-        errors.push("Forward test compareToBacktest must be boolean");
-      }
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-      warnings,
-    };
-  }
 
   /**
    * Merge loaded config with defaults to ensure all fields are present

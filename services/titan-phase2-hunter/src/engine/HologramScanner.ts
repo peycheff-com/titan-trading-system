@@ -24,6 +24,7 @@ import { HologramEngine } from "./HologramEngine";
 import { EnhancedHolographicEngine } from "./enhanced/EnhancedHolographicEngine";
 import { BybitPerpsClient } from "../exchanges/BybitPerpsClient";
 import { InstitutionalFlowClassifier } from "../flow/InstitutionalFlowClassifier";
+import { getLogger } from "../logging/Logger";
 
 export interface ScanResult {
   symbols: EnhancedHolographicState[];
@@ -91,11 +92,11 @@ export class HologramScanner extends EventEmitter {
     let errorCount = 0;
 
     try {
-      console.log("🔍 Starting hologram scan...");
+      getLogger().info("🔍 Starting hologram scan...");
 
       // Step 1: Fetch top 100 symbols by volume
       symbols = await this.fetchTopSymbols();
-      console.log(`📊 Fetched ${symbols.length} symbols for analysis`);
+      getLogger().info(`📊 Fetched ${symbols.length} symbols for analysis`);
 
       // Step 2: Analyze symbols in parallel with concurrency control
       holograms = await this.analyzeSymbolsParallel(symbols);
@@ -121,7 +122,7 @@ export class HologramScanner extends EventEmitter {
           threshold: this.SCAN_WARNING_THRESHOLD,
           symbolCount: symbols.length,
         });
-        console.warn(
+        getLogger().warn(
           `⚠️ Slow scan detected: ${scanDuration}ms (threshold: ${this.SCAN_WARNING_THRESHOLD}ms)`,
         );
       }
@@ -142,10 +143,10 @@ export class HologramScanner extends EventEmitter {
       // Emit scan complete event
       this.emit("scanComplete", result);
 
-      console.log(
+      getLogger().info(
         `✅ Hologram scan complete: ${successCount}/${symbols.length} symbols analyzed in ${scanDuration}ms`,
       );
-      console.log(
+      getLogger().info(
         `🎯 Top 20 symbols selected: ${
           top20.map((h) => `${h.symbol}(${h.alignment})`).join(", ")
         }`,

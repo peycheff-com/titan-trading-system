@@ -12,7 +12,7 @@
  * - High Volatility Regime -> Cap Position Sizes.
  */
 
-import { SharedConfigAdapter as ConfigManager } from "../config/SharedConfigAdapter.js";
+import { BrainConfig } from "../config/BrainConfig.js";
 
 export interface RiskState {
     tailIndex: number; // Current estimated tail index (alpha)
@@ -21,7 +21,7 @@ export interface RiskState {
 }
 
 export class RiskManager {
-    private config: ConfigManager;
+    private config: BrainConfig;
 
     // Default Risk State (assume normal/safe conditions initially)
     private state: RiskState = {
@@ -30,7 +30,7 @@ export class RiskManager {
         maxImpactBps: 10, // 10 basis points max impact
     };
 
-    constructor(config: ConfigManager) {
+    constructor(config: BrainConfig) {
         this.config = config;
     }
 
@@ -49,8 +49,8 @@ export class RiskManager {
      * - If alpha < 2.0 (Infinite Variance potential), strict safety mode.
      */
     public getSafeLeverage(baseLeverage: number): number {
-        const config = this.config.getConfig().risk;
-        let safeLeverage = Math.min(baseLeverage, config.maxLeverage);
+        const riskConfig = this.config.risk;
+        let safeLeverage = Math.min(baseLeverage, riskConfig.maxLeverage);
         const { tailIndex } = this.state;
 
         // 1. Tail Index Adjustment
@@ -60,9 +60,9 @@ export class RiskManager {
         if (tailIndex < 2.0) {
             // Extreme Danger: Cap leverage at 1x or 2x max (hard cap)
             safeLeverage = Math.min(safeLeverage, 2.0);
-        } else if (tailIndex < config.tailIndexThreshold) {
+        } else if (tailIndex < riskConfig.tailIndexThreshold) {
             // Heavy Tails: Penalize leverage by fatTailBuffer percentage
-            safeLeverage = safeLeverage * (1.0 - config.fatTailBuffer);
+            safeLeverage = safeLeverage * (1.0 - riskConfig.fatTailBuffer);
         } else if (tailIndex > 3.5) {
             // Thinner Tails: Potentially allow slightly higher usage of base leverage
             // (But usually we just stick to base as safe maximum)
@@ -115,8 +115,8 @@ export class RiskManager {
     public isImpactAllowed(estimatedImpactBps: number): boolean {
         // Use either the state override (if we had one) or the config default
         // For now, let's strictly use config for the budget
-        const config = this.config.getConfig().risk;
-        return estimatedImpactBps <= config.maxImpactBps;
+        const riskConfig = this.config.risk;
+        return estimatedImpactBps <= riskConfig.maxImpactBps;
     }
 
     public getCurrentState(): RiskState {

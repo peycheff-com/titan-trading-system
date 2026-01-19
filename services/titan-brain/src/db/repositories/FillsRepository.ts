@@ -26,8 +26,11 @@ export class FillsRepository {
         qty, 
         fee, 
         fee_currency,
-        created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TO_TIMESTAMP($9 / 1000.0))`,
+        created_at,
+        execution_id,
+        order_id,
+        realized_pnl
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TO_TIMESTAMP($9 / 1000.0), $10, $11, $12)`,
             [
                 fillId,
                 signalId,
@@ -38,6 +41,9 @@ export class FillsRepository {
                 fee,
                 feeCurrency,
                 fill.timestamp,
+                fill.executionId ?? null,
+                fill.orderId ?? null,
+                fill.realizedPnL ?? null,
             ],
         );
     }

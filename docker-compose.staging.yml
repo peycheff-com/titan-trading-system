@@ -1,36 +1,31 @@
 version: '3.8'
 
 services:
-  titan-db-staging:
-    image: postgres:14-alpine
-    container_name: titan-db-staging
-    environment:
-      POSTGRES_USER: titan_staging
-      POSTGRES_PASSWORD: staging_password
-      POSTGRES_DB: titan_brain_staging
+  # =============================================================================
+  # REVERSE PROXY (Staging)
+  # =============================================================================
+  traefik-staging:
+    image: traefik:v3.0
+    container_name: titan-traefik-staging
+    command:
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:8080
+      # Staging acts as its own entrypoint, mapping host 8080 -> container 8080
+      # In real staging VPS, this might be 80/443 if on separate IP.
+      # Here we assume side-by-side with prod, so we use different external ports.
     ports:
-      - "5433:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U titan_staging -d titan_brain_staging"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      - '8090:8080' # Traefik Dashboard / Web
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - titan-staging-net
+    restart: unless-stopped
 
-  titan-redis-staging:
-    image: redis:7-alpine
-    container_name: titan-redis-staging
-    ports:
-      - "6380:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - titan-staging-net
-
+  # =============================================================================
+  # INFRASTRUCTURE
+  # =============================================================================
   titan-nats-staging:
     image: nats:latest
     container_name: titan-nats-staging
@@ -40,7 +35,128 @@ services:
       - "8223:8222" # Monitoring
     networks:
       - titan-staging-net
+    restart: unless-stopped
+
+  titan-redis-staging:
+    image: redis:7-alpine
+    container_name: titan-redis-staging
+    ports:
+      - "6380:6379"
+    networks:
+      - titan-staging-net
+    restart: unless-stopped
+
+  titan-db-staging:
+    image: postgres:15-alpine
+    container_name: titan-db-staging
+    environment:
+      POSTGRES_USER: titan_staging
+      POSTGRES_PASSWORD: staging_password
+      POSTGRES_DB: titan_brain_staging
+    volumes:
+      - titan-db-staging-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - titan-staging-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U titan_staging -d titan_brain_staging"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # =============================================================================
+  # TITAN BRAIN - Master Orchestrator
+  # =============================================================================
+  titan-brain-staging:
+    build:
+      context: .
+      dockerfile: services/titan-brain/Dockerfile
+    container_name: titan-brain-staging
+    environment:
+      - NODE_ENV=staging
+      - PORT=3100
+      - HOST=0.0.0.0
+      - TITAN_DB_HOST=titan-db-staging
+      - TITAN_DB_PORT=5432
+      - TITAN_DB_NAME=titan_brain_staging
+      - TITAN_DB_USER=titan_staging
+      - TITAN_DB_PASSWORD=staging_password
+      - REDIS_URL=redis://titan-redis-staging:6379
+      - NATS_URL=nats://titan-nats-staging:4222
+      - HMAC_SECRET=${HMAC_SECRET:-staging_secret}
+      - LOG_LEVEL=debug
+      - SERVICE_NAME=titan-brain
+    ports:
+      - '3101:3100'
+    volumes:
+      - titan-ipc-staging:/tmp
+    networks:
+      - titan-staging-net
+    depends_on:
+      titan-nats-staging:
+        condition: service_started
+      titan-redis-staging:
+        condition: service_started
+      titan-db-staging:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # =============================================================================
+  # TITAN EXECUTION (Rust)
+  # =============================================================================
+  titan-execution-staging:
+    build:
+      context: .
+      dockerfile: services/titan-execution-rs/Dockerfile
+    container_name: titan-execution-staging
+    environment:
+      - RUN_MODE=staging
+      - RUST_LOG=info
+      - PORT=3002
+      - NATS_URL=nats://titan-nats-staging:4222
+      # Staging might use Testnet keys
+      - BINANCE_API_KEY=${BINANCE_TESTNET_KEY}
+      - BINANCE_API_SECRET=${BINANCE_TESTNET_SECRET}
+    volumes:
+      - titan-ipc-staging:/tmp
+    ports:
+      - '3003:3002'
+    networks:
+      - titan-staging-net
+    depends_on:
+      titan-nats-staging:
+        condition: service_started
+    restart: unless-stopped
+
+  # =============================================================================
+  # TITAN CONSOLE
+  # =============================================================================
+  titan-console-staging:
+    build:
+      context: .
+      dockerfile: services/titan-console/Dockerfile
+      args:
+        VITE_API_URL: http://localhost:3101
+    container_name: titan-console-staging
+    environment:
+      - NODE_ENV=staging
+      - PORT=8080
+    ports:
+      - '8081:8080'
+    networks:
+      - titan-staging-net
+    depends_on:
+      - titan-brain-staging
+    restart: unless-stopped
 
 networks:
   titan-staging-net:
     driver: bridge
+
+volumes:
+  titan-db-staging-data:
+    driver: local
+  titan-ipc-staging:
+    driver: local

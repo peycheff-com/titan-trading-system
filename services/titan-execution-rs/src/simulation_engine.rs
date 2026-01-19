@@ -1,8 +1,8 @@
-use crate::model::{Intent, FillReport, Side};
 use crate::market_data::engine::MarketDataEngine;
+use crate::model::{FillReport, Intent, Side};
+use chrono::Utc;
 use rust_decimal::Decimal;
 use std::sync::Arc;
-use chrono::Utc;
 use tracing::{info, warn};
 use uuid::Uuid;
 
@@ -18,14 +18,17 @@ impl SimulationEngine {
     pub fn simulate_execution(&self, intent: &Intent) -> Option<FillReport> {
         // 1. Get Live Price
         let ticker = self.market_data.get_ticker(&intent.symbol);
-        
+
         if ticker.is_none() {
-            warn!("Values to simulate execution: No market data for {}", intent.symbol);
+            warn!(
+                "Values to simulate execution: No market data for {}",
+                intent.symbol
+            );
             return None;
         }
-        
+
         let ticker = ticker.unwrap();
-        
+
         // 2. Determine execution price based on side and aggressive/passive
         // For now, assume TAKING liquidity (crossing spread) for immediate fill simulation
         let (fill_price, _liquidity) = match intent.intent_type {
@@ -34,9 +37,9 @@ impl SimulationEngine {
             _ => {
                 let is_buy = match intent.direction {
                     1 => true,
-                    _ => false // Simplification, need robust mapping
+                    _ => false, // Simplification, need robust mapping
                 };
-                
+
                 // If Buy, we pay Best Ask. If Sell, we take Best Bid.
                 if is_buy {
                     (ticker.best_ask, ticker.best_ask_qty)
@@ -68,10 +71,12 @@ impl SimulationEngine {
             t_decision: Utc::now().timestamp_millis(),
             t_ack: Utc::now().timestamp_millis(),
             t_exchange: ticker.transaction_time, // Use market data time as "exchange" time
+            client_order_id: format!("sim-oid-{}", Uuid::new_v4()),
+            execution_id: format!("sim-exec-{}", Uuid::new_v4()),
         };
-        
+
         info!("👻 Shadow Fill: {} @ {}", fill.symbol, fill.price);
-        
+
         Some(fill)
     }
 }
