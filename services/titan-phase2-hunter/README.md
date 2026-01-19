@@ -155,8 +155,17 @@ When price makes Lower Low but CVD makes Higher Low, indicating limit buy orders
 - **Position Size**: 15-25% of equity per trade
 - **Fee Advantage**: Maker rebates (-0.01%) vs Taker fees (+0.05%)
 
-## Installation
+## Quick Start (Production)
 
+Run as part of the full Titan stack:
+
+```bash
+cd ../..
+docker compose up -d
+```
+
+## Manual Installation
+ 
 1. **Clone and Navigate**:
    ```bash
    cd services/titan-phase2-hunter

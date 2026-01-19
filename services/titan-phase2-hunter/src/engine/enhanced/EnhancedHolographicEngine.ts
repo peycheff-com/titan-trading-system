@@ -710,47 +710,9 @@ export class EnhancedHolographicEngine extends EventEmitter {
       enhancementsActive: state.enhancementsActive,
     });
 
-    if (this.config.logLevel === "error") return;
-
-    console.log("🔮 Enhanced Holographic State:");
-    console.log(`   Symbol: ${state.symbol}`);
-    console.log(
-      `   Alignment: ${state.alignment} | Conviction: ${state.convictionLevel}`,
-    );
-    console.log(
-      `   Classic Score: ${state.classicScore} | Enhanced Score: ${
-        state.enhancedScore.toFixed(1)
-      }`,
-    );
-    console.log(
-      `   Daily: ${state.dailyBias} | 4H: ${state.fourHourLocation} | 15m: ${state.fifteenMinTrigger}`,
-    );
-
-    if (state.oracleScore) {
-      console.log(
-        `   Oracle: sentiment=${state.oracleScore.sentiment}, veto=${state.oracleScore.veto}`,
-      );
-    }
-
-    if (state.globalCVD) {
-      console.log(
-        `   Global CVD: ${state.globalCVD.consensus} (${
-          state.globalCVD.confidence.toFixed(0)
-        }%)`,
-      );
-    }
-
-    if (state.botTrapAnalysis?.isSuspect) {
-      console.log(
-        `   ⚠️ Bot Trap: ${
-          state.botTrapAnalysis.suspicionScore.toFixed(0)
-        }% suspicion`,
-      );
-    }
-
-    console.log("   Scoring Breakdown:");
-    for (const reason of scoring.reasoning) {
-      console.log(`     - ${reason}`);
+    // Logging handled by this.logger.logEnhancedHologram above
+    if (this.config.logLevel === "debug") {
+      this.logInfo(`Enhanced State Calculated for ${state.symbol}`);
     }
   }
 
@@ -763,37 +725,26 @@ export class EnhancedHolographicEngine extends EventEmitter {
   ): void {
     if (this.config.logLevel === "error") return;
 
-    const emoji = validation.isValid ? "✅" : "❌";
-    console.log(
-      `${emoji} Signal Validation: ${signal.symbol} ${signal.direction}`,
+    // Log validation result through logger
+    this.logger.info(
+      `✅ Signal Validation: ${signal.symbol} ${signal.direction} (${
+        validation.isValid ? "VALID" : "INVALID"
+      })`,
+      {
+        validation,
+      },
     );
-    console.log(
-      `   Original Confidence: ${signal.confidence} | Adjusted: ${
-        validation.adjustedConfidence.toFixed(1)
-      }`,
-    );
-    console.log(`   Recommendation: ${validation.recommendation}`);
-
-    for (const layer of validation.layerValidations) {
-      const layerEmoji = layer.recommendation === "proceed"
-        ? "✓"
-        : layer.recommendation === "veto"
-        ? "✗"
-        : "⚠";
-      console.log(`   ${layerEmoji} ${layer.layer}: ${layer.reasoning}`);
-    }
   }
 
   private logInfo(message: string): void {
     if (this.config.logLevel === "error" || this.config.logLevel === "warn") {
       return;
     }
-    console.log(`ℹ️ [EnhancedHologram] ${message}`);
+    this.logger.info(message, { component: "EnhancedHolographicEngine" });
   }
 
   private logError(message: string, details: string): void {
-    console.error(`❌ [EnhancedHologram] ${message}: ${details}`);
-    this.logger.logError("ERROR", `${message}: ${details}`, {
+    this.logger.error(message, new Error(details), undefined, {
       component: "EnhancedHolographicEngine",
     });
   }

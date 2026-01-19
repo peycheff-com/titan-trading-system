@@ -54,11 +54,14 @@ export {
 
 // Configuration Schema and Validation
 export {
+  BrainConfigSchema,
   ConfigValidator,
   type DeploymentConfig,
   type Environment,
   type ExchangeConfig as SchemaExchangeConfig,
   type InfrastructureConfig,
+  PhaseConfigBaseSchema,
+  PhaseConfigSchema,
   type ValidationResult,
 } from "./config/ConfigSchema";
 

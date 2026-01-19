@@ -1,8 +1,7 @@
 import { RiskManager } from "../../src/services/RiskManager";
-import { ConfigManager } from "../../src/config/ConfigManager";
 import { BrainConfig } from "../../src/config/BrainConfig";
 
-// Mock ConfigManager
+// Mock BrainConfig
 const mockConfig: BrainConfig = {
     nodeEnv: "test",
     risk: {
@@ -13,15 +12,11 @@ const mockConfig: BrainConfig = {
     },
 } as any; // Cast to avoid mocking entire config
 
-const configManagerMock = {
-    getConfig: jest.fn().mockReturnValue(mockConfig),
-} as unknown as ConfigManager;
-
 describe("RiskManager", () => {
     let riskManager: RiskManager;
 
     beforeEach(() => {
-        riskManager = new RiskManager(configManagerMock);
+        riskManager = new RiskManager(mockConfig);
     });
 
     it("should initialize with safe state", () => {

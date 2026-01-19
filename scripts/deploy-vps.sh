@@ -48,20 +48,36 @@ if [ -d .git ]; then
     git pull origin main
 fi
 
+# Deploy Environment
+ENV=${1:-prod}
+
+if [ "$ENV" = "staging" ]; then
+    COMPOSE_FILE="docker-compose.staging.yml"
+    echo -e "${YELLOW}🚧 Deploying to STAGING environment...${NC}"
+else
+    COMPOSE_FILE="docker-compose.prod.yml"
+    echo -e "${YELLOW}🚀 Deploying to PRODUCTION environment...${NC}"
+fi
+
 # Build and Start
 echo -e "${YELLOW}🏗️  Building and Starting Services...${NC}"
-$COMPOSE_CMD -f docker-compose.prod.yml up -d --build --remove-orphans
+$COMPOSE_CMD -f $COMPOSE_FILE up -d --build --remove-orphans
 
 echo -e "${YELLOW}🧹 Pruning unused images...${NC}"
 docker image prune -f
 
 echo -e "${GREEN}✅ Deployment Complete!${NC}"
 echo -e "   - Traefik: http://localhost (or configured domain)"
-echo -e "   - Console: https://<domain>"
-echo -e "   - Brain:   Internal port 3100"
+if [ "$ENV" = "staging" ]; then
+   echo -e "   - Console: http://<domain>:8081"
+   echo -e "   - Brain:   Internal port 3101"
+else
+   echo -e "   - Console: https://<domain>"
+   echo -e "   - Brain:   Internal port 3100"
+fi
 
 # Health check summary
 echo -e "${YELLOW}🏥 Checking container status...${NC}"
-$COMPOSE_CMD -f docker-compose.prod.yml ps
+$COMPOSE_CMD -f $COMPOSE_FILE ps
 
 exit 0

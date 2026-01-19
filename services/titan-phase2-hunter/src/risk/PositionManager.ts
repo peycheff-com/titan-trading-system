@@ -11,17 +11,17 @@
  * Requirements: 12.1-12.7 (Position Management)
  */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from "events";
 import {
+  OrderParams,
+  OrderResult,
+  PartialProfitConfig,
   Position,
   PositionUpdate,
   TrailingStopConfig,
-  PartialProfitConfig,
-  OrderParams,
-  OrderResult,
-} from '../types';
-import { BybitPerpsClient } from '../exchanges/BybitPerpsClient';
-import { logPositionClose, logError } from '../logging/Logger';
+} from "../types";
+import { BybitPerpsClient } from "../exchanges/BybitPerpsClient";
+import { getLogger, logError, logPositionClose } from "../logging/Logger";
 
 export interface PositionManagerConfig {
   breakevenRLevel: number; // R level to move stop to breakeven (default: 1.5)
@@ -33,12 +33,15 @@ export interface PositionManagerConfig {
 }
 
 export interface PositionManagerEvents {
-  'position:breakeven': (position: Position) => void;
-  'position:partial': (position: Position, closedQuantity: number) => void;
-  'position:trailing': (position: Position, newStopLoss: number) => void;
-  'position:tightened': (position: Position, newStopLoss: number) => void;
-  'position:closed': (position: Position, reason: 'STOP_HIT' | 'TARGET_HIT' | 'MANUAL') => void;
-  'position:error': (position: Position, error: Error) => void;
+  "position:breakeven": (position: Position) => void;
+  "position:partial": (position: Position, closedQuantity: number) => void;
+  "position:trailing": (position: Position, newStopLoss: number) => void;
+  "position:tightened": (position: Position, newStopLoss: number) => void;
+  "position:closed": (
+    position: Position,
+    reason: "STOP_HIT" | "TARGET_HIT" | "MANUAL",
+  ) => void;
+  "position:error": (position: Position, error: Error) => void;
 }
 
 export class PositionManager extends EventEmitter {
@@ -48,7 +51,10 @@ export class PositionManager extends EventEmitter {
   private updateInterval: NodeJS.Timeout | null = null;
   private readonly UPDATE_FREQUENCY = 5000; // 5 seconds
 
-  constructor(bybitClient: BybitPerpsClient, config?: Partial<PositionManagerConfig>) {
+  constructor(
+    bybitClient: BybitPerpsClient,
+    config?: Partial<PositionManagerConfig>,
+  ) {
     super();
 
     this.bybitClient = bybitClient;
@@ -72,8 +78,9 @@ export class PositionManager extends EventEmitter {
    */
   public addPosition(position: Position): void {
     this.positions.set(position.id, { ...position });
-    console.log(
-      `📊 Position Manager: Added position ${position.id} (${position.symbol} ${position.side})`
+    this.positions.set(position.id, { ...position });
+    getLogger().info(
+      `📊 Position Manager: Added position ${position.id} (${position.symbol} ${position.side})`,
     );
   }
 
@@ -85,7 +92,7 @@ export class PositionManager extends EventEmitter {
     const position = this.positions.get(positionId);
     if (position) {
       this.positions.delete(positionId);
-      console.log(`📊 Position Manager: Removed position ${positionId}`);
+      getLogger().info(`📊 Position Manager: Removed position ${positionId}`);
     }
   }
 
@@ -119,7 +126,8 @@ export class PositionManager extends EventEmitter {
     position.unrealizedPnL = update.unrealizedPnL;
 
     // Calculate current R value
-    const riskAmount = Math.abs(position.entryPrice - position.stopLoss) * position.quantity;
+    const riskAmount = Math.abs(position.entryPrice - position.stopLoss) *
+      position.quantity;
     if (riskAmount > 0) {
       position.rValue = update.unrealizedPnL / riskAmount;
     }
@@ -148,26 +156,39 @@ export class PositionManager extends EventEmitter {
         return false; // Not profitable enough yet
       }
 
-      console.log(
-        `🎯 Moving stop to breakeven for ${position.symbol} at ${position.rValue.toFixed(2)}R`
+      getLogger().info(
+        `🎯 Moving stop to breakeven for ${position.symbol} at ${
+          position.rValue.toFixed(2)
+        }R`,
       );
 
       // Set stop loss to entry price (breakeven)
-      const success = await this.bybitClient.setStopLoss(position.symbol, position.entryPrice);
+      const success = await this.bybitClient.setStopLoss(
+        position.symbol,
+        position.entryPrice,
+      );
 
       if (success) {
         position.stopLoss = position.entryPrice;
         this.positions.set(position.id, position);
-        this.emit('position:breakeven', position);
+        this.emit("position:breakeven", position);
 
-        console.log(`✅ Stop moved to breakeven: ${position.symbol} @ ${position.entryPrice}`);
+        this.emit("position:breakeven", position);
+
+        getLogger().info(
+          `✅ Stop moved to breakeven: ${position.symbol} @ ${position.entryPrice}`,
+        );
         return true;
       }
 
       return false;
     } catch (error) {
-      console.error(`❌ Failed to move stop to breakeven for ${position.symbol}:`, error);
-      this.emit('position:error', position, error as Error);
+      logError(
+        "ERROR",
+        `Failed to move stop to breakeven for ${position.symbol}`,
+        { error },
+      );
+      this.emit("position:error", position, error as Error);
       return false;
     }
   }
@@ -186,42 +207,52 @@ export class PositionManager extends EventEmitter {
 
       // Check if partial profit already taken (quantity would be reduced)
       const originalQuantity = position.quantity;
-      const partialQuantity = originalQuantity * (this.config.partialProfitPercentage / 100);
+      const partialQuantity = originalQuantity *
+        (this.config.partialProfitPercentage / 100);
 
-      console.log(
-        `💰 Taking partial profit for ${position.symbol} at ${position.rValue.toFixed(2)}R`
+      getLogger().info(
+        `💰 Taking partial profit for ${position.symbol} at ${
+          position.rValue.toFixed(2)
+        }R`,
       );
 
       // Place market order to close partial position
       const orderParams: OrderParams = {
-        phase: 'phase2',
+        phase: "phase2",
         symbol: position.symbol,
-        side: position.side === 'LONG' ? 'Sell' : 'Buy',
-        type: 'MARKET',
+        side: position.side === "LONG" ? "Sell" : "Buy",
+        type: "MARKET",
         qty: partialQuantity,
         leverage: position.leverage,
       };
 
       const result = await this.bybitClient.placeOrderWithRetry(orderParams);
 
-      if (result.status === 'FILLED') {
+      if (result.status === "FILLED") {
         // Update position quantity
         position.quantity -= partialQuantity;
-        position.realizedPnL += partialQuantity * (position.currentPrice - position.entryPrice);
+        position.realizedPnL += partialQuantity *
+          (position.currentPrice - position.entryPrice);
 
         this.positions.set(position.id, position);
-        this.emit('position:partial', position, partialQuantity);
+        this.emit("position:partial", position, partialQuantity);
 
-        console.log(
-          `✅ Partial profit taken: ${position.symbol} closed ${partialQuantity} at ${result.price}`
+        this.emit("position:partial", position, partialQuantity);
+
+        getLogger().info(
+          `✅ Partial profit taken: ${position.symbol} closed ${partialQuantity} at ${result.price}`,
         );
         return true;
       }
 
       return false;
     } catch (error) {
-      console.error(`❌ Failed to take partial profit for ${position.symbol}:`, error);
-      this.emit('position:error', position, error as Error);
+      logError(
+        "ERROR",
+        `Failed to take partial profit for ${position.symbol}`,
+        { error },
+      );
+      this.emit("position:error", position, error as Error);
       return false;
     }
   }
@@ -241,7 +272,7 @@ export class PositionManager extends EventEmitter {
       const atrDistance = position.atr * this.config.trailingStopDistance;
       let newStopLoss: number;
 
-      if (position.side === 'LONG') {
+      if (position.side === "LONG") {
         // For long positions, trail stop up
         newStopLoss = position.currentPrice - atrDistance;
 
@@ -259,26 +290,41 @@ export class PositionManager extends EventEmitter {
         }
       }
 
-      console.log(
-        `📈 Updating trailing stop for ${position.symbol}: ${position.stopLoss.toFixed(2)} → ${newStopLoss.toFixed(2)}`
+      getLogger().info(
+        `📈 Updating trailing stop for ${position.symbol}: ${
+          position.stopLoss.toFixed(2)
+        } → ${newStopLoss.toFixed(2)}`,
       );
 
       // Set new stop loss
-      const success = await this.bybitClient.setStopLoss(position.symbol, newStopLoss);
+      const success = await this.bybitClient.setStopLoss(
+        position.symbol,
+        newStopLoss,
+      );
 
       if (success) {
         position.stopLoss = newStopLoss;
         this.positions.set(position.id, position);
-        this.emit('position:trailing', position, newStopLoss);
+        this.emit("position:trailing", position, newStopLoss);
 
-        console.log(`✅ Trailing stop updated: ${position.symbol} @ ${newStopLoss.toFixed(2)}`);
+        this.emit("position:trailing", position, newStopLoss);
+
+        getLogger().info(
+          `✅ Trailing stop updated: ${position.symbol} @ ${
+            newStopLoss.toFixed(2)
+          }`,
+        );
         return true;
       }
 
       return false;
     } catch (error) {
-      console.error(`❌ Failed to update trailing stop for ${position.symbol}:`, error);
-      this.emit('position:error', position, error as Error);
+      logError(
+        "ERROR",
+        `Failed to update trailing stop for ${position.symbol}`,
+        { error },
+      );
+      this.emit("position:error", position, error as Error);
       return false;
     }
   }
@@ -296,10 +342,11 @@ export class PositionManager extends EventEmitter {
         return false; // Not old enough yet
       }
 
-      const tightenedDistance = position.atr * this.config.tightenedStopDistance;
+      const tightenedDistance = position.atr *
+        this.config.tightenedStopDistance;
       let newStopLoss: number;
 
-      if (position.side === 'LONG') {
+      if (position.side === "LONG") {
         newStopLoss = position.currentPrice - tightenedDistance;
 
         // Only tighten if new stop is higher than current stop
@@ -315,26 +362,41 @@ export class PositionManager extends EventEmitter {
         }
       }
 
-      console.log(
-        `⏰ Tightening stop after ${hoursOpen.toFixed(1)}h for ${position.symbol}: ${position.stopLoss.toFixed(2)} → ${newStopLoss.toFixed(2)}`
+      getLogger().info(
+        `⏰ Tightening stop after ${
+          hoursOpen.toFixed(1)
+        }h for ${position.symbol}: ${position.stopLoss.toFixed(2)} → ${
+          newStopLoss.toFixed(2)
+        }`,
       );
 
       // Set tightened stop loss
-      const success = await this.bybitClient.setStopLoss(position.symbol, newStopLoss);
+      const success = await this.bybitClient.setStopLoss(
+        position.symbol,
+        newStopLoss,
+      );
 
       if (success) {
         position.stopLoss = newStopLoss;
         this.positions.set(position.id, position);
-        this.emit('position:tightened', position, newStopLoss);
+        this.emit("position:tightened", position, newStopLoss);
 
-        console.log(`✅ Stop tightened: ${position.symbol} @ ${newStopLoss.toFixed(2)}`);
+        this.emit("position:tightened", position, newStopLoss);
+
+        getLogger().info(
+          `✅ Stop tightened: ${position.symbol} @ ${newStopLoss.toFixed(2)}`,
+        );
         return true;
       }
 
       return false;
     } catch (error) {
       console.error(`❌ Failed to tighten stop for ${position.symbol}:`, error);
-      this.emit('position:error', position, error as Error);
+      // Keep compat with emit error but use logger too
+      logError("ERROR", `Failed to tighten stop for ${position.symbol}`, {
+        error,
+      });
+      this.emit("position:error", position, error as Error);
       return false;
     }
   }
@@ -347,35 +409,42 @@ export class PositionManager extends EventEmitter {
    */
   public async closePosition(
     position: Position,
-    reason: 'STOP_HIT' | 'TARGET_HIT' | 'MANUAL'
+    reason: "STOP_HIT" | "TARGET_HIT" | "MANUAL",
   ): Promise<boolean> {
     try {
-      console.log(`🚪 Closing position ${position.symbol} - Reason: ${reason}`);
+      getLogger().info(
+        `🚪 Closing position ${position.symbol} - Reason: ${reason}`,
+      );
 
       // Place market order to close entire position
       const orderParams: OrderParams = {
-        phase: 'phase2',
+        phase: "phase2",
         symbol: position.symbol,
-        side: position.side === 'LONG' ? 'Sell' : 'Buy',
-        type: 'MARKET',
+        side: position.side === "LONG" ? "Sell" : "Buy",
+        type: "MARKET",
         qty: position.quantity,
         leverage: position.leverage,
       };
 
       const result = await this.bybitClient.placeOrderWithRetry(orderParams);
 
-      if (result.status === 'FILLED') {
+      if (result.status === "FILLED") {
         // Calculate profit percentage and hold time
-        const profitPercentage = ((result.price - position.entryPrice) / position.entryPrice) * 100;
+        const profitPercentage =
+          ((result.price - position.entryPrice) / position.entryPrice) * 100;
         const holdTime = Date.now() - position.entryTime;
 
         // Update position status
-        position.status = 'CLOSED';
-        position.realizedPnL += position.quantity * (result.price - position.entryPrice);
+        position.status = "CLOSED";
+        position.realizedPnL += position.quantity *
+          (result.price - position.entryPrice);
 
         // Map PositionManager close reasons to Logger close reasons
-        const loggerReason =
-          reason === 'STOP_HIT' ? 'STOP_LOSS' : reason === 'TARGET_HIT' ? 'TAKE_PROFIT' : 'MANUAL';
+        const loggerReason = reason === "STOP_HIT"
+          ? "STOP_LOSS"
+          : reason === "TARGET_HIT"
+          ? "TAKE_PROFIT"
+          : "MANUAL";
 
         // Log position close to structured logger
         logPositionClose(
@@ -387,28 +456,34 @@ export class PositionManager extends EventEmitter {
           profitPercentage,
           loggerReason,
           holdTime,
-          position.rValue
+          position.rValue,
         );
 
         // Remove from active management
         this.positions.delete(position.id);
-        this.emit('position:closed', position, reason);
+        this.emit("position:closed", position, reason);
 
-        console.log(`✅ Position closed: ${position.symbol} at ${result.price} (${reason})`);
+        this.emit("position:closed", position, reason);
+
+        getLogger().info(
+          `✅ Position closed: ${position.symbol} at ${result.price} (${reason})`,
+        );
         return true;
       }
 
       return false;
     } catch (error) {
-      console.error(`❌ Failed to close position ${position.symbol}:`, error);
-      logError('ERROR', `Failed to close position ${position.symbol}`, {
+      // console.error already replaced by logError below in original code logic?
+      // Original: console.error(...); logError(...);
+      // We remove the console.error.
+      logError("ERROR", `Failed to close position ${position.symbol}`, {
         symbol: position.symbol,
-        component: 'PositionManager',
-        function: 'closePosition',
+        component: "PositionManager",
+        function: "closePosition",
         stack: (error as Error).stack,
         data: { position, reason },
       });
-      this.emit('position:error', position, error as Error);
+      this.emit("position:error", position, error as Error);
       return false;
     }
   }
@@ -421,12 +496,12 @@ export class PositionManager extends EventEmitter {
     try {
       // Check for stop/target hits first
       if (this.checkStopHit(position)) {
-        await this.closePosition(position, 'STOP_HIT');
+        await this.closePosition(position, "STOP_HIT");
         return;
       }
 
       if (this.checkTargetHit(position)) {
-        await this.closePosition(position, 'TARGET_HIT');
+        await this.closePosition(position, "TARGET_HIT");
         return;
       }
 
@@ -456,8 +531,10 @@ export class PositionManager extends EventEmitter {
         await this.tightenStopAfter48h(position);
       }
     } catch (error) {
-      console.error(`❌ Error in position management for ${position.symbol}:`, error);
-      this.emit('position:error', position, error as Error);
+      logError("ERROR", `Error in position management for ${position.symbol}`, {
+        error,
+      });
+      this.emit("position:error", position, error as Error);
     }
   }
 
@@ -467,7 +544,7 @@ export class PositionManager extends EventEmitter {
    * @returns True if stop was hit
    */
   private checkStopHit(position: Position): boolean {
-    if (position.side === 'LONG') {
+    if (position.side === "LONG") {
       return position.currentPrice <= position.stopLoss;
     } else {
       return position.currentPrice >= position.stopLoss;
@@ -480,7 +557,7 @@ export class PositionManager extends EventEmitter {
    * @returns True if target was hit
    */
   private checkTargetHit(position: Position): boolean {
-    if (position.side === 'LONG') {
+    if (position.side === "LONG") {
       return position.currentPrice >= position.takeProfit;
     } else {
       return position.currentPrice <= position.takeProfit;
@@ -499,7 +576,9 @@ export class PositionManager extends EventEmitter {
       await this.updateAllPositions();
     }, this.UPDATE_FREQUENCY);
 
-    console.log(`📊 Position Manager: Started monitoring (${this.UPDATE_FREQUENCY}ms interval)`);
+    getLogger().info(
+      `📊 Position Manager: Started monitoring (${this.UPDATE_FREQUENCY}ms interval)`,
+    );
   }
 
   /**
@@ -510,7 +589,7 @@ export class PositionManager extends EventEmitter {
       clearInterval(this.updateInterval);
       this.updateInterval = null;
     }
-    console.log(`📊 Position Manager: Stopped monitoring`);
+    getLogger().info(`📊 Position Manager: Stopped monitoring`);
   }
 
   /**
@@ -522,13 +601,14 @@ export class PositionManager extends EventEmitter {
     for (const position of positions) {
       try {
         // Get current price from exchange
-        const currentPrice = await this.bybitClient.getCurrentPrice(position.symbol);
+        const currentPrice = await this.bybitClient.getCurrentPrice(
+          position.symbol,
+        );
 
         // Calculate unrealized P&L
-        const priceDiff =
-          position.side === 'LONG'
-            ? currentPrice - position.entryPrice
-            : position.entryPrice - currentPrice;
+        const priceDiff = position.side === "LONG"
+          ? currentPrice - position.entryPrice
+          : position.entryPrice - currentPrice;
         const unrealizedPnL = priceDiff * position.quantity;
 
         // Update position
@@ -539,7 +619,9 @@ export class PositionManager extends EventEmitter {
           timestamp: Date.now(),
         });
       } catch (error) {
-        console.error(`❌ Failed to update position ${position.symbol}:`, error);
+        logError("ERROR", `Failed to update position ${position.symbol}`, {
+          error,
+        });
       }
     }
   }
@@ -556,14 +638,20 @@ export class PositionManager extends EventEmitter {
     averageRValue: number;
   } {
     const positions = Array.from(this.positions.values());
-    const openPositions = positions.filter(p => p.status === 'OPEN');
+    const openPositions = positions.filter((p) => p.status === "OPEN");
 
-    const totalUnrealizedPnL = openPositions.reduce((sum, p) => sum + p.unrealizedPnL, 0);
-    const totalRealizedPnL = positions.reduce((sum, p) => sum + p.realizedPnL, 0);
-    const averageRValue =
-      openPositions.length > 0
-        ? openPositions.reduce((sum, p) => sum + p.rValue, 0) / openPositions.length
-        : 0;
+    const totalUnrealizedPnL = openPositions.reduce(
+      (sum, p) => sum + p.unrealizedPnL,
+      0,
+    );
+    const totalRealizedPnL = positions.reduce(
+      (sum, p) => sum + p.realizedPnL,
+      0,
+    );
+    const averageRValue = openPositions.length > 0
+      ? openPositions.reduce((sum, p) => sum + p.rValue, 0) /
+        openPositions.length
+      : 0;
 
     return {
       totalPositions: positions.length,
@@ -580,15 +668,17 @@ export class PositionManager extends EventEmitter {
    */
   public updateConfig(newConfig: Partial<PositionManagerConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    console.log(`📊 Position Manager: Configuration updated`);
+    getLogger().info(`📊 Position Manager: Configuration updated`);
   }
 
   /**
    * Emergency close all positions
    * @returns Promise with results
    */
-  public async emergencyCloseAll(): Promise<{ success: number; failed: number }> {
-    console.log(`🚨 Emergency closing all positions`);
+  public async emergencyCloseAll(): Promise<
+    { success: number; failed: number }
+  > {
+    getLogger().info(`🚨 Emergency closing all positions`);
 
     const positions = Array.from(this.positions.values());
     let success = 0;
@@ -596,19 +686,23 @@ export class PositionManager extends EventEmitter {
 
     for (const position of positions) {
       try {
-        const result = await this.closePosition(position, 'MANUAL');
+        const result = await this.closePosition(position, "MANUAL");
         if (result) {
           success++;
         } else {
           failed++;
         }
       } catch (error) {
-        console.error(`❌ Failed to emergency close ${position.symbol}:`, error);
+        logError("ERROR", `Failed to emergency close ${position.symbol}`, {
+          error,
+        });
         failed++;
       }
     }
 
-    console.log(`🚨 Emergency close complete: ${success} success, ${failed} failed`);
+    getLogger().info(
+      `🚨 Emergency close complete: ${success} success, ${failed} failed`,
+    );
     return { success, failed };
   }
 
@@ -619,13 +713,16 @@ export class PositionManager extends EventEmitter {
     this.stopMonitoring();
     this.positions.clear();
     this.removeAllListeners();
-    console.log(`📊 Position Manager: Destroyed`);
+    getLogger().info(`📊 Position Manager: Destroyed`);
   }
 }
 
 // Export event interface for TypeScript
 export declare interface PositionManager {
-  on<U extends keyof PositionManagerEvents>(event: U, listener: PositionManagerEvents[U]): this;
+  on<U extends keyof PositionManagerEvents>(
+    event: U,
+    listener: PositionManagerEvents[U],
+  ): this;
   emit<U extends keyof PositionManagerEvents>(
     event: U,
     ...args: Parameters<PositionManagerEvents[U]>

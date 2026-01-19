@@ -15,14 +15,14 @@
  * Requirements: 2.5, 5.1 (Fast Path IPC Integration)
  */
 
-import * as net from 'net';
-import * as crypto from 'crypto';
-import { EventEmitter } from 'events';
+import * as net from "net";
+import * as crypto from "crypto";
+import { EventEmitter } from "events";
 
 /**
  * Source service identifier
  */
-export type SignalSource = 'scavenger' | 'hunter' | 'sentinel' | 'brain';
+export type SignalSource = "scavenger" | "hunter" | "sentinel" | "brain";
 
 /**
  * Intent Signal sent to Execution Service
@@ -31,7 +31,7 @@ export interface IntentSignal {
   signal_id: string;
   source: SignalSource;
   symbol: string;
-  direction: 'LONG' | 'SHORT';
+  direction: "LONG" | "SHORT";
   entry_zone: { min: number; max: number };
   stop_loss: number;
   take_profits: number[];
@@ -65,10 +65,10 @@ export interface LatencyProfile {
  * Market Regime State for BOCPD
  */
 export enum RegimeState {
-  STABLE = 'STABLE', // Low vol, mean-reverting (Sentinel dominant)
-  VOLATILE_BREAKOUT = 'VOLATILE_BREAKOUT', // High vol, directional (Hunter dominant)
-  MEAN_REVERSION = 'MEAN_REVERSION', // Moderate vol, range-bound
-  CRASH = 'CRASH', // Extreme vol, correlation breakdown (Scavenger dominant)
+  STABLE = "STABLE", // Low vol, mean-reverting (Sentinel dominant)
+  VOLATILE_BREAKOUT = "VOLATILE_BREAKOUT", // High vol, directional (Hunter dominant)
+  MEAN_REVERSION = "MEAN_REVERSION", // Moderate vol, range-bound
+  CRASH = "CRASH", // Extreme vol, correlation breakdown (Scavenger dominant)
 }
 
 /**
@@ -78,7 +78,7 @@ export interface FillReport {
   fill_id: string;
   signal_id: string;
   symbol: string;
-  side: 'BUY' | 'SELL';
+  side: "BUY" | "SELL";
   price: number;
   qty: number;
   fee: number;
@@ -86,6 +86,8 @@ export interface FillReport {
   t_signal: number;
   t_exchange: number;
   t_ingress: number;
+  client_order_id: string; // Internal Order ID
+  execution_id: string; // Exchange Order ID
 }
 
 /**
@@ -120,11 +122,11 @@ export interface AbortResponse {
  * Connection state enum
  */
 export enum ConnectionState {
-  DISCONNECTED = 'disconnected',
-  CONNECTING = 'connecting',
-  CONNECTED = 'connected',
-  RECONNECTING = 'reconnecting',
-  FAILED = 'failed',
+  DISCONNECTED = "disconnected",
+  CONNECTING = "connecting",
+  CONNECTED = "connected",
+  RECONNECTING = "reconnecting",
+  FAILED = "failed",
 }
 
 /**
@@ -171,7 +173,7 @@ export class FastPathClient extends EventEmitter {
   private reconnectAttempts: number = 0;
   private reconnectTimer: NodeJS.Timeout | null = null;
   private disconnecting: boolean = false;
-  private messageBuffer: string = '';
+  private messageBuffer: string = "";
   private pendingMessages: Map<
     string,
     {
@@ -199,9 +201,11 @@ export class FastPathClient extends EventEmitter {
     super();
 
     this.config = {
-      socketPath: config?.socketPath || process.env.TITAN_IPC_SOCKET || '/tmp/titan-ipc.sock',
-      hmacSecret: config?.hmacSecret || process.env.TITAN_HMAC_SECRET || 'default-secret',
-      source: config?.source || 'scavenger',
+      socketPath: config?.socketPath || process.env.TITAN_IPC_SOCKET ||
+        "/tmp/titan-ipc.sock",
+      hmacSecret: config?.hmacSecret || process.env.TITAN_HMAC_SECRET ||
+        "default-secret",
+      source: config?.source || "scavenger",
       maxReconnectAttempts: config?.maxReconnectAttempts || 10,
       baseReconnectDelay: config?.baseReconnectDelay || 1000,
       maxReconnectDelay: config?.maxReconnectDelay || 30000,
@@ -229,16 +233,16 @@ export class FastPathClient extends EventEmitter {
     if (this.connectionState === ConnectionState.CONNECTING) {
       return new Promise((resolve, reject) => {
         const onConnected = () => {
-          this.removeListener('error', onError);
+          this.removeListener("error", onError);
           resolve();
         };
         const onError = (error: Error) => {
-          this.removeListener('connected', onConnected);
+          this.removeListener("connected", onConnected);
           reject(error);
         };
 
-        this.once('connected', onConnected);
-        this.once('error', onError);
+        this.once("connected", onConnected);
+        this.once("error", onError);
       });
     }
 
@@ -248,7 +252,7 @@ export class FastPathClient extends EventEmitter {
   private async attemptConnection(): Promise<void> {
     return new Promise((resolve, reject) => {
       this.connectionState = ConnectionState.CONNECTING;
-      this.emit('connecting');
+      this.emit("connecting");
 
       if (this.socket) {
         this.socket.removeAllListeners();
@@ -266,7 +270,7 @@ export class FastPathClient extends EventEmitter {
         }
       };
 
-      this.socket.on('connect', () => {
+      this.socket.on("connect", () => {
         cleanup();
         this.connectionState = ConnectionState.CONNECTED;
         this.reconnectAttempts = 0;
@@ -275,15 +279,15 @@ export class FastPathClient extends EventEmitter {
         console.log(
           `✅ [${this.config.source}] Connected to Execution Service via Fast Path IPC (${this.config.socketPath})`,
         );
-        this.emit('connected');
+        this.emit("connected");
         resolve();
       });
 
-      this.socket.on('data', (data: Buffer) => {
+      this.socket.on("data", (data: Buffer) => {
         this.handleIncomingData(data);
       });
 
-      this.socket.on('error', (error: Error) => {
+      this.socket.on("error", (error: Error) => {
         cleanup();
         this.connectionState = ConnectionState.FAILED;
         this.metrics.lastDisconnectedAt = Date.now();
@@ -293,22 +297,26 @@ export class FastPathClient extends EventEmitter {
           return;
         }
 
-        console.error(`❌ [${this.config.source}] Fast Path IPC error: ${error.message}`);
-        this.emit('error', error);
+        console.error(
+          `❌ [${this.config.source}] Fast Path IPC error: ${error.message}`,
+        );
+        this.emit("error", error);
         this.scheduleReconnection();
         reject(error);
       });
 
-      this.socket.on('close', () => {
+      this.socket.on("close", () => {
         cleanup();
         if (this.connectionState !== ConnectionState.FAILED) {
           this.connectionState = ConnectionState.DISCONNECTED;
         }
         this.metrics.lastDisconnectedAt = Date.now();
 
-        console.log(`🔌 [${this.config.source}] Fast Path IPC connection closed`);
-        this.emit('disconnected');
-        this.clearPendingMessages('Connection closed');
+        console.log(
+          `🔌 [${this.config.source}] Fast Path IPC connection closed`,
+        );
+        this.emit("disconnected");
+        this.clearPendingMessages("Connection closed");
 
         if (!this.disconnecting) {
           this.scheduleReconnection();
@@ -325,21 +333,26 @@ export class FastPathClient extends EventEmitter {
           this.socket = null;
         }
 
-        const error = new Error(`IPC connection timeout after ${this.config.connectionTimeout}ms`);
-        this.emit('error', error);
+        const error = new Error(
+          `IPC connection timeout after ${this.config.connectionTimeout}ms`,
+        );
+        this.emit("error", error);
         reject(error);
       }, this.config.connectionTimeout);
     });
   }
 
   private scheduleReconnection(): void {
-    if (this.disconnecting || this.reconnectAttempts >= this.config.maxReconnectAttempts) {
+    if (
+      this.disconnecting ||
+      this.reconnectAttempts >= this.config.maxReconnectAttempts
+    ) {
       if (this.reconnectAttempts >= this.config.maxReconnectAttempts) {
         console.error(
           `❌ [${this.config.source}] Max reconnection attempts (${this.config.maxReconnectAttempts}) reached`,
         );
         this.connectionState = ConnectionState.FAILED;
-        this.emit('maxReconnectAttemptsReached');
+        this.emit("maxReconnectAttemptsReached");
       }
       return;
     }
@@ -355,13 +368,15 @@ export class FastPathClient extends EventEmitter {
     const finalDelay = delay + jitter;
 
     console.log(
-      `🔄 [${this.config.source}] Scheduling reconnection attempt ${this.reconnectAttempts}/${this.config.maxReconnectAttempts} in ${Math.round(
-        finalDelay,
-      )}ms`,
+      `🔄 [${this.config.source}] Scheduling reconnection attempt ${this.reconnectAttempts}/${this.config.maxReconnectAttempts} in ${
+        Math.round(
+          finalDelay,
+        )
+      }ms`,
     );
 
     this.connectionState = ConnectionState.RECONNECTING;
-    this.emit('reconnecting', this.reconnectAttempts);
+    this.emit("reconnecting", this.reconnectAttempts);
 
     this.reconnectTimer = setTimeout(async () => {
       if (!this.disconnecting) {
@@ -378,7 +393,7 @@ export class FastPathClient extends EventEmitter {
     this.messageBuffer += data.toString();
 
     let delimiterIndex;
-    while ((delimiterIndex = this.messageBuffer.indexOf('\n')) !== -1) {
+    while ((delimiterIndex = this.messageBuffer.indexOf("\n")) !== -1) {
       const messageStr = this.messageBuffer.slice(0, delimiterIndex);
       this.messageBuffer = this.messageBuffer.slice(delimiterIndex + 1);
 
@@ -388,7 +403,7 @@ export class FastPathClient extends EventEmitter {
       } catch (error) {
         console.error(
           `❌ [${this.config.source}] Failed to parse IPC message: ${
-            error instanceof Error ? error.message : 'Unknown error'
+            error instanceof Error ? error.message : "Unknown error"
           }`,
         );
         this.metrics.messagesFailed++;
@@ -399,7 +414,9 @@ export class FastPathClient extends EventEmitter {
   private handleMessage(message: any): void {
     this.metrics.messagesReceived++;
 
-    if (message.correlationId && this.pendingMessages.has(message.correlationId)) {
+    if (
+      message.correlationId && this.pendingMessages.has(message.correlationId)
+    ) {
       const pending = this.pendingMessages.get(message.correlationId)!;
       this.pendingMessages.delete(message.correlationId);
 
@@ -416,7 +433,7 @@ export class FastPathClient extends EventEmitter {
         pending.resolve(message);
       }
     } else {
-      this.emit('message', message);
+      this.emit("message", message);
     }
   }
 
@@ -426,7 +443,8 @@ export class FastPathClient extends EventEmitter {
     this.metrics.maxLatencyMs = Math.max(this.metrics.maxLatencyMs, latency);
 
     if (this.metrics.messagesReceived > 0) {
-      this.metrics.avgLatencyMs = this.metrics.totalLatencyMs / this.metrics.messagesReceived;
+      this.metrics.avgLatencyMs = this.metrics.totalLatencyMs /
+        this.metrics.messagesReceived;
     }
   }
 
@@ -444,7 +462,7 @@ export class FastPathClient extends EventEmitter {
   async sendPrepare(signal: IntentSignal): Promise<PrepareResponse> {
     const enhancedSignal = {
       ...signal,
-      signal_type: 'PREPARE',
+      signal_type: "PREPARE",
       timestamp: Date.now(),
       source: this.config.source,
     };
@@ -462,11 +480,13 @@ export class FastPathClient extends EventEmitter {
     } catch (error) {
       console.error(
         `❌ [${this.config.source}] Failed to send PREPARE signal: ${
-          error instanceof Error ? error.message : 'Unknown error'
+          error instanceof Error ? error.message : "Unknown error"
         }`,
       );
       throw new Error(
-        `PREPARE_FAILED: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `PREPARE_FAILED: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
       );
     }
   }
@@ -477,7 +497,7 @@ export class FastPathClient extends EventEmitter {
   async sendConfirm(signal_id: string): Promise<ConfirmResponse> {
     const signal = {
       signal_id,
-      signal_type: 'CONFIRM',
+      signal_type: "CONFIRM",
       timestamp: Date.now(),
       source: this.config.source,
     };
@@ -495,11 +515,13 @@ export class FastPathClient extends EventEmitter {
     } catch (error) {
       console.error(
         `❌ [${this.config.source}] Failed to send CONFIRM signal: ${
-          error instanceof Error ? error.message : 'Unknown error'
+          error instanceof Error ? error.message : "Unknown error"
         }`,
       );
       throw new Error(
-        `CONFIRM_FAILED: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `CONFIRM_FAILED: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
       );
     }
   }
@@ -510,7 +532,7 @@ export class FastPathClient extends EventEmitter {
   async sendAbort(signal_id: string): Promise<AbortResponse> {
     const signal = {
       signal_id,
-      signal_type: 'ABORT',
+      signal_type: "ABORT",
       timestamp: Date.now(),
       source: this.config.source,
     };
@@ -528,10 +550,14 @@ export class FastPathClient extends EventEmitter {
     } catch (error) {
       console.error(
         `❌ [${this.config.source}] Failed to send ABORT signal: ${
-          error instanceof Error ? error.message : 'Unknown error'
+          error instanceof Error ? error.message : "Unknown error"
         }`,
       );
-      throw new Error(`ABORT_FAILED: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `ABORT_FAILED: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+      );
     }
   }
 
@@ -541,7 +567,7 @@ export class FastPathClient extends EventEmitter {
 
   private async send(message: any, timeout?: number): Promise<any> {
     if (this.connectionState !== ConnectionState.CONNECTED || !this.socket) {
-      throw new Error('NOT_CONNECTED');
+      throw new Error("NOT_CONNECTED");
     }
 
     const actualTimeout = timeout || this.config.messageTimeout;
@@ -551,7 +577,11 @@ export class FastPathClient extends EventEmitter {
       const timeoutHandle = setTimeout(() => {
         this.pendingMessages.delete(correlationId);
         this.metrics.messagesFailed++;
-        reject(new Error(`IPC_TIMEOUT: No response received within ${actualTimeout}ms`));
+        reject(
+          new Error(
+            `IPC_TIMEOUT: No response received within ${actualTimeout}ms`,
+          ),
+        );
       }, actualTimeout);
 
       this.pendingMessages.set(correlationId, {
@@ -565,8 +595,10 @@ export class FastPathClient extends EventEmitter {
         const success = this.socket!.write(messageStr);
 
         if (!success) {
-          this.socket!.once('drain', () => {
-            console.log(`[${this.config.source}] Socket drained after backpressure`);
+          this.socket!.once("drain", () => {
+            console.log(
+              `[${this.config.source}] Socket drained after backpressure`,
+            );
           });
         }
 
@@ -576,7 +608,11 @@ export class FastPathClient extends EventEmitter {
         clearTimeout(timeoutHandle);
         this.metrics.messagesFailed++;
         reject(
-          new Error(`SEND_FAILED: ${error instanceof Error ? error.message : 'Unknown error'}`),
+          new Error(
+            `SEND_FAILED: ${
+              error instanceof Error ? error.message : "Unknown error"
+            }`,
+          ),
         );
       }
     });
@@ -584,10 +620,12 @@ export class FastPathClient extends EventEmitter {
 
   private serializeMessage(message: any): string {
     try {
-      return JSON.stringify(message) + '\n';
+      return JSON.stringify(message) + "\n";
     } catch (error) {
       throw new Error(
-        `SERIALIZATION_FAILED: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `SERIALIZATION_FAILED: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
       );
     }
   }
@@ -596,18 +634,20 @@ export class FastPathClient extends EventEmitter {
     try {
       const normalizedSignal = this.normalizeForSigning(signal);
       return crypto
-        .createHmac('sha256', this.config.hmacSecret)
+        .createHmac("sha256", this.config.hmacSecret)
         .update(JSON.stringify(normalizedSignal))
-        .digest('hex');
+        .digest("hex");
     } catch (error) {
       throw new Error(
-        `SIGNATURE_FAILED: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `SIGNATURE_FAILED: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
       );
     }
   }
 
   private normalizeForSigning(obj: any): any {
-    if (obj === null || typeof obj !== 'object') {
+    if (obj === null || typeof obj !== "object") {
       return obj;
     }
 
@@ -637,7 +677,7 @@ export class FastPathClient extends EventEmitter {
       this.reconnectTimer = null;
     }
 
-    this.clearPendingMessages('Client disconnecting');
+    this.clearPendingMessages("Client disconnecting");
 
     if (this.socket) {
       return new Promise<void>((resolve) => {
@@ -647,13 +687,13 @@ export class FastPathClient extends EventEmitter {
             this.socket.destroy();
             this.socket = null;
           }
-          this.emit('disconnected');
+          this.emit("disconnected");
           resolve();
         };
 
         this.socket!.end();
         setTimeout(cleanup, 1000);
-        this.socket!.once('close', cleanup);
+        this.socket!.once("close", cleanup);
       });
     }
   }
@@ -705,18 +745,20 @@ export class FastPathClient extends EventEmitter {
     };
   }
 
-  async ping(): Promise<{ success: boolean; latency?: number; error?: string }> {
+  async ping(): Promise<
+    { success: boolean; latency?: number; error?: string }
+  > {
     if (!this.isConnected()) {
-      return { success: false, error: 'Not connected' };
+      return { success: false, error: "Not connected" };
     }
 
     const startTime = Date.now();
 
     try {
       const message = {
-        signal: { signal_type: 'PING', timestamp: startTime },
+        signal: { signal_type: "PING", timestamp: startTime },
         signature: this.sign({
-          signal_type: 'PING',
+          signal_type: "PING",
           timestamp: startTime,
         }),
         correlationId: this.generateCorrelationId(),
@@ -730,7 +772,7 @@ export class FastPathClient extends EventEmitter {
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       };
     }
   }

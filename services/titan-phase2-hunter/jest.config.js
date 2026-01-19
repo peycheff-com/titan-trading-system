@@ -112,9 +112,6 @@ module.exports = {
     '/node_modules/',
     '/dist/',
     '/coverage/',
-    '/temp/',
-    '/temp2/',
-    '/temp3/',
     '/.jest-cache/'
   ],
   

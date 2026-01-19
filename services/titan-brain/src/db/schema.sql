@@ -162,7 +162,9 @@ CREATE TABLE IF NOT EXISTS fills (
   t_signal BIGINT,
   t_exchange BIGINT,
   t_ingress BIGINT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  execution_id VARCHAR(100),
+  order_id VARCHAR(100)
 );
 
 CREATE INDEX IF NOT EXISTS idx_fills_signal_id ON fills(signal_id);

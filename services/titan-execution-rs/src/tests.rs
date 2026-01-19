@@ -1,18 +1,20 @@
 #[cfg(test)]
 mod tests {
-    use crate::model::{Intent, IntentType, IntentStatus, Side};
-    use crate::order_manager::{OrderManager, OrderManagerConfig, TakerAction};
+    use crate::circuit_breaker::GlobalHalt;
     use crate::market_data::engine::MarketDataEngine;
+    use crate::model::{Intent, IntentStatus, IntentType, Side};
+    use crate::order_manager::{OrderManager, OrderManagerConfig, TakerAction};
     use crate::shadow_state::ShadowState;
-    use rust_decimal_macros::dec;
     use chrono::Utc;
+    use rust_decimal_macros::dec;
     use std::sync::Arc;
 
     #[test]
     fn test_fee_analysis_maker_profitable() {
         let config = OrderManagerConfig::default();
         let md = Arc::new(MarketDataEngine::new());
-        let om = OrderManager::new(Some(config), md);
+        let halt = Arc::new(GlobalHalt::new());
+        let om = OrderManager::new(Some(config), md, halt);
 
         // Expected profit 1.0%
         // Maker fee 0.02% -> Profit 0.98%
@@ -29,7 +31,8 @@ mod tests {
     fn test_taker_conversion_unprofitable() {
         let config = OrderManagerConfig::default();
         let md = Arc::new(MarketDataEngine::new());
-        let om = OrderManager::new(Some(config), md);
+        let halt = Arc::new(GlobalHalt::new());
+        let om = OrderManager::new(Some(config), md, halt);
 
         // Expected profit 0.04%
         // Taker fee 0.05% -> Loss -0.01%
@@ -43,12 +46,39 @@ mod tests {
     fn test_taker_conversion_wait() {
         let config = OrderManagerConfig::default(); // default chase 2000ms
         let md = Arc::new(MarketDataEngine::new());
-        let om = OrderManager::new(Some(config), md);
+        let halt = Arc::new(GlobalHalt::new());
+        let om = OrderManager::new(Some(config), md, halt);
 
         // Profitable but not enough time passed
         let result = om.evaluate_taker_conversion("sig-1", dec!(1.0), 1000);
 
         assert_eq!(result.action, TakerAction::Wait);
+    }
+
+    #[test]
+    fn test_order_rejection_when_halted() {
+        let config = OrderManagerConfig::default();
+        let md = Arc::new(MarketDataEngine::new());
+        let halt = Arc::new(GlobalHalt::new());
+        let om = OrderManager::new(Some(config), md, halt.clone());
+
+        // Halt!
+        halt.set_halt(true, "Test Halt");
+
+        let params = crate::model::OrderParams {
+            signal_id: "test".to_string(),
+            symbol: "BTC/USD".to_string(),
+            side: Side::Buy,
+            size: dec!(1.0),
+            limit_price: None,
+            stop_loss: None,
+            take_profits: None,
+            signal_type: None,
+            expected_profit_pct: None,
+        };
+
+        let decision = om.decide_order_type(&params);
+        assert_eq!(decision.reason, "SYSTEM_HALTED");
     }
 
     #[test]
@@ -80,7 +110,7 @@ mod tests {
         };
 
         state.process_intent(intent);
-        
+
         let validated = state.validate_intent("sig-100");
         assert!(validated.is_some());
         assert!(matches!(validated.unwrap().status, IntentStatus::Validated));
@@ -88,7 +118,7 @@ mod tests {
         // 2. Execution (Open Position)
         let event = state.confirm_execution("sig-100", dec!(2000.0), dec!(1.5), true);
         assert!(event.is_some());
-        
+
         let p = match event.unwrap() {
             crate::shadow_state::ExecutionEvent::Opened(pos) => pos,
             _ => panic!("Expected Opened event"),
@@ -102,7 +132,7 @@ mod tests {
         assert!(state.has_position("ETH/USD"));
 
         // 4. Create Close Intent
-         let close_intent = Intent {
+        let close_intent = Intent {
             signal_id: "sig-101".to_string(),
             source: None,
             t_signal: Utc::now().timestamp_millis(),
@@ -112,7 +142,7 @@ mod tests {
             t_exchange: None,
             max_slippage_bps: None,
             symbol: "ETH/USD".to_string(),
-            direction: -1, 
+            direction: -1,
             intent_type: IntentType::CloseLong,
             entry_zone: vec![],
             stop_loss: dec!(0),
@@ -132,8 +162,8 @@ mod tests {
         let close_event = state.confirm_execution("sig-101", dec!(2100.0), dec!(1.5), true);
         assert!(close_event.is_some());
         match close_event.unwrap() {
-             crate::shadow_state::ExecutionEvent::Closed(_) => {},
-             _ => panic!("Expected Closed event"),
+            crate::shadow_state::ExecutionEvent::Closed(_) => {}
+            _ => panic!("Expected Closed event"),
         }
 
         // 6. Verify Position Closed

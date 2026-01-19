@@ -180,8 +180,8 @@ export class TreasuryRepository extends BaseRepository<TreasuryRow> {
     // Based on previous steps, I didn't see a migration for fills, so I should probably create one or use a generic storage.
     // Let's stick to the interface first.
     await this.db.query(
-      `INSERT INTO fills (fill_id, signal_id, symbol, side, price, qty, fee, fee_currency, t_signal, t_exchange, t_ingress, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+      `INSERT INTO fills (fill_id, signal_id, symbol, side, price, qty, fee, fee_currency, t_signal, t_exchange, t_ingress, execution_id, order_id, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
          ON CONFLICT (fill_id) DO NOTHING`,
       [
         fill.fill_id,
@@ -195,6 +195,8 @@ export class TreasuryRepository extends BaseRepository<TreasuryRow> {
         fill.t_signal,
         fill.t_exchange,
         fill.t_ingress,
+        fill.execution_id,
+        fill.client_order_id,
       ],
     );
   }

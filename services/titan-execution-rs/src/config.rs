@@ -76,7 +76,58 @@ impl Settings {
             .add_source(Environment::with_prefix("TITAN").separator("__"))
             .build()?;
 
-        s.try_deserialize()
+        let s = s.try_deserialize::<Settings>()?;
+        s.validate()?;
+        Ok(s)
+    }
+
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        // 1. Validate NATS URL (Execution Config)
+        if let Some(exec) = &self.execution {
+            if let Some(nats_url) = &exec.nats_url {
+                if nats_url.trim().is_empty() {
+                    return Err(ConfigError::Message("NATS URL cannot be empty".to_string()));
+                }
+            }
+        }
+
+        // 2. Validate Exchanges
+        if let Some(exchanges) = &self.exchanges {
+            // Helper to validate individual exchange
+            let validate_exchange = |name: &str,
+                                     config: &Option<ExchangeConfig>|
+             -> Result<(), ConfigError> {
+                if let Some(c) = config {
+                    if c.enabled {
+                        if c.get_api_key().is_none() || c.get_api_key().unwrap().trim().is_empty() {
+                            return Err(ConfigError::Message(format!(
+                                "Exchange '{}' is enabled but API Key is missing",
+                                name
+                            )));
+                        }
+                        if c.get_secret_key().is_none()
+                            || c.get_secret_key().unwrap().trim().is_empty()
+                        {
+                            return Err(ConfigError::Message(format!(
+                                "Exchange '{}' is enabled but Secret Key is missing",
+                                name
+                            )));
+                        }
+                    }
+                }
+                Ok(())
+            };
+
+            validate_exchange("binance", &exchanges.binance)?;
+            validate_exchange("bybit", &exchanges.bybit)?;
+            validate_exchange("mexc", &exchanges.mexc)?;
+
+            for (name, config) in &exchanges.others {
+                validate_exchange(name, &Some(config.clone()))?;
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -144,5 +195,40 @@ mod tests {
 
         assert_eq!(config.get_api_key().unwrap(), "alt_key");
         assert_eq!(config.get_secret_key().unwrap(), "alt_secret");
+    }
+
+    #[test]
+    fn test_validation_error() {
+        let mut settings = Settings::default();
+        let mut map = HashMap::new();
+        // Invalid config: Enabled but no API Key
+        map.insert(
+            "test_ex".to_string(),
+            ExchangeConfig {
+                api_key: None,
+                secret_key: None,
+                api_key_alt: None,
+                secret_key_alt: None,
+                enabled: true,
+                testnet: false,
+                execute_on: false,
+                rate_limit: None,
+            },
+        );
+        settings.exchanges = Some(Exchanges {
+            binance: None,
+            bybit: None,
+            mexc: None,
+            others: map,
+        });
+
+        let result = settings.validate();
+        assert!(result.is_err());
+        match result {
+            Err(ConfigError::Message(msg)) => {
+                assert!(msg.contains("API Key is missing"));
+            }
+            _ => panic!("Expected ConfigError::Message"),
+        }
     }
 }

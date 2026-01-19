@@ -44,13 +44,23 @@ High-performance order execution microservice for the Titan Trading System.
 cargo build --release
 ```
 
-### Run
+### Full System (Recommended)
+
+To run as part of the full Titan stack:
 
 ```bash
-# Development
+cd ../..
+docker compose up -d
+```
+
+### Local Development (Service Only)
+
+```bash
+# Development (Auto-reloading with cargo-watch if installed, or just cargo run)
 cargo run
 
-# Production
+# Production Build
+cargo build --release
 ./target/release/titan-execution-rs
 ```
 

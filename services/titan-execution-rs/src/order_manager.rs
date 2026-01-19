@@ -1,3 +1,4 @@
+use crate::circuit_breaker::GlobalHalt;
 use crate::impact_calculator::{ImpactCalculator, OrderRouting};
 use crate::market_data::engine::MarketDataEngine;
 use crate::model::{FeeAnalysis, OrderDecision, OrderParams, OrderType, Side};
@@ -42,10 +43,15 @@ pub struct OrderManager {
     config: OrderManagerConfig,
     market_data: Arc<MarketDataEngine>,
     impact_calculator: ImpactCalculator,
+    global_halt: Arc<GlobalHalt>,
 }
 
 impl OrderManager {
-    pub fn new(config: Option<OrderManagerConfig>, market_data: Arc<MarketDataEngine>) -> Self {
+    pub fn new(
+        config: Option<OrderManagerConfig>,
+        market_data: Arc<MarketDataEngine>,
+        global_halt: Arc<GlobalHalt>,
+    ) -> Self {
         let config = config.unwrap_or_default();
 
         info!(
@@ -59,6 +65,7 @@ impl OrderManager {
             config,
             market_data,
             impact_calculator: ImpactCalculator::new(),
+            global_halt,
         }
     }
 
@@ -119,6 +126,19 @@ impl OrderManager {
     }
 
     pub fn decide_order_type(&self, params: &OrderParams) -> OrderDecision {
+        // --- 0. SAFETY CHECK: GLOBAL HALT ---
+        if self.global_halt.is_halted() {
+            warn!("⛔ ORDER REJECTED: SYSTEM HALTED");
+            return OrderDecision {
+                order_type: OrderType::Limit, // Dummy
+                post_only: true,
+                reduce_only: true,
+                limit_price: None,
+                reason: "SYSTEM_HALTED".to_string(),
+                fee_analysis: None,
+            };
+        }
+
         let reduce_only = Self::is_exit_signal(params.signal_type.as_ref());
 
         // Default decision: Maker order

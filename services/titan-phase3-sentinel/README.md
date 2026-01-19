@@ -40,7 +40,16 @@ The Sentinel is an institutional-grade market-neutral hedge fund system that tre
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## Installation
+## Quick Start (Production)
+
+Run as part of the full Titan stack:
+
+```bash
+cd ../..
+docker compose up -d
+```
+
+## Manual Installation
 
 ```bash
 cd services/titan-phase3-sentinel

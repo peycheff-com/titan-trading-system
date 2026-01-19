@@ -82,6 +82,16 @@ import {
   GovernanceEngine,
 } from "../../src/engine/GovernanceEngine";
 
+// Mock TailRiskCalculator module to prevent SURVIVAL_MODE triggers in tests
+jest.mock("../../src/engine/TailRiskCalculator", () => {
+  return {
+    TailRiskCalculator: jest.fn().mockImplementation(() => ({
+      calculateAPTR: jest.fn().mockReturnValue(0.5), // Safe low APTR
+      isRiskCritical: jest.fn().mockReturnValue(false),
+    })),
+  };
+});
+
 const capitalFlowConfig: CapitalFlowConfig = {
   sweepThreshold: 1.2,
   reserveLimit: 200,

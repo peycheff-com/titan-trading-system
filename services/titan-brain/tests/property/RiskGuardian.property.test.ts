@@ -16,6 +16,16 @@ import {
   RiskGuardianConfig,
 } from "../../src/types/index";
 
+// Mock TailRiskCalculator module
+jest.mock("../../src/engine/TailRiskCalculator", () => {
+  return {
+    TailRiskCalculator: jest.fn().mockImplementation(() => ({
+      calculateAPTR: jest.fn().mockReturnValue(0.5), // Safe low APTR
+      isRiskCritical: jest.fn().mockReturnValue(false),
+    })),
+  };
+});
+
 // Test configurations
 const allocationConfig: AllocationEngineConfig = {
   transitionPoints: {
@@ -58,6 +68,7 @@ describe("RiskGuardian Property Tests", () => {
       getDefconLevel: jest.fn().mockReturnValue(DefconLevel.NORMAL),
       getLeverageMultiplier: jest.fn().mockReturnValue(1.0),
       canOpenNewPosition: jest.fn().mockReturnValue(true),
+      setOverride: jest.fn(),
     } as unknown as GovernanceEngine;
 
     riskGuardian = new RiskGuardian(
