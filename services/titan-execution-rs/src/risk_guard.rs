@@ -298,8 +298,10 @@ impl RiskGuard {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::context::ExecutionContext;
     use crate::model::{IntentStatus, IntentType};
     use crate::persistence::store::PersistenceStore;
+
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
@@ -349,7 +351,8 @@ mod tests {
     #[test]
     fn test_whitelist_rejection() {
         let (p, path) = create_test_persistence();
-        let state = Arc::new(RwLock::new(ShadowState::new(p)));
+        let ctx = Arc::new(ExecutionContext::new_system());
+        let state = Arc::new(RwLock::new(ShadowState::new(p, ctx)));
         let mut policy = RiskPolicy::default();
         policy.symbol_whitelist.clear();
         policy.symbol_whitelist.insert("BTC/USDT".to_string());
@@ -372,7 +375,8 @@ mod tests {
     #[test]
     fn test_max_notional_rejection() {
         let (p, path) = create_test_persistence();
-        let state = Arc::new(RwLock::new(ShadowState::new(p)));
+        let ctx = Arc::new(ExecutionContext::new_system());
+        let state = Arc::new(RwLock::new(ShadowState::new(p, ctx)));
         let mut policy = RiskPolicy::default();
         policy.max_position_notional = dec!(10000.0); // Max $10k
 
@@ -396,7 +400,8 @@ mod tests {
     #[test]
     fn test_daily_loss_rejection() {
         let (p, path) = create_test_persistence();
-        let state = Arc::new(RwLock::new(ShadowState::new(p)));
+        let ctx = Arc::new(ExecutionContext::new_system());
+        let state = Arc::new(RwLock::new(ShadowState::new(p, ctx)));
         let mut policy = RiskPolicy::default();
         policy.max_daily_loss = dec!(-1000.0);
 

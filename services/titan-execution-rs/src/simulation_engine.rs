@@ -1,18 +1,20 @@
 use crate::market_data::engine::MarketDataEngine;
 use crate::model::{FillReport, Intent, Side};
-use chrono::Utc;
+
 use rust_decimal::Decimal;
 use std::sync::Arc;
 use tracing::{info, warn};
-use uuid::Uuid;
+
+use crate::context::ExecutionContext;
 
 pub struct SimulationEngine {
     market_data: Arc<MarketDataEngine>,
+    ctx: Arc<ExecutionContext>,
 }
 
 impl SimulationEngine {
-    pub fn new(market_data: Arc<MarketDataEngine>) -> Self {
-        Self { market_data }
+    pub fn new(market_data: Arc<MarketDataEngine>, ctx: Arc<ExecutionContext>) -> Self {
+        Self { market_data, ctx }
     }
 
     pub fn simulate_execution(&self, intent: &Intent) -> Option<FillReport> {
@@ -58,7 +60,7 @@ impl SimulationEngine {
 
         // 3. Create Shadow/Simulated Fill
         let fill = FillReport {
-            fill_id: format!("sim-{}", Uuid::new_v4()),
+            fill_id: format!("sim-{}", self.ctx.id.new_id()),
             signal_id: intent.signal_id.clone(),
             symbol: intent.symbol.clone(),
             side: side_enum,
@@ -67,12 +69,12 @@ impl SimulationEngine {
             fee: fill_price * intent.size * Decimal::from_f64_retain(0.0005).unwrap(), // 0.05% Taker
             fee_currency: "USDT".to_string(),
             t_signal: intent.t_signal,
-            t_ingress: Utc::now().timestamp_millis(), // Approx
-            t_decision: Utc::now().timestamp_millis(),
-            t_ack: Utc::now().timestamp_millis(),
+            t_ingress: self.ctx.time.now_millis(), // Approx
+            t_decision: self.ctx.time.now_millis(),
+            t_ack: self.ctx.time.now_millis(),
             t_exchange: ticker.transaction_time, // Use market data time as "exchange" time
-            client_order_id: format!("sim-oid-{}", Uuid::new_v4()),
-            execution_id: format!("sim-exec-{}", Uuid::new_v4()),
+            client_order_id: format!("sim-oid-{}", self.ctx.id.new_id()),
+            execution_id: format!("sim-exec-{}", self.ctx.id.new_id()),
         };
 
         info!("👻 Shadow Fill: {} @ {}", fill.symbol, fill.price);

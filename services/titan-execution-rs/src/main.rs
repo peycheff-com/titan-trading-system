@@ -22,6 +22,7 @@ use titan_execution_rs::circuit_breaker::GlobalHalt;
 use titan_execution_rs::nats_engine;
 use titan_execution_rs::risk_policy::RiskPolicy;
 use titan_execution_rs::risk_guard::RiskGuard;
+use titan_execution_rs::context::ExecutionContext;
 use actix_web_prom::PrometheusMetricsBuilder;
 
 fn load_secrets_from_files() {
@@ -91,6 +92,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         }
     };
 
+
+
+    // Initialize Execution Context (System/Live)
+    let ctx = Arc::new(ExecutionContext::new_system());
+
     // Initialize JetStream
     let jetstream = async_nats::jetstream::new(nats_client.clone());
     
@@ -126,7 +132,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     // Wrap ShadowState in Arc<RwLock> for sharing between NATS (write) and API (read)
     // Pass persistence to ShadowState
-    let shadow_state = Arc::new(RwLock::new(ShadowState::new(persistence)));
+    let shadow_state = Arc::new(RwLock::new(ShadowState::new(persistence, ctx.clone())));
 
     // Initialize Market Data Engine (Truth Layer) - Moved up for dependency injection
     let market_data_engine = Arc::new(MarketDataEngine::new(Some(nats_client.clone())));
@@ -148,7 +154,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
 
     // Initialize Simulation Engine (Shadow Layer)
-    let simulation_engine = Arc::new(SimulationEngine::new(market_data_engine.clone()));
+    let simulation_engine = Arc::new(SimulationEngine::new(market_data_engine.clone(), ctx.clone()));
 
     // Load Configuration
     use titan_execution_rs::config::Settings;
@@ -230,6 +236,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         simulation_engine,
         global_halt,
         risk_guard,
+        ctx.clone(),
     ).await?;
 
     // --- API Server Task ---

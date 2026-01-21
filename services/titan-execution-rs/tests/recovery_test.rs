@@ -1,5 +1,6 @@
 use rust_decimal_macros::dec;
 use std::sync::Arc;
+use titan_execution_rs::context::ExecutionContext;
 use titan_execution_rs::model::{Intent, IntentType, Side};
 use titan_execution_rs::persistence::redb_store::RedbStore;
 use titan_execution_rs::persistence::store::PersistenceStore;
@@ -42,8 +43,10 @@ fn test_state_recovery() {
         println!("🚀 [Engine A] Starting...");
         let redb = Arc::new(RedbStore::new(&db_path).unwrap());
         let wal = Arc::new(WalManager::new(redb.clone()));
+
         let persistence = Arc::new(PersistenceStore::new(redb, wal));
-        let mut state = ShadowState::new(persistence);
+        let ctx = Arc::new(ExecutionContext::new_system());
+        let mut state = ShadowState::new(persistence, ctx);
 
         // A. Open Position
         let intent = create_test_intent("sig-1");
@@ -111,7 +114,9 @@ fn test_state_recovery() {
         let redb = Arc::new(RedbStore::new(&db_path).unwrap());
         let wal = Arc::new(WalManager::new(redb.clone()));
         let persistence = Arc::new(PersistenceStore::new(redb, wal));
-        let state = ShadowState::new(persistence);
+
+        let ctx = Arc::new(ExecutionContext::new_system());
+        let state = ShadowState::new(persistence, ctx);
 
         // Verify Position Persisted
         let pos = state.get_position("BTC/USDT");
