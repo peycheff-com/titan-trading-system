@@ -76,7 +76,7 @@ module.exports = {
         NODE_ENV: 'production',
         TITAN_CORE_URL: 'http://127.0.0.1:8080',
         TITAN_CORE_WS: 'ws://127.0.0.1:8081',
-        CORS_ORIGINS: 'http://localhost:3000,http://localhost:5173,http://localhost:3001,https://titan-console-production.up.railway.app',
+        CORS_ORIGINS: 'http://localhost:3000,http://localhost:5173,http://localhost:3001',
         LOG_LEVEL: 'info'
       },
       env_development: {
