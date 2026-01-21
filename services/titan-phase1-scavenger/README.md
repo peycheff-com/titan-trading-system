@@ -76,6 +76,16 @@ Expected timeline: 3-6 months with 60%+ win rate.
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+### Implementation Mapping (2026 Refactor)
+
+The Three-Layer Architecture is strictly enforced by the following components in `src/engine/`:
+
+- **TitanTrap.ts (Facade)**: The central nervous system. Orchestrates initialization, lifecycle management, and coordinates the four sub-components.
+- **TrapStateManager.ts (Shared Memory)**: The "Hippocampus". Manages active tripwires, trap history, blacklists, and equity cache.
+- **TrapGenerator.ts (The Web)**: The "Pre-Frontal Cortex". Runs on 1-min interval to analyze market structure and populate the trap map.
+- **TrapDetector.ts (The Spider)**: The "Visual Cortex". Processes real-time WebSocket feeds (Binance) to detect trap activations.
+- **TrapExecutor.ts (The Bite)**: The "Motor Cortex". Handles order sizing, execution logic, and IPC communication with Bybit/NATS.
+
 ### Layer 1: Pre-Computation (The Web)
 
 **Runs every 1 minute**
