@@ -43,6 +43,8 @@ import { HealthController } from "./controllers/HealthController.js";
 import { DashboardController } from "./controllers/DashboardController.js";
 import { SignalController } from "./controllers/SignalController.js";
 import { AdminController } from "./controllers/AdminController.js";
+import { LedgerController } from "./controllers/LedgerController.js";
+import { LedgerRepository } from "../db/repositories/LedgerRepository.js";
 
 /**
  * HMAC verification options
@@ -97,6 +99,7 @@ export class WebhookServer {
   private readonly dashboardController: DashboardController;
   private readonly signalController: SignalController;
   private readonly adminController: AdminController;
+  private readonly ledgerController: LedgerController;
 
   constructor(
     config: WebhookServerConfig,
@@ -157,6 +160,14 @@ export class WebhookServer {
       this.logger,
     );
     this.adminController = new AdminController(this.brain, this.logger);
+
+    // Initialize Ledger Repository & Controller
+    const dbManager = this.brain.getDatabaseManager();
+    if (!dbManager) {
+      throw new Error("DatabaseManager not initialized");
+    }
+    const ledgerRepo = new LedgerRepository(dbManager);
+    this.ledgerController = new LedgerController(ledgerRepo, this.logger);
   }
 
   private buildHmacValidator(): HMACValidator | null {
@@ -453,6 +464,7 @@ export class WebhookServer {
     this.dashboardController.registerRoutes(this.server);
     this.signalController.registerRoutes(this.server);
     this.adminController.registerRoutes(this.server);
+    this.ledgerController.registerRoutes(this.server);
 
     // Metrics (Inline as it requires metricsCollector from this class, or could move to controller if passed)
     // Keeping inline for now as it's simple

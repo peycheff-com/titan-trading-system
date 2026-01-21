@@ -57,9 +57,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     load_secrets_from_files();
 
     // Initialize logging
-    let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::INFO)
-        .finish();
+    // --- Observability Setup (Phase 4) ---
+    // Initialize OpenTelemetry
+    use opentelemetry::{global, KeyValue};
+    use opentelemetry_sdk::{trace as sdktrace, Resource};
+    use opentelemetry_otlp::WithExportConfig;
+    use tracing_subscriber::layer::SubscriberExt;
+    use tracing_subscriber::Registry;
+
+    let tracer = opentelemetry_otlp::new_pipeline()
+        .tracing()
+        .with_exporter(
+            opentelemetry_otlp::new_exporter()
+                .tonic()
+                .with_endpoint("http://tempo:4317"), // Assuming tempo is resolvable
+        )
+        .with_trace_config(
+            sdktrace::config().with_resource(Resource::new(vec![
+                KeyValue::new("service.name", "titan-execution-rs"),
+                KeyValue::new("service.version", "0.1.0"),
+            ])),
+        )
+        .install_batch(opentelemetry_sdk::runtime::Tokio)
+        .expect("OTel pipeline install failed");
+
+    // Create a tracing layer with the configured tracer
+    let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+
+    // Stdout JSON Layer
+    let fmt_layer = tracing_subscriber::fmt::layer()
+        .json()
+        .with_target(false);
+
+    // Registry combines both layers
+    let subscriber = Registry::default()
+        .with(tracing_subscriber::EnvFilter::from_default_env().add_directive(Level::INFO.into()))
+        .with(fmt_layer)
+        .with(telemetry);
+
     tracing::subscriber::set_global_default(subscriber)
         .expect("setting default subscriber failed");
 
@@ -72,7 +107,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     dotenv::dotenv().ok();
 
     // Initialize Prometheus Metrics
+    let registry = prometheus::default_registry().clone();
     let prometheus = PrometheusMetricsBuilder::new("titan_execution")
+        .registry(registry)
         .endpoint("/metrics")
         .build()
         .unwrap();
@@ -112,6 +149,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 name: stream_name.to_string(),
                 subjects,
                 storage: async_nats::jetstream::stream::StorageType::File,
+                max_age: std::time::Duration::from_secs(86400), // 24 hours
+                max_bytes: 1024 * 1024 * 1024, // 1GB
                 ..Default::default()
             }).await {
                 Ok(s) => s,
@@ -225,17 +264,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     // --- Start NATS Engine ---
     let nats_handle = nats_engine::start_nats_engine(
-        nats_client,
+        nats_client.clone(),
         shadow_state.clone(),
-        order_manager, // Moved: OrderManager doesn't impl Clone, but is consumed here? 
-                       // Wait, OrderManager does not impl Clone usually. 
-                       // `start_nats_engine` takes `OrderManager` by value? 
-                       // Previous code: `order_manager` was used inside `tokio::spawn(async move { ... })`.
-                       // So yes, it was moved.
+        order_manager,
         router,
         simulation_engine,
         global_halt,
-        risk_guard,
+        risk_guard.clone(),
         ctx.clone(),
     ).await?;
 
@@ -256,6 +291,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             .wrap(cors)
             .wrap(prometheus.clone())
             .app_data(web::Data::new(state_for_api.clone()))
+            .app_data(web::Data::new(nats_client.clone()))
+            .app_data(web::Data::new(risk_guard.clone()))
             .configure(api::config)
     })
     .bind(&bind_address)?

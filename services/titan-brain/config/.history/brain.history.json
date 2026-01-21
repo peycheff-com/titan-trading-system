@@ -1,0 +1,20 @@
+[
+  {
+    "version": 1,
+    "timestamp": 1769024863303,
+    "configType": "brain",
+    "configKey": "brain",
+    "data": {
+      "maxTotalLeverage": 50,
+      "maxGlobalDrawdown": 0.15,
+      "emergencyFlattenThreshold": 0.15,
+      "phaseTransitionRules": {
+        "phase1ToPhase2": 5000,
+        "phase2ToPhase3": 50000
+      }
+    },
+    "hash": "4dfd29faf8a4ab1c55345d57780c6a7801022d56ec0fd53185db031974aa55b9",
+    "author": "system",
+    "comment": "Configuration loaded"
+  }
+]

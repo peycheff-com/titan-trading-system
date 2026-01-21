@@ -10,6 +10,7 @@ import { Pool, PoolClient, PoolConfig, QueryResult, QueryResultRow } from "pg";
 import { DatabaseConfig } from "../types/index.js";
 import * as fs from "fs";
 import * as path from "path";
+import { createRequire } from "module";
 
 /**
  * Database type enum
@@ -193,8 +194,8 @@ export class DatabaseManager {
       // Dynamic require for SQLite (optional dependency)
       let Database: any;
       try {
-        // Use eval to avoid TypeScript compilation issues
-        Database = eval("require")("better-sqlite3");
+        const require = createRequire(import.meta.url);
+        Database = require("better-sqlite3");
       } catch (importError) {
         throw new DatabaseError(
           "SQLite support requires better-sqlite3. Install with: npm install better-sqlite3",
@@ -272,11 +273,30 @@ export class DatabaseManager {
         created_at INTEGER DEFAULT (strftime('%s', 'now'))
       );
 
+      CREATE TABLE IF NOT EXISTS fills (
+        fill_id TEXT PRIMARY KEY,
+        signal_id TEXT,
+        symbol TEXT NOT NULL,
+        side TEXT NOT NULL,
+        price REAL NOT NULL,
+        qty REAL NOT NULL,
+        fee REAL,
+        fee_currency TEXT,
+        created_at INTEGER DEFAULT (strftime('%s', 'now')),
+        order_id TEXT,
+        realized_pnl REAL,
+        t_signal INTEGER,
+        t_exchange INTEGER,
+        t_ingress INTEGER
+      );
+
       CREATE INDEX IF NOT EXISTS idx_decisions_timestamp ON brain_decisions(timestamp);
       CREATE INDEX IF NOT EXISTS idx_decisions_phase_id ON brain_decisions(phase_id);
       CREATE INDEX IF NOT EXISTS idx_performance_phase_timestamp ON phase_performance(phase_id, timestamp);
       CREATE INDEX IF NOT EXISTS idx_risk_snapshots_timestamp ON risk_snapshots(timestamp);
       CREATE INDEX IF NOT EXISTS idx_allocation_vectors_timestamp ON allocation_vectors(timestamp);
+      CREATE INDEX IF NOT EXISTS idx_fills_symbol ON fills(symbol);
+      CREATE INDEX IF NOT EXISTS idx_fills_created_at ON fills(created_at);
     `;
 
     this.sqlite.exec(schema);

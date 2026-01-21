@@ -1,0 +1,69 @@
+import { BacktestResult, ValidationReport } from "../types/index.js";
+
+export interface GateConfig {
+    maxDrawdown: number; // e.g., 0.20 (20%)
+    minSharpe: number; // e.g., 1.5
+    minSortino: number; // e.g., 2.0
+    minCalmar: number; // e.g., 1.0
+    tailRiskCap?: number; // e.g. 0.05 (5% max single day loss)
+}
+
+export class ShippingGate {
+    private config: GateConfig;
+
+    constructor(config: GateConfig) {
+        this.config = config;
+    }
+
+    evaluate(
+        baseline: BacktestResult,
+        proposed: BacktestResult,
+    ): ValidationReport {
+        const report: ValidationReport = {
+            passed: true,
+            metrics: proposed,
+            stressTestResults: [], // To be populated by stress tester
+        };
+
+        // 1. HARD GATE: Max Drawdown Limit
+        if (proposed.maxDrawdownPercent > this.config.maxDrawdown) {
+            report.passed = false;
+            report.rejectionReason = `Max Drawdown ${
+                (proposed.maxDrawdownPercent * 100).toFixed(2)
+            }% exceeds limit ${(this.config.maxDrawdown * 100).toFixed(2)}%`;
+            return report;
+        }
+
+        // 2. HARD GATE: Degradation Check (Proposed vs Baseline)
+        // We allow slight degradation if returns are significantly higher, but generally NO degradation in Drawdown > 10% relative
+        if (proposed.maxDrawdownPercent > baseline.maxDrawdownPercent * 1.10) {
+            report.passed = false;
+            report.rejectionReason =
+                `Drawdown degraded by >10% relative to baseline`;
+            return report;
+        }
+
+        // 3. HARD GATE: Tail Risk Cap (Single Day Loss)
+        if (this.config.tailRiskCap && (proposed as any).maxSingleDayLoss) {
+            const maxLoss = (proposed as any).maxSingleDayLoss;
+            if (maxLoss > this.config.tailRiskCap) {
+                report.passed = false;
+                report.rejectionReason = `Max Single Day Loss ${
+                    (maxLoss * 100).toFixed(2)
+                }% exceeds cap ${(this.config.tailRiskCap * 100).toFixed(2)}%`;
+                return report;
+            }
+        }
+
+        // 4. SOFT GATE: Risk-Adjusted Returns
+        if (proposed.sharpeRatio < this.config.minSharpe) {
+            report.passed = false;
+            report.rejectionReason = `Sharpe Ratio ${
+                proposed.sharpeRatio.toFixed(2)
+            } below minimum ${this.config.minSharpe}`;
+            return report;
+        }
+
+        return report;
+    }
+}

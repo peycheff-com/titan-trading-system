@@ -5,7 +5,9 @@ import {
     IntentSignal,
     NatsClient,
 } from "@titan/shared";
-import { TreasuryRepository } from "../../db/repositories/TreasuryRepository.js";
+import { FillsRepository } from "../../db/repositories/FillsRepository.js";
+import { LedgerRepository } from "../../db/repositories/LedgerRepository.js";
+import { PostingEngine } from "./PostingEngine.js";
 
 interface ReconciliationMetrics {
     latency_signal_to_ingress: number;
@@ -17,19 +19,26 @@ interface ReconciliationMetrics {
 export class AccountingService {
     private logger: Logger;
     private nats: NatsClient;
-    private treasuryRepository: TreasuryRepository;
+    private fillsRepository: FillsRepository;
+    private ledgerRepository: LedgerRepository;
     private activeOrders: Map<
         string,
-        { signal: IntentSignal; t_ingress: number }
+        {
+            signal: IntentSignal;
+            t_ingress: number;
+            shadowFill?: FillReport;
+        }
     > = new Map();
 
     constructor(
-        treasuryRepository: TreasuryRepository,
+        fillsRepository: FillsRepository,
+        ledgerRepository: LedgerRepository,
         natsClient?: NatsClient,
     ) {
         this.logger = Logger.getInstance("accounting-service");
         this.nats = natsClient || getNatsClient();
-        this.treasuryRepository = treasuryRepository;
+        this.fillsRepository = fillsRepository;
+        this.ledgerRepository = ledgerRepository;
     }
 
     async start(): Promise<void> {
@@ -73,15 +82,7 @@ export class AccountingService {
             "titan.execution.shadow_fill.>",
             async (fill: FillReport, subject: string) => {
                 try {
-                    this.logger.info("👻 Shadow Fill Received", undefined, {
-                        symbol: fill.symbol,
-                        price: fill.price,
-                        t_signal: fill.t_signal,
-                        t_exchange: fill.t_exchange,
-                    });
-
-                    // TODO: Implement full Drift/Slippage calculation by matching with Real Fill
-                    // For now, we just log it to verify the pipeline.
+                    this.processShadowFill(fill);
                 } catch (e) {
                     this.logger.error(
                         "Failed to process shadow fill",
@@ -94,10 +95,31 @@ export class AccountingService {
         this.logger.info("Titan Accountant started.");
     }
 
+    async stop(): Promise<void> {
+        this.logger.info("Stopping Titan Accountant...");
+        // TODO: Unsubscribe from NATS subjects if client supports it
+    }
+
     private trackIntent(intent: IntentSignal): void {
+        const existing = this.activeOrders.get(intent.signal_id);
         this.activeOrders.set(intent.signal_id, {
+            ...existing, // Preserve shadowFill if it arrived before intent (unlikely but possible)
             signal: intent,
-            t_ingress: Date.now(), // Approximate ingress tracking
+            t_ingress: Date.now(),
+        });
+    }
+
+    private processShadowFill(fill: FillReport): void {
+        const existing = this.activeOrders.get(fill.signal_id);
+        this.activeOrders.set(fill.signal_id, {
+            signal: existing?.signal as IntentSignal, // Might be undefined if shadow arrives first
+            t_ingress: existing?.t_ingress || Date.now(),
+            shadowFill: fill,
+        });
+
+        this.logger.info("👻 Shadow Fill Recorded", undefined, {
+            signalId: fill.signal_id,
+            price: fill.price,
         });
     }
 
@@ -119,16 +141,83 @@ export class AccountingService {
             reconciled: !!tracked,
         });
 
+        // Drift Detection
+        if (tracked?.shadowFill) {
+            const driftPrice = Math.abs(fill.price - tracked.shadowFill.price);
+            const driftPct = driftPrice / tracked.shadowFill.price;
+
+            if (driftPct > 0.001) { // > 0.1% deviation
+                this.logger.warn("⚠️ Price Drift Detected", undefined, {
+                    signalId: fill.signal_id,
+                    realPrice: fill.price,
+                    shadowPrice: tracked.shadowFill.price,
+                    driftPct,
+                });
+
+                // Publish Alert
+                this.nats.publish("titan.alert.drift", {
+                    type: "PRICE_DRIFT",
+                    signalId: fill.signal_id,
+                    symbol: fill.symbol,
+                    driftPct,
+                    details: {
+                        real: fill.price,
+                        shadow: tracked.shadowFill.price,
+                    },
+                });
+            }
+        }
+
         // Persist Reconciliation
-        await this.treasuryRepository.addFill({
+        await this.fillsRepository.createFill({
             ...fill,
-            metrics, // If schema supports it, otherwise ignored
-        });
+        } as any);
+
+        // General Ledger Posting
+        try {
+            const fillId = fill.fill_id || (fill as any).fillId ||
+                fill.execution_id || (fill as any).executionId ||
+                (fill as any).id;
+            if (fillId) {
+                const exists = await this.ledgerRepository.transactionExists(
+                    fillId,
+                );
+                if (!exists) {
+                    const txParams = PostingEngine.createFromFill({
+                        ...fill,
+                        fillId, // Ensure ID is passed normalized
+                    } as FillReport);
+                    await this.ledgerRepository.createTransaction(txParams);
+                    this.logger.info("Ledger Transaction Posted", undefined, {
+                        correlationId: fillId,
+                    });
+                } else {
+                    this.logger.debug(
+                        "Ledger Transaction skipped (Idempotent)",
+                        undefined,
+                        {
+                            correlationId: fillId,
+                        },
+                    );
+                }
+            }
+        } catch (err) {
+            this.logger.error("Failed to post to Ledger", err as Error);
+            // Non-blocking? Or should we throw?
+            // For now log error but don't crash stream
+        }
 
         // Store active trade reconciliation immediately
         // In verify phase, we will check if "latency_exchange_to_ack" > 50ms and flag it.
-        if (metrics.total_rtt > 200) {
+        if (metrics.total_rtt > 200) { // > 200ms
             this.logger.warn("High Latency Detected", undefined, { metrics });
+
+            this.nats.publish("titan.alert.latency", {
+                type: "HIGH_LATENCY",
+                signalId: fill.signal_id,
+                metrics,
+                threshold: 200,
+            });
         }
 
         // Cleanup active order tracking

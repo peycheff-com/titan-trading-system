@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 // Common Schemas
 export const TimestampSchema = z
@@ -7,9 +7,9 @@ export const TimestampSchema = z
   .positive()
   .optional()
   .default(() => Date.now());
-export const PhaseIdSchema = z.enum(['phase1', 'phase2', 'phase3']);
-export const SideSchema = z.enum(['BUY', 'SELL']);
-export const DirectionSchema = z.enum(['LONG', 'SHORT']);
+export const PhaseIdSchema = z.enum(["phase1", "phase2", "phase3"]);
+export const SideSchema = z.enum(["BUY", "SELL"]);
+export const DirectionSchema = z.enum(["LONG", "SHORT"]);
 export const SymbolSchema = z
   .string()
   .min(3)
@@ -39,7 +39,7 @@ export const AllocationWeightsSchema = z
     w3: z.number().min(0).max(1),
   })
   .refine((data) => Math.abs(data.w1 + data.w2 + data.w3 - 1.0) <= 0.001, {
-    message: 'Allocation weights must sum to 1.0',
+    message: "Allocation weights must sum to 1.0",
   });
 
 export const OverrideRequestSchema = z.object({
@@ -111,9 +111,18 @@ export const ManualTradeSchema = z.object({
 // Types inferred from schemas for usage in handlers
 export type SignalRequestBody = z.infer<typeof SignalRequestSchema>;
 export type OverrideRequestBody = z.infer<typeof OverrideRequestSchema>;
-export type DeactivateOverrideRequestBody = z.infer<typeof DeactivateOverrideSchema>;
+export type DeactivateOverrideRequestBody = z.infer<
+  typeof DeactivateOverrideSchema
+>;
 export type CreateOperatorRequestBody = z.infer<typeof CreateOperatorSchema>;
 export type RawPhaseSignalBody = z.infer<typeof PhaseSignalSchema>;
 export type PhaseRegisterBody = z.infer<typeof PhaseRegisterSchema>;
+// Login Request
+export const LoginSchema = z.object({
+  operatorId: z.string().min(1),
+  password: z.string().min(1),
+});
+
 export type BreakerResetBody = z.infer<typeof BreakerResetSchema>;
 export type ManualTradeRequestBody = z.infer<typeof ManualTradeSchema>;
+export type LoginRequestBody = z.infer<typeof LoginSchema>;

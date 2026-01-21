@@ -62,6 +62,7 @@ impl ShadowState {
                     self.positions.insert(pos.symbol.clone(), pos);
                 }
                 info!("Positions hydrated: {}", self.positions.len());
+                metrics::set_active_positions(self.positions.len() as i64);
             }
             Err(e) => error!("Failed to hydrate positions: {}", e),
         }
@@ -371,6 +372,7 @@ impl ShadowState {
             }
 
             self.positions.insert(symbol.clone(), position.clone());
+            metrics::set_active_positions(self.positions.len() as i64);
 
             info!(
                 signal_id = %signal_id,

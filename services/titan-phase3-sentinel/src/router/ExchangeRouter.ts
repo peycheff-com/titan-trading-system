@@ -1,7 +1,7 @@
-import type { IExchangeGateway } from "../exchanges/interfaces.js";
-import type { Order } from "../types/orders.js";
-import { PriceMonitor } from "./PriceMonitor.js";
-import { CostCalculator } from "./CostCalculator.js";
+import type { IExchangeGateway } from '../exchanges/interfaces.js';
+import type { Order } from '../types/orders.js';
+import { PriceMonitor } from './PriceMonitor.js';
+import { CostCalculator } from './CostCalculator.js';
 
 interface RoutingDecision {
   targetExchange: string;
@@ -17,10 +17,7 @@ export class ExchangeRouter {
   private priceMonitor: PriceMonitor;
   private costCalculator: CostCalculator;
 
-  constructor(
-    gateways: Record<string, IExchangeGateway>,
-    fees: Record<string, number>,
-  ) {
+  constructor(gateways: Record<string, IExchangeGateway>, fees: Record<string, number>) {
     this.gateways = new Map(Object.entries(gateways));
     this.priceMonitor = new PriceMonitor(gateways);
     this.costCalculator = new CostCalculator(fees);
@@ -51,14 +48,13 @@ export class ExchangeRouter {
       if (!bestDecision) {
         isBetter = true;
       } else {
-        if (order.side === "BUY") {
+        if (order.side === 'BUY') {
           isBetter = cost.effectivePrice < bestDecision.estimatedCost; // Using estimatedCost field to store effective price for comparison??
           // Wait, RoutingDecision structure logic:
           // estimatedCost usually implies total cost.
           // Let's use effectivePrice for comparison.
         } else {
-          isBetter =
-            cost.effectivePrice > bestDecision.estimatedCost / order.size; // Rough logic check
+          isBetter = cost.effectivePrice > bestDecision.estimatedCost / order.size; // Rough logic check
         }
 
         // Let's rely on effectivePrice explicitly
@@ -68,7 +64,7 @@ export class ExchangeRouter {
         // Total Cost for SELL = Price * Size - Fees. We want to MAXIMIZE this (Net Proceeds).
 
         const currentBestTotal = bestDecision.estimatedCost;
-        if (order.side === "BUY") {
+        if (order.side === 'BUY') {
           isBetter = cost.totalCost < currentBestTotal;
         } else {
           isBetter = cost.totalCost > currentBestTotal;

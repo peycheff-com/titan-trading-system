@@ -218,6 +218,27 @@ impl ExecutionPipeline {
                     };
                     
                     pipeline_result.fill_reports.push((exchange_name, fill_report));
+                    
+                    // --- METRICS RECORDING (Phase 3) ---
+                    // 1. End-to-End Latency
+                    let now = self.ctx.time.now_millis();
+                    let latency_ms = now - processed_intent.t_signal;
+                    let latency_sec = latency_ms as f64 / 1000.0;
+                    metrics::observe_order_latency(latency_sec);
+
+                    // 2. Slippage
+                    if let Some(target) = decision.limit_price.or(processed_intent.entry_zone.first().cloned()) {
+                         if target > Decimal::ZERO && fill_price > Decimal::ZERO {
+                            let diff = (fill_price - target).abs();
+                            let slip_ratio = diff / target;
+                            // Convert to BPS (f64)
+                            let slip_bps = (slip_ratio * Decimal::from(10000)).to_f64().unwrap_or(0.0);
+                            metrics::observe_slippage(slip_bps);
+                         }
+                    }
+
+                    // 3. Filled Orders
+                    metrics::inc_filled_orders();
                 },
                 Err(e) => {
                     error!("❌ [{}] Execution Failed: {}", exchange_name, e);

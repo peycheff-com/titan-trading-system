@@ -1,0 +1,63 @@
+# Service Level Objectives (SLOs) - Titan Trading System
+# Interpretation Reference: Google SRE Handbook, Chapter 4
+
+groups:
+  - name: titan-slos
+    rules:
+      # -----------------------------------------------------------------------------
+      # 1. AVAILABILITY (Target: 99.9% / 28d)
+      # -----------------------------------------------------------------------------
+      
+      # Error Budget Burn Rate (1h)
+      # Trigger Page if burning > 14.4x normal rate (consumes 2% of budget in 1h)
+      - alert: HighErrorBudgetBurn
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[1h])) 
+          / 
+          sum(rate(http_requests_total[1h])) 
+          > (14.4 * (1 - 0.999))
+        labels:
+          severity: critical
+          slo: availability
+        annotations:
+          summary: "High Error Budget Burn (1h)"
+          description: "Service is burning Availability error budget too fast. > 2% of budget lost in last hour."
+
+      # -----------------------------------------------------------------------------
+      # 2. LATENCY (Target: P99 < 500ms)
+      # -----------------------------------------------------------------------------
+      
+      # Execution Latency (Rust) - Tighter tolerance (100ms)
+      - alert: ExecutionLatencyBreach
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{service="titan-execution"}[5m])) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          slo: latency
+        annotations:
+          summary: "Execution Latency > 100ms"
+          description: "Titan Execution P99 latency is {{ $value }}s."
+
+      # Brain Latency (Node) - Standard tolerance (500ms)
+      - alert: BrainLatencyBreach
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{service="titan-brain"}[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          slo: latency
+        annotations:
+          summary: "Brain Latency > 500ms"
+          description: "Titan Brain P99 latency is {{ $value }}s."
+          
+      # -----------------------------------------------------------------------------
+      # 3. FRESHNESS (Data Lag)
+      # -----------------------------------------------------------------------------
+      
+      - alert: MarketDataStale
+        expr: (time() - timestamp(titan_last_tick_timestamp_seconds)) > 5
+        labels:
+          severity: critical
+          slo: freshness
+        annotations:
+          summary: "Market Data Stale (> 5s)"
+          description: "No new market data ticks processed in the last 5 seconds. System is flying blind."

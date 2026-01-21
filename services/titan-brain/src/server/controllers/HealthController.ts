@@ -14,8 +14,8 @@ export class HealthController {
      * Register routes for this controller
      */
     registerRoutes(server: FastifyInstance): void {
+        server.get("/health", this.handleHealth.bind(this));
         server.get("/status", this.handleStatus.bind(this));
-        server.get("/health", this.handleStatus.bind(this));
         server.get("/services", this.handleServicesStatus.bind(this));
         server.get(
             "/services/:serviceName/health",
@@ -24,7 +24,24 @@ export class HealthController {
     }
 
     /**
-     * Handle GET /status and /health - Enhanced health check endpoint
+     * Handle GET /health - Simple Load Balancer Check
+     */
+    async handleHealth(
+        _request: FastifyRequest,
+        reply: FastifyReply,
+    ): Promise<void> {
+        // Quick check: Are we initialized? Dependencies connected?
+        const healthStatus = await this.healthManager.checkHealth();
+
+        if (healthStatus.status === "unhealthy") {
+            reply.status(503).send({ status: "unhealthy" });
+        } else {
+            reply.status(200).send({ status: healthStatus.status });
+        }
+    }
+
+    /**
+     * Handle GET /status - Detailed Operator View
      */
     async handleStatus(
         _request: FastifyRequest,
@@ -32,120 +49,91 @@ export class HealthController {
     ): Promise<void> {
         try {
             const healthStatus = await this.healthManager.checkHealth();
+            const cbStatus = this.brain.getCircuitBreakerStatus();
 
-            // Determine HTTP status code based on health
-            let statusCode = 200;
+            // Determine Mode based on Status + Dependencies
+            let mode = "NORMAL";
+            const actions: string[] = [];
+            const unsafe_actions: string[] = [];
+
             if (healthStatus.status === "unhealthy") {
-                statusCode = 503; // Service Unavailable
+                mode = "EMERGENCY";
+                actions.push("Check Critical Infrastructure (Postgres/NATS)");
+                unsafe_actions.push("Do Not Restart without Checking Logs");
             } else if (healthStatus.status === "degraded") {
-                statusCode = 200; // OK but degraded
+                mode = "CAUTIOUS";
+                actions.push("Monitor Logs for Degraded Component");
             }
 
-            reply.status(statusCode).send({
-                status: healthStatus.status,
-                timestamp: healthStatus.timestamp,
-                uptime: healthStatus.uptime,
-                duration: healthStatus.duration,
-                version: healthStatus.version,
+            if (cbStatus.active) {
+                if (mode !== "EMERGENCY") mode = "DEFENSIVE";
+                actions.push(`Circuit Breaker Active: ${cbStatus.reason}`);
+                actions.push("Use Manual Override to Reset if Safe");
+            }
+
+            reply.status(200).send({
+                mode,
+                reasons: healthStatus.status === "healthy"
+                    ? []
+                    : ["System Degraded/Unhealthy"],
+                actions,
+                unsafe_actions,
                 components: healthStatus.components,
-                // Legacy fields for backward compatibility
-                healthy: healthStatus.status === "healthy",
-                equity: this.brain.getEquity(), // Accessing Brain for legacy field compatibility
-                circuitBreaker: this.brain.getCircuitBreakerStatus().active
-                    ? "active"
-                    : "inactive",
+                details: {
+                    timestamp: healthStatus.timestamp,
+                    uptime: healthStatus.uptime,
+                    version: healthStatus.version,
+                    equity: this.brain.getEquity(),
+                    circuitBreaker: cbStatus,
+                },
             });
         } catch (error) {
             reply.status(500).send({
-                status: "error",
-                timestamp: new Date().toISOString(),
-                error: error instanceof Error ? error.message : "Unknown error",
-                healthy: false,
+                mode: "EMERGENCY",
+                reasons: ["Internal Health Check Failure"],
+                actions: ["Investigate Brain Logs"],
+                unsafe_actions: [],
             });
         }
     }
 
     /**
-     * Handle GET /services - Service discovery status
+     * Handle GET /services - List all discovered services and their status
      */
     async handleServicesStatus(
         _request: FastifyRequest,
         reply: FastifyReply,
     ): Promise<void> {
-        try {
-            const healthStatus = this.serviceDiscovery.getHealthStatus();
-
-            reply.send({
-                status: "success",
-                data: {
-                    healthy: healthStatus.healthy,
-                    totalServices: healthStatus.totalServices,
-                    healthyServices: healthStatus.healthyServices,
-                    requiredServicesHealthy:
-                        healthStatus.requiredServicesHealthy,
-                    services: healthStatus.services.map((service) => ({
-                        name: service.name,
-                        url: service.url,
-                        healthy: service.healthy,
-                        lastCheck: service.lastCheck,
-                        responseTime: service.responseTime,
-                        error: service.error,
-                        consecutiveFailures: service.consecutiveFailures,
-                    })),
-                },
-                timestamp: Date.now(),
-            });
-        } catch (error) {
-            reply.status(500).send({
-                error: "Failed to get services status",
-                message: error instanceof Error ? error.message : String(error),
-                timestamp: Date.now(),
-            });
-        }
+        const services = this.serviceDiscovery.getAllServices();
+        reply.send(services);
     }
 
     /**
-     * Handle GET /services/:serviceName/health - Individual service health check
+     * Handle GET /services/:serviceName/health - Proxy health check to a specific service
      */
     async handleServiceHealth(
         request: FastifyRequest<{ Params: { serviceName: string } }>,
         reply: FastifyReply,
     ): Promise<void> {
+        const { serviceName } = request.params;
+        const service = this.serviceDiscovery.getService(serviceName);
+
+        if (!service) {
+            reply
+                .status(404)
+                .send({ error: `Service '${serviceName}' not found` });
+            return;
+        }
+
         try {
-            const { serviceName } = request.params;
-            const isHealthy = await this.serviceDiscovery.checkServiceHealth(
+            const health = await this.serviceDiscovery.checkServiceHealth(
                 serviceName,
             );
-            const status = this.serviceDiscovery.getServiceStatus(serviceName);
-
-            if (!status) {
-                reply.status(404).send({
-                    error: "Service not found",
-                    serviceName,
-                    timestamp: Date.now(),
-                });
-                return;
-            }
-
-            reply.send({
-                status: "success",
-                data: {
-                    serviceName: status.name,
-                    url: status.url,
-                    healthy: status.healthy,
-                    lastCheck: status.lastCheck,
-                    responseTime: status.responseTime,
-                    error: status.error,
-                    consecutiveFailures: status.consecutiveFailures,
-                    justChecked: isHealthy,
-                },
-                timestamp: Date.now(),
-            });
-        } catch (error) {
-            reply.status(500).send({
-                error: "Failed to check service health",
-                message: error instanceof Error ? error.message : String(error),
-                timestamp: Date.now(),
+            reply.send(health);
+        } catch (error: any) {
+            reply.status(502).send({
+                error: `Failed to check health for service '${serviceName}'`,
+                message: error.message,
             });
         }
     }
