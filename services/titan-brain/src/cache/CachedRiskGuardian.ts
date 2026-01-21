@@ -9,17 +9,17 @@ import {
   HighCorrelationNotifier,
   PriceHistoryEntry,
   RiskGuardian,
-} from "../engine/RiskGuardian.js";
-import { GovernanceEngine } from "../engine/GovernanceEngine.js";
+} from '../engine/RiskGuardian.js';
+import { GovernanceEngine } from '../engine/GovernanceEngine.js';
 import {
   IntentSignal,
   Position,
   RiskDecision,
   RiskGuardianConfig,
   RiskMetrics,
-} from "../types/index.js";
-import { AllocationEngine } from "../engine/AllocationEngine.js";
-import { CacheManager, CacheNamespace } from "./CacheManager.js";
+} from '../types/index.js';
+import { AllocationEngine } from '../engine/AllocationEngine.js';
+import { CacheManager, CacheNamespace } from './CacheManager.js';
 
 /**
  * CachedRiskGuardian wraps RiskGuardian with caching
@@ -35,11 +35,7 @@ export class CachedRiskGuardian {
     governanceEngine: GovernanceEngine,
     cache: CacheManager,
   ) {
-    this.guardian = new RiskGuardian(
-      config,
-      allocationEngine,
-      governanceEngine,
-    );
+    this.guardian = new RiskGuardian(config, allocationEngine, governanceEngine);
     this.cache = cache;
   }
 
@@ -68,10 +64,7 @@ export class CachedRiskGuardian {
    * Check signal against risk rules
    * Uses cached correlation data when available
    */
-  checkSignal(
-    signal: IntentSignal,
-    currentPositions: Position[],
-  ): Promise<RiskDecision> {
+  checkSignal(signal: IntentSignal, currentPositions: Position[]): Promise<RiskDecision> {
     return Promise.resolve(this.guardian.checkSignal(signal, currentPositions));
   }
 
@@ -97,10 +90,7 @@ export class CachedRiskGuardian {
     const [first, second] = [assetA, assetB].sort();
     const cacheKey = `corr:${first}:${second}`;
 
-    const cached = await this.cache.get<number>(
-      CacheNamespace.CORRELATION,
-      cacheKey,
-    );
+    const cached = await this.cache.get<number>(CacheNamespace.CORRELATION, cacheKey);
     if (cached.success && cached.value !== undefined) {
       return cached.value;
     }
@@ -118,13 +108,10 @@ export class CachedRiskGuardian {
     const positionKey = positions
       .map((p) => `${p.symbol}:${p.side}:${Math.round(p.size)}`)
       .sort()
-      .join("|");
+      .join('|');
     const cacheKey = `beta:${positionKey}`;
 
-    const cached = await this.cache.get<number>(
-      CacheNamespace.CORRELATION,
-      cacheKey,
-    );
+    const cached = await this.cache.get<number>(CacheNamespace.CORRELATION, cacheKey);
     if (cached.success && cached.value !== undefined) {
       return cached.value;
     }
@@ -137,21 +124,11 @@ export class CachedRiskGuardian {
   /**
    * Update price history - invalidates correlation cache for the symbol
    */
-  async updatePriceHistory(
-    symbol: string,
-    price: number,
-    timestamp?: number,
-  ): Promise<void> {
+  async updatePriceHistory(symbol: string, price: number, timestamp?: number): Promise<void> {
     this.guardian.updatePriceHistory(symbol, price, timestamp);
     // Invalidate correlations involving this symbol
-    await this.cache.invalidatePattern(
-      CacheNamespace.CORRELATION,
-      `corr:*${symbol}*`,
-    );
-    await this.cache.invalidatePattern(
-      CacheNamespace.CORRELATION,
-      `beta:*${symbol}*`,
-    );
+    await this.cache.invalidatePattern(CacheNamespace.CORRELATION, `corr:*${symbol}*`);
+    await this.cache.invalidatePattern(CacheNamespace.CORRELATION, `beta:*${symbol}*`);
   }
 
   /**
@@ -170,13 +147,10 @@ export class CachedRiskGuardian {
     const positionKey = positions
       .map((p) => `${p.symbol}:${p.side}:${Math.round(p.size)}`)
       .sort()
-      .join("|");
+      .join('|');
     const cacheKey = `metrics:${positionKey}`;
 
-    const cached = await this.cache.get<RiskMetrics>(
-      CacheNamespace.RISK,
-      cacheKey,
-    );
+    const cached = await this.cache.get<RiskMetrics>(CacheNamespace.RISK, cacheKey);
     if (cached.success && cached.value !== undefined) {
       return cached.value;
     }

@@ -71,6 +71,15 @@ export interface NotificationConfig {
 }
 
 /**
+ * Reconciliation configuration
+ */
+export interface ReconciliationConfig {
+  intervalMs: number;
+  exchanges: string[];
+  autoResolve?: boolean;
+}
+
+/**
  * Complete Titan Brain configuration
  */
 export interface TitanBrainConfig {
@@ -80,6 +89,7 @@ export interface TitanBrainConfig {
   riskGuardian: RiskGuardianConfig;
   capitalFlow: CapitalFlowConfig;
   circuitBreaker: CircuitBreakerConfig;
+  reconciliation: ReconciliationConfig;
   database: DatabaseConfig;
   redis: RedisConfig;
   server: ServerConfig;

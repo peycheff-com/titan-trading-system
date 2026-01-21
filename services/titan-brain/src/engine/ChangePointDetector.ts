@@ -1,4 +1,4 @@
-import { RegimeState } from "@titan/shared/dist/ipc/index.js";
+import { RegimeState } from '@titan/shared/dist/ipc/index.js';
 
 /**
  * Change Point Detector (CPD)
@@ -30,10 +30,7 @@ export class ChangePointDetector {
    * Update the detector with new price data and determine regime via BOCPD
    * @returns CPDResult with regime and change probability score
    */
-  update(
-    price: number,
-    _timestamp: number,
-  ): { regime: RegimeState; changeScore: number } {
+  update(price: number, _timestamp: number): { regime: RegimeState; changeScore: number } {
     if (this.lastPrice === null || this.lastPrice <= 0) {
       this.lastPrice = price;
       return { regime: RegimeState.STABLE, changeScore: 0 };
@@ -51,15 +48,15 @@ export class ChangePointDetector {
     // Assume Gaussian: N(0, VAR)
     const probs = this.runLengthProbs.map(() => {
       // Simplified: Fixed variance for now, real implementation would update Normal-Inverse-Gamma params
-      const prob = Math.exp(
-        (-0.5 * Math.pow(ret - this.PREDICTIVE_MEAN, 2)) / this.PREDICTIVE_VAR,
-      ) / Math.sqrt(2 * Math.PI * this.PREDICTIVE_VAR);
+      const prob =
+        Math.exp((-0.5 * Math.pow(ret - this.PREDICTIVE_MEAN, 2)) / this.PREDICTIVE_VAR) /
+        Math.sqrt(2 * Math.PI * this.PREDICTIVE_VAR);
       return prob;
     });
 
     // 2. Growth Probability: P(r_t = r_{t-1} + 1 | ...)
-    const growthProbs = probs.map((prob, r) =>
-      prob * this.runLengthProbs[r] * (1 - this.HAZARD_RATE)
+    const growthProbs = probs.map(
+      (prob, r) => prob * this.runLengthProbs[r] * (1 - this.HAZARD_RATE),
     );
 
     // 3. Changepoint Probability: P(r_t = 0 | ...)
@@ -75,9 +72,7 @@ export class ChangePointDetector {
     this.runLengthProbs = this.runLengthProbs.slice(0, this.WINDOW_SIZE); // Prune tail
 
     // 5. Determine State
-    const maxRunLength = this.runLengthProbs.indexOf(
-      Math.max(...this.runLengthProbs),
-    );
+    const maxRunLength = this.runLengthProbs.indexOf(Math.max(...this.runLengthProbs));
     const changeScore = this.runLengthProbs[0]; // Probability of recent change
 
     // Heuristic mapping of "Regime" based on Volatility + Run Length
@@ -86,11 +81,7 @@ export class ChangePointDetector {
     return { regime, changeScore };
   }
 
-  private classifyRegime(
-    currentRet: number,
-    runLength: number,
-    changeScore: number,
-  ): RegimeState {
+  private classifyRegime(currentRet: number, runLength: number, changeScore: number): RegimeState {
     const vol = this.calculateStdDev(this.returnsHistory.slice(-20));
 
     // Crash Logic overrides everything
@@ -106,9 +97,7 @@ export class ChangePointDetector {
     // Established Regimes
     if (vol > 0.005) {
       // Trending or Mean Reverting?
-      const trend = Math.abs(
-        this.returnsHistory.slice(-10).reduce((a, b) => a + b, 0),
-      );
+      const trend = Math.abs(this.returnsHistory.slice(-10).reduce((a, b) => a + b, 0));
       if (trend > 0.01) return RegimeState.VOLATILE_BREAKOUT;
       return RegimeState.MEAN_REVERSION;
     }
@@ -119,8 +108,7 @@ export class ChangePointDetector {
   private calculateStdDev(data: number[]): number {
     if (data.length === 0) return 0;
     const mean = data.reduce((a, b) => a + b, 0) / data.length;
-    const variance =
-      data.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / data.length;
+    const variance = data.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / data.length;
     return Math.sqrt(variance);
   }
 }

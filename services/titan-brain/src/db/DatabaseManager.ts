@@ -6,17 +6,17 @@
  * Requirements: 9.1, 9.2, 9.3
  */
 
-import { Pool, PoolClient, PoolConfig, QueryResult, QueryResultRow } from "pg";
-import { DatabaseConfig } from "../types/index.js";
-import * as fs from "fs";
-import * as path from "path";
+import { Pool, PoolClient, PoolConfig, QueryResult, QueryResultRow } from 'pg';
+import { DatabaseConfig } from '../types/index.js';
+import * as fs from 'fs';
+import * as path from 'path';
 
 /**
  * Database type enum
  */
 export enum DatabaseType {
-  POSTGRESQL = "postgresql",
-  SQLITE = "sqlite",
+  POSTGRESQL = 'postgresql',
+  SQLITE = 'sqlite',
 }
 
 /**
@@ -58,14 +58,9 @@ export class DatabaseError extends Error {
   public readonly query?: string;
   public readonly originalError: Error;
 
-  constructor(
-    message: string,
-    code: string,
-    originalError: Error,
-    query?: string,
-  ) {
+  constructor(message: string, code: string, originalError: Error, query?: string) {
     super(message);
-    this.name = "DatabaseError";
+    this.name = 'DatabaseError';
     this.code = code;
     this.query = query;
     this.originalError = originalError;
@@ -105,9 +100,7 @@ export class DatabaseManager {
   // Performance optimization features
   private queryCache = new Map<string, QueryCacheEntry>();
   private slowQueryThreshold = 1000; // 1 second
-  private slowQueries: Array<
-    { query: string; duration: number; timestamp: number }
-  > = [];
+  private slowQueries: Array<{ query: string; duration: number; timestamp: number }> = [];
   private preparedStatements = new Map<string, string>();
   private connectionPoolStats = {
     totalQueries: 0,
@@ -130,15 +123,15 @@ export class DatabaseManager {
     try {
       await this.connectPostgreSQL();
       this.dbType = DatabaseType.POSTGRESQL;
-      console.log("✅ Connected to PostgreSQL database");
+      console.log('✅ Connected to PostgreSQL database');
     } catch (error) {
       console.warn(
-        "⚠️ PostgreSQL connection failed, falling back to SQLite:",
+        '⚠️ PostgreSQL connection failed, falling back to SQLite:',
         (error as Error).message,
       );
       await this.connectSQLite();
       this.dbType = DatabaseType.SQLITE;
-      console.log("✅ Connected to SQLite database (fallback mode)");
+      console.log('✅ Connected to SQLite database (fallback mode)');
     }
   }
 
@@ -158,10 +151,7 @@ export class DatabaseManager {
       user: this.config.user,
       password: this.config.password,
       max: this.config.maxConnections || 20,
-      min:
-        (this.config.maxConnections
-          ? Math.floor(this.config.maxConnections / 4)
-          : 2) || 2,
+      min: (this.config.maxConnections ? Math.floor(this.config.maxConnections / 4) : 2) || 2,
       idleTimeoutMillis: this.config.idleTimeout || 30000,
       connectionTimeoutMillis: 10000,
       // Performance optimizations
@@ -169,16 +159,14 @@ export class DatabaseManager {
       query_timeout: 30000,
       keepAlive: true,
       keepAliveInitialDelayMillis: 10000,
-      ssl: process.env.DB_SSL === "true"
-        ? { rejectUnauthorized: false }
-        : undefined,
+      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
     };
 
     this.pool = new Pool(poolConfig);
 
     // Handle pool errors
-    this.pool.on("error", (err) => {
-      console.error("Unexpected database pool error:", err);
+    this.pool.on('error', (err) => {
+      console.error('Unexpected database pool error:', err);
     });
 
     // Test connection with retry logic
@@ -194,17 +182,17 @@ export class DatabaseManager {
       let Database: any;
       try {
         // Use eval to avoid TypeScript compilation issues
-        Database = eval("require")("better-sqlite3");
+        Database = eval('require')('better-sqlite3');
       } catch (importError) {
         throw new DatabaseError(
-          "SQLite support requires better-sqlite3. Install with: npm install better-sqlite3",
-          "SQLITE_NOT_AVAILABLE",
+          'SQLite support requires better-sqlite3. Install with: npm install better-sqlite3',
+          'SQLITE_NOT_AVAILABLE',
           importError as Error,
         );
       }
 
       // Use environment variable or default path
-      const dbPath = process.env.SQLITE_DB_PATH || "./titan_brain.db";
+      const dbPath = process.env.SQLITE_DB_PATH || './titan_brain.db';
 
       // Ensure directory exists
       const dbDir = path.dirname(dbPath);
@@ -218,8 +206,8 @@ export class DatabaseManager {
       await this.initializeSQLiteSchema();
     } catch (error) {
       throw new DatabaseError(
-        "Failed to connect to SQLite database",
-        "SQLITE_CONNECTION_FAILED",
+        'Failed to connect to SQLite database',
+        'SQLITE_CONNECTION_FAILED',
         error as Error,
       );
     }
@@ -297,7 +285,7 @@ export class DatabaseManager {
         if (this.connectionRetries >= this.maxRetries) {
           throw new DatabaseError(
             `Failed to connect to PostgreSQL after ${this.maxRetries} attempts`,
-            "CONNECTION_FAILED",
+            'CONNECTION_FAILED',
             error as Error,
           );
         }
@@ -335,11 +323,7 @@ export class DatabaseManager {
     }
 
     if (!this.pool) {
-      throw new DatabaseError(
-        "Database not connected",
-        "NOT_CONNECTED",
-        new Error("Pool is null"),
-      );
+      throw new DatabaseError('Database not connected', 'NOT_CONNECTED', new Error('Pool is null'));
     }
 
     const startTime = Date.now();
@@ -378,7 +362,7 @@ export class DatabaseManager {
       this.metrics.failedQueries++;
       throw new DatabaseError(
         `Query failed: ${(error as Error).message}`,
-        "QUERY_FAILED",
+        'QUERY_FAILED',
         error as Error,
         text,
       );
@@ -394,11 +378,7 @@ export class DatabaseManager {
     options: { cache?: boolean; cacheTtl?: number } = {},
   ): Promise<QueryResult<T>> {
     if (!this.sqlite) {
-      throw new DatabaseError(
-        "SQLite not connected",
-        "NOT_CONNECTED",
-        new Error("SQLite is null"),
-      );
+      throw new DatabaseError('SQLite not connected', 'NOT_CONNECTED', new Error('SQLite is null'));
     }
 
     const startTime = Date.now();
@@ -418,13 +398,13 @@ export class DatabaseManager {
       const sqliteQuery = this.convertToSQLite(text);
 
       let result: any;
-      if (sqliteQuery.toLowerCase().startsWith("select")) {
+      if (sqliteQuery.toLowerCase().startsWith('select')) {
         const stmt = this.sqlite.prepare(sqliteQuery);
         const rows = params ? stmt.all(...params) : stmt.all();
         result = {
           rows: rows as T[],
           rowCount: rows.length,
-          command: "SELECT",
+          command: 'SELECT',
           oid: 0,
           fields: [],
         };
@@ -434,7 +414,7 @@ export class DatabaseManager {
         result = {
           rows: [],
           rowCount: info.changes || 0,
-          command: sqliteQuery.split(" ")[0].toUpperCase(),
+          command: sqliteQuery.split(' ')[0].toUpperCase(),
           oid: 0,
           fields: [],
         };
@@ -454,7 +434,7 @@ export class DatabaseManager {
       this.metrics.failedQueries++;
       throw new DatabaseError(
         `SQLite query failed: ${(error as Error).message}`,
-        "SQLITE_QUERY_FAILED",
+        'SQLITE_QUERY_FAILED',
         error as Error,
         text,
       );
@@ -468,16 +448,16 @@ export class DatabaseManager {
     return (
       query
         // Convert $1, $2, etc. to ? placeholders
-        .replace(/\$\d+/g, "?")
+        .replace(/\$\d+/g, '?')
         // Convert NOW() to datetime('now')
         .replace(/NOW\(\)/gi, "datetime('now')")
         // Convert EXTRACT(epoch FROM timestamp) to strftime('%s', timestamp)
         .replace(/EXTRACT\(epoch FROM ([^)]+)\)/gi, "strftime('%s', $1)")
         // Convert RETURNING clauses (SQLite doesn't support RETURNING in all cases)
-        .replace(/RETURNING \*/gi, "")
+        .replace(/RETURNING \*/gi, '')
         // Convert serial/bigserial to INTEGER PRIMARY KEY AUTOINCREMENT
-        .replace(/\bSERIAL\b/gi, "INTEGER PRIMARY KEY AUTOINCREMENT")
-        .replace(/\bBIGSERIAL\b/gi, "INTEGER PRIMARY KEY AUTOINCREMENT")
+        .replace(/\bSERIAL\b/gi, 'INTEGER PRIMARY KEY AUTOINCREMENT')
+        .replace(/\bBIGSERIAL\b/gi, 'INTEGER PRIMARY KEY AUTOINCREMENT')
     );
   }
 
@@ -490,11 +470,7 @@ export class DatabaseManager {
     params?: unknown[],
   ): Promise<QueryResult<T>> {
     if (!this.pool) {
-      throw new DatabaseError(
-        "Database not connected",
-        "NOT_CONNECTED",
-        new Error("Pool is null"),
-      );
+      throw new DatabaseError('Database not connected', 'NOT_CONNECTED', new Error('Pool is null'));
     }
 
     const client = await this.pool.connect();
@@ -549,25 +525,21 @@ export class DatabaseManager {
    */
   async transaction<T>(callback: TransactionCallback<T>): Promise<T> {
     if (!this.pool) {
-      throw new DatabaseError(
-        "Database not connected",
-        "NOT_CONNECTED",
-        new Error("Pool is null"),
-      );
+      throw new DatabaseError('Database not connected', 'NOT_CONNECTED', new Error('Pool is null'));
     }
 
     const client = await this.pool.connect();
 
     try {
-      await client.query("BEGIN");
+      await client.query('BEGIN');
       const result = await callback(client);
-      await client.query("COMMIT");
+      await client.query('COMMIT');
       return result;
     } catch (error) {
-      await client.query("ROLLBACK");
+      await client.query('ROLLBACK');
       throw new DatabaseError(
         `Transaction failed: ${(error as Error).message}`,
-        "TRANSACTION_FAILED",
+        'TRANSACTION_FAILED',
         error as Error,
       );
     } finally {
@@ -581,14 +553,14 @@ export class DatabaseManager {
   async insert<T extends QueryResultRow = QueryResultRow>(
     table: string,
     data: Record<string, unknown>,
-    returning: string = "*",
+    returning: string = '*',
   ): Promise<T> {
     const columns = Object.keys(data);
     const values = Object.values(data);
-    const placeholders = columns.map((_, i) => `$${i + 1}`).join(", ");
+    const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
 
     const query = `
-      INSERT INTO ${table} (${columns.join(", ")})
+      INSERT INTO ${table} (${columns.join(', ')})
       VALUES (${placeholders})
       RETURNING ${returning}
     `;
@@ -608,7 +580,7 @@ export class DatabaseManager {
   ): Promise<number> {
     const columns = Object.keys(data);
     const values = Object.values(data);
-    const setClause = columns.map((col, i) => `${col} = $${i + 1}`).join(", ");
+    const setClause = columns.map((col, i) => `${col} = $${i + 1}`).join(', ');
 
     // Adjust where clause parameter indices
     const adjustedWhere = where.replace(
@@ -677,13 +649,13 @@ export class DatabaseManager {
     try {
       if (this.dbType === DatabaseType.SQLITE && this.sqlite) {
         // Simple SQLite health check
-        const stmt = this.sqlite.prepare("SELECT 1 as health");
+        const stmt = this.sqlite.prepare('SELECT 1 as health');
         stmt.get();
         return true;
       }
 
       if (this.pool) {
-        await this.pool.query("SELECT 1");
+        await this.pool.query('SELECT 1');
         return true;
       }
 
@@ -728,10 +700,10 @@ export class DatabaseManager {
       };
     }
 
-    const cacheHitRate = this.connectionPoolStats.totalQueries > 0
-      ? (this.connectionPoolStats.cacheHits /
-        this.connectionPoolStats.totalQueries) * 100
-      : 0;
+    const cacheHitRate =
+      this.connectionPoolStats.totalQueries > 0
+        ? (this.connectionPoolStats.cacheHits / this.connectionPoolStats.totalQueries) * 100
+        : 0;
 
     return {
       totalConnections: this.pool.totalCount,
@@ -748,16 +720,14 @@ export class DatabaseManager {
    * Generate cache key for query
    */
   private generateCacheKey(text: string, params?: unknown[]): string {
-    const paramStr = params ? JSON.stringify(params) : "";
+    const paramStr = params ? JSON.stringify(params) : '';
     return `${text}:${paramStr}`;
   }
 
   /**
    * Get result from cache
    */
-  private getFromCache<T extends QueryResultRow>(
-    key: string,
-  ): QueryResult<T> | null {
+  private getFromCache<T extends QueryResultRow>(key: string): QueryResult<T> | null {
     const entry = this.queryCache.get(key);
     if (!entry) {
       return null;
@@ -811,17 +781,13 @@ export class DatabaseManager {
       this.slowQueries = this.slowQueries.slice(-100);
     }
 
-    console.warn(
-      `🐌 Slow query detected (${duration}ms): ${query.substring(0, 100)}...`,
-    );
+    console.warn(`🐌 Slow query detected (${duration}ms): ${query.substring(0, 100)}...`);
   }
 
   /**
    * Get slow queries
    */
-  getSlowQueries(): Array<
-    { query: string; duration: number; timestamp: number }
-  > {
+  getSlowQueries(): Array<{ query: string; duration: number; timestamp: number }> {
     return [...this.slowQueries];
   }
 
@@ -830,7 +796,7 @@ export class DatabaseManager {
    */
   clearCache(): void {
     this.queryCache.clear();
-    console.log("🧹 Query cache cleared");
+    console.log('🧹 Query cache cleared');
   }
 
   /**
@@ -838,26 +804,22 @@ export class DatabaseManager {
    */
   async optimizeDatabase(): Promise<void> {
     if (!this.pool) {
-      throw new DatabaseError(
-        "Database not connected",
-        "NOT_CONNECTED",
-        new Error("Pool is null"),
-      );
+      throw new DatabaseError('Database not connected', 'NOT_CONNECTED', new Error('Pool is null'));
     }
 
     try {
       // Run ANALYZE to update table statistics
-      await this.pool.query("ANALYZE");
+      await this.pool.query('ANALYZE');
 
       // Run VACUUM to reclaim space (non-blocking)
-      await this.pool.query("VACUUM (ANALYZE)");
+      await this.pool.query('VACUUM (ANALYZE)');
 
-      console.log("✅ Database optimization completed");
+      console.log('✅ Database optimization completed');
     } catch (error) {
-      console.error("❌ Database optimization failed:", error);
+      console.error('❌ Database optimization failed:', error);
       throw new DatabaseError(
-        "Database optimization failed",
-        "OPTIMIZATION_FAILED",
+        'Database optimization failed',
+        'OPTIMIZATION_FAILED',
         error as Error,
       );
     }
@@ -868,25 +830,21 @@ export class DatabaseManager {
    */
   async createPerformanceIndexes(): Promise<void> {
     if (!this.pool) {
-      throw new DatabaseError(
-        "Database not connected",
-        "NOT_CONNECTED",
-        new Error("Pool is null"),
-      );
+      throw new DatabaseError('Database not connected', 'NOT_CONNECTED', new Error('Pool is null'));
     }
 
     const indexes = [
-      "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_decisions_timestamp ON brain_decisions(timestamp)",
-      "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_decisions_phase_id ON brain_decisions(phase_id)",
-      "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_performance_phase_timestamp ON phase_performance(phase_id, timestamp)",
-      "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_risk_snapshots_timestamp ON risk_snapshots(timestamp)",
-      "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_allocation_vectors_timestamp ON allocation_vectors(timestamp)",
+      'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_decisions_timestamp ON brain_decisions(timestamp)',
+      'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_decisions_phase_id ON brain_decisions(phase_id)',
+      'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_performance_phase_timestamp ON phase_performance(phase_id, timestamp)',
+      'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_risk_snapshots_timestamp ON risk_snapshots(timestamp)',
+      'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_allocation_vectors_timestamp ON allocation_vectors(timestamp)',
     ];
 
     for (const indexQuery of indexes) {
       try {
         await this.pool.query(indexQuery);
-        console.log(`✅ Created index: ${indexQuery.split(" ")[5]}`);
+        console.log(`✅ Created index: ${indexQuery.split(' ')[5]}`);
       } catch (error) {
         // Index might already exist, log but don't fail
         console.warn(`⚠️ Index creation warning: ${(error as Error).message}`);
@@ -899,8 +857,7 @@ export class DatabaseManager {
    */
   private updateMetrics(durationMs: number): void {
     this.metrics.totalDurationMs += durationMs;
-    this.metrics.avgDurationMs = this.metrics.totalDurationMs /
-      this.metrics.totalQueries;
+    this.metrics.avgDurationMs = this.metrics.totalDurationMs / this.metrics.totalQueries;
   }
 
   /**

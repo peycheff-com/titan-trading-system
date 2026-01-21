@@ -24,9 +24,10 @@ async function main() {
   // 1. Configuration
   // Dynamic import if needed or use standard import if build allows. 
   // Assuming @titan/shared is available as per checking NatsClient
-  const { getConfigManager, TitanSubject, getNatsClient } = await import("@titan/shared");
+  const { getConfigManager, TitanSubject, getNatsClient, loadSecretsFromFiles } = await import("@titan/shared");
   
   // Initialize shared manager to load environment variables/files
+  loadSecretsFromFiles();
   getConfigManager();
   
   const configManager = {
@@ -63,21 +64,41 @@ async function main() {
   // 3. Start Core
   const core = new SentinelCore(config, gateways);
 
-  // 3a. Start NATS Subscription (Regime Awareness)
+  // 3a. Start NATS Subscription (Regime & Budget Awareness)
   try {
       const nats = await getNatsClient();
-      console.log("Connected to NATS for Regime Updates");
+      console.log("Connected to NATS for Regime & Budget Updates");
       
-      const sub = nats.subscribe<{ regime: string; alpha: number }>(
+      const sub = nats.subscribe<any>(
           TitanSubject.REGIME_UPDATE,
           (data) => {
+              // Dual Read Strategy
+              let payload = data;
+              if (data && typeof data === 'object' && 'payload' in data && 'type' in data) {
+                   payload = data.payload;
+              }
+
               try {
-                  core.updateRegime(data.regime, data.alpha);
+                  core.updateRegime(payload.regime, payload.alpha);
               } catch (err) {
                   console.error("Error processing regime update:", err);
               }
           }
       );
+
+      // Subscribe to Budget Updates (Truth Layer)
+      nats.subscribe("titan.ai.budget.update", (data: any) => {
+          let payload = data;
+          if (data && typeof data === 'object' && 'payload' in data) {
+               payload = data.payload;
+          }
+
+          if (payload.phaseId === 'phase3' && payload.allocatedEquity) {
+               console.log(`[Sentinel] Received Budget Update: $${payload.allocatedEquity}`);
+               core.updateBudget(payload.allocatedEquity);
+          }
+      });
+
   } catch (err) {
       console.warn("⚠️ Failed to connect to NATS. Sentinel will run in STABLE usage.", err);
   }

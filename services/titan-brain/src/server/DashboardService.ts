@@ -19,6 +19,8 @@ import {
 import { getNatsClient, TitanSubject } from '@titan/shared';
 import { TitanBrain } from '../engine/TitanBrain.js';
 import { DatabaseManager } from '../db/DatabaseManager.js';
+import { PowerLawMetrics } from '../types/index.js';
+import { RegimeState } from '@titan/shared/dist/ipc/index.js';
 
 /**
  * Extended dashboard data with additional metrics
@@ -48,6 +50,10 @@ export interface ExtendedDashboardData extends DashboardData {
     totalNotional: number;
     totalUnrealizedPnL: number;
   };
+  /** PowerLaw metrics per symbol */
+  powerLawMetrics: Record<string, PowerLawMetrics>;
+  /** Current market regime state */
+  regimeState: RegimeState;
 }
 
 /**
@@ -132,7 +138,7 @@ export class DashboardService {
         const data = await this.getDashboardData();
         const nats = getNatsClient();
         if (nats.isConnected()) {
-          await nats.publish(TitanSubject.DASHBOARD_UPDATES, {
+          await nats.publish(TitanSubject.DATA_DASHBOARD_UPDATE, {
             type: 'STATE_UPDATE',
             timestamp: Date.now(),
             ...data,
@@ -236,6 +242,11 @@ export class DashboardService {
           equity: equity * allocation.w3,
           percentage: (allocation.w3 * 100).toFixed(2) + '%',
         },
+        manual: {
+          weight: 0,
+          equity: 0,
+          percentage: '0.00%',
+        },
       },
       totalEquity: equity,
       lastUpdated: allocation.timestamp,
@@ -255,6 +266,7 @@ export class DashboardService {
       phase1: equity * allocation.w1,
       phase2: equity * allocation.w2,
       phase3: equity * allocation.w3,
+      manual: 0,
     };
   }
 
@@ -431,6 +443,8 @@ export class DashboardService {
       positionsSummary,
       treasury: enhancedTreasury,
       recentDecisions: enhancedDecisions.decisions,
+      powerLawMetrics: this.brain.getPowerLawMetricsSnapshot(),
+      regimeState: this.brain.getRegimeState() as any,
     };
 
     // Cache the result

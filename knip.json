@@ -1,0 +1,22 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignore": ["**/*.d.ts", "**/*.test.ts", "**/dist/**", "**/coverage/**"],
+  "ignoreDependencies": ["ts-node", "typescript", "eslint*", "prettier*", "nx"],
+  "workspaces": {
+    "services/titan-console": {
+      "entry": ["index.html", "src/main.tsx", "vite.config.ts"],
+      "project": ["src/**/*.{ts,tsx}"]
+    },
+    "services/titan-execution-rs": {
+      "ignore": ["**"]
+    },
+    "services/*": {
+      "entry": ["src/index.ts", "src/main.ts", "src/server.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    ".": {
+      "entry": ["scripts/**/*.ts"],
+      "project": ["scripts/**/*.ts"]
+    }
+  }
+}

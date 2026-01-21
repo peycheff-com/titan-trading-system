@@ -94,6 +94,10 @@ pub struct Intent {
     pub regime_state: Option<i32>,
     pub phase: Option<i32>,
     pub metadata: Option<serde_json::Value>,
+    #[serde(default)]
+    pub exchange: Option<String>,
+    #[serde(default)]
+    pub position_mode: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -109,6 +113,25 @@ pub struct Position {
     pub regime_state: Option<i32>,
     pub phase: Option<i32>,
     pub metadata: Option<serde_json::Value>,
+    #[serde(default)]
+    pub exchange: Option<String>,
+    #[serde(default)]
+
+    pub position_mode: Option<String>,
+    
+    // PnL & Fees
+    #[serde(default)]
+    pub realized_pnl: Decimal,
+    #[serde(default)]
+    pub unrealized_pnl: Decimal,
+    #[serde(default)]
+    pub fees_paid: Decimal,
+    #[serde(default)]
+    pub funding_paid: Decimal,
+    #[serde(default)]
+    pub last_mark_price: Option<Decimal>,
+    #[serde(default)]
+    pub last_update_ts: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -121,6 +144,8 @@ pub struct TradeRecord {
     pub size: Decimal,
     pub pnl: Decimal,
     pub pnl_pct: Decimal,
+    pub fee: Decimal,
+    pub fee_asset: String,
     pub opened_at: DateTime<Utc>,
     pub closed_at: DateTime<Utc>,
     pub close_reason: String,
@@ -167,6 +192,12 @@ pub struct FeeAnalysis {
     pub profit_after_maker: Decimal,
     pub profit_after_taker: Decimal,
     pub taker_profitable: bool,
+    #[serde(default)]
+    pub estimated_impact_pct: Decimal,
+    #[serde(default)]
+    pub profit_after_impact_maker: Decimal,
+    #[serde(default)]
+    pub profit_after_impact_taker: Decimal,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

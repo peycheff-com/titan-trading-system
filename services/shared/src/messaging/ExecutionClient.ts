@@ -1,4 +1,4 @@
-import { getNatsClient, NatsClient } from './NatsClient.js';
+import { getNatsClient, NatsClient, TitanSubject } from './NatsClient.js';
 import {
   AbortResponse,
   ConfirmResponse,
@@ -7,10 +7,12 @@ import {
   PrepareResponse,
   SignalSource,
 } from '../ipc/index.js';
+import { validateIntentPayload } from '../schemas/intentSchema.js';
 import { EventEmitter } from 'eventemitter3';
 
 // Rust-compatible definitions
 interface RustIntent {
+  schema_version?: string;
   signal_id: string;
   source: string;
   symbol: string;
@@ -23,6 +25,7 @@ interface RustIntent {
   status: string; // "PENDING"
   received_at: string; // ISO date
   t_signal: number;
+  timestamp?: number;
   t_exchange?: number;
   metadata?: any;
 }
@@ -101,8 +104,10 @@ export class ExecutionClient extends EventEmitter {
     // Transform to Rust structure
     const directionInt = signal.direction === 'LONG' ? 1 : -1;
     const intentType = signal.direction === 'LONG' ? 'BUY_SETUP' : 'SELL_SETUP';
+    const tSignal = signal.timestamp ?? Date.now();
 
     const rustPayload: RustIntent = {
+      schema_version: '1.0.0',
       signal_id: signal.signal_id,
       source: this.source,
       symbol: signal.symbol,
@@ -114,19 +119,32 @@ export class ExecutionClient extends EventEmitter {
       size: 0, // Default to 0, let Rust ShadowState calculation handle risk sizing
       status: 'PENDING',
       received_at: new Date().toISOString(),
-      t_signal: signal.timestamp,
+      t_signal: tSignal,
+      timestamp: tSignal,
       t_exchange: signal.t_exchange,
       metadata: {
         confidence: signal.confidence,
         leverage: signal.leverage,
         original_source: this.source,
+        correlation_id: signal.signal_id,
+        intent_schema_version: '1.0.0',
       },
     };
 
+    const validation = validateIntentPayload(rustPayload);
+    if (!validation.valid) {
+      await this.publishDlq(rustPayload, validation.errors.join('; '));
+      this.pendingSignals.delete(signal_id);
+      return { executed: false, reason: 'Invalid intent payload' };
+    }
+
     // Publish to NATS
-    // Subject: titan.execution.intent.<symbol> (or just .intent.>)
-    // Rust subscribes to `titan.execution.intent.>`
-    const subject = `titan.execution.intent.${signal.symbol.replace('/', '')}`;
+    // Subject: titan.cmd.exec.place.v1.<venue>.<account>.<symbol>
+    // Rust subscribes to `titan.cmd.exec.>`
+    const symbolToken = signal.symbol.replace('/', '_');
+    const venue = 'auto';
+    const account = 'main';
+    const subject = `${TitanSubject.CMD_EXEC_PLACE}.${venue}.${account}.${symbolToken}`;
 
     try {
       await this.nats.publish(subject, rustPayload);
@@ -147,6 +165,20 @@ export class ExecutionClient extends EventEmitter {
   async sendAbort(signal_id: string): Promise<AbortResponse> {
     this.pendingSignals.delete(signal_id);
     return { aborted: true };
+  }
+
+  private async publishDlq(payload: RustIntent, reason: string): Promise<void> {
+    try {
+      const dlqPayload = {
+        reason,
+        payload,
+        t_ingress: Date.now(),
+      };
+      await this.nats.publish('titan.dlq.execution.core', dlqPayload);
+      await this.nats.publish('titan.execution.dlq', dlqPayload);
+    } catch (e) {
+      console.error('Failed to publish intent to DLQ', e);
+    }
   }
 
   // Compatibility methods

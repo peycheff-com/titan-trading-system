@@ -46,6 +46,7 @@ module.exports = {
   
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '^(.*/monitoring/index)(\\.js)?$': '<rootDir>/tests/mocks/monitoring.ts',
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   

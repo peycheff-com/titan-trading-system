@@ -41,10 +41,15 @@ import {
   ExecutionClient,
   getNatsClient,
   type IntentSignal,
+  loadSecretsFromFiles,
+  type PhaseDiagnostics,
+  type PhasePosture,
+  TitanSubject,
 } from "@titan/shared";
 
 // Load environment variables
 config();
+loadSecretsFromFiles();
 
 /**
  * Main Hunter Application Class
@@ -79,6 +84,7 @@ class HunterApplication {
   private hologramScanInterval: NodeJS.Timeout | null = null;
   private sessionMonitorInterval: NodeJS.Timeout | null = null;
   private poiDetectionInterval: NodeJS.Timeout | null = null;
+  private stateBroadcastInterval: NodeJS.Timeout | null = null;
 
   // Constants
   private readonly HOLOGRAM_SCAN_INTERVAL = 5 * 60 * 1000; // 5 minutes
@@ -322,11 +328,40 @@ class HunterApplication {
         await nats.connect();
       }
       nats.subscribe("titan.ai.regime.update", (data: any) => {
+        // Dual Read Strategy
+        let payload = data;
+        if (
+          data && typeof data === "object" && "payload" in data &&
+          "type" in data
+        ) {
+          payload = data.payload;
+        }
+
         this.logEvent(
           "INFO",
-          `🧠 Market Regime Update: ${data.regime} (α=${data.alpha})`,
+          `🧠 Market Regime Update: ${payload.regime} (α=${payload.alpha})`,
         );
-        this.enhancedEngine.updateMarketRegime(data.regime, data.alpha);
+        this.enhancedEngine.updateMarketRegime(payload.regime, payload.alpha);
+      });
+
+      // Initialize NATS subscription for Budget updates
+      this.logEvent("INFO", "🔗 Subscribing to Budget updates...");
+      nats.subscribe("titan.ai.budget.update", (data: any) => {
+        let payload = data;
+        if (data && typeof data === "object" && "payload" in data) {
+          payload = data.payload;
+        }
+
+        if (payload.phaseId === "phase2" && payload.allocatedEquity) {
+          this.logEvent(
+            "INFO",
+            `💰 Budget Updated: $${payload.allocatedEquity.toFixed(2)}`,
+          );
+          // Dynamic Sizing: Set base position size to 10% of allocated equity
+          // This ensures we scale with the budget provided by the Brain
+          const newBaseSize = payload.allocatedEquity * 0.1;
+          this.enhancedEngine.updateConfig({ basePositionSize: newBaseSize });
+        }
       });
 
       // Start configuration watching
@@ -689,7 +724,9 @@ class HunterApplication {
       this.startHologramScanCycle();
       this.startSessionMonitoring();
       this.startPOIDetectionCycle();
+      this.startPOIDetectionCycle();
       this.startCVDMonitoring();
+      this.startStateBroadcast();
 
       // Setup keyboard handling
       this.setupKeyboardHandling();
@@ -757,48 +794,111 @@ class HunterApplication {
       this.logEvent("INFO", `📤 Sending PREPARE for ${signal.symbol}...`, {
         intentSignal,
       });
-      const prepareResult = await this.executionClient.sendPrepare(
-        intentSignal,
+
+      // Calculate conviction-based position size
+      // We use the enhanced engine to get the exact size based on current conviction
+      // and the dynamically updated base position size (from Budget)
+      const convictionSizing = await this.enhancedEngine.calculatePositionSize(
+        this.enhancedEngine.getConfig().basePositionSize,
+        signal.symbol,
       );
 
-      if (prepareResult.prepared) {
-        this.logEvent("INFO", `✅ PREPARE accepted, confirming...`);
-        const confirmResult = await this.executionClient.sendConfirm(
-          intentSignal.signal_id,
+      // Enforce Truth Layer: The Phase (Hunter) determines the size, not the Execution Service
+      // We pass the calculated usd_size in the payload for the Execution Service to respect
+      const finalSignal: IntentSignal = {
+        ...intentSignal,
+        position_size: convictionSizing.finalSize,
+      };
+
+      const prepareResponse = await this.executionClient.sendPrepare(
+        finalSignal,
+      );
+
+      if (prepareResponse.prepared) {
+        this.logEvent(
+          "INFO",
+          `✅ PREPARE confirmed for ${signal.symbol}, sending CONFIRM...`,
+        );
+        const confirmResponse = await this.executionClient.sendConfirm(
+          finalSignal.signal_id,
         );
 
-        if (confirmResult.executed) {
+        if (confirmResponse.executed) {
           this.logEvent(
             "INFO",
-            `✅ Signal executed: ${signal.symbol} @ ${confirmResult.fill_price}`,
-            { confirmResult },
+            `✅ CONFIRM sent via Fast Path IPC (High Priority) - Size: $${
+              convictionSizing.finalSize.toFixed(
+                2,
+              )
+            } - Price: ${confirmResponse.fill_price}`,
           );
         } else {
           this.logEvent(
             "WARN",
-            `⚠️ Execution rejected: ${confirmResult.reason}`,
-            { confirmResult },
+            `⚠️ CONFIRM rejected: ${confirmResponse.reason}`,
           );
         }
       } else {
-        this.logEvent("WARN", `⚠️ PREPARE rejected: ${prepareResult.reason}`, {
-          prepareResult,
-        });
+        this.logEvent("WARN", `⚠️ PREPARE rejected: ${prepareResponse.reason}`);
       }
     } catch (error) {
-      this.logEvent("ERROR", `❌ Execution signal forwarding failed:`, {
-        error: (error as Error).message,
+      this.logEvent("ERROR", "❌ Failed to send signal to execution:", {
+        error,
       });
-      this.logger.logError(
-        "ERROR",
-        `Execution signal forwarding failed for ${signal.symbol}`,
-        {
-          component: "ExecutionClient",
-          function: "forwardSignalToExecution",
-          stack: (error as Error).stack,
-        },
-      );
+      // Fallback: Use standard NATS if IPC fails (ExecutionClient handles this internally, but we log here)
     }
+  }
+
+  /**
+   * Start state broadcast cycle
+   */
+  private startStateBroadcast(): void {
+    this.logEvent("INFO", "📡 Starting state broadcast cycle...");
+    this.stateBroadcastInterval = setInterval(() => {
+      this.broadcastState();
+    }, 5000);
+  }
+
+  private async broadcastState(): Promise<void> {
+    const nats = getNatsClient();
+    if (!nats.isConnected()) return;
+
+    // Posture
+    const posturePayload: PhasePosture = {
+      phase: "hunter",
+      status: this.isPaused ? "PAUSED" : "RUNNING",
+      regime: "HOLOGRAPHIC",
+      metrics: {
+        activeHolograms: this.currentHolograms.length,
+        activePOIs: this.activePOIs.length,
+        session: this.currentSession?.type || "UNKNOWN",
+      },
+      timestamp: Date.now(),
+    };
+    nats.publish(`${TitanSubject.EVT_PHASE_POSTURE}.hunter`, posturePayload);
+
+    // Diagnostics
+    const memUsage = process.memoryUsage();
+    const diagnosticsPayload: PhaseDiagnostics = {
+      phase: "hunter",
+      health: "HEALTHY",
+      alerts: [],
+      system: {
+        memory: {
+          rss: memUsage.rss,
+          heapTotal: memUsage.heapTotal,
+          heapUsed: memUsage.heapUsed,
+          external: memUsage.external,
+          arrayBuffers: memUsage.arrayBuffers,
+        },
+        uptime: process.uptime(),
+      },
+      timestamp: Date.now(),
+    };
+    nats.publish(
+      `${TitanSubject.EVT_PHASE_DIAGNOSTICS}.hunter`,
+      diagnosticsPayload,
+    );
   }
 
   /**

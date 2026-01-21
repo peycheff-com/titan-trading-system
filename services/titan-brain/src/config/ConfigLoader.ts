@@ -3,10 +3,10 @@
  * Handles loading, validation, and merging of configuration independently.
  */
 
-import { existsSync, readFileSync } from "fs";
-import { EquityTier, TitanBrainConfig } from "../types/index.js";
-import { defaultConfig } from "./defaults.js";
-import { TitanBrainConfigSchema } from "./schema.js";
+import { existsSync, readFileSync } from 'fs';
+import { EquityTier, TitanBrainConfig } from '../types/index.js';
+import { defaultConfig } from './defaults.js';
+import { TitanBrainConfigSchema } from './schema.js';
 
 /**
  * Configuration validation result
@@ -41,15 +41,13 @@ export interface ConfigLoaderResult {
 /**
  * Load configuration from a JSON file
  */
-export function loadConfigFromFile(
-  filePath: string,
-): Partial<TitanBrainConfig> {
+export function loadConfigFromFile(filePath: string): Partial<TitanBrainConfig> {
   if (!existsSync(filePath)) {
     throw new Error(`Configuration file not found: ${filePath}`);
   }
 
   try {
-    const content = readFileSync(filePath, "utf-8");
+    const content = readFileSync(filePath, 'utf-8');
     return JSON.parse(content) as Partial<TitanBrainConfig>;
   } catch (error) {
     if (error instanceof SyntaxError) {
@@ -67,9 +65,7 @@ export function loadConfigFromEnvironment(): Partial<TitanBrainConfig> {
   const config: Partial<TitanBrainConfig> = {};
 
   // Brain config
-  if (
-    process.env.BRAIN_SIGNAL_TIMEOUT || process.env.BRAIN_METRIC_UPDATE_INTERVAL
-  ) {
+  if (process.env.BRAIN_SIGNAL_TIMEOUT || process.env.BRAIN_METRIC_UPDATE_INTERVAL) {
     config.brain = {
       signalTimeout: process.env.BRAIN_SIGNAL_TIMEOUT
         ? parseInt(process.env.BRAIN_SIGNAL_TIMEOUT)
@@ -125,10 +121,7 @@ export function loadConfigFromEnvironment(): Partial<TitanBrainConfig> {
   }
 
   // Performance tracker config
-  if (
-    process.env.PERFORMANCE_WINDOW_DAYS ||
-    process.env.PERFORMANCE_MIN_TRADE_COUNT
-  ) {
+  if (process.env.PERFORMANCE_WINDOW_DAYS || process.env.PERFORMANCE_MIN_TRADE_COUNT) {
     config.performanceTracker = {
       windowDays: process.env.PERFORMANCE_WINDOW_DAYS
         ? parseInt(process.env.PERFORMANCE_WINDOW_DAYS)
@@ -152,9 +145,7 @@ export function loadConfigFromEnvironment(): Partial<TitanBrainConfig> {
   }
 
   // Risk guardian config
-  if (
-    process.env.RISK_MAX_CORRELATION || process.env.RISK_CORRELATION_PENALTY
-  ) {
+  if (process.env.RISK_MAX_CORRELATION || process.env.RISK_CORRELATION_PENALTY) {
     config.riskGuardian = {
       maxCorrelation: process.env.RISK_MAX_CORRELATION
         ? parseFloat(process.env.RISK_MAX_CORRELATION)
@@ -175,9 +166,7 @@ export function loadConfigFromEnvironment(): Partial<TitanBrainConfig> {
   }
 
   // Capital flow config
-  if (
-    process.env.CAPITAL_SWEEP_THRESHOLD || process.env.CAPITAL_RESERVE_LIMIT
-  ) {
+  if (process.env.CAPITAL_SWEEP_THRESHOLD || process.env.CAPITAL_RESERVE_LIMIT) {
     config.capitalFlow = {
       sweepThreshold: process.env.CAPITAL_SWEEP_THRESHOLD
         ? parseFloat(process.env.CAPITAL_SWEEP_THRESHOLD)
@@ -196,9 +185,7 @@ export function loadConfigFromEnvironment(): Partial<TitanBrainConfig> {
   }
 
   // Circuit breaker config
-  if (
-    process.env.BREAKER_MAX_DAILY_DRAWDOWN || process.env.BREAKER_MIN_EQUITY
-  ) {
+  if (process.env.BREAKER_MAX_DAILY_DRAWDOWN || process.env.BREAKER_MIN_EQUITY) {
     config.circuitBreaker = {
       maxDailyDrawdown: process.env.BREAKER_MAX_DAILY_DRAWDOWN
         ? parseFloat(process.env.BREAKER_MAX_DAILY_DRAWDOWN)
@@ -229,9 +216,7 @@ export function loadConfigFromEnvironment(): Partial<TitanBrainConfig> {
       maxConnections: process.env.DB_MAX_CONNECTIONS
         ? parseInt(process.env.DB_MAX_CONNECTIONS)
         : undefined,
-      idleTimeout: process.env.DB_IDLE_TIMEOUT
-        ? parseInt(process.env.DB_IDLE_TIMEOUT)
-        : undefined,
+      idleTimeout: process.env.DB_IDLE_TIMEOUT ? parseInt(process.env.DB_IDLE_TIMEOUT) : undefined,
     } as any;
   }
 
@@ -252,10 +237,8 @@ export function loadConfigFromEnvironment(): Partial<TitanBrainConfig> {
   if (process.env.SERVER_PORT || process.env.SERVER_HOST) {
     config.server = {
       host: process.env.SERVER_HOST,
-      port: process.env.SERVER_PORT
-        ? parseInt(process.env.SERVER_PORT)
-        : undefined,
-      corsOrigins: process.env.CORS_ORIGINS?.split(","),
+      port: process.env.SERVER_PORT ? parseInt(process.env.SERVER_PORT) : undefined,
+      corsOrigins: process.env.CORS_ORIGINS?.split(','),
     } as any;
   }
 
@@ -270,11 +253,9 @@ export function loadConfigFromEnvironment(): Partial<TitanBrainConfig> {
       email: {
         enabled: !!process.env.EMAIL_SMTP_HOST,
         smtpHost: process.env.EMAIL_SMTP_HOST,
-        smtpPort: process.env.EMAIL_SMTP_PORT
-          ? parseInt(process.env.EMAIL_SMTP_PORT)
-          : undefined,
+        smtpPort: process.env.EMAIL_SMTP_PORT ? parseInt(process.env.EMAIL_SMTP_PORT) : undefined,
         from: process.env.EMAIL_FROM,
-        to: process.env.EMAIL_TO?.split(","),
+        to: process.env.EMAIL_TO?.split(','),
       },
     } as any;
   }
@@ -294,6 +275,16 @@ export function loadConfigFromEnvironment(): Partial<TitanBrainConfig> {
     } as any;
   }
 
+  // Reconciliation config
+  if (process.env.RECONCILIATION_INTERVAL || process.env.RECONCILIATION_EXCHANGES) {
+    config.reconciliation = {
+      intervalMs: process.env.RECONCILIATION_INTERVAL
+        ? parseInt(process.env.RECONCILIATION_INTERVAL)
+        : undefined,
+      exchanges: process.env.RECONCILIATION_EXCHANGES?.split(','),
+    } as any;
+  }
+
   return config;
 }
 
@@ -310,10 +301,10 @@ function mergeConfigSection<T>(target: T, source: Partial<T> | undefined): T {
 
     if (
       sourceValue !== undefined &&
-      typeof sourceValue === "object" &&
+      typeof sourceValue === 'object' &&
       sourceValue !== null &&
       !Array.isArray(sourceValue) &&
-      typeof targetValue === "object" &&
+      typeof targetValue === 'object' &&
       targetValue !== null &&
       !Array.isArray(targetValue)
     ) {
@@ -328,38 +319,21 @@ function mergeConfigSection<T>(target: T, source: Partial<T> | undefined): T {
 /**
  * Deep merge two TitanBrainConfig objects
  */
-function deepMerge(
-  target: TitanBrainConfig,
-  source: Partial<TitanBrainConfig>,
-): TitanBrainConfig {
+function deepMerge(target: TitanBrainConfig, source: Partial<TitanBrainConfig>): TitanBrainConfig {
   return {
     brain: mergeConfigSection(target.brain, source.brain),
-    allocationEngine: mergeConfigSection(
-      target.allocationEngine,
-      source.allocationEngine,
-    ),
-    performanceTracker: mergeConfigSection(
-      target.performanceTracker,
-      source.performanceTracker,
-    ),
+    allocationEngine: mergeConfigSection(target.allocationEngine, source.allocationEngine),
+    performanceTracker: mergeConfigSection(target.performanceTracker, source.performanceTracker),
     riskGuardian: mergeConfigSection(target.riskGuardian, source.riskGuardian),
     capitalFlow: mergeConfigSection(target.capitalFlow, source.capitalFlow),
-    circuitBreaker: mergeConfigSection(
-      target.circuitBreaker,
-      source.circuitBreaker,
-    ),
+    circuitBreaker: mergeConfigSection(target.circuitBreaker, source.circuitBreaker),
     database: mergeConfigSection(target.database, source.database),
     redis: mergeConfigSection(target.redis, source.redis),
     server: mergeConfigSection(target.server, source.server),
-    notifications: mergeConfigSection(
-      target.notifications,
-      source.notifications,
-    ),
-    activeInference: mergeConfigSection(
-      target.activeInference,
-      source.activeInference,
-    ),
+    notifications: mergeConfigSection(target.notifications, source.notifications),
+    activeInference: mergeConfigSection(target.activeInference, source.activeInference),
     services: mergeConfigSection(target.services, source.services),
+    reconciliation: mergeConfigSection(target.reconciliation, source.reconciliation),
   };
 }
 
@@ -367,16 +341,10 @@ function deepMerge(
  * Load and merge configuration from all sources
  * Priority: Environment variables > Config file > Defaults
  */
-export function loadConfig(
-  options: ConfigLoaderOptions = {},
-): ConfigLoaderResult {
-  const {
-    configFile,
-    validate = true,
-    throwOnError = false,
-  } = options;
+export function loadConfig(options: ConfigLoaderOptions = {}): ConfigLoaderResult {
+  const { configFile, validate = true, throwOnError = false } = options;
 
-  const sources: string[] = ["defaults"];
+  const sources: string[] = ['defaults'];
   let mergedConfig: TitanBrainConfig = { ...defaultConfig };
 
   // Load from config file if provided
@@ -386,9 +354,7 @@ export function loadConfig(
       mergedConfig = deepMerge(mergedConfig, fileConfig);
       sources.push(`file:${configFile}`);
     } catch (error) {
-      console.warn(
-        `Warning: Could not load config file: ${(error as Error).message}`,
-      );
+      console.warn(`Warning: Could not load config file: ${(error as Error).message}`);
     }
   }
 
@@ -396,7 +362,7 @@ export function loadConfig(
   const envConfig = loadConfigFromEnvironment();
   if (Object.keys(envConfig).length > 0) {
     mergedConfig = deepMerge(mergedConfig, envConfig);
-    sources.push("environment");
+    sources.push('environment');
   }
 
   // Validate configuration
@@ -410,16 +376,12 @@ export function loadConfig(
     } else {
       validation = {
         valid: false,
-        errors: result.error.errors.map((e) =>
-          `${e.path.join(".")}: ${e.message}`
-        ),
+        errors: result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`),
         warnings: [],
       };
 
       if (throwOnError) {
-        throw new Error(
-          `Configuration validation failed:\n${validation.errors.join("\n")}`,
-        );
+        throw new Error(`Configuration validation failed:\n${validation.errors.join('\n')}`);
       }
     }
   }
@@ -464,11 +426,7 @@ export class ConfigLoader {
   private async load(): Promise<TitanBrainConfig> {
     const result = loadConfig(this.options);
     if (!result.validation.valid && this.options.throwOnError) {
-      throw new Error(
-        `Configuration validation failed:\n${
-          result.validation.errors.join("\\n")
-        }`,
-      );
+      throw new Error(`Configuration validation failed:\n${result.validation.errors.join('\\n')}`);
     }
     this.config = result.config;
     return this.config;
@@ -481,7 +439,7 @@ export class ConfigLoader {
     if (!this.config) {
       return {
         valid: false,
-        errors: ["Configuration not loaded"],
+        errors: ['Configuration not loaded'],
         warnings: [],
       };
     }
@@ -491,9 +449,7 @@ export class ConfigLoader {
     }
     return {
       valid: false,
-      errors: result.error.errors.map((e) =>
-        `${e.path.join(".")}: ${e.message}`
-      ),
+      errors: result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`),
       warnings: [],
     };
   }
@@ -514,7 +470,7 @@ export class ConfigValidationError extends Error {
 
   constructor(message: string, errors: string[]) {
     super(message);
-    this.name = "ConfigValidationError";
+    this.name = 'ConfigValidationError';
     this.errors = errors;
   }
 }
@@ -529,7 +485,7 @@ export function validateConfig(config: unknown): ValidationResult {
   }
   return {
     valid: false,
-    errors: result.error.errors.map((e) => `${e.path.join(".")}: ${e.message}`),
+    errors: result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`),
     warnings: [],
   };
 }

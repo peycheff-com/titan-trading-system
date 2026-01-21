@@ -1,9 +1,9 @@
 /**
  * PrometheusMetrics - Prometheus metrics exporter for Titan Phase 1 Scavenger
- * 
+ *
  * Implements trap detection metrics, signal generation rate,
  * IPC communication metrics, and performance monitoring.
- * 
+ *
  * Requirements: 6.5
  */
 
@@ -56,89 +56,60 @@ export class PrometheusMetrics {
    */
   private initializeMetrics(): void {
     // Trap detection metrics
-    this.defineCounter(
-      'traps_detected_total',
-      'Total number of traps detected',
-      ['trap_type', 'symbol']
-    );
+    this.defineCounter('traps_detected_total', 'Total number of traps detected', [
+      'trap_type',
+      'symbol',
+    ]);
 
-    this.defineCounter(
-      'signals_generated_total',
-      'Total number of signals generated',
-      ['symbol', 'direction', 'result']
-    );
+    this.defineCounter('signals_generated_total', 'Total number of signals generated', [
+      'symbol',
+      'direction',
+      'result',
+    ]);
 
     // IPC communication metrics
-    this.defineCounter(
-      'ipc_messages_total',
-      'Total IPC messages sent/received',
-      ['direction', 'result']
-    );
+    this.defineCounter('ipc_messages_total', 'Total IPC messages sent/received', [
+      'direction',
+      'result',
+    ]);
 
-    this.defineHistogram(
-      'ipc_latency_ms',
-      'IPC message latency in milliseconds',
-      ['message_type']
-    );
+    this.defineHistogram('ipc_latency_ms', 'IPC message latency in milliseconds', ['message_type']);
 
     // Binance WebSocket metrics
-    this.defineCounter(
-      'binance_ticks_total',
-      'Total Binance ticks received',
-      ['symbol']
-    );
+    this.defineCounter('binance_ticks_total', 'Total Binance ticks received', ['symbol']);
 
     this.defineGauge(
       'binance_connection_status',
       'Binance WebSocket connection status (1=connected, 0=disconnected)',
-      []
+      [],
     );
 
     // Trap engine metrics
-    this.defineGauge(
-      'active_traps_count',
-      'Number of currently active traps',
-      ['trap_type']
-    );
+    this.defineGauge('active_traps_count', 'Number of currently active traps', ['trap_type']);
 
     this.defineHistogram(
       'trap_calculation_duration_ms',
       'Time taken to calculate trap levels in milliseconds',
-      ['calculation_type']
+      ['calculation_type'],
     );
 
     // Performance metrics
-    this.defineGauge(
-      'tick_processing_rate',
-      'Rate of tick processing per second',
-      []
-    );
+    this.defineGauge('tick_processing_rate', 'Rate of tick processing per second', []);
 
-    this.defineCounter(
-      'validation_results_total',
-      'Total validation results',
-      ['symbol', 'result']
-    );
+    this.defineCounter('validation_results_total', 'Total validation results', [
+      'symbol',
+      'result',
+    ]);
 
     // Health metrics
-    this.defineGauge(
-      'health_status',
-      'Component health status (1=healthy, 0=unhealthy)',
-      ['component']
-    );
+    this.defineGauge('health_status', 'Component health status (1=healthy, 0=unhealthy)', [
+      'component',
+    ]);
 
     // Configuration metrics
-    this.defineGauge(
-      'config_reload_timestamp',
-      'Timestamp of last configuration reload',
-      []
-    );
+    this.defineGauge('config_reload_timestamp', 'Timestamp of last configuration reload', []);
 
-    this.defineCounter(
-      'config_reload_total',
-      'Total configuration reloads',
-      ['result']
-    );
+    this.defineCounter('config_reload_total', 'Total configuration reloads', ['result']);
   }
 
   /**
@@ -146,7 +117,12 @@ export class PrometheusMetrics {
    */
   private defineCounter(name: string, help: string, labels: string[]): void {
     const fullName = `${this.prefix}_${name}`;
-    this.definitions.set(fullName, { name: fullName, help, type: 'counter', labels });
+    this.definitions.set(fullName, {
+      name: fullName,
+      help,
+      type: 'counter',
+      labels,
+    });
     this.counters.set(fullName, new Map());
   }
 
@@ -155,7 +131,12 @@ export class PrometheusMetrics {
    */
   private defineGauge(name: string, help: string, labels: string[]): void {
     const fullName = `${this.prefix}_${name}`;
-    this.definitions.set(fullName, { name: fullName, help, type: 'gauge', labels });
+    this.definitions.set(fullName, {
+      name: fullName,
+      help,
+      type: 'gauge',
+      labels,
+    });
     this.gauges.set(fullName, new Map());
   }
 
@@ -164,7 +145,12 @@ export class PrometheusMetrics {
    */
   private defineHistogram(name: string, help: string, labels: string[]): void {
     const fullName = `${this.prefix}_${name}`;
-    this.definitions.set(fullName, { name: fullName, help, type: 'histogram', labels });
+    this.definitions.set(fullName, {
+      name: fullName,
+      help,
+      type: 'histogram',
+      labels,
+    });
     this.histograms.set(fullName, new Map());
   }
 
@@ -214,10 +200,10 @@ export class PrometheusMetrics {
 
     const key = this.getLabelKey(labels);
     let data = histogram.get(key);
-    
+
     if (!data) {
       data = {
-        buckets: new Map(LATENCY_BUCKETS.map(b => [b, 0])),
+        buckets: new Map(LATENCY_BUCKETS.map((b) => [b, 0])),
         sum: 0,
         count: 0,
       };
@@ -241,14 +227,21 @@ export class PrometheusMetrics {
    * Record trap detection
    */
   recordTrapDetection(trapType: string, symbol: string): void {
-    this.incrementCounter('traps_detected_total', { trap_type: trapType, symbol });
+    this.incrementCounter('traps_detected_total', {
+      trap_type: trapType,
+      symbol,
+    });
   }
 
   /**
    * Record signal generation
    */
   recordSignalGeneration(symbol: string, direction: string, result: string): void {
-    this.incrementCounter('signals_generated_total', { symbol, direction, result });
+    this.incrementCounter('signals_generated_total', {
+      symbol,
+      direction,
+      result,
+    });
   }
 
   /**
@@ -262,7 +255,9 @@ export class PrometheusMetrics {
    * Record IPC latency
    */
   recordIPCLatency(messageType: string, latencyMs: number): void {
-    this.observeHistogram('ipc_latency_ms', latencyMs, { message_type: messageType });
+    this.observeHistogram('ipc_latency_ms', latencyMs, {
+      message_type: messageType,
+    });
   }
 
   /**
@@ -290,7 +285,9 @@ export class PrometheusMetrics {
    * Record trap calculation duration
    */
   recordTrapCalculationDuration(calculationType: string, durationMs: number): void {
-    this.observeHistogram('trap_calculation_duration_ms', durationMs, { calculation_type: calculationType });
+    this.observeHistogram('trap_calculation_duration_ms', durationMs, {
+      calculation_type: calculationType,
+    });
   }
 
   /**
@@ -373,13 +370,13 @@ export class PrometheusMetrics {
       }
       for (const [labelKey, data] of values) {
         const baseLabels = labelKey ? `${labelKey},` : '';
-        
+
         // Export buckets
         for (const [bucket, count] of data.buckets) {
           lines.push(`${name}_bucket{${baseLabels}le="${bucket}"} ${count}`);
         }
         lines.push(`${name}_bucket{${baseLabels}le="+Inf"} ${data.count}`);
-        
+
         // Export sum and count
         const sumLabels = labelKey ? `{${labelKey}}` : '';
         lines.push(`${name}_sum${sumLabels} ${data.sum}`);
@@ -419,14 +416,4 @@ export function getMetrics(prefix?: string): PrometheusMetrics {
     metricsInstance = new PrometheusMetrics(prefix);
   }
   return metricsInstance;
-}
-
-/**
- * Reset the global metrics instance (for testing)
- */
-export function resetMetrics(): void {
-  if (metricsInstance) {
-    metricsInstance.reset();
-  }
-  metricsInstance = null;
 }

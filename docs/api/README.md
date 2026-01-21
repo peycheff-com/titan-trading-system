@@ -127,21 +127,23 @@ curl http://localhost:3002/api/console/system-status
 
 ### HMAC Signature Verification
 
-All webhook endpoints require HMAC-SHA256 signature verification:
+All webhook endpoints require HMAC-SHA256 signature verification using the **raw request body**
+and a timestamp header (`x-timestamp` by default). The signature is computed over
+`${timestamp}.${rawBody}` to prevent replay attacks.
 
 ```javascript
 const crypto = require("crypto");
 
-function signRequest(body, secret) {
-  return crypto
-    .createHmac("sha256", secret)
-    .update(JSON.stringify(body))
-    .digest("hex");
+function signRequest(rawBody, secret, timestamp) {
+  const payload = `${timestamp}.${rawBody}`;
+  return crypto.createHmac("sha256", secret).update(payload, "utf8").digest("hex");
 }
 
 // Usage
-const signature = signRequest(requestBody, process.env.WEBHOOK_SECRET);
-// Include in x-signature header
+const rawBody = JSON.stringify(requestBody);
+const timestamp = Math.floor(Date.now() / 1000);
+const signature = signRequest(rawBody, process.env.WEBHOOK_SECRET, timestamp);
+// Include x-signature and x-timestamp headers
 ```
 
 ### API Key Management

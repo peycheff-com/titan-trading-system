@@ -11,6 +11,10 @@ Complete API reference for the Titan Brain orchestrator service.
 - [Dashboard Data Format](#dashboard-data-format)
 - [Error Handling](#error-handling)
 - [Rate Limiting](#rate-limiting)
+- [Rate Limiting](#rate-limiting)
+- [Manual Trading](#manual-trading)
+- [System Configuration](#system-configuration)
+- [Observability](#observability)
 - [Examples](#examples)
 
 ---
@@ -114,7 +118,7 @@ interface IntentSignal {
   signalId: string;
   
   /** Phase originating the signal */
-  phaseId: 'phase1' | 'phase2' | 'phase3';
+  phaseId: 'phase1' | 'phase2' | 'phase3' | 'manual';
   
   /** Trading pair symbol */
   symbol: string;
@@ -592,6 +596,12 @@ interface DashboardData {
     netDelta: number;
     correlationScore: number;
     portfolioBeta: number;
+    portfolioBeta: number;
+    powerLaw?: {
+        alpha: number;
+        volatilityState: 'STABLE' | 'EXPANDING' | 'CONTRACTING' | 'EXTREME';
+        theoreticalMaxLeverage: number;
+    };
   };
   
   /** Treasury status */
@@ -611,6 +621,13 @@ interface DashboardData {
   
   /** Warning banner flag */
   warningBannerActive: boolean;
+
+  /** Current regime state */
+  regimeState?: {
+      current: string;
+      confidence: number;
+      lastShift: number;
+  };
 }
 
 interface AllocationVector {
@@ -780,6 +797,92 @@ The Brain does not implement rate limiting by default. For production deployment
 | `/webhook/*` | 100 req/min per phase |
 | `/dashboard` | 60 req/min |
 | `/admin/*` | 10 req/min |
+| `/trade/*` | 20 req/min |
+| `/risk/*` | 10 req/min |
+
+---
+
+## Manual Trading
+
+### POST /trade/manual
+Execute a manual trade with optional risk bypass.
+
+**Request Body:**
+```json
+{
+  "symbol": "BTCUSDT",
+  "side": "BUY",
+  "size": 500,
+  "leverage": 5,
+  "bypassRisk": false,
+  "exchange": "bybit"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "signalId": "manual_sys_1702500000000",
+  "message": "Manual trade executed",
+  "timestamp": 1702500000000
+}
+```
+
+### DELETE /trade/cancel-all
+Emergency command to cancel all open orders and potentially flatten positions (configurable).
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "All trades cancelled",
+  "timestamp": 1702500000000
+}
+```
+
+---
+
+## System Configuration
+
+### PATCH /risk/config
+Hot-patch risk parameters at runtime.
+
+**Request Body:**
+```json
+{
+    "maxDrawdown": 0.15,
+    "leverageCaps": {
+        "MICRO": 20,
+        "SMALL": 10,
+        "MEDIUM": 5,
+        "INSTITUTIONAL": 2
+    },
+    "maxCorrelationInfo": 0.7
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "config": { ... },
+    "timestamp": 1702500000000
+}
+```
+
+---
+
+## Observability
+
+### GET /metrics
+Exposes Prometheus metrics for scraping.
+
+**Metrics:**
+*   `titan_brain_current_equity`: Current NAV.
+*   `titan_brain_sharpe_ratio`: Rolling Sharpe per phase.
+*   `titan_brain_circuit_breaker_active`: 1 if active, 0 if inactive.
+*   `titan_brain_signal_processing_latency_ms`: Histogram of processing time.
 
 ---
 
@@ -1012,3 +1115,10 @@ createOverride(
 - Dashboard API
 - Circuit breaker management
 - Manual override support
+
+### v1.1.0 (January 2026) -> Current
+
+- **PowerLaw Integration**: Added `powerlaw_metrics` to Dashboard and Risk logic.
+- **Steerability**: Added `/trade/manual` and `/trade/cancel-all` endpoints.
+- **Dynamic Risk**: Added `/risk/config` endpoint.
+- **Observability**: Added `/dashboard/extended` endpoint.

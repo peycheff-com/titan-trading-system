@@ -10,6 +10,7 @@
  * - 11.1-11.7: Signal execution logging to trades.jsonl
  */
 
+import { context, trace } from '@opentelemetry/api';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -40,6 +41,8 @@ export interface LogEntry {
   component?: string;
   operation?: string;
   duration?: number;
+  traceId?: string;
+  spanId?: string;
   metadata?: Record<string, any>;
   error?: {
     name: string;
@@ -235,6 +238,15 @@ export class Logger {
       message,
       component: this.config.component,
     };
+
+    // Inject OpenTelemetry Trace Context if available
+    const activeSpan = trace.getSpan(context.active());
+    if (activeSpan) {
+      const spanContext = activeSpan.spanContext();
+      entry.traceId = spanContext.traceId;
+      entry.spanId = spanContext.spanId;
+    }
+
     if (correlationId) entry.correlationId = correlationId;
     if (operation) entry.operation = operation;
     if (duration !== undefined) entry.duration = duration;
@@ -669,7 +681,9 @@ export class Logger {
 
   // Helpers
   queryLogs(filter?: (entry: TradeLogEntry) => boolean): TradeLogEntry[] {
-    if (!this.config.tradeLogPath || !fs.existsSync(this.config.tradeLogPath)) return [];
+    if (!this.config.tradeLogPath || !fs.existsSync(this.config.tradeLogPath)) {
+      return [];
+    }
     try {
       const content = fs.readFileSync(this.config.tradeLogPath, 'utf-8');
       const lines = content.split('\n').filter((line) => line.trim());

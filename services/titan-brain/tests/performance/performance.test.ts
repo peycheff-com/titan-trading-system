@@ -8,18 +8,30 @@
  */
 
 import { performance } from "perf_hooks";
-import { CacheManager } from "../../src/cache/CacheManager.js";
+jest.mock("../../src/monitoring/index.js", () => ({
+  getLogger: () => ({
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+    logSecurityEvent: jest.fn(),
+  }),
+}));
+
+let CacheManager: typeof import("../../src/cache/CacheManager.js").CacheManager;
 
 describe("Performance Validation Tests", () => {
   describe("Cache Performance", () => {
-    let cacheManager: CacheManager;
+    let cacheManager: InstanceType<typeof CacheManager>;
 
     beforeAll(async () => {
+      ({ CacheManager } = await import("../../src/cache/CacheManager.js"));
+      const redisConfig =
+        process.env.CACHE_TEST_USE_REDIS === "true"
+          ? { host: "localhost", port: 6379 }
+          : undefined;
       cacheManager = new CacheManager({
-        redis: {
-          host: "localhost",
-          port: 6379,
-        },
+        redis: redisConfig,
         enableInMemoryFallback: true,
         inMemoryMaxSize: 1000,
         inMemoryTtlMs: 300000, // 5 minutes

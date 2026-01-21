@@ -25,12 +25,41 @@ export interface IntentSignal {
   /** Optional: stop loss distance or price */
   /** Optional: stop loss distance or price */
   stopLossPrice?: number;
+  /** Expected edge/profit margin for this trade (e.g. 0.005 for 0.5%) */
+  expectedEdge?: number;
   /** Optional: latency profile for feedback loop */
   latencyProfile?: {
     transit: number;
     processing: number;
     endToEnd: number;
   };
+  /** Exchange where this signal should be executed */
+  exchange?: string;
+  /** Position mode (One-Way vs Hedge) */
+  positionMode?: 'ONE_WAY' | 'HEDGE';
+  /** Intent Type */
+  type?: 'MANUAL' | 'STRATEGY' | 'RECONCILIATION' | 'LIQUIDATION';
+}
+
+/**
+ * Risk Policy Command (Brain -> Execution)
+ */
+export interface RiskPolicy {
+  current_state: RiskPolicyState;
+  max_position_notional: number; // Decimal in Rust, number here (safely)
+  max_account_leverage: number;
+  max_daily_loss: number;
+  max_open_orders_per_symbol: number;
+  symbol_whitelist: string[];
+  max_slippage_bps: number;
+  max_staleness_ms: number;
+}
+
+export enum RiskPolicyState {
+  Normal = 'Normal',
+  Cautious = 'Cautious',
+  Defensive = 'Defensive',
+  Emergency = 'Emergency',
 }
 
 /**
@@ -49,6 +78,10 @@ export interface Position {
   leverage: number;
   /** Phase that opened this position */
   phaseId: PhaseId;
+  /** Exchange where position is held */
+  exchange?: string;
+  /** Position mode (One-Way vs Hedge) */
+  positionMode?: 'ONE_WAY' | 'HEDGE';
 }
 
 /**
@@ -60,6 +93,7 @@ export interface RiskMetrics {
   correlation: number;
   portfolioDelta: number;
   portfolioBeta: number;
+  var95?: number;
 }
 
 /**
@@ -100,4 +134,67 @@ export interface RiskGuardianConfig {
   correlationUpdateInterval: number;
   /** Minimum stop distance multiplier (x ATR) */
   minStopDistanceMultiplier: number;
+  /** Minimum confidence score to allow trading (0.0 - 1.0) */
+  minConfidenceScore: number;
+  /** Confidence score configuration */
+  confidence: ConfidenceScoreConfig;
+  /** Fractal risk constraints per phase */
+  fractal: {
+    [key: string]: PhaseRiskConstraints;
+  };
+  riskAversionLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
+}
+
+/**
+ * Phase Risk Constraints
+ */
+export interface PhaseRiskConstraints {
+  maxLeverage: number;
+  maxDrawdown: number;
+  maxAllocation: number;
+}
+
+/**
+ * Confidence Score Configuration
+ */
+export interface ConfidenceScoreConfig {
+  decayRate: number; // Rate at which confidence decays on drift
+  recoveryRate: number; // Rate at which confidence recovers
+  threshold: number; // Minimum confidence to allow trading
+}
+
+/**
+ * Metrics from PowerLaw Lab (Tail Risk & Volatility)
+ */
+export interface PowerLawMetrics {
+  symbol: string;
+  tailExponent: number; // Hill alpha
+  tailConfidence: number;
+  exceedanceProbability: number; // POT
+  volatilityCluster: {
+    state: string;
+    persistence: number;
+    sigma: number;
+  };
+  timestamp: number;
+}
+
+/**
+ * Integrated Risk State for Observability
+ */
+export interface RiskGuardianState {
+  config: RiskGuardianConfig;
+  metrics: {
+    currentEquity: number;
+    portfolioBeta: number;
+    maxDrawdown: number;
+  };
+  regime: string; // RegimeState enum not imported here to avoid cycles, using string
+  powerLaw: Record<string, PowerLawMetrics>;
+  circuitBreaker: {
+    active: boolean;
+    reason?: string;
+    tripCount: number;
+    lastTripTime?: number;
+  };
 }

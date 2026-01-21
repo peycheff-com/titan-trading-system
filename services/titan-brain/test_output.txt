@@ -1,0 +1,40 @@
+
+> titan-brain@1.0.0 test
+> npm run test:unit tests/unit/ManualTradeService.test.ts
+
+
+> titan-brain@1.0.0 test:unit
+> jest --config jest.config.cjs tests/unit/ManualTradeService.test.ts
+
+FAIL tests/unit/ManualTradeService.test.ts
+  ● Test suite failed to run
+
+    [96mtests/unit/ManualTradeService.test.ts[0m:[93m77[0m:[93m19[0m - [91merror[0m[90m TS2741: [0mProperty 'timestamp' is missing in type '{ symbol: string; side: "SELL"; size: number; bypassRisk: true; }' but required in type '{ symbol: string; side: "BUY" | "SELL"; size: number; timestamp: number; leverage?: number | undefined; exchange?: string | undefined; bypassRisk?: boolean | undefined; }'.
+
+    [7m77[0m             const minimalRequest: ManualTradeRequestBody = {
+    [7m  [0m [91m                  ~~~~~~~~~~~~~~[0m
+
+      [96msrc/schemas/apiSchemas.ts[0m:[93m87[0m:[93m5[0m
+        [7m87[0m     timestamp: TimestampSchema,
+        [7m  [0m [96m    ~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+        'timestamp' is declared here.
+
+Test Suites: 1 failed, 1 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        0.971 s
+Ran all test suites matching /tests\/unit\/ManualTradeService.test.ts/i.
+npm error Lifecycle script `test:unit` failed with error:
+npm error code 1
+npm error path /Users/ivan/Code/trading/titan/services/titan-brain
+npm error workspace titan-brain@1.0.0
+npm error location /Users/ivan/Code/trading/titan/services/titan-brain
+npm error command failed
+npm error command sh -c jest --config jest.config.cjs tests/unit/ManualTradeService.test.ts
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path /Users/ivan/Code/trading/titan/services/titan-brain
+npm error workspace titan-brain@1.0.0
+npm error location /Users/ivan/Code/trading/titan/services/titan-brain
+npm error command failed
+npm error command sh -c npm run test:unit tests/unit/ManualTradeService.test.ts

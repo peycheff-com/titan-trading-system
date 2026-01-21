@@ -1,8 +1,8 @@
 /**
  * Health Server for Titan Phase 1 - Scavenger
- * 
+ *
  * Exposes health check endpoint on port 8081 for monitoring and orchestration.
- * 
+ *
  * Requirements: System Integration 11.2, 22.3
  * - GET /health - Returns health status with connection info
  */
@@ -123,18 +123,20 @@ export class HealthServer {
   private handleHealthCheck(res: http.ServerResponse): void {
     try {
       const status = this.config.getStatus();
-      const httpStatus = status.status === 'healthy' ? 200 : 
-                         status.status === 'degraded' ? 200 : 503;
-      
+      const httpStatus =
+        status.status === 'healthy' ? 200 : status.status === 'degraded' ? 200 : 503;
+
       res.writeHead(httpStatus);
       res.end(JSON.stringify(status, null, 2));
     } catch (error) {
       res.writeHead(500);
-      res.end(JSON.stringify({
-        status: 'unhealthy',
-        error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toISOString()
-      }));
+      res.end(
+        JSON.stringify({
+          status: 'unhealthy',
+          error: error instanceof Error ? error.message : 'Unknown error',
+          timestamp: new Date().toISOString(),
+        }),
+      );
     }
   }
 
@@ -144,11 +146,13 @@ export class HealthServer {
    */
   private handleLivenessCheck(res: http.ServerResponse): void {
     res.writeHead(200);
-    res.end(JSON.stringify({
-      status: 'alive',
-      uptime: Math.floor((Date.now() - this.startTime) / 1000),
-      timestamp: new Date().toISOString()
-    }));
+    res.end(
+      JSON.stringify({
+        status: 'alive',
+        uptime: Math.floor((Date.now() - this.startTime) / 1000),
+        timestamp: new Date().toISOString(),
+      }),
+    );
   }
 
   /**
@@ -159,20 +163,24 @@ export class HealthServer {
     try {
       const status = this.config.getStatus();
       const isReady = status.connections.binance === 'connected';
-      
+
       res.writeHead(isReady ? 200 : 503);
-      res.end(JSON.stringify({
-        ready: isReady,
-        connections: status.connections,
-        timestamp: new Date().toISOString()
-      }));
+      res.end(
+        JSON.stringify({
+          ready: isReady,
+          connections: status.connections,
+          timestamp: new Date().toISOString(),
+        }),
+      );
     } catch (error) {
       res.writeHead(503);
-      res.end(JSON.stringify({
-        ready: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toISOString()
-      }));
+      res.end(
+        JSON.stringify({
+          ready: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+          timestamp: new Date().toISOString(),
+        }),
+      );
     }
   }
 
@@ -184,16 +192,18 @@ export class HealthServer {
     try {
       const metrics = getMetrics();
       const metricsText = metrics.export();
-      
+
       res.setHeader('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
       res.writeHead(200);
       res.end(metricsText);
     } catch (error) {
       res.writeHead(500);
-      res.end(JSON.stringify({
-        error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toISOString()
-      }));
+      res.end(
+        JSON.stringify({
+          error: error instanceof Error ? error.message : 'Unknown error',
+          timestamp: new Date().toISOString(),
+        }),
+      );
     }
   }
 }

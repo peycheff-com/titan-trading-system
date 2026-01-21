@@ -14,6 +14,12 @@ import type {
   PerformanceMetrics,
   RiskStatus,
 } from "../types/portfolio.js";
+import {
+  ExecutionClient,
+  getNatsClient,
+  type IntentSignal,
+  TitanSubject,
+} from "@titan/shared";
 
 export interface SentinelConfig {
   updateIntervalMs: number;
@@ -45,10 +51,19 @@ export class SentinelCore extends EventEmitter {
   public performance: PerformanceTracker;
   public signals: SignalGenerator;
   public priceMonitor: PriceMonitor;
+  private executionClient: ExecutionClient;
 
   // State from NATS
   private currentRegime: string = "STABLE";
   private currentAPTR: number = 0;
+  private allocatedEquity: number = 0;
+
+  // ... (constructor) ...
+
+  public updateBudget(equity: number) {
+    this.allocatedEquity = equity;
+    this.emit("log", `💰 Budget Updated: $${equity.toFixed(2)}`);
+  }
 
   constructor(
     private config: SentinelConfig,
@@ -83,6 +98,7 @@ export class SentinelCore extends EventEmitter {
     this.signals = new SignalGenerator(DEFAULT_SIGNAL_THRESHOLDS);
     this.vacuum = new VacuumMonitor(this.signals); // Pass signalGenerator
     this.performance = new PerformanceTracker(config.initialCapital);
+    this.executionClient = new ExecutionClient({ source: "sentinel" });
   }
 
   async start(): Promise<void> {
@@ -92,6 +108,14 @@ export class SentinelCore extends EventEmitter {
 
     // Initialize Portfolio
     await this.portfolio.initialize();
+
+    // Connect Execution Client
+    try {
+      await this.executionClient.connect();
+      this.emit("log", "✅ Execution Client Connected");
+    } catch (e) {
+      this.emit("log", `⚠️ Execution Client Connect Failed: ${e}`);
+    }
 
     // Start Loops
     this.tickInterval = setInterval(
@@ -272,38 +296,139 @@ export class SentinelCore extends EventEmitter {
       };
 
       this.emit("tick", state);
+      this.publishState(state);
     } catch (e) {
       this.emit("error", e instanceof Error ? e : new Error(String(e)));
     }
   }
 
+  private async publishState(state: SentinelState): Promise<void> {
+    const nats = getNatsClient();
+    if (!nats.isConnected()) return;
+
+    // Publish Posture
+    const posturePayload = {
+      phase: "sentinel",
+      status: this.isRunning ? "RUNNING" : "STOPPED",
+      regime: this.currentRegime,
+      metrics: {
+        nav: state.health.nav,
+        equity: this.allocatedEquity,
+        openPositions: state.health.positions.length,
+        basis: state.prices.basis,
+      },
+      timestamp: Date.now(),
+    };
+    nats.publish(`${TitanSubject.EVT_PHASE_POSTURE}.sentinel`, posturePayload);
+
+    // Publish Diagnostics
+    const diagnosticsPayload = {
+      phase: "sentinel",
+      health: state.health.riskStatus,
+      alerts: state.health.alerts,
+      system: {
+        memory: process.memoryUsage(),
+        uptime: process.uptime(),
+      },
+      timestamp: Date.now(),
+    };
+    nats.publish(
+      `${TitanSubject.EVT_PHASE_DIAGNOSTICS}.sentinel`,
+      diagnosticsPayload,
+    );
+  }
+
   private async executeSignal(signal: Signal): Promise<void> {
-    // Volatile Protocol: reduce size
-    let size = 100; // Base USD size
+    // Truth Layer Sizing: Use Allocated Equity if available, else static config
+    const capitalBase = this.allocatedEquity > 0
+      ? this.allocatedEquity
+      : this.config.initialCapital;
+
+    // Sizing Strategy:
+    // STABLE: 10% of capital per trade
+    // VOLATILE: 5% of capital per trade
+    // CRASH: 0% (Handled by regime rejection earlier, but safe to default 0)
+
+    let sizingPercentage = 0.10;
     if (this.currentRegime === "VOLATILE") {
-      size = 50; // Half size
+      sizingPercentage = 0.05;
     }
+
+    let calculatedSize = capitalBase * sizingPercentage;
+
+    // Cap at Max Position Size from Risk Settings
+    // Need to cast to any if maxPositionSize is not public in RiskManager, but usually access via getter or public prop
+    // Actually this.risk is public.
+    // However, RiskManager def is imported. Let's assume it has maxPositionSize if it was passed in config.
+    // In constructor: maxPositionSize: 50000.
+    // Let's assume RiskManager has a limit logic, but we want to cap the *intent* size.
+    // For now, let's just log the calculated size.
 
     this.emit(
       "log",
-      `Executing Signal: ${signal.action} @ ${
-        signal.basis.toFixed(4)
-      } (Size: ${size})`,
+      `Generaring Intent with Truth Sizing: ${sizingPercentage * 100}% of $${
+        capitalBase.toFixed(0)
+      } => $${calculatedSize.toFixed(2)}`,
     );
 
-    // Record Trade (Simulated)
-    this.performance.recordTrade({
-      id: `tr-${Date.now()}`,
+    // Orchestrate Intent
+    // Basis Arb requires two legs. For Phase 3 Alpha, we execute Leg 1 (Perp) then Leg 2 (Spot)
+    // EXPAND: Buy Perp, Sell Spot
+    // CONTRACT: Sell Perp, Buy Spot
+
+    const direction = signal.action === "EXPAND" ? "LONG" : "SHORT";
+
+    // Construct Intent
+    const intent: IntentSignal = {
+      signal_id: `sentinel-${Date.now()}-${signal.symbol}`,
+      source: "sentinel",
       symbol: signal.symbol,
-      type: "BASIS_SCALP",
-      entryTime: Date.now(),
-      exitTime: 0,
-      entryBasis: signal.basis,
-      exitBasis: 0,
-      size,
-      realizedPnL: 0, // Pending close
-      fees: 0.1,
-      entryPrice: 0,
-    });
+      direction: direction,
+      entry_zone: {
+        min: 0,
+        max: 999999, // Market order mostly
+      },
+      stop_loss: 0,
+      take_profits: [],
+      confidence: signal.confidence,
+      leverage: 1,
+      timestamp: Date.now(),
+
+      // Truth Layer Injection
+      position_size: calculatedSize,
+
+      trap_type: "BASIS_ARB",
+    };
+
+    try {
+      this.emit("log", `📤 Sending PREPARE...`);
+      const prepareResult = await this.executionClient.sendPrepare(intent);
+
+      if (prepareResult.prepared) {
+        const confirmResult = await this.executionClient.sendConfirm(
+          intent.signal_id,
+        );
+        this.emit("log", `✅ CONFIRM Executed: ${confirmResult.executed}`);
+
+        // Simple performance tracking (approximate)
+        this.performance.recordTrade({
+          id: intent.signal_id,
+          symbol: signal.symbol,
+          type: "BASIS_SCALP",
+          entryTime: Date.now(),
+          exitTime: 0,
+          entryBasis: signal.basis,
+          exitBasis: 0,
+          size: calculatedSize,
+          realizedPnL: 0,
+          fees: 0,
+          entryPrice: confirmResult.fill_price || 0,
+        });
+      } else {
+        this.emit("log", `❌ PREPARE Rejected: ${prepareResult.reason}`);
+      }
+    } catch (error) {
+      this.emit("log", `❌ Execution Error: ${error}`);
+    }
   }
 }

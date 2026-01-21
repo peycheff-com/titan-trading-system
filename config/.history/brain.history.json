@@ -1,0 +1,47 @@
+[
+  {
+    "version": 1,
+    "timestamp": 1768913972990,
+    "configType": "brain",
+    "configKey": "brain",
+    "data": {
+      "maxTotalLeverage": 10,
+      "maxGlobalDrawdown": 0.05,
+      "emergencyFlattenThreshold": 0.05,
+      "phaseTransitionRules": {
+        "phase1ToPhase2": 5000,
+        "phase2ToPhase3": 50000
+      },
+      "overrides": {
+        "phase1": {
+          "maxLeverage": 20,
+          "maxDrawdown": 0.07
+        },
+        "phase2": {
+          "maxLeverage": 5,
+          "maxDrawdown": 0.05
+        }
+      },
+      "environments": {
+        "development": {
+          "maxTotalLeverage": 10,
+          "maxGlobalDrawdown": 0.05,
+          "emergencyFlattenThreshold": 0.05
+        },
+        "staging": {
+          "maxTotalLeverage": 25,
+          "maxGlobalDrawdown": 0.1,
+          "emergencyFlattenThreshold": 0.1
+        },
+        "production": {
+          "maxTotalLeverage": 50,
+          "maxGlobalDrawdown": 0.15,
+          "emergencyFlattenThreshold": 0.15
+        }
+      }
+    },
+    "hash": "9589f7ed12c4a4b5abc7476c4a8300f76d7e8f5e6f753ce3692786ad7cbd147e",
+    "author": "system",
+    "comment": "Configuration loaded"
+  }
+]

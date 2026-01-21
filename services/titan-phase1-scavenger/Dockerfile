@@ -1,20 +1,26 @@
-# Build stage
+# ============================================================================
+# Titan Scavenger - Market Microstructure Engine
+# Multi-stage Docker build for production deployment
+# ============================================================================
+
+# Stage 1: Build
 FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Copy root package files for workspace resolution
-COPY package.json package-lock.json ./
-COPY services/titan-phase1-scavenger/package.json services/titan-phase1-scavenger/
-COPY services/shared services/shared/
+# Install build dependencies
+RUN apk add --no-cache python3 make g++
 
-# Install dependencies
-RUN npm ci --workspace=services/titan-phase1-scavenger --workspace=services/shared
+# Copy root package files for resolution
+COPY package*.json ./
 
-# Copy source code
-COPY services/titan-phase1-scavenger services/titan-phase1-scavenger/
+# Copy all workspaces for npm workspaces resolution
+COPY services/ ./services/
 
-# Build shared package first (required for workspace imports)
+# Install all dependencies (monorepo)
+RUN npm ci
+
+# Build the shared package first
 WORKDIR /app/services/shared
 RUN npm run build
 
@@ -22,19 +28,50 @@ RUN npm run build
 WORKDIR /app/services/titan-phase1-scavenger
 RUN npm run build
 
-# Production stage
-FROM node:22-alpine
+# Prune dev dependencies for production image
+WORKDIR /app
+RUN npm prune --omit=dev --workspaces
+
+# Ensure workspace node_modules exist for copy
+RUN mkdir -p /app/services/titan-phase1-scavenger/node_modules /app/services/shared/node_modules
+
+# Stage 2: Production
+FROM node:22-alpine AS production
 
 WORKDIR /app
 
-# Copy built application and production dependencies
-COPY --from=builder /app/package.json /app/package-lock.json ./
-COPY --from=builder /app/services/titan-phase1-scavenger/package.json services/titan-phase1-scavenger/
-COPY --from=builder /app/services/titan-phase1-scavenger/dist services/titan-phase1-scavenger/dist/
-COPY --from=builder /app/services/shared services/shared/
+# Install runtime dependencies only
+RUN apk add --no-cache \
+    curl \
+    && rm -rf /var/cache/apk/*
 
-# Install production dependencies only
-RUN npm ci --workspace=services/titan-phase1-scavenger --workspace=services/shared --omit=dev
+# Create non-root user for security
+RUN addgroup -g 1001 -S titan && \
+    adduser -S titan -u 1001 -G titan
+
+# Copy root package files for workspace resolution
+COPY package*.json ./
+
+# Copy shared workspace package (built)
+COPY --from=builder /app/services/shared/ ./services/shared/
+
+# Copy service package files
+COPY services/titan-phase1-scavenger/package*.json ./services/titan-phase1-scavenger/
+
+# Copy pruning production dependencies from builder
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/services/titan-phase1-scavenger/node_modules ./services/titan-phase1-scavenger/node_modules
+COPY --from=builder /app/services/shared/node_modules ./services/shared/node_modules
+
+# Copy built application from builder stage
+COPY --from=builder /app/services/titan-phase1-scavenger/dist ./services/titan-phase1-scavenger/dist
+
+# Create directories for logs and data
+RUN mkdir -p /app/logs /app/data && \
+    chown -R titan:titan /app
+
+# Switch to non-root user
+USER titan
 
 WORKDIR /app/services/titan-phase1-scavenger
 
@@ -43,7 +80,8 @@ ENV PORT=8081
 
 EXPOSE 8081
 
+# Health check using curl (installed in prod stage)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-    CMD wget -qO- http://localhost:8081/health || exit 1
+    CMD curl -f http://localhost:8081/health || exit 1
 
 CMD ["node", "dist/index.js"]

@@ -50,7 +50,7 @@ To run as part of the full Titan stack:
 
 ```bash
 cd ../..
-docker compose up -d
+docker compose -f docker-compose.dev.yml up -d
 ```
 
 ### Local Development (Service Only)
@@ -99,15 +99,64 @@ BYBIT_API_SECRET=your_secret
 | ------------------------ | ------------------------------ |
 | `execution.trade.closed` | Published when trade completes |
 
-## Performance
+## Performance Targets
 
-| Metric      | Target      | Achieved |
-| ----------- | ----------- | -------- |
-| P50 Latency | <0.5ms      | ✅       |
-| P99 Latency | <1ms        | ✅       |
-| Throughput  | >1000 msg/s | ✅       |
+| Metric      | Target      |
+| ----------- | ----------- |
+| P50 Latency | <0.5ms      |
+| P99 Latency | <1ms        |
+| Throughput  | >1000 msg/s |
 
-## Development
+Targets are measured using the NATS shadow-fill benchmark (synthetic pipeline, no exchange latency).
+See Benchmarking for a reproducible workflow.
+
+## Benchmarking
+
+The execution engine ships with a repeatable NATS shadow-fill benchmark that measures end-to-end
+latency from intent publish → shadow fill emit. This isolates internal pipeline latency and excludes
+exchange/network latency.
+
+### Prerequisites
+
+- NATS running (JetStream enabled)
+- Titan Execution running
+- Market data stream connected (shadow fills require a live ticker)
+
+For local parity, use the dev compose stack:
+
+```bash
+cd ../..
+docker compose -f docker-compose.dev.yml up -d
+```
+
+### Run the benchmark
+
+```bash
+node services/titan-execution-rs/scripts/benchmark_nats_latency.mjs --count=500 --symbol=BTCUSDT
+```
+
+Optional flags:
+- `--nats=nats://localhost:4222`
+- `--timeoutMs=30000`
+- `--source=bench`
+
+Record the reported P50/P99 and compare to the targets above.
+
+If the benchmark exits early, confirm that the market data stream is connected
+(shadow fills require a live ticker feed).
+
+## Observability
+
+### Metrics
+Exposed via internal HTTP server (default port 3002).
+
+- `titan_execution_orders_total`: Total orders processed
+- `titan_execution_latency_us`: Order processing latency
+- `titan_execution_active_connections`: Active exchange connections
+
+### Health
+- `/health`: Service health status
+- `/Live`: Liveness probe
 
 ```bash
 # Run tests

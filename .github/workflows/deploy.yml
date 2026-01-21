@@ -10,6 +10,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Install dependencies (Root)
+        run: npm ci
+
+      - name: Validate configuration
+        run: npm run validate:config
+
       - name: Copy files to VPS
         uses: appleboy/scp-action@v0.1.7
         with:

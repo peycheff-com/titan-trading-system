@@ -15,22 +15,26 @@ config = "0.13"
 dotenv = "0.15"
 futures = "0.3"
 uuid = { version = "1.7", features = ["v4", "serde"] }
-rust_decimal = { version = "1.33", features = ["serde-with-float"] }
+rust_decimal = { version = "1.33", features = ["serde-with-float", "macros"] }
 chrono = { version = "0.4", features = ["serde"] }
 thiserror = "2.0"
 actix-web = "4"
 actix-cors = "0.7"
 async-trait = "0.1"
 tokio-tungstenite = { version = "0.21", features = ["native-tls"] }
+redb = "1.5.0"
 
 reqwest = "0.13.1"
 hmac = "0.12.1"
 sha2 = "0.10.9"
+rust_decimal_macros = "1.33"
 hex = "0.4.3"
 url = "2.5.8"
 dashmap = "5.5"
 parking_lot = "0.12"
 actix-web-prom = "0.10.0"
+prometheus = "0.13"
+once_cell = "1.19"
 
 [dev-dependencies]
 tokio-test = "0.4"

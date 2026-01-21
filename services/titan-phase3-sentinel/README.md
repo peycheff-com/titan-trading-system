@@ -46,8 +46,14 @@ Run as part of the full Titan stack:
 
 ```bash
 cd ../..
-docker compose up -d
+cd ../..
+docker compose up -d titan-phase3-sentinel
 ```
+
+### Docker Configuration
+Uses multi-stage build (Alpine Linux) for minimal footprint.
+- **Image**: `node:20-alpine` -> `titan/phase3-sentinel:latest`
+- **Healthcheck**: `wget --no-verbose --tries=1 --spider http://localhost:3003/health`
 
 ## Manual Installation
 
@@ -126,6 +132,8 @@ Environment variables:
 - `BYBIT_API_SECRET` - Bybit API secret
 - `POLYGON_RPC_URL` - Polygon RPC endpoint for Polymarket
 - `POLYMARKET_PRIVATE_KEY` - Private key for Polymarket signing
+- `TITAN_URL` - Titan Brain URL (internal)
+- `PROMETHEUS_METRICS` - Enable metrics (default: true)
 
 ## Risk Parameters
 

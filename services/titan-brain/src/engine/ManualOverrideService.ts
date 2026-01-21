@@ -5,8 +5,9 @@
  * Requirements: 9.7, 9.8
  */
 
-import { AllocationVector, PhaseId } from '../types/index.js';
+import { AllocationVector } from '../types/index.js';
 import { DatabaseManager } from '../db/DatabaseManager.js';
+import crypto from 'crypto';
 
 export interface ManualOverride {
   id?: number;
@@ -554,7 +555,7 @@ export class ManualOverrideService {
    */
   private hashPassword(password: string): string {
     // In production, use bcrypt or similar
-    const crypto = require('crypto');
+
     return crypto
       .createHash('sha256')
       .update(password + 'titan_salt')

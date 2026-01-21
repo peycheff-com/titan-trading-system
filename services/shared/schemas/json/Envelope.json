@@ -1,0 +1,53 @@
+{
+  "$ref": "#/definitions/Envelope",
+  "definitions": {
+    "Envelope": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9A-Z]{26}$",
+          "default": "01KFDQ44J2R2F9MHRGPXT96M68"
+        },
+        "type": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        },
+        "ts": {
+          "type": "integer",
+          "default": 1768913244739
+        },
+        "producer": {
+          "type": "string"
+        },
+        "correlation_id": {
+          "type": "string",
+          "default": "01KFDQ44J3B18FMCX772C2WDBW"
+        },
+        "causation_id": {
+          "type": "string"
+        },
+        "partition_key": {
+          "type": "string"
+        },
+        "idempotency_key": {
+          "type": "string"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "type",
+        "version",
+        "producer",
+        "payload"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

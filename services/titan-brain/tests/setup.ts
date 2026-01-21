@@ -33,6 +33,11 @@ console.error = (...args: any[]) => {
 // Increase max listeners for tests to prevent warnings
 process.setMaxListeners(20);
 
+// Stub uuid ESM module for Jest CJS tests
+jest.mock("uuid", () => ({
+  v4: () => "test-uuid-0000",
+}));
+
 // Clean up after each test
 afterEach(() => {
   // Reset any global state if needed

@@ -7,22 +7,29 @@
 
 import {
   AllocationVector,
-  PhasePerformance,
   PhaseId,
-  RiskMetrics,
+  PhasePerformance,
   Position,
+  RiskMetrics,
 } from '../types/index.js';
 import { AllocationRepository } from '../db/repositories/AllocationRepository.js';
 import { PerformanceRepository } from '../db/repositories/PerformanceRepository.js';
 import { TreasuryRepository } from '../db/repositories/TreasuryRepository.js';
 import { RiskRepository } from '../db/repositories/RiskRepository.js';
 import { DatabaseManager } from '../db/DatabaseManager.js';
+import { NatsClient, TitanSubject } from '@titan/shared';
+import { consumerOpts, JSONCodec } from 'nats';
+import { FillConfirmation } from '../types/execution.js';
 
 export interface RecoveredState {
   allocation: AllocationVector | null;
   performance: Record<PhaseId, PhasePerformance>;
   highWatermark: number;
   riskMetrics: RiskMetrics | null;
+  equity?: number;
+  positions?: Position[];
+  dailyStartEquity?: number;
+  lastUpdated?: number;
 }
 
 export interface StateRecoveryConfig {
@@ -40,13 +47,15 @@ export class StateRecoveryService {
   private readonly treasuryRepo: TreasuryRepository;
   private readonly riskRepo: RiskRepository;
   private readonly config: StateRecoveryConfig;
+  private readonly natsClient?: NatsClient;
 
-  constructor(db: DatabaseManager, config: StateRecoveryConfig) {
+  constructor(db: DatabaseManager, config: StateRecoveryConfig, natsClient?: NatsClient) {
     this.allocationRepo = new AllocationRepository(db);
     this.performanceRepo = new PerformanceRepository(db);
     this.treasuryRepo = new TreasuryRepository(db);
     this.riskRepo = new RiskRepository(db);
     this.config = config;
+    this.natsClient = natsClient;
   }
 
   /**
@@ -74,6 +83,17 @@ export class StateRecoveryService {
     const riskMetrics = await this.loadRiskMetrics();
     console.log('Loaded risk metrics:', riskMetrics ? 'available' : 'none');
 
+    // Recover positions from stream if possible
+    let positions: Position[] = [];
+    if (this.natsClient) {
+      try {
+        positions = await this.recoverPositionsFromStream();
+        console.log(`Recovered ${positions.length} positions from stream`);
+      } catch (err) {
+        console.error('Failed to recover positions from stream', err);
+      }
+    }
+
     console.log('State recovery completed successfully');
 
     return {
@@ -81,7 +101,48 @@ export class StateRecoveryService {
       performance,
       highWatermark,
       riskMetrics,
+      positions,
+      // Default equity to High Watermark or Initial Capital if not found?
+      // For now leaving undefined, TitanBrain will handle defaults.
     };
+  }
+
+  /**
+   * Persist current system state
+   */
+  async persistState(state: RecoveredState): Promise<void> {
+    console.log('Persisting system state...');
+
+    try {
+      // Save allocation if it's a full record
+      if (state.allocation && 'tier' in state.allocation) {
+        // Safe cast as we checked 'tier' property presence
+        // @ts-expect-error - Ignoring type check for partial allocation update
+        await this.allocationRepo.save(state.allocation);
+      }
+
+      // Performance is persisted by PerformanceTracker separately
+
+      // Persist High Watermark
+      await this.treasuryRepo.updateHighWatermark(state.highWatermark);
+
+      // Persist Risk Metrics
+      if (state.riskMetrics) {
+        // Map RiskMetrics to RiskSnapshot format
+        await this.riskRepo.save({
+          timestamp: Date.now(),
+          globalLeverage: state.riskMetrics.currentLeverage,
+          netDelta: state.riskMetrics.portfolioDelta,
+          correlationScore: state.riskMetrics.correlation,
+          portfolioBeta: state.riskMetrics.portfolioBeta || 0, // Fallback if missing
+          var95: state.riskMetrics.var95 || 0, // Fallback if missing
+        });
+      }
+
+      console.log('State persisted successfully');
+    } catch (err) {
+      console.error('Failed to persist state:', err);
+    }
   }
 
   /**
@@ -124,6 +185,7 @@ export class StateRecoveryService {
       phase1: this.createDefaultPerformance('phase1'),
       phase2: this.createDefaultPerformance('phase2'),
       phase3: this.createDefaultPerformance('phase3'),
+      manual: this.createDefaultPerformance('manual'),
     };
 
     const windowMs = this.config.performanceWindowDays * 24 * 60 * 60 * 1000;
@@ -172,7 +234,9 @@ export class StateRecoveryService {
         };
 
         console.log(
-          `Loaded performance for ${phaseId}: Sharpe=${sharpeRatio.toFixed(2)}, Trades=${trades.length}, Modifier=${modifier.toFixed(2)}`,
+          `Loaded performance for ${phaseId}: Sharpe=${sharpeRatio.toFixed(
+            2,
+          )}, Trades=${trades.length}, Modifier=${modifier.toFixed(2)}`,
         );
       } catch (error) {
         console.error(`Error loading performance for ${phaseId}:`, error);
@@ -386,5 +450,122 @@ export class StateRecoveryService {
     const btcNotional = btcPositions.reduce((sum, pos) => sum + Math.abs(pos.size), 0);
 
     return totalNotional > 0 ? btcNotional / totalNotional : 0;
+  }
+
+  /**
+   * Recover open positions by replaying Fill events from NATS JetStream
+   * Requirement 9.4: Rebuild state from event log
+   */
+  async recoverPositionsFromStream(): Promise<Position[]> {
+    console.log('🔄 Replaying execution history to rebuild positions...');
+
+    if (!this.natsClient) {
+      console.warn(
+        '⚠️ NATS Client not provided to StateRecoveryService, skipping JetStream replay.',
+      );
+      return [];
+    }
+
+    const js = this.natsClient.getJetStream();
+    const jsm = this.natsClient.getJetStreamManager();
+
+    if (!js || !jsm) {
+      console.warn('⚠️ JetStream context not available.');
+      return [];
+    }
+
+    // Get stream info to find end sequence
+    let lastSeq = 0;
+    try {
+      const si = await jsm.streams.info('TITAN_EVT');
+      lastSeq = si.state.last_seq;
+      console.log(`Stream TITAN_TRADING last sequence: ${lastSeq}`);
+    } catch (e) {
+      console.error('Failed to get stream info:', e);
+      return [];
+    }
+
+    if (lastSeq === 0) return [];
+
+    const positions = new Map<string, Position>();
+    const jc = JSONCodec();
+
+    try {
+      const opts = consumerOpts();
+      opts.deliverAll();
+      opts.orderedConsumer();
+
+      const sub = await js.subscribe(TitanSubject.EVT_EXEC_FILL + '.>', opts);
+      console.log('Started replaying fills...');
+
+      for await (const m of sub) {
+        try {
+          const fill = jc.decode(m.data) as FillConfirmation;
+          const notional = fill.fillSize * fill.fillPrice;
+          const signedChange = fill.side === 'BUY' ? notional : -notional;
+
+          let pos = positions.get(fill.symbol);
+
+          if (!pos) {
+            pos = {
+              symbol: fill.symbol,
+              side: signedChange > 0 ? 'LONG' : 'SHORT',
+              size: Math.abs(signedChange),
+              entryPrice: fill.fillPrice,
+              unrealizedPnL: 0,
+              leverage: 1, // Defaulting leverage
+              phaseId: 'phase1', // Defaulting phase as it's not in FillConfirmation
+            };
+          } else {
+            const currentSignedSize = pos.side === 'LONG' ? pos.size : -pos.size;
+            const newSignedSize = currentSignedSize + signedChange;
+
+            if (Math.abs(newSignedSize) < 0.0001) {
+              // Floating point epsilon
+              positions.delete(fill.symbol);
+              continue;
+            }
+
+            const isLong = newSignedSize > 0;
+
+            // Entry Price Logic (Weighted Average)
+            if (
+              (currentSignedSize > 0 && signedChange > 0) ||
+              (currentSignedSize < 0 && signedChange < 0)
+            ) {
+              // Increasing position
+              const totalSize = Math.abs(currentSignedSize) + Math.abs(signedChange);
+              const newEntry =
+                (pos.entryPrice * Math.abs(currentSignedSize) +
+                  fill.fillPrice * Math.abs(signedChange)) /
+                totalSize;
+              pos.entryPrice = newEntry;
+            } else if (
+              (currentSignedSize > 0 && newSignedSize < 0) ||
+              (currentSignedSize < 0 && newSignedSize > 0)
+            ) {
+              // Flipped position
+              pos.entryPrice = fill.fillPrice;
+            }
+            // If decreasing without flip, entry price remains same
+
+            pos.side = isLong ? 'LONG' : 'SHORT';
+            pos.size = Math.abs(newSignedSize);
+          }
+          positions.set(fill.symbol, pos);
+        } catch (err) {
+          console.error('Error processing message:', err);
+        }
+
+        if (m.info.streamSequence >= lastSeq) {
+          sub.unsubscribe();
+          break;
+        }
+      }
+    } catch (error) {
+      console.error('Failed to replay from JetStream', error);
+    }
+
+    return Array.from(positions.values());
   }
 }

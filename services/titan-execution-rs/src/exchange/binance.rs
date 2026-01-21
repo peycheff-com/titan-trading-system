@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use rust_decimal::Decimal;
 use crate::exchange::adapter::{ExchangeAdapter, ExchangeError, OrderRequest, OrderResponse};
-use crate::model::Side;
+use crate::model::{Side, Position};
 use reqwest::Client;
 use std::env;
 use hmac::{Hmac, Mac};
@@ -17,7 +17,7 @@ pub struct BinanceAdapter {
     base_url: String,
     client: Client,
     http_limiter: TokenBucket,
-    ws_limiter: TokenBucket,
+    _ws_limiter: TokenBucket,
 }
 
 use crate::config::ExchangeConfig;
@@ -53,7 +53,7 @@ impl BinanceAdapter {
             base_url,
             client: Client::new(),
             http_limiter,
-            ws_limiter,
+            _ws_limiter: ws_limiter,
         })
     }
 
@@ -63,6 +63,51 @@ impl BinanceAdapter {
             .expect("HMAC can take key of any size");
         mac.update(query.as_bytes());
         hex::encode(mac.finalize().into_bytes())
+    }
+
+    fn normalize_order_id(value: &serde_json::Value) -> String {
+        if let Some(s) = value.as_str() {
+            return s.to_string();
+        }
+        if let Some(n) = value.as_i64() {
+            return n.to_string();
+        }
+        if let Some(n) = value.as_u64() {
+            return n.to_string();
+        }
+        if let Some(n) = value.as_f64() {
+            return n.to_string();
+        }
+        value.to_string().trim_matches('"').to_string()
+    }
+}
+
+pub(crate) fn build_order_params(order: &OrderRequest, timestamp: i64) -> String {
+    let side_str = match order.side {
+        Side::Buy | Side::Long => "BUY",
+        Side::Sell | Side::Short => "SELL",
+    };
+    let reduce_only = if order.reduce_only { "&reduceOnly=true" } else { "" };
+
+    if let Some(price) = order.price {
+        format!(
+            "symbol={}&side={}&type=LIMIT&quantity={}{}&price={}&timeInForce=GTC&timestamp={}",
+            order.symbol.replace("/", ""),
+            side_str,
+            order.quantity,
+            reduce_only,
+            price,
+            timestamp
+        )
+    } else {
+        format!(
+            "symbol={}&side={}&type=MARKET&quantity={}{}&timestamp={}",
+            order.symbol.replace("/", ""),
+            side_str,
+            order.quantity,
+            reduce_only,
+            timestamp
+        )
     }
 }
 
@@ -88,31 +133,7 @@ impl ExchangeAdapter for BinanceAdapter {
 
         let endpoint = "/fapi/v1/order";
         let timestamp = Utc::now().timestamp_millis();
-        
-        let side_str = match order.side {
-            Side::Buy | Side::Long => "BUY",
-            Side::Sell | Side::Short => "SELL",
-        };
-        
-        // Basic parameters for a LIMIT or MARKET order
-        let mut params = format!(
-            "symbol={}&side={}&type=MARKET&quantity={}&timestamp={}",
-            order.symbol.replace("/", ""), // Binance uses BTCUSDT not BTC/USDT
-            side_str,
-            order.quantity,
-            timestamp
-        );
-
-        if let Some(price) = order.price {
-             params = format!(
-                "symbol={}&side={}&type=LIMIT&quantity={}&price={}&timeInForce=GTC&timestamp={}",
-                order.symbol.replace("/", ""),
-                side_str,
-                order.quantity,
-                price,
-                timestamp
-            );
-        }
+        let params = build_order_params(&order, timestamp);
 
         let signature = self.sign(&params);
         let full_query = format!("{}&signature={}", params, signature);
@@ -138,7 +159,7 @@ impl ExchangeAdapter for BinanceAdapter {
         let json: serde_json::Value = serde_json::from_str(&text)
             .map_err(|e| ExchangeError::Api(format!("Parse error: {}", e)))?;
 
-        let order_id = json["orderId"].to_string();
+        let order_id = Self::normalize_order_id(&json["orderId"]);
         
         Ok(OrderResponse {
             order_id,
@@ -149,6 +170,8 @@ impl ExchangeAdapter for BinanceAdapter {
             executed_qty: json["executedQty"].as_str().and_then(|s| rust_decimal::Decimal::from_str_exact(s).ok()).unwrap_or_default(),
             t_ack: Utc::now().timestamp_millis(),
             t_exchange: None,
+            fee: None,
+            fee_asset: None,
         })
     }
 
@@ -191,15 +214,159 @@ impl ExchangeAdapter for BinanceAdapter {
             executed_qty: Decimal::ZERO,
             t_ack: Utc::now().timestamp_millis(),
             t_exchange: None,
+            fee: None,
+            fee_asset: None,
         })
     }
 
-    async fn get_balance(&self, _asset: &str) -> Result<Decimal, ExchangeError> {
-        // Implementation omitted for brevity
-        Ok(Decimal::from(1000))
+    async fn get_balance(&self, asset: &str) -> Result<Decimal, ExchangeError> {
+        self.http_limiter.acquire(1).await;
+
+        let endpoint = "/fapi/v2/balance";
+        let timestamp = Utc::now().timestamp_millis();
+        let params = format!("timestamp={}&recvWindow=5000", timestamp);
+        let signature = self.sign(&params);
+        let url = format!(
+            "{}{}?{}&signature={}",
+            self.base_url, endpoint, params, signature
+        );
+
+        let resp = self
+            .client
+            .get(&url)
+            .header("X-MBX-APIKEY", &self.api_key)
+            .send()
+            .await
+            .map_err(|e| ExchangeError::Network(e.to_string()))?;
+
+        let status = resp.status();
+        let text = resp
+            .text()
+            .await
+            .map_err(|e| ExchangeError::Network(e.to_string()))?;
+
+        if !status.is_success() {
+            return Err(ExchangeError::Api(format!(
+                "Balance failed {}: {}",
+                status, text
+            )));
+        }
+
+        let json: serde_json::Value = serde_json::from_str(&text)
+            .map_err(|e| ExchangeError::Api(format!("Parse error: {}", e)))?;
+
+        let balances = json
+            .as_array()
+            .ok_or_else(|| ExchangeError::Api("Unexpected balance response".into()))?;
+
+        for entry in balances {
+            if entry.get("asset").and_then(|v| v.as_str()) == Some(asset) {
+                if let Some(available) = entry.get("availableBalance").and_then(|v| v.as_str()) {
+                    if let Ok(value) = Decimal::from_str_exact(available) {
+                        return Ok(value);
+                    }
+                }
+                if let Some(balance) = entry.get("balance").and_then(|v| v.as_str()) {
+                    if let Ok(value) = Decimal::from_str_exact(balance) {
+                        return Ok(value);
+                    }
+                }
+            }
+        }
+
+        Ok(Decimal::ZERO)
     }
 
     fn name(&self) -> &str {
         "Binance Futures"
+    }
+
+    async fn get_positions(&self) -> Result<Vec<Position>, ExchangeError> {
+        // /fapi/v2/positionRisk
+        self.http_limiter.acquire(1).await;
+        
+        let endpoint = "/fapi/v2/positionRisk";
+        let timestamp = Utc::now().timestamp_millis();
+        let params = format!("timestamp={}&recvWindow=5000", timestamp);
+        let signature = self.sign(&params);
+        // Binance V2 uses query params for GET
+        let url = format!("{}{}?{}&signature={}", self.base_url, endpoint, params, signature);
+
+        let resp = self.client.get(&url)
+            .header("X-MBX-APIKEY", &self.api_key)
+            .send()
+            .await
+            .map_err(|e| ExchangeError::Network(e.to_string()))?;
+
+        if !resp.status().is_success() {
+            let text = resp.text().await.unwrap_or_default();
+            return Err(ExchangeError::Api(format!("Binance positionRisk failed: {}", text)));
+        }
+
+        let text = resp.text().await.map_err(|e| ExchangeError::Network(e.to_string()))?;
+        let json: serde_json::Value = serde_json::from_str(&text)
+            .map_err(|e| ExchangeError::Api(format!("Parse error: {}", e)))?;
+        
+        let mut positions = Vec::new();
+
+        if let Some(list) = json.as_array() {
+            for item in list {
+                let symbol = item["symbol"].as_str().unwrap_or("").to_string();
+                let amt_str = item["positionAmt"].as_str().unwrap_or("0");
+                let amt = rust_decimal::Decimal::from_str_exact(amt_str).unwrap_or(Decimal::ZERO);
+                
+                if amt.is_zero() {
+                    continue; // Skip closed positions
+                }
+
+                let entry_str = item["entryPrice"].as_str().unwrap_or("0");
+                let entry_price = rust_decimal::Decimal::from_str_exact(entry_str).unwrap_or(Decimal::ZERO);
+                
+                // Determine Side
+                // Logic: if amt > 0 -> Long, if amt < 0 -> Short
+                // Binance "positionSide" indicates "LONG", "SHORT" (Hedge Mode) or "BOTH" (One-Way)
+                let pos_side_str = item["positionSide"].as_str().unwrap_or("BOTH");
+                
+                let side = if pos_side_str == "SHORT" {
+                    Side::Short
+                } else if pos_side_str == "LONG" {
+                    Side::Long
+                } else {
+                    // One-Way Mode
+                    if amt.is_sign_negative() {
+                        Side::Short
+                    } else {
+                        Side::Long
+                    }
+                };
+
+                // Abs size
+                let size = amt.abs();
+
+                positions.push(Position {
+                    symbol,
+                    side,
+                    size,
+                    entry_price,
+                    stop_loss: Decimal::ZERO, // Exchange doesn't give SL/TP easily in this endpoint usually
+                    take_profits: vec![],
+                    signal_id: "EXCHANGE_FETCHED".to_string(),
+                    opened_at: Utc::now(), // Unknown
+                    regime_state: None,
+                    phase: None,
+                    metadata: None,
+                    exchange: Some("BINANCE".to_string()),
+                    position_mode: Some(pos_side_str.to_string()),
+                    realized_pnl: Decimal::ZERO,
+                    unrealized_pnl: item["unRealizedProfit"].as_str().and_then(|s| Decimal::from_str_exact(s).ok()).unwrap_or(Decimal::ZERO),
+                    fees_paid: Decimal::ZERO,
+                    funding_paid: Decimal::ZERO,
+                    last_mark_price: None,
+                    last_update_ts: Utc::now().timestamp_millis(),
+                });
+            }
+        }
+        
+        Ok(positions)
     }
 }

@@ -24,6 +24,7 @@ The Brain is the master control system that orchestrates capital allocation, ris
 The Titan Brain implements a hierarchical decision-making architecture where phases generate **Intent Signals**, and the Brain grants or denies **Permission** based on:
 
 - **Portfolio-level risk metrics** - Leverage, correlation, delta exposure
+- **PowerLaw Lab Metrics** - Tail risk (Hill Alpha) and Volatility Clustering
 - **Performance data** - Rolling Sharpe ratios with malus/bonus modifiers
 - **Equity tier rules** - Dynamic allocation based on account size
 - **Correlation guards** - Prevent concentrated risk across phases
@@ -42,6 +43,9 @@ The Titan Brain implements a hierarchical decision-making architecture where pha
 | Correlation Guard | Veto or reduce correlated positions |
 | Profit Sweeper | Automatic profit locking to spot wallet |
 | Circuit Breaker | Emergency halt on drawdown or consecutive losses |
+| Manual Steerability | Operator control via `/trade/manual` and emergency stop |
+| Dynamic Risk Config | Runtime adjustment of risk parameters via `/risk/config` |
+| Prometheus Metrics | Native observability via `/metrics` endpoint |
 | Signal Queue | Priority-based processing with idempotency |
 
 ---
@@ -58,6 +62,12 @@ The Titan Brain implements a hierarchical decision-making architecture where pha
 │  │  - Leverage cap enforcement                            │ │
 │  └────────────────────────────────────────────────────────┘ │
 │  ┌────────────────────────────────────────────────────────┐ │
+│  │      PowerLaw Integration (Regime Adaptation)          │ │
+│  │  - Real-time Tail Risk (Hill Alpha) monitoring         │ │
+│  │  - Volatility Clustering (Expanding/Stable)            │ │
+│  │  - Dynamic Leverage Scaling based on Alpha             │ │
+│  └────────────────────────────────────────────────────────┘ │
+│  ┌────────────────────────────────────────────────────────┐ │
 │  │      Performance Tracker (Rolling Sharpe Ratios)       │ │
 │  │  - 7-day rolling Sharpe calculation                    │ │
 │  │  - Malus penalty (Sharpe < 0) / Bonus (Sharpe > 2.0)   │ │
@@ -68,6 +78,7 @@ The Titan Brain implements a hierarchical decision-making architecture where pha
 │  │  - Portfolio beta calculation                          │ │
 │  │  - Combined leverage monitoring                        │ │
 │  │  - Correlation matrix (5-min updates)                  │ │
+│  │  - Extreme Tail Risk Gating (Alpha < 2.0 veto)         │ │
 │  └────────────────────────────────────────────────────────┘ │
 │  ┌────────────────────────────────────────────────────────┐ │
 │  │          Capital Flow Manager (Profit Sweeper)         │ │
@@ -89,6 +100,7 @@ The Titan Brain implements a hierarchical decision-making architecture where pha
 │  Phase 1: Scavenger │              │  Execution Engine   │
 │  Phase 2: Hunter    │              │  (Order Placement)  │
 │  Phase 3: Sentinel  │              └─────────────────────┘
+│  Manual: Override   │
 └─────────────────────┘
 ```
 
@@ -126,7 +138,7 @@ For running the complete Titan system (Brain, Execution, Console, DB), use the r
 
 ```bash
 cd ../..
-docker compose up -d
+docker compose -f docker-compose.dev.yml up -d
 ```
 
 ### Local Development (Service Only)
@@ -728,6 +740,43 @@ Get manual override history.
 
 ---
 
+#### POST /trade/manual
+
+Execute a manual trade.
+
+**Request Body:**
+```json
+{
+  "symbol": "BTCUSDT",
+  "side": "BUY",
+  "size": 500,
+  "leverage": 5,
+  "exchange": "bybit"
+}
+```
+
+---
+
+#### DELETE /trade/cancel-all
+
+Emergency position flattening.
+
+---
+
+#### PATCH /risk/config
+
+Runtime risk configuration update.
+
+**Request Body:**
+```json
+{
+  "maxDrawdown": 0.15,
+  "leverageCaps": { "MICRO": 20 }
+}
+```
+
+---
+
 
 ## Signal Processing
 
@@ -781,6 +830,8 @@ interface BrainDecision {
 |--------|-------------|
 | `Circuit breaker active` | System is in emergency halt |
 | `Leverage cap exceeded` | Would exceed tier leverage limit |
+| `TAIL_RISK_VETO` | Extreme tail risk (Alpha < 2.0) detected |
+| `REGIME_VETO` | Volatility regime (Expanding) unsafe for strategy |
 | `High correlation` | Position too correlated with existing |
 | `Phase weight zero` | Phase has no allocation at current equity |
 | `Insufficient equity` | Not enough capital for position |

@@ -17,7 +17,7 @@ The console is automatically deployed with the full stack:
 
 ```bash
 cd ../..
-docker compose up -d
+docker compose -f docker-compose.dev.yml up -d
 ```
 
 Access the console at: **http://localhost:5173**
@@ -40,3 +40,21 @@ npm run dev
 - **UI**: Shadcn UI + Tailwind CSS
 - **State**: TanStack Query
 - **Charts**: Recharts
+
+## Operator Access Control (RBAC)
+
+The Console exposes high-impact controls (circuit breaker, overrides, logs). In production,
+these controls must be gated by role-based access control and audited.
+
+Recommended roles:
+- **Viewer**: Read-only dashboards and metrics.
+- **Operator**: Can acknowledge alerts and initiate safe-mode actions.
+- **Admin**: Can reset circuit breakers, apply overrides, and change risk limits.
+
+Guard rails for high-risk actions:
+- Admin-only controls require re-authentication and explicit confirmation.
+- Circuit breaker reset requires two-person approval (admin + operator) or a change ticket ID.
+- All overrides and log access must be audit-logged with actor, time, and reason.
+
+Implementation note: enforce RBAC at the API gateway or reverse proxy and integrate with the Console
+for UI guard rails. See `docs/operations/monitoring-alerting.md` and `docs/operations/legal-and-compliance.md`.

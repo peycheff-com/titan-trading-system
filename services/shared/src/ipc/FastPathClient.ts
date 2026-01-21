@@ -37,6 +37,7 @@ export interface IntentSignal {
   take_profits: number[];
   confidence: number;
   leverage: number;
+  position_size?: number; // Proposed position size (USD/Notional) from Phase
   velocity?: number;
   trap_type?: string;
   timestamp: number; // Signal generation time (t_signal)

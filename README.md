@@ -8,6 +8,19 @@ and executed via specialized microservices with sub-millisecond latency.
 [![Node.js](https://img.shields.io/badge/Node.js-22+-43853D)](https://nodejs.org)
 [![Rust](https://img.shields.io/badge/Rust-1.75+-000000)](https://rust-lang.org)
 
+## Intended Use & Legal Positioning
+
+Titan is built primarily for **research, backtesting, and internal evaluation**. Live trading
+is supported for **authorized operators** only when all applicable regulatory, risk, and security
+requirements are satisfied. This repository does **not** provide legal advice or licensing.
+
+Permitted use cases include:
+- Research and simulation (offline)
+- Paper trading / sandbox exchange testing
+- Production trading by approved operators within compliant jurisdictions
+
+See `docs/operations/legal-and-compliance.md` for compliance posture, approvals, and jurisdictional considerations.
+
 ## Architecture Overview
 
 ```
@@ -50,6 +63,12 @@ and executed via specialized microservices with sub-millisecond latency.
 | 4     | AI Quant  | —             | Gemini AI parameter optimization & Research | —        |
 | 5     | Brain     | All           | Master orchestrator & Risk Management       | —        |
 
+## Research and Strategy Promotion
+
+Strategy research, validation, and rollout follow a documented workflow:
+see `docs/operations/research-workflow.md` for research → backtest → review → rollout
+and AI Quant validation requirements.
+
 ## Services
 
 | Service                   | Description                            | Technology                      |
@@ -85,6 +104,7 @@ and executed via specialized microservices with sub-millisecond latency.
 - **Rust:** 1.75+ (for execution engine)
 - **PostgreSQL:** Local instance or VPS
 - **NATS Server:** JetStream enabled (optional for local dev if using Docker)
+- **Docker + Docker Compose:** Recommended for local stack parity
 
 ### Installation
 
@@ -104,15 +124,18 @@ cp .env.example .env
 ### Development
 
 ```bash
-# Start all services locally (via Docker Compose)
-# This spins up Postgres, NATS, Brain, Execution, Console, etc.
-docker compose up -d
+# Start the local development stack (parity with production topology)
+# This spins up Postgres, Redis, NATS, Brain, Execution, Console
+docker compose -f docker-compose.dev.yml up -d
 
 # Or start individual services for development
 npm run start:brain       # Titan Brain on :3100
 npm run start:execution   # Rust Engine on :3002
 npm run start:console     # Dashboard on :5173
 ```
+
+Note: `docker-compose.yml` includes only NATS for lightweight local use. Use `docker-compose.dev.yml`
+for full local stack parity.
 
 ### Build
 
@@ -133,6 +156,8 @@ npm run test:all    # Test all services
 ### Environment Variables
 
 Configuration is primarily managed via `.env` files. Access is unified via `@titan/shared`.
+For production, prefer Docker secrets or Vault and use `*_FILE` environment variables
+to load secrets from mounted files (see `docs/operations/secrets-management.md`).
 
 ```bash
 # Core
@@ -166,6 +191,11 @@ BYBIT_API_SECRET=your_secret
 - **TLS Encryption** — All external traffic encrypted
 - **Visual Confirmation** — "Truth Layer" verification of trade execution
 
+## Contracts
+
+- NATS Intent Schema (v1): `docs/contracts/nats-intent.v1.schema.json`
+- Contract overview: `docs/contracts/nats-intent.md`
+
 ## Monitoring
 
 | Endpoint   | Description            |
@@ -177,6 +207,8 @@ BYBIT_API_SECRET=your_secret
 ## Deployment
 
 Deployment is managed **manually** on a DigitalOcean Droplet (VPS) using Docker Compose. We have migrated away from DigitalOcean App Platform.
+Production deployment is intended for **authorized operators** only. Ensure compliance review is completed
+before going live (see `docs/operations/legal-and-compliance.md`).
 
 1. **SSH into the server**:
    ```bash
@@ -193,6 +225,12 @@ Deployment is managed **manually** on a DigitalOcean Droplet (VPS) using Docker 
    git pull origin main
    docker-compose -f docker-compose.prod.yml up -d --build --remove-orphans
    ```
+
+Optional secrets overlay:
+
+```bash
+docker compose -f docker-compose.prod.yml -f docker-compose.secrets.yml up -d
+```
 
 ## Project Structure
 
@@ -220,9 +258,10 @@ Proprietary software. All rights reserved.
 
 ## Disclaimer
 
-This software is for educational and research purposes only. Trading
-cryptocurrencies involves substantial risk of loss. Past performance does not
-guarantee future results.
+This software is provided for educational and research purposes by default. Live trading
+is only permitted for authorized operators who have completed legal and compliance review.
+Trading cryptocurrencies involves substantial risk of loss. Past performance does not
+guarantee future results. Nothing here is investment, legal, or tax advice.
 
 ---
 

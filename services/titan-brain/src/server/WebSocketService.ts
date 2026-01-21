@@ -19,6 +19,8 @@ export type WSMessageType =
   | 'TRADE'
   | 'ALERT'
   | 'PHASE1_UPDATE'
+  | 'PHASE_POSTURE'
+  | 'PHASE_DIAGNOSTICS'
   | 'ping'
   | 'pong';
 
@@ -348,6 +350,32 @@ export class WebSocketService {
       timestamp: Date.now(),
       tripwires,
       sensorStatus,
+    };
+
+    this.broadcast(message);
+  }
+
+  /**
+   * Broadcast Phase Posture update to all clients
+   */
+  broadcastPhasePosture(data: Record<string, unknown>): void {
+    const message: WSMessage = {
+      type: 'PHASE_POSTURE',
+      timestamp: Date.now(),
+      data,
+    };
+
+    this.broadcast(message);
+  }
+
+  /**
+   * Broadcast Phase Diagnostics update to all clients
+   */
+  broadcastPhaseDiagnostics(data: Record<string, unknown>): void {
+    const message: WSMessage = {
+      type: 'PHASE_DIAGNOSTICS',
+      timestamp: Date.now(),
+      data,
     };
 
     this.broadcast(message);

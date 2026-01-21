@@ -163,15 +163,17 @@ export class HierarchicalConfigLoader {
       }
 
       // Also check for environment-specific overrides in base config
-      const baseConfig = this.loadJsonFile(baseConfigPath);
-      if (baseConfig.environments?.[this.options.environment]) {
-        const envOverrides = baseConfig.environments[this.options.environment];
-        config = this.mergeConfigs(config, envOverrides);
-        sources.push({
-          source: 'env-file',
-          path: `${baseConfigPath}:environments.${this.options.environment}`,
-          keys: Object.keys(envOverrides),
-        });
+      if (existsSync(baseConfigPath)) {
+        const baseConfig = this.loadJsonFile(baseConfigPath);
+        if (baseConfig.environments?.[this.options.environment]) {
+          const envOverrides = baseConfig.environments[this.options.environment];
+          config = this.mergeConfigs(config, envOverrides);
+          sources.push({
+            source: 'env-file',
+            path: `${baseConfigPath}:environments.${this.options.environment}`,
+            keys: Object.keys(envOverrides),
+          });
+        }
       }
     }
 
@@ -315,6 +317,19 @@ export class HierarchicalConfigLoader {
           keys: Object.keys(envConfig),
         });
       }
+
+      if (existsSync(baseConfigPath)) {
+        const baseConfig = this.loadJsonFile(baseConfigPath);
+        if (baseConfig.environments?.[this.options.environment]) {
+          const envOverrides = baseConfig.environments[this.options.environment];
+          config = this.mergeConfigs(config, envOverrides);
+          sources.push({
+            source: 'env-file',
+            path: `${baseConfigPath}:environments.${this.options.environment}`,
+            keys: Object.keys(envOverrides),
+          });
+        }
+      }
     }
 
     // 3. Validate configuration
@@ -367,6 +382,19 @@ export class HierarchicalConfigLoader {
           keys: Object.keys(envConfig),
         });
       }
+
+      if (existsSync(baseConfigPath)) {
+        const baseConfig = this.loadJsonFile(baseConfigPath);
+        if (baseConfig.environments?.[this.options.environment]) {
+          const envOverrides = baseConfig.environments[this.options.environment];
+          config = this.mergeConfigs(config, envOverrides);
+          sources.push({
+            source: 'env-file',
+            path: `${baseConfigPath}:environments.${this.options.environment}`,
+            keys: Object.keys(envOverrides),
+          });
+        }
+      }
     }
 
     // 3. Validate configuration
@@ -418,6 +446,19 @@ export class HierarchicalConfigLoader {
           path: envConfigPath,
           keys: Object.keys(envConfig),
         });
+      }
+
+      if (existsSync(baseConfigPath)) {
+        const baseConfig = this.loadJsonFile(baseConfigPath);
+        if (baseConfig.environments?.[this.options.environment]) {
+          const envOverrides = baseConfig.environments[this.options.environment];
+          config = this.mergeConfigs(config, envOverrides);
+          sources.push({
+            source: 'env-file',
+            path: `${baseConfigPath}:environments.${this.options.environment}`,
+            keys: Object.keys(envOverrides),
+          });
+        }
       }
     }
 

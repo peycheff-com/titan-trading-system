@@ -1,7 +1,7 @@
-import { getNatsClient, NatsClient, TitanSubject } from "@titan/shared";
-import { TitanBrain } from "../engine/TitanBrain.js";
-import { getLogger, StructuredLogger } from "../monitoring/index.js";
-import { WebSocketService } from "./WebSocketService.js";
+import { getNatsClient, NatsClient, TitanSubject } from '@titan/shared';
+import { TitanBrain } from '../engine/TitanBrain.js';
+import { getLogger, StructuredLogger } from '../monitoring/index.js';
+import { WebSocketService } from './WebSocketService.js';
 
 export class NatsConsumer {
   private nats: NatsClient;
@@ -22,56 +22,144 @@ export class NatsConsumer {
 
   async start(natsUrl?: string): Promise<void> {
     try {
-      await this.nats.connect({
-        servers: [natsUrl || process.env.NATS_URL || "nats://localhost:4222"],
-      });
-      this.logger.info("NATS Consumer connected");
+      if (!this.nats.isConnected()) {
+        await this.nats.connect({
+          servers: [natsUrl || process.env.NATS_URL || 'nats://localhost:4222'],
+        });
+        this.logger.info('NATS Consumer connected (New Connection)');
+      } else {
+        this.logger.info('NATS Consumer reused existing connection');
+      }
       this.subscribeToTopics();
     } catch (err) {
-      this.logger.error("Failed to connect NATS Consumer", err as Error);
+      this.logger.error('Failed to connect NATS Consumer', err as Error);
       throw err;
     }
   }
 
   private subscribeToTopics(): void {
-    // Subscribe to Execution Reports
+    // Subscribe to Execution Reports (General)
     this.nats.subscribe(
-      TitanSubject.EXECUTION_REPORTS,
+      TitanSubject.EXECUTION_REPORTS, // Uses remapped legacy key for now, pointing to titan.evt.exec.report.v1
       async (data: any, subject) => {
         this.handleExecutionReport(data);
       },
     );
 
-    // Subscribe to Execution Fills (Wildcard for Rust services)
+    // Subscribe to Execution Fills (Wildcard for venues/symbols)
+    // Topic: titan.evt.exec.fill.v1.{venue}.{account}.{symbol}
     this.nats.subscribe(
-      TitanSubject.EXECUTION_FILL + ".*",
+      TitanSubject.EXECUTION_FILL + '.*', // Use suffix wildcard
       async (data: any, subject) => {
         this.handleExecutionReport(data);
       },
+      'BRAIN_RISK', // Durable consumer name as per Manifest
     );
+
+    // Subscribe to Dashboard Updates
+    this.nats.subscribe(TitanSubject.DASHBOARD_UPDATES, (data: any, subject) => {
+      if (this.webSocketService) {
+        if (data.type) {
+          if (data.type === 'SIGNAL') {
+            this.webSocketService.broadcastSignal(data.data);
+          } else if (data.type === 'TRADE') {
+            this.webSocketService.broadcastTrade(data.data);
+          } else if (data.type === 'ALERT') {
+            this.webSocketService.broadcastAlert(data.level, data.message);
+          } else if (data.type === 'PHASE1_UPDATE') {
+            this.webSocketService.broadcastPhase1Update(data.tripwires, data.sensorStatus);
+          } else if (data.type === 'STATE_UPDATE') {
+            this.webSocketService.broadcastStateUpdate(data);
+          }
+        }
+      }
+    });
+
+    // Subscribe to PowerLaw Updates
+    this.nats.subscribe('titan.powerlaw.update', async (data: any, subject) => {
+      try {
+        // Validate structure roughly
+        if (data.symbol && data.tailExponent) {
+          // Relaxed check
+          await this.brain.handlePowerLawUpdate({
+            symbol: data.symbol,
+            tailExponent: Number(data.tailExponent),
+            tailConfidence: Number(data.tailConfidence),
+            exceedanceProbability: Number(data.exceedanceProbability),
+            volatilityCluster: {
+              state: data.volatilityCluster.state,
+              persistence: Number(data.volatilityCluster.persistence),
+              sigma: Number(data.volatilityCluster.sigma || 0),
+            },
+            timestamp: data.timestamp || Date.now(),
+          });
+        }
+      } catch (err) {
+        this.logger.error('Error handling PowerLaw update', err as Error);
+      }
+    });
+
+    // Subscribe to Market Data
+    this.nats.subscribe(
+      TitanSubject.MARKET_DATA,
+      async (data: any, subject) => {
+        try {
+          if (data.symbol && data.price) {
+            this.brain.handleMarketData({
+              symbol: data.symbol,
+              price: Number(data.price),
+              timestamp: data.timestamp || Date.now(),
+            });
+          }
+        } catch (err) {
+          this.logger.error('Error handling Market Data', err as Error);
+        }
+      },
+      // No durable name -> ephemeral consumer for real-time data
+    );
+
+    // Subscribe to Phase Posture (All Phases)
+    this.nats.subscribe(`${TitanSubject.EVT_PHASE_POSTURE}.*`, async (data: any, subject) => {
+      if (this.webSocketService) {
+        this.webSocketService.broadcastPhasePosture(data);
+      }
+    });
+
+    // Subscribe to Phase Diagnostics (All Phases)
+    this.nats.subscribe(`${TitanSubject.EVT_PHASE_DIAGNOSTICS}.*`, async (data: any, subject) => {
+      if (this.webSocketService) {
+        this.webSocketService.broadcastPhaseDiagnostics(data);
+      }
+    });
   }
 
   private async handleExecutionReport(data: any): Promise<void> {
-    this.logger.info("Received Execution Report via NATS", {
-      orderId: data.orderId || data.order_id,
-      symbol: data.symbol,
-      status: data.status,
+    // Dual Read Strategy: unwraps Envelope if present
+    let payload = data;
+    if (data && typeof data === 'object' && 'payload' in data && 'type' in data) {
+      payload = data.payload;
+    }
+
+    this.logger.info('Received Execution Report via NATS', {
+      orderId: payload.orderId || payload.order_id,
+      symbol: payload.symbol,
+      status: payload.status,
     });
 
     try {
       // Map incoming NATS data to Brain's ExecutionReport interface
       // Handling both snake_case (from Python/Rust services) and camelCase (Node services)
       const report = {
-        type: "EXECUTION_REPORT", // Event type
-        phaseId: data.phaseId || data.phase_id || "unknown",
-        signalId: data.signalId || data.signal_id,
-        symbol: data.symbol,
-        side: (data.side || "BUY").toUpperCase(),
-        price: Number(data.fillPrice || data.fill_price || data.price || 0),
-        qty: Number(data.fillSize || data.fill_size || data.qty || 0),
-        timestamp: data.timestamp || Date.now(),
-        status: data.status, // FILLED, PARTIALLY_FILLED, etc.
-        reason: data.reason,
+        type: 'EXECUTION_REPORT', // Event type
+        phaseId: payload.phaseId || payload.phase_id || 'unknown',
+        signalId: payload.signalId || payload.signal_id,
+        symbol: payload.symbol,
+        side: (payload.side || 'BUY').toUpperCase(),
+        price: Number(payload.fillPrice || payload.fill_price || payload.price || 0),
+        qty: Number(payload.fillSize || payload.fill_size || payload.qty || 0),
+        timestamp: payload.timestamp || Date.now(),
+        status: payload.status, // FILLED, PARTIALLY_FILLED, etc.
+        reason: payload.reason,
       };
 
       // Forward to Brain engine
@@ -91,50 +179,8 @@ export class NatsConsumer {
         });
       }
     } catch (err) {
-      this.logger.error(
-        "Error handling Execution Report via NATS",
-        err as Error,
-      );
+      this.logger.error('Error handling Execution Report via NATS', err as Error);
     }
-
-    // TODO: Subscribe to Signals if Brain sends signals via NATS?
-    // For now, Phase 1 only specifies Feedback loop migration.
-
-    // Subscribe to Dashboard Updates
-    this.nats.subscribe(
-      TitanSubject.DASHBOARD_UPDATES,
-      (data: any, subject) => {
-        if (this.webSocketService) {
-          // Forward directly to WebSocket clients
-          // Assuming data is already in WSMessage format or compatible
-          // If data has 'type', use it, otherwise default to 'STATE_UPDATE' or 'DATA'
-          if (data.type) {
-            // If it's a broadcast method we can use that, or just raw send?
-            // WebSocketService has specific broadcast methods.
-            // But it also has clients map.
-            // Let's expose a generic broadcast method or use the specific ones.
-            // For now, let's assume specific types.
-            if (data.type === "SIGNAL") {
-              this.webSocketService.broadcastSignal(data.data);
-            } else if (data.type === "TRADE") {
-              this.webSocketService.broadcastTrade(data.data);
-            } else if (data.type === "ALERT") {
-              this.webSocketService.broadcastAlert(data.level, data.message);
-            } else if (data.type === "PHASE1_UPDATE") {
-              this.webSocketService.broadcastPhase1Update(
-                data.tripwires,
-                data.sensorStatus,
-              );
-            } else if (data.type === "STATE_UPDATE") {
-              // Forward state update to clients
-              // Assuming data content matches WSMessage structure for state update
-              // We might need to reconstruct it if data is just the payload
-              this.webSocketService.broadcastStateUpdate(data);
-            }
-          }
-        }
-      },
-    );
   }
 
   async stop(): Promise<void> {

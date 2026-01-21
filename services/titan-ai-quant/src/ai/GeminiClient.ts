@@ -5,18 +5,9 @@
  * and error handling for the Titan AI Quant system.
  */
 
-import {
-  GenerationConfig,
-  GenerativeModel,
-  GoogleGenerativeAI,
-} from "@google/generative-ai";
-import { RateLimiter } from "./RateLimiter.js";
-import {
-  calculateBackoffDelay,
-  ErrorCode,
-  logError,
-  TitanError,
-} from "../utils/ErrorHandler.js";
+import { GenerationConfig, GenerativeModel, GoogleGenerativeAI } from '@google/generative-ai';
+import { RateLimiter } from './RateLimiter.js';
+import { calculateBackoffDelay, ErrorCode, logError, TitanError } from '../utils/ErrorHandler.js';
 
 export interface GeminiClientConfig {
   apiKey?: string;
@@ -33,7 +24,7 @@ export interface GenerateOptions {
   topK?: number;
 }
 
-import { configManager } from "../config/ConfigManager.js";
+import { configManager } from '../config/ConfigManager.js';
 
 export class GeminiClient {
   private readonly client: GoogleGenerativeAI;
@@ -43,16 +34,15 @@ export class GeminiClient {
   private readonly baseRetryDelayMs: number;
 
   constructor(config: GeminiClientConfig = {}) {
-    const apiKey = config.apiKey ?? configManager.getGeminiKey() ??
-      process.env.GEMINI_API_KEY;
+    const apiKey = config.apiKey ?? configManager.getGeminiKey() ?? process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
-      throw new Error("GEMINI_API_KEY environment variable is required");
+      throw new Error('GEMINI_API_KEY environment variable is required');
     }
 
     this.client = new GoogleGenerativeAI(apiKey);
     this.model = this.client.getGenerativeModel({
-      model: config.modelName ?? "gemini-3.0-flash",
+      model: config.modelName ?? 'gemini-3.0-flash',
     });
 
     this.rateLimiter = new RateLimiter({
@@ -66,10 +56,7 @@ export class GeminiClient {
   /**
    * Generate text content with rate limiting and retry logic
    */
-  async generate(
-    prompt: string,
-    options: GenerateOptions = {},
-  ): Promise<string> {
+  async generate(prompt: string, options: GenerateOptions = {}): Promise<string> {
     const generationConfig: GenerationConfig = {
       temperature: options.temperature ?? 0.7,
       maxOutputTokens: options.maxOutputTokens ?? 2048,
@@ -85,10 +72,7 @@ export class GeminiClient {
   /**
    * Generate JSON response with automatic parsing
    */
-  async generateJSON<T>(
-    prompt: string,
-    options: GenerateOptions = {},
-  ): Promise<T> {
+  async generateJSON<T>(prompt: string, options: GenerateOptions = {}): Promise<T> {
     const response = await this.generate(prompt, {
       ...options,
       temperature: options.temperature ?? 0.3, // Lower temperature for JSON
@@ -136,7 +120,7 @@ export class GeminiClient {
   ): Promise<string> {
     try {
       const result = await this.model.generateContent({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: config,
       });
 
@@ -144,13 +128,9 @@ export class GeminiClient {
       const text = response.text();
 
       if (!text) {
-        throw new TitanError(
-          ErrorCode.INVALID_RESPONSE,
-          "Empty response from Gemini API",
-          {
-            attempt,
-          },
-        );
+        throw new TitanError(ErrorCode.INVALID_RESPONSE, 'Empty response from Gemini API', {
+          attempt,
+        });
       }
 
       return text;
@@ -194,10 +174,7 @@ export class GeminiClient {
     if (error instanceof Error) {
       const message = error.message.toLowerCase();
 
-      if (
-        message.includes("429") || message.includes("rate limit") ||
-        message.includes("quota")
-      ) {
+      if (message.includes('429') || message.includes('rate limit') || message.includes('quota')) {
         return new TitanError(
           ErrorCode.RATE_LIMIT,
           `Gemini API rate limit exceeded: ${error.message}`,
@@ -206,10 +183,7 @@ export class GeminiClient {
         );
       }
 
-      if (
-        message.includes("500") || message.includes("503") ||
-        message.includes("internal")
-      ) {
+      if (message.includes('500') || message.includes('503') || message.includes('internal')) {
         return new TitanError(
           ErrorCode.SERVER_ERROR,
           `Gemini API server error: ${error.message}`,
@@ -218,7 +192,7 @@ export class GeminiClient {
         );
       }
 
-      if (message.includes("timeout") || message.includes("deadline")) {
+      if (message.includes('timeout') || message.includes('deadline')) {
         return new TitanError(
           ErrorCode.TIMEOUT,
           `Gemini API timeout: ${error.message}`,
@@ -228,9 +202,9 @@ export class GeminiClient {
       }
 
       if (
-        message.includes("network") ||
-        message.includes("econnreset") ||
-        message.includes("econnrefused")
+        message.includes('network') ||
+        message.includes('econnreset') ||
+        message.includes('econnrefused')
       ) {
         return new TitanError(
           ErrorCode.NETWORK_ERROR,
@@ -259,12 +233,12 @@ export class GeminiClient {
     if (error instanceof Error) {
       const message = error.message.toLowerCase();
       return (
-        message.includes("429") ||
-        message.includes("rate limit") ||
-        message.includes("500") ||
-        message.includes("503") ||
-        message.includes("timeout") ||
-        message.includes("network")
+        message.includes('429') ||
+        message.includes('rate limit') ||
+        message.includes('500') ||
+        message.includes('503') ||
+        message.includes('timeout') ||
+        message.includes('network')
       );
     }
     return false;
@@ -277,13 +251,13 @@ export class GeminiClient {
     let jsonStr = response.trim();
 
     // Remove markdown code blocks if present
-    if (jsonStr.startsWith("```json")) {
+    if (jsonStr.startsWith('```json')) {
       jsonStr = jsonStr.slice(7);
-    } else if (jsonStr.startsWith("```")) {
+    } else if (jsonStr.startsWith('```')) {
       jsonStr = jsonStr.slice(3);
     }
 
-    if (jsonStr.endsWith("```")) {
+    if (jsonStr.endsWith('```')) {
       jsonStr = jsonStr.slice(0, -3);
     }
 
@@ -294,7 +268,7 @@ export class GeminiClient {
     } catch (error) {
       throw new Error(
         `Failed to parse JSON response: ${
-          error instanceof Error ? error.message : "Unknown error"
+          error instanceof Error ? error.message : 'Unknown error'
         }`,
       );
     }

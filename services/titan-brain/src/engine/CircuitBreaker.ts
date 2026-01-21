@@ -1,10 +1,3 @@
-/**
- * CircuitBreaker - Emergency halt system for Titan Brain
- * Monitors for extreme conditions and triggers emergency halt when thresholds are breached
- *
- * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.8
- */
-
 import {
   BreakerAction,
   BreakerCheckInput,
@@ -61,6 +54,15 @@ export class CircuitBreaker {
   /** Tracking state */
   private dailyStartEquity: number = 0;
   private recentLosses: Array<{ pnl: number; timestamp: number }> = [];
+  private tripCount: number = 0;
+  private lastTripTime?: number;
+
+  /** State Persistence */
+  private stateStore?: {
+    save(key: string, value: string): Promise<void>;
+    load(key: string): Promise<string | null>;
+  };
+  private readonly STATE_KEY = 'titan:brain:breaker:state';
 
   /** External handlers */
   private positionHandler?: PositionClosureHandler;
@@ -90,6 +92,65 @@ export class CircuitBreaker {
    */
   setEventPersistence(persistence: BreakerEventPersistence): void {
     this.eventPersistence = persistence;
+  }
+
+  /**
+   * Set the state store for persistence
+   */
+  setStateStore(store: {
+    save(key: string, value: string): Promise<void>;
+    load(key: string): Promise<string | null>;
+  }): void {
+    this.stateStore = store;
+  }
+
+  /**
+   * Persist current state
+   */
+  private async persistState(): Promise<void> {
+    if (!this.stateStore) return;
+
+    try {
+      const state = {
+        active: this.active,
+        breakerType: this.breakerType,
+        triggerReason: this.triggerReason,
+        triggeredAt: this.triggeredAt,
+        cooldownEndsAt: this.cooldownEndsAt,
+        dailyStartEquity: this.dailyStartEquity,
+        tripCount: this.tripCount,
+        lastTripTime: this.lastTripTime,
+        // We don't persist recentLosses to keep payload small, assuming acceptable loss on restart
+      };
+      await this.stateStore.save(this.STATE_KEY, JSON.stringify(state));
+    } catch (error) {
+      console.error('Failed to persist breaker state:', error);
+    }
+  }
+
+  /**
+   * Load state from persistence
+   */
+  async loadState(): Promise<void> {
+    if (!this.stateStore) return;
+
+    try {
+      const data = await this.stateStore.load(this.STATE_KEY);
+      if (data) {
+        const state = JSON.parse(data);
+        this.active = state.active;
+        this.breakerType = state.breakerType;
+        this.triggerReason = state.triggerReason;
+        this.triggeredAt = state.triggeredAt;
+        this.cooldownEndsAt = state.cooldownEndsAt;
+        this.dailyStartEquity = state.dailyStartEquity;
+        this.tripCount = state.tripCount;
+        this.lastTripTime = state.lastTripTime;
+        console.log('✅ Circuit Breaker state restored from persistence');
+      }
+    } catch (error) {
+      console.error('Failed to load breaker state:', error);
+    }
   }
 
   /**
@@ -145,7 +206,7 @@ export class CircuitBreaker {
       return this.getStatus();
     }
 
-    // Requirement 5.2: Equity drops below minimum
+    // Requirement 5.2: Equity below minimum
     if (equity < this.config.minEquity) {
       this.trigger(`Equity below minimum: $${equity.toFixed(2)} < $${this.config.minEquity}`);
       return this.getStatus();
@@ -171,6 +232,8 @@ export class CircuitBreaker {
       consecutiveLosses,
       equityLevel: equity,
       cooldownEndsAt: this.cooldownEndsAt,
+      tripCount: this.tripCount,
+      lastTripTime: this.lastTripTime,
     };
   }
 
@@ -194,6 +257,10 @@ export class CircuitBreaker {
     this.triggerReason = reason;
     this.triggeredAt = timestamp;
     this.cooldownEndsAt = undefined;
+    this.tripCount++;
+    this.lastTripTime = timestamp;
+
+    await this.persistState();
 
     // Requirement 5.4: Close all open positions immediately
     if (this.positionHandler) {
@@ -259,6 +326,10 @@ export class CircuitBreaker {
     this.triggerReason = reason;
     this.triggeredAt = timestamp;
     this.cooldownEndsAt = timestamp + this.config.cooldownMinutes * 60 * 1000;
+    this.tripCount++;
+    this.lastTripTime = timestamp;
+
+    await this.persistState();
 
     // Log the event
     const event: BreakerEvent = {
@@ -307,6 +378,8 @@ export class CircuitBreaker {
     this.triggerReason = undefined;
     this.triggeredAt = undefined;
     this.cooldownEndsAt = undefined;
+
+    await this.persistState();
 
     // Requirement 5.8: Log the reset with operator identity
     const event: BreakerEvent = {
@@ -357,6 +430,8 @@ export class CircuitBreaker {
       consecutiveLosses: this.recentLosses.length,
       equityLevel: this.dailyStartEquity,
       cooldownEndsAt: this.cooldownEndsAt,
+      tripCount: this.tripCount,
+      lastTripTime: this.lastTripTime,
     };
   }
 
@@ -449,7 +524,9 @@ export class CircuitBreaker {
       this.breakerType = undefined;
       this.triggerReason = undefined;
       this.triggeredAt = undefined;
+      this.triggeredAt = undefined;
       this.cooldownEndsAt = undefined;
+      this.persistState().catch((err) => console.error('Failed to persist state check', err));
     }
   }
   /**

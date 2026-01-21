@@ -25,7 +25,7 @@
  * - Leverage: 15x
  */
 
-import { Tripwire } from "../types/index.js";
+import { Tripwire } from '../types/index.js';
 
 interface OHLCV {
   timestamp: number;
@@ -43,11 +43,7 @@ interface BybitClient {
 }
 
 interface CVDCalculator {
-  calcCVD(
-    symbol: string,
-    windowSeconds: number,
-    offsetSeconds?: number,
-  ): Promise<number>;
+  calcCVD(symbol: string, windowSeconds: number, offsetSeconds?: number): Promise<number>;
 }
 
 export class FundingSqueezeDetector {
@@ -82,21 +78,18 @@ export class FundingSqueezeDetector {
       }
 
       console.log(
-        `🔍 Checking funding squeeze: ${symbol} (Funding: ${
-          (fundingRate * 100).toFixed(3)
-        }%)`,
+        `🔍 Checking funding squeeze: ${symbol} (Funding: ${(fundingRate * 100).toFixed(3)}%)`,
       );
 
       // 3. Check if price is making higher lows (shorts trapped)
-      const ohlcv = await this.bybitClient.fetchOHLCV(symbol, "5m", 20);
+      const ohlcv = await this.bybitClient.fetchOHLCV(symbol, '5m', 20);
       if (ohlcv.length < 3) {
         return null;
       }
 
       // Get last 3 lows
       const recentLows = ohlcv.slice(-3).map((bar) => bar.low);
-      const isHigherLow = recentLows[2] > recentLows[1] &&
-        recentLows[1] > recentLows[0];
+      const isHigherLow = recentLows[2] > recentLows[1] && recentLows[1] > recentLows[0];
 
       if (!isHigherLow) {
         return null;
@@ -122,34 +115,33 @@ export class FundingSqueezeDetector {
       console.log(`⚡ FUNDING SQUEEZE DETECTED: ${symbol}`);
       console.log(`   Funding Rate: ${(fundingRate * 100).toFixed(3)}%`);
       console.log(
-        `   Higher Low: YES (${recentLows[0].toFixed(2)} → ${
-          recentLows[1].toFixed(2)
-        } → ${recentLows[2].toFixed(2)})`,
+        `   Higher Low: YES (${recentLows[0].toFixed(2)} → ${recentLows[1].toFixed(
+          2,
+        )} → ${recentLows[2].toFixed(2)})`,
       );
+      console.log(`   CVD Rising: YES (${previousCVD.toFixed(0)} → ${cvd.toFixed(0)})`);
       console.log(
-        `   CVD Rising: YES (${previousCVD.toFixed(0)} → ${cvd.toFixed(0)})`,
-      );
-      console.log(
-        `   Target: ${liquidationTarget.toFixed(2)} (+${
-          ((liquidationTarget / currentPrice - 1) * 100).toFixed(1)
-        }%)`,
+        `   Target: ${liquidationTarget.toFixed(2)} (+${(
+          (liquidationTarget / currentPrice - 1) *
+          100
+        ).toFixed(1)}%)`,
       );
 
       return {
         symbol,
         triggerPrice: currentPrice * 1.001, // Slight markup for entry
-        direction: "LONG",
-        trapType: "FUNDING_SQUEEZE",
+        direction: 'LONG',
+        trapType: 'FUNDING_SQUEEZE',
         confidence: 90,
         leverage: 15,
-        estimatedCascadeSize: 0.10, // 10% squeeze expected
+        estimatedCascadeSize: 0.1, // 10% squeeze expected
         activated: false,
         targetPrice: liquidationTarget,
         stopLoss: stopLoss,
       };
     } catch (error: any) {
       // Check for Geo-blocking (HTTP 403)
-      if (error && (error.message || "").includes("403")) {
+      if (error && (error.message || '').includes('403')) {
         if (!this.isGeoBlocked) {
           console.warn(
             `⛔ Geo-blocking detected for ${symbol} (HTTP 403). Disabling FundingSqueezeDetector.`,

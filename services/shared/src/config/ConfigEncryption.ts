@@ -15,19 +15,19 @@ import {
   DecipherGCM,
   pbkdf2Sync,
   randomBytes,
-} from "crypto";
+} from 'crypto';
 
 /**
  * Encryption algorithm configuration
  */
 const ENCRYPTION_CONFIG = {
-  algorithm: "aes-256-gcm",
+  algorithm: 'aes-256-gcm',
   keyLength: 32, // 256 bits
   ivLength: 16, // 128 bits
   tagLength: 16, // 128 bits
   saltLength: 32, // 256 bits
   iterations: 100000, // PBKDF2 iterations
-  hashAlgorithm: "sha256",
+  hashAlgorithm: 'sha256',
 } as const;
 
 /**
@@ -71,12 +71,12 @@ export class ConfigEncryption {
    */
   initialize(masterPassword: string): void {
     if (!masterPassword || masterPassword.length < 12) {
-      throw new Error("Master password must be at least 12 characters long");
+      throw new Error('Master password must be at least 12 characters long');
     }
 
     // Derive master key from password
     const salt = createHash(ENCRYPTION_CONFIG.hashAlgorithm)
-      .update("titan-config-encryption")
+      .update('titan-config-encryption')
       .digest();
 
     this.masterKey = pbkdf2Sync(
@@ -94,7 +94,7 @@ export class ConfigEncryption {
   encrypt(data: any): EncryptionResult {
     try {
       if (!this.masterKey) {
-        throw new Error("Encryption not initialized. Call initialize() first.");
+        throw new Error('Encryption not initialized. Call initialize() first.');
       }
 
       // Convert data to JSON string
@@ -114,16 +114,12 @@ export class ConfigEncryption {
       );
 
       // Create cipher with IV
-      const cipher = createCipheriv(
-        ENCRYPTION_CONFIG.algorithm,
-        encryptionKey,
-        iv,
-      ) as CipherGCM;
-      cipher.setAAD(Buffer.from("titan-config")); // Additional authenticated data
+      const cipher = createCipheriv(ENCRYPTION_CONFIG.algorithm, encryptionKey, iv) as CipherGCM;
+      cipher.setAAD(Buffer.from('titan-config')); // Additional authenticated data
 
       // Encrypt data
-      let encrypted = cipher.update(plaintext, "utf8", "base64");
-      encrypted += cipher.final("base64");
+      let encrypted = cipher.update(plaintext, 'utf8', 'base64');
+      encrypted += cipher.final('base64');
 
       // Get authentication tag (for GCM mode)
       const tag = cipher.getAuthTag();
@@ -132,9 +128,9 @@ export class ConfigEncryption {
         success: true,
         data: {
           encrypted,
-          iv: iv.toString("base64"),
-          tag: tag.toString("base64"),
-          salt: salt.toString("base64"),
+          iv: iv.toString('base64'),
+          tag: tag.toString('base64'),
+          salt: salt.toString('base64'),
           algorithm: ENCRYPTION_CONFIG.algorithm,
           iterations: ENCRYPTION_CONFIG.iterations,
         },
@@ -142,9 +138,7 @@ export class ConfigEncryption {
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error
-          ? error.message
-          : "Unknown encryption error",
+        error: error instanceof Error ? error.message : 'Unknown encryption error',
       };
     }
   }
@@ -155,7 +149,7 @@ export class ConfigEncryption {
   decrypt(encryptedData: EncryptedData): DecryptionResult {
     try {
       if (!this.masterKey) {
-        throw new Error("Encryption not initialized. Call initialize() first.");
+        throw new Error('Encryption not initialized. Call initialize() first.');
       }
 
       // Validate encrypted data structure
@@ -165,13 +159,13 @@ export class ConfigEncryption {
         !encryptedData.tag ||
         !encryptedData.salt
       ) {
-        throw new Error("Invalid encrypted data structure");
+        throw new Error('Invalid encrypted data structure');
       }
 
       // Convert base64 strings back to buffers
-      const iv = Buffer.from(encryptedData.iv, "base64");
-      const tag = Buffer.from(encryptedData.tag, "base64");
-      const salt = Buffer.from(encryptedData.salt, "base64");
+      const iv = Buffer.from(encryptedData.iv, 'base64');
+      const tag = Buffer.from(encryptedData.tag, 'base64');
+      const salt = Buffer.from(encryptedData.salt, 'base64');
 
       // Derive decryption key from master key and salt
       const decryptionKey = pbkdf2Sync(
@@ -183,21 +177,13 @@ export class ConfigEncryption {
       );
 
       // Create decipher with IV
-      const decipher = createDecipheriv(
-        encryptedData.algorithm,
-        decryptionKey,
-        iv,
-      ) as DecipherGCM;
+      const decipher = createDecipheriv(encryptedData.algorithm, decryptionKey, iv) as DecipherGCM;
       decipher.setAuthTag(tag);
-      decipher.setAAD(Buffer.from("titan-config")); // Additional authenticated data
+      decipher.setAAD(Buffer.from('titan-config')); // Additional authenticated data
 
       // Decrypt data
-      let decrypted = decipher.update(
-        encryptedData.encrypted,
-        "base64",
-        "utf8",
-      );
-      decrypted += decipher.final("utf8");
+      let decrypted = decipher.update(encryptedData.encrypted, 'base64', 'utf8');
+      decrypted += decipher.final('utf8');
 
       // Parse JSON
       const data = JSON.parse(decrypted);
@@ -209,9 +195,7 @@ export class ConfigEncryption {
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error
-          ? error.message
-          : "Unknown decryption error",
+        error: error instanceof Error ? error.message : 'Unknown decryption error',
       };
     }
   }
@@ -246,7 +230,7 @@ export class ConfigEncryption {
 
     this.walkObject(result, (obj, key) => {
       const value = obj[key];
-      if (value && typeof value === "object" && value.__encrypted === true) {
+      if (value && typeof value === 'object' && value.__encrypted === true) {
         const decryptionResult = this.decrypt(value);
         if (decryptionResult.success) {
           obj[key] = decryptionResult.data;
@@ -265,7 +249,7 @@ export class ConfigEncryption {
 
     this.walkObject(config, (obj, key) => {
       const value = obj[key];
-      if (value && typeof value === "object" && value.__encrypted === true) {
+      if (value && typeof value === 'object' && value.__encrypted === true) {
         hasEncrypted = true;
       }
     });
@@ -281,7 +265,7 @@ export class ConfigEncryption {
 
     this.walkObjectWithPath(config, (obj, key, path) => {
       const value = obj[key];
-      if (value && typeof value === "object" && value.__encrypted === true) {
+      if (value && typeof value === 'object' && value.__encrypted === true) {
         encryptedPaths.push(path);
       }
     });
@@ -295,37 +279,37 @@ export class ConfigEncryption {
   static validateMasterPassword(password: string): {
     valid: boolean;
     errors: string[];
-    strength: "weak" | "medium" | "strong";
+    strength: 'weak' | 'medium' | 'strong';
   } {
     const errors: string[] = [];
-    let strength: "weak" | "medium" | "strong" = "weak";
+    let strength: 'weak' | 'medium' | 'strong' = 'weak';
 
     if (password.length < 12) {
-      errors.push("Password must be at least 12 characters long");
+      errors.push('Password must be at least 12 characters long');
     }
 
     if (!/[a-z]/.test(password)) {
-      errors.push("Password must contain at least one lowercase letter");
+      errors.push('Password must contain at least one lowercase letter');
     }
 
     if (!/[A-Z]/.test(password)) {
-      errors.push("Password must contain at least one uppercase letter");
+      errors.push('Password must contain at least one uppercase letter');
     }
 
     if (!/\d/.test(password)) {
-      errors.push("Password must contain at least one number");
+      errors.push('Password must contain at least one number');
     }
 
     if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
-      errors.push("Password must contain at least one special character");
+      errors.push('Password must contain at least one special character');
     }
 
     // Determine strength
     if (errors.length === 0) {
       if (password.length >= 16) {
-        strength = "strong";
+        strength = 'strong';
       } else if (password.length >= 12) {
-        strength = "medium";
+        strength = 'medium';
       }
     }
 
@@ -340,7 +324,7 @@ export class ConfigEncryption {
    * Get nested value from object using dot notation
    */
   private getNestedValue(obj: any, path: string): any {
-    return path.split(".").reduce((current, key) => {
+    return path.split('.').reduce((current, key) => {
       return current && current[key] !== undefined ? current[key] : undefined;
     }, obj);
   }
@@ -349,12 +333,12 @@ export class ConfigEncryption {
    * Set nested value in object using dot notation
    */
   private setNestedValue(obj: any, path: string, value: any): void {
-    const keys = path.split(".");
+    const keys = path.split('.');
     let current = obj;
 
     for (let i = 0; i < keys.length - 1; i++) {
       const key = keys[i];
-      if (!(key in current) || typeof current[key] !== "object") {
+      if (!(key in current) || typeof current[key] !== 'object') {
         current[key] = {};
       }
       current = current[key];
@@ -366,18 +350,15 @@ export class ConfigEncryption {
   /**
    * Walk object recursively and call callback for each property
    */
-  private walkObject(
-    obj: any,
-    callback: (obj: any, key: string) => void,
-  ): void {
-    if (typeof obj !== "object" || obj === null) {
+  private walkObject(obj: any, callback: (obj: any, key: string) => void): void {
+    if (typeof obj !== 'object' || obj === null) {
       return;
     }
 
     for (const key in obj) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
         callback(obj, key);
-        if (typeof obj[key] === "object" && obj[key] !== null) {
+        if (typeof obj[key] === 'object' && obj[key] !== null) {
           this.walkObject(obj[key], callback);
         }
       }
@@ -390,9 +371,9 @@ export class ConfigEncryption {
   private walkObjectWithPath(
     obj: any,
     callback: (obj: any, key: string, path: string) => void,
-    currentPath: string = "",
+    currentPath: string = '',
   ): void {
-    if (typeof obj !== "object" || obj === null) {
+    if (typeof obj !== 'object' || obj === null) {
       return;
     }
 
@@ -400,7 +381,7 @@ export class ConfigEncryption {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
         const path = currentPath ? `${currentPath}.${key}` : key;
         callback(obj, key, path);
-        if (typeof obj[key] === "object" && obj[key] !== null) {
+        if (typeof obj[key] === 'object' && obj[key] !== null) {
           this.walkObjectWithPath(obj[key], callback, path);
         }
       }

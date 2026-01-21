@@ -5,10 +5,10 @@
  * Requirements: 10.2, 10.8
  */
 
-import { DashboardService, WalletBalance } from "./DashboardService.js";
-import { TitanBrain } from "../engine/TitanBrain.js";
-import { DatabaseManager } from "../db/DatabaseManager.js";
-import { getLogger } from "../monitoring/index.js";
+import { DashboardService, WalletBalance } from './DashboardService.js';
+import { TitanBrain } from '../engine/TitanBrain.js';
+import { DatabaseManager } from '../db/DatabaseManager.js';
+import { getLogger } from '../monitoring/index.js';
 
 const logger = getLogger();
 
@@ -32,16 +32,16 @@ export class BybitWalletProvider {
     // In a real implementation, this would call the Bybit API
     return [
       {
-        exchange: "bybit",
-        walletType: "futures",
-        asset: "USDT",
+        exchange: 'bybit',
+        walletType: 'futures',
+        asset: 'USDT',
         balance: 1000.0,
         usdValue: 1000.0,
       },
       {
-        exchange: "bybit",
-        walletType: "spot",
-        asset: "USDT",
+        exchange: 'bybit',
+        walletType: 'spot',
+        asset: 'USDT',
         balance: 500.0,
         usdValue: 500.0,
       },
@@ -69,16 +69,16 @@ export class BinanceWalletProvider {
     // In a real implementation, this would call the Binance API
     return [
       {
-        exchange: "binance",
-        walletType: "spot",
-        asset: "USDT",
+        exchange: 'binance',
+        walletType: 'spot',
+        asset: 'USDT',
         balance: 750.0,
         usdValue: 750.0,
       },
       {
-        exchange: "binance",
-        walletType: "spot",
-        asset: "BTC",
+        exchange: 'binance',
+        walletType: 'spot',
+        asset: 'BTC',
         balance: 0.01,
         usdValue: 430.0, // Assuming BTC price of $43,000
       },
@@ -89,12 +89,9 @@ export class BinanceWalletProvider {
 /**
  * Set up dashboard service with wallet providers
  */
-export function setupDashboardService(
-  brain: TitanBrain,
-  db?: DatabaseManager,
-): DashboardService {
+export function setupDashboardService(brain: TitanBrain, db?: DatabaseManager): DashboardService {
   const dashboardService = new DashboardService(brain, db, {
-    version: "1.0.0",
+    version: '1.0.0',
     cacheTTL: 60000, // 1 minute
     navCacheTTL: 30000, // 30 seconds
     maxRecentDecisions: 50,
@@ -102,17 +99,11 @@ export function setupDashboardService(
 
   // Register wallet providers
   // In a real implementation, these would use actual API credentials
-  const bybitProvider = new BybitWalletProvider("api_key", "api_secret");
-  const binanceProvider = new BinanceWalletProvider("api_key", "api_secret");
+  const bybitProvider = new BybitWalletProvider('api_key', 'api_secret');
+  const binanceProvider = new BinanceWalletProvider('api_key', 'api_secret');
 
-  dashboardService.registerWalletProvider(
-    "bybit",
-    () => bybitProvider.getBalances(),
-  );
-  dashboardService.registerWalletProvider(
-    "binance",
-    () => binanceProvider.getBalances(),
-  );
+  dashboardService.registerWalletProvider('bybit', () => bybitProvider.getBalances());
+  dashboardService.registerWalletProvider('binance', () => binanceProvider.getBalances());
 
   return dashboardService;
 }
@@ -126,20 +117,21 @@ export async function exampleUsage(brain: TitanBrain, db?: DatabaseManager) {
   // Get NAV calculation
   const nav = await dashboardService.calculateNAV();
   logger.info(`Total NAV: ${nav.totalNAV}`);
-  (logger as any).info("Wallet breakdown:", undefined, {
+  (logger as any).info('Wallet breakdown:', undefined, {
     breakdown: nav.walletBreakdown,
   });
 
   const dashboardData = await brain.getDashboardData();
   // Enrich with stored metrics
-  const extendedData: any = { // Changed type to any for simplicity, assuming ExtendedDashboardData is defined elsewhere
+  const extendedData: any = {
+    // Changed type to any for simplicity, assuming ExtendedDashboardData is defined elsewhere
     ...dashboardData,
     metrics: {
       ...dashboardData.riskMetrics,
       // Add historical metrics here if needed
     },
   };
-  (logger as any).info("Dashboard data generated", undefined, {
+  (logger as any).info('Dashboard data generated', undefined, {
     data: extendedData,
   });
 
@@ -148,5 +140,5 @@ export async function exampleUsage(brain: TitanBrain, db?: DatabaseManager) {
 
   // Check cache status
   const cacheStatus = dashboardService.getCacheStatus();
-  logger.info("Cache status:", cacheStatus);
+  logger.info('Cache status:', cacheStatus);
 }

@@ -26,8 +26,10 @@ export {
 export {
   IntentSignal,
   Position,
+  PowerLawMetrics,
   RiskDecision,
   RiskGuardianConfig,
+  RiskGuardianState,
   RiskMetrics,
   RiskSnapshot,
 } from './risk.js';
@@ -65,12 +67,36 @@ export {
 // Market types
 export { MarketSignal, SignalType } from './market.js';
 
+// Execution types
+// Execution types
+export {
+  ExchangeBalance,
+  ExecutionEngineClient,
+  ExecutionEngineConfig,
+  ExecutionPosition,
+  FillConfirmation,
+} from './execution.js';
+
+// Reconciliation types
+// Reconciliation types
+export {
+  DriftEvent,
+  MismatchDetail,
+  MismatchSeverity,
+  ReconciliationReport,
+  ReconciliationRun,
+  ReconciliationStats,
+  ReconciliationType,
+  TruthConfidence,
+} from './reconciliation.js';
+
 // Config types
 export {
   DatabaseConfig,
   EnvConfig,
   HmacConfig,
   NotificationConfig,
+  ReconciliationConfig,
   RedisConfig,
   ServerConfig,
   TitanBrainConfig,

@@ -11,7 +11,7 @@ import {
   EquityTier,
   LeverageCaps,
   TransitionPoints,
-} from "../types/index.js";
+} from '../types/index.js';
 
 /**
  * AllocationEngine calculates capital allocation across Titan phases
@@ -33,11 +33,7 @@ export class AllocationEngine {
    * @param midpoint - Center of transition
    * @param steepness - How sharp the transition is (higher = sharper)
    */
-  private sigmoid(
-    x: number,
-    midpoint: number,
-    steepness: number = 0.002,
-  ): number {
+  private sigmoid(x: number, midpoint: number, steepness: number = 0.002): number {
     return 1 / (1 + Math.exp(-steepness * (x - midpoint)));
   }
 
@@ -53,6 +49,21 @@ export class AllocationEngine {
    * @param equity - Current account equity in USD
    * @returns AllocationVector with weights summing to 1.0
    */
+  private hasEnteredPhase2: boolean = false;
+  private hasEnteredPhase3: boolean = false;
+  private readonly HYSTERESIS_BUFFER = 0.9; // 10% buffer to downgrade
+
+  /**
+   * Calculate allocation weights for each phase based on current equity
+   *
+   * Transition logic (with Hysteresis):
+   * - Below $1,500 (or $1,350 if previously active): 100% Phase 1
+   * - Transition Zone: Sigmoid blend
+   * - Buffer prevents rapid oscillation at boundaries
+   *
+   * @param equity - Current account equity in USD
+   * @returns AllocationVector with weights summing to 1.0
+   */
   getWeights(equity: number): AllocationVector {
     const { startP2, fullP2, startP3 } = this.transitionPoints;
     const timestamp = Date.now();
@@ -60,8 +71,19 @@ export class AllocationEngine {
     // Ensure equity is non-negative
     const safeEquity = Math.max(0, equity);
 
-    // Phase 1 only (MICRO tier)
-    if (safeEquity < startP2) {
+    // Determines effective thresholds based on state
+    const effectiveStartP2 = this.hasEnteredPhase2 ? startP2 * this.HYSTERESIS_BUFFER : startP2;
+    const effectiveStartP3 = this.hasEnteredPhase3 ? startP3 * this.HYSTERESIS_BUFFER : startP3;
+
+    // State Updates
+    if (safeEquity >= startP2) this.hasEnteredPhase2 = true;
+    if (safeEquity < effectiveStartP2) this.hasEnteredPhase2 = false;
+
+    if (safeEquity >= startP3) this.hasEnteredPhase3 = true;
+    if (safeEquity < effectiveStartP3) this.hasEnteredPhase3 = false;
+
+    // Phase 1 Only (MICRO tier)
+    if (safeEquity < effectiveStartP2) {
       return { w1: 1.0, w2: 0.0, w3: 0.0, timestamp };
     }
 
@@ -79,8 +101,8 @@ export class AllocationEngine {
       return this.normalizeWeights({ w1, w2, w3, timestamp });
     }
 
-    // Stable zone: 20% P1, 80% P2 (before P3 transition)
-    if (safeEquity < startP3) {
+    // Stable zone: 20% P1, 80% P2
+    if (safeEquity < effectiveStartP3) {
       return { w1: 0.2, w2: 0.8, w3: 0.0, timestamp };
     }
 
@@ -89,9 +111,9 @@ export class AllocationEngine {
     const p3TransitionMidpoint = startP3 + 12500; // $37,500 midpoint
     const p3Progress = this.sigmoid(safeEquity, p3TransitionMidpoint, 0.0002);
 
+    // w1 stays at 0.2
     // w3 goes from 0 to 0.5 (max 50% to P3)
     // w2 goes from 0.8 to 0.3
-    // w1 stays at 0.2
     const w1 = 0.2;
     const w3 = 0.5 * p3Progress;
     const w2 = 0.8 - w3;
@@ -210,7 +232,7 @@ export class AllocationEngine {
 
     // 1. Calculate Softmax of Sharpe Ratios for Performance Weights
     // Filter for phases 1, 2, 3 in order
-    const phases = ["phase1", "phase2", "phase3"];
+    const phases = ['phase1', 'phase2', 'phase3'];
     const sharpes = phases.map((id) => {
       const p = performances.find((p) => p.phaseId === id);
       return p ? Math.max(0, p.sharpeRatio) : 0; // Floor at 0 for softmax

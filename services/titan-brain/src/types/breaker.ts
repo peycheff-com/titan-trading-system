@@ -47,6 +47,14 @@ export interface BreakerStatus {
   equityLevel: number;
   /** Cooldown end time for soft breakers */
   cooldownEndsAt?: number;
+  /** Total number of breaker trips since start */
+  tripCount: number;
+  /** Timestamp of the last breaker trip */
+  lastTripTime?: number;
+  /** Timestamp of the last breaker reset */
+  lastReset?: number;
+  /** Current daily PnL */
+  dailyPnl?: number;
 }
 
 /**

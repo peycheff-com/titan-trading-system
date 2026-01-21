@@ -36,10 +36,13 @@ export class AccountingService {
         this.logger.info("Starting Titan Accountant (Phase 4)...");
 
         // Subscribe to Intents (to track ingress)
-        await this.nats.subscribe<IntentSignal>(
-            "titan.execution.intent.>",
-            (intent: IntentSignal, subject: string) => {
+        await this.nats.subscribe<any>( // Type as any to handle both Envelope and raw during migration
+            "titan.cmd.exec.place.v1.>",
+            (msg: any, subject: string) => {
                 try {
+                    // unwrapping logic
+                    const intent = msg.payload ? msg.payload : msg;
+
                     // Add t_ingress if not present (it should be added by ExecutionRouter, but Brain sees it here too)
                     // Actually Brain sends it. Brain -> NATS -> Execution.
                     // We want to see what Execution publishes BACK.
@@ -52,9 +55,9 @@ export class AccountingService {
         );
 
         // Subscribe to Fills (from Execution Service)
-        // Subject: titan.execution.fill.<symbol>
+        // Subject: titan.evt.exec.fill.v1.<venue>.<account>.<symbol>
         await this.nats.subscribe<FillReport>(
-            "titan.execution.fill.>",
+            "titan.evt.exec.fill.v1.>",
             async (fill: FillReport, subject: string) => {
                 try {
                     await this.processFill(fill);

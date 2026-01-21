@@ -57,11 +57,26 @@ impl ExchangeConfig {
 pub struct ExecutionConfig {
     pub port: Option<u16>,
     pub nats_url: Option<String>,
+    pub routing: Option<RoutingConfig>,
+}
+
+#[derive(Debug, Deserialize, Clone, Default)]
+pub struct RoutingConfig {
+    pub fanout: Option<bool>,
+    pub weights: Option<HashMap<String, f64>>,
+    #[serde(default)]
+    pub per_source: HashMap<String, RoutingRule>,
+}
+
+#[derive(Debug, Deserialize, Clone, Default)]
+pub struct RoutingRule {
+    pub fanout: Option<bool>,
+    pub weights: Option<HashMap<String, f64>>,
 }
 
 impl Settings {
     pub fn new() -> Result<Self, ConfigError> {
-        let run_mode = env::var("RUN_MODE").unwrap_or_else(|_| "development".into());
+        let _run_mode = env::var("RUN_MODE").unwrap_or_else(|_| "development".into());
         let home = env::var("HOME").unwrap_or_else(|_| ".".into());
 
         let s = Config::builder()
@@ -127,6 +142,38 @@ impl Settings {
             }
         }
 
+        // 3. Validate Routing Config
+        if let Some(exec) = &self.execution {
+            if let Some(routing) = &exec.routing {
+                let validate_weights = |name: &str,
+                                        weights: &Option<HashMap<String, f64>>|
+                 -> Result<(), ConfigError> {
+                    if let Some(map) = weights {
+                        if map.is_empty() {
+                            return Err(ConfigError::Message(format!(
+                                "Routing weights for '{}' cannot be empty",
+                                name
+                            )));
+                        }
+                        for (exchange, weight) in map {
+                            if !weight.is_finite() || *weight <= 0.0 {
+                                return Err(ConfigError::Message(format!(
+                                    "Routing weight for '{}' must be > 0 (exchange: {})",
+                                    name, exchange
+                                )));
+                            }
+                        }
+                    }
+                    Ok(())
+                };
+
+                validate_weights("default", &routing.weights)?;
+                for (source, rule) in &routing.per_source {
+                    validate_weights(source, &rule.weights)?;
+                }
+            }
+        }
+
         Ok(())
     }
 }
@@ -134,7 +181,6 @@ impl Settings {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::env;
 
     #[test]
     fn test_config_defaults() {
@@ -142,7 +188,7 @@ mod tests {
         // This is tricky if running in parallel, but for unit test file it's okay unless global env is set.
         // Better to use Figment or Config with manual source for testing, but Config works with env.
 
-        let settings = Settings::new();
+        let _settings = Settings::new();
         // It might fail if no file, but defaults should be Option::None or defaults.
         // We set defaults for ExecutionConfig
         // But Settings::new() calls Config::builder().

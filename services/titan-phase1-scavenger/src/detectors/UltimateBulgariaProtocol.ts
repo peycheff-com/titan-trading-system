@@ -16,27 +16,34 @@
  * - Highest win rate (98% confidence)
  */
 
-import { BinanceSpotClient } from "../exchanges/BinanceSpotClient.js";
-import { OIWipeoutDetector } from "./OIWipeoutDetector.js";
-import { OrderFlowImbalanceCalculator } from "../calculators/OrderFlowImbalanceCalculator.js";
+import { BinanceSpotClient } from '../exchanges/BinanceSpotClient.js';
+import { OIWipeoutDetector } from './OIWipeoutDetector.js';
+import { OrderFlowImbalanceCalculator } from '../calculators/OrderFlowImbalanceCalculator.js';
 
-import { Tripwire } from "../types/index.js";
+import { PowerLawMetric, Tripwire } from '../types/index.js';
 export type { Tripwire };
 
+import { BybitPerpsClient } from '../exchanges/BybitPerpsClient.js';
+import { Logger } from '../logging/Logger.js';
+
 export class UltimateBulgariaProtocol {
-  private bybitClient: any; // Will be null when using titan-execution service
+  private bybitClient: BybitPerpsClient; // Will be null when using titan-execution service but typed for strictness
   private binanceClient: BinanceSpotClient;
   private oiDetector: OIWipeoutDetector;
   private ofiCalculator: OrderFlowImbalanceCalculator;
 
+  private logger: Logger;
+
   constructor(
-    bybitClient: any, // Can be null when using titan-execution service
+    bybitClient: BybitPerpsClient, // Can be null when using titan-execution service
     binanceClient: BinanceSpotClient,
     oiDetector: OIWipeoutDetector,
+    logger: Logger,
   ) {
     this.bybitClient = bybitClient;
     this.binanceClient = binanceClient;
     this.oiDetector = oiDetector;
+    this.logger = logger;
     this.ofiCalculator = new OrderFlowImbalanceCalculator(50);
   }
 
@@ -68,28 +75,24 @@ export class UltimateBulgariaProtocol {
       // Sampling BBO 5 times over ~1 second to gauge immediate flow
       const ofiScore = await this.sampleOFI(symbol);
       if (ofiScore <= 0) {
-        console.log(
-          `   OFI Check Failed: ${ofiScore.toFixed(4)} (Buying Pressure Low)`,
-        );
+        this.logger.info(`   OFI Check Failed: ${ofiScore.toFixed(4)} (Buying Pressure Low)`);
         continue;
       }
-      console.log(
-        `   OFI Confirmed: ${ofiScore.toFixed(4)} (Buying Pressure Detected)`,
-      );
+      this.logger.info(`   OFI Confirmed: ${ofiScore.toFixed(4)} (Buying Pressure Detected)`);
 
       // 3. Set Leader-Follower trap on Binance Spot
       // When Binance starts V-Shape recovery, fire Long on Bybit
       const binancePrice = await this.binanceClient.getSpotPrice(symbol);
       const recoveryTrigger = binancePrice * 1.01; // +1% recovery
 
-      console.log(`🕸️ ULTIMATE TRAP SET: ${symbol}`);
-      console.log(`   OI Wipeout: CONFIRMED`);
-      console.log(`   Binance Trigger: ${recoveryTrigger.toFixed(2)}`);
-      console.log(`   Waiting for V-Shape...`);
+      this.logger.info(`🕸️ ULTIMATE TRAP SET: ${symbol}`);
+      this.logger.info(`   OI Wipeout: CONFIRMED`);
+      this.logger.info(`   Binance Trigger: ${recoveryTrigger.toFixed(2)}`);
+      this.logger.warn(`   Waiting for V-Shape...`);
 
       return {
         ...oiWipeout,
-        trapType: "ULTIMATE_BULGARIA",
+        trapType: 'ULTIMATE_BULGARIA',
         binanceTrigger: recoveryTrigger,
         confidence: 98, // Highest confidence
       };
@@ -99,9 +102,9 @@ export class UltimateBulgariaProtocol {
   }
 
   // Power Law Metrics Cache
-  private metrics: Map<string, any> = new Map();
+  private metrics: Map<string, PowerLawMetric> = new Map();
 
-  updatePowerLawMetrics(symbol: string, data: any) {
+  updatePowerLawMetrics(symbol: string, data: PowerLawMetric) {
     this.metrics.set(symbol, data);
   }
 
@@ -125,14 +128,14 @@ export class UltimateBulgariaProtocol {
     const crashes: string[] = [];
 
     // Get BTC drop as market baseline
-    const btcOHLCV = await this.bybitClient.fetchOHLCV("BTCUSDT", "1m", 5);
+    const btcOHLCV = await this.bybitClient.fetchOHLCV('BTCUSDT', '1m', 5);
     const btcStart = btcOHLCV[0].close;
     const btcNow = btcOHLCV[btcOHLCV.length - 1].close;
     const btcDrop = (btcStart - btcNow) / btcStart;
 
     for (const symbol of symbols) {
       try {
-        const ohlcv = await this.bybitClient.fetchOHLCV(symbol, "1m", 5);
+        const ohlcv = await this.bybitClient.fetchOHLCV(symbol, '1m', 5);
 
         if (ohlcv.length < 2) continue;
 
@@ -175,14 +178,14 @@ export class UltimateBulgariaProtocol {
         if (drop > dropThreshold && btcDrop < 0.005) {
           crashes.push(symbol);
           console.log(
-            `💀 Idiosyncratic crash detected: ${symbol} (-${
-              (drop * 100).toFixed(1)
-            }%) vs BTC (-${(btcDrop * 100).toFixed(1)}%) | Regime: ${
-              metric ? metric.alpha.toFixed(2) : "N/A"
+            `💀 Idiosyncratic crash detected: ${symbol} (-${(drop * 100).toFixed(
+              1,
+            )}%) vs BTC (-${(btcDrop * 100).toFixed(1)}%) | Regime: ${
+              metric ? metric.alpha.toFixed(2) : 'N/A'
             }`,
           );
         }
-      } catch (error) {
+      } catch {
         // Skip symbols with errors (delisted, no data, etc.)
         continue;
       }
@@ -210,7 +213,7 @@ export class UltimateBulgariaProtocol {
         );
 
         await new Promise((resolve) => setTimeout(resolve, 200));
-      } catch (e) {
+      } catch {
         // Ignore single fetch errors
       }
     }

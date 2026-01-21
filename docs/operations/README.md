@@ -6,13 +6,18 @@ This directory contains comprehensive operational documentation for deploying, c
 
 ```
 docs/operations/
-├── README.md                           # This file - Operations overview
-├── deployment/                         # Deployment guides and procedures
-│   ├── production-deployment.md        # Production deployment procedures
-│   └── configuration-management.md     # Configuration best practices
-├── monitoring/                         # Monitoring and alerting setup
-├── maintenance/                        # System maintenance procedures
-└── troubleshooting/                    # Troubleshooting and incident response
+├── README.md                         # This file - Operations overview
+├── legal-and-compliance.md           # Intended use, compliance posture
+├── configuration-governance.md       # Config validation and change control
+├── execution-routing.md              # Exchange routing & fan-out configuration
+├── research-workflow.md              # Research to production promotion
+├── data-governance.md                # Migrations and retention policy
+├── secrets-management.md             # Docker secrets / Vault guidance
+├── ha-strategy.md                    # HA and multi-node roadmap
+├── monitoring-alerting.md            # SLOs, alerts, dashboards
+├── ci-quality-gates.md               # CI matrix and merge gates
+├── runbooks.md                       # Operational runbooks index
+└── troubleshooting/                  # Troubleshooting and incident response
 ```
 
 ## Quick Start (Production)
@@ -144,6 +149,13 @@ The Titan Trading System consists of interconnected microservices managed by Doc
 1. **Read the Root README**: [../../README.md](../../README.md)
 2. **Review Environment**: Check `.env.example` versus production `.env`
 3. **Check Logs**: `docker compose logs -f --tail=100`
+
+## Further Reading
+
+- `docs/operations/legal-and-compliance.md`
+- `docs/operations/configuration-governance.md`
+- `docs/operations/monitoring-alerting.md`
+- `docs/operations/ha-strategy.md`
 
 ---
 

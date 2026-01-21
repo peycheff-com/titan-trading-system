@@ -6,19 +6,20 @@
  */
 
 export {
-  DatabaseManager,
   DatabaseError,
+  DatabaseManager,
   QueryMetrics,
   TransactionCallback,
 } from './DatabaseManager.js';
-export { runMigrations, rollbackMigration } from './migrate.js';
+export { rollbackMigration, runMigrations } from './migrate.js';
 export {
-  BaseRepository,
   AllocationRepository,
-  PerformanceRepository,
-  DecisionRepository,
-  TreasuryRepository,
+  BaseRepository,
   BreakerRepository,
+  DecisionRepository,
+  PerformanceRepository,
+  PowerLawRepository,
   RiskRepository,
+  TreasuryRepository,
 } from './repositories/index.js';
 export { OptimizedQueries } from './OptimizedQueries.js';
