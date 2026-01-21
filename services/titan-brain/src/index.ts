@@ -115,6 +115,7 @@ import { ManualOverrideService } from "./engine/ManualOverrideService.js";
 import { NatsConsumer } from "./server/NatsConsumer.js";
 import { IngestionQueue } from "./queue/IngestionQueue.js";
 import { IngestionWorker } from "./workers/IngestionWorker.js";
+import { AccountingService } from "./services/accounting/AccountingService.js";
 
 // Global instances for cleanup
 
@@ -128,6 +129,7 @@ let webSocketService: WebSocketService | null = null;
 let startupManager: StartupManager | null = null;
 let configManager: ConfigManager | null = null;
 let natsConsumer: NatsConsumer | null = null;
+let accountingService: AccountingService | null = null;
 
 /**
  * Main startup function with enhanced startup management
@@ -593,15 +595,24 @@ async function main(): Promise<void> {
       logger.info("   ✅ NATS Publisher started");
 
       // Initialize Accounting Service (Phase 4) - Requires NATS
-      const { TreasuryRepository } = await import(
-        "./db/repositories/TreasuryRepository.js"
+      const { FillsRepository } = await import(
+        "./db/repositories/FillsRepository.js"
       );
-      const treasuryRepository = new TreasuryRepository(databaseManager!);
+      // Re-instantiate FillsRepository for AccountingService (or could lift to outer scope)
+      const accountingFillsRepo = new FillsRepository(databaseManager!);
+
+      const { LedgerRepository } = await import(
+        "./db/repositories/LedgerRepository.js"
+      );
+      const accountingLedgerRepo = new LedgerRepository(databaseManager!);
 
       const { AccountingService } = await import(
         "./services/accounting/AccountingService.js"
       );
-      const accountingService = new AccountingService(treasuryRepository);
+      accountingService = new AccountingService(
+        accountingFillsRepo,
+        accountingLedgerRepo,
+      );
       await accountingService.start();
       logger.info("   ✅ AccountingService (Phase 4) initialized");
 
@@ -641,6 +652,10 @@ async function main(): Promise<void> {
 
     sm.registerShutdownHandler(async () => {
       if (executionEngineClient) await executionEngineClient.shutdown();
+    });
+
+    sm.registerShutdownHandler(async () => {
+      if (accountingService) await accountingService.stop(); // Stop Accounting Service
     });
 
     sm.registerShutdownHandler(async () => {

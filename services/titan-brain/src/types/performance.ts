@@ -6,7 +6,7 @@
 /**
  * Phase identifier
  */
-export type PhaseId = 'phase1' | 'phase2' | 'phase3' | 'manual';
+export type PhaseId = "phase1" | "phase2" | "phase3" | "manual";
 
 /**
  * Trade record for performance tracking
@@ -17,7 +17,7 @@ export interface TradeRecord {
   pnl: number;
   timestamp: number;
   symbol?: string;
-  side?: 'BUY' | 'SELL';
+  side?: "BUY" | "SELL";
 }
 
 /**
@@ -74,13 +74,17 @@ export interface ExecutionReport {
   phaseId: PhaseId;
   signalId?: string;
   symbol: string;
-  side: 'BUY' | 'SELL';
+  side: "BUY" | "SELL";
   price: number;
   qty: number;
   fee?: number;
   feeCurrency?: string;
   executionId?: string;
+  fillId?: string;
   orderId?: string;
   realizedPnL?: number;
+  t_signal?: number;
+  t_exchange?: number;
+  t_ingress?: number;
   timestamp: number;
 }

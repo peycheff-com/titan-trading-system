@@ -677,6 +677,12 @@ export class TitanBrain
     return this.manualOverrideService.deactivateOverride(id);
   }
 
+  async verifyOperatorCredentials(id: string, pass: string): Promise<boolean> {
+    return this.manualOverrideService
+      ? this.manualOverrideService.authenticateOperator(id, pass)
+      : false;
+  }
+
   async resetCircuitBreaker(operatorId: string): Promise<void> {
     this.circuitBreaker.reset(operatorId);
     // Log event

@@ -11,7 +11,7 @@
 //     let model: BaseCommand = serde_json::from_str(&json).unwrap();
 // }
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -65,6 +65,11 @@ pub struct IntentEnvelope {
     pub intent_envelope_type: String,
 
     pub version: i64,
+
+    // Security Fields (Jan 2026 Audit)
+    pub sig: Option<String>,
+    pub key_id: Option<String>,
+    pub nonce: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

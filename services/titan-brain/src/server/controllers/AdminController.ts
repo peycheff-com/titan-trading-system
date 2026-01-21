@@ -6,54 +6,166 @@ import {
     CreateOperatorSchema,
     DeactivateOverrideRequestBody,
     DeactivateOverrideSchema,
+    LoginRequestBody,
+    LoginSchema,
     ManualTradeRequestBody,
     ManualTradeSchema,
     OverrideRequestBody,
     OverrideRequestSchema,
 } from "../../schemas/apiSchemas.js";
 import { AllocationVector, RiskGuardianConfig } from "../../types/index.js";
+import { AuthMiddleware } from "../../security/AuthMiddleware.js";
 
 export class AdminController {
     constructor(
         private readonly brain: TitanBrain,
         private readonly logger: Logger,
+        private readonly auth: AuthMiddleware,
     ) {}
 
     /**
      * Register routes for this controller
      */
     registerRoutes(server: FastifyInstance): void {
-        server.post("/breaker/reset", this.handleBreakerReset.bind(this));
+        // Public / Login
+        server.post<{ Body: LoginRequestBody }>(
+            "/auth/login",
+            this.handleLogin.bind(this),
+        );
+
+        // Protected Routes (Admin)
+        const adminGuard = {
+            preHandler: [
+                this.auth.verifyToken.bind(this.auth),
+                this.auth.requireRole("admin"),
+            ],
+        };
+        const operatorGuard = {
+            preHandler: [this.auth.verifyToken.bind(this.auth)],
+        }; // Basic auth
+
+        server.post<
+            { Body: import("../../schemas/apiSchemas.js").BreakerResetBody }
+        >(
+            "/breaker/reset",
+            adminGuard,
+            this.handleBreakerReset.bind(this),
+        );
 
         // Overrides
-        server.post("/admin/override", this.handleCreateOverride.bind(this));
-        server.delete(
+        server.post<{ Body: OverrideRequestBody }>(
             "/admin/override",
+            adminGuard,
+            this.handleCreateOverride.bind(this),
+        );
+        server.delete<{ Body: DeactivateOverrideRequestBody }>(
+            "/admin/override",
+            adminGuard,
             this.handleDeactivateOverride.bind(this),
         );
-        server.get("/admin/override", this.handleGetOverride.bind(this));
         server.get(
+            "/admin/override",
+            operatorGuard,
+            this.handleGetOverride.bind(this),
+        ); // Read-only allowed for operators
+        server.get<{ Querystring: { operatorId?: string; limit?: string } }>(
             "/admin/override/history",
+            operatorGuard,
             this.handleOverrideHistory.bind(this),
         );
 
         // Admin actions
-        server.post("/admin/operator", this.handleCreateOperator.bind(this));
-        server.post("/trade/manual", this.handleManualTrade.bind(this));
-        server.delete(
+        server.post<{ Body: CreateOperatorRequestBody }>(
+            "/admin/operator",
+            adminGuard,
+            this.handleCreateOperator.bind(this),
+        );
+        server.post<{ Body: ManualTradeRequestBody }>(
+            "/trade/manual",
+            adminGuard,
+            this.handleManualTrade.bind(this),
+        );
+        server.delete<{ Body: { reason: string } }>(
             "/trade/cancel-all",
+            adminGuard,
             this.handleCancelAllTrades.bind(this),
         );
 
         // Risk & Audit
-        server.patch("/risk/config", this.handleUpdateRiskConfig.bind(this));
-        server.post(
+        server.patch<
+            {
+                Body: Partial<
+                    import("../../types/index.js").RiskGuardianConfig
+                >;
+            }
+        >(
+            "/risk/config",
+            adminGuard,
+            this.handleUpdateRiskConfig.bind(this),
+        );
+        server.post<{ Body: { exchange?: string } }>(
             "/reconciliation/trigger",
+            adminGuard,
             this.handleTriggerReconciliation.bind(this),
         );
-        server.get("/audit/decisions", this.handleAuditDecisions.bind(this));
-        server.get("/risk/state", this.handleRiskState.bind(this));
-        server.get("/risk/regime-history", this.handleRegimeHistory.bind(this));
+        server.get<{ Querystring: { limit?: string; signalId?: string } }>(
+            "/audit/decisions",
+            operatorGuard,
+            this.handleAuditDecisions.bind(this),
+        );
+        server.get(
+            "/risk/state",
+            operatorGuard,
+            this.handleRiskState.bind(this),
+        );
+        server.get(
+            "/risk/regime-history",
+            operatorGuard,
+            this.handleRegimeHistory.bind(this),
+        );
+    }
+
+    /**
+     * Handle POST /auth/login
+     */
+    async handleLogin(
+        request: FastifyRequest<{ Body: LoginRequestBody }>,
+        reply: FastifyReply,
+    ): Promise<void> {
+        try {
+            const parseResult = LoginSchema.safeParse(request.body);
+            if (!parseResult.success) {
+                reply.status(400).send({ error: "Invalid login request" });
+                return;
+            }
+
+            const { operatorId, password } = parseResult.data;
+
+            // Verify credentials via Brain (which checks against DB/Config)
+            const isValid = await this.brain.verifyOperatorCredentials(
+                operatorId,
+                password,
+            );
+            if (!isValid) {
+                reply.status(401).send({ error: "Invalid credentials" });
+                return;
+            }
+
+            // Get operator roles (Assuming brain returns simple bool now, we might default to 'admin' for now or fetch roles)
+            // TODO: Enhance verifyOperatorCredentials to return Operator object with roles
+            const roles = ["admin"]; // detailed implementation pending in Brain
+
+            const token = this.auth.generateToken(operatorId, roles);
+
+            reply.send({
+                success: true,
+                token,
+                operatorId,
+                roles,
+            });
+        } catch (error) {
+            reply.status(500).send({ error: "Login failed" });
+        }
     }
 
     /**

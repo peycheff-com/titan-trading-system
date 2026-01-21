@@ -20,6 +20,7 @@ pub mod replay_engine;
 pub mod replay_model;
 pub mod risk_guard;
 pub mod risk_policy;
+pub mod security;
 pub mod shadow_state;
 pub mod simulation_engine;
 pub mod tests;

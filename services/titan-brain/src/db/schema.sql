@@ -162,12 +162,15 @@ CREATE TABLE IF NOT EXISTS fills (
   t_signal BIGINT,
   t_exchange BIGINT,
   t_ingress BIGINT,
+  realized_pnl DECIMAL(18, 8),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   execution_id VARCHAR(100),
-  order_id VARCHAR(100)
+  order_id VARCHAR(100),
+  CONSTRAINT uq_fills_fill_id UNIQUE (fill_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_fills_signal_id ON fills(signal_id);
+CREATE INDEX IF NOT EXISTS idx_fills_created_at ON fills(created_at DESC);
 
 -- Event Log (Event Sourcing)
 CREATE TABLE IF NOT EXISTS event_log (
@@ -184,6 +187,40 @@ CREATE INDEX IF NOT EXISTS idx_event_log_aggregate_id ON event_log(aggregate_id)
 CREATE INDEX IF NOT EXISTS idx_event_log_type ON event_log(type);
 CREATE INDEX IF NOT EXISTS idx_event_log_created_at ON event_log(created_at DESC);
 
+-- Ledger System
+CREATE TABLE IF NOT EXISTS ledger_accounts (
+  id VARCHAR(50) PRIMARY KEY DEFAULT gen_random_uuid()::varchar,
+  name VARCHAR(100) NOT NULL,
+  type VARCHAR(20) NOT NULL,
+  currency VARCHAR(10) NOT NULL,
+  metadata JSONB,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(name, currency)
+);
+
+CREATE TABLE IF NOT EXISTS ledger_transactions (
+  id VARCHAR(50) PRIMARY KEY DEFAULT gen_random_uuid()::varchar,
+  correlation_id VARCHAR(100) NOT NULL,
+  event_type VARCHAR(50) NOT NULL,
+  description TEXT,
+  metadata JSONB,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS ledger_entries (
+  id VARCHAR(50) PRIMARY KEY DEFAULT gen_random_uuid()::varchar,
+  tx_id VARCHAR(50) NOT NULL,
+  account_id VARCHAR(50) NOT NULL,
+  direction INTEGER NOT NULL,
+  amount DECIMAL(24, 12) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_ledger_entries_tx_id ON ledger_entries(tx_id);
+CREATE INDEX IF NOT EXISTS idx_ledger_entries_account_id ON ledger_entries(account_id);
+CREATE INDEX IF NOT EXISTS idx_ledger_transactions_correlation_id ON ledger_transactions(correlation_id);
+CREATE INDEX IF NOT EXISTS idx_ledger_transactions_created_at ON ledger_transactions(created_at DESC);
+
 -- Enable Row Level Security (RLS)
 ALTER TABLE allocation_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE phase_trades ENABLE ROW LEVEL SECURITY;
@@ -198,3 +235,6 @@ ALTER TABLE manual_overrides ENABLE ROW LEVEL SECURITY;
 ALTER TABLE operators ENABLE ROW LEVEL SECURITY;
 ALTER TABLE fills ENABLE ROW LEVEL SECURITY;
 ALTER TABLE event_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ledger_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ledger_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ledger_entries ENABLE ROW LEVEL SECURITY;

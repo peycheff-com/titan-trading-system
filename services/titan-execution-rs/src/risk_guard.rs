@@ -98,7 +98,17 @@ impl RiskGuard {
                 "🛡️ Risk State Transition: {:?} -> {:?}",
                 policy.current_state, new_state
             );
-            policy.current_state = new_state;
+            policy.current_state = new_state.clone();
+
+            // Metrics Export
+            let metric_val = match new_state {
+                crate::risk_policy::RiskState::Normal => 0,
+                crate::risk_policy::RiskState::Cautious => 1,
+                crate::risk_policy::RiskState::Defensive => 2,
+                crate::risk_policy::RiskState::Emergency => 3,
+            };
+            use crate::metrics;
+            metrics::set_risk_state(metric_val);
         }
     }
 
@@ -131,10 +141,14 @@ impl RiskGuard {
                 {
                     tracing::error!("🛡️ CIRCUIT BREAKER: Excessive Slippage -> DEFENSIVE");
                     policy_write.current_state = crate::risk_policy::RiskState::Defensive;
+                    use crate::metrics;
+                    metrics::set_risk_state(2); // Defensive
                 }
             } else if policy_write.current_state == crate::risk_policy::RiskState::Normal {
                 warn!("🛡️ CIRCUIT BREAKER: High Slippage -> CAUTIOUS");
                 policy_write.current_state = crate::risk_policy::RiskState::Cautious;
+                use crate::metrics;
+                metrics::set_risk_state(1); // Cautious
             }
         }
     }

@@ -19,6 +19,8 @@ import * as migration006 from "./migrations/006_add_fill_details.js";
 import * as migration008 from "./migrations/008_event_log.js";
 import * as migration009 from "./migrations/009_position_snapshots.js";
 import * as migration010 from "./migrations/010_truth_layer.js";
+import * as migration011 from "./migrations/011_idempotent_fills.js";
+import * as migration012 from "./migrations/012_create_ledger_tables.js";
 
 interface Migration {
   version: number;
@@ -37,6 +39,8 @@ const migrations: Migration[] = [
   migration008,
   migration009,
   migration010,
+  migration011,
+  migration012,
 ];
 
 /**

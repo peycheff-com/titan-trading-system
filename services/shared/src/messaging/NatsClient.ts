@@ -11,6 +11,7 @@ import {
 } from "nats";
 import { EventEmitter } from "eventemitter3";
 import { createEnvelope, Envelope } from "../schemas/envelope";
+import { createHmac, randomBytes } from "crypto";
 
 export enum TitanSubject {
   // --- COMMANDS (TITAN_CMD) ---
@@ -245,6 +246,38 @@ export class NatsClient extends EventEmitter {
       causation_id: meta.causation_id,
       idempotency_key: meta.idempotency_key,
     });
+
+    // Security Signing (Jan 2026 Audit)
+    const secret = process.env.HMAC_SECRET;
+    if (secret) {
+      const nonce = randomBytes(16).toString("hex");
+      const keyId = process.env.HMAC_KEY_ID || "default";
+
+      // Canonicalize JSON (Sort keys recursively)
+      const canonicalize = (obj: any): any => {
+        if (typeof obj !== "object" || obj === null) {
+          return obj;
+        }
+        if (Array.isArray(obj)) {
+          return obj.map(canonicalize);
+        }
+        return Object.keys(obj)
+          .sort()
+          .reduce((sorted: any, key) => {
+            sorted[key] = canonicalize(obj[key]);
+            return sorted;
+          }, {});
+      };
+
+      // Canonical String: ts.nonce.payload_json_sorted
+      const payloadStr = JSON.stringify(canonicalize(data));
+      const canonical = `${envelope.ts}.${nonce}.${payloadStr}`;
+      const sig = createHmac("sha256", secret).update(canonical).digest("hex");
+
+      envelope.sig = sig;
+      envelope.nonce = nonce;
+      envelope.key_id = keyId;
+    }
 
     await this.publish(subject, envelope);
   }

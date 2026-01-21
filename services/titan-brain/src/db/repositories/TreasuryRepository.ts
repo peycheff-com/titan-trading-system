@@ -166,40 +166,7 @@ export class TreasuryRepository extends BaseRepository<TreasuryRow> {
 
   // --- Accounting / Reconciliation Persistence ---
 
-  async addFill(fill: any): Promise<void> {
-    // Ideally this would go into a 'fills' or 'accounting_fills' table.
-    // For now assuming we might have or need to create a `fills` table or similar in migrations.
-    // Given the Phase 4 requirements, storing the raw reconciliation data is key.
-    // We will assume a `fills` table exists or should be created.
-    // For this step I'll assume we simply log it or store it if the table exists.
-    // Let's assume the table 'fills' with JSONB `data` column for flexibility if schema isn't strict.
-
-    // Check if table exists (optional fallback mechanism or just try insert)
-    // For strictness, let's insert into `fills`.
-    // NOTE: You might need to add a migration for `fills` table if it doesn't exist.
-    // Based on previous steps, I didn't see a migration for fills, so I should probably create one or use a generic storage.
-    // Let's stick to the interface first.
-    await this.db.query(
-      `INSERT INTO fills (fill_id, signal_id, symbol, side, price, qty, fee, fee_currency, t_signal, t_exchange, t_ingress, execution_id, order_id, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
-         ON CONFLICT (fill_id) DO NOTHING`,
-      [
-        fill.fill_id,
-        fill.signal_id,
-        fill.symbol,
-        fill.side,
-        fill.price,
-        fill.qty,
-        fill.fee,
-        fill.fee_currency,
-        fill.t_signal,
-        fill.t_exchange,
-        fill.t_ingress,
-        fill.execution_id,
-        fill.client_order_id,
-      ],
-    );
-  }
+  // addFill removed - use FillsRepository instead
 
   async getActiveReconciliations(): Promise<any[]> {
     // This might query orders that haven't been fully reconciled (e.g. status='PENDING' in an orders table)
