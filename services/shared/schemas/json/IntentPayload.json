@@ -1,0 +1,138 @@
+{
+  "$ref": "#/definitions/IntentPayload",
+  "definitions": {
+    "IntentPayload": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "type": "string"
+        },
+        "signal_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "type": "string"
+        },
+        "symbol": {
+          "type": "string",
+          "minLength": 1
+        },
+        "direction": {
+          "type": "integer"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "BUY_SETUP",
+            "SELL_SETUP",
+            "CLOSE_LONG",
+            "CLOSE_SHORT",
+            "CLOSE"
+          ]
+        },
+        "entry_zone": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "stop_loss": {
+          "type": "number"
+        },
+        "take_profits": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "size": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "PENDING",
+            "VALIDATED",
+            "REJECTED",
+            "EXECUTED",
+            "EXECUTED_PARTIAL",
+            "EXPIRED",
+            "FAILED"
+          ]
+        },
+        "t_signal": {
+          "type": "integer"
+        },
+        "timestamp": {
+          "type": "integer"
+        },
+        "t_analysis": {
+          "type": "integer"
+        },
+        "t_decision": {
+          "type": "integer"
+        },
+        "t_ingress": {
+          "type": "integer"
+        },
+        "t_exchange": {
+          "type": "integer"
+        },
+        "max_slippage_bps": {
+          "type": "integer"
+        },
+        "rejection_reason": {
+          "type": "string"
+        },
+        "regime_state": {
+          "type": "integer"
+        },
+        "phase": {
+          "type": "integer"
+        },
+        "exchange": {
+          "type": "string"
+        },
+        "position_mode": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "confidence": {
+          "type": "number"
+        },
+        "leverage": {
+          "type": "number"
+        },
+        "expected_impact_bps": {
+          "type": "number"
+        },
+        "fill_feasibility": {
+          "type": "number"
+        },
+        "velocity": {
+          "type": "number"
+        },
+        "trap_type": {
+          "type": "string"
+        },
+        "parent_strategy": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "signal_id",
+        "symbol",
+        "direction",
+        "type",
+        "size",
+        "status"
+      ],
+      "additionalProperties": true
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

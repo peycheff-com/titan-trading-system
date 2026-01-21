@@ -217,7 +217,10 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
     }
 
     if (!rawSignal.direction || !['LONG', 'SHORT'].includes(rawSignal.direction)) {
-      return { valid: false, error: `Invalid direction: ${rawSignal.direction}` };
+      return {
+        valid: false,
+        error: `Invalid direction: ${rawSignal.direction}`,
+      };
     }
 
     return { valid: true };
@@ -325,7 +328,9 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
     try {
       await this.sendNotification(webhook.url, '/brain/allocation', notification);
       console.log(
-        `📊 Allocation change notification sent to ${phaseId}: ${(newAllocation * 100).toFixed(1)}%`,
+        `📊 Allocation change notification sent to ${phaseId}: ${(newAllocation * 100).toFixed(
+          1,
+        )}%`,
       );
     } catch (error) {
       console.error(`❌ Failed to send allocation notification to ${phaseId}:`, error);
@@ -384,6 +389,7 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
       phase1: false,
       phase2: false,
       phase3: false,
+      manual: false,
     };
 
     for (const phaseId of ['phase1', 'phase2', 'phase3'] as PhaseId[]) {
@@ -408,6 +414,7 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
       phase1: this.phaseWebhooks.get('phase1') || null,
       phase2: this.phaseWebhooks.get('phase2') || null,
       phase3: this.phaseWebhooks.get('phase3') || null,
+      manual: this.phaseWebhooks.get('manual') || null,
     };
   }
 

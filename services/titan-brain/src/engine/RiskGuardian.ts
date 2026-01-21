@@ -8,15 +8,18 @@
 import {
   IntentSignal,
   Position,
+  PowerLawMetrics,
   RiskDecision,
   RiskGuardianConfig,
+  RiskGuardianState,
   RiskMetrics,
-} from "../types/index.js";
-import { AllocationEngine } from "./AllocationEngine.js";
-import { ChangePointDetector } from "./ChangePointDetector.js";
-import { DefconLevel, GovernanceEngine } from "./GovernanceEngine.js";
-import { TailRiskCalculator } from "./TailRiskCalculator.js";
-import { RegimeState } from "@titan/shared/dist/ipc/index.js";
+} from '../types/index.js';
+import { AllocationEngine } from './AllocationEngine.js';
+import { ChangePointDetector } from './ChangePointDetector.js';
+import { DefconLevel, GovernanceEngine } from './GovernanceEngine.js';
+import { FeatureManager } from '../config/FeatureManager.js';
+import { TailRiskCalculator } from './TailRiskCalculator.js';
+import { NatsClient, RegimeState, RiskState } from '@titan/shared';
 
 /**
  * Interface for high correlation notification callback
@@ -56,7 +59,10 @@ export class RiskGuardian {
   private readonly governanceEngine: GovernanceEngine;
   private readonly changePointDetector: ChangePointDetector;
   private readonly tailRiskCalculator: TailRiskCalculator;
+  private readonly natsClient?: NatsClient; // Optional for testing/DI
+
   private currentRegime: RegimeState = RegimeState.STABLE;
+  private currentRiskState: RiskState = RiskState.NORMAL;
 
   /** Price history for correlation calculations */
   private priceHistory: Map<string, PriceHistoryEntry[]> = new Map();
@@ -65,8 +71,10 @@ export class RiskGuardian {
   private correlationCache: Map<string, CorrelationCacheEntry> = new Map();
 
   /** Cached portfolio beta */
-  private portfolioBetaCache: { value: number; timestamp: number } | null =
-    null;
+  private portfolioBetaCache: { value: number; timestamp: number } | null = null;
+
+  /** PowerLaw Metrics Cache */
+  private powerLawMetrics: Map<string, PowerLawMetrics> = new Map();
 
   /** Current equity for leverage calculations */
   private currentEquity: number = 0;
@@ -74,23 +82,166 @@ export class RiskGuardian {
   /** High correlation notifier */
   private correlationNotifier: HighCorrelationNotifier | null = null;
 
+  /** Current confidence score (initially 1.0) */
+  private confidenceScore: number = 1.0;
+
+  private heartbeatInterval: NodeJS.Timeout | null = null;
+
   constructor(
     config: RiskGuardianConfig,
     allocationEngine: AllocationEngine,
     governanceEngine: GovernanceEngine,
+    natsClient?: NatsClient,
   ) {
     this.config = config;
     this.allocationEngine = allocationEngine;
     this.governanceEngine = governanceEngine;
+    this.natsClient = natsClient;
     this.changePointDetector = new ChangePointDetector();
     this.tailRiskCalculator = new TailRiskCalculator();
+
+    this.startHeartbeat();
+  }
+
+  /**
+   * Start 1s heartbeat to keep Execution Layer execution alive (Fail Closed)
+   */
+  public startHeartbeat() {
+    if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+
+    this.heartbeatInterval = setInterval(() => {
+      if (this.natsClient) {
+        this.natsClient
+          .publish('titan.evt.system.heartbeat', {
+            ts: Date.now(),
+            state: this.currentRiskState,
+            regime: this.currentRegime,
+          })
+          .catch((err) => console.error('Failed to pulse heartbeat', err));
+      }
+    }, 1000);
+  }
+
+  public stopHeartbeat() {
+    if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+  }
+
+  /**
+   * Derive Global Risk State from Regime, Governance, and Confidence
+   */
+  private deriveRiskState(): RiskState {
+    // 1. Emergency Overrides
+    if (this.governanceEngine.getDefconLevel() === DefconLevel.EMERGENCY) {
+      return RiskState.EMERGENCY;
+    }
+
+    // 2. Regime Overrides
+    if (this.currentRegime === RegimeState.CRASH) {
+      return RiskState.EMERGENCY; // Crash = Stop
+    }
+    if (
+      this.config.riskAversionLevel === 'HIGH' &&
+      this.currentRegime === RegimeState.MEAN_REVERSION
+    ) {
+      return RiskState.CAUTIOUS;
+    }
+
+    // 3. Confidence degradation
+    if (this.confidenceScore < 0.5) {
+      return RiskState.DEFENSIVE;
+    }
+
+    // 4. Default
+    return RiskState.NORMAL;
+  }
+
+  /**
+   * Update and publish new risk state
+   */
+  private updateAndPublishRiskState() {
+    const newState = this.deriveRiskState();
+
+    if (newState !== this.currentRiskState) {
+      console.warn(`[RiskGuardian] State Transition: ${this.currentRiskState} -> ${newState}`);
+      this.currentRiskState = newState;
+
+      if (this.natsClient) {
+        this.natsClient
+          .publish('titan.evt.risk.state', JSON.stringify(newState))
+          .catch((err) => console.error('Failed to publish risk state', err));
+      }
+    }
+  }
+
+  // Hook into updateConfidence to trigger state check
+  overrideUpdateConfidence(drift: boolean) {
+    this.updateConfidence(drift);
+    this.updateAndPublishRiskState();
   }
 
   /**
    * Set the high correlation notifier
    */
+
   setCorrelationNotifier(notifier: HighCorrelationNotifier): void {
     this.correlationNotifier = notifier;
+  }
+
+  /**
+   * Set FeatureManager for hot-reloadable risk configuration
+   */
+  setFeatureManager(featureManager: FeatureManager): void {
+    featureManager.on('updated', (features) => {
+      this.updateDynamicConfig(features);
+    });
+    // Apply initial config
+    this.updateDynamicConfig(featureManager.getAll());
+  }
+
+  private updateDynamicConfig(features: Record<string, boolean | string | number>): void {
+    let updated = false;
+
+    // Dynamic Risk Parameters
+    if (typeof features['risk.maxCorrelation'] === 'number') {
+      (this.config as any).maxCorrelation = features['risk.maxCorrelation'];
+      updated = true;
+    }
+    if (typeof features['risk.correlationPenalty'] === 'number') {
+      (this.config as any).correlationPenalty = features['risk.correlationPenalty'];
+      updated = true;
+    }
+    if (typeof features['risk.minConfidenceScore'] === 'number') {
+      (this.config as any).minConfidenceScore = features['risk.minConfidenceScore'];
+      updated = true;
+    }
+    if (typeof features['risk.minStopDistanceMultiplier'] === 'number') {
+      (this.config as any).minStopDistanceMultiplier = features['risk.minStopDistanceMultiplier'];
+      updated = true;
+    }
+
+    if (updated) {
+      console.log('⚙️  RiskGuardian configuration updated dynamically');
+      // Re-evaluate state
+      this.updateAndPublishRiskState();
+    }
+  }
+
+  /**
+   * Get current PowerLaw metrics snapshot
+   */
+  getPowerLawMetricsSnapshot(): Record<string, PowerLawMetrics> {
+    const snapshot: Record<string, PowerLawMetrics> = {};
+    for (const [symbol, metrics] of this.powerLawMetrics.entries()) {
+      snapshot[symbol] = metrics;
+    }
+    return snapshot;
+  }
+
+  /**
+   * Get current regime state
+   */
+  getRegimeState(): RegimeState {
+    return this.currentRegime;
   }
 
   /**
@@ -105,7 +256,83 @@ export class RiskGuardian {
    * Get current equity
    */
   getEquity(): number {
+    /**
+     * Get current equity
+     */
     return this.currentEquity;
+  }
+
+  /**
+   * Get internal state for observability
+   */
+  getInternalState(): RiskGuardianState {
+    return {
+      config: this.config,
+      regime: this.currentRegime,
+      powerLaw: Object.fromEntries(this.powerLawMetrics),
+      metrics: {
+        currentEquity: this.currentEquity,
+        portfolioBeta: this.portfolioBetaCache?.value ?? 0,
+        maxDrawdown: 0, // Placeholder or actual calc
+      },
+      circuitBreaker: {
+        active: false,
+        tripCount: 0,
+      },
+    };
+  }
+
+  /**
+   * Get latest known price for a symbol
+   */
+  getLatestPrice(symbol: string): number | undefined {
+    const history = this.priceHistory.get(symbol);
+    if (!history || history.length === 0) return undefined;
+    const entry = history[history.length - 1];
+    // Check if entry is object or number
+    return typeof entry === 'number' ? entry : (entry as any).price;
+  }
+
+  /**
+   * Update PowerLaw Metrics
+   */
+  updatePowerLawMetrics(metrics: PowerLawMetrics): void {
+    this.powerLawMetrics.set(metrics.symbol, metrics);
+  }
+
+  /**
+   * Handle incoming price tick
+   */
+  handlePriceUpdate(tick: { symbol: string; price: number; timestamp: number }): void {
+    const history = this.priceHistory.get(tick.symbol) || [];
+    history.push(tick);
+
+    // Prune history older than window (e.g. 1 hour or based on ActiveInference window)
+    const cutoff = Date.now() - 3600000;
+    if (history[0] && history[0].timestamp < cutoff) {
+      // Perform cleanup
+      const validHistory = history.filter((h) => h.timestamp >= cutoff);
+      this.priceHistory.set(tick.symbol, validHistory);
+    } else {
+      this.priceHistory.set(tick.symbol, history);
+    }
+  }
+
+  /**
+   * Update Confidence Score based on Reconciliation/Drift events
+   * @param driftDetected - Whether a drift was detected in truth layer
+   */
+  updateConfidence(driftDetected: boolean): void {
+    if (driftDetected) {
+      const decay = this.config.confidence?.decayRate ?? 0.1;
+      this.confidenceScore *= 1 - decay;
+      console.warn(
+        `[RiskGuardian] Confidence degraded to ${this.confidenceScore.toFixed(3)} due to DRIFT`,
+      );
+    } else {
+      const recovery = this.config.confidence?.recoveryRate ?? 0.01;
+      this.confidenceScore = Math.min(1.0, this.confidenceScore * (1 + recovery));
+    }
   }
 
   /**
@@ -122,10 +349,7 @@ export class RiskGuardian {
    * @param currentPositions - Array of current open positions
    * @returns RiskDecision with approval status and metrics
    */
-  checkSignal(
-    signal: IntentSignal,
-    currentPositions: Position[],
-  ): RiskDecision {
+  checkSignal(signal: IntentSignal, currentPositions: Position[]): RiskDecision {
     // 0. Governance & Regime Gating
     const defcon = this.governanceEngine.getDefconLevel();
 
@@ -143,69 +367,97 @@ export class RiskGuardian {
       // Strict veto for new risk in CRASH
       return {
         approved: false,
-        reason: "REGIME_CRASH_RISK_AVERSION: All new signals rejected",
+        reason: 'REGIME_CRASH_RISK_AVERSION: All new signals rejected',
         riskMetrics: this.getRiskMetrics(currentPositions),
       };
     }
 
     // 0c. Survival Mode Check (Tail Risk)
     // Calculate APTR for current + signal
-    // We need Alpha metrics map here. For now, assuming we inject or cache it.
-    // TODO: Inject alphas from TitanBrain or PowerLawEstimator
-    const mockAlphas = new Map<string, number>(); // Placeholder until injected
+    // We need Alpha metrics map here.
+    const alphas = new Map<string, number>();
+    this.powerLawMetrics.forEach((m, s) => alphas.set(s, m.tailExponent));
+    // Default to strict alpha (2.0) if missing
+    if (!alphas.has(signal.symbol)) alphas.set(signal.symbol, 2.0);
 
-    const currentAPTR = this.tailRiskCalculator.calculateAPTR(
-      currentPositions,
-      mockAlphas,
-    );
+    const currentAPTR = this.tailRiskCalculator.calculateAPTR(currentPositions, alphas);
     const criticalThreshold = 0.5; // 50% max equity @ 20% crash
 
     if (
-      this.tailRiskCalculator.isRiskCritical(
-        currentAPTR,
-        this.currentEquity,
-        criticalThreshold,
-      )
+      this.tailRiskCalculator.isRiskCritical(currentAPTR, this.currentEquity, criticalThreshold)
     ) {
       // Trigger Survival Mode if not already
-      if (
-        defcon !== DefconLevel.DEFENSIVE && defcon !== DefconLevel.EMERGENCY
-      ) {
+      if (defcon !== DefconLevel.DEFENSIVE && defcon !== DefconLevel.EMERGENCY) {
         console.warn(
-          `[RiskGuardian] APTR Critical (${
-            currentAPTR.toFixed(2)
-          }). Triggering Survival Mode.`,
+          `[RiskGuardian] APTR Critical (${currentAPTR.toFixed(2)}). Triggering Survival Mode.`,
         );
         this.governanceEngine.setOverride(DefconLevel.DEFENSIVE); // Force defensive posture
       }
 
       return {
         approved: false,
-        reason: `SURVIVAL_MODE: APTR Critical (${currentAPTR.toFixed(2)} > ${
-          (this.currentEquity * criticalThreshold).toFixed(2)
-        })`,
+        reason: `SURVIVAL_MODE: APTR Critical (${currentAPTR.toFixed(2)} > ${(
+          this.currentEquity * criticalThreshold
+        ).toFixed(2)})`,
         riskMetrics: this.getRiskMetrics(currentPositions),
       };
     }
 
-    if (
-      this.currentRegime === RegimeState.MEAN_REVERSION &&
-      signal.phaseId === "phase2"
-    ) {
+    // 0d. Mean Reversion Logic (Placeholder - logic to be added if needed)
+    if (this.currentRegime === RegimeState.MEAN_REVERSION && signal.phaseId === 'phase2') {
+      // Allow Phase 2 in Mean Reversion
+    }
+
+    // 0e. Confidence Score Check
+    if (this.confidenceScore < this.config.minConfidenceScore) {
       return {
         approved: false,
-        reason:
-          "REGIME_MISMATCH: Hunter (Trend) signals rejected in Mean Reversion",
+        reason: `CONFIDENCE_VETO: Score ${this.confidenceScore.toFixed(
+          2,
+        )} < ${this.config.minConfidenceScore}`,
         riskMetrics: this.getRiskMetrics(currentPositions),
       };
+    }
+
+    // Initial signal size (may be reduced by latency or correlation)
+    let effectiveSize = signal.requestedSize;
+
+    // 0f. Fractal Phase Risk Constraints
+    if (this.config.fractal && this.config.fractal[signal.phaseId]) {
+      const constraints = this.config.fractal[signal.phaseId];
+
+      // Check Phase Leverage
+      // Calculate leverage just for this phase's positions
+      const phasePositions = currentPositions.filter((p) => p.phaseId === signal.phaseId);
+      const phaseNotional = phasePositions.reduce((sum, p) => sum + p.size, 0) + effectiveSize;
+      const phaseLeverage = phaseNotional / this.currentEquity;
+
+      if (phaseLeverage > constraints.maxLeverage) {
+        return {
+          approved: false,
+          reason: `FRACTAL_VETO: ${signal.phaseId} leverage ${phaseLeverage.toFixed(
+            2,
+          )}x > max ${constraints.maxLeverage}x`,
+          riskMetrics: this.getRiskMetrics(currentPositions),
+        };
+      }
+
+      // Check Phase Allocation (Max % of Equity)
+      if (phaseNotional > this.currentEquity * constraints.maxAllocation) {
+        return {
+          approved: false,
+          reason: `FRACTAL_VETO: ${signal.phaseId} allocation ${(
+            (phaseNotional / this.currentEquity) *
+            100
+          ).toFixed(1)}% > max ${constraints.maxAllocation * 100}%`,
+          riskMetrics: this.getRiskMetrics(currentPositions),
+        };
+      }
     }
 
     const currentLeverage = this.calculateCombinedLeverage(currentPositions);
     const portfolioDelta = this.calculatePortfolioDelta(currentPositions);
     const portfolioBeta = this.getPortfolioBeta(currentPositions);
-
-    // Initial signal size (may be reduced by latency or correlation)
-    let effectiveSize = signal.requestedSize;
 
     // Requirement: Latency Feedback Loop
     // If signal shows high system latency, it implies congestion. Reduce size to minimize toxic flow.
@@ -213,8 +465,7 @@ export class RiskGuardian {
       if (signal.latencyProfile.endToEnd > 500) {
         return {
           approved: false,
-          reason:
-            `LATENCY_VETO: System lag ${signal.latencyProfile.endToEnd}ms > 500ms`,
+          reason: `LATENCY_VETO: System lag ${signal.latencyProfile.endToEnd}ms > 500ms`,
           riskMetrics: this.getRiskMetrics(currentPositions),
         };
       }
@@ -229,16 +480,92 @@ export class RiskGuardian {
     }
 
     // Calculate projected leverage using EFFECTIVE size
-    const projectedLeverage = this.calculateProjectedLeverage(
+    let projectedLeverage = this.calculateProjectedLeverage(
       { ...signal, requestedSize: effectiveSize },
       currentPositions,
     );
 
+    // 0d. PowerLaw Regime Gates & Leverage Adjustment
+    const plMetrics =
+      this.powerLawMetrics.get(signal.symbol) ?? this.powerLawMetrics.get('BTCUSDT');
+    if (plMetrics) {
+      // Rule 1: Extreme Tail Risk Gating
+      // "If tailExponent < 2.0 && proposedLeverage > 5"
+      if (plMetrics.tailExponent < 2.0 && projectedLeverage > 5) {
+        return {
+          approved: false,
+          reason: `TAIL_RISK_VETO: Extreme tail risk (α=${plMetrics.tailExponent.toFixed(
+            2,
+          )}) prohibits leverage > 5x`,
+          riskMetrics: this.getRiskMetrics(currentPositions),
+        };
+      }
+
+      // Rule 2: Volatility Cluster Gating
+      // "If vol state = 'expanding': don't add new scalp positions (Phase 1)"
+      if (plMetrics.volatilityCluster.state === 'expanding' && signal.phaseId === 'phase1') {
+        return {
+          approved: false,
+          reason: `REGIME_VETO: Expanding volatility rejects Phase 1 scalps`,
+          riskMetrics: this.getRiskMetrics(currentPositions),
+        };
+      }
+
+      // Rule 3: Dynamic Leverage Scaling for Phase 1
+      // "Use vol cluster state to reduce leverage or pause."
+      // "leverage = min(20, 5 / alpha)" or "baseLeverage / Math.max(tailExponent, 1.5)"
+      if (signal.phaseId === 'phase1') {
+        const baseLeverage = 20; // Default max for Phase 1
+        // Dynamic leverage cap based on heavy tails
+        const dynamicMaxLeverage = baseLeverage / Math.max(plMetrics.tailExponent, 1.5);
+
+        // Calculate max allowed size based on this dynamic leverage
+        // Max Notional = Equity * DynamicLeverage
+        const maxNotional = this.currentEquity * dynamicMaxLeverage;
+
+        // Check if projected notional exceeds this
+        // projectedNotional is roughly (CurrentNotional + EffectiveSize)
+        const currentNotional = currentPositions.reduce((sum, p) => sum + p.size, 0); // Simplified, checking total portfolio leverage cap?
+        // Wait, "Adapt Phase 1 leverage". Usually implies per-position or Phase limit.
+        // Assuming global leverage safety for simplicity here as Phase 1 is high frequency.
+        // If we want per-symbol leverage control, we need to know margin usage per symbol.
+        // Let's stick to restricting the *new* size if it pushes total leverage beyond dynamic limit,
+        // OR better: check if specific trade implies leverage > limit.
+        // Titan's Position interface has `leverage`.
+        // But `projectedLeverage` in RiskGuardian is GLOBAL leverage.
+        // Let's use the rule: "If tail risk is high, reduce global leverage limit"
+
+        if (projectedLeverage > dynamicMaxLeverage) {
+          // Reduce size to fit
+          const availableNotional = Math.max(0, maxNotional - currentNotional);
+          if (availableNotional < effectiveSize) {
+            effectiveSize = availableNotional;
+            console.warn(
+              `[RiskGuardian] Tail Risk (α=${plMetrics.tailExponent.toFixed(
+                2,
+              )}) reduced auth size to fits ${dynamicMaxLeverage.toFixed(2)}x leverage`,
+            );
+
+            if (effectiveSize <= 0) {
+              return {
+                approved: false,
+                reason: `TAIL_RISK_CAP: Leverage limit ${dynamicMaxLeverage.toFixed(2)}x reached`,
+                riskMetrics: this.getRiskMetrics(currentPositions),
+              };
+            }
+
+            // Recalculate projected leverage with new reduced size
+            projectedLeverage = this.calculateProjectedLeverage(
+              { ...signal, requestedSize: effectiveSize },
+              currentPositions,
+            );
+          }
+        }
+      }
+    }
+
     // Calculate correlation with existing positions
-    const maxCorrelation = this.calculateMaxCorrelationWithPositions(
-      signal,
-      currentPositions,
-    );
+    const maxCorrelation = this.calculateMaxCorrelationWithPositions(signal, currentPositions);
 
     const riskMetrics: RiskMetrics = {
       currentLeverage,
@@ -252,7 +579,7 @@ export class RiskGuardian {
     if (this.isPhase3HedgeThatReducesDelta(signal, portfolioDelta)) {
       return {
         approved: true,
-        reason: "Phase 3 hedge approved: reduces global delta",
+        reason: 'Phase 3 hedge approved: reduces global delta',
         adjustedSize: signal.requestedSize,
         riskMetrics,
       };
@@ -262,19 +589,16 @@ export class RiskGuardian {
     const entryPrice = signal.entryPrice ?? this.getSignalPrice(signal);
 
     if (signal.stopLossPrice && entryPrice) {
-      const volatility = signal.volatility ??
-        this.calculateVolatility(signal.symbol);
+      const volatility = signal.volatility ?? this.calculateVolatility(signal.symbol);
       const stopDistance = Math.abs(entryPrice - signal.stopLossPrice);
       const minDistance = volatility * this.config.minStopDistanceMultiplier;
 
       if (stopDistance < minDistance) {
         return {
           approved: false,
-          reason: `Stop distance too tight: ${stopDistance.toFixed(2)} < ${
-            minDistance.toFixed(
-              2,
-            )
-          } (${this.config.minStopDistanceMultiplier}x ATR)`,
+          reason: `Stop distance too tight: ${stopDistance.toFixed(2)} < ${minDistance.toFixed(
+            2,
+          )} (${this.config.minStopDistanceMultiplier}x ATR)`,
           riskMetrics,
         };
       }
@@ -285,16 +609,13 @@ export class RiskGuardian {
     // Requirement 3.3: Check leverage cap
     // Apply Governance Multiplier
     const govMultiplier = this.governanceEngine.getLeverageMultiplier();
-    const maxLeverage =
-      this.allocationEngine.getMaxLeverage(this.currentEquity) * govMultiplier;
+    const maxLeverage = this.allocationEngine.getMaxLeverage(this.currentEquity) * govMultiplier;
     if (projectedLeverage > maxLeverage) {
       return {
         approved: false,
-        reason: `Leverage cap exceeded: projected ${
-          projectedLeverage.toFixed(
-            2,
-          )
-        }x > max ${maxLeverage}x`,
+        reason: `Leverage cap exceeded: projected ${projectedLeverage.toFixed(
+          2,
+        )}x > max ${maxLeverage}x`,
         riskMetrics,
       };
     }
@@ -303,27 +624,19 @@ export class RiskGuardian {
     if (maxCorrelation > this.config.maxCorrelation) {
       // Send high correlation warning notification
       if (this.correlationNotifier) {
-        const affectedPositions = this.getCorrelatedPositions(
-          signal,
-          currentPositions,
-        );
+        const affectedPositions = this.getCorrelatedPositions(signal, currentPositions);
         this.correlationNotifier
-          .sendHighCorrelationWarning(
-            maxCorrelation,
-            this.config.maxCorrelation,
-            affectedPositions,
-          )
+          .sendHighCorrelationWarning(maxCorrelation, this.config.maxCorrelation, affectedPositions)
           .catch((error) => {
-            console.error("Failed to send high correlation warning:", error);
+            console.error('Failed to send high correlation warning:', error);
           });
       }
 
       // Check if same direction as correlated position
-      const hasCorrelatedSameDirection = this
-        .hasCorrelatedSameDirectionPosition(
-          signal,
-          currentPositions,
-        );
+      const hasCorrelatedSameDirection = this.hasCorrelatedSameDirectionPosition(
+        signal,
+        currentPositions,
+      );
 
       if (hasCorrelatedSameDirection) {
         // Apply 50% size reduction (cumulative with latency penalty if we wanted, but logic here overrides or min?)
@@ -332,13 +645,9 @@ export class RiskGuardian {
 
         return {
           approved: true,
-          reason: `High correlation (${
-            maxCorrelation.toFixed(
-              2,
-            )
-          }) with same direction: size reduced by ${
-            this.config.correlationPenalty * 100
-          }%`,
+          reason: `High correlation (${maxCorrelation.toFixed(
+            2,
+          )}) with same direction: size reduced by ${this.config.correlationPenalty * 100}%`,
           adjustedSize: effectiveSize,
           riskMetrics,
         };
@@ -352,12 +661,16 @@ export class RiskGuardian {
     return {
       approved: true,
       reason: wasAdjusted
-        ? "Signal approved with size adjustment: Risk/Latency"
-        : "Signal approved: within risk limits",
+        ? 'Signal approved with size adjustment: Risk/Latency'
+        : 'Signal approved: within risk limits',
       adjustedSize: effectiveSize,
       riskMetrics,
     };
   }
+
+  /**
+   * Calculate current risk metrics for a set of positions
+   */
 
   /**
    * Calculate portfolio delta (net directional exposure)
@@ -368,7 +681,7 @@ export class RiskGuardian {
    */
   calculatePortfolioDelta(positions: Position[]): number {
     return positions.reduce((delta, pos) => {
-      const positionDelta = pos.side === "LONG" ? pos.size : -pos.size;
+      const positionDelta = pos.side === 'LONG' ? pos.size : -pos.size;
       return delta + positionDelta;
     }, 0);
   }
@@ -396,25 +709,20 @@ export class RiskGuardian {
    * @param currentPositions - Current open positions
    * @returns Projected leverage ratio
    */
-  private calculateProjectedLeverage(
-    signal: IntentSignal,
-    currentPositions: Position[],
-  ): number {
+  private calculateProjectedLeverage(signal: IntentSignal, currentPositions: Position[]): number {
     if (this.currentEquity <= 0) {
       return 0;
     }
 
     // Check if signal is for an existing position (same symbol)
-    const existingPosition = currentPositions.find((p) =>
-      p.symbol === signal.symbol
-    );
+    const existingPosition = currentPositions.find((p) => p.symbol === signal.symbol);
 
     let projectedNotional: number;
 
     if (existingPosition) {
       // If same direction, add to position
       // If opposite direction, reduce or flip position
-      const existingSide = existingPosition.side === "LONG" ? "BUY" : "SELL";
+      const existingSide = existingPosition.side === 'LONG' ? 'BUY' : 'SELL';
 
       if (signal.side === existingSide) {
         // Adding to position
@@ -436,8 +744,8 @@ export class RiskGuardian {
       }
     } else {
       // New position
-      projectedNotional = currentPositions.reduce((sum, pos) =>
-        sum + pos.size, 0) + signal.requestedSize;
+      projectedNotional =
+        currentPositions.reduce((sum, pos) => sum + pos.size, 0) + signal.requestedSize;
     }
 
     return projectedNotional / this.currentEquity;
@@ -456,10 +764,7 @@ export class RiskGuardian {
     const cacheKey = this.getCorrelationCacheKey(assetA, assetB);
     const cached = this.correlationCache.get(cacheKey);
 
-    if (
-      cached &&
-      Date.now() - cached.timestamp < this.config.correlationUpdateInterval
-    ) {
+    if (cached && Date.now() - cached.timestamp < this.config.correlationUpdateInterval) {
       return cached.correlation;
     }
 
@@ -507,8 +812,7 @@ export class RiskGuardian {
     // Check cache
     if (
       this.portfolioBetaCache &&
-      Date.now() - this.portfolioBetaCache.timestamp <
-        this.config.betaUpdateInterval
+      Date.now() - this.portfolioBetaCache.timestamp < this.config.betaUpdateInterval
     ) {
       return this.portfolioBetaCache.value;
     }
@@ -526,9 +830,9 @@ export class RiskGuardian {
     let weightedBeta = 0;
     for (const pos of positions) {
       const weight = pos.size / totalNotional;
-      const assetBeta = this.calculateCorrelation(pos.symbol, "BTCUSDT");
+      const assetBeta = this.calculateCorrelation(pos.symbol, 'BTCUSDT');
       // Adjust for position direction
-      const directionMultiplier = pos.side === "LONG" ? 1 : -1;
+      const directionMultiplier = pos.side === 'LONG' ? 1 : -1;
       weightedBeta += weight * assetBeta * directionMultiplier;
     }
 
@@ -568,12 +872,9 @@ export class RiskGuardian {
     // Feed price to ChangePointDetector (using BTC or Reference, or maybe all? defaulting to BTC typically)
     // For now, we only drive Regime from "BTCUSDT" or "ETHUSDT" acting as market proxy.
     // If the symbol is one of our reference assets:
-    const referenceAssets = ["BTCUSDT", "BTC-USD", "ETHUSDT", "ETH-USD"];
+    const referenceAssets = ['BTCUSDT', 'BTC-USD', 'ETHUSDT', 'ETH-USD'];
     if (referenceAssets.includes(symbol)) {
-      const detection = this.changePointDetector.update(
-        price,
-        timestamp ?? Date.now(),
-      );
+      const detection = this.changePointDetector.update(price, timestamp ?? Date.now());
       if (detection.regime !== this.currentRegime) {
         console.log(
           `RiskGuardian: Regime change detected for ${symbol}: ${this.currentRegime} -> ${detection.regime}`,
@@ -614,23 +915,27 @@ export class RiskGuardian {
     return { ...this.config };
   }
 
+  /**
+   * Update configuration dynamically
+   * @param newConfig - Partial configuration to update
+   */
+  updateConfig(newConfig: Partial<RiskGuardianConfig>): void {
+    Object.assign(this.config, newConfig);
+    console.log('[RiskGuardian] Configuration updated:', newConfig);
+  }
+
   // ============ Private Helper Methods ============
 
   /**
    * Check if signal is a Phase 3 hedge that reduces global delta
    */
-  private isPhase3HedgeThatReducesDelta(
-    signal: IntentSignal,
-    currentDelta: number,
-  ): boolean {
-    if (signal.phaseId !== "phase3") {
+  private isPhase3HedgeThatReducesDelta(signal: IntentSignal, currentDelta: number): boolean {
+    if (signal.phaseId !== 'phase3') {
       return false;
     }
 
     // Determine if signal reduces delta
-    const signalDelta = signal.side === "BUY"
-      ? signal.requestedSize
-      : -signal.requestedSize;
+    const signalDelta = signal.side === 'BUY' ? signal.requestedSize : -signal.requestedSize;
     const newDelta = currentDelta + signalDelta;
 
     // Signal reduces delta if it moves closer to zero
@@ -651,9 +956,7 @@ export class RiskGuardian {
     let maxCorrelation = 0;
     for (const pos of positions) {
       if (pos.symbol !== signal.symbol) {
-        const correlation = Math.abs(
-          this.calculateCorrelation(signal.symbol, pos.symbol),
-        );
+        const correlation = Math.abs(this.calculateCorrelation(signal.symbol, pos.symbol));
         maxCorrelation = Math.max(maxCorrelation, correlation);
       }
     }
@@ -670,11 +973,8 @@ export class RiskGuardian {
   /**
    * Check if there's a highly correlated position in the same direction
    */
-  private hasCorrelatedSameDirectionPosition(
-    signal: IntentSignal,
-    positions: Position[],
-  ): boolean {
-    const signalDirection = signal.side === "BUY" ? "LONG" : "SHORT";
+  private hasCorrelatedSameDirectionPosition(signal: IntentSignal, positions: Position[]): boolean {
+    const signalDirection = signal.side === 'BUY' ? 'LONG' : 'SHORT';
 
     for (const pos of positions) {
       // Same symbol, same direction
@@ -684,9 +984,7 @@ export class RiskGuardian {
 
       // Different symbol but high correlation and same direction
       if (pos.symbol !== signal.symbol && pos.side === signalDirection) {
-        const correlation = Math.abs(
-          this.calculateCorrelation(signal.symbol, pos.symbol),
-        );
+        const correlation = Math.abs(this.calculateCorrelation(signal.symbol, pos.symbol));
         if (correlation > this.config.maxCorrelation) {
           return true;
         }
@@ -781,19 +1079,14 @@ export class RiskGuardian {
   /**
    * Get list of positions that are correlated with the signal
    */
-  private getCorrelatedPositions(
-    signal: IntentSignal,
-    positions: Position[],
-  ): string[] {
+  private getCorrelatedPositions(signal: IntentSignal, positions: Position[]): string[] {
     const correlatedPositions: string[] = [];
 
     for (const pos of positions) {
       if (pos.symbol === signal.symbol) {
         correlatedPositions.push(pos.symbol);
       } else {
-        const correlation = Math.abs(
-          this.calculateCorrelation(signal.symbol, pos.symbol),
-        );
+        const correlation = Math.abs(this.calculateCorrelation(signal.symbol, pos.symbol));
         if (correlation > this.config.maxCorrelation) {
           correlatedPositions.push(pos.symbol);
         }
@@ -821,9 +1114,7 @@ export class RiskGuardian {
 
     // Calculate Standard Deviation of returns
     const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
-    const variance =
-      returns.reduce((sum, r) => sum + Math.pow(r - mean, 2), 0) /
-      returns.length;
+    const variance = returns.reduce((sum, r) => sum + Math.pow(r - mean, 2), 0) / returns.length;
     const stdDev = Math.sqrt(variance);
 
     // Annualize or scale to price?
@@ -846,7 +1137,7 @@ export class RiskGuardian {
     }
     // Fallback?
     return signal.stopLossPrice
-      ? signal.side === "BUY"
+      ? signal.side === 'BUY'
         ? signal.stopLossPrice * 1.01
         : signal.stopLossPrice * 0.99
       : 0;

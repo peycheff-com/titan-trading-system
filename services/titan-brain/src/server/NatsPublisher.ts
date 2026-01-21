@@ -56,7 +56,12 @@ export class NatsPublisher {
     }
 
     try {
-      await this.nats.publish(TitanSubject.AI_OPTIMIZATION_REQUESTS, request);
+      await this.nats.publishEnvelope(TitanSubject.AI_OPTIMIZATION_REQUESTS, request, {
+        type: 'titan.control.ai.optimize.v1',
+        version: 1,
+        producer: 'titan-brain',
+        // Logic for correlation_id could be improved here if available
+      });
       this.logger.info('AI optimization request published', {
         reason: request.reason,
         triggeredBy: request.triggeredBy,

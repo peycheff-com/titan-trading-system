@@ -1,0 +1,19 @@
+{
+  "$ref": "#/definitions/BaseCommand",
+  "definitions": {
+    "BaseCommand": {
+      "type": "object",
+      "properties": {
+        "idempotency_key": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "idempotency_key"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

@@ -4,96 +4,85 @@
  * The Predestination Engine that pre-calculates structural breakout levels,
  * monitors Binance Spot for validation signals, and executes on Bybit Perps.
  *
- * Three-Layer Architecture:
- * 1. Pre-Computation Layer (The Web): Calculates tripwires every 1 minute
- * 2. Detection Layer (The Spider): Monitors Binance WebSocket for tripwire hits
- * 3. Execution Layer (The Bite): Fires orders on Bybit when traps spring
+ * Three-Layer Architecture (Refactored):
+ * 1. Pre-Computation Layer (TrapGenerator): Calculates tripwires
+ * 2. Detection Layer (TrapDetector): Monitors Binance WebSocket
+ * 3. Execution Layer (TrapExecutor): Fires orders via Fast Path IPC
+ * 4. State Layer (TrapStateManager): shared state
  */
 
 import { EventEmitter } from "../events/EventEmitter.js";
-import { ExecutionClient, IntentSignal } from "@titan/shared";
-import { VolatilityScaler } from "../calculators/VolatilityScaler.js";
+import { ExecutionClient, getNatsClient, TitanSubject } from "@titan/shared";
 import { CVDCalculator } from "../calculators/CVDCalculator.js";
 import { LeadLagDetector } from "../calculators/LeadLagDetector.js";
-import { PredictionMarketDetector } from "../detectors/PredictionMarketDetector.js";
-import { PolymarketClient } from "../exchanges/PolymarketClient.js";
 import { TripwireCalculators } from "../calculators/TripwireCalculators.js";
 import { PositionSizeCalculator } from "../calculators/PositionSizeCalculator.js";
-import {
-  OHLCV,
-  OrderParams,
-  Trade,
-  TrapType,
-  Tripwire,
-} from "../types/index.js";
+import { BinanceSpotClient } from "../exchanges/BinanceSpotClient.js";
+import { BybitPerpsClient } from "../exchanges/BybitPerpsClient.js";
+import { ConfigManager, TrapConfig } from "../config/ConfigManager.js";
+import { VelocityCalculator } from "../calculators/VelocityCalculator.js";
+import { Trade, Tripwire } from "../types/index.js";
+import { Logger } from "../logging/Logger.js";
+import { OIWipeoutDetector } from "../detectors/OIWipeoutDetector.js";
+import { FundingSqueezeDetector } from "../detectors/FundingSqueezeDetector.js";
+import { BasisArbDetector } from "../detectors/BasisArbDetector.js";
+import { UltimateBulgariaProtocol } from "../detectors/UltimateBulgariaProtocol.js";
 
-interface VolumeCounter {
-  count: number;
-  buyVolume: number;
-  sellVolume: number;
-  startTime: number;
+// Components
+import { TrapStateManager } from "./components/TrapStateManager.js";
+import { TrapGenerator } from "./components/TrapGenerator.js";
+import { TrapExecutor } from "./components/TrapExecutor.js";
+import { TrapDetector } from "./components/TrapDetector.js";
+
+interface IPCMessage {
+  type: string;
+  config?: Record<string, unknown>;
+  [key: string]: unknown;
 }
 
 /**
  * TitanTrap Engine
  *
- * Manages the complete trap lifecycle from calculation to execution.
+ * Facade that coordinates the trap lifecycle components.
  */
 export class TitanTrap {
-  // Trap storage
-  private trapMap: Map<string, Tripwire[]> = new Map();
-  private volumeCounters: Map<string, VolumeCounter> = new Map();
-  private latestPrices: Map<string, number> = new Map(); // Real-time price cache for confirmation checks
+  // Components
+  public stateManager: TrapStateManager; // Public for index.tsx access if needed, or use getter
+  private generator: TrapGenerator;
+  private executor: TrapExecutor;
+  private detector: TrapDetector;
 
-  // Cached equity (updated every 5 seconds in background)
-  private cachedEquity: number = 0;
-  private equityUpdateInterval?: NodeJS.Timeout;
-
-  // Pre-computation interval
+  // Timers
   private preComputationInterval?: NodeJS.Timeout;
-
-  // Memory monitoring interval
   private memoryMonitorInterval?: NodeJS.Timeout;
+  private stateBroadcastInterval?: NodeJS.Timeout;
 
-  // Client references (injected via constructor)
-  private binanceClient: any; // TODO: Type as BinanceSpotClient
-  private bybitClient: any; // TODO: Type as BybitPerpsClient
-  private executionClient: ExecutionClient; // Execution client for NATS signals
-  private logger: any; // TODO: Type as Logger
-  private config: any; // TODO: Type as ConfigManager
+  // Clients & Dependencies
+  private binanceClient: BinanceSpotClient;
+  private bybitClient: BybitPerpsClient | null;
+  private executionClient: ExecutionClient;
+  private logger: Logger;
+  private config: ConfigManager;
   private eventEmitter: EventEmitter;
 
-  // Calculators and detectors (injected via constructor)
-  private tripwireCalculators: any; // TODO: Type as TripwireCalculators
-  private velocityCalculator: any; // TODO: Type as VelocityCalculator
-  private positionSizeCalculator: any; // TODO: Type as PositionSizeCalculator
-  private oiDetector?: any; // TODO: Type as OIWipeoutDetector
-  private fundingDetector?: any; // TODO: Type as FundingSqueezeDetector
-  private basisDetector?: any; // TODO: Type as BasisArbDetector
-  private ultimateProtocol?: any; // TODO: Type as UltimateBulgariaProtocol
-  private volatilityScaler: VolatilityScaler;
-  private cvdCalculator: CVDCalculator;
-  private leadLagDetector: LeadLagDetector;
-  private predictionDetector: PredictionMarketDetector;
-
-  // Anti-Gaming State
-  private lastActivationTime: Map<string, number>;
-  private failedAttempts: Map<string, number>;
-  private blacklistedUntil: Map<string, number>;
+  // Calculators (maintained here for injection compatibility or component use)
+  private velocityCalculator: VelocityCalculator;
+  private positionSizeCalculator: PositionSizeCalculator;
+  private tripwireCalculators: TripwireCalculators;
 
   constructor(dependencies: {
-    binanceClient: any;
-    bybitClient: any | null; // Can be null when using titan-execution service
-    logger: any;
-    config: any;
+    binanceClient: BinanceSpotClient;
+    bybitClient: BybitPerpsClient | null;
+    logger: Logger;
+    config: ConfigManager;
     eventEmitter: EventEmitter;
-    tripwireCalculators: any;
-    velocityCalculator: any;
-    positionSizeCalculator: any;
-    oiDetector?: any;
-    fundingDetector?: any;
-    basisDetector?: any;
-    ultimateProtocol?: any;
+    tripwireCalculators: TripwireCalculators;
+    velocityCalculator: VelocityCalculator;
+    positionSizeCalculator: PositionSizeCalculator;
+    oiDetector?: OIWipeoutDetector;
+    fundingDetector?: FundingSqueezeDetector;
+    basisDetector?: BasisArbDetector;
+    ultimateProtocol?: UltimateBulgariaProtocol;
   }) {
     this.binanceClient = dependencies.binanceClient;
     this.bybitClient = dependencies.bybitClient;
@@ -103,112 +92,141 @@ export class TitanTrap {
     this.tripwireCalculators = dependencies.tripwireCalculators;
     this.velocityCalculator = dependencies.velocityCalculator;
     this.positionSizeCalculator = dependencies.positionSizeCalculator;
-    this.oiDetector = dependencies.oiDetector;
-    this.fundingDetector = dependencies.fundingDetector;
-    this.basisDetector = dependencies.basisDetector;
-    this.ultimateProtocol = dependencies.ultimateProtocol;
-
-    // Initialize Volatility Scaler
-    this.volatilityScaler = new VolatilityScaler();
-
-    // Initialize CVD Calculator for smart filtering
-    this.cvdCalculator = new CVDCalculator();
-
-    // Initialize Lead/Lag Detector
-    this.leadLagDetector = new LeadLagDetector();
-
-    // --- ANTI-GAMING STATE (2026 Requirement) ---
-    this.lastActivationTime = new Map();
-    this.failedAttempts = new Map();
-    this.blacklistedUntil = new Map();
-
-    // Initialize Prediction Market Detector (2026)
-    const polymarket = new PolymarketClient();
-    this.predictionDetector = new PredictionMarketDetector(
-      polymarket,
-      this.binanceClient,
-    );
 
     // Initialize Execution Client
     this.executionClient = new ExecutionClient({
       source: "scavenger",
     });
-
-    // Setup Execution Client event listeners
     this.setupExecutionEventListeners();
+
+    // Initialize Components
+    this.stateManager = new TrapStateManager();
+
+    this.generator = new TrapGenerator({
+      logger: this.logger,
+      config: this.config,
+      eventEmitter: this.eventEmitter,
+      binanceClient: this.binanceClient,
+      bybitClient: this.bybitClient,
+      stateManager: this.stateManager,
+      oiDetector: dependencies.oiDetector,
+      fundingDetector: dependencies.fundingDetector,
+      basisDetector: dependencies.basisDetector,
+    });
+
+    // Initialize calculators required for components
+    const cvdCalculator = new CVDCalculator();
+    const leadLagDetector = new LeadLagDetector();
+
+    this.executor = new TrapExecutor({
+      logger: this.logger,
+      config: this.config,
+      eventEmitter: this.eventEmitter,
+      bybitClient: this.bybitClient,
+      stateManager: this.stateManager,
+      executionClient: this.executionClient,
+      positionSizeCalculator: this.positionSizeCalculator,
+      velocityCalculator: this.velocityCalculator,
+      cvdCalculator: cvdCalculator,
+      leadLagDetector: leadLagDetector,
+    });
+
+    this.detector = new TrapDetector({
+      logger: this.logger,
+      config: this.config,
+      eventEmitter: this.eventEmitter,
+      stateManager: this.stateManager,
+      executor: this.executor,
+      velocityCalculator: this.velocityCalculator,
+      cvdCalculator: cvdCalculator,
+      leadLagDetector: leadLagDetector,
+    });
+
+    // Wire up Bybit callbacks
+    if (this.bybitClient) {
+      this.generator.setOnTickerCallback(
+        this.detector.onBybitTicker.bind(this.detector),
+      );
+    }
   }
 
   /**
-   * Setup Execution Client event listeners for handling execution feedback
+   * Setup Execution Client Event Listeners (IPC/Fast Path)
    */
   private setupExecutionEventListeners(): void {
-    // Connection events
     this.executionClient.on("connected", () => {
-      console.log("✅ Execution Client (NATS) connected");
+      this.logger.info("✅ Execution Client (NATS) connected");
       this.eventEmitter.emit("IPC_CONNECTED", {
         timestamp: Date.now(),
-        socketPath: this.executionClient.getStatus().socketPath,
       });
     });
 
     this.executionClient.on("disconnected", () => {
-      console.log("🔌 Fast Path IPC disconnected");
+      this.logger.warn("🔌 Fast Path IPC disconnected");
       this.eventEmitter.emit("IPC_DISCONNECTED", {
         timestamp: Date.now(),
       });
     });
 
-    this.executionClient.on("reconnecting", (attempt: number) => {
-      console.log(`🔄 Fast Path IPC reconnecting (attempt ${attempt})`);
+    this.executionClient.on("reconnecting", () => {
+      this.logger.warn("🔄 Fast Path IPC reconnecting...");
       this.eventEmitter.emit("IPC_RECONNECTING", {
-        attempt,
         timestamp: Date.now(),
       });
     });
 
-    this.executionClient.on("error", (error: Error) => {
-      console.error(`❌ Fast Path IPC error: ${error.message}`);
+    this.executionClient.on("error", (error) => {
+      this.logger.error("❌ Fast Path IPC error", error as Error);
       this.eventEmitter.emit("IPC_ERROR", {
-        error: error.message,
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     });
 
     this.executionClient.on("maxReconnectAttemptsReached", () => {
-      console.error("❌ Fast Path IPC max reconnection attempts reached");
+      this.logger.error("❌ Fast Path IPC max reconnection attempts reached");
       this.eventEmitter.emit("IPC_MAX_RECONNECT_ATTEMPTS", {
         timestamp: Date.now(),
       });
     });
 
-    // Message events for monitoring
-    this.executionClient.on("message", (message: any) => {
-      // Handle unsolicited messages from execution service
+    // Handle incoming messages
+    this.executionClient.on("message", (message: IPCMessage) => {
       if (message.type === "status_update") {
-        console.log("📊 Execution service status update:", message);
-      } else if (message.type === "CONFIG_UPDATE") {
-        console.log("🔄 IPC Config Update Received:", message.config);
+        this.logger.info(
+          `📊 Execution service status update: ${JSON.stringify(message)}`,
+        );
+      }
 
-        // Dynamic configuration update
+      // Handle config updates
+      if (message.type === "CONFIG_UPDATE") {
+        this.logger.info(
+          `🔄 IPC Config Update Received: ${JSON.stringify(message.config)}`,
+        );
+
         if (
-          this.config && typeof this.config.updatePhaseConfig === "function"
+          this.config &&
+          typeof this.config.updatePhaseConfig === "function" &&
+          message.config
         ) {
           try {
-            this.config.updatePhaseConfig(message.config);
-            console.log("✅ Config successfully updated via IPC");
+            // Fix: remove first argument, pass only config object
+            this.config.updatePhaseConfig(
+              message.config as unknown as Partial<TrapConfig>,
+            );
 
-            // Emit event for monitoring
+            this.logger.info("✅ Config successfully updated via IPC");
             this.eventEmitter.emit("CONFIG_UPDATED_IPC", {
-              timestamp: Date.now(),
               config: message.config,
+              timestamp: Date.now(),
             });
           } catch (err) {
-            console.error("❌ Failed to apply IPC config update:", err);
+            this.logger.error(
+              "❌ Failed to apply IPC config update",
+              err as Error,
+              undefined,
+            );
           }
-        } else {
-          console.warn(
-            "⚠️ ConfigManager not available or invalid for IPC update",
-          );
         }
       }
     });
@@ -216,24 +234,19 @@ export class TitanTrap {
 
   /**
    * Start the TitanTrap engine
-   * - Starts background equity cache loop (every 5 seconds)
-   * - Starts pre-computation layer (every 1 minute)
    */
   async start(): Promise<void> {
-    console.log("🕸️ Starting TitanTrap Engine...");
+    this.logger.info("🕸️ Starting TitanTrap Engine...");
 
-    // Connect to Execution Client
     try {
-      console.log("🔌 Connecting to Execution Service via NATS...");
+      this.logger.info("🔌 Connecting to Execution Service via NATS...");
       await this.executionClient.connect();
-      console.log("✅ Connected to Execution Service");
+      this.logger.info("✅ Connected to Execution Service");
     } catch (error) {
-      console.warn(
-        "⚠️ Failed to connect to Execution Service:",
-        error instanceof Error ? error.message : "Unknown error",
+      this.logger.warn(
+        "⚠️ Failed to connect to Execution Service: " +
+          (error instanceof Error ? error.message : "Unknown error"),
       );
-
-      // Emit warning event
       this.eventEmitter.emit("IPC_CONNECTION_FAILED", {
         error: error instanceof Error ? error.message : "Unknown error",
         fallback: "HTTP",
@@ -241,1065 +254,108 @@ export class TitanTrap {
       });
     }
 
-    // CRITICAL: Initialize equity BEFORE any traps can fire
-    // This prevents position sizing with $0 equity on first trap activation
-    console.log("💰 Initializing equity cache...");
-    await this.updateCachedEquity();
-
-    // Start background equity cache loop
-    this.startEquityCacheLoop();
-
-    // Start memory monitoring (Requirement 1.7)
     this.startMemoryMonitoring();
+    this.startStateBroadcast();
 
-    // Run initial pre-computation
-    await this.updateTrapMap();
+    await this.generator.updateTrapMap();
+    await this.updateSubscriptions();
 
-    // Start pre-computation interval (every 1 minute)
     const updateInterval = this.config.getConfig().updateInterval || 60000;
     this.preComputationInterval = setInterval(async () => {
-      await this.updateTrapMap();
+      await this.generator.updateTrapMap();
+      await this.updateSubscriptions();
     }, updateInterval);
 
-    console.log("✅ TitanTrap Engine started");
+    this.logger.info("✅ TitanTrap Engine started");
   }
 
   /**
    * Stop the TitanTrap engine
    */
   async stop(): Promise<void> {
-    console.log("🛑 Stopping TitanTrap Engine...");
+    this.logger.info("🛑 Stopping TitanTrap Engine...");
 
-    if (this.equityUpdateInterval) {
-      clearInterval(this.equityUpdateInterval);
-    }
+    if (this.preComputationInterval) clearInterval(this.preComputationInterval);
+    if (this.memoryMonitorInterval) clearInterval(this.memoryMonitorInterval);
+    if (this.stateBroadcastInterval) clearInterval(this.stateBroadcastInterval);
 
-    if (this.preComputationInterval) {
-      clearInterval(this.preComputationInterval);
-    }
-
-    if (this.memoryMonitorInterval) {
-      clearInterval(this.memoryMonitorInterval);
-    }
-
-    // Disconnect Execution Client gracefully
     try {
       await this.executionClient.disconnect();
-      console.log("✅ Disconnected from Execution Client");
+      this.logger.info("✅ Disconnected from Execution Client");
     } catch (error) {
-      console.warn(
-        "⚠️ Error disconnecting from Execution Client:",
-        error instanceof Error ? error.message : "Unknown error",
+      this.logger.warn(
+        "⚠️ Error disconnecting from Execution Client: " +
+          (error instanceof Error ? error.message : "Unknown error"),
       );
+      this.logger.error("Unknown error", error as Error);
     }
 
-    console.log("✅ TitanTrap Engine stopped");
+    this.binanceClient.close();
+    if (this.bybitClient) {
+      this.bybitClient.close();
+    }
+
+    this.logger.info("✅ TitanTrap Engine stopped");
   }
 
   /**
-   * Phase 2: Confirmation Check
-   * Requires price to be actively holding or extending beyond the trigger level.
+   * EXPOSED for index.tsx: Handle Binance Tick
    */
-  private async checkConfirmation(
+  public async onBinanceTick(
     symbol: string,
-    trap: Tripwire,
-    microCVD: number,
-    burstVolume: number,
+    price: number,
+    trades: Trade[],
   ): Promise<void> {
-    const currentPrice = this.latestPrices.get(symbol);
+    const signal = await this.detector.onBinanceTick(symbol, price, trades);
+  }
 
-    if (!currentPrice) {
-      console.warn(`⚠️ Confirmation failed: No price data for ${symbol}`);
-      return;
-    }
+  /**
+   * EXPOSED for index.tsx: Get Trap Map
+   */
+  public getTrapMap(): Map<string, Tripwire[]> {
+    return this.stateManager.getTrapMap();
+  }
 
-    // Logic:
-    // LONG: Current Price >= Trigger Price
-    // SHORT: Current Price <= Trigger Price
-    // We allow a tiny tolerance (epsilon) because noise happens, but mostly it should hold.
+  /**
+   * EXPOSED for index.tsx: Get Equity
+   */
+  public getCachedEquity(): number {
+    return this.executor.getCachedEquity();
+  }
 
-    // Actually, distinct from "trigger price", we want to ensure it hasn't fully reverted.
-    // If we simply check vs trigger price, that's good.
-    // Ideally it should be BETTER than trigger price.
-
-    let isHolding = false;
-
-    if (trap.direction === "LONG") {
-      isHolding = currentPrice >= trap.triggerPrice * 0.9995; // Allow 0.05% slip back only
-    } else {
-      isHolding = currentPrice <= trap.triggerPrice * 1.0005;
-    }
-
-    if (isHolding) {
-      console.log(
-        `✅ CONFIRMATION PASSED: ${symbol} holding at ${
-          currentPrice.toFixed(2)
-        } vs Trigger ${trap.triggerPrice.toFixed(2)}`,
+  /**
+   * Force Reconnect IPC
+   */
+  async forceReconnectIPC(): Promise<void> {
+    this.logger.warn("🔄 Force reconnecting Fast Path IPC...");
+    try {
+      await this.executionClient.disconnect();
+      await this.executionClient.connect();
+      this.logger.info("✅ Fast Path IPC reconnection successful");
+      this.eventEmitter.emit("IPC_FORCE_RECONNECT_SUCCESS", {
+        timestamp: Date.now(),
+      });
+    } catch (error) {
+      this.logger.error(
+        "❌ Fast Path IPC force reconnection failed:",
+        error as Error,
       );
-      await this.fire(trap, microCVD, burstVolume);
-    } else {
-      console.warn(
-        `❌ CONFIRMATION FAILED (WICK): ${symbol} reverted to ${
-          currentPrice.toFixed(2)
-        } (Trigger: ${trap.triggerPrice.toFixed(2)})`,
-      );
-      this.eventEmitter.emit("TRAP_ABORTED", {
-        symbol,
-        reason: "WICK_REVERSION",
+      this.eventEmitter.emit("IPC_FORCE_RECONNECT_FAILED", {
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
   }
 
-  /**
-   * Background loop: Update equity every 5 seconds
-   *
-   * CRITICAL: This prevents fire() from hanging on slow API calls.
-   * We cache equity and read it instantly during execution.
-   */
-  private startEquityCacheLoop(): void {
-    // Initial equity fetch
-    this.updateCachedEquity();
-
-    // Update every 5 seconds
-    this.equityUpdateInterval = setInterval(async () => {
-      await this.updateCachedEquity();
-    }, 5000);
-  }
-
-  private async updateCachedEquity(): Promise<void> {
-    try {
-      this.cachedEquity = await this.bybitClient.getEquity();
-      console.log(`💰 Equity updated: $${this.cachedEquity.toFixed(2)}`);
-    } catch (error) {
-      console.error("⚠️ Failed to update equity:", error);
-    }
-  }
-
-  /**
-   * PRE-COMPUTATION LAYER (The Web)
-   *
-   * Runs every 1 minute to calculate tripwires for top 20 volatile symbols.
-   *
-   * Steps:
-   * 1. Fetch top 500 symbols by volume from Bybit
-   * 2. Calculate tripwires for each symbol
-   * 3. Score trap quality (volatility + volume + confluence)
-   * 4. Select top 20 symbols
-   * 5. Update Trap Map
-   * 6. Subscribe Binance Spot WebSocket to top 20
-   */
-  async updateTrapMap(): Promise<void> {
-    const startTime = Date.now();
-
-    try {
-      console.log("🔄 Pre-Computation Layer: Calculating tripwires...");
-
-      // 1. Fetch top 500 symbols by volume from Bybit
-      const symbols = await this.bybitClient.fetchTopSymbols(500);
-      console.log(`   Fetched ${symbols.length} symbols`);
-
-      // 2. Calculate tripwires for each symbol
-      const scoredSymbols = await Promise.all(
-        symbols.map(async (symbol: string) => {
-          try {
-            // Fetch OHLCV data
-            const ohlcv = await this.bybitClient.fetchOHLCV(symbol, "1h", 100);
-
-            // Calculate tripwires using calculators
-            const traps: Tripwire[] = [];
-
-            // Basic tripwires
-            const liquidationTrap = TripwireCalculators
-              .calcLiquidationCluster(ohlcv, symbol);
-            const dailyLevelTrap = TripwireCalculators.calcDailyLevel(
-              ohlcv,
-              symbol,
-            );
-            const bollingerTrap = TripwireCalculators
-              .calcBollingerBreakout(ohlcv, symbol);
-
-            if (liquidationTrap) traps.push(liquidationTrap);
-            if (dailyLevelTrap) traps.push(dailyLevelTrap);
-            if (bollingerTrap) traps.push(bollingerTrap);
-
-            // Structural flaw detectors (if available)
-            if (this.oiDetector) {
-              const oiWipeout = await this.oiDetector.detectWipeout(symbol);
-              if (oiWipeout) traps.push(oiWipeout);
-            }
-
-            if (this.fundingDetector) {
-              const fundingSqueeze = await this.fundingDetector.detectSqueeze(
-                symbol,
-              );
-              if (fundingSqueeze) traps.push(fundingSqueeze);
-            }
-
-            if (this.basisDetector) {
-              const basisArb = await this.basisDetector.detectBasisArb(symbol);
-              if (basisArb) traps.push(basisArb);
-            }
-
-            // --- ADAPTIVE VOLATILITY LOGIC ---
-            const volMetrics = this.volatilityScaler.calculateMetrics(ohlcv);
-
-            // --- ALPHA LOGIC: TREND AGGREGATION ---
-            const adx = TripwireCalculators.calcADX(ohlcv);
-
-            // Determine trend direction (Price vs SMA20)
-            const lastClose = ohlcv[ohlcv.length - 1].close;
-            const sma20 = TripwireCalculators.calcSMA(
-              new Float64Array(ohlcv.map((b: any) => b.close)),
-              20,
-            );
-            const trend = lastClose > sma20 ? "UP" : "DOWN";
-
-            // Attach metrics to all traps for this symbol
-            for (const trap of traps) {
-              trap.volatilityMetrics = {
-                atr: volMetrics.atr,
-                regime: volMetrics.regime,
-                stopLossMultiplier: volMetrics.stopLossMultiplier,
-                positionSizeMultiplier: volMetrics.positionSizeMultiplier,
-              };
-
-              // Alpha Tags
-              trap.adx = adx;
-              trap.trend = trend;
-            }
-
-            // Calculate trap quality score
-            const trapQuality = this.calculateTrapQuality(ohlcv, traps);
-
-            return {
-              symbol,
-              trapQuality,
-              traps,
-            };
-          } catch (error) {
-            console.error(
-              `   ⚠️ Failed to calculate traps for ${symbol}:`,
-              error,
-            );
-            return {
-              symbol,
-              trapQuality: 0,
-              traps: [],
-            };
-          }
-        }),
-      );
-
-      // 3. Select top 20 symbols with highest trap quality
-      const topSymbolsCount = this.config.getConfig().topSymbolsCount || 20;
-      const top20 = scoredSymbols
-        .filter((s) => s.trapQuality > 0)
-        .sort((a, b) => b.trapQuality - a.trapQuality)
-        .slice(0, topSymbolsCount);
-
-      // 4. Update trap map
-      this.trapMap.clear();
-      for (const { symbol, traps } of top20) {
-        this.trapMap.set(symbol, traps);
-      }
-
-      // 5. Subscribe to Binance Spot for these symbols
-      const symbolList = top20.map((s) => s.symbol);
-      await this.binanceClient.subscribeAggTrades(symbolList);
-
-      // 6. Subscribe to Bybit Perps for Lead/Lag detection
-      if (
-        this.bybitClient &&
-        typeof this.bybitClient.subscribeTicker === "function"
-      ) {
-        this.bybitClient.subscribeTicker(
-          symbolList,
-          this.onBybitTicker.bind(this),
-        );
-        console.log(`   ✅ Subscribed to Bybit Tickers for Lead/Lag detection`);
-      }
-
-      const duration = Date.now() - startTime;
-
-      // Warn if pre-computation exceeded 60 seconds
-      if (duration > 60000) {
-        console.warn(
-          `⚠️ COMPUTATION_SLOW: Pre-computation exceeded 60s: ${duration}ms`,
-        );
-      }
-
-      console.log(
-        `✅ Trap Map updated: ${top20.length} symbols, ${duration}ms`,
-      );
-
-      // Log trap summary
-      this.logTrapSummary();
-
-      // Emit TRAP_MAP_UPDATED event (Requirement 7.5)
-      this.eventEmitter.emit("TRAP_MAP_UPDATED", {
-        symbolCount: top20.length,
-        duration,
-        symbols: symbolList,
-      });
-    } catch (error) {
-      console.error("❌ Pre-Computation Layer failed:", error);
-
-      // Emit ERROR event
-      this.eventEmitter.emit("ERROR", {
-        message: "Pre-Computation Layer failed",
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
-
-  /**
-   * Calculate trap quality score
-   *
-   * Score = (volatility * 0.4) + (volume * 0.3) + (confluence * 0.3)
-   */
-  private calculateTrapQuality(ohlcv: OHLCV[], traps: Tripwire[]): number {
-    if (traps.length === 0) return 0;
-
-    // Volatility score (0-100)
-    const volatility = this.calcVolatility(ohlcv);
-
-    // Volume score (0-100)
-    const volume = ohlcv[ohlcv.length - 1].volume;
-    const volumeScore = Math.min(volume / 10000000, 1) * 100; // Normalize to $10M
-
-    // Confluence score (0-100)
-    const confluence = this.calcConfluence(traps);
-
-    // Weighted score
-    const trapQuality = (volatility * 0.4) + (volumeScore * 0.3) +
-      (confluence * 0.3);
-
-    return trapQuality;
-  }
-
-  private calcVolatility(ohlcv: OHLCV[]): number {
-    // Calculate ATR as volatility measure
-    const atrPeriod = 14;
-    const recentBars = ohlcv.slice(-atrPeriod);
-
-    let atrSum = 0;
-    for (let i = 1; i < recentBars.length; i++) {
-      const high = recentBars[i].high;
-      const low = recentBars[i].low;
-      const prevClose = recentBars[i - 1].close;
-
-      const tr = Math.max(
-        high - low,
-        Math.abs(high - prevClose),
-        Math.abs(low - prevClose),
-      );
-
-      atrSum += tr;
-    }
-
-    const atr = atrSum / (recentBars.length - 1);
-    const currentPrice = ohlcv[ohlcv.length - 1].close;
-    const atrPercent = (atr / currentPrice) * 100;
-
-    // Normalize to 0-100 (assume 5% ATR is max)
-    return Math.min(atrPercent / 5, 1) * 100;
-  }
-
-  private calcConfluence(traps: Tripwire[]): number {
-    // More traps = higher confluence
-    // Max score at 3+ traps
-    return Math.min(traps.length / 3, 1) * 100;
-  }
-
-  private logTrapSummary(): void {
-    console.log("\n📊 Active Traps Summary:");
-    for (const [symbol, traps] of this.trapMap.entries()) {
-      console.log(`   ${symbol}: ${traps.length} traps`);
-      for (const trap of traps) {
-        console.log(
-          `      - ${trap.trapType} @ ${
-            trap.triggerPrice.toFixed(2)
-          } (${trap.direction}, ${trap.confidence}% conf)`,
-        );
-      }
-    }
-    console.log("");
-  }
-
-  /**
-   * DETECTION LAYER (The Spider)
-   *
-   * Real-time WebSocket handler for Binance Spot ticks.
-   *
-   * Steps:
-   * 1. Check if price matches any tripwire (±0.1%)
-   * 2. Start volume accumulation counter
-   * 3. Count trades in 100ms window
-   * 4. If trades >= 50, activate trap and trigger execution
-   */
-  onBinanceTick(symbol: string, price: number, trades: Trade[]): void {
-    // 0. CHECK BLACKLIST (Anti-Gaming)
-    const blacklistedTime = this.blacklistedUntil.get(symbol);
-    if (blacklistedTime && Date.now() < blacklistedTime) {
-      return; // Skip blacklisted symbol
-    }
-
-    const traps = this.trapMap.get(symbol);
-    if (!traps) return;
-
-    // Record price with exchange timestamp (not Date.now())
-    const exchangeTime = trades[0].time;
-    this.latestPrices.set(symbol, price); // Update real-time price cache
-    this.velocityCalculator.recordPrice(symbol, price, exchangeTime);
-    this.leadLagDetector.recordPrice(symbol, "BINANCE", price, exchangeTime);
-
-    // Feed trades to CVD Calculator
-    for (const trade of trades) {
-      this.cvdCalculator.recordTrade(trade);
-    }
-
-    for (const trap of traps) {
-      // Skip if already activated
-      if (trap.activated) continue;
-
-      // Check cooldown (5-minute minimum between activations)
-      const timeSinceActivation = Date.now() - (trap.activatedAt || 0);
-      if (trap.activatedAt && timeSinceActivation < 300000) {
-        continue; // Still in cooldown
-      }
-
-      // Check if price is within 0.1% of trigger
-      const priceDistance = Math.abs(price - trap.triggerPrice) /
-        trap.triggerPrice;
-      if (priceDistance > 0.001) continue; // Not close enough
-
-      // Start volume accumulation
-      if (!this.volumeCounters.has(symbol)) {
-        this.volumeCounters.set(symbol, {
-          count: 0,
-          buyVolume: 0,
-          sellVolume: 0,
-          startTime: Date.now(),
-        });
-      }
-
-      const counter = this.volumeCounters.get(symbol)!;
-      counter.count += trades.length;
-
-      // Accumulate Micro-CVD
-      for (const trade of trades) {
-        // isBuyerMaker = false -> Buyer is Taker -> BUY
-        // isBuyerMaker = true  -> Seller is Taker -> SELL
-        if (!trade.isBuyerMaker) {
-          counter.buyVolume += trade.qty;
-        } else {
-          counter.sellVolume += trade.qty;
-        }
-      }
-
-      // Check if 100ms window has elapsed
-      const elapsed = Date.now() - counter.startTime;
-      if (elapsed >= 100) {
-        // Validate: Require minimum trades in 100ms
-        const minTrades = this.config.getConfig().minTradesIn100ms || 50;
-
-        if (counter.count >= minTrades) {
-          const microCVD = counter.buyVolume - counter.sellVolume;
-
-          console.log(
-            `⚡ TRAP SPRUNG: ${symbol} at ${
-              price.toFixed(2)
-            } (${counter.count} trades, CVD: ${microCVD.toFixed(4)})`,
-          );
-
-          // Emit TRAP_SPRUNG event
-          this.eventEmitter.emit("TRAP_SPRUNG", {
-            symbol,
-            price,
-            trapType: trap.trapType,
-            direction: trap.direction,
-            confidence: trap.confidence,
-            tradeCount: counter.count,
-            microCVD, // Add to event
-            elapsed,
-          });
-
-          // Phase 2: Confirmation Check (200ms Delay)
-          // Don't fire immediately. Wait to see if price holds.
-          const totalVolume = counter.buyVolume + counter.sellVolume;
-
-          console.log(`   ⏳ PENDING CONFIRMATION: Waiting 200ms...`);
-
-          setTimeout(() => {
-            this.checkConfirmation(
-              symbol,
-              trap,
-              microCVD,
-              totalVolume,
-            );
-          }, 200);
-
-          // Old logic: this.fire(trap, microCVD, totalVolume);
-        }
-
-        // Reset counter
-        this.volumeCounters.delete(symbol);
-      }
-    }
-  }
-
-  /**
-   * Handle Bybit Ticker Updates (Execution/Perp Layer)
-   * Feeds data to Lead/Lag Detector
-   */
-  onBybitTicker(symbol: string, price: number, timestamp: number): void {
-    this.leadLagDetector.recordPrice(symbol, "BYBIT", price, timestamp);
-  }
-
-  /**
-   * EXECUTION LAYER (The Bite)
-   *
-   * Sends PREPARE/CONFIRM/ABORT signals to Execution Service via Fast Path IPC.
-   *
-   * Steps:
-   * 1. Validate Micro-CVD
-   * 2. Calculate price velocity
-   * 3. Send PREPARE via Fast Path IPC
-   */
-  async fire(
-    trap: Tripwire,
-    microCVD?: number,
-    burstVolume?: number,
-  ): Promise<void> {
-    let signalId: string | undefined;
-
-    try {
-      // 0. COOLDOWN CHECK (Anti-Gaming)
-      const lastActive = this.lastActivationTime.get(trap.symbol) || 0;
-      if (Date.now() - lastActive < 1000) {
-        console.log(`   ⏳ Cooldown active for ${trap.symbol}, skipping...`);
-        return;
-      }
-
-      // IDEMPOTENCY CHECK: Prevent duplicate activation (Requirement 7.6)
-      if (trap.activated) {
-        console.warn(`⚠️ Trap already activated: ${trap.symbol}`);
-        return;
-      }
-
-      // COOLDOWN CHECK: Prevent reactivation within 5 minutes (Requirement 7.6)
-      const timeSinceActivation = Date.now() - (trap.activatedAt || 0);
-      if (trap.activatedAt && timeSinceActivation < 300000) {
-        console.warn(
-          `⚠️ Trap cooldown: ${trap.symbol} (${
-            Math.floor(timeSinceActivation / 1000)
-          }s ago)`,
-        );
-        return;
-      }
-
-      // --- MICRO-CVD VALIDATION (2026 Optimization) ---
-      // Detection Layer passes microCVD from the breakout burst.
-      // We must check if the flow supports the breakout.
-      if (
-        microCVD !== undefined && burstVolume !== undefined && burstVolume > 0
-      ) {
-        const isCVDAligned = (trap.direction === "LONG" && microCVD > 0) ||
-          (trap.direction === "SHORT" && microCVD < 0);
-
-        if (!isCVDAligned) {
-          // STRICT VETO: If burst volume opposes direction, it's likely a fakeout/absorption.
-          console.warn(
-            `🛑 MICRO-CVD VETO: Volume flow opposes trap. Direction: ${trap.direction}, CVD: ${
-              microCVD.toFixed(4)
-            }`,
-          );
-          return;
-        }
-
-        // --- SECONDARY CONFIRMATION: DIRECTIONAL QUALITY (2026) ---
-        // Ensure the burst is not just churn.
-        // Require > 30% of volume to be net directional.
-        const directionalRatio = Math.abs(microCVD) / burstVolume;
-        if (directionalRatio < 0.3) {
-          console.warn(
-            `🛑 BURST QUALITY VETO: Low directional conviction. Ratio: ${
-              directionalRatio.toFixed(2)
-            } < 0.3. (CVD: ${microCVD.toFixed(4)} / Vol: ${
-              burstVolume.toFixed(4)
-            })`,
-          );
-          return;
-        }
-
-        console.log(
-          `✅ MICRO-CVD CONFIRMED: ${
-            microCVD.toFixed(4)
-          } aligns with ${trap.direction} (Quality: ${
-            directionalRatio.toFixed(2)
-          })`,
-        );
-      }
-
-      // Mark trap as activated
-      trap.activated = true;
-      trap.activatedAt = Date.now();
-      this.lastActivationTime.set(trap.symbol, Date.now());
-
-      console.log(`🔥 FIRING TRAP: ${trap.symbol} ${trap.trapType}`);
-
-      // --- CVD FILTER CHECK (Macro) ---
-      const cvd = await this.cvdCalculator.calcCVD(trap.symbol, 60); // 1-minute CVD
-      const isCounterFlow = (trap.direction === "LONG" && cvd < 0) ||
-        (trap.direction === "SHORT" && cvd > 0);
-
-      // Note: We previously preferred counter-flow for mean reversion, but for momentum ignition (2026),
-      // alignment is often safer unless specifically catching a wick (Ultimate Bulgaria).
-      // Keeping original logic as warning/info for now.
-      if (!isCounterFlow) {
-        console.warn(
-          `⚠️ MACRO CVD INFO: Trend following detected (CVD: ${cvd}).`,
-        );
-      } else {
-        console.log(`✅ MACRO CVD INFO: Counter-flow detected (CVD: ${cvd})`);
-      }
-
-      // --- ALPHA LOGIC: KNIFE-CATCH PROTECTION (Acceleration) ---
-      const acceleration = this.velocityCalculator.getAcceleration(trap.symbol);
-      if (acceleration > 0) {
-        console.warn(
-          `🛑 KNIFE-CATCH VETO: Price is accelerating (${
-            acceleration.toFixed(4)
-          }). Waiting for deceleration.`,
-        );
-        return; // VETO EXECUTION
-      }
-      console.log(
-        `✅ ACCELERATION CHECK: Safe (Acc: ${acceleration.toFixed(4)})`,
-      );
-
-      // --- ALPHA LOGIC: TREND FILTER (ADX) ---
-      if (trap.adx && trap.adx > 25) {
-        const isFadingTrend =
-          (trap.direction === "LONG" && trap.trend === "DOWN") ||
-          (trap.direction === "SHORT" && trap.trend === "UP");
-
-        if (isFadingTrend) {
-          console.warn(
-            `🛑 TREND VETO: Strong Trend (ADX: ${
-              trap.adx.toFixed(2)
-            }) is against us. Aborting fade.`,
-          );
-          return; // VETO EXECUTION
-        }
-      }
-
-      // Calculate price velocity
-      const bybitPrice = this.bybitClient
-        ? await this.bybitClient.getCurrentPrice(trap.symbol)
-        : trap.triggerPrice;
-      const velocity = this.velocityCalculator.calcVelocity(trap.symbol);
-
-      // --- LEAD/LAG CHECK (2026 Requirement) ---
-      const leaderStatus = this.leadLagDetector.getLeader(trap.symbol);
-      console.log(`   🏁 Lead/Lag Status: ${leaderStatus} leads`);
-
-      let maxSlippageBps = 50; // Default 0.5%
-      if (leaderStatus === "BYBIT") {
-        maxSlippageBps = 30; // Tighter if Perps leading (chasing)
-        console.log(`   ⚠️ Perps Leading: Tightening slippage to 30bps`);
-      }
-
-      // --- DYNAMIC VELOCITY THRESHOLDS (2026 Optimization) ---
-      // Use ATR-based metrics if available to scale velocity thresholds
-      // Base thresholds
-      const config = this.config.getConfig();
-      let extremeVelocity = config.extremeVelocityThreshold || 0.005;
-      let moderateVelocity = config.moderateVelocityThreshold || 0.001;
-
-      if (trap.volatilityMetrics?.atr) {
-        // Example dynamic logic:
-        // If ATR is high, expect higher velocity for the same "panic" level.
-        // Scale threshold by relative volatility (ATR % / 5% baseline)
-        // Note: normalized ATR was %/5.
-        // Let's use positionSizeMultiplier inverse? Or just scale raw?
-        // Let's stick to a simpler heuristic: If regime is 'HIGH_VOL', double thresholds.
-        if (trap.volatilityMetrics.regime === "HIGH_VOL") {
-          extremeVelocity *= 1.5;
-          moderateVelocity *= 1.5;
-          console.log(
-            `   🌊 High Volatility Regime: Scaling velocity thresholds x1.5`,
-          );
-        } else if (trap.volatilityMetrics.regime === "LOW_VOL") {
-          extremeVelocity *= 0.8;
-          moderateVelocity *= 0.8;
-          console.log(
-            `   🧊 Low Volatility Regime: Scaling velocity thresholds x0.8`,
-          );
-        }
-      }
-
-      // Determine order type based on velocity
-      let orderType: "MARKET" | "LIMIT";
-      let limitPrice: number | undefined;
-
-      const aggressiveMarkup = config.aggressiveLimitMarkup || 0.002;
-
-      if (velocity > extremeVelocity) {
-        // Extreme Velocity -> Market Order
-        orderType = "MARKET";
-        console.log(
-          `   🚀 Using MARKET order (velocity: ${
-            (velocity * 100).toFixed(2)
-          }% > ${extremeVelocity * 100}%)`,
-        );
-      } else if (velocity > moderateVelocity) {
-        // Moderate Velocity -> Aggressive Limit
-        orderType = "LIMIT";
-        limitPrice = trap.direction === "LONG"
-          ? bybitPrice * (1 + aggressiveMarkup) // Ask + 0.2%
-          : bybitPrice * (1 - aggressiveMarkup); // Bid - 0.2%
-        console.log(
-          `   ⚡ Using AGGRESSIVE LIMIT at ${
-            limitPrice.toFixed(2)
-          } (velocity: ${(velocity * 100).toFixed(2)}%)`,
-        );
-      } else {
-        // Low Velocity -> Limit at best price
-        orderType = "LIMIT";
-        limitPrice = trap.direction === "LONG"
-          ? bybitPrice * 1.0001 // Ask
-          : bybitPrice * 0.9999; // Bid
-        console.log(
-          `   📍 Using LIMIT at ${limitPrice.toFixed(2)} (velocity: ${
-            (velocity * 100).toFixed(2)
-          }%)`,
-        );
-      }
-
-      // Calculate position size using cached equity
-      const positionSize = PositionSizeCalculator.calcPositionSize({
-        equity: this.cachedEquity,
-        confidence: trap.confidence,
-        leverage: trap.leverage,
-        stopLossPercent: config.stopLossPercent || 0.01,
-        targetPercent: config.targetPercent || 0.03,
-        maxPositionSizePercent: config.maxPositionSizePercent || 0.5,
-      });
-
-      console.log(
-        `   💰 Position size: ${positionSize.toFixed(4)} (Equity: $${
-          this.cachedEquity.toFixed(2)
-        })`,
-      );
-
-      // --- ADAPTIVE VOLATILITY SIZING ---
-      // Apply volatility multiplier to position size if available
-      const volMultiplier = trap.volatilityMetrics?.positionSizeMultiplier || 1;
-      const adjustedPositionSize = positionSize * volMultiplier;
-
-      if (volMultiplier !== 1) {
-        console.log(
-          `   📉 Volatility Adjustment: Size scaled by ${
-            volMultiplier.toFixed(2)
-          }x -> ${adjustedPositionSize.toFixed(4)}`,
-        );
-      }
-
-      // Calculate stop loss and target
-      const stopLossPercent = config.stopLossPercent || 0.01;
-      const targetPercent = config.targetPercent || 0.03;
-
-      const stopLoss = trap.stopLoss ||
-        (trap.direction === "LONG"
-          ? bybitPrice * (1 - stopLossPercent) // -1%
-          : bybitPrice * (1 + stopLossPercent)); // +1%
-
-      const target = trap.targetPrice ||
-        (trap.direction === "LONG"
-          ? bybitPrice * (1 + targetPercent) // +3%
-          : bybitPrice * (1 - targetPercent)); // -3%
-
-      // Create Intent Signal
-      const intentSignal: IntentSignal = {
-        signal_id: `scavenger-${trap.symbol}-${Date.now()}`,
-        source: "scavenger",
-        symbol: trap.symbol,
-        direction: trap.direction,
-        entry_zone: {
-          min: limitPrice ? limitPrice * 0.999 : bybitPrice * 0.999,
-          max: limitPrice ? limitPrice * 1.001 : bybitPrice * 1.001,
-        },
-        stop_loss: stopLoss,
-        take_profits: [target],
-        confidence: trap.confidence,
-        leverage: trap.leverage,
-        velocity,
-        trap_type: trap.trapType,
-        max_slippage_bps: maxSlippageBps,
-        timestamp: Date.now(),
-      };
-
-      // --- GHOST MODE CHECK ---
-      const ghostMode = config.ghostMode;
-      if (ghostMode) {
-        console.log(
-          `👻 GHOST MODE ACTIVE: Skipping IPC execution for ${trap.symbol}`,
-        );
-        console.log(
-          `👻 Virtual Trade: ${trap.direction} ${trap.symbol} @ ${
-            limitPrice || bybitPrice
-          } (Size: ${positionSize})`,
-        );
-
-        // Mark as "activated" logic remains to prevent re-firing
-        // We simply return early to simulate execution without risk
-        return;
-      }
-
-      // STEP 1: Send PREPARE via Fast Path IPC
-      signalId = intentSignal.signal_id;
-      const ipcStartTime = Date.now();
-      console.log(
-        `   📤 Sending PREPARE signal via Fast Path IPC (signal_id=${signalId})...`,
-      );
-
-      try {
-        // Check if IPC is connected before attempting to send
-        if (!this.executionClient.isConnected()) {
-          throw new Error("IPC_NOT_CONNECTED");
-        }
-
-        const prepareResult = await this.executionClient.sendPrepare(
-          intentSignal,
-        );
-
-        if (prepareResult.rejected) {
-          throw new Error(`PREPARE_REJECTED: ${prepareResult.reason}`);
-        }
-
-        const prepareLatency = Date.now() - ipcStartTime;
-        console.log(
-          `   ✅ PREPARE acknowledged: prepared=${prepareResult.prepared} (${prepareLatency}ms)`,
-        );
-
-        // STEP 2: Wait 100ms for trap confirmation
-        await this.sleep(100);
-
-        // STEP 3: Check if trap is still valid
-        if (this.isTrapStillValid(trap)) {
-          // Send CONFIRM
-          console.log(`   ✅ Trap still valid, sending CONFIRM...`);
-
-          const confirmStartTime = Date.now();
-          const confirmResult = await this.executionClient.sendConfirm(
-            signalId,
-          );
-
-          if (confirmResult.rejected) {
-            throw new Error(`CONFIRM_REJECTED: ${confirmResult.reason}`);
-          }
-
-          // Reset failure count on success
-          this.failedAttempts.set(trap.symbol, 0);
-
-          const confirmLatency = Date.now() - confirmStartTime;
-          const totalLatency = Date.now() - ipcStartTime;
-
-          console.log(
-            `   ✅ CONFIRM acknowledged: executed=${confirmResult.executed}, fill_price=${confirmResult.fill_price} (${confirmLatency}ms, total: ${totalLatency}ms)`,
-          );
-
-          // Log execution with IPC metrics
-          this.logger.log({
-            timestamp: Date.now(),
-            signal_id: signalId,
-            symbol: trap.symbol,
-            trapType: trap.trapType,
-            direction: trap.direction,
-            entry: confirmResult.fill_price || bybitPrice,
-            stop: stopLoss,
-            target: target,
-            confidence: trap.confidence,
-            leverage: trap.leverage,
-            orderType,
-            velocity,
-            positionSize: adjustedPositionSize,
-            ipc_prepare_latency_ms: prepareLatency,
-            ipc_confirm_latency_ms: confirmLatency,
-            ipc_total_latency_ms: totalLatency,
-          });
-
-          console.log(`✅ Trap execution complete: ${trap.symbol}`);
-
-          // Emit EXECUTION_COMPLETE event
-          this.eventEmitter.emit("EXECUTION_COMPLETE", {
-            signal_id: signalId,
-            symbol: trap.symbol,
-            trapType: trap.trapType,
-            direction: trap.direction,
-            fillPrice: confirmResult.fill_price || bybitPrice,
-            positionSize: adjustedPositionSize,
-            leverage: trap.leverage,
-            stopLoss,
-            target,
-            orderType,
-            ipcLatency: totalLatency,
-          });
-        } else {
-          // Send ABORT
-          console.log(`   ⚠️ Trap invalidated, sending ABORT...`);
-
-          const abortResult = await this.executionClient.sendAbort(signalId);
-
-          console.log(
-            `   ✅ ABORT acknowledged: aborted=${abortResult.aborted}`,
-          );
-
-          // Reset trap activation
-          trap.activated = false;
-          trap.activatedAt = undefined;
-
-          // Emit TRAP_ABORTED event
-          this.eventEmitter.emit("TRAP_ABORTED", {
-            signal_id: signalId,
-            symbol: trap.symbol,
-            trapType: trap.trapType,
-            reason: "trap_invalidated",
-            timestamp: Date.now(),
-          });
-
-          // Increment failures on ABORT
-          this.handleFailure(trap.symbol);
-        }
-      } catch (ipcError) {
-        // Fast Path IPC failed, fall back to HTTP POST
-        const errorMessage = ipcError instanceof Error
-          ? ipcError.message
-          : "Unknown IPC error";
-        console.warn(
-          `⚠️ Fast Path IPC failed (${errorMessage}), falling back to HTTP POST`,
-        );
-
-        // Emit IPC failure event
-        this.eventEmitter.emit("IPC_EXECUTION_FAILED", {
-          signal_id: signalId,
-          symbol: trap.symbol,
-          error: errorMessage,
-          fallback: "HTTP",
-          timestamp: Date.now(),
-        });
-
-        try {
-          await this.fallbackToHTTP(intentSignal);
-
-          console.log(`✅ HTTP POST fallback successful: ${trap.symbol}`);
-
-          // Log execution (HTTP fallback)
-          this.logger.log({
-            timestamp: Date.now(),
-            signal_id: signalId,
-            symbol: trap.symbol,
-            trapType: trap.trapType,
-            direction: trap.direction,
-            entry: bybitPrice,
-            stop: stopLoss,
-            target: target,
-            confidence: trap.confidence,
-            leverage: trap.leverage,
-            orderType,
-            velocity,
-            positionSize,
-            fallback: "HTTP",
-            ipc_error: errorMessage,
-          });
-
-          // Emit EXECUTION_COMPLETE event
-          this.eventEmitter.emit("EXECUTION_COMPLETE", {
-            signal_id: signalId,
-            symbol: trap.symbol,
-            trapType: trap.trapType,
-            direction: trap.direction,
-            fillPrice: bybitPrice,
-            positionSize,
-            leverage: trap.leverage,
-            stopLoss,
-            target,
-            orderType,
-            fallback: "HTTP",
-          });
-        } catch (httpError) {
-          // Both IPC and HTTP failed
-          throw new Error(
-            `Both IPC and HTTP execution failed. IPC: ${errorMessage}, HTTP: ${
-              httpError instanceof Error ? httpError.message : "Unknown error"
-            }`,
-          );
-        }
-      }
-    } catch (error) {
-      console.error(`❌ Trap execution failed: ${trap.symbol}`, error);
-
-      this.handleFailure(trap.symbol);
-
-      // If we have a signal_id, send ABORT
-      if (signalId) {
-        try {
-          await this.executionClient.sendAbort(signalId);
-          console.log(
-            `   ✅ Sent ABORT for failed execution: signal_id=${signalId}`,
-          );
-        } catch (abortError) {
-          console.error(`   ⚠️ Failed to send ABORT:`, abortError);
-        }
-      }
-
-      // Emit ERROR event
-      this.eventEmitter.emit("ERROR", {
-        message: `Trap execution failed: ${trap.symbol}`,
-        error: error instanceof Error ? error.message : String(error),
-        symbol: trap.symbol,
-        trapType: trap.trapType,
-      });
-
-      // Reset trap activation on failure
-      trap.activated = false;
-      trap.activatedAt = undefined;
-    }
-  }
-
-  /**
-   * Get current trap map (for dashboard display)
-   */
-  getTrapMap(): Map<string, Tripwire[]> {
-    return this.trapMap;
-  }
-
-  /**
-   * Memory monitoring loop: Check memory usage every 10 seconds
-   *
-   * Requirement 1.7: Emit RESOURCE_WARNING when memory exceeds 150MB
-   */
   private startMemoryMonitoring(): void {
     this.memoryMonitorInterval = setInterval(() => {
-      const memUsage = process.memoryUsage();
-      const heapUsedMB = memUsage.heapUsed / 1024 / 1024;
-      const heapTotalMB = memUsage.heapTotal / 1024 / 1024;
-      const rssMB = memUsage.rss / 1024 / 1024;
+      const memoryUsage = process.memoryUsage();
+      const heapUsedMB = memoryUsage.heapUsed / 1024 / 1024;
+      const heapTotalMB = memoryUsage.heapTotal / 1024 / 1024;
+      const rssMB = memoryUsage.rss / 1024 / 1024;
 
-      // Log memory stats occasionally
-      if (Math.random() < 0.1) {
-        console.log(
-          `📊 Memory: Heap ${heapUsedMB.toFixed(1)}MB / ${
-            heapTotalMB.toFixed(1)
-          }MB, RSS ${rssMB.toFixed(1)}MB`,
-        );
-      }
-
-      // Emit warning if heap usage exceeds 150MB
       if (heapUsedMB > 150) {
-        console.warn(
+        this.logger.warn(
           `⚠️ RESOURCE_WARNING: Memory usage ${
             heapUsedMB.toFixed(2)
           }MB exceeds 150MB threshold`,
@@ -1312,188 +368,65 @@ export class TitanTrap {
           timestamp: Date.now(),
         });
       }
-    }, 10000); // Check every 10 seconds
+    }, 10000);
   }
 
-  /**
-   * Get cached equity (for dashboard display)
-   */
-  getCachedEquity(): number {
-    return this.cachedEquity;
+  private startStateBroadcast(): void {
+    this.stateBroadcastInterval = setInterval(() => {
+      this.broadcastState();
+    }, 5000);
   }
 
-  /**
-   * Get Fast Path IPC status and metrics
-   * Requirements: 2.5, 5.1 (IPC monitoring and metrics)
-   */
-  getIPCStatus(): {
-    connected: boolean;
-    connectionState: string;
-    metrics: any;
-    status: any;
-  } {
-    return {
-      connected: this.executionClient.isConnected(),
-      connectionState: this.executionClient.getConnectionState(),
-      metrics: this.executionClient.getMetrics(),
-      status: this.executionClient.getStatus(),
+  private async broadcastState(): Promise<void> {
+    const nats = getNatsClient();
+    if (!nats.isConnected()) return;
+
+    const posturePayload = {
+      phase: "scavenger",
+      status: "RUNNING",
+      regime: "MULTI",
+      metrics: {
+        activeTraps: this.stateManager.getTrapMap().size,
+        topSymbols: Array.from(this.stateManager.getTrapMap().keys()).slice(
+          0,
+          5,
+        ),
+        equity: this.executor.getCachedEquity(),
+      },
+      timestamp: Date.now(),
     };
+    nats.publish(`${TitanSubject.EVT_PHASE_POSTURE}.scavenger`, posturePayload);
+
+    const diagnosticsPayload = {
+      phase: "scavenger",
+      health: "HEALTHY",
+      alerts: [],
+      system: {
+        memory: process.memoryUsage(),
+        uptime: process.uptime(),
+      },
+      timestamp: Date.now(),
+    };
+    nats.publish(
+      `${TitanSubject.EVT_PHASE_DIAGNOSTICS}.scavenger`,
+      diagnosticsPayload,
+    );
   }
 
-  /**
-   * Force IPC reconnection (for manual recovery)
-   * Requirements: 2.5 (IPC connection management)
-   */
-  async forceIPCReconnect(): Promise<void> {
-    try {
-      console.log("🔄 Force reconnecting Fast Path IPC...");
-      await this.executionClient.forceReconnect();
-      console.log("✅ Fast Path IPC reconnection successful");
+  private async updateSubscriptions(): Promise<void> {
+    const symbols = this.stateManager.getAllSymbols();
+    if (symbols.length === 0) return;
 
-      this.eventEmitter.emit("IPC_FORCE_RECONNECT_SUCCESS", {
-        timestamp: Date.now(),
-      });
-    } catch (error) {
-      console.error("❌ Fast Path IPC force reconnection failed:", error);
+    this.logger.info(
+      `🔄 Updating Binance subscriptions for ${symbols.length} symbols`,
+    );
+    await this.binanceClient.subscribeAggTrades(symbols);
 
-      this.eventEmitter.emit("IPC_FORCE_RECONNECT_FAILED", {
-        error: error instanceof Error ? error.message : "Unknown error",
-        timestamp: Date.now(),
-      });
-
-      throw error;
-    }
-  }
-
-  /**
-   * Check if trap is still valid after 100ms delay
-   *
-   * Validates:
-   * - Price is still within 0.1% of trigger price
-   * - Volume counter still shows sufficient activity
-   * - Trap hasn't been deactivated
-   *
-   * Requirements: 1.4
-   */
-  private isTrapStillValid(trap: Tripwire): boolean {
-    try {
-      // Check if trap is still activated
-      if (!trap.activated) {
-        console.log(`   ⚠️ Trap validation failed: trap deactivated`);
-        return false;
-      }
-
-      // Get current price from velocity calculator (most recent tick)
-      const currentPrice = this.velocityCalculator.getLastPrice(trap.symbol);
-
-      if (!currentPrice) {
-        console.log(`   ⚠️ Trap validation failed: no current price available`);
-        return false;
-      }
-
-      // Check if price is still within 0.1% of trigger price
-      const priceDistance = Math.abs(currentPrice - trap.triggerPrice) /
-        trap.triggerPrice;
-      const maxPriceDistance = 0.001; // 0.1%
-
-      if (priceDistance > maxPriceDistance) {
-        console.log(
-          `   ⚠️ Trap validation failed: price moved ${
-            (priceDistance * 100).toFixed(3)
-          }% from trigger (max ${(maxPriceDistance * 100).toFixed(1)}%)`,
-        );
-        return false;
-      }
-
-      // Check if volume counter still exists (indicates recent activity)
-      const volumeCounter = this.volumeCounters.get(trap.symbol);
-
-      if (!volumeCounter) {
-        console.log(`   ⚠️ Trap validation failed: no volume activity`);
-        return false;
-      }
-
-      // Check if volume counter is recent (within last 200ms)
-      const timeSinceVolumeStart = Date.now() - volumeCounter.startTime;
-
-      if (timeSinceVolumeStart > 200) {
-        console.log(
-          `   ⚠️ Trap validation failed: volume activity stale (${timeSinceVolumeStart}ms old)`,
-        );
-        return false;
-      }
-
-      console.log(
-        `   ✅ Trap validation passed: price=${
-          currentPrice.toFixed(2)
-        }, distance=${
-          (priceDistance * 100).toFixed(3)
-        }%, volume=${volumeCounter.count} trades`,
-      );
-      return true;
-    } catch (error) {
-      console.error(`   ❌ Trap validation error:`, error);
-      return false;
-    }
-  }
-
-  /**
-   * Fall back to HTTP POST if Fast Path IPC fails
-   */
-  private async fallbackToHTTP(signal: IntentSignal): Promise<void> {
-    try {
-      const executionServiceUrl = process.env.TITAN_EXECUTION_URL ||
-        "http://localhost:8080";
-
-      const response = await fetch(`${executionServiceUrl}/webhook`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Titan-Source": "scavenger",
-        },
-        body: JSON.stringify(signal),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      console.log(`✅ HTTP POST fallback successful: ${signal.symbol}`, result);
-    } catch (error) {
-      console.error(`❌ HTTP POST fallback failed: ${signal.symbol}`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Sleep utility
-   */
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
-  /**
-   * Handle execution failure (Anti-Gaming Blacklist)
-   */
-  private handleFailure(symbol: string): void {
-    const currentFailures = (this.failedAttempts.get(symbol) || 0) + 1;
-    this.failedAttempts.set(symbol, currentFailures);
-
-    console.log(`   ⚠️ Failure Count for ${symbol}: ${currentFailures}/3`);
-
-    if (currentFailures >= 3) {
-      console.warn(
-        `   ⛔ BLACKLISTING ${symbol} for 5 minutes (Too many failures)`,
-      );
-      this.blacklistedUntil.set(symbol, Date.now() + 5 * 60 * 1000); // 5 mins
-      this.failedAttempts.set(symbol, 0); // Reset count
-
-      this.eventEmitter.emit("SYMBOL_BLACKLISTED", {
-        symbol,
-        reason: "too_many_failures",
-        durationMs: 300000,
-        timestamp: Date.now(),
+    for (const symbol of symbols) {
+      this.binanceClient.onTrade(symbol, (trades) => {
+        if (trades.length > 0) {
+          this.onBinanceTick(symbol, trades[trades.length - 1].price, trades);
+        }
       });
     }
   }

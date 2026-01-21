@@ -427,6 +427,38 @@ describe('HMACValidator', () => {
       expect(mockRequest.hmacValidation.valid).toBe(true);
     });
 
+    it('should enforce timestamp header when required', async () => {
+      const tsValidator = new HMACValidator({
+        secret: testSecret,
+        algorithm: 'sha256',
+        headerName: 'x-signature',
+        timestampHeaderName: 'x-timestamp',
+        timestampTolerance: 300,
+        requireTimestamp: true
+      });
+
+      const middleware = createHMACMiddleware(tsValidator);
+      const body = JSON.stringify({ test: 'payload' });
+      const signature = tsValidator.generateSignature(body);
+
+      const request = {
+        url: '/webhook/phase1',
+        headers: {
+          'x-signature': signature
+        },
+        rawBody: body,
+        ip: '127.0.0.1'
+      } as any;
+      const reply = {
+        status: jest.fn().mockReturnThis(),
+        send: jest.fn()
+      } as any;
+
+      await middleware(request, reply);
+
+      expect(reply.status).toHaveBeenCalledWith(401);
+    });
+
     it('should reject invalid HMAC signature', async () => {
       const payload = 'test payload';
       mockRequest.rawBody = payload;

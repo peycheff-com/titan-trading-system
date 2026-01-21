@@ -13,15 +13,13 @@ RUN apk add --no-cache python3 make g++
 
 # Copy root package files for workspace resolution
 COPY package*.json ./
+COPY tsconfig.json ./
 
-# Copy shared workspace package
-COPY services/shared/ ./services/shared/
+# Copy all workspaces for npm workspaces resolution
+COPY services/ ./services/
 
-# Copy titan-brain package files
-COPY services/titan-brain/package*.json ./services/titan-brain/
-
-# Install all dependencies (workspace mode)
-RUN npm ci --workspace=services/titan-brain --workspace=services/shared
+# Install all dependencies (monorepo)
+RUN npm ci
 
 # Build the shared package first
 WORKDIR /app/services/shared
@@ -29,11 +27,15 @@ RUN npm run build
 
 # Copy titan-brain source code and build
 WORKDIR /app/services/titan-brain
-COPY services/titan-brain/tsconfig.json ./
-COPY services/titan-brain/src/ ./src/
-
 # Build TypeScript
 RUN npm run build
+
+# Prune dev dependencies for production image
+WORKDIR /app
+RUN npm prune --omit=dev --workspaces
+
+# Ensure workspace node_modules exist for copy
+RUN mkdir -p /app/services/titan-brain/node_modules /app/services/shared/node_modules
 
 # Stage 2: Production
 FROM node:22-alpine AS production
@@ -59,9 +61,10 @@ COPY --from=builder /app/services/shared/ ./services/shared/
 # Copy titan-brain package files
 COPY services/titan-brain/package*.json ./services/titan-brain/
 
-# Install production dependencies only (workspace mode)
-RUN npm ci --only=production --workspace=services/titan-brain --workspace=services/shared && \
-    npm cache clean --force
+# Copy pruned production dependencies from builder
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/services/titan-brain/node_modules ./services/titan-brain/node_modules
+COPY --from=builder /app/services/shared/node_modules ./services/shared/node_modules
 
 # Copy built application from builder stage
 COPY --from=builder /app/services/titan-brain/dist ./services/titan-brain/dist

@@ -1,0 +1,27 @@
+[
+  {
+    "version": 1,
+    "timestamp": 1768913972993,
+    "configType": "service",
+    "configKey": "titan-brain",
+    "data": {
+      "port": 3100,
+      "logLevel": "info",
+      "database": {
+        "host": "${TITAN_DB_HOST}",
+        "port": "${TITAN_DB_PORT}",
+        "name": "${TITAN_DB_NAME}",
+        "user": "${TITAN_DB_USER}",
+        "password": "${TITAN_DB_PASSWORD}",
+        "ssl": false
+      },
+      "redis": {
+        "url": "redis://localhost:6379/1",
+        "keyPrefix": "titan:brain:"
+      }
+    },
+    "hash": "9401b21352d84e7573ec7724a93d79dafff99cfc65b296bbcd41297814b3dba3",
+    "author": "system",
+    "comment": "Configuration loaded"
+  }
+]

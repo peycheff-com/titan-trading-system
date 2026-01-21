@@ -1,0 +1,100 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "titan.nats.intent.v1.schema.json",
+  "title": "Titan NATS Intent v1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "signal_id",
+    "symbol",
+    "direction",
+    "type",
+    "size",
+    "status"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Optional schema version marker (default: 1.0.0)"
+    },
+    "signal_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "type": "string",
+      "description": "Originating service (scavenger/hunter/sentinel/brain/manual)"
+    },
+    "symbol": {
+      "type": "string",
+      "minLength": 1
+    },
+    "direction": {
+      "type": "integer",
+      "enum": [-1, 0, 1],
+      "description": "1=LONG, -1=SHORT, 0=CLOSE/flatten"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "BUY_SETUP",
+        "SELL_SETUP",
+        "CLOSE_LONG",
+        "CLOSE_SHORT",
+        "CLOSE"
+      ]
+    },
+    "entry_zone": {
+      "type": "array",
+      "items": { "type": "number" },
+      "default": []
+    },
+    "stop_loss": {
+      "type": "number"
+    },
+    "take_profits": {
+      "type": "array",
+      "items": { "type": "number" },
+      "default": []
+    },
+    "size": {
+      "type": "number"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["PENDING", "VALIDATED", "REJECTED", "EXECUTED", "EXPIRED"]
+    },
+    "t_signal": {
+      "type": "integer",
+      "description": "Signal creation timestamp (ms since epoch)"
+    },
+    "timestamp": {
+      "type": "integer",
+      "description": "Legacy alias for t_signal (ms since epoch)"
+    },
+    "t_analysis": { "type": "integer" },
+    "t_decision": { "type": "integer" },
+    "t_ingress": { "type": "integer" },
+    "t_exchange": { "type": "integer" },
+    "max_slippage_bps": { "type": "integer" },
+    "rejection_reason": { "type": "string" },
+    "regime_state": { "type": "integer" },
+    "phase": { "type": "integer" },
+    "exchange": { "type": "string" },
+    "position_mode": { "type": "string" },
+    "metadata": {
+      "type": "object",
+      "description": "Arbitrary metadata including correlation_id"
+    },
+    "confidence": { "type": "number" },
+    "leverage": { "type": "number" },
+    "expected_impact_bps": { "type": "number" },
+    "fill_feasibility": { "type": "number" },
+    "velocity": { "type": "number" },
+    "trap_type": { "type": "string" }
+  },
+  "anyOf": [
+    { "required": ["t_signal"] },
+    { "required": ["timestamp"] }
+  ]
+}

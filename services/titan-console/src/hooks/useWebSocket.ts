@@ -23,6 +23,7 @@ export function useWebSocket({
 }: WebSocketOptions = {}) {
     const [status, setStatus] = useState<ConnectionStatus>("DISCONNECTED");
     const [error, setError] = useState<Error | null>(null);
+    const [lastMessage, setLastMessage] = useState<any>(null);
     const wsRef = useRef<WebSocket | null>(null);
     const reconnectCountRef = useRef(0);
     const reconnectTimerRef = useRef<NodeJS.Timeout>();
@@ -47,6 +48,7 @@ export function useWebSocket({
             ws.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
+                    setLastMessage(data);
                     onMessage?.(data);
                 } catch (e) {
                     console.error("Failed to parse WebSocket message:", e);
@@ -107,5 +109,5 @@ export function useWebSocket({
         }
     }, []);
 
-    return { status, error, sendMessage };
+    return { status, error, sendMessage, lastMessage };
 }

@@ -139,17 +139,22 @@ export async function correlationPlugin(
 /**
  * Utility to create correlation-aware logger
  */
-export function createCorrelationLogger(
-  baseLogger: Logger,
-  request: FastifyRequest,
-): {
+export interface CorrelationLogger {
   debug: (message: string, metadata?: Record<string, any>) => void;
   info: (message: string, metadata?: Record<string, any>) => void;
   warn: (message: string, metadata?: Record<string, any>) => void;
   error: (message: string, error?: Error, metadata?: Record<string, any>) => void;
   startTimer: (operation: string, metadata?: Record<string, any>) => string;
   endTimer: (timerId: string, additionalMetadata?: Record<string, any>) => number | null;
-} {
+}
+
+/**
+ * Utility to create correlation-aware logger
+ */
+export function createCorrelationLogger(
+  baseLogger: Logger,
+  request: FastifyRequest,
+): CorrelationLogger {
   const correlationId = getCorrelationId(request);
 
   return {

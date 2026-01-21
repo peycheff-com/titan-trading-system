@@ -1,6 +1,5 @@
 use std::sync::Arc;
 use dashmap::DashMap;
-use rust_decimal::prelude::ToPrimitive;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]

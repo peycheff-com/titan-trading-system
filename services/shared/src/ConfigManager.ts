@@ -207,6 +207,22 @@ export class ConfigManager extends EventEmitter {
       if (this.brainConfig?.overrides?.[phase]) {
         config = this.mergeConfigs(config, this.brainConfig.overrides[phase] as Partial<PhaseConfig>);
         console.log(colors.blue(`🔄 Applied brain overrides for ${phase}`));
+
+        const overrideValidation = ConfigValidator.validatePhaseConfig(config);
+        if (!overrideValidation.valid) {
+          throw new Error(
+            `Invalid ${phase} configuration after brain overrides: ${overrideValidation.errors.join(', ')}`,
+          );
+        }
+
+        if (overrideValidation.warnings.length > 0) {
+          console.warn(
+            colors.yellow(`⚠️ ${phase} override warnings:`),
+            overrideValidation.warnings,
+          );
+        }
+
+        config = overrideValidation.data || config;
       }
       
       if (result.validation.warnings.length > 0) {
@@ -511,13 +527,22 @@ export class ConfigManager extends EventEmitter {
    */
   private mergeConfigs<T>(base: T, override: Partial<T>): T {
     const merged = { ...base };
-    
+
     for (const [key, value] of Object.entries(override)) {
-      if (value !== undefined) {
-        (merged as any)[key] = value;
+      if (value !== undefined && value !== null) {
+        if (
+          typeof value === 'object' &&
+          !Array.isArray(value) &&
+          typeof (merged as any)[key] === 'object' &&
+          !Array.isArray((merged as any)[key])
+        ) {
+          (merged as any)[key] = this.mergeConfigs((merged as any)[key], value);
+        } else {
+          (merged as any)[key] = value;
+        }
       }
     }
-    
+
     return merged;
   }
   

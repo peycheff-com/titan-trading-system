@@ -20,6 +20,18 @@ export interface BrainDecision {
   allocation: AllocationVector;
   performance: PhasePerformance;
   risk: RiskDecision;
+  context?: {
+    signal: IntentSignal;
+    marketState: {
+      price?: number;
+      volatility?: number;
+      regime: string;
+    };
+    riskState: RiskMetrics;
+    governance: {
+      defcon: string;
+    };
+  };
   timestamp: number;
 }
 
@@ -111,6 +123,8 @@ export interface BrainConfig {
   dashboardCacheTTL: number;
   /** Maximum signals in queue */
   maxQueueSize: number;
+  /** Initial capital for fresh start */
+  initialCapital: number;
 }
 
 /**

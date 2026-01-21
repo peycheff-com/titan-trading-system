@@ -15,6 +15,7 @@ import {
   Target,
   Shield,
   Brain,
+  BrainCircuit,
   Cpu,
   Zap,
   BookOpen,
@@ -23,6 +24,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Settings,
+  Terminal,
+  History,
 } from 'lucide-react';
 
 const navigation = [
@@ -31,6 +34,7 @@ const navigation = [
     items: [
       { name: 'Overview', path: '/', icon: LayoutDashboard },
       { name: 'Live Ops', path: '/live', icon: Radio },
+      { name: 'Trade Control', path: '/trade', icon: Terminal },
     ],
   },
   {
@@ -47,12 +51,14 @@ const navigation = [
       { name: 'Brain', path: '/brain', icon: Brain },
       { name: 'AI Quant', path: '/ai-quant', icon: Cpu },
       { name: 'Execution', path: '/execution', icon: Zap },
+      { name: 'Decision Log', path: '/decision-log', icon: BrainCircuit },
     ],
   },
   {
     group: 'Ops',
     items: [
       { name: 'Journal', path: '/journal', icon: BookOpen },
+      { name: 'Trade History', path: '/history', icon: History },
       { name: 'Alerts', path: '/alerts', icon: Bell },
       { name: 'Infra / DR', path: '/infra', icon: Server },
       { name: 'Settings', path: '/settings', icon: Settings },

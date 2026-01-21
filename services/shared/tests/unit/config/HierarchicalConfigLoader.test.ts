@@ -130,6 +130,54 @@ describe('HierarchicalConfigLoader', () => {
       expect(result.config.emergencyFlattenThreshold).toBe(0.15); // From base config
       expect(result.sources).toHaveLength(2);
     });
+
+    it('should load env config even when base file is missing', async () => {
+      const devConfig = {
+        maxTotalLeverage: 8,
+        maxGlobalDrawdown: 0.05,
+        emergencyFlattenThreshold: 0.1,
+        phaseTransitionRules: {
+          phase1ToPhase2: 3000,
+          phase2ToPhase3: 30000
+        }
+      };
+
+      writeFileSync(
+        join(testConfigDir, 'brain.development.config.json'),
+        JSON.stringify(devConfig, null, 2)
+      );
+
+      const result = await loader.loadBrainConfig();
+
+      expect(result.config.maxTotalLeverage).toBe(8);
+      expect(result.config.maxGlobalDrawdown).toBe(0.05);
+      expect(result.sources).toHaveLength(1);
+      expect(result.sources[0].source).toBe('env-file');
+    });
+
+    it('should re-validate after environment overrides and fail on invalid override', async () => {
+      const baseConfig = {
+        maxTotalLeverage: 50,
+        maxGlobalDrawdown: 0.15,
+        emergencyFlattenThreshold: 0.15,
+        phaseTransitionRules: {
+          phase1ToPhase2: 5000,
+          phase2ToPhase3: 50000
+        },
+        environments: {
+          development: {
+            maxTotalLeverage: -1
+          }
+        }
+      };
+
+      writeFileSync(
+        join(testConfigDir, 'brain.config.json'),
+        JSON.stringify(baseConfig, null, 2)
+      );
+
+      await expect(loader.loadBrainConfig()).rejects.toThrow('Invalid brain configuration');
+    });
     
     it('should validate brain configuration schema', async () => {
       // Create invalid config
@@ -303,6 +351,36 @@ describe('HierarchicalConfigLoader', () => {
       expect(result.validation.valid).toBe(false); // No schema defined
       expect(result.validation.errors[0]).toContain('No schema defined');
     });
+
+    it('should apply environment overrides from base service config', async () => {
+      const serviceConfig = {
+        port: 3100,
+        logLevel: 'info',
+        database: {
+          host: 'localhost',
+          port: 5432,
+          name: 'titan_brain',
+          user: 'titan',
+          password: 'test_password',
+          ssl: false
+        },
+        environments: {
+          development: {
+            port: 3200
+          }
+        }
+      };
+
+      writeFileSync(
+        join(testConfigDir, 'titan-brain.config.json'),
+        JSON.stringify(serviceConfig, null, 2)
+      );
+
+      const result = await loader.loadServiceConfig('titan-brain');
+
+      expect(result.config.port).toBe(3200);
+      expect(result.sources.length).toBe(2);
+    });
   });
   
   describe('Configuration Hierarchy', () => {
@@ -319,9 +397,10 @@ describe('HierarchicalConfigLoader', () => {
   });
   
   describe('Error Handling', () => {
-    it('should throw error for missing required configuration', async () => {
-      // No config file exists
-      await expect(loader.loadBrainConfig()).rejects.toThrow('Failed to load configuration file');
+    it('should use defaults when configuration files are missing', async () => {
+      const result = await loader.loadBrainConfig();
+      expect(result.validation.valid).toBe(true);
+      expect(result.config.maxTotalLeverage).toBeGreaterThan(0);
     });
     
     it('should throw error for invalid JSON', async () => {

@@ -2,7 +2,7 @@
  * Configuration Module Exports
  */
 
-export { defaultConfig, mergeConfig } from "./defaults.js";
+export { defaultConfig, mergeConfig } from './defaults.js';
 
 export {
   ConfigLoader,
@@ -13,10 +13,6 @@ export {
   loadConfigFromFile,
   resetConfigLoader,
   validateConfig,
-} from "./ConfigLoader.js";
+} from './ConfigLoader.js';
 
-export type {
-  ConfigLoaderOptions,
-  ConfigLoaderResult,
-  ValidationResult,
-} from "./ConfigLoader.js";
+export type { ConfigLoaderOptions, ConfigLoaderResult, ValidationResult } from './ConfigLoader.js';

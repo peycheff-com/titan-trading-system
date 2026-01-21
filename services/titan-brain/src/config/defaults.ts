@@ -3,7 +3,7 @@
  * Contains all default values for the system
  */
 
-import { EquityTier, TitanBrainConfig } from "../types/index.js";
+import { EquityTier, TitanBrainConfig } from '../types/index.js';
 
 export const defaultConfig: TitanBrainConfig = {
   brain: {
@@ -11,6 +11,7 @@ export const defaultConfig: TitanBrainConfig = {
     metricUpdateInterval: 60000, // 1 minute
     dashboardCacheTTL: 5000, // 5 seconds
     maxQueueSize: 100,
+    initialCapital: 1000,
   },
 
   allocationEngine: {
@@ -43,12 +44,19 @@ export const defaultConfig: TitanBrainConfig = {
     betaUpdateInterval: 300000, // 5 minutes
     correlationUpdateInterval: 300000, // 5 minutes
     minStopDistanceMultiplier: 2.0, // 2x ATR default
+    minConfidenceScore: 0.7,
+    confidence: {
+      decayRate: 0.1,
+      recoveryRate: 0.01,
+      threshold: 0.5,
+    },
+    fractal: {},
   },
 
   capitalFlow: {
     sweepThreshold: 1.2, // 20% excess triggers sweep
     reserveLimit: 200, // $200 minimum
-    sweepSchedule: "0 0 * * *", // Daily at midnight UTC
+    sweepSchedule: '0 0 * * *', // Daily at midnight UTC
     maxRetries: 3,
     retryBaseDelay: 1000, // 1 second
   },
@@ -62,25 +70,25 @@ export const defaultConfig: TitanBrainConfig = {
   },
 
   database: {
-    host: "localhost",
+    host: 'localhost',
     port: 5432,
-    database: "titan_brain",
-    user: "postgres",
-    password: "postgres",
+    database: 'titan_brain',
+    user: 'postgres',
+    password: 'postgres',
     maxConnections: 20,
     idleTimeout: 30000,
   },
 
   redis: {
-    url: "redis://localhost:6379",
+    url: 'redis://localhost:6379',
     maxRetries: 3,
     retryDelay: 1000,
   },
 
   server: {
-    host: "0.0.0.0",
+    host: '0.0.0.0',
     port: 3100,
-    corsOrigins: ["http://localhost:3000"],
+    corsOrigins: ['http://localhost:3000'],
   },
 
   notifications: {
@@ -103,14 +111,17 @@ export const defaultConfig: TitanBrainConfig = {
   services: {
     executionUrl: undefined,
   },
+
+  reconciliation: {
+    intervalMs: 60000,
+    exchanges: ['BYBIT'],
+  },
 };
 
 /**
  * Merge configurations with defaults
  */
-export function mergeConfig(
-  partial: Partial<TitanBrainConfig>,
-): TitanBrainConfig {
+export function mergeConfig(partial: Partial<TitanBrainConfig>): TitanBrainConfig {
   return {
     brain: { ...defaultConfig.brain, ...partial.brain },
     allocationEngine: {
@@ -139,5 +150,9 @@ export function mergeConfig(
       ...partial.activeInference,
     },
     services: { ...defaultConfig.services, ...partial.services },
+    reconciliation: {
+      ...defaultConfig.reconciliation,
+      ...partial.reconciliation,
+    },
   };
 }

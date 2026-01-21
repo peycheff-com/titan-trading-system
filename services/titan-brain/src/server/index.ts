@@ -18,12 +18,7 @@ export {
 export { TitanNotificationHandler } from './NotificationHandler.js';
 
 // Integration services for connecting to Execution Engine and Phase services
-export {
-  ExecutionEngineClient,
-  ExecutionEngineConfig,
-  ExecutionPosition,
-  FillConfirmation,
-} from './ExecutionEngineClient.js';
+export { ExecutionEngineClient } from './ExecutionEngineClient.js';
 export {
   PhaseIntegrationConfig,
   PhaseIntegrationService,

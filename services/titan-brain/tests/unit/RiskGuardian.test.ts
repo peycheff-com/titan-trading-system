@@ -57,6 +57,18 @@ const riskConfig: RiskGuardianConfig = {
   correlationUpdateInterval: 300000, // 5 minutes
   betaUpdateInterval: 300000, // 5 minutes
   minStopDistanceMultiplier: 2.0, // 2x ATR
+  minConfidenceScore: 0,
+  confidence: {
+    decayRate: 0.1,
+    recoveryRate: 0.05,
+    threshold: 0.2,
+  },
+  fractal: {
+    phase1: { maxLeverage: 1000, maxDrawdown: 1, maxAllocation: 1000 },
+    phase2: { maxLeverage: 1000, maxDrawdown: 1, maxAllocation: 1000 },
+    phase3: { maxLeverage: 1000, maxDrawdown: 1, maxAllocation: 1000 },
+    manual: { maxLeverage: 1000, maxDrawdown: 1, maxAllocation: 1000 },
+  },
 };
 
 import {

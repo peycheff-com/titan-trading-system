@@ -8,6 +8,24 @@ export async function up(pool: Pool): Promise<void> {
     try {
         await client.query("BEGIN");
 
+        // Ensure fills table exists (Safety catch for broken 001)
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS fills (
+            fill_id VARCHAR(100) PRIMARY KEY,
+            signal_id VARCHAR(100),
+            symbol VARCHAR(20) NOT NULL,
+            side VARCHAR(10) NOT NULL,
+            price DECIMAL(18, 8) NOT NULL,
+            qty DECIMAL(18, 8) NOT NULL,
+            fee DECIMAL(18, 8),
+            fee_currency VARCHAR(10),
+            t_signal BIGINT,
+            t_exchange BIGINT,
+            t_ingress BIGINT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+
         // Add columns to fills table
         await client.query(
             "ALTER TABLE fills ADD COLUMN IF NOT EXISTS execution_id VARCHAR(100)",
@@ -29,9 +47,19 @@ export async function up(pool: Pool): Promise<void> {
 
         // Add unique constraint to execution_id to prevent duplicates (if supported by data)
         // We make it optional first, but recommended for integrity
-        await client.query(
-            "ALTER TABLE fills ADD CONSTRAINT uq_fills_execution_id UNIQUE (execution_id)",
+        const constraintExists = await client.query(
+            `
+            SELECT 1
+            FROM pg_constraint
+            WHERE conname = 'uq_fills_execution_id'
+              AND conrelid = 'fills'::regclass
+            `,
         );
+        if (!constraintExists.rowCount) {
+            await client.query(
+                "ALTER TABLE fills ADD CONSTRAINT uq_fills_execution_id UNIQUE (execution_id)",
+            );
+        }
 
         await client.query("COMMIT");
     } catch (error) {

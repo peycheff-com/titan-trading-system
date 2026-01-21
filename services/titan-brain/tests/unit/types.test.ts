@@ -97,6 +97,7 @@ describe("Types", () => {
         dailyDrawdown: 0.05,
         consecutiveLosses: 1,
         equityLevel: 1000,
+        tripCount: 0,
       };
 
       expect(status.active).toBe(false);
@@ -113,6 +114,7 @@ describe("Types", () => {
         dailyDrawdown: 0.16,
         consecutiveLosses: 0,
         equityLevel: 170,
+        tripCount: 1,
       };
 
       expect(status.active).toBe(true);

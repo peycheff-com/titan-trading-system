@@ -13,7 +13,7 @@
  * Requirements: 3.1-3.7 (Detection Layer)
  */
 
-import WebSocket from "ws";
+import WebSocket from 'ws';
 
 /**
  * Trade data structure from Binance AggTrades stream
@@ -56,8 +56,8 @@ export class BinanceSpotClient {
    * @param restUrl - Optional custom REST API URL (for testing)
    */
   constructor(
-    wsUrl: string = "wss://stream.binance.com:9443/ws",
-    restUrl: string = "https://api.binance.com",
+    wsUrl: string = 'wss://stream.binance.com:9443/ws',
+    restUrl: string = 'https://api.binance.com',
   ) {
     this.WS_URL = wsUrl;
     this.REST_URL = restUrl;
@@ -88,7 +88,7 @@ export class BinanceSpotClient {
     // Connect to Binance Spot WebSocket
     this.ws = new WebSocket(this.WS_URL);
 
-    this.ws.on("open", () => {
+    this.ws.on('open', () => {
       console.log(`✅ Binance WebSocket connected`);
       this.reconnectAttempts = 0; // Reset on successful connection
       this.reconnectDelay = 1000; // Reset delay on successful connection
@@ -103,7 +103,7 @@ export class BinanceSpotClient {
 
       // Subscribe to aggregate trades for all symbols
       const subscribeMsg = {
-        method: "SUBSCRIBE",
+        method: 'SUBSCRIBE',
         params: symbols.map((s) => `${s.toLowerCase()}@aggTrade`),
         id: 1,
       };
@@ -112,12 +112,12 @@ export class BinanceSpotClient {
       console.log(`✅ Subscribed to Binance Spot: ${symbols.length} symbols`);
     });
 
-    this.ws.on("message", (data: Buffer) => {
+    this.ws.on('message', (data: Buffer) => {
       try {
         const msg = JSON.parse(data.toString());
 
         // Handle aggregate trade events
-        if (msg.e === "aggTrade") {
+        if (msg.e === 'aggTrade') {
           const trade: Trade = {
             symbol: msg.s,
             price: parseFloat(msg.p),
@@ -133,21 +133,21 @@ export class BinanceSpotClient {
           }
         }
       } catch (error) {
-        console.error("❌ Error parsing Binance message:", error);
+        console.error('❌ Error parsing Binance message:', error);
       }
     });
 
-    this.ws.on("pong", () => {
+    this.ws.on('pong', () => {
       // Connection is alive
-      console.log("🏓 Binance pong received");
+      console.log('🏓 Binance pong received');
     });
 
-    this.ws.on("error", (error) => {
-      console.error("❌ Binance WebSocket error:", error);
+    this.ws.on('error', (error) => {
+      console.error('❌ Binance WebSocket error:', error);
     });
 
-    this.ws.on("close", () => {
-      console.info("ℹ️ Binance WebSocket closed (auto-reconnecting...)");
+    this.ws.on('close', () => {
+      console.info('ℹ️ Binance WebSocket closed (auto-reconnecting...)');
 
       // Clear ping interval
       if (this.pingInterval) {
@@ -156,10 +156,7 @@ export class BinanceSpotClient {
       }
 
       // Attempt reconnection if not already reconnecting
-      if (
-        !this.isReconnecting &&
-        this.reconnectAttempts < this.maxReconnectAttempts
-      ) {
+      if (!this.isReconnecting && this.reconnectAttempts < this.maxReconnectAttempts) {
         this.isReconnecting = true;
         this.reconnectAttempts++;
 
@@ -220,15 +217,13 @@ export class BinanceSpotClient {
    */
   async getSpotPrice(symbol: string): Promise<number> {
     try {
-      const response = await fetch(
-        `${this.REST_URL}/api/v3/ticker/price?symbol=${symbol}`,
-      );
+      const response = await fetch(`${this.REST_URL}/api/v3/ticker/price?symbol=${symbol}`);
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const data = await response.json() as { price: string };
+      const data = (await response.json()) as { price: string };
       return parseFloat(data.price);
     } catch (error) {
       console.error(`❌ Failed to get spot price for ${symbol}:`, error);

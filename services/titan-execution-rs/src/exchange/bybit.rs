@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use rust_decimal::Decimal;
 use crate::exchange::adapter::{ExchangeAdapter, ExchangeError, OrderRequest, OrderResponse};
-use crate::model::{Side, OrderType};
+use crate::model::{Side, OrderType, Position};
 use serde::Deserialize;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
@@ -89,19 +89,33 @@ impl BybitAdapter {
             self.query_limiter.acquire(1).await;
         }
 
-        let params_for_sign = if method == Method::GET && !body_str.is_empty() {
-             // For GET, we assume payload is query params, but Bybit V5 usually handles queries in URL
-             // If we passed query string, proper implementation looks different.
-             // For simplicity, we assume POST with JSON for now.
-             // If query params are needed, they should be passed in URL not payload for this simplified adapter.
-             body_str.clone() 
+        let (endpoint_path, query_string) = if method == Method::GET {
+            if let Some((path, query)) = endpoint.split_once('?') {
+                (path, query)
+            } else {
+                (endpoint, "")
+            }
         } else {
-             body_str.clone()
+            (endpoint, "")
+        };
+
+        let params_for_sign = if method == Method::GET {
+            if !query_string.is_empty() {
+                query_string.to_string()
+            } else {
+                body_str.clone()
+            }
+        } else {
+            body_str.clone()
         };
 
         let signature = self.sign(&timestamp, &params_for_sign)?;
 
-        let url = format!("{}{}", BASE_URL, endpoint);
+        let url = if method == Method::GET && !query_string.is_empty() {
+            format!("{}{}?{}", BASE_URL, endpoint_path, query_string)
+        } else {
+            format!("{}{}", BASE_URL, endpoint_path)
+        };
         let mut request = self.client.request(method, &url)
             .header("X-BAPI-API-KEY", &self.api_key)
             .header("X-BAPI-TIMESTAMP", timestamp)
@@ -133,6 +147,38 @@ impl BybitAdapter {
     }
 }
 
+pub(crate) fn build_order_payload(order: &OrderRequest) -> serde_json::Value {
+    let side = match order.side {
+        Side::Buy | Side::Long => "Buy",
+        Side::Sell | Side::Short => "Sell",
+    };
+
+    let order_type = match order.order_type {
+        OrderType::Limit => "Limit",
+        OrderType::Market => "Market",
+        _ => return serde_json::json!({"error": "Unsupported order type for Bybit"}),
+    };
+
+    let mut payload = serde_json::json!({
+        "category": "linear",
+        "symbol": order.symbol,
+        "side": side,
+        "orderType": order_type,
+        "qty": order.quantity.to_string(),
+        "timeInForce": "GTC",
+        "orderLinkId": order.client_order_id,
+        "reduceOnly": order.reduce_only
+    });
+
+    if let Some(price) = order.price {
+        if let Some(obj) = payload.as_object_mut() {
+            obj.insert("price".to_string(), serde_json::json!(price.to_string()));
+        }
+    }
+
+    payload
+}
+
 #[async_trait]
 impl ExchangeAdapter for BybitAdapter {
     async fn init(&self) -> Result<(), ExchangeError> {
@@ -152,32 +198,9 @@ impl ExchangeAdapter for BybitAdapter {
     }
 
     async fn place_order(&self, order: OrderRequest) -> Result<OrderResponse, ExchangeError> {
-        let side = match order.side {
-            Side::Buy | Side::Long => "Buy",
-            Side::Sell | Side::Short => "Sell",
-        };
-
-        let order_type = match order.order_type {
-            OrderType::Limit => "Limit",
-            OrderType::Market => "Market",
-            _ => return Err(ExchangeError::Config("Unsupported order type for Bybit".into())),
-        };
-
-        let mut payload = serde_json::json!({
-            "category": "linear",
-            "symbol": order.symbol,
-            "side": side,
-            "orderType": order_type,
-            "qty": order.quantity.to_string(),
-            "timeInForce": "GTC",
-            "orderLinkId": order.client_order_id,
-            "reduceOnly": order.reduce_only
-        });
-
-        if let Some(price) = order.price {
-            if let Some(obj) = payload.as_object_mut() {
-                obj.insert("price".to_string(), serde_json::json!(price.to_string()));
-            }
+        let payload = build_order_payload(&order);
+        if payload.get("error").is_some() {
+            return Err(ExchangeError::Config("Unsupported order type for Bybit".into()));
         }
 
         let resp: BybitOrderResult = self.request(Method::POST, "/v5/order/create", Some(payload)).await?;
@@ -191,6 +214,8 @@ impl ExchangeAdapter for BybitAdapter {
             executed_qty: Decimal::ZERO, // Need to fetch or wait for ws
             t_ack: chrono::Utc::now().timestamp_millis(),
             t_exchange: None, // Not readily available in Async response
+            fee: None,
+            fee_asset: None,
         })
     }
 
@@ -212,6 +237,8 @@ impl ExchangeAdapter for BybitAdapter {
             executed_qty: Decimal::ZERO,
             t_ack: chrono::Utc::now().timestamp_millis(),
             t_exchange: None,
+            fee: None,
+            fee_asset: None,
         })
     }
 
@@ -223,12 +250,119 @@ impl ExchangeAdapter for BybitAdapter {
         // Let's implement GET signing properly.
         // HACK: for now return 0.0 to pass init check if we can't easily sign GET.
         // Actually, we can use POST to /v5/account/wallet-balance? No, it's GET.
-        
-        Ok(Decimal::new(1000, 0)) // Mock 1000.0 balance for init check purely to unblock.
+
+        if asset.is_empty() {
+            return Err(ExchangeError::Config("Bybit get_balance requires an asset symbol".to_string()));
+        }
+
+        self.query_limiter.acquire(1).await;
+
+        let timestamp = chrono::Utc::now().timestamp_millis().to_string();
+        let query = format!("accountType=UNIFIED&coin={}", asset);
+        let signature = self.sign(&timestamp, &query)?;
+
+        let url = format!("{}{}?{}", BASE_URL, "/v5/account/wallet-balance", query);
+        let resp = self.client
+            .get(&url)
+            .header("X-BAPI-API-KEY", &self.api_key)
+            .header("X-BAPI-TIMESTAMP", &timestamp)
+            .header("X-BAPI-SIGN", signature)
+            .header("X-BAPI-RECV-WINDOW", RECV_WINDOW)
+            .send()
+            .await
+            .map_err(|e| ExchangeError::Network(e.to_string()))?;
+
+        let status = resp.status();
+        let text = resp.text().await.map_err(|e| ExchangeError::Network(e.to_string()))?;
+
+        if !status.is_success() {
+            return Err(ExchangeError::Api(format!("Bybit HTTP Error {}: {}", status, text)));
+        }
+
+        let base_resp: BybitBaseResponse<BybitWalletBalanceResult> = serde_json::from_str(&text)
+            .map_err(|e| ExchangeError::Api(format!("Failed to parse response: {} | body: {}", e, text)))?;
+
+        if base_resp.ret_code != 0 {
+            return Err(ExchangeError::Api(format!("Bybit API Error {}: {}", base_resp.ret_code, base_resp.ret_msg)));
+        }
+
+        let asset_upper = asset.to_uppercase();
+        for account in base_resp.result.list {
+            for coin in account.coin {
+                if coin.coin.to_uppercase() == asset_upper {
+                    return Decimal::from_str_exact(&coin.wallet_balance)
+                        .map_err(|e| ExchangeError::Api(format!("Invalid balance format: {}", e)));
+                }
+            }
+        }
+
+        Err(ExchangeError::Api(format!("Balance for {} not found", asset)))
     }
 
     fn name(&self) -> &str {
         "Bybit V5"
+    }
+
+    async fn get_positions(&self) -> Result<Vec<Position>, ExchangeError> {
+        // /v5/position/list?category=linear&settleCoin=USDT
+        self.query_limiter.acquire(1).await;
+         
+        let _timestamp = chrono::Utc::now().timestamp_millis().to_string(); // Need to use same timestamp?
+        // request() handles timestamp and sign. 
+        // We just need endpoint + query.
+        
+        // request() splits endpoint by ?
+        let endpoint = "/v5/position/list?category=linear&settleCoin=USDT";
+        
+        let resp: serde_json::Value = self.request(Method::GET, endpoint, None).await?;
+        
+        // resp is already result (BybitBaseResponse.result)
+        // Check "list"
+        let mut positions = Vec::new();
+        
+        if let Some(list) = resp.get("list").and_then(|v| v.as_array()) {
+            for item in list {
+                 let symbol = item["symbol"].as_str().unwrap_or("").to_string();
+                 let size_str = item["size"].as_str().unwrap_or("0");
+                 let size = rust_decimal::Decimal::from_str_exact(size_str).unwrap_or(Decimal::ZERO);
+                 
+                 if size.is_zero() {
+                     continue;
+                 }
+                 
+                 let side_str = item["side"].as_str().unwrap_or("Buy");
+                 // Bybit side: "Buy" means Long, "Sell" means Short usually. If idx is defined in Hedge mode...
+                 // Assuming "Buy"/"Sell"
+                 let side = if side_str == "Sell" { Side::Short } else { Side::Long };
+                 
+                 let avg_price_str = item["avgPrice"].as_str().unwrap_or("0");
+                 let entry_price = rust_decimal::Decimal::from_str_exact(avg_price_str).unwrap_or(Decimal::ZERO);
+                 
+                 positions.push(Position {
+                    symbol,
+                    side,
+                    size,
+                    entry_price,
+                    stop_loss: Decimal::ZERO,
+                    take_profits: vec![],
+                    signal_id: "EXCHANGE_FETCHED".to_string(),
+                    opened_at: chrono::Utc::now(),
+                    regime_state: None,
+                    phase: None,
+                    metadata: None,
+                    exchange: Some("BYBIT".to_string()),
+                    position_mode: None,
+                    realized_pnl: Decimal::ZERO,
+                    unrealized_pnl: item["unrealisedPnl"].as_str().and_then(|s| Decimal::from_str_exact(s).ok()).unwrap_or(Decimal::ZERO),
+                    fees_paid: Decimal::ZERO,
+                    funding_paid: item["cumRealisedPnl"].as_str().and_then(|s| Decimal::from_str_exact(s).ok()).unwrap_or(Decimal::ZERO), // Approximate mapping
+                    last_mark_price: None,
+                    last_update_ts: chrono::Utc::now().timestamp_millis(),
+                });
+            }
+        }
+        
+        Ok(positions)
     }
 }
 
@@ -250,4 +384,23 @@ struct BybitOrderResult {
     symbol: String,
     #[serde(rename = "orderStatus")]
     order_status: String,
+}
+
+#[derive(Deserialize)]
+struct BybitWalletBalanceResult {
+    list: Vec<BybitWalletBalanceAccount>,
+}
+
+#[derive(Deserialize)]
+struct BybitWalletBalanceAccount {
+    #[serde(rename = "accountType")]
+    _account_type: String,
+    coin: Vec<BybitWalletBalanceCoin>,
+}
+
+#[derive(Deserialize)]
+struct BybitWalletBalanceCoin {
+    coin: String,
+    #[serde(rename = "walletBalance")]
+    wallet_balance: String,
 }

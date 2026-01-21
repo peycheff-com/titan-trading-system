@@ -1,15 +1,29 @@
+use crate::metrics;
 use crate::model::{Intent, IntentStatus, IntentType, Position, Side, TradeRecord};
+use crate::persistence::store::PersistenceStore;
 use chrono::Utc;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::{info, warn};
+use std::sync::Arc;
+use crate::exposure::{ExposureCalculator, ExposureMetrics};
+use tracing::{error, info, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ExecutionEvent {
     Opened(Position),
     Updated(Position),
     Closed(TradeRecord),
+    FundingPaid(String, Decimal, String), // Symbol, Amount, Asset
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OrderChild {
+    pub exchange: String,
+    pub client_order_id: String,
+    pub execution_order_id: String,
+    pub size: Decimal,
+    pub created_at: i64,
 }
 
 // Constants
@@ -20,30 +34,75 @@ pub struct ShadowState {
     pending_intents: HashMap<String, Intent>,
     trade_history: Vec<TradeRecord>,
     max_trade_history: usize,
+    order_children: HashMap<String, Vec<OrderChild>>,
+    persistence: Arc<PersistenceStore>,
 }
 
-impl Default for ShadowState {
-    fn default() -> Self {
-        Self {
+impl ShadowState {
+    pub fn new(persistence: Arc<PersistenceStore>) -> Self {
+        let mut state = Self {
             positions: HashMap::new(),
             pending_intents: HashMap::new(),
             trade_history: Vec::new(),
             max_trade_history: MAX_TRADE_HISTORY,
-        }
+            order_children: HashMap::new(),
+            persistence,
+        };
+        state.hydrate_from_persistence();
+        state
     }
-}
 
-impl ShadowState {
-    pub fn new() -> Self {
-        Self::default()
+    fn hydrate_from_persistence(&mut self) {
+        match self.persistence.load_positions() {
+            Ok(positions) => {
+                for pos in positions {
+                    self.positions.insert(pos.symbol.clone(), pos);
+                }
+                info!("Positions hydrated: {}", self.positions.len());
+            }
+            Err(e) => error!("Failed to hydrate positions: {}", e),
+        }
+
+        match self.persistence.load_intents() {
+            Ok(intents) => {
+                for intent in intents {
+                    self.pending_intents
+                        .insert(intent.signal_id.clone(), intent);
+                }
+                info!("Intents hydrated: {}", self.pending_intents.len());
+            }
+            Err(e) => error!("Failed to hydrate intents: {}", e),
+        }
+
+        match self.persistence.load_trades() {
+            Ok(trades) => {
+                self.trade_history = trades;
+                info!("Trade history hydrated: {}", self.trade_history.len());
+            }
+            Err(e) => error!("Failed to hydrate trade history: {}", e),
+        }
     }
 
     pub fn process_intent(&mut self, mut intent: Intent) -> Intent {
+        // Idempotency Check
+        if let Some(existing) = self.pending_intents.get(&intent.signal_id) {
+            warn!(signal_id = %intent.signal_id, "Duplicate intent received - returning existing state");
+            return existing.clone();
+        }
+        // Also check if it's already executed (in trade history) - simplified check
+        // Ideally we check a dedicated "processed_ids" set or WAL index
+        
         intent.t_ingress = Some(Utc::now().timestamp_millis());
         intent.status = IntentStatus::Pending;
 
         // Clone for storage and return
         let stored_intent = intent.clone();
+
+        // Persist first
+        if let Err(e) = self.persistence.save_intent(&stored_intent) {
+            error!("Failed to persist intent {}: {}", intent.signal_id, e);
+        }
+
         self.pending_intents
             .insert(intent.signal_id.clone(), stored_intent);
 
@@ -60,6 +119,10 @@ impl ShadowState {
     pub fn validate_intent(&mut self, signal_id: &str) -> Option<Intent> {
         if let Some(intent) = self.pending_intents.get_mut(signal_id) {
             intent.status = IntentStatus::Validated;
+            // Update persistence
+            if let Err(e) = self.persistence.save_intent(intent) {
+                error!("Failed to update intent persistence {}: {}", signal_id, e);
+            }
             info!(signal_id = %signal_id, "Intent validated");
             return Some(intent.clone());
         }
@@ -68,9 +131,19 @@ impl ShadowState {
     }
 
     pub fn reject_intent(&mut self, signal_id: &str, reason: String) -> Option<Intent> {
-        if let Some(intent) = self.pending_intents.get_mut(signal_id) {
+        if let Some(mut intent) = self.pending_intents.remove(signal_id) {
             intent.status = IntentStatus::Rejected;
             intent.rejection_reason = Some(reason.clone());
+
+            // Delete from persistence since we are removing from pending?
+            // OR update status to REJECTED?
+            // "remove" from HashMap suggests it's gone from active memory.
+            // But we should probably keep history?
+            // Existing code returns it, but removes from Map.
+            // I will mimic map behavior: Remove from persistence.
+            if let Err(e) = self.persistence.delete_intent(signal_id) {
+                error!("Failed to delete intent persistence {}: {}", signal_id, e);
+            }
 
             warn!(
                 signal_id = %signal_id,
@@ -79,9 +152,31 @@ impl ShadowState {
                 "REJECTED - Intent rejected, position state NOT updated"
             );
 
-            return Some(intent.clone());
+            return Some(intent);
         }
         warn!(signal_id = %signal_id, "Intent not found for rejection");
+        None
+    }
+
+    pub fn expire_intent(&mut self, signal_id: &str, reason: String) -> Option<Intent> {
+        if let Some(mut intent) = self.pending_intents.remove(signal_id) {
+            intent.status = IntentStatus::Expired;
+            intent.rejection_reason = Some(reason.clone());
+
+            if let Err(e) = self.persistence.delete_intent(signal_id) {
+                error!("Failed to delete intent persistence {}: {}", signal_id, e);
+            }
+
+            warn!(
+                signal_id = %signal_id,
+                reason = %reason,
+                symbol = %intent.symbol,
+                "EXPIRED - Intent expired before execution"
+            );
+
+            return Some(intent);
+        }
+        warn!(signal_id = %signal_id, "Intent not found for expiration");
         None
     }
 
@@ -91,7 +186,10 @@ impl ShadowState {
         fill_price: Decimal,
         fill_size: Decimal,
         filled: bool,
-    ) -> Option<ExecutionEvent> {
+        fee: Decimal,
+        fee_asset: String,
+    ) -> Vec<ExecutionEvent> {
+        let mut events = Vec::new();
         // We need to clone the intent ID first to avoid borrow check issues if we removed it,
         // but here we just get a mutable reference.
         // Logic: Get intent -> Check status -> Update -> Logic
@@ -99,22 +197,44 @@ impl ShadowState {
         // Temporarily get intent details needed for logic, to avoid holding mutable borrow on `pending_intents` too long if possible.
         // Actually, we can just use the mutable reference since we are mostly operating on `positions` map which is separate.
 
-        let intent = match self.pending_intents.get_mut(signal_id) {
+        let mut intent = match self.pending_intents.remove(signal_id) {
             Some(i) => i,
             None => {
                 warn!(signal_id = %signal_id, "Intent not found for execution confirmation");
-                return None;
+                return events;
             }
         };
 
         if !filled {
             intent.status = IntentStatus::Rejected;
             intent.rejection_reason = Some("Broker did not fill order".to_string());
+            if let Err(e) = self.persistence.delete_intent(signal_id) {
+                error!("Failed to delete intent persistence {}: {}", signal_id, e);
+            }
             warn!(signal_id = %signal_id, "REJECTED - Broker did not fill order");
-            return None;
+            return events;
+        }
+
+        if fill_size <= Decimal::ZERO || fill_price <= Decimal::ZERO {
+            intent.status = IntentStatus::Rejected;
+            intent.rejection_reason = Some("Invalid fill size/price".to_string());
+            if let Err(e) = self.persistence.delete_intent(signal_id) {
+                error!("Failed to delete intent persistence {}: {}", signal_id, e);
+            }
+            warn!(
+                signal_id = %signal_id,
+                fill_size = %fill_size,
+                fill_price = %fill_price,
+                "REJECTED - Invalid fill size/price"
+            );
+            return events;
         }
 
         intent.status = IntentStatus::Executed;
+        // Clean up intent from persistence as it is now executed and becomes a position/trade
+        if let Err(e) = self.persistence.delete_intent(signal_id) {
+            error!("Failed to delete intent persistence {}: {}", signal_id, e);
+        }
 
         let symbol = intent.symbol.clone();
         let intent_type = intent.intent_type.clone();
@@ -127,13 +247,18 @@ impl ShadowState {
         // Handle close intents
         match intent_type {
             IntentType::CloseLong | IntentType::CloseShort | IntentType::Close => {
-                return self.close_position(
+                if let Some(event) = self.close_position(
                     signal_id,
                     &symbol,
                     fill_price,
                     "MANUAL".to_string(),
                     Some(fill_size),
-                );
+                    fee,
+                    fee_asset,
+                ) {
+                    events.push(event);
+                }
+                return events;
             }
             _ => {}
         }
@@ -145,28 +270,117 @@ impl ShadowState {
         };
 
         // Check for existing position
-        if let Some(existing_position) = self.positions.get_mut(&symbol) {
-            // Pyramiding
-            let total_size = existing_position.size + fill_size;
-            // Weighted average price
-            // (old_entry * old_size + new_fill * new_size) / total_size
-            let old_val = existing_position.entry_price * existing_position.size;
-            let new_val = fill_price * fill_size;
-            let avg_price = (old_val + new_val) / total_size;
+        if let Some(existing_position) = self.positions.get(&symbol).cloned() {
+            if existing_position.side == side {
+                if let Some(existing_position) = self.positions.get_mut(&symbol) {
+                    // Pyramiding
+                    let total_size = existing_position.size + fill_size;
+                    // Weighted average price
+                    // (old_entry * old_size + new_fill * new_size) / total_size
+                    let old_val = existing_position.entry_price * existing_position.size;
+                    let new_val = fill_price * fill_size;
+                    let avg_price = (old_val + new_val) / total_size;
 
-            existing_position.size = total_size;
-            existing_position.entry_price = avg_price;
+                    existing_position.size = total_size;
+                    existing_position.entry_price = avg_price;
+                    existing_position.fees_paid += fee; // Accumulate fees
+
+                    if let Err(e) = self.persistence.save_position(existing_position) {
+                        error!("Failed to persist position update {}: {}", symbol, e);
+                    }
+
+                    info!(
+                        signal_id = %signal_id,
+                        symbol = %symbol,
+                        side = ?side,
+                        new_size = %total_size,
+                        avg_price = %avg_price,
+                        "Position increased (pyramid)"
+                    );
+
+                    events.push(ExecutionEvent::Updated(existing_position.clone()));
+                    return events;
+                }
+            }
+
+            // Opposite direction fill: reduce/close, and flip if remainder remains
+            let existing_size = existing_position.size;
+            if fill_size <= existing_size {
+                if let Some(existing_position_mut) = self.positions.get_mut(&symbol) {
+                    existing_position_mut.fees_paid += fee; // Fees paid regardless of reduction
+                }
+                if let Some(event) = self.close_position(
+                    signal_id,
+                    &symbol,
+                    fill_price,
+                    "OPPOSITE_FILL".to_string(),
+                    Some(fill_size),
+                    fee,
+                    fee_asset,
+                ) {
+                    events.push(event);
+                }
+                return events;
+            }
+
+            let remainder = fill_size - existing_size;
+            if let Some(existing_position_mut) = self.positions.get_mut(&symbol) {
+                existing_position_mut.fees_paid += fee; // Fees paid for the closing part
+            }
+            if let Some(event) = self.close_position(
+                signal_id,
+                &symbol,
+                fill_price,
+                "OPPOSITE_FILL".to_string(),
+                Some(existing_size),
+                fee, // Fee for the closed part
+                fee_asset.clone(),
+            ) {
+                events.push(event);
+            }
+
+            let mut position = Position {
+                symbol: symbol.clone(),
+                side: side.clone(),
+                size: remainder,
+                entry_price: fill_price,
+                stop_loss,
+                take_profits,
+                signal_id: signal_id.to_string(),
+                opened_at: Utc::now(),
+                regime_state,
+                phase,
+                metadata: intent.metadata.clone(),
+                exchange: Some("BYBIT".to_string()), // Default for now
+                position_mode: Some("ONE_WAY".to_string()), // Default for now
+                realized_pnl: Decimal::ZERO,
+                unrealized_pnl: Decimal::ZERO,
+                fees_paid: Decimal::ZERO, // This is for the new position, the fee for the closed part was handled above
+                funding_paid: Decimal::ZERO,
+                last_mark_price: None,
+                last_update_ts: Utc::now().timestamp_millis(),
+            };
+            position.fees_paid = fee; // This fee is for the new position part
+            position.funding_paid = Decimal::ZERO;
+
+            if let Err(e) = self.persistence.save_position(&position) {
+                error!("Failed to persist flipped position {}: {}", symbol, e);
+            }
+
+            self.positions.insert(symbol.clone(), position.clone());
 
             info!(
                 signal_id = %signal_id,
                 symbol = %symbol,
                 side = ?side,
-                new_size = %total_size,
-                avg_price = %avg_price,
-                "Position increased (pyramid)"
+                size = %remainder,
+                entry_price = %fill_price,
+                "Position flipped"
             );
 
-            return Some(ExecutionEvent::Updated(existing_position.clone()));
+            events.push(ExecutionEvent::Opened(position));
+            metrics::inc_position_flips();
+            return events;
         }
 
         // New Position
@@ -182,7 +396,19 @@ impl ShadowState {
             regime_state,
             phase,
             metadata: intent.metadata.clone(),
+            exchange: Some("BYBIT".to_string()), // Default for now
+            position_mode: Some("ONE_WAY".to_string()), // Default for now
+            realized_pnl: Decimal::ZERO,
+            unrealized_pnl: Decimal::ZERO,
+            fees_paid: Decimal::ZERO,
+            funding_paid: Decimal::ZERO,
+            last_mark_price: None,
+            last_update_ts: Utc::now().timestamp_millis(),
         };
+
+        if let Err(e) = self.persistence.save_position(&position) {
+            error!("Failed to persist new position {}: {}", symbol, e);
+        }
 
         self.positions.insert(symbol.clone(), position.clone());
 
@@ -195,7 +421,8 @@ impl ShadowState {
             "Position opened"
         );
 
-        Some(ExecutionEvent::Opened(position))
+        events.push(ExecutionEvent::Opened(position));
+        events
     }
 
     fn calculate_pnl(
@@ -235,6 +462,8 @@ impl ShadowState {
         exit_price: Decimal,
         close_reason: String,
         close_size: Option<Decimal>,
+        fee: Decimal,
+        fee_asset: String,
     ) -> Option<ExecutionEvent> {
         // Use if let to avoid getting mutable ref twice or unwrapping
         let position = match self.positions.get_mut(symbol) {
@@ -252,6 +481,10 @@ impl ShadowState {
         }
 
         let actual_close_size = close_size.unwrap_or(position.size);
+        if actual_close_size <= Decimal::ZERO {
+            warn!(signal_id = %signal_id, symbol = %symbol, "Close size is non-positive");
+            return None;
+        }
         // Ensure we don't close more than we have
         let actual_close_size = if actual_close_size > position.size {
             position.size
@@ -281,8 +514,16 @@ impl ShadowState {
             closed_at: Utc::now(),
             close_reason,
             metadata: position.metadata.clone(),
+            fee,
+            fee_asset,
         };
 
+        if let Err(e) = self.persistence.save_trade(&trade_record) {
+            error!(
+                "Failed to persist trade record {}: {}",
+                trade_record.signal_id, e
+            );
+        }
         self.trade_history.push(trade_record.clone());
         if self.trade_history.len() > self.max_trade_history {
             self.trade_history.remove(0); // O(n) but simple for Vec. Deque might be better if frequent.
@@ -291,6 +532,10 @@ impl ShadowState {
         if is_partial_close {
             // Partial Close
             position.size -= actual_close_size;
+
+            if let Err(e) = self.persistence.save_position(position) {
+                error!("Failed to persist partial close {}: {}", symbol, e);
+            }
             info!(
                 signal_id = %signal_id,
                 symbol = %symbol,
@@ -301,6 +546,9 @@ impl ShadowState {
             return Some(ExecutionEvent::Updated(position.clone()));
         } else {
             // Full Close
+            if let Err(e) = self.persistence.delete_position(symbol) {
+                error!("Failed to delete closed position {}: {}", symbol, e);
+            }
             self.positions.remove(symbol);
             info!(
                 signal_id = %signal_id,
@@ -320,11 +568,92 @@ impl ShadowState {
         self.positions.get(symbol)
     }
 
+    pub fn update_valuation(&mut self, ticker: &crate::market_data::types::BookTicker) -> Option<ExecutionEvent> {
+        let symbol = &ticker.symbol;
+        if let Some(position) = self.positions.get_mut(symbol) {
+            let mid_price = (ticker.best_bid + ticker.best_ask) / Decimal::from(2);
+            let pnl = match position.side {
+                Side::Long => (mid_price - position.entry_price) * position.size,
+                Side::Short => (position.entry_price - mid_price) * position.size,
+                _ => Decimal::ZERO,
+            };
+
+            position.unrealized_pnl = pnl;
+            position.last_mark_price = Some(mid_price);
+            position.last_update_ts = ticker.transaction_time;
+            
+            return Some(ExecutionEvent::Updated(position.clone()));
+        }
+        None
+    }
+
+    pub fn apply_funding(&mut self, symbol: &str, amount: Decimal, asset: String) -> Option<ExecutionEvent> {
+        if let Some(position) = self.positions.get_mut(symbol) {
+            position.funding_paid += amount;
+            position.last_update_ts = Utc::now().timestamp_millis();
+            
+            // Persist
+             if let Err(e) = self.persistence.save_position(position) {
+                error!("Failed to persist funding update {}: {}", symbol, e);
+            }
+            
+            return Some(ExecutionEvent::FundingPaid(symbol.to_string(), amount, asset));
+        }
+        None
+    }
+
     pub fn get_all_positions(&self) -> HashMap<String, Position> {
         self.positions.clone()
     }
 
     pub fn get_trade_history(&self) -> &Vec<TradeRecord> {
         &self.trade_history
+    }
+
+    pub fn record_child_order(
+        &mut self,
+        signal_id: &str,
+        exchange: String,
+        client_order_id: String,
+        execution_order_id: String,
+        size: Decimal,
+    ) {
+        let entry = self
+            .order_children
+            .entry(signal_id.to_string())
+            .or_default();
+        entry.push(OrderChild {
+            exchange: exchange.clone(),
+            client_order_id: client_order_id.clone(),
+            execution_order_id: execution_order_id.clone(),
+            size,
+            created_at: Utc::now().timestamp_millis(),
+        });
+
+        // Persist "Order Placed" event to WAL
+        let payload = serde_json::json!({
+            "size": size,
+            "execution_id": execution_order_id,
+            "created_at": Utc::now().timestamp_millis()
+        });
+        
+        if let Err(e) = self.persistence.log_order_placed(
+            signal_id.to_string(), 
+            exchange.clone(), 
+            client_order_id.clone(), 
+            payload
+        ) {
+            error!("Failed to log order placed to WAL {}: {}", signal_id, e);
+        }
+    }
+
+    pub fn get_child_orders(&self, signal_id: &str) -> Option<&Vec<OrderChild>> {
+        self.order_children.get(signal_id)
+    }
+
+
+
+    pub fn calculate_exposure(&self) -> ExposureMetrics {
+        ExposureCalculator::calculate(&self.positions)
     }
 }

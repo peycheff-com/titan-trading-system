@@ -13,5 +13,7 @@ export {
   NotificationHandler,
   PositionClosureHandler,
 } from './CircuitBreaker.js';
-export { ExecutionEngineClient, PhaseNotifier, TitanBrain } from './TitanBrain.js';
+export { PhaseNotifier, TitanBrain } from './TitanBrain.js';
 export { ActiveInferenceEngine } from './ActiveInferenceEngine.js';
+export { TradeGate } from './TradeGate.js';
+export { PositionManager } from './PositionManager.js';

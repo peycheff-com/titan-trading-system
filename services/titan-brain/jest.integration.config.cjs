@@ -12,9 +12,8 @@ const TEST_RESULTS_DIR = 'test-results/integration';
 
 module.exports = {
   // Use modern ts-jest preset
-  preset: 'ts-jest/presets/default-esm',
+  preset: 'ts-jest',
   testEnvironment: 'node',
-  extensionsToTreatAsEsm: ['.ts'],
   
   // Test discovery
   roots: [INTEGRATION_TEST_DIR],
@@ -24,17 +23,19 @@ module.exports = {
   transform: {
     '^.+\\.ts$': ['ts-jest', {
       tsconfig: 'tsconfig.test.json', // Use test-specific tsconfig if available
-      isolatedModules: true, // Faster compilation
-      useESM: true,
+      isolatedModules: true // Faster compilation
     }]
   },
+  transformIgnorePatterns: [
+    'node_modules/(?!(node-fetch|chalk|fastify|@fastify)/)'
+  ],
   
   // Module resolution
   moduleFileExtensions: ['ts', 'js', 'json'],
   
   // Test setup
   setupFilesAfterEnv: [`${INTEGRATION_TEST_DIR}/setup.ts`],
-  setupFiles: [`${INTEGRATION_TEST_DIR}/env.ts`],
+  setupFiles: [`${INTEGRATION_TEST_DIR}/env.js`],
   
   // Timeouts - more reasonable for integration tests
   testTimeout: 30000, // 30 seconds should be sufficient for most integration tests

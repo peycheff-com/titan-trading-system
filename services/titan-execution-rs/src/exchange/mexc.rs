@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use rust_decimal::Decimal;
 use crate::exchange::adapter::{ExchangeAdapter, ExchangeError, OrderRequest, OrderResponse};
-use crate::model::{Side, OrderType};
+use crate::model::{Side, OrderType, Position};
 use serde::Deserialize;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
@@ -20,6 +20,15 @@ pub struct MexcAdapter {
     client: Client,
     api_key: String,
     api_secret: String,
+}
+
+pub(crate) fn mexc_side_code(side: Side, reduce_only: bool) -> i32 {
+    match (reduce_only, side) {
+        (true, Side::Buy | Side::Long) => 2, // Close Short
+        (true, Side::Sell | Side::Short) => 4, // Close Long
+        (false, Side::Buy | Side::Long) => 1, // Open Long
+        (false, Side::Sell | Side::Short) => 3, // Open Short
+    }
 }
 
 impl MexcAdapter {
@@ -120,11 +129,7 @@ impl ExchangeAdapter for MexcAdapter {
     }
 
     async fn place_order(&self, order: OrderRequest) -> Result<OrderResponse, ExchangeError> {
-        let side = match order.side {
-            Side::Buy | Side::Long => 1, // Open Long
-            Side::Sell | Side::Short => 3, // Open Short
-            // MEXC V1: 1: Open Long, 2: Close Short, 3: Open Short, 4: Close Long
-        };
+        let side = mexc_side_code(order.side, order.reduce_only);
         
         let type_code = match order.order_type {
             OrderType::Limit => 1, // Limit
@@ -154,6 +159,8 @@ impl ExchangeAdapter for MexcAdapter {
             executed_qty: Decimal::ZERO,
             t_ack: chrono::Utc::now().timestamp_millis(),
             t_exchange: None,
+            fee: None,
+            fee_asset: None,
         })
     }
 
@@ -175,15 +182,54 @@ impl ExchangeAdapter for MexcAdapter {
             executed_qty: Decimal::ZERO,
             t_ack: chrono::Utc::now().timestamp_millis(),
             t_exchange: None,
+            fee: None,
+            fee_asset: None,
         })
     }
 
-    async fn get_balance(&self, _asset: &str) -> Result<Decimal, ExchangeError> {
-         Ok(Decimal::new(1000, 0)) // Mock for now
+    async fn get_balance(&self, asset: &str) -> Result<Decimal, ExchangeError> {
+        let resp: serde_json::Value =
+            self.request(Method::GET, "/api/v1/private/account/assets", None).await?;
+
+        let mut entries: Vec<&serde_json::Value> = Vec::new();
+        if let Some(array) = resp.as_array() {
+            entries.extend(array.iter());
+        } else if let Some(array) = resp.get("assets").and_then(|v| v.as_array()) {
+            entries.extend(array.iter());
+        }
+
+        let asset_upper = asset.to_uppercase();
+        for entry in entries {
+            let symbol = entry
+                .get("currency")
+                .and_then(|v| v.as_str())
+                .or_else(|| entry.get("asset").and_then(|v| v.as_str()))
+                .unwrap_or("")
+                .to_uppercase();
+
+            if symbol == asset_upper {
+                if let Some(balance) = entry
+                    .get("availableBalance")
+                    .and_then(|v| v.as_str())
+                    .or_else(|| entry.get("available").and_then(|v| v.as_str()))
+                    .or_else(|| entry.get("balance").and_then(|v| v.as_str()))
+                {
+                    return Decimal::from_str_exact(balance)
+                        .map_err(|e| ExchangeError::Api(format!("Invalid balance format: {}", e)));
+                }
+            }
+        }
+
+        Err(ExchangeError::Api(format!("Balance for {} not found", asset)))
     }
 
     fn name(&self) -> &str {
         "MEXC Futures"
+    }
+
+    async fn get_positions(&self) -> Result<Vec<Position>, ExchangeError> {
+        // Stub for now
+        Ok(Vec::new())
     }
 }
 

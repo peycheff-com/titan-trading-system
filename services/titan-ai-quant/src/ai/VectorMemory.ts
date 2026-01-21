@@ -5,7 +5,6 @@ export class VectorMemory {
   private className = "TitanMemory";
 
   constructor() {
-    // @ts-ignore - weaviate-ts-client types can be tricky with default import
     this.client = (weaviate.default || weaviate).client({
       scheme: "http",
       host: process.env.WEAVIATE_HOST || "localhost:8080",

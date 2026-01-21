@@ -88,8 +88,21 @@ export class DatabaseHealthComponent implements HealthComponent {
         };
       }
 
-      const isHealthy = this.databaseManager.isHealthy();
-      const metrics = this.databaseManager.getMetrics();
+      const hasHealthCheck = typeof this.databaseManager.healthCheck === 'function';
+      const hasIsConnected = typeof this.databaseManager.isConnected === 'function';
+      const isHealthy = hasHealthCheck
+        ? await this.databaseManager.healthCheck()
+        : hasIsConnected
+          ? this.databaseManager.isConnected()
+          : false;
+      const metrics =
+        typeof this.databaseManager.getMetrics === 'function'
+          ? this.databaseManager.getMetrics()
+          : null;
+      const poolStats =
+        typeof this.databaseManager.getPoolStats === 'function'
+          ? this.databaseManager.getPoolStats()
+          : null;
 
       if (!isHealthy) {
         return {
@@ -99,8 +112,8 @@ export class DatabaseHealthComponent implements HealthComponent {
           duration: Date.now() - startTime,
           timestamp: Date.now(),
           details: {
-            connectionErrors: metrics.connectionErrors,
-            lastHealthCheck: metrics.lastHealthCheck,
+            ...(metrics ?? {}),
+            ...(poolStats ?? {}),
           },
         };
       }
@@ -112,10 +125,8 @@ export class DatabaseHealthComponent implements HealthComponent {
         duration: Date.now() - startTime,
         timestamp: Date.now(),
         details: {
-          totalConnections: metrics.totalConnections,
-          idleConnections: metrics.idleConnections,
-          successfulQueries: metrics.successfulQueries,
-          failedQueries: metrics.failedQueries,
+          ...(metrics ?? {}),
+          ...(poolStats ?? {}),
         },
       };
     } catch (error) {
@@ -144,18 +155,17 @@ export class ConfigHealthComponent implements HealthComponent {
     const startTime = Date.now();
 
     try {
-      // Check if required configuration is present
-      const requiredFields = ['port', 'nodeEnv'];
-      const missingFields = requiredFields.filter((field) => !this.config[field]);
+      const nodeEnv = this.config?.nodeEnv || process.env.NODE_ENV;
+      const port = this.config?.port;
 
-      if (missingFields.length > 0) {
+      if (!port) {
         return {
           name: this.name,
           status: HealthStatus.UNHEALTHY,
-          message: `Missing required configuration: ${missingFields.join(', ')}`,
+          message: 'Missing required configuration: port',
           duration: Date.now() - startTime,
           timestamp: Date.now(),
-          details: { missingFields },
+          details: { missingFields: ['port'] },
         };
       }
 
@@ -166,8 +176,8 @@ export class ConfigHealthComponent implements HealthComponent {
         duration: Date.now() - startTime,
         timestamp: Date.now(),
         details: {
-          nodeEnv: this.config.nodeEnv,
-          port: this.config.port,
+          nodeEnv: nodeEnv || 'unknown',
+          port,
         },
       };
     } catch (error) {

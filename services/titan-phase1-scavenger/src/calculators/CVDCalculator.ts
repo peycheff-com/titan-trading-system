@@ -18,7 +18,7 @@
  * - Uses exchange timestamps (not Date.now()) to avoid clock drift
  */
 
-import { Trade } from "../types/index.js";
+import { Trade } from '../types/index.js';
 
 interface TradeHistoryPoint {
   qty: number;
@@ -54,7 +54,7 @@ export class CVDCalculator {
     });
 
     // Keep only last MAX_HISTORY_SECONDS
-    const cutoff = trade.time - (this.MAX_HISTORY_SECONDS * 1000);
+    const cutoff = trade.time - this.MAX_HISTORY_SECONDS * 1000;
     this.tradeHistory.set(
       trade.symbol,
       history.filter((t) => t.time > cutoff),
@@ -79,11 +79,7 @@ export class CVDCalculator {
    * // Get CVD from 5-10 minutes ago (for comparison)
    * const previousCVD = await calculator.calcCVD('BTCUSDT', 300, 300);
    */
-  async calcCVD(
-    symbol: string,
-    windowSeconds: number,
-    offsetSeconds: number = 0,
-  ): Promise<number> {
+  async calcCVD(symbol: string, windowSeconds: number, offsetSeconds: number = 0): Promise<number> {
     const history = this.tradeHistory.get(symbol);
 
     if (!history || history.length === 0) {
@@ -97,14 +93,12 @@ export class CVDCalculator {
     // windowEnd is the end of the time window (most recent point)
     // If offset is 0, windowEnd = latestTime (now)
     // If offset is 300, windowEnd = latestTime - 300s (5 minutes ago)
-    const windowEnd = latestTime - (offsetSeconds * 1000);
-    const windowStart = windowEnd - (windowSeconds * 1000);
+    const windowEnd = latestTime - offsetSeconds * 1000;
+    const windowStart = windowEnd - windowSeconds * 1000;
 
     // Filter trades within the time window
     // Use <= for windowEnd to include trades at the exact boundary
-    const tradesInWindow = history.filter(
-      (t) => t.time >= windowStart && t.time <= windowEnd,
-    );
+    const tradesInWindow = history.filter((t) => t.time >= windowStart && t.time <= windowEnd);
 
     if (tradesInWindow.length === 0) {
       return 0;

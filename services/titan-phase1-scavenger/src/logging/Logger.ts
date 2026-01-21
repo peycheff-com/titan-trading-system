@@ -6,13 +6,8 @@
  * Requirements: 11.1-11.7 (Signal Execution Logging)
  */
 
-import {
-  Logger as SharedLogger,
-  LoggerConfig,
-  SharedLogLevel,
-  TradeLogEntry,
-} from "@titan/shared";
-import * as path from "path";
+import { Logger as SharedLogger, LoggerConfig, SharedLogLevel, TradeLogEntry } from '@titan/shared';
+import * as path from 'path';
 
 // Re-export types for compatibility
 export type LogEntry = TradeLogEntry;
@@ -20,15 +15,15 @@ export type LogEntry = TradeLogEntry;
 export class Logger extends SharedLogger {
   constructor(logDir?: string) {
     // Determine configuration based on legacy logDir argument
-    const homeDir = process.env.HOME || process.env.USERPROFILE || ".";
-    const defaultLogDir = path.join(homeDir, ".titan-scanner", "logs");
+    const homeDir = process.env.HOME || process.env.USERPROFILE || '.';
+    const defaultLogDir = path.join(homeDir, '.titan-scanner', 'logs');
     const finalLogDir = logDir || defaultLogDir;
-    const tradeLogPath = path.join(finalLogDir, "trades.jsonl");
+    const tradeLogPath = path.join(finalLogDir, 'trades.jsonl');
 
     // Create a config that enables trade logging with the specified path
     const config: LoggerConfig = {
       level: SharedLogLevel.INFO,
-      component: "scavenger",
+      component: 'scavenger',
       enableConsole: true,
       enableFile: false, // Scavenger focused on trade logs primarily in this class
       enablePerformanceLogging: true,
@@ -39,7 +34,7 @@ export class Logger extends SharedLogger {
     };
 
     super(config);
-    console.log(`📝 Scavenger Logger initialized: ${tradeLogPath}`);
+    this.info(`📝 Scavenger Logger initialized: ${tradeLogPath}`);
   }
 
   /**
@@ -54,27 +49,29 @@ export class Logger extends SharedLogger {
    * Log an error with context
    * Compatibility wrapper for Scavenger's logError
    */
-  logError(error: Error | string, context?: any): void {
+  logError(error: Error | string, context?: unknown): void {
     const errorMsg = error instanceof Error ? error.message : error;
     const errorStack = error instanceof Error ? error.stack : undefined;
+    const safeContext = (context as Record<string, unknown>) || {};
 
     // Log to trade log
+    // Log to trade log
     this.logTradeEntry({
-      type: "error",
-      level: "error",
-      symbol: context?.symbol || "SYSTEM",
+      type: 'error',
+      level: 'error',
+      symbol: (safeContext.symbol as string) || 'SYSTEM',
       error: errorMsg,
       errorStack: errorStack,
-      signal_id: context?.signal_id,
+      signal_id: safeContext.signal_id as string | undefined,
       context,
-    });
+    } as Partial<LogEntry>);
 
     // Also log to structured error log
     this.error(
       errorMsg,
       error instanceof Error ? error : undefined,
-      context?.signal_id,
-      context,
+      safeContext.signal_id as string | undefined,
+      safeContext,
     );
   }
 }

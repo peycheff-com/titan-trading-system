@@ -98,17 +98,26 @@ impl OrderManager {
         Some((spread_bps, imbalance))
     }
 
-    pub fn analyze_fees(&self, expected_profit_pct: Decimal) -> FeeAnalysis {
-        let profit_after_maker = expected_profit_pct - self.config.maker_fee_pct;
-        let profit_after_taker = expected_profit_pct - self.config.taker_fee_pct;
+    pub fn analyze_fees(
+        &self,
+        expected_profit_pct: Decimal,
+        estimated_impact_pct: Decimal,
+    ) -> FeeAnalysis {
+        let profit_after_maker =
+            expected_profit_pct - self.config.maker_fee_pct - estimated_impact_pct;
+        let profit_after_taker =
+            expected_profit_pct - self.config.taker_fee_pct - estimated_impact_pct;
 
         FeeAnalysis {
             maker_fee_pct: self.config.maker_fee_pct,
             taker_fee_pct: self.config.taker_fee_pct,
             expected_profit_pct,
-            profit_after_maker,
-            profit_after_taker,
+            profit_after_maker: expected_profit_pct - self.config.maker_fee_pct,
+            profit_after_taker: expected_profit_pct - self.config.taker_fee_pct,
             taker_profitable: profit_after_taker > self.config.min_profit_margin,
+            estimated_impact_pct,
+            profit_after_impact_maker: profit_after_maker,
+            profit_after_impact_taker: profit_after_taker,
         }
     }
 
@@ -152,8 +161,17 @@ impl OrderManager {
         };
 
         // --- IMPACT ANALYSIS ---
+        // --- IMPACT ANALYSIS ---
         // Simplified notional calculation (size * price). using Limit price if available or best ask
-        let exec_price = params.limit_price.unwrap_or(Decimal::ZERO); // Simplified, ideally gets mid price if market
+        let mut exec_price = params.limit_price.unwrap_or(Decimal::ZERO);
+
+        // If market order (price 0), try to get mid price
+        if exec_price.is_zero() {
+            if let Some(ticker) = self.market_data.get_ticker(&params.symbol) {
+                exec_price = (ticker.best_bid + ticker.best_ask) / Decimal::from(2);
+            }
+        }
+
         let notional = if !exec_price.is_zero() {
             (params.size * exec_price).to_f64().unwrap_or(0.0)
         } else {
@@ -161,12 +179,15 @@ impl OrderManager {
             0.0
         };
 
+        let mut estimated_impact_bps = 0.0;
+
         if notional > 0.0 {
             let impact_est = self.impact_calculator.estimate_impact(
                 &params.symbol,
                 notional,
                 None, // VolState not yet available in Rust
             );
+            estimated_impact_bps = impact_est.impact_bps;
 
             if !impact_est.feasible {
                 decision.reason = format!("REJECTED_IMPACT: {:.1}bps", impact_est.impact_bps);
@@ -249,7 +270,43 @@ impl OrderManager {
             );
             return decision;
         };
-        let fee_analysis = self.analyze_fees(expected_profit);
+
+        let impact_pct = Decimal::from_f64(estimated_impact_bps / 10000.0).unwrap_or(Decimal::ZERO);
+        let fee_analysis = self.analyze_fees(expected_profit, impact_pct);
+
+        // Strict profitability check after impact
+        // If Maker strategy is selected (or forced), check if Maker is profitable
+        if decision.order_type != OrderType::Market {
+            if fee_analysis.profit_after_impact_maker < self.config.min_profit_margin {
+                decision.reason = format!(
+                    "UNPROFITABLE_MAKER: {}% < {}% (Impact: {}bps)",
+                    fee_analysis.profit_after_impact_maker.round_dp(4),
+                    self.config.min_profit_margin,
+                    estimated_impact_bps
+                );
+                // We flag it. The caller (Executor) should handle rejection logic based on reason or specific flag.
+                // For safety, we keep it as Maker PostOnly so we don't pay taker fees on a bad trade.
+                decision.post_only = true;
+                warn!("Profitability Rejection: {}", decision.reason);
+            }
+        } else {
+            // If Taker is selected, check if Taker is profitable
+            if fee_analysis.profit_after_impact_taker < self.config.min_profit_margin {
+                decision.reason = format!(
+                    "UNPROFITABLE_TAKER: {}% < {}% (Impact: {}bps)",
+                    fee_analysis.profit_after_impact_taker.round_dp(4),
+                    self.config.min_profit_margin,
+                    estimated_impact_bps
+                );
+                // Revert to Maker if Taker is too expensive
+                decision.order_type = OrderType::Limit;
+                decision.post_only = true;
+                warn!(
+                    "Profitability Rejection (Taker): Reverting to Maker. {}",
+                    decision.reason
+                );
+            }
+        }
 
         info!(
             signal_id = %params.signal_id,
@@ -258,6 +315,8 @@ impl OrderManager {
             profit_after_maker = %fee_analysis.profit_after_maker,
             profit_after_taker = %fee_analysis.profit_after_taker,
             taker_profitable = fee_analysis.taker_profitable,
+            estimated_impact_bps = estimated_impact_bps,
+            profit_after_impact_maker = %fee_analysis.profit_after_impact_maker,
             "Fee analysis completed"
         );
 
@@ -283,7 +342,7 @@ impl OrderManager {
             };
         }
 
-        let fee_analysis = self.analyze_fees(expected_profit_pct);
+        let fee_analysis = self.analyze_fees(expected_profit_pct, Decimal::ZERO);
 
         if fee_analysis.taker_profitable {
             info!(

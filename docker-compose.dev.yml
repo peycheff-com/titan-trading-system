@@ -1,0 +1,160 @@
+version: '3.8'
+
+services:
+  nats:
+    image: nats:latest
+    container_name: titan-dev-nats
+    command: ["-js", "-m", "8222"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    networks:
+      - titan-dev-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nats-server", "--version"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: titan-dev-postgres
+    environment:
+      POSTGRES_USER: ${TITAN_DB_USER:-titan}
+      POSTGRES_PASSWORD: ${TITAN_DB_PASSWORD:-titan_dev_secret}
+      POSTGRES_DB: ${TITAN_DB_NAME:-titan_brain}
+    ports:
+      - "5432:5432"
+    volumes:
+      - titan-dev-db-data:/var/lib/postgresql/data
+    networks:
+      - titan-dev-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${TITAN_DB_USER:-titan}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: titan-dev-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - titan-dev-redis-data:/data
+    networks:
+      - titan-dev-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  titan-brain:
+    build:
+      context: .
+      dockerfile: services/titan-brain/Dockerfile
+    container_name: titan-dev-brain
+    environment:
+      - NODE_ENV=development
+      - PORT=3100
+      - HOST=0.0.0.0
+      - TITAN_DB_HOST=postgres
+      - TITAN_DB_PORT=5432
+      - TITAN_DB_NAME=${TITAN_DB_NAME:-titan_brain}
+      - TITAN_DB_USER=${TITAN_DB_USER:-titan}
+      - TITAN_DB_PASSWORD=${TITAN_DB_PASSWORD:-titan_dev_secret}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${TITAN_DB_NAME:-titan_brain}
+      - DB_USER=${TITAN_DB_USER:-titan}
+      - DB_PASSWORD=${TITAN_DB_PASSWORD:-titan_dev_secret}
+      - DATABASE_URL=postgresql://${TITAN_DB_USER:-titan}:${TITAN_DB_PASSWORD:-titan_dev_secret}@postgres:5432/${TITAN_DB_NAME:-titan_brain}
+      - REDIS_URL=redis://redis:6379
+      - NATS_URL=nats://nats:4222
+      - HMAC_SECRET=${HMAC_SECRET:-dev_hmac_secret}
+      - LOG_LEVEL=info
+      - SERVICE_NAME=titan-brain
+    ports:
+      - "3100:3100"
+    volumes:
+      - titan-dev-ipc:/tmp
+      - ./config:/app/services/titan-brain/config
+    networks:
+      - titan-dev-network
+    depends_on:
+      nats:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3100/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  titan-execution:
+    build:
+      context: .
+      dockerfile: services/titan-execution-rs/Dockerfile
+    container_name: titan-dev-execution
+    environment:
+      - RUST_LOG=info
+      - PORT=3002
+      - NATS_URL=nats://nats:4222
+      - BINANCE_API_KEY=${BINANCE_API_KEY}
+      - BINANCE_API_SECRET=${BINANCE_API_SECRET}
+    ports:
+      - "3002:3002"
+    volumes:
+      - titan-dev-ipc:/tmp
+    networks:
+      - titan-dev-network
+    depends_on:
+      nats:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  titan-console:
+    build:
+      context: .
+      dockerfile: services/titan-console/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3100}
+    container_name: titan-dev-console
+    ports:
+      - "5173:8080"
+    networks:
+      - titan-dev-network
+    depends_on:
+      - titan-brain
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  titan-dev-network:
+    driver: bridge
+
+volumes:
+  titan-dev-ipc:
+    driver: local
+  titan-dev-db-data:
+    driver: local
+  titan-dev-redis-data:
+    driver: local

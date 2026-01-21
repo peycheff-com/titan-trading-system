@@ -4,16 +4,24 @@
  * Requirements: 1.1, 1.7, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6
  */
 
+jest.mock("../../src/engine/ActiveInferenceEngine.js", () => ({
+  ActiveInferenceEngine: jest.fn().mockImplementation(() => ({
+    getCortisol: jest.fn().mockReturnValue(0),
+    processUpdate: jest.fn(),
+  })),
+}));
+
 import {
   ActiveInferenceEngine,
   AllocationEngine,
   CapitalFlowManager,
   CircuitBreaker,
-  ExecutionEngineClient,
   PerformanceTracker,
   PhaseNotifier,
+  PositionManager,
   RiskGuardian,
   TitanBrain,
+  TradeGate,
 } from "../../src/engine/index.js";
 import {
   ActiveInferenceConfig,
@@ -26,6 +34,7 @@ import {
   PerformanceTrackerConfig,
   PhaseId,
   Position,
+  ExecutionEngineClient,
   RiskGuardianConfig,
 } from "../../src/types/index.js";
 
@@ -75,6 +84,18 @@ const riskConfig: RiskGuardianConfig = {
   betaUpdateInterval: 300000,
   correlationUpdateInterval: 300000,
   minStopDistanceMultiplier: 2.0,
+  minConfidenceScore: 0,
+  confidence: {
+    decayRate: 0.1,
+    recoveryRate: 0.05,
+    threshold: 0.2,
+  },
+  fractal: {
+    phase1: { maxLeverage: 1000, maxDrawdown: 1, maxAllocation: 1000 },
+    phase2: { maxLeverage: 1000, maxDrawdown: 1, maxAllocation: 1000 },
+    phase3: { maxLeverage: 1000, maxDrawdown: 1, maxAllocation: 1000 },
+    manual: { maxLeverage: 1000, maxDrawdown: 1, maxAllocation: 1000 },
+  },
 };
 
 import {
@@ -135,6 +156,14 @@ function createTitanBrain(): TitanBrain {
     activeInferenceConfig,
   );
 
+  const tradeGate = {
+    checkViability: jest.fn().mockReturnValue({ accepted: true, reason: "" }),
+  } as unknown as TradeGate;
+
+  const positionManager = {
+    updatePosition: jest.fn(),
+  } as unknown as PositionManager;
+
   return new TitanBrain(
     brainConfig,
     allocationEngine,
@@ -144,6 +173,8 @@ function createTitanBrain(): TitanBrain {
     circuitBreaker,
     activeInferenceEngine,
     governanceEngine,
+    tradeGate,
+    positionManager,
   );
 }
 
@@ -618,7 +649,7 @@ describe("TitanBrain", () => {
         forwardSignal: jest.fn(),
         closeAllPositions: jest.fn(),
         getPositions: jest.fn().mockResolvedValue([]),
-      };
+      } as unknown as ExecutionEngineClient;
 
       brain.setExecutionEngine(mockEngine);
       // No error means success
@@ -643,7 +674,7 @@ describe("TitanBrain", () => {
         forwardSignal: jest.fn(),
         closeAllPositions: jest.fn(),
         getPositions: jest.fn().mockResolvedValue([]),
-      };
+      } as unknown as ExecutionEngineClient;
       brain.setExecutionEngine(mockEngine);
 
       const signal = createSignal("phase1", 100);

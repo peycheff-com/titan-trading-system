@@ -1,16 +1,21 @@
 pub mod api;
-pub mod exchange;
-pub mod model;
-pub mod order_manager;
-pub mod rate_limiter;
-pub mod shadow_state;
-
-#[cfg(test)]
-mod tests;
-
 pub mod circuit_breaker;
 pub mod config;
+pub mod contracts;
+pub mod engine;
+pub mod exchange;
 pub mod impact_calculator;
+pub mod intent_validation;
 pub mod market_data;
+pub mod exposure;
+pub mod metrics;
+pub mod model;
 pub mod nats_engine;
+pub mod order_manager;
+pub mod persistence;
+pub mod rate_limiter;
+pub mod risk_guard;
+pub mod risk_policy;
+pub mod shadow_state;
 pub mod simulation_engine;
+pub mod tests;

@@ -15,6 +15,7 @@ const PHASE_PRIORITY: Record<PhaseId, number> = {
   phase3: 3,
   phase2: 2,
   phase1: 1,
+  manual: 4,
 };
 
 /**

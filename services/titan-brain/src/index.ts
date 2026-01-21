@@ -1,3 +1,6 @@
+// Initialize OpenTelemetry Tracing (Must be first)
+import "./tracing.js";
+
 /**
  * Titan Brain - Phase 5 Orchestrator (Enhanced)
  *
@@ -9,10 +12,15 @@
 
 // Load environment variables from .env file
 import "dotenv/config";
+// import { loadSecretsFromFiles } from "@titan/shared";
+// loadSecretsFromFiles();
 
+import { getNatsClient, Logger } from "@titan/shared";
 import { StartupManager } from "./startup/StartupManager.js";
+import { FeatureManager } from "./config/FeatureManager.js";
 import { BrainConfig } from "./config/BrainConfig.js";
 import { SharedConfigAdapter as ConfigManager } from "./config/SharedConfigAdapter.js";
+import Redis from "ioredis";
 
 // Local implementation of standard init steps since it's not exported
 function createStandardInitSteps(): any[] {
@@ -50,6 +58,14 @@ function createStandardInitSteps(): any[] {
       execute: async () => {/* Overridden in main */},
     },
     {
+      name: "init-nats",
+      description: "Initialize NATS connection",
+      timeout: 15000,
+      required: true,
+      dependencies: ["load-config"],
+      execute: async () => {/* Overridden in main */},
+    },
+    {
       name: "init-engine",
       description: "Initialize core engine",
       timeout: 60000,
@@ -76,8 +92,10 @@ import {
   CircuitBreaker,
   GovernanceEngine,
   PerformanceTracker,
+  PositionManager,
   RiskGuardian,
   TitanBrain,
+  TradeGate,
 } from "./engine/index.js";
 import {
   DashboardService,
@@ -190,6 +208,14 @@ async function main(): Promise<void> {
       logger.info("📋 Loading configuration with ConfigManager...");
       const brainConfig = await configManager!.loadConfig();
 
+      // Initialize FeatureManager
+      const featureManager = FeatureManager.getInstance(
+        logger as unknown as Logger,
+        brainConfig.redisUrl || "redis://localhost:6379",
+      );
+      await featureManager.start();
+      brainConfig.featureManager = featureManager;
+
       // Also load legacy config for compatibility
       const { config, validation } = loadConfig({
         validate: true,
@@ -244,7 +270,6 @@ async function main(): Promise<void> {
           logger.warn("Redis not available, using in-memory queue", { error });
           signalQueue = new InMemorySignalQueue({
             idempotencyTTL: 3600000,
-            maxQueueSize: 10000,
           });
           await signalQueue.connect();
         }
@@ -252,6 +277,20 @@ async function main(): Promise<void> {
     };
 
     initSteps[3].execute = async () => {
+      // NATS connection (required for system event replay)
+      logger.info("📨 Initializing NATS connection...");
+      const brainConfig = configManager!.getConfig();
+      const nats = getNatsClient();
+      await nats.connect({
+        servers: [
+          brainConfig.natsUrl || process.env.NATS_URL ||
+          "nats://localhost:4222",
+        ],
+      });
+      logger.info("   ✅ NATS connection established");
+    };
+
+    initSteps[4].execute = async () => {
       // Configuration loading and core engine initialization
       const brainConfig = configManager!.getConfig();
       const { config } = loadConfig({ validate: true, throwOnError: true });
@@ -275,12 +314,41 @@ async function main(): Promise<void> {
         allocationEngine,
         governanceEngine,
       );
+
+      // Wire up Hot Risk Configuration
+      if (brainConfig.featureManager) {
+        riskGuardian.setFeatureManager(brainConfig.featureManager);
+        logger.info("   ✅ Hot Risk Configuration enabled");
+      }
+
       logger.info("   ✅ RiskGuardian initialized");
 
       const capitalFlowManager = new CapitalFlowManager(config.capitalFlow);
       logger.info("   ✅ CapitalFlowManager initialized");
 
       const circuitBreaker = new CircuitBreaker(config.circuitBreaker);
+
+      // Wire up persistence for Circuit Breaker
+      if (process.env.REDIS_DISABLED !== "true" && brainConfig.redisUrl) {
+        logger.info("   🔌 Wiring Circuit Breaker persistence to Redis...");
+        try {
+          const persistenceRedis = new (Redis as any)(brainConfig.redisUrl);
+          circuitBreaker.setStateStore({
+            save: async (key: string, value: string) => {
+              await persistenceRedis.set(key, value);
+            },
+            load: async (key: string) => {
+              return await persistenceRedis.get(key);
+            },
+          });
+        } catch (error) {
+          logger.error(
+            "   ❌ Failed to wire Circuit Breaker persistence",
+            error as Error,
+          );
+        }
+      }
+
       logger.info("   ✅ CircuitBreaker initialized");
 
       const activeInferenceEngine = new ActiveInferenceEngine(
@@ -288,12 +356,18 @@ async function main(): Promise<void> {
       );
       logger.info("   ✅ ActiveInferenceEngine initialized");
 
+      const tradeGate = new TradeGate(); // Use defaults
+      logger.info("   ✅ TradeGate initialized");
+
+      const positionManager = new PositionManager();
+      logger.info("   ✅ PositionManager initialized");
+
       // Initialize state recovery service
       const stateRecoveryService = new StateRecoveryService(databaseManager!, {
         performanceWindowDays: config.performanceTracker.windowDays,
         defaultAllocation: { w1: 1.0, w2: 0.0, w3: 0.0, timestamp: Date.now() },
         defaultHighWatermark: 0,
-      });
+      }, getNatsClient());
       logger.info("   ✅ StateRecoveryService initialized");
 
       const manualOverrideService = new ManualOverrideService(
@@ -316,6 +390,27 @@ async function main(): Promise<void> {
       );
       const fillsRepository = new FillsRepository(databaseManager!);
       logger.info("   ✅ FillsRepository initialized");
+
+      // Initialize PowerLawRepository
+      const { PowerLawRepository } = await import(
+        "./db/repositories/PowerLawRepository.js"
+      );
+      const powerLawRepository = new PowerLawRepository(databaseManager!);
+      logger.info("   ✅ PowerLawRepository initialized");
+
+      // Initialize PositionRepository (Snapshotting)
+      const { PositionRepository } = await import(
+        "./db/repositories/PositionRepository.js"
+      );
+      const positionRepository = new PositionRepository(databaseManager!);
+      logger.info("   ✅ PositionRepository initialized");
+
+      // Initialize TruthRepository (Truth Layer)
+      const { TruthRepository } = await import(
+        "./db/repositories/TruthRepository.js"
+      );
+      const truthRepository = new TruthRepository(databaseManager!);
+      logger.info("   ✅ TruthRepository initialized");
 
       // Initialize Ingestion Worker
       const ingestionWorker = new IngestionWorker(
@@ -343,11 +438,18 @@ async function main(): Promise<void> {
         circuitBreaker,
         activeInferenceEngine,
         governanceEngine,
+        tradeGate,
+        positionManager,
         databaseManager!,
         stateRecoveryService,
         manualOverrideService,
         fillsRepository,
+        powerLawRepository,
+        positionRepository,
         ingestionQueue,
+        undefined, // eventStore (reserved)
+        undefined, // reconciliationConfig (reserved)
+        truthRepository,
       );
 
       // Set initial equity from environment or default
@@ -369,7 +471,7 @@ async function main(): Promise<void> {
       logger.info("   ✅ Notification handlers wired");
     };
 
-    initSteps[4].execute = async () => {
+    initSteps[5].execute = async () => {
       // HTTP server startup
       const brainConfig = configManager!.getConfig();
 
@@ -474,8 +576,12 @@ async function main(): Promise<void> {
       webSocketService.listen(wsPort, brainConfig.host);
 
       // Initialize NATS Consumer
+      // Note: NATS connection is already established in init-nats step
       logger.info("📨 Starting NATS Consumer...");
       natsConsumer = new NatsConsumer(brain!, webSocketService);
+      // We can skip calling start() if it just connects, but NatsConsumer.start also subscribes.
+      // We should check if NatsConsumer reuses the singleton connection correctly or if we need to adjust it.
+      // Assuming NatsConsumer uses getNatsClient() internally and handles existing connection gracefully.
       await natsConsumer.start(brainConfig.natsUrl);
       logger.info("   ✅ NATS Consumer started");
 

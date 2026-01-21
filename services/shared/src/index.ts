@@ -5,6 +5,11 @@
  * across different Titan services for centralized management.
  */
 
+import { loadSecretsFromFiles } from "./config/loadSecrets";
+
+// Ensure *_FILE secrets are promoted to env early in service startup.
+loadSecretsFromFiles();
+
 // WebSocket Management
 export {
   type ConnectionStatus,
@@ -64,6 +69,12 @@ export {
   PhaseConfigSchema,
   type ValidationResult,
 } from "./config/ConfigSchema";
+
+// Secrets (Docker secrets / Vault file mounts)
+export {
+  loadSecretsFromFiles,
+  type LoadSecretsOptions,
+} from "./config/loadSecrets";
 
 // Hierarchical Configuration Loading
 export {
@@ -215,6 +226,32 @@ export {
 
 export { ExecutionClient } from "./messaging/ExecutionClient.js";
 
+// Intent schema (NATS contract)
+export {
+  createIntentMessage,
+  // New Envelope Exports
+  type IntentMessage,
+  IntentPayloadSchemaV1,
+  type IntentPayloadV1,
+  IntentSchemaV1,
+  IntentStatusEnum,
+  IntentTypeEnum,
+  validateIntentPayload,
+} from "./schemas/intentSchema.js";
+
+// Canonical Envelopes
+export {
+  createEnvelope,
+  type Envelope,
+  EnvelopeSchema,
+} from "./schemas/envelope.js";
+
+export {
+  type BaseCommand,
+  BaseCommandSchema,
+  type BaseEvent,
+} from "./schemas/base.js";
+
 // IPC (Fast Path Communication)
 export {
   type AbortResponse,
@@ -226,6 +263,7 @@ export {
   type IPCClientConfig,
   type IPCMetrics,
   type PrepareResponse,
+  RegimeState,
   type SignalSource,
 } from "./ipc/index.js";
 
@@ -247,5 +285,12 @@ export {
   TradeLogEntry,
 };
 
+export { RiskState } from "./types/RiskState";
+export * from "./types/budget";
+export * from "./types/Phase";
+
 export const SharedLogLevel = LogLevel;
 export type SharedLogLevel = LogLevel;
+
+// Time Utilities
+export * from "./utils/time/Clock";

@@ -1,106 +1,115 @@
-import { connect, JSONCodec, NatsConnection, StringCodec } from "nats";
-import { EventEmitter } from "events";
+import { getNatsClient, NatsClient as SharedNatsClient } from '@titan/shared';
+import { Logger } from '../logging/Logger.js';
+import { PowerLawMetric } from '../types/index.js';
 
 export interface NatsConfig {
-    servers: string | string[];
-    token?: string;
-    name?: string;
+  servers: string | string[];
+  token?: string;
+  name?: string;
 }
 
-export class NatsClient extends EventEmitter {
-    private nc?: NatsConnection;
-    private jc = JSONCodec();
-    private sc = StringCodec();
+interface Signal {
+  signal_id: string;
+  symbol?: string;
+  exchange?: string;
+  timestamp?: number;
+  t_signal?: number;
+  meta?: unknown;
+  [key: string]: unknown;
+}
 
-    constructor(private config: NatsConfig) {
-        super();
+export class NatsClient {
+  private client: SharedNatsClient;
+  private logger: Logger;
+
+  constructor(private config: NatsConfig) {
+    this.client = getNatsClient();
+    this.logger = new Logger();
+  }
+
+  async connect(): Promise<void> {
+    await this.client.connect({
+      servers: Array.isArray(this.config.servers) ? this.config.servers : [this.config.servers],
+      token: this.config.token,
+      name: this.config.name || 'titan-scavenger',
+    });
+    this.logger.info('✅ Connected to NATS via Shared Client');
+  }
+
+  async publishSignal(signal: Signal): Promise<void> {
+    if (!this.client.isConnected()) {
+      throw new Error('Not connected to NATS');
     }
 
-    async connect(): Promise<void> {
-        try {
-            this.nc = await connect({
-                servers: this.config.servers,
-                token: this.config.token,
-                name: this.config.name || "titan-scavenger",
-                maxReconnectAttempts: -1,
-                waitOnFirstConnect: true,
-            });
-            console.log(`✅ Connected to NATS at ${this.config.servers}`);
+    // Subject: titan.cmd.exec.place.v1.<venue>.<account>.<symbol>
+    const symbolToken = String(signal.symbol || '').replace('/', '_');
+    const venue = (signal.exchange || 'auto').toString().toLowerCase();
+    const account = 'main';
+    const subject = `titan.cmd.exec.place.v1.${venue}.${account}.${symbolToken}`;
 
-            this.monitorConnection();
-        } catch (err) {
-            console.error("Error connecting to NATS:", err);
-            throw err;
-        }
+    // Uses explicit Envelope publishing
+    const tSignal = signal.t_signal ?? signal.timestamp ?? Date.now();
+
+    // Remove flattened metadata fields if they exist to avoid duplication in payload
+    // const { t_signal, timestamp, meta, ...cleanSignal } = signal;
+    const cleanSignal = { ...signal };
+    delete cleanSignal.t_signal;
+    delete cleanSignal.timestamp;
+    delete cleanSignal.meta;
+
+    try {
+      await this.client.publishEnvelope(
+        subject,
+        {
+          ...cleanSignal,
+          t_signal: tSignal,
+          timestamp: tSignal, // Keep for backward compat inside payload if needed
+        },
+        {
+          type: 'titan.cmd.exec.place.v1',
+          version: 1,
+          producer: 'titan-phase1-scavenger',
+          id: signal.signal_id, // Use signal_id as envelope ID for traceability
+          correlation_id: signal.signal_id,
+        },
+      );
+      this.logger.info(`📤 Publishing signal to ${subject} [${signal.signal_id}]`);
+    } catch (err) {
+      this.logger.logError(err as Error, {
+        signalId: signal.signal_id,
+        context: 'publishSignal',
+      });
+      throw err;
     }
+  }
 
-    private async monitorConnection() {
-        if (!this.nc) return;
-        for await (const status of this.nc.status()) {
-            console.log(`NATS Status: ${status.type} - ${status.data}`);
-            if (status.type === "disconnect") {
-                this.emit("disconnect");
-            } else if (status.type === "reconnect") {
-                this.emit("reconnect");
-            }
-        }
-    }
+  async subscribeToPowerLawMetrics(callback: (symbol: string, metrics: PowerLawMetric) => void) {
+    if (!this.client.isConnected()) return;
 
-    async publishSignal(signal: any): Promise<void> {
-        if (!this.nc) throw new Error("Not connected to NATS");
+    // Wildcard subscription
+    // Shared client handles callback execution safely
+    await this.client.subscribe('powerlaw.metrics.>', (data: unknown, subject: string) => {
+      // Dual Read: Check if it's an Envelope or raw data
+      let payload = data;
 
-        // Subject: titan.execution.intent.<source>.<symbol>
-        // Example: titan.execution.intent.scavenger.BTCUSDT
-        const subject =
-            `titan.execution.intent.${signal.source}.${signal.symbol}`;
+      // Simple heuristic for Envelope: has 'payload' and 'type'
+      if (data && typeof data === 'object' && 'payload' in data && 'type' in data) {
+        // It's likely an envelope
+        payload = (data as { payload: unknown }).payload;
+      }
 
-        // Add Scavenger specific metadata if needed
-        const payload = {
-            ...signal,
-            timestamp: Date.now(),
-            meta: {
-                origin: "titan-phase1-scavenger",
-                version: "1.0.0",
-            },
-        };
+      // Subject: powerlaw.metrics.<symbol>
+      const parts = subject.split('.');
+      if (parts.length >= 3) {
+        const symbol = parts[2];
+        callback(symbol, payload as PowerLawMetric);
+      }
+    });
 
-        console.log(`📤 Publishing signal to ${subject}`, payload.signal_id);
-        this.nc.publish(subject, this.jc.encode(payload));
-    }
+    this.logger.info('✅ Subscribed to Power Law metrics (Dual Read Enabled)');
+  }
 
-    async subscribeToPowerLawMetrics(
-        callback: (symbol: string, metrics: any) => void,
-    ) {
-        if (!this.nc) return;
-
-        // Wildcard subscription
-        const sub = this.nc.subscribe("powerlaw.metrics.>");
-
-        // Create async iterator loop
-        (async () => {
-            for await (const m of sub) {
-                try {
-                    const data = this.jc.decode(m.data);
-                    // Subject: powerlaw.metrics.<symbol>
-                    const parts = m.subject.split(".");
-                    if (parts.length >= 3) {
-                        const symbol = parts[2];
-                        callback(symbol, data);
-                    }
-                } catch (err) {
-                    console.error("Error decoding metrics:", err);
-                }
-            }
-        })();
-
-        console.log("✅ Subscribed to Power Law metrics");
-    }
-
-    async close(): Promise<void> {
-        if (this.nc) {
-            await this.nc.drain();
-            await this.nc.close();
-            console.log("NATS connection closed");
-        }
-    }
+  async close(): Promise<void> {
+    await this.client.close();
+  }
 }

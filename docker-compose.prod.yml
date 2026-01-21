@@ -146,6 +146,22 @@ services:
       - titan-network
     restart: unless-stopped
 
+  titan-tempo:
+    image: grafana/tempo:latest
+    container_name: titan-tempo
+    command: ['-config.file=/etc/tempo.yaml']
+    volumes:
+      - ./monitoring/tempo/tempo.yaml:/etc/tempo.yaml
+      - titan-tempo-data:/tmp/tempo
+    ports:
+      - '14268:14268' # jeager ingest
+      - '3200:3200' # tempo
+      - '4317:4317' # otlp grpc
+      - '4318:4318' # otlp http
+    networks:
+      - titan-network
+    restart: unless-stopped
+
   # =============================================================================
   # TITAN BRAIN - Master Orchestrator
   # =============================================================================
@@ -381,4 +397,6 @@ volumes:
   titan-prometheus-data:
     driver: local
   titan-grafana-data:
+    driver: local
+  titan-tempo-data:
     driver: local

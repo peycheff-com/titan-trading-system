@@ -169,6 +169,21 @@ CREATE TABLE IF NOT EXISTS fills (
 
 CREATE INDEX IF NOT EXISTS idx_fills_signal_id ON fills(signal_id);
 
+-- Event Log (Event Sourcing)
+CREATE TABLE IF NOT EXISTS event_log (
+  id UUID PRIMARY KEY,
+  type VARCHAR(50) NOT NULL,
+  aggregate_id VARCHAR(100) NOT NULL,
+  payload JSONB NOT NULL,
+  metadata JSONB NOT NULL,
+  version INTEGER NOT NULL DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_event_log_aggregate_id ON event_log(aggregate_id);
+CREATE INDEX IF NOT EXISTS idx_event_log_type ON event_log(type);
+CREATE INDEX IF NOT EXISTS idx_event_log_created_at ON event_log(created_at DESC);
+
 -- Enable Row Level Security (RLS)
 ALTER TABLE allocation_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE phase_trades ENABLE ROW LEVEL SECURITY;
@@ -182,3 +197,4 @@ ALTER TABLE system_state ENABLE ROW LEVEL SECURITY;
 ALTER TABLE manual_overrides ENABLE ROW LEVEL SECURITY;
 ALTER TABLE operators ENABLE ROW LEVEL SECURITY;
 ALTER TABLE fills ENABLE ROW LEVEL SECURITY;
+ALTER TABLE event_log ENABLE ROW LEVEL SECURITY;

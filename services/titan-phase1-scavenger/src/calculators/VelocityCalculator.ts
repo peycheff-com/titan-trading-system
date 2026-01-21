@@ -72,8 +72,7 @@ export class VelocityCalculator {
     const oldestPrice = recentPrices[0].price;
     const newestPrice = recentPrices[recentPrices.length - 1].price;
     const timeDiffSeconds =
-      (recentPrices[recentPrices.length - 1].timestamp -
-        recentPrices[0].timestamp) / 1000;
+      (recentPrices[recentPrices.length - 1].timestamp - recentPrices[0].timestamp) / 1000;
 
     // Avoid division by zero
     if (timeDiffSeconds === 0) {

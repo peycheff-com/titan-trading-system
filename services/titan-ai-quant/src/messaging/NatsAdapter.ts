@@ -1,5 +1,6 @@
-import { getNatsClient, NatsClient, TitanSubject } from "@titan/shared";
-import { NightlyOptimize } from "../cron/NightlyOptimize.js";
+import { getNatsClient, NatsClient, TitanSubject } from '@titan/shared';
+import { NightlyOptimize } from '../cron/NightlyOptimize.js';
+import crypto from 'crypto';
 
 const logger = console;
 
@@ -18,10 +19,17 @@ export class NatsAdapter {
   async publishRegimeUpdate(snapshot: any): Promise<void> {
     try {
       if (this.nats.isConnected()) {
-        await this.nats.publish(TitanSubject.REGIME_UPDATE, snapshot);
+        const id = crypto.randomUUID();
+
+        await this.nats.publishEnvelope(TitanSubject.EVT_REGIME_UPDATE, snapshot, {
+          type: TitanSubject.EVT_REGIME_UPDATE,
+          version: 1,
+          producer: 'titan-ai-quant',
+          id: id,
+        });
       }
     } catch (error) {
-      logger.error("Failed to publish regime update:", error);
+      logger.error('Failed to publish regime update:', error);
     }
   }
 
@@ -30,17 +38,17 @@ export class NatsAdapter {
    */
   async init(): Promise<void> {
     try {
-      const natsUrl = process.env.NATS_URL || "nats://localhost:4222";
+      const natsUrl = process.env.NATS_URL || 'nats://localhost:4222';
       await this.nats.connect({
         servers: [natsUrl],
-        name: "titan-ai-quant",
+        name: 'titan-ai-quant',
       });
 
       this.subscribeToOptimizationRequests();
 
-      logger.log("✅ NatsAdapter initialized");
+      logger.log('✅ NatsAdapter initialized');
     } catch (error) {
-      logger.error("Failed to initialize NatsAdapter:", error);
+      logger.error('Failed to initialize NatsAdapter:', error);
       throw error;
     }
   }
@@ -49,23 +57,26 @@ export class NatsAdapter {
    * Subscribe to AI optimization requests
    */
   private subscribeToOptimizationRequests(): void {
-    this.nats.subscribe(
-      TitanSubject.AI_OPTIMIZATION_REQUESTS,
-      async (data: any, subject: string) => {
-        logger.log(`Received optimization request on ${subject}`, data);
+    this.nats.subscribe(TitanSubject.CMD_AI_OPTIMIZE, async (data: any, subject: string) => {
+      // Dual Read Strategy
+      let payload = data;
+      if (data && typeof data === 'object' && 'payload' in data && 'type' in data) {
+        payload = data.payload;
+      }
 
-        try {
-          // Trigger optimization
-          // In a real scenario, we might use data to filter scope,
-          // but for now we run the standard nightly cycle
-          await this.optimizer.runNow();
+      logger.log(`Received optimization request on ${subject}`, payload);
 
-          logger.log("✅ Automated optimization completed via NATS trigger");
-        } catch (error) {
-          logger.error("❌ Validated optimization failed:", error);
-        }
-      },
-    );
+      try {
+        // Trigger optimization
+        // In a real scenario, we might use data to filter scope,
+        // but for now we run the standard nightly cycle
+        await this.optimizer.runNow();
+
+        logger.log('✅ Automated optimization completed via NATS trigger');
+      } catch (error) {
+        logger.error('❌ Validated optimization failed:', error);
+      }
+    });
   }
 
   /**
