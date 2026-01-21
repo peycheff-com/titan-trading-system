@@ -3,13 +3,13 @@ use futures::StreamExt;
 use std::sync::Arc;
 use parking_lot::RwLock;
 use serde_json::Value;
-use rust_decimal::Decimal;
-use rust_decimal::prelude::ToPrimitive;
-use chrono::Utc;
 
+
+
+use crate::context::ExecutionContext;
 use crate::shadow_state::{ShadowState, ExecutionEvent};
 use crate::order_manager::OrderManager;
-use crate::model::{Intent, IntentType, FillReport, Side};
+use crate::model::{Intent, IntentType, Side};
 use crate::exchange::adapter::OrderRequest;
 use crate::exchange::router::ExecutionRouter;
 use crate::simulation_engine::SimulationEngine;
@@ -17,6 +17,7 @@ use crate::circuit_breaker::GlobalHalt;
 use crate::intent_validation::validate_intent_payload;
 use crate::metrics;
 use crate::risk_guard::RiskGuard;
+use crate::pipeline::{ExecutionPipeline, PipelineResult};
 
 /// Start the NATS Engine (Consumer Loop and Halt Listener)
 /// Returns a handle to the consumer task
@@ -28,6 +29,7 @@ pub async fn start_nats_engine(
     simulation_engine: Arc<SimulationEngine>,
     global_halt: Arc<GlobalHalt>,
     risk_guard: Arc<RiskGuard>,
+    ctx: Arc<ExecutionContext>,
 ) -> Result<tokio::task::JoinHandle<()>, Box<dyn std::error::Error + Send + Sync>> {
     
     // --- System Halt Listener (Core NATS) ---
@@ -123,6 +125,7 @@ pub async fn start_nats_engine(
     })?;
     let state_for_flatten = shadow_state.clone();
     let router_flatten = router.clone();
+    let ctx_flatten = ctx.clone();
     
     tokio::spawn(async move {
         info!("👂 Listening for risk flatten commands...");
@@ -146,7 +149,7 @@ pub async fn start_nats_engine(
                     quantity: pos.size,
                     price: None,
                     stop_price: None,
-                    client_order_id: format!("flatten-{}", uuid::Uuid::new_v4()),
+                    client_order_id: format!("flatten-{}", ctx_flatten.id.new_id()),
                     reduce_only: true, // Important: Reduce Only to avoid flipping if async race
                 };
                 
@@ -164,7 +167,7 @@ pub async fn start_nats_engine(
                     size: pos.size,
                     status: crate::model::IntentStatus::Validated,
                     source: Some("RiskFlatten".to_string()),
-                    t_signal: Utc::now().timestamp_millis(),
+                    t_signal: ctx_flatten.time.now_millis(),
                     t_analysis: None,
                     t_decision: None,
                     t_ingress: None,
@@ -341,10 +344,7 @@ pub async fn start_nats_engine(
     let client_clone = client.clone();
     let client_shadow = client.clone(); // Clone for shadow publisher
     let state_for_nats = shadow_state.clone();
-    let router_nats = router.clone();
-
-    let sim_engine_nats = simulation_engine.clone();
-    let guard_for_execution = risk_guard.clone();
+    let ctx_nats = ctx.clone();
 
     // Create Durable Consumer on TITAN_CMD
     let consumer_name = "EXECUTION_CORE";
@@ -365,6 +365,16 @@ pub async fn start_nats_engine(
     })?;
     
     info!("🚀 JetStream Consumer '{}' listening on '{}'", consumer_name, intent_subject);
+
+    let pipeline = Arc::new(ExecutionPipeline::new(
+        shadow_state.clone(),
+        order_manager, // OrderManager doesn't seem to be Arc? It is cloned in new(), but here it's moved.
+                       // Wait, OrderManager is struct. new() consumed it.
+        router.clone(),
+        simulation_engine.clone(),
+        risk_guard.clone(),
+        ctx.clone()
+    ));
 
     // Pull messages
     let mut messages = consumer.messages().await.map_err(|e| {
@@ -427,236 +437,83 @@ pub async fn start_nats_engine(
                                     
                                     // ACK at end...
 
-                                    // --- RISK GUARD CHECK ---
-                                    if let Err(reason) = risk_guard.check_pre_trade(&intent) {
-                                         error!(
-                                             correlation_id = %correlation_id, 
-                                             signal_id = %intent.signal_id, 
-                                             "❌ RISK REJECTION: {}", 
-                                             reason
-                                         );
-                                         metrics::inc_risk_rejections();
-                                         publish_dlq(&client_clone, &msg.payload, &format!("Risk Reject: {}", reason)).await;
-                                         
-                                         // We drop the intent here.
-                                         // We MUST ACK so it doesn't redeliver forever.
-                                         if let Err(e) = msg.ack().await {
-                                             error!("Failed to ACK rejected intent: {}", e);
-                                         }
-                                         continue;
-                                    }
+                                    // --- EXECUTION PIPELINE ---
+                                    let result = pipeline.process_intent(intent.clone(), correlation_id.clone()).await;
 
-                                    // Lock state for writing
-                                    let processed_intent = {
-                                        let mut state = state_for_nats.write();
-                                        state.process_intent(intent.clone())
-                                    };
-
-                                    // Enforce Timestamp Freshness (5000ms window)
-                                    let now = Utc::now().timestamp_millis();
-                                    if now - processed_intent.t_signal > 5000 {
-                                        error!("❌ Intent EXPIRED: {} ms latency. Dropping.", now - processed_intent.t_signal);
-                                        metrics::inc_expired_intents();
-                                        {
-                                            let mut state = state_for_nats.write();
-                                            state.expire_intent(
-                                                &processed_intent.signal_id,
-                                                format!("Latency {} ms", now - processed_intent.t_signal),
-                                            );
-                                        }
-                                        publish_dlq(&client_clone, &msg.payload, "Intent expired").await;
-                                        if let Err(e) = msg.ack().await {
-                                             error!("Failed to ACK expired msg: {}", e);
-                                        }
-                                        continue;
-                                    }
-
-                                    // --- SHADOW EXECUTION (Concurrent) ---
-                                    if let Some(shadow_fill) = sim_engine_nats.simulate_execution(&processed_intent) {
-                                        let subject = format!("titan.execution.shadow_fill.{}", processed_intent.symbol);
-                                        if let Ok(payload) = serde_json::to_vec(&shadow_fill) {
-                                            client_shadow.publish(subject, payload.into()).await.ok();
-                                        }
-                                    }
-                                    
-                                    let side = infer_side(&processed_intent);
-
-                                    // Order Manager Decision
-                                    let decision = {
-                                        let order_params = crate::model::OrderParams {
-                                            signal_id: processed_intent.signal_id.clone(),
-                                            symbol: processed_intent.symbol.clone(),
-                                            side: side.clone(),
-                                            size: processed_intent.size,
-                                            limit_price: Some(processed_intent.entry_zone.first().cloned().unwrap_or_default()),
-                                            stop_loss: Some(processed_intent.stop_loss),
-                                            take_profits: Some(processed_intent.take_profits.clone()),
-                                            signal_type: Some(format!("{:?}", processed_intent.intent_type)),
-                                            expected_profit_pct: None,
-                                        };
-                                        order_manager.decide_order_type(&order_params)
-                                    };
-                                    let t_decision = Utc::now().timestamp_millis();
-
-                                    let order_req = OrderRequest {
-                                        symbol: processed_intent.symbol.replace("/", ""), 
-                                        side: side.clone(),
-                                        order_type: decision.order_type.clone(),
-                                        quantity: processed_intent.size,
-                                        price: decision.limit_price,
-                                        stop_price: None,
-                                        client_order_id: format!("{}-{}", processed_intent.signal_id, uuid::Uuid::new_v4()),
-                                        reduce_only: decision.reduce_only,
-                                    };
-                                    
-                                    info!(
-                                        correlation_id = %correlation_id,
-                                        "🚀 Executing Real Order: {:?} {} @ {:?}",
-                                        order_req.side,
-                                        order_req.symbol,
-                                        order_req.price
-                                    );
-
-                                    let results = router_nats.execute(&processed_intent, order_req.clone()).await;
-                                    
-                                    for (exchange_name, request, result) in results {
-                                        match result {
-                                            Ok(response) => {
-                                                info!(
-                                                    correlation_id = %correlation_id,
-                                                    "✅ [{}] Order Placed: ID {}",
-                                                    exchange_name,
-                                                    response.order_id
-                                                );
-                                                
-                                                let fill_price = response.avg_price.unwrap_or(decision.limit_price.unwrap_or_default());
-
-                                                // --- SLIPPAGE CHECK (Circuit Breaker) ---
-                                                let expected_price = decision.limit_price.or(processed_intent.entry_zone.first().cloned()).unwrap_or(Decimal::ZERO);
-                                                if expected_price > Decimal::ZERO && fill_price > Decimal::ZERO {
-                                                    let diff = (fill_price - expected_price).abs();
-                                                    let slippage_ratio = diff / expected_price;
-                                                    let slippage_bps = (slippage_ratio * rust_decimal::Decimal::from(10000)).to_u32().unwrap_or(0);
-                                                    
-                                                    if slippage_bps > 0 {
-                                                        guard_for_execution.record_slippage(slippage_bps);
-                                                    }
+                                    match result {
+                                        Ok(pipeline_result) => {
+                                            // 1. Shadow Fill
+                                            if let Some(shadow_fill) = pipeline_result.shadow_fill {
+                                                let subject = format!("titan.execution.shadow_fill.{}", intent.symbol);
+                                                if let Ok(payload) = serde_json::to_vec(&shadow_fill) {
+                                                    client_shadow.publish(subject, payload.into()).await.ok();
                                                 }
+                                            }
 
-                                                if response.executed_qty <= Decimal::ZERO || fill_price <= Decimal::ZERO {
-                                                    warn!(
-                                                        correlation_id = %correlation_id,
-                                                        executed_qty = %response.executed_qty,
-                                                        fill_price = %fill_price,
-                                                        "Skipping zero/invalid fill report"
-                                                    );
-                                                    continue;
-                                                }
-                                                
-                                                let (events_to_publish, exposure) = {
-                                                    let mut state = state_for_nats.write();
-                                                    let events = state.confirm_execution(
-                                                        &processed_intent.signal_id, 
-                                                        fill_price, 
-                                                        response.executed_qty, 
-                                                        true,
-                                                        response.fee.unwrap_or(Decimal::ZERO),
-                                                        response.fee_asset.unwrap_or("USDT".to_string())
-                                                    );
-                                                    let exposure = state.calculate_exposure();
-                                                    (events, exposure)
-                                                };
-
-                                                // Publish Exposure Update
+                                            // 2. Exposure Update
+                                            if let Some(exposure) = pipeline_result.exposure {
                                                 if let Ok(payload) = serde_json::to_vec(&exposure) {
-                                                    if let Err(e) = client.publish("exposure.update", payload.into()).await {
+                                                    if let Err(e) = client_shadow.publish("exposure.update", payload.into()).await {
                                                         error!("Failed to publish exposure update: {}", e);
                                                     }
                                                 }
+                                            }
 
-                                                for event in events_to_publish {
-                                                    match event {
-                                                        ExecutionEvent::Opened(pos) => info!("Pos Open: {} {}", pos.symbol, pos.size),
-                                                        ExecutionEvent::Updated(pos) => info!("Pos Upd: {} {}", pos.symbol, pos.size),
-                                                        ExecutionEvent::Closed(trade) => {
-                                                            let subject = "titan.evt.exec.trade.closed";
-                                                            let envelope = serde_json::json!({
-                                                                "id": uuid::Uuid::new_v4().to_string(),
-                                                                "type": "titan.event.execution.trade.closed.v1",
-                                                                "version": 1,
-                                                                "ts": Utc::now().timestamp_millis(),
-                                                                "producer": "titan-execution-rs",
-                                                                "correlation_id": correlation_id, // Link to original intent
-                                                                "payload": trade
-                                                            });
-
-                                                            if let Ok(payload) = serde_json::to_vec(&envelope) {
-                                                                client_clone.publish(subject.to_string(), payload.into()).await.ok();
+                                            // 3. Execution Events
+                                            for event in pipeline_result.events {
+                                                match event {
+                                                    ExecutionEvent::Opened(pos) => info!("Pos Open: {} {}", pos.symbol, pos.size),
+                                                    ExecutionEvent::Updated(pos) => info!("Pos Upd: {} {}", pos.symbol, pos.size),
+                                                    ExecutionEvent::Closed(trade) => {
+                                                        let subject = "titan.evt.exec.trade.closed";
+                                                        // Envelope
+                                                        let envelope = serde_json::json!({
+                                                            "id": ctx_nats.id.new_id(),
+                                                            "type": "titan.event.execution.trade.closed.v1",
+                                                            "version": 1,
+                                                            "ts": ctx_nats.time.now_millis(),
+                                                            "producer": "titan-execution-rs",
+                                                            "correlation_id": correlation_id,
+                                                            "payload": trade
+                                                        });
+                                                        if let Ok(payload) = serde_json::to_vec(&envelope) {
+                                                            client_clone.publish(subject.to_string(), payload.into()).await.ok();
+                                                        }
+                                                    },
+                                                    ExecutionEvent::FundingPaid(symbol, amount, asset) => {
+                                                        let subject = "titan.evt.exec.funding";
+                                                          let envelope = serde_json::json!({
+                                                            "id": ctx_nats.id.new_id(),
+                                                            "type": "titan.event.execution.funding.v1",
+                                                            "version": 1,
+                                                            "ts": ctx_nats.time.now_millis(),
+                                                            "producer": "titan-execution-rs",
+                                                            "payload": {
+                                                                "symbol": symbol,
+                                                                "amount": amount,
+                                                                "asset": asset
                                                             }
-                                                        },
-
-                                                        ExecutionEvent::FundingPaid(symbol, amount, asset) => {
-                                                            let subject = "titan.evt.exec.funding";
-                                                            let envelope = serde_json::json!({
-                                                                "id": uuid::Uuid::new_v4().to_string(),
-                                                                "type": "titan.event.execution.funding.v1",
-                                                                "version": 1,
-                                                                "ts": Utc::now().timestamp_millis(),
-                                                                "producer": "titan-execution-rs",
-                                                                "payload": {
-                                                                    "symbol": symbol,
-                                                                    "amount": amount,
-                                                                    "asset": asset
-                                                                }
-                                                            });
-
-                                                            if let Ok(payload) = serde_json::to_vec(&envelope) {
-                                                                client_clone.publish(subject.to_string(), payload.into()).await.ok();
-                                                            }
+                                                        });
+                                                        if let Ok(payload) = serde_json::to_vec(&envelope) {
+                                                            client_clone.publish(subject.to_string(), payload.into()).await.ok();
                                                         }
                                                     }
                                                 }
-
-                                                {
-                                                    let mut state = state_for_nats.write();
-                                                    state.record_child_order(
-                                                        &processed_intent.signal_id,
-                                                        exchange_name.clone(),
-                                                        request.client_order_id.clone(),
-                                                        response.order_id.clone(),
-                                                        request.quantity,
-                                                    );
-                                                }
-
-                                                let fill_report = FillReport {
-                                                    fill_id: response.order_id.clone(),
-                                                    signal_id: processed_intent.signal_id.clone(),
-                                                    symbol: processed_intent.symbol.clone(),
-                                                    side: order_req.side.clone(),
-                                                    price: fill_price,
-                                                    qty: response.executed_qty,
-                                                    fee: Decimal::ZERO,
-                                                    fee_currency: "USDT".to_string(),
-                                                    t_signal: processed_intent.t_signal,
-                                                    t_ingress: processed_intent.t_ingress.unwrap_or(Utc::now().timestamp_millis()),
-                                                    t_decision,
-                                                    t_ack: response.t_ack,
-                                                    t_exchange: response.t_exchange.unwrap_or(Utc::now().timestamp_millis()),
-                                                    client_order_id: request.client_order_id.clone(),
-                                                    execution_id: response.order_id.clone(),
-                                                };
-
+                                            }
+        
+                                            // 4. Fill Reports
+                                            for (exchange_name, fill_report) in pipeline_result.fill_reports {
                                                 let subject = format!(
                                                     "titan.evt.exec.fill.v1.{}.main.{}",
                                                     exchange_name,
-                                                    processed_intent.symbol.replace("/", "_")
+                                                    fill_report.symbol.replace("/", "_")
                                                 );
                                                 
                                                 let envelope = serde_json::json!({
-                                                    "id": uuid::Uuid::new_v4().to_string(),
+                                                    "id": ctx_nats.id.new_id(),
                                                     "type": "titan.event.execution.fill.v1",
                                                     "version": 1,
-                                                    "ts": Utc::now().timestamp_millis(),
+                                                    "ts": ctx_nats.time.now_millis(),
                                                     "producer": "titan-execution-rs",
                                                     "correlation_id": correlation_id,
                                                     "payload": fill_report
@@ -665,25 +522,40 @@ pub async fn start_nats_engine(
                                                 if let Ok(payload) = serde_json::to_vec(&envelope) {
                                                     client_clone.publish(subject, payload.into()).await.ok();
                                                 }
-                                            },
-                                            Err(e) => {
-                                                error!("❌ [{}] Execution Failed: {}", exchange_name, e);
+                                            }
+
+                                            // ACK
+                                            if let Err(e) = msg.ack().await {
+                                                error!("❌ Failed to ACK message: {}", e);
+                                            } else {
+                                                info!(correlation_id = %correlation_id, "ACKed intent {}", intent.signal_id);
                                             }
                                         }
-                                    }
-
-                                    // ACK Message after processing
-                                    if let Err(e) = msg.ack().await {
-                                        error!("❌ Failed to ACK message: {}", e);
-                                    } else {
-                                        info!(correlation_id = %correlation_id, "ACKed intent {}", processed_intent.signal_id);
+                                        Err(reason) => {
+                                            error!(
+                                                correlation_id = %correlation_id, 
+                                                signal_id = %intent.signal_id, 
+                                                "Pipeline Failure: {}", 
+                                                reason
+                                            );
+                                            // We publish DLQ inside pipeline? No, inside here.
+                                            // But risk rejection was inside pipeline which returned Err.
+                                            // And Latency checks too.
+                                            publish_dlq(&client_clone, &msg.payload, &reason, &ctx_nats).await;
+                                            
+                                            // Must ACK to prevent redelivery loop if it's a permanent failure
+                                            // Logic assumption: If pipeline returned Err, it's rejected/dropped suitable for DLQ.
+                                            if let Err(e) = msg.ack().await {
+                                                error!("Failed to ACK rejected intent: {}", e);
+                                            }
+                                        }
                                     }
 
                                 },
                                 Err(e) => {
                                     error!("Failed to validate intent: {}", e);
                                     metrics::inc_invalid_intents();
-                                    publish_dlq(&client_clone, &msg.payload, &format!("Invalid intent: {}", e)).await;
+                                    publish_dlq(&client_clone, &msg.payload, &format!("Invalid intent: {}", e), &ctx_nats).await;
                                     msg.ack().await.ok(); 
                                 }
                             }
@@ -704,23 +576,9 @@ pub async fn start_nats_engine(
     Ok(nats_handle)
 }
 
-fn infer_side(intent: &Intent) -> Side {
-    match intent.intent_type {
-        IntentType::BuySetup => Side::Buy,
-        IntentType::SellSetup => Side::Sell,
-        IntentType::CloseLong => Side::Sell,
-        IntentType::CloseShort => Side::Buy,
-        IntentType::Close => {
-            if intent.direction < 0 {
-                Side::Buy
-            } else {
-                Side::Sell
-            }
-        }
-    }
-}
 
-async fn publish_dlq(client: &async_nats::Client, payload: &[u8], reason: &str) {
+
+async fn publish_dlq(client: &async_nats::Client, payload: &[u8], reason: &str, ctx: &ExecutionContext) {
     let parsed_payload = serde_json::from_slice::<Value>(payload).unwrap_or_else(|_| {
         Value::String(String::from_utf8_lossy(payload).to_string())
     });
@@ -728,7 +586,7 @@ async fn publish_dlq(client: &async_nats::Client, payload: &[u8], reason: &str) 
     let dlq_payload = serde_json::json!({
         "reason": reason,
         "payload": parsed_payload,
-        "t_ingress": Utc::now().timestamp_millis(),
+        "t_ingress": ctx.time.now_millis(),
     });
 
     if let Ok(bytes) = serde_json::to_vec(&dlq_payload) {
@@ -738,45 +596,5 @@ async fn publish_dlq(client: &async_nats::Client, payload: &[u8], reason: &str) 
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::infer_side;
-    use crate::model::{Intent, IntentStatus, IntentType, Side};
-    use chrono::Utc;
-    use rust_decimal_macros::dec;
 
-    fn base_intent(intent_type: IntentType, direction: i32) -> Intent {
-        Intent {
-            signal_id: "sig-test".to_string(),
-            source: Some("test".to_string()),
-            symbol: "BTC/USD".to_string(),
-            direction,
-            intent_type,
-            entry_zone: vec![dec!(1.0)],
-            stop_loss: dec!(0),
-            take_profits: vec![],
-            size: dec!(1.0),
-            status: IntentStatus::Pending,
-            t_signal: Utc::now().timestamp_millis(),
-            t_analysis: None,
-            t_decision: None,
-            t_ingress: None,
-            t_exchange: None,
-            max_slippage_bps: None,
-            rejection_reason: None,
-            regime_state: None,
-            phase: None,
-            metadata: None,
-            exchange: None,
-            position_mode: None,
-        }
-    }
 
-    #[test]
-    fn test_infer_side_from_intent_type() {
-        assert_eq!(infer_side(&base_intent(IntentType::BuySetup, 1)), Side::Buy);
-        assert_eq!(infer_side(&base_intent(IntentType::SellSetup, -1)), Side::Sell);
-        assert_eq!(infer_side(&base_intent(IntentType::CloseLong, -1)), Side::Sell);
-        assert_eq!(infer_side(&base_intent(IntentType::CloseShort, 1)), Side::Buy);
-    }
-}

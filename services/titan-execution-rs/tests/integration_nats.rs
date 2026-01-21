@@ -1,4 +1,5 @@
 use titan_execution_rs::nats_engine;
+use titan_execution_rs::context::ExecutionContext;
 use titan_execution_rs::shadow_state::ShadowState;
 use titan_execution_rs::order_manager::OrderManager;
 use titan_execution_rs::market_data::engine::MarketDataEngine;
@@ -40,7 +41,8 @@ async fn test_full_execution_flow() {
     let market_data = Arc::new(MarketDataEngine::new(None));
     let halt = Arc::new(GlobalHalt::new());
     let (persistence, _db_path) = create_test_persistence();
-    let shadow_state = Arc::new(RwLock::new(ShadowState::new(persistence)));
+    let ctx = Arc::new(ExecutionContext::new_system());
+    let shadow_state = Arc::new(RwLock::new(ShadowState::new(persistence, ctx.clone())));
     // Risk Guard
     let risk_policy = RiskPolicy::default(); // Assumes Default impl or I need to construct one
     let risk_guard = Arc::new(RiskGuard::new(risk_policy, shadow_state.clone()));
@@ -87,7 +89,7 @@ async fn test_full_execution_flow() {
     }
 
     router.register("binance", Arc::new(MockAdapter));
-    let sim_engine = Arc::new(SimulationEngine::new(market_data.clone()));
+    let sim_engine = Arc::new(SimulationEngine::new(market_data.clone(), ctx.clone()));
     
     // Config: Chase orders for 5s
     let order_manager = OrderManager::new(None, market_data.clone(), halt.clone());
@@ -104,7 +106,8 @@ async fn test_full_execution_flow() {
         router.clone(),
         sim_engine.clone(),
         halt.clone(),
-        risk_guard.clone()
+        risk_guard.clone(),
+        ctx.clone()
     ).await.expect("Failed to start engine");
 
     // 4. Test Subscription (Listen for Fills + DLQ)

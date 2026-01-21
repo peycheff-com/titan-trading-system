@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::circuit_breaker::GlobalHalt;
+    use crate::context::ExecutionContext;
     use crate::exchange::adapter::OrderRequest;
     use crate::exchange::binance::build_order_params;
     use crate::exchange::bybit::build_order_payload;
@@ -101,7 +102,8 @@ mod tests {
     #[test]
     fn test_shadow_state_workflow() {
         let (persistence, path) = create_test_persistence();
-        let mut state = ShadowState::new(persistence);
+        let ctx = Arc::new(ExecutionContext::new_system());
+        let mut state = ShadowState::new(persistence, ctx);
         defer_delete(&path); // clean up if possible, or just let OS handle /tmp
 
         // 1. Process Intent
@@ -256,7 +258,8 @@ mod tests {
     #[test]
     fn test_shadow_state_reduce_and_flip() {
         let (persistence, _path) = create_test_persistence();
-        let mut state = ShadowState::new(persistence);
+        let ctx = Arc::new(ExecutionContext::new_system());
+        let mut state = ShadowState::new(persistence, ctx);
 
         // Open long position
         let long_intent = Intent {

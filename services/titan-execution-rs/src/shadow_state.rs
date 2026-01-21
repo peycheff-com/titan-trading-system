@@ -1,12 +1,13 @@
+use crate::context::ExecutionContext;
+use crate::exposure::{ExposureCalculator, ExposureMetrics};
 use crate::metrics;
 use crate::model::{Intent, IntentStatus, IntentType, Position, Side, TradeRecord};
 use crate::persistence::store::PersistenceStore;
-use chrono::Utc;
+
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use crate::exposure::{ExposureCalculator, ExposureMetrics};
 use tracing::{error, info, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,10 +37,11 @@ pub struct ShadowState {
     max_trade_history: usize,
     order_children: HashMap<String, Vec<OrderChild>>,
     persistence: Arc<PersistenceStore>,
+    ctx: Arc<ExecutionContext>,
 }
 
 impl ShadowState {
-    pub fn new(persistence: Arc<PersistenceStore>) -> Self {
+    pub fn new(persistence: Arc<PersistenceStore>, ctx: Arc<ExecutionContext>) -> Self {
         let mut state = Self {
             positions: HashMap::new(),
             pending_intents: HashMap::new(),
@@ -47,6 +49,7 @@ impl ShadowState {
             max_trade_history: MAX_TRADE_HISTORY,
             order_children: HashMap::new(),
             persistence,
+            ctx,
         };
         state.hydrate_from_persistence();
         state
@@ -91,8 +94,8 @@ impl ShadowState {
         }
         // Also check if it's already executed (in trade history) - simplified check
         // Ideally we check a dedicated "processed_ids" set or WAL index
-        
-        intent.t_ingress = Some(Utc::now().timestamp_millis());
+
+        intent.t_ingress = Some(self.ctx.time.now_millis());
         intent.status = IntentStatus::Pending;
 
         // Clone for storage and return
@@ -347,7 +350,7 @@ impl ShadowState {
                 stop_loss,
                 take_profits,
                 signal_id: signal_id.to_string(),
-                opened_at: Utc::now(),
+                opened_at: self.ctx.time.now(),
                 regime_state,
                 phase,
                 metadata: intent.metadata.clone(),
@@ -358,7 +361,7 @@ impl ShadowState {
                 fees_paid: Decimal::ZERO, // This is for the new position, the fee for the closed part was handled above
                 funding_paid: Decimal::ZERO,
                 last_mark_price: None,
-                last_update_ts: Utc::now().timestamp_millis(),
+                last_update_ts: self.ctx.time.now_millis(),
             };
             position.fees_paid = fee; // This fee is for the new position part
             position.funding_paid = Decimal::ZERO;
@@ -392,7 +395,7 @@ impl ShadowState {
             stop_loss,
             take_profits,
             signal_id: signal_id.to_string(),
-            opened_at: Utc::now(),
+            opened_at: self.ctx.time.now(),
             regime_state,
             phase,
             metadata: intent.metadata.clone(),
@@ -403,7 +406,7 @@ impl ShadowState {
             fees_paid: Decimal::ZERO,
             funding_paid: Decimal::ZERO,
             last_mark_price: None,
-            last_update_ts: Utc::now().timestamp_millis(),
+            last_update_ts: self.ctx.time.now_millis(),
         };
 
         if let Err(e) = self.persistence.save_position(&position) {
@@ -511,7 +514,7 @@ impl ShadowState {
             pnl,
             pnl_pct,
             opened_at: position.opened_at,
-            closed_at: Utc::now(),
+            closed_at: self.ctx.time.now(),
             close_reason,
             metadata: position.metadata.clone(),
             fee,
@@ -568,7 +571,10 @@ impl ShadowState {
         self.positions.get(symbol)
     }
 
-    pub fn update_valuation(&mut self, ticker: &crate::market_data::types::BookTicker) -> Option<ExecutionEvent> {
+    pub fn update_valuation(
+        &mut self,
+        ticker: &crate::market_data::types::BookTicker,
+    ) -> Option<ExecutionEvent> {
         let symbol = &ticker.symbol;
         if let Some(position) = self.positions.get_mut(symbol) {
             let mid_price = (ticker.best_bid + ticker.best_ask) / Decimal::from(2);
@@ -581,23 +587,32 @@ impl ShadowState {
             position.unrealized_pnl = pnl;
             position.last_mark_price = Some(mid_price);
             position.last_update_ts = ticker.transaction_time;
-            
+
             return Some(ExecutionEvent::Updated(position.clone()));
         }
         None
     }
 
-    pub fn apply_funding(&mut self, symbol: &str, amount: Decimal, asset: String) -> Option<ExecutionEvent> {
+    pub fn apply_funding(
+        &mut self,
+        symbol: &str,
+        amount: Decimal,
+        asset: String,
+    ) -> Option<ExecutionEvent> {
         if let Some(position) = self.positions.get_mut(symbol) {
             position.funding_paid += amount;
-            position.last_update_ts = Utc::now().timestamp_millis();
-            
+            position.last_update_ts = self.ctx.time.now_millis();
+
             // Persist
-             if let Err(e) = self.persistence.save_position(position) {
+            if let Err(e) = self.persistence.save_position(position) {
                 error!("Failed to persist funding update {}: {}", symbol, e);
             }
-            
-            return Some(ExecutionEvent::FundingPaid(symbol.to_string(), amount, asset));
+
+            return Some(ExecutionEvent::FundingPaid(
+                symbol.to_string(),
+                amount,
+                asset,
+            ));
         }
         None
     }
@@ -627,21 +642,21 @@ impl ShadowState {
             client_order_id: client_order_id.clone(),
             execution_order_id: execution_order_id.clone(),
             size,
-            created_at: Utc::now().timestamp_millis(),
+            created_at: self.ctx.time.now_millis(),
         });
 
         // Persist "Order Placed" event to WAL
         let payload = serde_json::json!({
             "size": size,
             "execution_id": execution_order_id,
-            "created_at": Utc::now().timestamp_millis()
+            "created_at": self.ctx.time.now_millis() // Assuming we want consistent time here too
         });
-        
+
         if let Err(e) = self.persistence.log_order_placed(
-            signal_id.to_string(), 
-            exchange.clone(), 
-            client_order_id.clone(), 
-            payload
+            signal_id.to_string(),
+            exchange.clone(),
+            client_order_id.clone(),
+            payload,
         ) {
             error!("Failed to log order placed to WAL {}: {}", signal_id, e);
         }
@@ -650,8 +665,6 @@ impl ShadowState {
     pub fn get_child_orders(&self, signal_id: &str) -> Option<&Vec<OrderChild>> {
         self.order_children.get(signal_id)
     }
-
-
 
     pub fn calculate_exposure(&self) -> ExposureMetrics {
         ExposureCalculator::calculate(&self.positions)
