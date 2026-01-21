@@ -14,6 +14,7 @@ export default tseslint.config(
   {
     ignores: ["**/dist", "**/node_modules", "**/coverage", "**/.do", "**/docs"],
   },
+
   {
     languageOptions: {
       parserOptions: {
@@ -34,6 +35,19 @@ export default tseslint.config(
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
       ...prettierConfig.rules,
+    },
+  },
+  {
+    files: ['ecosystem.config.js'],
+    languageOptions: {
+      globals: {
+        module: 'readonly',
+        __dirname: 'readonly',
+        process: 'readonly',
+      },
+      parserOptions: {
+        project: null,
+      },
     },
   }
 );
