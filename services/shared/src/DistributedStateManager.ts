@@ -7,8 +7,8 @@
  * Requirements: 10.1 - Distributed state management and synchronization
  */
 
-import { EventEmitter } from 'eventemitter3';
-import { createHash } from 'crypto';
+import { EventEmitter } from "eventemitter3";
+import { createHash } from "crypto";
 
 // Simple color logging utility
 const colors = {
@@ -23,14 +23,14 @@ const colors = {
 /**
  * State entry with versioning and metadata
  */
-export interface StateEntry<T = any> {
+export interface StateEntry<T = unknown> {
   key: string;
   value: T;
   version: number;
   timestamp: number;
   nodeId: string;
   checksum: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   ttl?: number; // Time to live in milliseconds
 }
 
@@ -38,9 +38,9 @@ export interface StateEntry<T = any> {
  * State change operation
  */
 export interface StateOperation {
-  type: 'SET' | 'DELETE' | 'INCREMENT' | 'DECREMENT' | 'APPEND' | 'MERGE';
+  type: "SET" | "DELETE" | "INCREMENT" | "DECREMENT" | "APPEND" | "MERGE";
   key: string;
-  value?: any;
+  value?: unknown;
   delta?: number;
   expectedVersion?: number;
   nodeId: string;
@@ -51,16 +51,16 @@ export interface StateOperation {
  * Conflict resolution strategy
  */
 export type ConflictResolutionStrategy =
-  | 'last_write_wins'
-  | 'first_write_wins'
-  | 'highest_version'
-  | 'custom'
-  | 'merge';
+  | "last_write_wins"
+  | "first_write_wins"
+  | "highest_version"
+  | "custom"
+  | "merge";
 
 /**
  * Consistency level
  */
-export type ConsistencyLevel = 'eventual' | 'strong' | 'bounded_staleness';
+export type ConsistencyLevel = "eventual" | "strong" | "bounded_staleness";
 
 /**
  * Distributed state configuration
@@ -85,12 +85,35 @@ export interface DistributedStateConfig {
  * Sync message types
  */
 export interface SyncMessage {
-  type: 'SYNC_REQUEST' | 'SYNC_RESPONSE' | 'STATE_UPDATE' | 'CONFLICT_RESOLUTION';
+  type:
+    | "SYNC_REQUEST"
+    | "SYNC_RESPONSE"
+    | "STATE_UPDATE"
+    | "CONFLICT_RESOLUTION";
   fromNode: string;
   toNode?: string; // undefined for broadcast
   timestamp: number;
-  data: any;
+  data: unknown;
   messageId: string;
+}
+
+interface SyncRequestData {
+  stateVersion: number;
+  keys: string[];
+}
+
+interface SyncResponseData {
+  stateVersion: number;
+  stateDiff: StateEntry[];
+}
+
+interface StateUpdateData {
+  operation: StateOperation;
+}
+
+interface ConflictResolutionData {
+  key: string;
+  resolvedEntry: StateEntry;
 }
 
 /**
@@ -109,7 +132,7 @@ export interface NodeInfo {
 /**
  * Conflict resolver interface
  */
-export interface ConflictResolver<T = any> {
+export interface ConflictResolver<T = unknown> {
   resolve(local: StateEntry<T>, remote: StateEntry<T>): StateEntry<T>;
 }
 
@@ -131,7 +154,7 @@ export class HighestVersionResolver<T> implements ConflictResolver<T> {
 export class MergeResolver<T> implements ConflictResolver<T> {
   resolve(local: StateEntry<T>, remote: StateEntry<T>): StateEntry<T> {
     // Simple merge strategy - combine objects or use latest for primitives
-    if (typeof local.value === 'object' && typeof remote.value === 'object') {
+    if (typeof local.value === "object" && typeof remote.value === "object") {
       const merged = { ...local.value, ...remote.value };
       return {
         ...local,
@@ -175,7 +198,9 @@ class StateSynchronizer extends EventEmitter {
     }, this.config.syncInterval);
 
     console.log(
-      colors.green(`🔄 State synchronization started (${this.config.syncInterval}ms interval)`),
+      colors.green(
+        `🔄 State synchronization started (${this.config.syncInterval}ms interval)`,
+      ),
     );
   }
 
@@ -216,7 +241,10 @@ class StateSynchronizer extends EventEmitter {
       try {
         await this.syncWithNode(node);
       } catch (error) {
-        console.error(colors.red(`❌ Sync failed with node ${node.id}:`), error);
+        console.error(
+          colors.red(`❌ Sync failed with node ${node.id}:`),
+          error,
+        );
       }
     }
   }
@@ -234,7 +262,7 @@ class StateSynchronizer extends EventEmitter {
    */
   private async syncWithNode(node: NodeInfo): Promise<void> {
     const syncMessage: SyncMessage = {
-      type: 'SYNC_REQUEST',
+      type: "SYNC_REQUEST",
       fromNode: this.config.nodeId,
       toNode: node.id,
       timestamp: Date.now(),
@@ -246,7 +274,7 @@ class StateSynchronizer extends EventEmitter {
     };
 
     // Send sync request (in real implementation, this would use network communication)
-    this.emit('syncMessage', syncMessage);
+    this.emit("syncMessage", syncMessage);
   }
 
   /**
@@ -254,16 +282,16 @@ class StateSynchronizer extends EventEmitter {
    */
   async handleSyncMessage(message: SyncMessage): Promise<void> {
     switch (message.type) {
-      case 'SYNC_REQUEST':
+      case "SYNC_REQUEST":
         await this.handleSyncRequest(message);
         break;
-      case 'SYNC_RESPONSE':
+      case "SYNC_RESPONSE":
         await this.handleSyncResponse(message);
         break;
-      case 'STATE_UPDATE':
+      case "STATE_UPDATE":
         await this.handleStateUpdate(message);
         break;
-      case 'CONFLICT_RESOLUTION':
+      case "CONFLICT_RESOLUTION":
         await this.handleConflictResolution(message);
         break;
     }
@@ -273,14 +301,14 @@ class StateSynchronizer extends EventEmitter {
    * Handle sync request from another node
    */
   private async handleSyncRequest(message: SyncMessage): Promise<void> {
-    const { stateVersion, keys } = message.data;
+    const { stateVersion, keys } = message.data as SyncRequestData;
     const localVersion = this.getStateVersion();
 
     // Determine what state to send back
     const stateDiff = this.calculateStateDiff(keys, stateVersion);
 
     const response: SyncMessage = {
-      type: 'SYNC_RESPONSE',
+      type: "SYNC_RESPONSE",
       fromNode: this.config.nodeId,
       toNode: message.fromNode,
       timestamp: Date.now(),
@@ -291,14 +319,14 @@ class StateSynchronizer extends EventEmitter {
       },
     };
 
-    this.emit('syncMessage', response);
+    this.emit("syncMessage", response);
   }
 
   /**
    * Handle sync response from another node
    */
   private async handleSyncResponse(message: SyncMessage): Promise<void> {
-    const { stateDiff } = message.data;
+    const { stateDiff } = message.data as SyncResponseData;
 
     for (const entry of stateDiff) {
       await this.mergeRemoteState(entry);
@@ -309,7 +337,7 @@ class StateSynchronizer extends EventEmitter {
    * Handle state update from another node
    */
   private async handleStateUpdate(message: SyncMessage): Promise<void> {
-    const { operation } = message.data;
+    const { operation } = message.data as StateUpdateData;
     await this.applyRemoteOperation(operation);
   }
 
@@ -317,18 +345,25 @@ class StateSynchronizer extends EventEmitter {
    * Handle conflict resolution
    */
   private async handleConflictResolution(message: SyncMessage): Promise<void> {
-    const { key, resolvedEntry } = message.data;
+    const { key, resolvedEntry } = message.data as ConflictResolutionData;
 
     // Apply resolved state
     // eslint-disable-next-line functional/immutable-data
     this.stateStore.set(key, resolvedEntry);
-    this.emit('stateChanged', { key, value: resolvedEntry.value, source: 'conflict_resolution' });
+    this.emit("stateChanged", {
+      key,
+      value: resolvedEntry.value,
+      source: "conflict_resolution",
+    });
   }
 
   /**
    * Calculate state difference for synchronization
    */
-  private calculateStateDiff(remoteKeys: string[], remoteVersion: number): StateEntry[] {
+  private calculateStateDiff(
+    remoteKeys: string[],
+    remoteVersion: number,
+  ): StateEntry[] {
     const diff: StateEntry[] = [];
 
     // Find entries that are newer or missing on remote
@@ -352,10 +387,10 @@ class StateSynchronizer extends EventEmitter {
       // New entry, just add it
       // eslint-disable-next-line functional/immutable-data
       this.stateStore.set(remoteEntry.key, remoteEntry);
-      this.emit('stateChanged', {
+      this.emit("stateChanged", {
         key: remoteEntry.key,
         value: remoteEntry.value,
-        source: 'remote',
+        source: "remote",
       });
       return;
     }
@@ -368,10 +403,10 @@ class StateSynchronizer extends EventEmitter {
       const resolved = await this.resolveConflict(localEntry, remoteEntry);
       // eslint-disable-next-line functional/immutable-data
       this.stateStore.set(remoteEntry.key, resolved);
-      this.emit('stateChanged', {
+      this.emit("stateChanged", {
         key: remoteEntry.key,
         value: resolved.value,
-        source: 'conflict_resolved',
+        source: "conflict_resolved",
       });
     }
   }
@@ -382,17 +417,17 @@ class StateSynchronizer extends EventEmitter {
   private async applyRemoteOperation(operation: StateOperation): Promise<void> {
     // Apply operation based on type
     switch (operation.type) {
-      case 'SET':
+      case "SET":
         await this.handleRemoteSet(operation);
         break;
-      case 'DELETE':
+      case "DELETE":
         await this.handleRemoteDelete(operation);
         break;
-      case 'INCREMENT':
-      case 'DECREMENT':
+      case "INCREMENT":
+      case "DECREMENT":
         await this.handleRemoteIncrement(operation);
         break;
-      // Add other operation types as needed
+        // Add other operation types as needed
     }
   }
 
@@ -422,18 +457,26 @@ class StateSynchronizer extends EventEmitter {
     if (localEntry && operation.timestamp > localEntry.timestamp) {
       // eslint-disable-next-line functional/immutable-data
       this.stateStore.delete(operation.key);
-      this.emit('stateChanged', { key: operation.key, value: undefined, source: 'remote_delete' });
+      this.emit("stateChanged", {
+        key: operation.key,
+        value: undefined,
+        source: "remote_delete",
+      });
     }
   }
 
   /**
    * Handle remote INCREMENT/DECREMENT operation
    */
-  private async handleRemoteIncrement(operation: StateOperation): Promise<void> {
+  private async handleRemoteIncrement(
+    operation: StateOperation,
+  ): Promise<void> {
     const localEntry = this.stateStore.get(operation.key);
 
-    if (localEntry && typeof localEntry.value === 'number') {
-      const delta = operation.type === 'INCREMENT' ? operation.delta || 1 : -(operation.delta || 1);
+    if (localEntry && typeof localEntry.value === "number") {
+      const delta = operation.type === "INCREMENT"
+        ? operation.delta || 1
+        : -(operation.delta || 1);
       const newValue = localEntry.value + delta;
 
       const updatedEntry: StateEntry = {
@@ -446,10 +489,10 @@ class StateSynchronizer extends EventEmitter {
 
       // eslint-disable-next-line functional/immutable-data
       this.stateStore.set(operation.key, updatedEntry);
-      this.emit('stateChanged', {
+      this.emit("stateChanged", {
         key: operation.key,
         value: newValue,
-        source: 'remote_increment',
+        source: "remote_increment",
       });
     }
   }
@@ -457,21 +500,24 @@ class StateSynchronizer extends EventEmitter {
   /**
    * Resolve conflict between local and remote state
    */
-  private async resolveConflict(local: StateEntry, remote: StateEntry): Promise<StateEntry> {
+  private async resolveConflict(
+    local: StateEntry,
+    remote: StateEntry,
+  ): Promise<StateEntry> {
     // eslint-disable-next-line functional/no-let
     let resolver: ConflictResolver;
 
     switch (this.config.conflictResolution) {
-      case 'last_write_wins':
+      case "last_write_wins":
         resolver = new LastWriteWinsResolver();
         break;
-      case 'highest_version':
+      case "highest_version":
         resolver = new HighestVersionResolver();
         break;
-      case 'merge':
+      case "merge":
         resolver = new MergeResolver();
         break;
-      case 'first_write_wins':
+      case "first_write_wins":
         return local; // Always keep local
       default:
         resolver = new LastWriteWinsResolver();
@@ -503,16 +549,21 @@ class StateSynchronizer extends EventEmitter {
   /**
    * Calculate checksum for value
    */
-  private calculateChecksum(value: any): string {
+  private calculateChecksum(value: unknown): string {
     const serialized = JSON.stringify(value);
-    return createHash('sha256').update(serialized).digest('hex').substring(0, 16);
+    return createHash("sha256").update(serialized).digest("hex").substring(
+      0,
+      16,
+    );
   }
 
   /**
    * Generate unique message ID
    */
   private generateMessageId(): string {
-    return `${this.config.nodeId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `${this.config.nodeId}_${Date.now()}_${
+      Math.random().toString(36).substr(2, 9)
+    }`;
   }
 }
 
@@ -534,13 +585,27 @@ export class DistributedStateManager extends EventEmitter {
   constructor(private config: DistributedStateConfig) {
     super();
 
-    this.synchronizer = new StateSynchronizer(config, this.stateStore, this.nodes);
+    this.synchronizer = new StateSynchronizer(
+      config,
+      this.stateStore,
+      this.nodes,
+    );
 
     // Forward synchronizer events
-    this.synchronizer.on('syncMessage', (message) => this.emit('syncMessage', message));
-    this.synchronizer.on('stateChanged', (event) => this.emit('stateChanged', event));
+    this.synchronizer.on(
+      "syncMessage",
+      (message) => this.emit("syncMessage", message),
+    );
+    this.synchronizer.on(
+      "stateChanged",
+      (event) => this.emit("stateChanged", event),
+    );
 
-    console.log(colors.blue(`🗄️ Distributed State Manager initialized (node: ${config.nodeId})`));
+    console.log(
+      colors.blue(
+        `🗄️ Distributed State Manager initialized (node: ${config.nodeId})`,
+      ),
+    );
   }
 
   /**
@@ -553,7 +618,7 @@ export class DistributedStateManager extends EventEmitter {
       this.startTTLCleanup();
     }
 
-    console.log(colors.green('🚀 Distributed State Manager started'));
+    console.log(colors.green("🚀 Distributed State Manager started"));
   }
 
   /**
@@ -568,7 +633,7 @@ export class DistributedStateManager extends EventEmitter {
       this.ttlTimer = null;
     }
 
-    console.log(colors.yellow('🛑 Distributed State Manager stopped'));
+    console.log(colors.yellow("🛑 Distributed State Manager stopped"));
   }
 
   /**
@@ -612,7 +677,7 @@ export class DistributedStateManager extends EventEmitter {
 
     // Broadcast state update to other nodes
     await this.broadcastStateUpdate({
-      type: 'SET',
+      type: "SET",
       key,
       value,
       expectedVersion: entry.version,
@@ -620,9 +685,13 @@ export class DistributedStateManager extends EventEmitter {
       timestamp: entry.timestamp,
     });
 
-    this.emit('stateChanged', { key, value, source: 'local' });
+    this.emit("stateChanged", { key, value, source: "local" });
 
-    console.log(colors.cyan(`📝 Set state: ${key} = ${JSON.stringify(value).substring(0, 100)}`));
+    console.log(
+      colors.cyan(
+        `📝 Set state: ${key} = ${JSON.stringify(value).substring(0, 100)}`,
+      ),
+    );
   }
 
   /**
@@ -679,13 +748,17 @@ export class DistributedStateManager extends EventEmitter {
 
       // Broadcast delete operation
       await this.broadcastStateUpdate({
-        type: 'DELETE',
+        type: "DELETE",
         key,
         nodeId: this.config.nodeId,
         timestamp: Date.now(),
       });
 
-      this.emit('stateChanged', { key, value: undefined, source: 'local_delete' });
+      this.emit("stateChanged", {
+        key,
+        value: undefined,
+        source: "local_delete",
+      });
 
       console.log(colors.yellow(`🗑️ Deleted state: ${key}`));
     }
@@ -738,7 +811,7 @@ export class DistributedStateManager extends EventEmitter {
     // eslint-disable-next-line functional/immutable-data
     this.metrics.totalOperations++;
 
-    console.log(colors.red('🧹 Cleared all state'));
+    console.log(colors.red("🧹 Cleared all state"));
   }
 
   /**
@@ -747,7 +820,9 @@ export class DistributedStateManager extends EventEmitter {
   addNode(node: NodeInfo): void {
     // eslint-disable-next-line functional/immutable-data
     this.nodes.set(node.id, node);
-    console.log(colors.green(`➕ Added node: ${node.id} (${node.host}:${node.port})`));
+    console.log(
+      colors.green(`➕ Added node: ${node.id} (${node.host}:${node.port})`),
+    );
   }
 
   /**
@@ -788,14 +863,14 @@ export class DistributedStateManager extends EventEmitter {
    */
   private async broadcastStateUpdate(operation: StateOperation): Promise<void> {
     const message: SyncMessage = {
-      type: 'STATE_UPDATE',
+      type: "STATE_UPDATE",
       fromNode: this.config.nodeId,
       timestamp: Date.now(),
       messageId: this.generateMessageId(),
       data: { operation },
     };
 
-    this.emit('syncMessage', message);
+    this.emit("syncMessage", message);
   }
 
   /**
@@ -825,11 +900,17 @@ export class DistributedStateManager extends EventEmitter {
     toDelete.forEach((key) => {
       // eslint-disable-next-line functional/immutable-data
       this.stateStore.delete(key);
-      this.emit('stateChanged', { key, value: undefined, source: 'ttl_expired' });
+      this.emit("stateChanged", {
+        key,
+        value: undefined,
+        source: "ttl_expired",
+      });
     });
 
     if (toDelete.length > 0) {
-      console.log(colors.blue(`🧹 Cleaned up ${toDelete.length} expired entries`));
+      console.log(
+        colors.blue(`🧹 Cleaned up ${toDelete.length} expired entries`),
+      );
     }
   }
 
@@ -838,14 +919,19 @@ export class DistributedStateManager extends EventEmitter {
    */
   private calculateChecksum(value: any): string {
     const serialized = JSON.stringify(value);
-    return createHash('sha256').update(serialized).digest('hex').substring(0, 16);
+    return createHash("sha256").update(serialized).digest("hex").substring(
+      0,
+      16,
+    );
   }
 
   /**
    * Generate unique message ID
    */
   private generateMessageId(): string {
-    return `${this.config.nodeId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `${this.config.nodeId}_${Date.now()}_${
+      Math.random().toString(36).substr(2, 9)
+    }`;
   }
 
   /**
@@ -864,7 +950,8 @@ export class DistributedStateManager extends EventEmitter {
       lastSyncTime: number;
     };
   } {
-    const onlineNodes = Array.from(this.nodes.values()).filter((node) => node.isOnline).length;
+    const onlineNodes =
+      Array.from(this.nodes.values()).filter((node) => node.isOnline).length;
 
     return {
       nodeId: this.config.nodeId,
@@ -882,14 +969,14 @@ export class DistributedStateManager extends EventEmitter {
   updateConfig(config: Partial<DistributedStateConfig>): void {
     // eslint-disable-next-line functional/immutable-data
     this.config = { ...this.config, ...config };
-    console.log(colors.blue('⚙️ Distributed state configuration updated'));
+    console.log(colors.blue("⚙️ Distributed state configuration updated"));
   }
 
   /**
    * Shutdown and cleanup
    */
   shutdown(): void {
-    console.log(colors.blue('🛑 Shutting down Distributed State Manager...'));
+    console.log(colors.blue("🛑 Shutting down Distributed State Manager..."));
     this.stop();
     // eslint-disable-next-line functional/immutable-data
     this.stateStore.clear();
@@ -904,8 +991,8 @@ export class DistributedStateManager extends EventEmitter {
  */
 export const DEFAULT_DISTRIBUTED_STATE_CONFIG: DistributedStateConfig = {
   nodeId: `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-  consistencyLevel: 'eventual',
-  conflictResolution: 'last_write_wins',
+  consistencyLevel: "eventual",
+  conflictResolution: "last_write_wins",
   syncInterval: 30000, // 30 seconds
   maxSyncRetries: 3,
   syncTimeout: 10000, // 10 seconds

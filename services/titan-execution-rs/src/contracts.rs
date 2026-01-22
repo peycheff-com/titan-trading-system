@@ -11,7 +11,7 @@
 //     let model: BaseCommand = serde_json::from_str(&json).unwrap();
 // }
 
-use serde::{Deserialize, Serialize};
+use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -29,11 +29,17 @@ pub struct Envelope {
 
     pub idempotency_key: Option<String>,
 
+    pub key_id: Option<String>,
+
+    pub nonce: Option<String>,
+
     pub partition_key: Option<String>,
 
     pub payload: HashMap<String, Option<serde_json::Value>>,
 
     pub producer: String,
+
+    pub sig: Option<String>,
 
     pub ts: Option<i64>,
 
@@ -53,11 +59,17 @@ pub struct IntentEnvelope {
 
     pub idempotency_key: Option<String>,
 
+    pub key_id: Option<String>,
+
+    pub nonce: Option<String>,
+
     pub partition_key: Option<String>,
 
     pub payload: Payload,
 
     pub producer: String,
+
+    pub sig: Option<String>,
 
     pub ts: Option<i64>,
 
@@ -65,11 +77,6 @@ pub struct IntentEnvelope {
     pub intent_envelope_type: String,
 
     pub version: i64,
-
-    // Security Fields (Jan 2026 Audit)
-    pub sig: Option<String>,
-    pub key_id: Option<String>,
-    pub nonce: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
