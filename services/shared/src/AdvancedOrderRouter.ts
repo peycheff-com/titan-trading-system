@@ -7,8 +7,8 @@
  * Requirements: 10.1 - Advanced order routing and execution algorithms
  */
 
-import { EventEmitter } from 'eventemitter3';
-import { performance } from 'perf_hooks';
+import { EventEmitter } from "eventemitter3";
+import { performance } from "perf_hooks";
 
 // Simple color logging utility
 const colors = {
@@ -26,7 +26,7 @@ const colors = {
 export interface TradingVenue {
   id: string;
   name: string;
-  type: 'EXCHANGE' | 'ECN' | 'DARK_POOL' | 'MARKET_MAKER';
+  type: "EXCHANGE" | "ECN" | "DARK_POOL" | "MARKET_MAKER";
   latency: number; // Average latency in microseconds
   fees: {
     maker: number; // Basis points
@@ -50,16 +50,23 @@ export interface TradingVenue {
 export interface RoutingRequest {
   orderId: string;
   symbol: string;
-  side: 'BUY' | 'SELL';
+  side: "BUY" | "SELL";
   quantity: number;
-  orderType: 'MARKET' | 'LIMIT' | 'STOP' | 'STOP_LIMIT' | 'ICEBERG' | 'TWAP' | 'VWAP';
+  orderType:
+    | "MARKET"
+    | "LIMIT"
+    | "STOP"
+    | "STOP_LIMIT"
+    | "ICEBERG"
+    | "TWAP"
+    | "VWAP";
   price?: number;
-  timeInForce: 'GTC' | 'IOC' | 'FOK' | 'DAY';
-  urgency: 'IMMEDIATE' | 'NORMAL' | 'PATIENT';
+  timeInForce: "GTC" | "IOC" | "FOK" | "DAY";
+  urgency: "IMMEDIATE" | "NORMAL" | "PATIENT";
   maxSlippage?: number; // Basis points
   minFillSize?: number;
   displayQuantity?: number; // For iceberg orders
-  strategy?: 'AGGRESSIVE' | 'PASSIVE' | 'NEUTRAL' | 'STEALTH';
+  strategy?: "AGGRESSIVE" | "PASSIVE" | "NEUTRAL" | "STEALTH";
   constraints?: {
     excludeVenues?: string[];
     preferredVenues?: string[];
@@ -164,7 +171,7 @@ export interface OrderRouterConfig {
  * TWAP (Time-Weighted Average Price) Algorithm
  */
 class TWAPAlgorithm implements ExecutionAlgorithm {
-  name = 'TWAP';
+  name = "TWAP";
 
   async route(
     request: RoutingRequest,
@@ -194,8 +201,11 @@ class TWAPAlgorithm implements ExecutionAlgorithm {
       const allocation = quantityPerSlice / sortedVenues.length;
 
       const venueData = marketData.venues[venue.id];
-      const expectedPrice = request.side === 'BUY' ? venueData?.ask || 0 : venueData?.bid || 0;
-      const expectedFees = (expectedPrice * allocation * venue.fees.taker) / 10000;
+      const expectedPrice = request.side === "BUY"
+        ? venueData?.ask || 0
+        : venueData?.bid || 0;
+      const expectedFees = (expectedPrice * allocation * venue.fees.taker) /
+        10000;
 
       // eslint-disable-next-line functional/immutable-data
       routes.push({
@@ -207,8 +217,8 @@ class TWAPAlgorithm implements ExecutionAlgorithm {
         expectedLatency: venue.latency,
         priority: i + 1,
         orderParams: {
-          type: 'LIMIT',
-          timeInForce: 'GTC',
+          type: "LIMIT",
+          timeInForce: "GTC",
           hidden: false,
         },
       });
@@ -220,16 +230,18 @@ class TWAPAlgorithm implements ExecutionAlgorithm {
     return {
       requestId: request.orderId,
       routes,
-      totalExpectedCost: (totalCost / (request.quantity * (request.price || 1))) * 10000,
+      totalExpectedCost:
+        (totalCost / (request.quantity * (request.price || 1))) * 10000,
       expectedLatency: maxLatency,
       confidence: 85,
-      reasoning: 'TWAP algorithm distributes order across time and top liquidity venues',
+      reasoning:
+        "TWAP algorithm distributes order across time and top liquidity venues",
       timestamp: Date.now(),
     };
   }
 
   getDescription(): string {
-    return 'Time-Weighted Average Price algorithm for steady execution over time';
+    return "Time-Weighted Average Price algorithm for steady execution over time";
   }
 }
 
@@ -237,7 +249,7 @@ class TWAPAlgorithm implements ExecutionAlgorithm {
  * VWAP (Volume-Weighted Average Price) Algorithm
  */
 class VWAPAlgorithm implements ExecutionAlgorithm {
-  name = 'VWAP';
+  name = "VWAP";
 
   async route(
     request: RoutingRequest,
@@ -268,8 +280,11 @@ class VWAPAlgorithm implements ExecutionAlgorithm {
 
       if (allocation < 1) continue; // Skip tiny allocations
 
-      const expectedPrice = request.side === 'BUY' ? venueData.ask : venueData.bid;
-      const expectedFees = (expectedPrice * allocation * venue.fees.taker) / 10000;
+      const expectedPrice = request.side === "BUY"
+        ? venueData.ask
+        : venueData.bid;
+      const expectedFees = (expectedPrice * allocation * venue.fees.taker) /
+        10000;
 
       // eslint-disable-next-line functional/immutable-data
       routes.push({
@@ -281,8 +296,8 @@ class VWAPAlgorithm implements ExecutionAlgorithm {
         expectedLatency: venue.latency,
         priority: routes.length + 1,
         orderParams: {
-          type: 'LIMIT',
-          timeInForce: 'IOC',
+          type: "LIMIT",
+          timeInForce: "IOC",
           hidden: false,
         },
       });
@@ -294,16 +309,17 @@ class VWAPAlgorithm implements ExecutionAlgorithm {
     return {
       requestId: request.orderId,
       routes,
-      totalExpectedCost: (totalCost / (request.quantity * (request.price || 1))) * 10000,
+      totalExpectedCost:
+        (totalCost / (request.quantity * (request.price || 1))) * 10000,
       expectedLatency: maxLatency,
       confidence: 90,
-      reasoning: 'VWAP algorithm allocates based on historical volume patterns',
+      reasoning: "VWAP algorithm allocates based on historical volume patterns",
       timestamp: Date.now(),
     };
   }
 
   getDescription(): string {
-    return 'Volume-Weighted Average Price algorithm based on historical volume patterns';
+    return "Volume-Weighted Average Price algorithm based on historical volume patterns";
   }
 }
 
@@ -311,7 +327,7 @@ class VWAPAlgorithm implements ExecutionAlgorithm {
  * Aggressive Liquidity Taking Algorithm
  */
 class AggressiveAlgorithm implements ExecutionAlgorithm {
-  name = 'AGGRESSIVE';
+  name = "AGGRESSIVE";
 
   async route(
     request: RoutingRequest,
@@ -319,7 +335,9 @@ class AggressiveAlgorithm implements ExecutionAlgorithm {
     marketData: MarketData,
   ): Promise<RoutingDecision> {
     // Aggressive algorithm prioritizes speed over cost
-    const activeVenues = venues.filter((v) => v.isActive).sort((a, b) => a.latency - b.latency); // Sort by latency (fastest first)
+    const activeVenues = venues.filter((v) => v.isActive).sort((a, b) =>
+      a.latency - b.latency
+    ); // Sort by latency (fastest first)
 
     const routes: RouteAllocation[] = [];
     // eslint-disable-next-line functional/no-let
@@ -337,13 +355,18 @@ class AggressiveAlgorithm implements ExecutionAlgorithm {
       if (!venueData) continue;
 
       // Take available liquidity
-      const availableSize = request.side === 'BUY' ? venueData.askSize : venueData.bidSize;
+      const availableSize = request.side === "BUY"
+        ? venueData.askSize
+        : venueData.bidSize;
       const allocation = Math.min(remainingQuantity, availableSize);
 
       if (allocation < 1) continue;
 
-      const expectedPrice = request.side === 'BUY' ? venueData.ask : venueData.bid;
-      const expectedFees = (expectedPrice * allocation * venue.fees.taker) / 10000;
+      const expectedPrice = request.side === "BUY"
+        ? venueData.ask
+        : venueData.bid;
+      const expectedFees = (expectedPrice * allocation * venue.fees.taker) /
+        10000;
 
       // eslint-disable-next-line functional/immutable-data
       routes.push({
@@ -355,8 +378,8 @@ class AggressiveAlgorithm implements ExecutionAlgorithm {
         expectedLatency: venue.latency,
         priority: routes.length + 1,
         orderParams: {
-          type: 'MARKET',
-          timeInForce: 'IOC',
+          type: "MARKET",
+          timeInForce: "IOC",
           hidden: false,
         },
       });
@@ -369,16 +392,17 @@ class AggressiveAlgorithm implements ExecutionAlgorithm {
     return {
       requestId: request.orderId,
       routes,
-      totalExpectedCost: (totalCost / (request.quantity * (request.price || 1))) * 10000,
+      totalExpectedCost:
+        (totalCost / (request.quantity * (request.price || 1))) * 10000,
       expectedLatency: maxLatency,
       confidence: 95,
-      reasoning: 'Aggressive algorithm prioritizes speed using fastest venues',
+      reasoning: "Aggressive algorithm prioritizes speed using fastest venues",
       timestamp: Date.now(),
     };
   }
 
   getDescription(): string {
-    return 'Aggressive algorithm prioritizing speed over cost using fastest venues';
+    return "Aggressive algorithm prioritizing speed over cost using fastest venues";
   }
 }
 
@@ -386,7 +410,7 @@ class AggressiveAlgorithm implements ExecutionAlgorithm {
  * Stealth Algorithm for large orders
  */
 class StealthAlgorithm implements ExecutionAlgorithm {
-  name = 'STEALTH';
+  name = "STEALTH";
 
   async route(
     request: RoutingRequest,
@@ -394,8 +418,10 @@ class StealthAlgorithm implements ExecutionAlgorithm {
     marketData: MarketData,
   ): Promise<RoutingDecision> {
     // Stealth algorithm uses dark pools and hidden orders
-    const darkPools = venues.filter((v) => v.isActive && v.type === 'DARK_POOL');
-    const exchanges = venues.filter((v) => v.isActive && v.type === 'EXCHANGE');
+    const darkPools = venues.filter((v) =>
+      v.isActive && v.type === "DARK_POOL"
+    );
+    const exchanges = venues.filter((v) => v.isActive && v.type === "EXCHANGE");
 
     const routes: RouteAllocation[] = [];
     // eslint-disable-next-line functional/no-let
@@ -404,7 +430,10 @@ class StealthAlgorithm implements ExecutionAlgorithm {
     let maxLatency = 0;
 
     // Prefer dark pools for large orders
-    const darkPoolAllocation = Math.min(request.quantity * 0.7, request.quantity);
+    const darkPoolAllocation = Math.min(
+      request.quantity * 0.7,
+      request.quantity,
+    );
     const exchangeAllocation = request.quantity - darkPoolAllocation;
 
     // Allocate to dark pools
@@ -413,10 +442,12 @@ class StealthAlgorithm implements ExecutionAlgorithm {
 
       for (const venue of darkPools) {
         const venueData = marketData.venues[venue.id];
-        const expectedPrice =
-          request.price ||
-          (venueData ? (request.side === 'BUY' ? venueData.ask : venueData.bid) : 0);
-        const expectedFees = (expectedPrice * allocationPerPool * venue.fees.taker) / 10000;
+        const expectedPrice = request.price ||
+          (venueData
+            ? (request.side === "BUY" ? venueData.ask : venueData.bid)
+            : 0);
+        const expectedFees =
+          (expectedPrice * allocationPerPool * venue.fees.taker) / 10000;
 
         // eslint-disable-next-line functional/immutable-data
         routes.push({
@@ -428,8 +459,8 @@ class StealthAlgorithm implements ExecutionAlgorithm {
           expectedLatency: venue.latency,
           priority: routes.length + 1,
           orderParams: {
-            type: 'LIMIT',
-            timeInForce: 'GTC',
+            type: "LIMIT",
+            timeInForce: "GTC",
             hidden: true,
           },
         });
@@ -441,14 +472,17 @@ class StealthAlgorithm implements ExecutionAlgorithm {
 
     // Allocate remaining to exchanges with hidden orders
     if (exchanges.length > 0 && exchangeAllocation > 0) {
-      const allocationPerExchange = exchangeAllocation / Math.min(exchanges.length, 2);
+      const allocationPerExchange = exchangeAllocation /
+        Math.min(exchanges.length, 2);
 
       for (const venue of exchanges.slice(0, 2)) {
         const venueData = marketData.venues[venue.id];
-        const expectedPrice =
-          request.price ||
-          (venueData ? (request.side === 'BUY' ? venueData.ask : venueData.bid) : 0);
-        const expectedFees = (expectedPrice * allocationPerExchange * venue.fees.maker) / 10000;
+        const expectedPrice = request.price ||
+          (venueData
+            ? (request.side === "BUY" ? venueData.ask : venueData.bid)
+            : 0);
+        const expectedFees =
+          (expectedPrice * allocationPerExchange * venue.fees.maker) / 10000;
 
         // eslint-disable-next-line functional/immutable-data
         routes.push({
@@ -460,8 +494,8 @@ class StealthAlgorithm implements ExecutionAlgorithm {
           expectedLatency: venue.latency,
           priority: routes.length + 1,
           orderParams: {
-            type: 'LIMIT',
-            timeInForce: 'GTC',
+            type: "LIMIT",
+            timeInForce: "GTC",
             hidden: true,
             displayQuantity: Math.min(allocationPerExchange * 0.1, 100), // Show only 10%
           },
@@ -475,16 +509,18 @@ class StealthAlgorithm implements ExecutionAlgorithm {
     return {
       requestId: request.orderId,
       routes,
-      totalExpectedCost: (totalCost / (request.quantity * (request.price || 1))) * 10000,
+      totalExpectedCost:
+        (totalCost / (request.quantity * (request.price || 1))) * 10000,
       expectedLatency: maxLatency,
       confidence: 80,
-      reasoning: 'Stealth algorithm uses dark pools and hidden orders to minimize market impact',
+      reasoning:
+        "Stealth algorithm uses dark pools and hidden orders to minimize market impact",
       timestamp: Date.now(),
     };
   }
 
   getDescription(): string {
-    return 'Stealth algorithm using dark pools and hidden orders to minimize market impact';
+    return "Stealth algorithm using dark pools and hidden orders to minimize market impact";
   }
 }
 
@@ -528,15 +564,15 @@ export class AdvancedOrderRouter extends EventEmitter {
 
     // Initialize built-in algorithms
     // eslint-disable-next-line functional/immutable-data
-    this.algorithms.set('TWAP', new TWAPAlgorithm());
+    this.algorithms.set("TWAP", new TWAPAlgorithm());
     // eslint-disable-next-line functional/immutable-data
-    this.algorithms.set('VWAP', new VWAPAlgorithm());
+    this.algorithms.set("VWAP", new VWAPAlgorithm());
     // eslint-disable-next-line functional/immutable-data
-    this.algorithms.set('AGGRESSIVE', new AggressiveAlgorithm());
+    this.algorithms.set("AGGRESSIVE", new AggressiveAlgorithm());
     // eslint-disable-next-line functional/immutable-data
-    this.algorithms.set('STEALTH', new StealthAlgorithm());
+    this.algorithms.set("STEALTH", new StealthAlgorithm());
 
-    console.log(colors.blue('🎯 Advanced Order Router initialized'));
+    console.log(colors.blue("🎯 Advanced Order Router initialized"));
   }
 
   /**
@@ -549,7 +585,9 @@ export class AdvancedOrderRouter extends EventEmitter {
     this.metrics.venueUtilization.set(venue.id, 0);
 
     console.log(
-      colors.green(`➕ Added venue: ${venue.name} (${venue.type}, latency: ${venue.latency}μs)`),
+      colors.green(
+        `➕ Added venue: ${venue.name} (${venue.type}, latency: ${venue.latency}μs)`,
+      ),
     );
   }
 
@@ -577,7 +615,11 @@ export class AdvancedOrderRouter extends EventEmitter {
     if (venue) {
       // eslint-disable-next-line functional/immutable-data
       venue.isActive = isActive;
-      console.log(colors.cyan(`🔄 Venue ${venueId} is now ${isActive ? 'active' : 'inactive'}`));
+      console.log(
+        colors.cyan(
+          `🔄 Venue ${venueId} is now ${isActive ? "active" : "inactive"}`,
+        ),
+      );
     }
   }
 
@@ -624,10 +666,16 @@ export class AdvancedOrderRouter extends EventEmitter {
       const availableVenues = this.getAvailableVenues(request);
 
       // Route the order
-      const decision = await algorithm.route(request, availableVenues, marketData);
+      const decision = await algorithm.route(
+        request,
+        availableVenues,
+        marketData,
+      );
 
       // Apply co-location and network optimizations
-      if (this.config.enableCoLocation || this.config.enableNetworkOptimization) {
+      if (
+        this.config.enableCoLocation || this.config.enableNetworkOptimization
+      ) {
         this.optimizeRouting(decision, availableVenues);
       }
 
@@ -645,15 +693,20 @@ export class AdvancedOrderRouter extends EventEmitter {
 
       console.log(
         colors.cyan(
-          `🎯 Routed order ${request.orderId}: ${decision.routes.length} venues, ${routingLatency.toFixed(2)}μs`,
+          `🎯 Routed order ${request.orderId}: ${decision.routes.length} venues, ${
+            routingLatency.toFixed(2)
+          }μs`,
         ),
       );
 
-      this.emit('orderRouted', decision);
+      this.emit("orderRouted", decision);
 
       return decision;
     } catch (error) {
-      console.error(colors.red(`❌ Order routing failed for ${request.orderId}:`), error);
+      console.error(
+        colors.red(`❌ Order routing failed for ${request.orderId}:`),
+        error,
+      );
       throw error;
     }
   }
@@ -663,15 +716,19 @@ export class AdvancedOrderRouter extends EventEmitter {
    */
   private validateRequest(request: RoutingRequest): void {
     if (request.quantity < this.config.minOrderSize) {
-      throw new Error(`Order size ${request.quantity} below minimum ${this.config.minOrderSize}`);
+      throw new Error(
+        `Order size ${request.quantity} below minimum ${this.config.minOrderSize}`,
+      );
     }
 
     if (request.quantity > this.config.maxOrderSize) {
-      throw new Error(`Order size ${request.quantity} above maximum ${this.config.maxOrderSize}`);
+      throw new Error(
+        `Order size ${request.quantity} above maximum ${this.config.maxOrderSize}`,
+      );
     }
 
     if (request.maxSlippage && request.maxSlippage < 0) {
-      throw new Error('Max slippage cannot be negative');
+      throw new Error("Max slippage cannot be negative");
     }
   }
 
@@ -699,24 +756,24 @@ export class AdvancedOrderRouter extends EventEmitter {
    */
   private selectAlgorithm(request: RoutingRequest): ExecutionAlgorithm {
     // Select based on order type and strategy
-    if (request.orderType === 'TWAP') {
-      return this.algorithms.get('TWAP')!;
+    if (request.orderType === "TWAP") {
+      return this.algorithms.get("TWAP")!;
     }
 
-    if (request.orderType === 'VWAP') {
-      return this.algorithms.get('VWAP')!;
+    if (request.orderType === "VWAP") {
+      return this.algorithms.get("VWAP")!;
     }
 
     switch (request.strategy) {
-      case 'AGGRESSIVE':
-        return this.algorithms.get('AGGRESSIVE')!;
-      case 'STEALTH':
-        return this.algorithms.get('STEALTH')!;
-      case 'PASSIVE':
-        return this.algorithms.get('TWAP')!;
+      case "AGGRESSIVE":
+        return this.algorithms.get("AGGRESSIVE")!;
+      case "STEALTH":
+        return this.algorithms.get("STEALTH")!;
+      case "PASSIVE":
+        return this.algorithms.get("TWAP")!;
       default:
         // Default to VWAP for normal orders
-        return this.algorithms.get('VWAP')!;
+        return this.algorithms.get("VWAP")!;
     }
   }
 
@@ -725,29 +782,42 @@ export class AdvancedOrderRouter extends EventEmitter {
    */
   private getAvailableVenues(request: RoutingRequest): TradingVenue[] {
     // eslint-disable-next-line functional/no-let
-    let venues = Array.from(this.venues.values()).filter((venue) => venue.isActive);
+    let venues = Array.from(this.venues.values()).filter((venue) =>
+      venue.isActive
+    );
 
     // Apply constraints
     if (request.constraints) {
-      const { excludeVenues, preferredVenues, maxVenues, darkPoolOnly, requireRebate } =
-        request.constraints;
+      const {
+        excludeVenues,
+        preferredVenues,
+        maxVenues,
+        darkPoolOnly,
+        requireRebate,
+      } = request.constraints;
 
       if (excludeVenues) {
         venues = venues.filter((venue) => !excludeVenues.includes(venue.id));
       }
 
       if (preferredVenues) {
-        const preferred = venues.filter((venue) => preferredVenues.includes(venue.id));
-        const others = venues.filter((venue) => !preferredVenues.includes(venue.id));
+        const preferred = venues.filter((venue) =>
+          preferredVenues.includes(venue.id)
+        );
+        const others = venues.filter((venue) =>
+          !preferredVenues.includes(venue.id)
+        );
         venues = [...preferred, ...others];
       }
 
       if (darkPoolOnly) {
-        venues = venues.filter((venue) => venue.type === 'DARK_POOL');
+        venues = venues.filter((venue) => venue.type === "DARK_POOL");
       }
 
       if (requireRebate) {
-        venues = venues.filter((venue) => venue.fees.rebate && venue.fees.rebate > 0);
+        venues = venues.filter((venue) =>
+          venue.fees.rebate && venue.fees.rebate > 0
+        );
       }
 
       if (maxVenues) {
@@ -764,7 +834,10 @@ export class AdvancedOrderRouter extends EventEmitter {
   /**
    * Optimize routing for co-location and network
    */
-  private optimizeRouting(decision: RoutingDecision, venues: TradingVenue[]): void {
+  private optimizeRouting(
+    decision: RoutingDecision,
+    venues: TradingVenue[],
+  ): void {
     if (this.config.enableCoLocation) {
       // Prioritize co-located venues
       // eslint-disable-next-line functional/immutable-data
@@ -772,8 +845,12 @@ export class AdvancedOrderRouter extends EventEmitter {
         const venueA = venues.find((v) => v.id === a.venueId);
         const venueB = venues.find((v) => v.id === b.venueId);
 
-        if (venueA?.coLocationAvailable && !venueB?.coLocationAvailable) return -1;
-        if (!venueA?.coLocationAvailable && venueB?.coLocationAvailable) return 1;
+        if (venueA?.coLocationAvailable && !venueB?.coLocationAvailable) {
+          return -1;
+        }
+        if (!venueA?.coLocationAvailable && venueB?.coLocationAvailable) {
+          return 1;
+        }
 
         return a.expectedLatency - b.expectedLatency;
       });
@@ -800,7 +877,8 @@ export class AdvancedOrderRouter extends EventEmitter {
     // eslint-disable-next-line functional/immutable-data
     this.metrics.averageLatency = (this.metrics.averageLatency + latency) / 2;
     // eslint-disable-next-line functional/immutable-data
-    this.metrics.averageCost = (this.metrics.averageCost + decision.totalExpectedCost) / 2;
+    this.metrics.averageCost =
+      (this.metrics.averageCost + decision.totalExpectedCost) / 2;
 
     // Update venue utilization
     for (const route of decision.routes) {
@@ -828,7 +906,8 @@ export class AdvancedOrderRouter extends EventEmitter {
     }
 
     // Count algorithm usage from recent history
-    for (const decision of this.routingHistory.slice(-100)) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    for (const _decision of this.routingHistory.slice(-100)) {
       // This would need to be tracked during routing
       // For now, just initialize to 0
     }
@@ -863,14 +942,14 @@ export class AdvancedOrderRouter extends EventEmitter {
   updateConfig(config: Partial<OrderRouterConfig>): void {
     // eslint-disable-next-line functional/immutable-data
     this.config = { ...this.config, ...config };
-    console.log(colors.blue('⚙️ Order router configuration updated'));
+    console.log(colors.blue("⚙️ Order router configuration updated"));
   }
 
   /**
    * Shutdown and cleanup
    */
   shutdown(): void {
-    console.log(colors.blue('🛑 Shutting down Advanced Order Router...'));
+    console.log(colors.blue("🛑 Shutting down Advanced Order Router..."));
     // eslint-disable-next-line functional/immutable-data
     this.venues.clear();
     // eslint-disable-next-line functional/immutable-data
@@ -912,7 +991,9 @@ let orderRouterInstance: AdvancedOrderRouter | null = null;
 /**
  * Get or create the global Advanced Order Router instance
  */
-export function getAdvancedOrderRouter(config?: Partial<OrderRouterConfig>): AdvancedOrderRouter {
+export function getAdvancedOrderRouter(
+  config?: Partial<OrderRouterConfig>,
+): AdvancedOrderRouter {
   if (!orderRouterInstance) {
     orderRouterInstance = new AdvancedOrderRouter(config);
   }

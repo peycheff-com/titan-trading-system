@@ -7,7 +7,7 @@
         "id": {
           "type": "string",
           "pattern": "^[0-9A-Z]{26}$",
-          "default": "01KFDQ44J4NP48RT980ABVP8F7"
+          "default": "01KFKJR9RKWNHA37XD7KMWFP2J"
         },
         "type": {
           "type": "string"
@@ -17,14 +17,14 @@
         },
         "ts": {
           "type": "integer",
-          "default": 1768913244741
+          "default": 1769109989139
         },
         "producer": {
           "type": "string"
         },
         "correlation_id": {
           "type": "string",
-          "default": "01KFDQ44J56A7DMRHS8BA0T23M"
+          "default": "01KFKJR9RK7TSG4G5GNE1WX8MV"
         },
         "causation_id": {
           "type": "string"
@@ -33,6 +33,15 @@
           "type": "string"
         },
         "idempotency_key": {
+          "type": "string"
+        },
+        "sig": {
+          "type": "string"
+        },
+        "key_id": {
+          "type": "string"
+        },
+        "nonce": {
           "type": "string"
         },
         "payload": {
