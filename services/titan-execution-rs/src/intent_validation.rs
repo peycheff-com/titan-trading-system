@@ -10,13 +10,7 @@ const ALLOWED_TYPES: [&str; 5] = [
     "CLOSE",
 ];
 
-const ALLOWED_STATUSES: [&str; 5] = [
-    "PENDING",
-    "VALIDATED",
-    "REJECTED",
-    "EXECUTED",
-    "EXPIRED",
-];
+const ALLOWED_STATUSES: [&str; 5] = ["PENDING", "VALIDATED", "REJECTED", "EXECUTED", "EXPIRED"];
 
 fn require_string(obj: &Map<String, Value>, key: &str) -> Result<String, String> {
     match obj.get(key) {
@@ -48,8 +42,8 @@ fn require_float(obj: &Map<String, Value>, key: &str) -> Result<f64, String> {
 }
 
 pub fn validate_intent_payload(payload: &[u8]) -> Result<Intent, String> {
-    let mut value: Value = serde_json::from_slice(payload)
-        .map_err(|e| format!("Invalid JSON: {}", e))?;
+    let mut value: Value =
+        serde_json::from_slice(payload).map_err(|e| format!("Invalid JSON: {}", e))?;
 
     let obj = value
         .as_object_mut()
@@ -60,13 +54,24 @@ pub fn validate_intent_payload(payload: &[u8]) -> Result<Intent, String> {
             obj.insert("t_signal".to_string(), timestamp.clone());
             obj.remove("timestamp");
         }
+    } else {
+        // If t_signal exists, remove timestamp to prevent 'duplicate field' error
+        // because Intent struct aliases timestamp -> t_signal
+        obj.remove("timestamp");
     }
 
-    if !obj.contains_key("entry_zone") || obj.get("entry_zone").map(|v| v.is_null()).unwrap_or(false) {
+    if !obj.contains_key("entry_zone")
+        || obj.get("entry_zone").map(|v| v.is_null()).unwrap_or(false)
+    {
         obj.insert("entry_zone".to_string(), Value::Array(vec![]));
     }
 
-    if !obj.contains_key("take_profits") || obj.get("take_profits").map(|v| v.is_null()).unwrap_or(false) {
+    if !obj.contains_key("take_profits")
+        || obj
+            .get("take_profits")
+            .map(|v| v.is_null())
+            .unwrap_or(false)
+    {
         obj.insert("take_profits".to_string(), Value::Array(vec![]));
     }
 
@@ -116,7 +121,11 @@ mod tests {
 
         let bytes = serde_json::to_vec(&payload).unwrap();
         let result = validate_intent_payload(&bytes);
-        assert!(result.is_ok(), "{}", result.err().unwrap_or_else(|| "unknown error".to_string()));
+        assert!(
+            result.is_ok(),
+            "{}",
+            result.err().unwrap_or_else(|| "unknown error".to_string())
+        );
     }
 
     #[test]

@@ -24,6 +24,7 @@ pub struct ExecutionPipeline {
     simulation_engine: Arc<SimulationEngine>,
     risk_guard: Arc<RiskGuard>,
     ctx: Arc<ExecutionContext>,
+    freshness_threshold: u64,
 }
 
 use crate::exposure::ExposureMetrics;
@@ -43,6 +44,7 @@ impl ExecutionPipeline {
         simulation_engine: Arc<SimulationEngine>,
         risk_guard: Arc<RiskGuard>,
         ctx: Arc<ExecutionContext>,
+        freshness_threshold: u64,
     ) -> Self {
         Self {
             shadow_state,
@@ -51,6 +53,7 @@ impl ExecutionPipeline {
             simulation_engine,
             risk_guard,
             ctx,
+            freshness_threshold,
         }
     }
 
@@ -78,9 +81,9 @@ impl ExecutionPipeline {
             state.process_intent(intent.clone())
         };
 
-        // Enforce Timestamp Freshness (5000ms window)
+        // Enforce Timestamp Freshness
         let now = self.ctx.time.now_millis();
-        if now - processed_intent.t_signal > 5000 {
+        if now - processed_intent.t_signal > self.freshness_threshold as i64 {
             let msg = format!("Intent EXPIRED: {} ms latency", now - processed_intent.t_signal);
             error!("❌ {}. Dropping.", msg);
             metrics::inc_expired_intents();
@@ -174,7 +177,8 @@ impl ExecutionPipeline {
                     let (events_to_publish, exposure) = {
                         let mut state = self.shadow_state.write();
                         let events = state.confirm_execution(
-                            &processed_intent.signal_id, 
+                            &processed_intent.signal_id,
+                            &response.order_id, // Idempotency Key
                             fill_price, 
                             response.executed_qty, 
                             true,

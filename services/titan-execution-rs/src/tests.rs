@@ -103,7 +103,7 @@ mod tests {
     fn test_shadow_state_workflow() {
         let (persistence, path) = create_test_persistence();
         let ctx = Arc::new(ExecutionContext::new_system());
-        let mut state = ShadowState::new(persistence, ctx);
+        let mut state = ShadowState::new(persistence, ctx, Some(10000.0));
         defer_delete(&path); // clean up if possible, or just let OS handle /tmp
 
         // 1. Process Intent
@@ -130,6 +130,8 @@ mod tests {
             metadata: None,
             exchange: None,
             position_mode: None,
+            child_fills: vec![],
+            filled_size: dec!(0),
         };
 
         state.process_intent(intent);
@@ -141,6 +143,7 @@ mod tests {
         // 2. Execution (Open Position)
         let events = state.confirm_execution(
             "sig-100",
+            "child-1",
             dec!(2000.0),
             dec!(1.5),
             true,
@@ -189,6 +192,8 @@ mod tests {
             metadata: None,
             exchange: None,
             position_mode: None,
+            child_fills: vec![],
+            filled_size: dec!(0),
         };
         state.process_intent(close_intent);
 
@@ -196,6 +201,7 @@ mod tests {
         // Exit at 2100. Profit = (2100 - 2000) * 1.5 = 150
         let close_events = state.confirm_execution(
             "sig-101",
+            "child-2",
             dec!(2100.0),
             dec!(1.5),
             true,
@@ -259,7 +265,7 @@ mod tests {
     fn test_shadow_state_reduce_and_flip() {
         let (persistence, _path) = create_test_persistence();
         let ctx = Arc::new(ExecutionContext::new_system());
-        let mut state = ShadowState::new(persistence, ctx);
+        let mut state = ShadowState::new(persistence, ctx, Some(10000.0));
 
         // Open long position
         let long_intent = Intent {
@@ -285,11 +291,14 @@ mod tests {
             metadata: None,
             exchange: None,
             position_mode: None,
+            child_fills: vec![],
+            filled_size: dec!(0),
         };
 
         state.process_intent(long_intent);
         let _ = state.confirm_execution(
             "sig-long",
+            "child-long-1",
             dec!(2000.0),
             dec!(2.0),
             true,
@@ -321,11 +330,14 @@ mod tests {
             metadata: None,
             exchange: None,
             position_mode: None,
+            child_fills: vec![],
+            filled_size: dec!(0),
         };
 
         state.process_intent(short_reduce);
         let reduce_events = state.confirm_execution(
             "sig-short-1",
+            "child-short-1",
             dec!(1990.0),
             dec!(1.0),
             true,
@@ -365,11 +377,14 @@ mod tests {
             metadata: None,
             exchange: None,
             position_mode: None,
+            child_fills: vec![],
+            filled_size: dec!(0),
         };
 
         state.process_intent(short_flip);
         let flip_events = state.confirm_execution(
             "sig-short-2",
+            "child-short-2",
             dec!(1980.0),
             dec!(3.0),
             true,

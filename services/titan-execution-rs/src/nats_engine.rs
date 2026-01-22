@@ -30,9 +30,19 @@ pub async fn start_nats_engine(
     global_halt: Arc<GlobalHalt>,
     risk_guard: Arc<RiskGuard>,
     ctx: Arc<ExecutionContext>,
+    freshness_threshold: u64,
 ) -> Result<tokio::task::JoinHandle<()>, Box<dyn std::error::Error + Send + Sync>> {
     
     // --- System Halt Listener (Core NATS) ---
+    // ... (unchanged)
+
+    // ... (skipping unchanged parts for brevity if possible, but replace_file_content needs contiguity)
+    // Actually, I can use multi_replace to target specific areas.
+    // Chunk 1: Signature
+    // Chunk 2: Pipeline Init
+    // Chunk 3: Loop optimization
+    // Wait, the Instruction says "Update signature". I should use multi_replace.
+
     // Listen for urgent kill signals. Payload: { "active": true, "reason": "Manually triggered" }
     let mut halt_sub = client.subscribe("system.halt").await.map_err(|e| {
          error!("❌ Failed to subscribe to system.halt: {}", e);
@@ -103,13 +113,26 @@ pub async fn start_nats_engine(
          e
     })?;
     let client_for_balances = client.clone();
+    let state_for_balances = shadow_state.clone();
     
     tokio::spawn(async move {
         while let Some(msg) = balances_sub.next().await {
             if let Some(reply_to) = msg.reply {
-                 // Mock response
+                 let (equity, cash) = {
+                     let state = state_for_balances.read();
+                     (state.get_equity(), state.get_cash_balance())
+                 };
+
                  let response = serde_json::json!({
-                    "balances": []
+                    "balances": [
+                        {
+                            "currency": "USDT",
+                            "available": cash,
+                            "locked": equity - cash,
+                            "total": equity,
+                            "updateTime": chrono::Utc::now().timestamp_millis()
+                        }
+                    ]
                  });
                  if let Ok(payload) = serde_json::to_vec(&response) {
                     client_for_balances.publish(reply_to, payload.into()).await.ok();
@@ -179,6 +202,8 @@ pub async fn start_nats_engine(
                     metadata: None,
                     exchange: None,
                     position_mode: None,
+                    child_fills: vec![],
+                    filled_size: rust_decimal::Decimal::ZERO,
                 };
 
                 // Execute fire-and-forget (log errors)
@@ -373,8 +398,12 @@ pub async fn start_nats_engine(
         router.clone(),
         simulation_engine.clone(),
         risk_guard.clone(),
-        ctx.clone()
+        ctx.clone(),
+        freshness_threshold,
     ));
+
+    // Initialize HmacValidator once (reusable and thread-safe logic)
+    let hmac_validator = crate::security::HmacValidator::new();
 
     // Pull messages
     let mut messages = consumer.messages().await.map_err(|e| {
@@ -421,9 +450,8 @@ pub async fn start_nats_engine(
                                 if is_envelope {
                                     if let Ok(envelope) = serde_json::from_value::<crate::contracts::IntentEnvelope>(value.clone()) {
                                         // 2. Validate HMAC
-                                        // TODO: Hoist validator out of loop for performance
-                                        let validator = crate::security::HmacValidator::new();
-                                        if let Err(e) = validator.validate(&envelope, &value["payload"]) {
+                                        // Use reusable validator
+                                        if let Err(e) = hmac_validator.validate(&envelope, &value["payload"]) {
                                             error!("⛔ REJECTED Intent (Signature Verify Failed): {}", e);
                                             // ACK to prevent retry loops of bad messages
                                             if let Err(e) = msg.ack().await { error!("Failed to ACK rejected intent: {}", e); }
@@ -561,7 +589,23 @@ pub async fn start_nats_engine(
                                                         if let Ok(payload) = serde_json::to_vec(&envelope) {
                                                             client_clone.publish(subject.to_string(), payload.into()).await.ok();
                                                         }
+                                                    },
+
+                                                    ExecutionEvent::BalanceUpdated(equity, cash) => {
+                                                        let subject = "titan.evt.exec.balance";
+                                                        // Simple payload
+                                                        let payload = serde_json::json!({
+                                                            "asset": "USDT",
+                                                            "free": cash,
+                                                            "total": equity,
+                                                            "locked": equity - cash,
+                                                            "ts": ctx_nats.time.now_millis()
+                                                        });
+                                                        if let Ok(bytes) = serde_json::to_vec(&payload) {
+                                                            client_clone.publish(subject.to_string(), bytes.into()).await.ok();
+                                                        }
                                                     }
+
                                                 }
                                             }
         

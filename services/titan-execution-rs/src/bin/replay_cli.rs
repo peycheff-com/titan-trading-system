@@ -100,7 +100,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let market_data = Arc::new(MarketDataEngine::new(None));
     let global_halt = Arc::new(GlobalHalt::new());
     
-    let shadow_state = Arc::new(RwLock::new(ShadowState::new(persistence.clone(), ctx.clone())));
+    let shadow_state = Arc::new(RwLock::new(ShadowState::new(persistence.clone(), ctx.clone(), None)));
     
     let order_manager = OrderManager::new(None, market_data.clone(), global_halt.clone());
     
@@ -122,6 +122,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         simulation_engine.clone(),
         risk_guard.clone(),
         ctx.clone(),
+        5000,
     ));
 
     // 6. Replay Engine
