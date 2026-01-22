@@ -243,6 +243,7 @@ export class EmergencyProtocolManager extends EventEmitter {
     const components = ['oracle', 'global_cvd', 'bot_trap', 'flow_validator', 'hologram_engine'];
 
     for (const component of components) {
+      // eslint-disable-next-line functional/immutable-data
       this.componentHealth.set(component, {
         component,
         status: 'healthy',
@@ -260,6 +261,7 @@ export class EmergencyProtocolManager extends EventEmitter {
     const exchanges = ['binance', 'coinbase', 'kraken'];
 
     for (const exchange of exchanges) {
+      // eslint-disable-next-line functional/immutable-data
       this.exchangeStatuses.set(exchange, {
         status: ConnectionStatus.DISCONNECTED,
         lastSeen: new Date(),
@@ -278,6 +280,7 @@ export class EmergencyProtocolManager extends EventEmitter {
   checkPredictionEmergency(oracleScore: OracleScore | null): EmergencyTriggerResult {
     // Update last oracle update time
     if (oracleScore) {
+      // eslint-disable-next-line functional/immutable-data
       this.lastOracleUpdate = new Date();
       this.updateComponentHealth('oracle', 'healthy', 'Data received');
     }
@@ -494,6 +497,7 @@ export class EmergencyProtocolManager extends EventEmitter {
   checkFlowEmergency(globalCVD: GlobalCVDData | null): EmergencyTriggerResult {
     // Update last CVD update time
     if (globalCVD) {
+      // eslint-disable-next-line functional/immutable-data
       this.lastGlobalCVDUpdate = new Date();
       this.updateComponentHealth('global_cvd', 'healthy', 'Data received');
     }
@@ -625,6 +629,7 @@ export class EmergencyProtocolManager extends EventEmitter {
    * Update exchange status
    */
   updateExchangeStatus(exchange: string, status: ConnectionStatus): void {
+    // eslint-disable-next-line functional/immutable-data
     this.exchangeStatuses.set(exchange, {
       status,
       lastSeen: new Date(),
@@ -652,6 +657,7 @@ export class EmergencyProtocolManager extends EventEmitter {
     const failedCount = components.filter(c => c.status === 'failed').length;
 
     // Determine overall health
+    // eslint-disable-next-line functional/no-let
     let overallHealth: 'healthy' | 'degraded' | 'critical' | 'emergency';
 
     if (activeEmergencies.length > 0) {
@@ -742,6 +748,7 @@ export class EmergencyProtocolManager extends EventEmitter {
   private updateDegradationLevel(newLevel: DegradationLevel): void {
     if (this.currentDegradation.level !== newLevel.level) {
       const oldLevel = this.currentDegradation;
+      // eslint-disable-next-line functional/immutable-data
       this.currentDegradation = newLevel;
 
       this.emit('degradation:changed', newLevel);
@@ -769,19 +776,27 @@ export class EmergencyProtocolManager extends EventEmitter {
     for (const emergency of emergencies) {
       switch (emergency.type) {
         case EmergencyType.PREDICTION_EMERGENCY:
+          // eslint-disable-next-line functional/immutable-data
           recommendations.push('Flatten all positions immediately');
+          // eslint-disable-next-line functional/immutable-data
           recommendations.push('Wait for extreme event to resolve');
           break;
         case EmergencyType.LIQUIDITY_EMERGENCY:
+          // eslint-disable-next-line functional/immutable-data
           recommendations.push('Monitor exchange connectivity');
+          // eslint-disable-next-line functional/immutable-data
           recommendations.push('Manage existing positions manually');
           break;
         case EmergencyType.FLOW_EMERGENCY:
+          // eslint-disable-next-line functional/immutable-data
           recommendations.push('Investigate CVD divergence source');
+          // eslint-disable-next-line functional/immutable-data
           recommendations.push('Wait for market normalization');
           break;
         case EmergencyType.TRAP_SATURATION:
+          // eslint-disable-next-line functional/immutable-data
           recommendations.push('Avoid pattern-based entries');
+          // eslint-disable-next-line functional/immutable-data
           recommendations.push('Consider manual trading only');
           break;
       }
@@ -790,14 +805,17 @@ export class EmergencyProtocolManager extends EventEmitter {
     // Component-specific recommendations
     for (const component of components) {
       if (component.status === 'failed') {
+        // eslint-disable-next-line functional/immutable-data
         recommendations.push(`Restart ${component.component} component`);
       } else if (component.status === 'degraded') {
+        // eslint-disable-next-line functional/immutable-data
         recommendations.push(`Monitor ${component.component} for further degradation`);
       }
     }
 
     // Degradation recommendations
     if (this.currentDegradation.level === 'significant') {
+      // eslint-disable-next-line functional/immutable-data
       recommendations.push('Consider switching to classic Phase 2 mode');
     }
 
@@ -855,7 +873,9 @@ export class EmergencyProtocolManager extends EventEmitter {
       acknowledged: false,
     };
 
+    // eslint-disable-next-line functional/immutable-data
     this.notificationHistory.push(notification);
+    // eslint-disable-next-line functional/immutable-data
     this.lastNotificationTime.set(type, Date.now());
 
     // Emit notification event
@@ -898,10 +918,12 @@ export class EmergencyProtocolManager extends EventEmitter {
       metadata,
     };
 
+    // eslint-disable-next-line functional/immutable-data
     this.emergencyLog.push(entry);
 
     // Keep log size manageable (last 1000 entries)
     if (this.emergencyLog.length > 1000) {
+      // eslint-disable-next-line functional/immutable-data
       this.emergencyLog = this.emergencyLog.slice(-1000);
     }
 
@@ -945,6 +967,7 @@ export class EmergencyProtocolManager extends EventEmitter {
   acknowledgeNotification(notificationId: string): boolean {
     const notification = this.notificationHistory.find(n => n.id === notificationId);
     if (notification) {
+      // eslint-disable-next-line functional/immutable-data
       notification.acknowledged = true;
       return true;
     }
@@ -966,6 +989,7 @@ export class EmergencyProtocolManager extends EventEmitter {
       return; // Already active
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.activeEmergencies.set(state.type, state);
     this.emit('emergency:triggered', state);
 
@@ -984,6 +1008,7 @@ export class EmergencyProtocolManager extends EventEmitter {
   clearEmergency(type: EmergencyType): void {
     if (!this.activeEmergencies.has(type)) return;
 
+    // eslint-disable-next-line functional/immutable-data
     this.activeEmergencies.delete(type);
     this.emit('emergency:cleared', type);
 
@@ -1049,6 +1074,7 @@ export class EmergencyProtocolManager extends EventEmitter {
         current.errorCount = 0;
       }
 
+      // eslint-disable-next-line functional/immutable-data
       this.componentHealth.set(component, current);
     }
 
@@ -1076,6 +1102,7 @@ export class EmergencyProtocolManager extends EventEmitter {
       }
 
       current.lastUpdate = new Date();
+      // eslint-disable-next-line functional/immutable-data
       this.componentHealth.set(component, current);
     }
 
@@ -1123,15 +1150,19 @@ export class EmergencyProtocolManager extends EventEmitter {
 
     // Check all emergency conditions
     const predictionResult = this.checkPredictionEmergency(oracleScore);
+    // eslint-disable-next-line functional/immutable-data
     if (predictionResult.triggered) emergencies.push(predictionResult);
 
     const liquidityResult = this.checkLiquidityEmergency();
+    // eslint-disable-next-line functional/immutable-data
     if (liquidityResult.triggered) emergencies.push(liquidityResult);
 
     const flowResult = this.checkFlowEmergency(globalCVD);
+    // eslint-disable-next-line functional/immutable-data
     if (flowResult.triggered) emergencies.push(flowResult);
 
     const trapResult = this.checkTrapSaturationEmergency(botTrapAnalysis, trapDetectionRate);
+    // eslint-disable-next-line functional/immutable-data
     if (trapResult.triggered) emergencies.push(trapResult);
 
     // Assess system health
@@ -1167,6 +1198,7 @@ export class EmergencyProtocolManager extends EventEmitter {
       clearInterval(this.healthCheckInterval);
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.healthCheckInterval = setInterval(() => {
       this.assessSystemHealth();
     }, this.config.degradationCheckInterval);
@@ -1182,6 +1214,7 @@ export class EmergencyProtocolManager extends EventEmitter {
   stopHealthChecks(): void {
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval);
+      // eslint-disable-next-line functional/immutable-data
       this.healthCheckInterval = null;
     }
   }
@@ -1215,6 +1248,7 @@ export class EmergencyProtocolManager extends EventEmitter {
    * Update configuration
    */
   updateConfig(config: Partial<EmergencyProtocolConfig>): void {
+    // eslint-disable-next-line functional/immutable-data
     this.config = { ...this.config, ...config };
 
     // Restart health checks if interval changed
@@ -1243,6 +1277,7 @@ export class EmergencyProtocolManager extends EventEmitter {
     };
 
     for (const health of this.componentHealth.values()) {
+      // eslint-disable-next-line functional/immutable-data
       componentHealthSummary[health.status]++;
     }
 
@@ -1259,13 +1294,20 @@ export class EmergencyProtocolManager extends EventEmitter {
    * Reset state (for testing)
    */
   resetState(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.activeEmergencies.clear();
+    // eslint-disable-next-line functional/immutable-data
     this.emergencyLog = [];
+    // eslint-disable-next-line functional/immutable-data
     this.notificationHistory = [];
+    // eslint-disable-next-line functional/immutable-data
     this.lastNotificationTime.clear();
+    // eslint-disable-next-line functional/immutable-data
     this.lastOracleUpdate = null;
+    // eslint-disable-next-line functional/immutable-data
     this.lastGlobalCVDUpdate = null;
 
+    // eslint-disable-next-line functional/immutable-data
     this.currentDegradation = {
       level: 'none',
       affectedComponents: [],

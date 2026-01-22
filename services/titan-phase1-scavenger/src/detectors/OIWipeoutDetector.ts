@@ -148,6 +148,7 @@ export class OIWipeoutDetector {
           console.warn(
             `⛔ Geo-blocking detected for ${symbol} (HTTP 403). Disabling OIWipeoutDetector.`,
           );
+          // eslint-disable-next-line functional/immutable-data
           this.isGeoBlocked = true;
         }
         return null;
@@ -168,14 +169,17 @@ export class OIWipeoutDetector {
    */
   recordOI(symbol: string, oi: number): void {
     if (!this.oiHistory.has(symbol)) {
+      // eslint-disable-next-line functional/immutable-data
       this.oiHistory.set(symbol, []);
     }
 
     const history = this.oiHistory.get(symbol)!;
+    // eslint-disable-next-line functional/immutable-data
     history.push({ oi, timestamp: Date.now() });
 
     // Keep only last 10 minutes
     const cutoff = Date.now() - 600000;
+    // eslint-disable-next-line functional/immutable-data
     this.oiHistory.set(
       symbol,
       history.filter((h) => h.timestamp > cutoff),
@@ -193,6 +197,7 @@ export class OIWipeoutDetector {
    * Clear OI history for a symbol (for testing)
    */
   clearOIHistory(symbol: string): void {
+    // eslint-disable-next-line functional/immutable-data
     this.oiHistory.delete(symbol);
   }
 }

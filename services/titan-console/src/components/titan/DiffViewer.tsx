@@ -31,7 +31,7 @@ export function DiffViewer({ before, after, className }: DiffViewerProps) {
               <div
                 className={cn(
                   'border-r border-border px-3 py-1.5',
-                  hasChanged && 'bg-pnl-negative/5'
+                  hasChanged && 'bg-pnl-negative/5',
                 )}
               >
                 <span className="text-muted-foreground">{key}: </span>

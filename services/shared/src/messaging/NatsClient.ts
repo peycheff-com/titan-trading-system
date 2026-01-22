@@ -8,60 +8,64 @@ import {
   NatsConnection,
   StringCodec,
   Subscription,
-} from "nats";
-import { EventEmitter } from "eventemitter3";
-import { createEnvelope, Envelope } from "../schemas/envelope";
-import { createHmac, randomBytes } from "crypto";
+} from 'nats';
+import { EventEmitter } from 'eventemitter3';
+import { createEnvelope, Envelope } from '../schemas/envelope';
+import { createHmac, randomBytes } from 'crypto';
 
 export enum TitanSubject {
   // --- COMMANDS (TITAN_CMD) ---
   /* eslint-disable @typescript-eslint/no-duplicate-enum-values */
   // titan.cmd.exec.place.v1.{venue}.{account}.{symbol}
-  CMD_EXEC_PLACE = "titan.cmd.exec.place.v1",
+  CMD_EXEC_PLACE = 'titan.cmd.exec.place.v1',
   // titan.cmd.sys.halt.v1.{scope}
-  CMD_SYS_HALT = "titan.cmd.sys.halt.v1",
+  CMD_SYS_HALT = 'titan.cmd.sys.halt.v1',
   // titan.cmd.ai.optimize.v1
-  CMD_AI_OPTIMIZE = "titan.cmd.ai.optimize.v1",
+  CMD_AI_OPTIMIZE = 'titan.cmd.ai.optimize.v1',
   // titan.cmd.risk.policy (Global Risk Policy)
-  CMD_RISK_POLICY = "titan.cmd.risk.policy",
+  CMD_RISK_POLICY = 'titan.cmd.risk.policy',
 
   // --- EVENTS (TITAN_EVT) ---
   // titan.evt.exec.fill.v1.{venue}.{account}.{symbol}
-  EVT_EXEC_FILL = "titan.evt.exec.fill.v1",
+  EVT_EXEC_FILL = 'titan.evt.exec.fill.v1',
   // titan.evt.brain.signal.v1.{strategy}
-  EVT_BRAIN_SIGNAL = "titan.evt.brain.signal.v1",
+  EVT_BRAIN_SIGNAL = 'titan.evt.brain.signal.v1',
   // titan.evt.brain.regime.v1
-  EVT_REGIME_UPDATE = "titan.evt.brain.regime.v1",
+  EVT_REGIME_UPDATE = 'titan.evt.brain.regime.v1',
   // titan.evt.analytics.powerlaw.v1
-  EVT_POWERLAW_UPDATE = "titan.evt.analytics.powerlaw.v1",
+  EVT_POWERLAW_UPDATE = 'titan.evt.analytics.powerlaw.v1',
   // titan.evt.budget.update
-  EVT_BUDGET_UPDATE = "titan.evt.budget.update",
+  EVT_BUDGET_UPDATE = 'titan.evt.budget.update',
   // titan.evt.market.trade.{venue}.{symbol} (Note: Market data might be EVT or DATA depending on retention needs. Manifest says DATA for Ticker, EVT for signals)
   // But wait, brain signals are critical. Market data is usually ephemeral.
 
   // --- PHASE EVENTS ---
   // titan.evt.phase.intent.v1.{phase}.{symbol}
-  EVT_PHASE_INTENT = "titan.evt.phase.intent.v1",
+  EVT_PHASE_INTENT = 'titan.evt.phase.intent.v1',
   // titan.evt.phase.posture.v1.{phase}
-  EVT_PHASE_POSTURE = "titan.evt.phase.posture.v1",
+  EVT_PHASE_POSTURE = 'titan.evt.phase.posture.v1',
   // titan.evt.phase.diagnostics.v1.{phase}
-  EVT_PHASE_DIAGNOSTICS = "titan.evt.phase.diagnostics.v1",
+  EVT_PHASE_DIAGNOSTICS = 'titan.evt.phase.diagnostics.v1',
 
   // --- DATA (TITAN_DATA) ---
   // titan.data.market.ticker.{venue}.{symbol}
-  DATA_MARKET_TICKER = "titan.data.market.ticker",
+  DATA_MARKET_TICKER = 'titan.data.market.ticker',
   // titan.data.dashboard.update.v1
-  DATA_DASHBOARD_UPDATE = "titan.data.dashboard.update.v1",
+  DATA_DASHBOARD_UPDATE = 'titan.data.dashboard.update.v1',
 
   // Legacy mappings (to be phased out or remapped)
-  SIGNALS = "titan.evt.brain.signal.v1", // Remapped
-  EXECUTION_FILL = "titan.evt.exec.fill.v1", // Remapped
-  EXECUTION_REPORTS = "titan.evt.exec.report.v1", // Remapped
-  MARKET_DATA = "titan.data.market.ticker", // Remapped
-  AI_OPTIMIZATION_REQUESTS = "titan.cmd.ai.optimize.v1", // Remapped
-  REGIME_UPDATE = "titan.evt.brain.regime.v1", // Remapped
-  DASHBOARD_UPDATES = "titan.data.dashboard.update.v1", // Remapped
-  EXECUTION_INTENT = "titan.cmd.exec.place.v1", // Remapped (Warning: Intents could be cancels too)
+  SIGNALS = 'titan.evt.brain.signal.v1', // Remapped
+  EXECUTION_FILL = 'titan.evt.exec.fill.v1', // Remapped
+  EXECUTION_REPORTS = 'titan.evt.exec.report.v1', // Remapped
+  MARKET_DATA = 'titan.data.market.ticker', // Remapped
+  AI_OPTIMIZATION_REQUESTS = 'titan.cmd.ai.optimize.v1', // Remapped
+  REGIME_UPDATE = 'titan.evt.brain.regime.v1', // Remapped
+  DASHBOARD_UPDATES = 'titan.data.dashboard.update.v1', // Remapped
+  EXECUTION_INTENT = 'titan.cmd.exec.place.v1', // Remapped (Warning: Intents could be cancels too)
+
+  // --- SIGNAL FLOW (NEW 2026) ---
+  // titan.signal.submit.v1 (Phases -> Brain)
+  SIGNAL_SUBMIT = 'titan.signal.submit.v1',
 }
 
 export interface NatsConfig {
@@ -82,11 +86,7 @@ export class NatsClient extends EventEmitter {
   // In the new manifest, subjects starting with titan.cmd or titan.evt are Durable.
   // titan.data is Ephemeral (but stored in Memory Stream, so strictly speaking it's still JetStream if we want stream features, or Core NATS if pure fire-and-forget).
   // Manifest says TITAN_DATA has Memory storage, so it IS a stream.
-  private readonly STREAM_PREFIXES = [
-    "titan.cmd.",
-    "titan.evt.",
-    "titan.data.",
-  ];
+  private readonly STREAM_PREFIXES = ['titan.cmd.', 'titan.evt.', 'titan.data.'];
 
   private constructor() {
     super();
@@ -94,19 +94,19 @@ export class NatsClient extends EventEmitter {
 
   public static getInstance(): NatsClient {
     if (!NatsClient.instance) {
+      // eslint-disable-next-line functional/immutable-data
       NatsClient.instance = new NatsClient();
     }
     return NatsClient.instance;
   }
 
-  public async connect(
-    config: NatsConfig = { servers: ["nats://localhost:4222"] },
-  ): Promise<void> {
+  public async connect(config: NatsConfig = { servers: ['nats://localhost:4222'] }): Promise<void> {
     if (this.nc) {
       return;
     }
 
     try {
+      // eslint-disable-next-line functional/immutable-data
       this.nc = await connect({
         servers: config.servers,
         name: config.name,
@@ -118,7 +118,9 @@ export class NatsClient extends EventEmitter {
       console.log(`Connected to NATS at ${this.nc.getServer()}`);
 
       // Initialize JetStream
+      // eslint-disable-next-line functional/immutable-data
       this.js = this.nc.jetstream();
+      // eslint-disable-next-line functional/immutable-data
       this.jsm = await this.nc.jetstreamManager();
 
       await this.ensureStreams();
@@ -126,13 +128,16 @@ export class NatsClient extends EventEmitter {
       this.nc.closed().then((err) => {
         if (err) {
           console.error(`NATS connection closed with error: ${err.message}`);
-          this.emit("error", err);
+          this.emit('error', err);
         } else {
-          console.log("NATS connection closed");
-          this.emit("closed");
+          console.log('NATS connection closed');
+          this.emit('closed');
         }
+        // eslint-disable-next-line functional/immutable-data
         this.nc = null;
+        // eslint-disable-next-line functional/immutable-data
         this.js = null;
+        // eslint-disable-next-line functional/immutable-data
         this.jsm = null;
       });
     } catch (err) {
@@ -146,26 +151,26 @@ export class NatsClient extends EventEmitter {
 
     const streams = [
       {
-        name: "TITAN_CMD",
-        subjects: ["titan.cmd.>"],
-        storage: "file" as const,
-        retention: "workqueue" as const,
+        name: 'TITAN_CMD',
+        subjects: ['titan.cmd.>'],
+        storage: 'file' as const,
+        retention: 'workqueue' as const,
         max_age: 7 * 24 * 60 * 60 * 1000 * 1000 * 1000, // 7 Days
         duplicate_window: 60 * 1000 * 1000 * 1000, // 1 min
       },
       {
-        name: "TITAN_EVT",
-        subjects: ["titan.evt.>"],
-        storage: "file" as const,
-        retention: "limits" as const,
+        name: 'TITAN_EVT',
+        subjects: ['titan.evt.>'],
+        storage: 'file' as const,
+        retention: 'limits' as const,
         max_age: 30 * 24 * 60 * 60 * 1000 * 1000 * 1000, // 30 Days
         max_bytes: 10 * 1024 * 1024 * 1024, // 10 GB
       },
       {
-        name: "TITAN_DATA",
-        subjects: ["titan.data.>"],
-        storage: "memory" as const,
-        retention: "limits" as const,
+        name: 'TITAN_DATA',
+        subjects: ['titan.data.>'],
+        storage: 'memory' as const,
+        retention: 'limits' as const,
         max_age: 15 * 60 * 1000 * 1000 * 1000, // 15 Min
       },
     ];
@@ -177,7 +182,7 @@ export class NatsClient extends EventEmitter {
       } catch (err: any) {
         // If stream explicitly exists but with different config, we might want to update it
         // For now, logging error if it's not just "already exists" (which 'add' handles by updating/idempotency usually, but NATS can be strict)
-        if (!err.message.includes("already in use")) {
+        if (!err.message.includes('already in use')) {
           try {
             // Try update if add failed
             await this.jsm.streams.update(stream.name, stream as any);
@@ -189,22 +194,18 @@ export class NatsClient extends EventEmitter {
     }
   }
 
-  public async publish<T>(
-    subject: TitanSubject | string,
-    data: T,
-  ): Promise<void> {
+  public async publish<T>(subject: TitanSubject | string, data: T): Promise<void> {
     if (!this.nc) {
-      throw new Error("NATS client not connected");
+      throw new Error('NATS client not connected');
     }
 
-    const payload = typeof data === "string"
-      ? this.sc.encode(data)
-      : this.jc.encode(data);
+    const payload = typeof data === 'string' ? this.sc.encode(data) : this.jc.encode(data);
 
     // Use JetStream if subject matches any stream prefix
+    // eslint-disable-next-line functional/no-let
     let isJetStream = false;
     if (this.js) {
-      if (typeof subject === "string") {
+      if (typeof subject === 'string') {
         for (const prefix of this.STREAM_PREFIXES) {
           if (subject.startsWith(prefix)) {
             isJetStream = true;
@@ -250,12 +251,12 @@ export class NatsClient extends EventEmitter {
     // Security Signing (Jan 2026 Audit)
     const secret = process.env.HMAC_SECRET;
     if (secret) {
-      const nonce = randomBytes(16).toString("hex");
-      const keyId = process.env.HMAC_KEY_ID || "default";
+      const nonce = randomBytes(16).toString('hex');
+      const keyId = process.env.HMAC_KEY_ID || 'default';
 
       // Canonicalize JSON (Sort keys recursively)
       const canonicalize = (obj: any): any => {
-        if (typeof obj !== "object" || obj === null) {
+        if (typeof obj !== 'object' || obj === null) {
           return obj;
         }
         if (Array.isArray(obj)) {
@@ -264,6 +265,7 @@ export class NatsClient extends EventEmitter {
         return Object.keys(obj)
           .sort()
           .reduce((sorted: any, key) => {
+            // eslint-disable-next-line functional/immutable-data
             sorted[key] = canonicalize(obj[key]);
             return sorted;
           }, {});
@@ -272,10 +274,13 @@ export class NatsClient extends EventEmitter {
       // Canonical String: ts.nonce.payload_json_sorted
       const payloadStr = JSON.stringify(canonicalize(data));
       const canonical = `${envelope.ts}.${nonce}.${payloadStr}`;
-      const sig = createHmac("sha256", secret).update(canonical).digest("hex");
+      const sig = createHmac('sha256', secret).update(canonical).digest('hex');
 
+      // eslint-disable-next-line functional/immutable-data
       envelope.sig = sig;
+      // eslint-disable-next-line functional/immutable-data
       envelope.nonce = nonce;
+      // eslint-disable-next-line functional/immutable-data
       envelope.key_id = keyId;
     }
 
@@ -288,7 +293,7 @@ export class NatsClient extends EventEmitter {
     durableName?: string, // If provided, creates a durable consumer
   ): Subscription {
     if (!this.nc) {
-      throw new Error("NATS client not connected");
+      throw new Error('NATS client not connected');
     }
 
     // Wrapper to handle both sync and async callbacks uniformly
@@ -302,8 +307,9 @@ export class NatsClient extends EventEmitter {
     };
 
     // Check if we should use JetStream Push Consumer
+    // eslint-disable-next-line functional/no-let
     let isJetStream = false;
-    if (this.js && typeof subject === "string") {
+    if (this.js && typeof subject === 'string') {
       for (const prefix of this.STREAM_PREFIXES) {
         if (subject.startsWith(prefix)) {
           isJetStream = true;
@@ -324,6 +330,7 @@ export class NatsClient extends EventEmitter {
           const sub = await this.js!.subscribe(subject, opts);
           for await (const m of sub) {
             try {
+              // eslint-disable-next-line functional/no-let
               let decoded: T;
               try {
                 decoded = this.jc.decode(m.data) as T;
@@ -334,10 +341,7 @@ export class NatsClient extends EventEmitter {
               await executeCallback(decoded, m.subject);
               m.ack();
             } catch (err) {
-              console.error(
-                `Failed to process durable message on ${subject}:`,
-                err,
-              );
+              console.error(`Failed to process durable message on ${subject}:`, err);
               m.nak();
             }
           }
@@ -349,9 +353,7 @@ export class NatsClient extends EventEmitter {
       // Return a dummy subscription
       return {
         unsubscribe: () =>
-          console.warn(
-            "Unsubscribing from durable JS subscription not fully supported",
-          ),
+          console.warn('Unsubscribing from durable JS subscription not fully supported'),
         closed: Promise.resolve(undefined),
         drain: () => Promise.resolve(),
         isClosed: () => false,
@@ -369,6 +371,7 @@ export class NatsClient extends EventEmitter {
     (async () => {
       for await (const m of sub) {
         try {
+          // eslint-disable-next-line functional/no-let
           let decoded: T;
           try {
             decoded = this.jc.decode(m.data) as T;
@@ -389,8 +392,11 @@ export class NatsClient extends EventEmitter {
     if (this.nc) {
       await this.nc.drain();
       await this.nc.close();
+      // eslint-disable-next-line functional/immutable-data
       this.nc = null;
+      // eslint-disable-next-line functional/immutable-data
       this.js = null;
+      // eslint-disable-next-line functional/immutable-data
       this.jsm = null;
     }
   }
@@ -401,7 +407,7 @@ export class NatsClient extends EventEmitter {
     options: { timeout?: number } = {},
   ): Promise<T> {
     if (!this.nc) {
-      throw new Error("NATS client not connected");
+      throw new Error('NATS client not connected');
     }
 
     const payload = this.jc.encode(data);

@@ -70,6 +70,7 @@ export class CapitalFlowManager {
    * Set the sweep notifier
    */
   setSweepNotifier(notifier: SweepNotifier): void {
+    // eslint-disable-next-line functional/immutable-data
     this.sweepNotifier = notifier;
   }
 
@@ -94,6 +95,7 @@ export class CapitalFlowManager {
     );
 
     if (result.rows.length > 0) {
+      // eslint-disable-next-line functional/immutable-data
       this.highWatermark = parseFloat(result.rows[0].value);
     }
   }
@@ -111,6 +113,7 @@ export class CapitalFlowManager {
     );
 
     if (result.rows.length > 0) {
+      // eslint-disable-next-line functional/immutable-data
       this.totalSwept = parseFloat(result.rows[0].total);
     }
   }
@@ -122,6 +125,7 @@ export class CapitalFlowManager {
    * @param amount - Target allocation in USD
    */
   setTargetAllocation(amount: number): void {
+    // eslint-disable-next-line functional/immutable-data
     this.targetAllocation = Math.max(0, amount);
   }
 
@@ -145,6 +149,7 @@ export class CapitalFlowManager {
       return;
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.highWatermark = value;
 
     // Persist to database
@@ -174,6 +179,7 @@ export class CapitalFlowManager {
     }
 
     const previousWatermark = this.highWatermark;
+    // eslint-disable-next-line functional/immutable-data
     this.highWatermark = equity;
 
     // Persist to database
@@ -287,14 +293,17 @@ export class CapitalFlowManager {
     }
 
     // Execute transfer with retry logic
+    // eslint-disable-next-line functional/no-let
     let lastError: string | undefined;
 
+    // eslint-disable-next-line functional/no-let
     for (let attempt = 1; attempt <= this.config.maxRetries; attempt++) {
       try {
         const result = await this.executeTransfer(amount);
 
         if (result.success) {
           // Update total swept (monotonically increasing)
+          // eslint-disable-next-line functional/immutable-data
           this.totalSwept += amount;
 
           // Log the operation

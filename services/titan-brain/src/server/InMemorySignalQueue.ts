@@ -73,6 +73,7 @@ export class InMemorySignalQueue {
    */
   async connect(): Promise<void> {
     // Start cleanup interval for expired idempotency keys
+    // eslint-disable-next-line functional/immutable-data
     this.cleanupInterval = setInterval(() => {
       this.cleanupExpired();
     }, 60000); // Every minute
@@ -86,6 +87,7 @@ export class InMemorySignalQueue {
   async disconnect(): Promise<void> {
     if (this.cleanupInterval) {
       clearInterval(this.cleanupInterval);
+      // eslint-disable-next-line functional/immutable-data
       this.cleanupInterval = null;
     }
     console.log('🛑 Signal queue disconnected (in-memory mode)');
@@ -106,6 +108,7 @@ export class InMemorySignalQueue {
 
     for (const [signalId, expiresAt] of this.idempotencyMap.entries()) {
       if (expiresAt <= now) {
+        // eslint-disable-next-line functional/immutable-data
         this.idempotencyMap.delete(signalId);
       }
     }
@@ -128,7 +131,9 @@ export class InMemorySignalQueue {
     // Check queue size and evict oldest if necessary
     if (this.queue.length >= this.config.maxQueueSize) {
       // Remove lowest priority (lowest score) signal
+      // eslint-disable-next-line functional/immutable-data
       this.queue.sort((a, b) => a.score - b.score);
+      // eslint-disable-next-line functional/immutable-data
       this.queue.shift();
     }
 
@@ -148,12 +153,15 @@ export class InMemorySignalQueue {
     };
 
     // Add to queue
+    // eslint-disable-next-line functional/immutable-data
     this.queue.push(entry);
 
     // Sort by score (descending - highest priority first)
+    // eslint-disable-next-line functional/immutable-data
     this.queue.sort((a, b) => b.score - a.score);
 
     // Mark signal ID as seen for idempotency
+    // eslint-disable-next-line functional/immutable-data
     this.idempotencyMap.set(signal.signalId, now + this.config.idempotencyTTL);
 
     return true;
@@ -171,6 +179,7 @@ export class InMemorySignalQueue {
     }
 
     // Remove and return highest priority (first element)
+    // eslint-disable-next-line functional/immutable-data
     const entry = this.queue.shift();
     return entry ? entry.signal : null;
   }
@@ -203,6 +212,7 @@ export class InMemorySignalQueue {
 
     // Check if expired
     if (expiresAt <= Date.now()) {
+      // eslint-disable-next-line functional/immutable-data
       this.idempotencyMap.delete(signalId);
       return false;
     }
@@ -216,11 +226,13 @@ export class InMemorySignalQueue {
    * @param signalId - Signal ID to mark as processed
    */
   async markProcessed(signalId: string): Promise<void> {
+    // eslint-disable-next-line functional/immutable-data
     this.processedMap.set(signalId, Date.now());
 
     // Extend idempotency TTL
     const expiresAt = this.idempotencyMap.get(signalId);
     if (expiresAt) {
+      // eslint-disable-next-line functional/immutable-data
       this.idempotencyMap.set(signalId, Date.now() + this.config.idempotencyTTL);
     }
   }
@@ -261,6 +273,7 @@ export class InMemorySignalQueue {
    * Clear the queue
    */
   async clear(): Promise<void> {
+    // eslint-disable-next-line functional/immutable-data
     this.queue = [];
   }
 
@@ -268,6 +281,7 @@ export class InMemorySignalQueue {
    * Clear idempotency records
    */
   async clearIdempotency(): Promise<void> {
+    // eslint-disable-next-line functional/immutable-data
     this.idempotencyMap.clear();
   }
 
@@ -275,6 +289,7 @@ export class InMemorySignalQueue {
    * Clear processed records
    */
   async clearProcessed(): Promise<void> {
+    // eslint-disable-next-line functional/immutable-data
     this.processedMap.clear();
   }
 
@@ -290,6 +305,7 @@ export class InMemorySignalQueue {
     const processedCount = this.processedMap.size;
 
     // Get oldest signal age
+    // eslint-disable-next-line functional/no-let
     let oldestSignalAge: number | null = null;
     if (this.queue.length > 0) {
       // Find oldest by enqueuedAt
@@ -315,9 +331,11 @@ export class InMemorySignalQueue {
   async dequeueBatch(limit: number): Promise<IntentSignal[]> {
     const signals: IntentSignal[] = [];
 
+    // eslint-disable-next-line functional/no-let
     for (let i = 0; i < limit; i++) {
       const signal = await this.dequeue();
       if (!signal) break;
+      // eslint-disable-next-line functional/immutable-data
       signals.push(signal);
     }
 

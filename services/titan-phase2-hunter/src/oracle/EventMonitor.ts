@@ -56,6 +56,7 @@ export class EventMonitor extends EventEmitter {
       // 1. Check for Rapid Probability Change (>10% default)
       const probChange = currentEvent.probability - prevEvent.probability;
       if (Math.abs(probChange) >= threshold) {
+        // eslint-disable-next-line functional/immutable-data
         alerts.push({
           type: 'probability_change',
           severity: Math.abs(probChange) >= 20 ? 'warning' : 'info',
@@ -73,6 +74,7 @@ export class EventMonitor extends EventEmitter {
       for (const criticalLevel of this.CRITICAL_THRESHOLDS) {
         // Check if we crossed the level from below
         if (prevEvent.probability < criticalLevel && currentEvent.probability >= criticalLevel) {
+          // eslint-disable-next-line functional/immutable-data
           alerts.push({
             type: 'threshold_crossing',
             severity: 'warning',
@@ -85,6 +87,7 @@ export class EventMonitor extends EventEmitter {
         }
         // Check if we crossed the level from above
         if (prevEvent.probability > criticalLevel && currentEvent.probability <= criticalLevel) {
+          // eslint-disable-next-line functional/immutable-data
           alerts.push({
             type: 'threshold_crossing',
             severity: 'warning',
@@ -134,6 +137,7 @@ export class EventMonitor extends EventEmitter {
    */
   public calculateCompositeRiskScore(windowMinutes: number = 60): CompositeEventScore {
     const upcomingEvents = this.getUpcomingHighImpactEvents(windowMinutes);
+    // eslint-disable-next-line functional/no-let
     let totalImpactScore = 0;
     const maxVolatility = 0;
 
@@ -182,6 +186,7 @@ export class EventMonitor extends EventEmitter {
       const probChange = currentEvent.probability - prevEvent.probability;
 
       if (Math.abs(probChange) >= 20) {
+        // eslint-disable-next-line functional/immutable-data
         anomalies.push({
           eventId: currentEvent.id,
           type: 'flash_volatility',
@@ -199,6 +204,7 @@ export class EventMonitor extends EventEmitter {
    */
   private updateState(events: PredictionMarketEvent[]): void {
     for (const event of events) {
+      // eslint-disable-next-line functional/immutable-data
       this.previousEvents.set(event.id, event);
     }
   }

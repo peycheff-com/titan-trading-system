@@ -124,6 +124,7 @@ export class TripwireCalculators {
       // Handle edge case where close === maxPrice
       const safeBinIdx = Math.min(binIdx, bins - 1);
       if (safeBinIdx >= 0 && safeBinIdx < bins) {
+        // eslint-disable-next-line functional/immutable-data
         profile[safeBinIdx].volume += bar.volume;
       }
     }
@@ -225,11 +226,13 @@ export class TripwireCalculators {
 
     // Calculate historical BB widths (72 hours = 72 bars for 1h)
     const historicalWidths = new Float64Array(72);
+    // eslint-disable-next-line functional/no-let
     for (let i = 0; i < 72; i++) {
       const startIdx = ohlcv.length - 92 + i;
       const slice = closes.slice(startIdx, startIdx + period);
       const sliceSMA = TripwireCalculators.calcSMA(slice, period);
       const sliceStdDev = TripwireCalculators.calcStdDev(slice, period);
+      // eslint-disable-next-line functional/immutable-data
       historicalWidths[i] = (sliceStdDev * 2 * 2) / sliceSMA;
     }
 
@@ -270,7 +273,9 @@ export class TripwireCalculators {
     }
 
     const slice = data.slice(-period);
+    // eslint-disable-next-line functional/no-let
     let sum = 0;
+    // eslint-disable-next-line functional/no-let
     for (let i = 0; i < slice.length; i++) {
       sum += slice[i];
     }
@@ -292,7 +297,9 @@ export class TripwireCalculators {
     const slice = data.slice(-period);
     const mean = TripwireCalculators.calcSMA(data, period);
 
+    // eslint-disable-next-line functional/no-let
     let sumSquaredDiffs = 0;
+    // eslint-disable-next-line functional/no-let
     for (let i = 0; i < slice.length; i++) {
       const diff = slice[i] - mean;
       sumSquaredDiffs += diff * diff;
@@ -321,6 +328,7 @@ export class TripwireCalculators {
     const minusDM = new Float64Array(ohlcv.length);
 
     // 1. Calculate TR, +DM, -DM for each bar
+    // eslint-disable-next-line functional/no-let
     for (let i = 1; i < ohlcv.length; i++) {
       const high = ohlcv[i].high;
       const low = ohlcv[i].low;
@@ -329,22 +337,29 @@ export class TripwireCalculators {
       const prevLow = ohlcv[i - 1].low;
 
       // True Range
+      // eslint-disable-next-line functional/immutable-data
       tr[i] = Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
 
       // Directional Movement
       const upMove = high - prevHigh;
       const downMove = prevLow - low;
 
+      // eslint-disable-next-line functional/immutable-data
       plusDM[i] = upMove > downMove && upMove > 0 ? upMove : 0;
+      // eslint-disable-next-line functional/immutable-data
       minusDM[i] = downMove > upMove && downMove > 0 ? downMove : 0;
     }
 
     // 2. Smoothed TR, +DM, -DM (Wilder's Smoothing)
     // First value is simple sum
+    // eslint-disable-next-line functional/no-let
     let smoothTR = 0;
+    // eslint-disable-next-line functional/no-let
     let smoothPlusDM = 0;
+    // eslint-disable-next-line functional/no-let
     let smoothMinusDM = 0;
 
+    // eslint-disable-next-line functional/no-let
     for (let i = 1; i <= period; i++) {
       smoothTR += tr[i];
       smoothPlusDM += plusDM[i];
@@ -354,6 +369,7 @@ export class TripwireCalculators {
     // Subsequent values
     const dxValues: number[] = [];
 
+    // eslint-disable-next-line functional/no-let
     for (let i = period + 1; i < ohlcv.length; i++) {
       smoothTR = smoothTR - smoothTR / period + tr[i];
       smoothPlusDM = smoothPlusDM - smoothPlusDM / period + plusDM[i];
@@ -366,6 +382,7 @@ export class TripwireCalculators {
       // 4. Calculate DX
       const diSum = plusDI + minusDI;
       const dx = diSum === 0 ? 0 : (Math.abs(plusDI - minusDI) / diSum) * 100;
+      // eslint-disable-next-line functional/immutable-data
       dxValues.push(dx);
     }
 
@@ -377,6 +394,7 @@ export class TripwireCalculators {
     // For simplicity and standard usage, simple average of last 'period' DX is often sufficient proxy
     // or we can do wilder's smoothing on DX too. Let's do simple SMA of last 14 DX for stability.
 
+    // eslint-disable-next-line functional/no-let
     let sumDX = 0;
     const recentDX = dxValues.slice(-period);
     for (const val of recentDX) sumDX += val;

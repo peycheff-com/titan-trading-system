@@ -1,14 +1,14 @@
-import weaviate, { ApiKey, WeaviateClient } from "weaviate-ts-client";
+import weaviate, { ApiKey, WeaviateClient } from 'weaviate-ts-client';
 
 export class VectorMemory {
   private client: WeaviateClient;
-  private className = "TitanMemory";
+  private className = 'TitanMemory';
 
   constructor() {
     this.client = (weaviate.default || weaviate).client({
-      scheme: "http",
-      host: process.env.WEAVIATE_HOST || "localhost:8080",
-      apiKey: new ApiKey(process.env.WEAVIATE_API_KEY || ""),
+      scheme: 'http',
+      host: process.env.WEAVIATE_HOST || 'localhost:8080',
+      apiKey: new ApiKey(process.env.WEAVIATE_API_KEY || ''),
     });
   }
 
@@ -19,15 +19,15 @@ export class VectorMemory {
         .classCreator()
         .withClass({
           class: this.className,
-          vectorizer: "text2vec-transformers",
+          vectorizer: 'text2vec-transformers',
           properties: [
-            { name: "content", dataType: ["text"] },
-            { name: "metadata", dataType: ["text"] },
-            { name: "timestamp", dataType: ["date"] },
+            { name: 'content', dataType: ['text'] },
+            { name: 'metadata', dataType: ['text'] },
+            { name: 'timestamp', dataType: ['date'] },
           ],
         })
         .do();
-      console.log("Weaviate Schema Initialized");
+      console.log('Weaviate Schema Initialized');
     } catch (e) {
       // likely already exists
     }
@@ -49,7 +49,7 @@ export class VectorMemory {
     const res = await this.client.graphql
       .get()
       .withClassName(this.className)
-      .withFields("content metadata")
+      .withFields('content metadata')
       .withNearText({ concepts: [query] })
       .withLimit(limit)
       .do();

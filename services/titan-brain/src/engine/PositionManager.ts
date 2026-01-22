@@ -46,12 +46,14 @@ export class PositionManager {
     // If size is zero/negligible, remove it
     if (position.size <= 0.000001) {
       if (this.positions.has(key)) {
+        // eslint-disable-next-line functional/immutable-data
         this.positions.delete(key);
         logger.info(`[PositionManager] Closed/Removed position: ${key}`);
       }
       return;
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.positions.set(key, position);
     // logger.debug(`[PositionManager] Updated position: ${key} | Size: ${position.size}`);
   }
@@ -81,6 +83,7 @@ export class PositionManager {
    * Useful for risk aggregation.
    */
   public getNetExposure(symbol: string): number {
+    // eslint-disable-next-line functional/no-let
     let net = 0;
     for (const pos of this.positions.values()) {
       if (pos.symbol === symbol) {
@@ -104,6 +107,7 @@ export class PositionManager {
     const keysToRemove = new Set<string>();
     for (const [key, pos] of this.positions) {
       if (pos.exchange === exchange) {
+        // eslint-disable-next-line functional/immutable-data
         keysToRemove.add(key);
       }
     }
@@ -118,17 +122,20 @@ export class PositionManager {
       }
       const key = this.generateKey(pos);
       this.updatePosition(pos);
+      // eslint-disable-next-line functional/immutable-data
       keysToRemove.delete(key);
     }
 
     // 3. Remove positions not in the new list (stale)
     for (const key of keysToRemove) {
+      // eslint-disable-next-line functional/immutable-data
       this.positions.delete(key);
       logger.info(`[PositionManager] Removed stale position during sync: ${key}`);
     }
   }
 
   public clear(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.positions.clear();
   }
 }

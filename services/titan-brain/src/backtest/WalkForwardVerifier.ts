@@ -26,6 +26,7 @@ export class WalkForwardVerifier {
       config,
     });
 
+    // eslint-disable-next-line functional/no-let
     let windowStart = new Date(config.startDate);
 
     while (windowStart < config.endDate) {

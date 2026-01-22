@@ -154,6 +154,7 @@ export class HunterEventEmitter extends NodeEventEmitter {
    */
   static getInstance(): HunterEventEmitter {
     if (!HunterEventEmitter.instance) {
+      // eslint-disable-next-line functional/immutable-data
       HunterEventEmitter.instance = new HunterEventEmitter();
     }
     return HunterEventEmitter.instance;
@@ -391,6 +392,7 @@ export class HunterEventEmitter extends NodeEventEmitter {
     const events = this.eventNames();
 
     for (const event of events) {
+      // eslint-disable-next-line functional/immutable-data
       stats[event.toString()] = this.listenerCount(event);
     }
 

@@ -22,7 +22,7 @@ def scan_secrets(root_dir):
     
     for dirpath, _, filenames in os.walk(root_dir):
         # Ignore common non-source directories
-        if any(x in dirpath for x in ['node_modules', '.git', 'dist', 'build', '.genkit', 'coverage']):
+        if any(x in dirpath for x in ['node_modules', '.git', 'dist', 'build', '.genkit', 'coverage', 'target']):
             continue
             
         for f in filenames:
@@ -41,8 +41,8 @@ def scan_secrets(root_dir):
                     content = file.read()
                     for name, pattern in PATTERNS.items():
                         if re.search(pattern, content):
-                            # Check if it's likely a test file or example
-                            if 'test' in relpath.lower() or 'example' in relpath.lower():
+                            # Check if it's likely a test file or example or the scanner itself
+                            if 'test' in relpath.lower() or 'example' in relpath.lower() or 'secret_scan.py' in relpath:
                                 continue
                             issues.append((name, relpath))
             except Exception as e:

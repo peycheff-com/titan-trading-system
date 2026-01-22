@@ -439,6 +439,7 @@ mod tests {
                 true,
                 dec!(0),
                 "USDT".to_string(),
+                "MOCK",
             );
         }
 
@@ -456,6 +457,7 @@ mod tests {
                 true,
                 dec!(0),
                 "USDT".to_string(),
+                "MOCK",
             );
         }
 
@@ -473,6 +475,7 @@ mod tests {
                 true,
                 dec!(0),
                 "USDT".to_string(),
+                "MOCK",
             );
 
             let close = simple_intent("SOL/USDT", dec!(100.0), dec!(5.0), IntentType::CloseLong);
@@ -486,6 +489,7 @@ mod tests {
                 true,
                 dec!(0),
                 "USDT".to_string(),
+                "MOCK",
             );
             // Loss (4-10)*100 = -600. Total = -1100.
         }

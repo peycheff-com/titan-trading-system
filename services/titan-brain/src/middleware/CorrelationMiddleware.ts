@@ -62,6 +62,7 @@ export function createCorrelationMiddleware(
     }
 
     // Get or generate correlation ID
+    // eslint-disable-next-line functional/no-let
     let correlationId = request.headers[finalConfig.headerName.toLowerCase()] as string;
 
     if (!correlationId && finalConfig.generateIfMissing) {
@@ -74,6 +75,7 @@ export function createCorrelationMiddleware(
     }
 
     // Add correlation ID to request
+    // eslint-disable-next-line functional/immutable-data
     (request as RequestWithCorrelation).correlationId = correlationId;
 
     // Add correlation ID to response headers

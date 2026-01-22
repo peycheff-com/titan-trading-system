@@ -30,6 +30,7 @@ export class ExchangeRouter {
     const quotes = await this.priceMonitor.getAllPrices(order.symbol);
     if (quotes.length === 0) return null;
 
+    // eslint-disable-next-line functional/no-let
     let bestDecision: RoutingDecision | null = null;
 
     for (const quote of quotes) {
@@ -44,6 +45,7 @@ export class ExchangeRouter {
       // BUY: Minimize effective price
       // SELL: Maximize effective price
 
+      // eslint-disable-next-line functional/no-let
       let isBetter = false;
       if (!bestDecision) {
         isBetter = true;

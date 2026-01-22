@@ -153,6 +153,7 @@ export class EnhancedAIIntegration extends EventEmitter {
 
     // Start orchestration timers
     if (this.config.enableAutomatedStrategySelection) {
+      // eslint-disable-next-line functional/immutable-data
       this.strategySelectionTimer = setInterval(() => {
         this.runStrategySelection().catch((error) => {
           this.telemetry.error('EnhancedAIIntegration', 'Strategy selection failed', error);
@@ -161,6 +162,7 @@ export class EnhancedAIIntegration extends EventEmitter {
     }
 
     if (this.config.enableAdaptiveRiskManagement) {
+      // eslint-disable-next-line functional/immutable-data
       this.riskAdjustmentTimer = setInterval(() => {
         this.runRiskAdjustment().catch((error) => {
           this.telemetry.error('EnhancedAIIntegration', 'Risk adjustment failed', error);
@@ -168,6 +170,7 @@ export class EnhancedAIIntegration extends EventEmitter {
       }, this.config.riskAdjustmentInterval);
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.performanceEvaluationTimer = setInterval(() => {
       this.evaluatePerformance().catch((error) => {
         this.telemetry.error('EnhancedAIIntegration', 'Performance evaluation failed', error);
@@ -190,16 +193,19 @@ export class EnhancedAIIntegration extends EventEmitter {
     // Clear timers
     if (this.strategySelectionTimer) {
       clearInterval(this.strategySelectionTimer);
+      // eslint-disable-next-line functional/immutable-data
       this.strategySelectionTimer = null;
     }
 
     if (this.riskAdjustmentTimer) {
       clearInterval(this.riskAdjustmentTimer);
+      // eslint-disable-next-line functional/immutable-data
       this.riskAdjustmentTimer = null;
     }
 
     if (this.performanceEvaluationTimer) {
       clearInterval(this.performanceEvaluationTimer);
+      // eslint-disable-next-line functional/immutable-data
       this.performanceEvaluationTimer = null;
     }
 
@@ -350,6 +356,7 @@ export class EnhancedAIIntegration extends EventEmitter {
     for (const strategy of strategies) {
       const prediction = this.predictiveAnalytics.predictStrategyPerformance(strategy, symbol);
       if (prediction) {
+        // eslint-disable-next-line functional/immutable-data
         predictions.push(prediction);
       }
     }
@@ -361,6 +368,7 @@ export class EnhancedAIIntegration extends EventEmitter {
     // Select strategies based on predictions and regime
     const selection = this.selectOptimalStrategies(symbol, regime, predictions);
 
+    // eslint-disable-next-line functional/immutable-data
     this.currentStrategySelection.set(symbol, selection);
 
     this.telemetry.info('EnhancedAIIntegration', `Strategy selection updated for ${symbol}`, {
@@ -387,16 +395,19 @@ export class EnhancedAIIntegration extends EventEmitter {
 
     const selectedStrategies: StrategySelection['selectedStrategies'] = [];
     const disabledStrategies: StrategySelection['disabledStrategies'] = [];
+    // eslint-disable-next-line functional/no-let
     let totalAllocation = 0;
 
     // Apply regime-specific selection logic
     const maxStrategies = this.getMaxStrategiesForRegime(regime);
     const baseAllocation = 1 / Math.min(maxStrategies, sortedPredictions.length);
 
+    // eslint-disable-next-line functional/no-let
     for (let i = 0; i < Math.min(maxStrategies, sortedPredictions.length); i++) {
       const prediction = sortedPredictions[i];
 
       // Calculate allocation based on confidence and performance
+      // eslint-disable-next-line functional/no-let
       let allocation = baseAllocation * prediction.confidence;
 
       // Apply regime adjustments
@@ -406,6 +417,7 @@ export class EnhancedAIIntegration extends EventEmitter {
       allocation = Math.min(allocation, this.config.strategyAllocationLimits.maxSingleStrategy);
 
       if (allocation > 0.1 && totalAllocation + allocation <= 1.0) {
+        // eslint-disable-next-line functional/immutable-data
         selectedStrategies.push({
           strategy: prediction.strategy,
           allocation,
@@ -421,6 +433,7 @@ export class EnhancedAIIntegration extends EventEmitter {
     // Mark remaining strategies as disabled
     for (const prediction of predictions) {
       if (!selectedStrategies.find((s) => s.strategy === prediction.strategy)) {
+        // eslint-disable-next-line functional/immutable-data
         disabledStrategies.push({
           strategy: prediction.strategy,
           reasoning:
@@ -442,6 +455,7 @@ export class EnhancedAIIntegration extends EventEmitter {
         if (!selectedStrategies.find((s) => s.strategy === prediction.strategy)) {
           const allocation = Math.min(0.2, (1.0 - totalAllocation) / 2);
           if (allocation > 0.05) {
+            // eslint-disable-next-line functional/immutable-data
             selectedStrategies.push({
               strategy: prediction.strategy,
               allocation,
@@ -487,6 +501,7 @@ export class EnhancedAIIntegration extends EventEmitter {
       const adjustedConfig = this.applyRiskAdjustments(currentConfig, riskAdjustments);
       const riskScore = this.calculateRiskScore(riskAdjustments);
 
+      // eslint-disable-next-line functional/immutable-data
       this.currentRiskConfig = {
         timestamp: Date.now(),
         baseConfig: currentConfig,
@@ -507,7 +522,9 @@ export class EnhancedAIIntegration extends EventEmitter {
         });
       }
 
+      // eslint-disable-next-line functional/immutable-data
       this.riskAdjustmentCount++;
+      // eslint-disable-next-line functional/immutable-data
       this.lastRiskAdjustmentTime = Date.now();
 
       this.emit('riskAdjusted', this.currentRiskConfig);
@@ -527,6 +544,7 @@ export class EnhancedAIIntegration extends EventEmitter {
       const analyticsStats = this.predictiveAnalytics.getStats();
 
       // Calculate performance score (0-100)
+      // eslint-disable-next-line functional/no-let
       let performanceScore = 50; // Base score
 
       // Optimizer contribution
@@ -550,6 +568,7 @@ export class EnhancedAIIntegration extends EventEmitter {
 
       performanceScore = Math.min(100, Math.max(0, performanceScore));
 
+      // eslint-disable-next-line functional/immutable-data
       this.performanceHistory.push({
         timestamp: Date.now(),
         score: performanceScore,
@@ -557,6 +576,7 @@ export class EnhancedAIIntegration extends EventEmitter {
 
       // Keep only recent history
       if (this.performanceHistory.length > 100) {
+        // eslint-disable-next-line functional/immutable-data
         this.performanceHistory = this.performanceHistory.slice(-50);
       }
 
@@ -655,15 +675,19 @@ export class EnhancedAIIntegration extends EventEmitter {
     for (const adjustment of adjustments) {
       switch (adjustment.trigger) {
         case 'volatility_spike':
+          // eslint-disable-next-line functional/immutable-data
           adjustedConfig.risk.max_daily_loss = adjustment.recommendedRisk;
           break;
         case 'correlation_increase':
+          // eslint-disable-next-line functional/immutable-data
           adjustedConfig.risk.max_position_size = adjustment.recommendedRisk;
           break;
         case 'regime_change':
+          // eslint-disable-next-line functional/immutable-data
           adjustedConfig.risk.max_open_positions = adjustment.recommendedRisk;
           break;
         case 'performance_degradation':
+          // eslint-disable-next-line functional/immutable-data
           adjustedConfig.risk.emergency_flatten_threshold = adjustment.recommendedRisk;
           break;
       }
@@ -681,7 +705,9 @@ export class EnhancedAIIntegration extends EventEmitter {
     }
 
     const urgencyWeights = { low: 1, medium: 2, high: 3, critical: 4 };
+    // eslint-disable-next-line functional/no-let
     let totalWeight = 0;
+    // eslint-disable-next-line functional/no-let
     let weightedUrgency = 0;
 
     for (const adjustment of adjustments) {
@@ -759,12 +785,14 @@ export class EnhancedAIIntegration extends EventEmitter {
     const activeStrategies: Record<string, number> = {};
     for (const selection of this.currentStrategySelection.values()) {
       for (const strategy of selection.selectedStrategies) {
+        // eslint-disable-next-line functional/immutable-data
         activeStrategies[strategy.strategy] =
           (activeStrategies[strategy.strategy] || 0) + strategy.allocation;
       }
     }
 
     // Calculate risk level
+    // eslint-disable-next-line functional/no-let
     let riskLevel: 'low' | 'medium' | 'high' | 'critical' = 'low';
     if (this.currentRiskConfig) {
       const score = this.currentRiskConfig.riskScore;

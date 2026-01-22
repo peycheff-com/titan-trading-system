@@ -37,6 +37,7 @@ export class GovernanceEngine extends EventEmitter {
   }
 
   public setOverride(level: DefconLevel | null) {
+    // eslint-disable-next-line functional/immutable-data
     this.overrideLevel = level;
     this.logger.warn(`Manual Override: ${level || 'CLEARED'}`);
     this.emit('defcon_change', this.getDefconLevel());
@@ -51,6 +52,7 @@ export class GovernanceEngine extends EventEmitter {
         undefined,
         { health },
       );
+      // eslint-disable-next-line functional/immutable-data
       this.currentLevel = calculatedLevel;
       this.emit('defcon_change', this.getDefconLevel());
     }

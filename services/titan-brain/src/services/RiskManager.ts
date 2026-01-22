@@ -39,6 +39,7 @@ export class RiskManager {
    * This would typically be called by a 'MarketState' update event from the "Tail Lab"
    */
   public updateRiskState(newState: Partial<RiskState>) {
+    // eslint-disable-next-line functional/immutable-data
     this.state = { ...this.state, ...newState };
   }
 
@@ -50,6 +51,7 @@ export class RiskManager {
    */
   public getSafeLeverage(baseLeverage: number): number {
     const riskConfig = this.config.risk;
+    // eslint-disable-next-line functional/no-let
     let safeLeverage = Math.min(baseLeverage, riskConfig.maxLeverage);
     const { tailIndex } = this.state;
 
@@ -80,6 +82,7 @@ export class RiskManager {
    */
   public getPositionSizeMultiplier(): number {
     const { volatilityRegime, tailIndex } = this.state;
+    // eslint-disable-next-line functional/no-let
     let multiplier = 1.0;
 
     // 1. Volatility Regime Penalty

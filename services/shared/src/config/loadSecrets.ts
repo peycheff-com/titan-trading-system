@@ -33,6 +33,7 @@ export function loadSecretsFromFiles(options: LoadSecretsOptions = {}): void {
     try {
       const secretValue = fs.readFileSync(value, 'utf8').trim();
       if (secretValue.length > 0) {
+        // eslint-disable-next-line functional/immutable-data
         process.env[targetKey] = secretValue;
       }
     } catch (error) {

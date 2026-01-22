@@ -21,6 +21,7 @@ const defaultColors = [
 
 export function LatencyWaterfall({ steps, className }: LatencyWaterfallProps) {
   const totalDuration = steps.reduce((sum, step) => sum + step.duration, 0);
+  // eslint-disable-next-line functional/no-let
   let accumulated = 0;
 
   return (
@@ -37,7 +38,7 @@ export function LatencyWaterfall({ steps, className }: LatencyWaterfallProps) {
               key={step.name}
               className={cn(
                 'absolute top-1 h-6 rounded-sm transition-all',
-                step.color || defaultColors[index % defaultColors.length]
+                step.color || defaultColors[index % defaultColors.length],
               )}
               style={{
                 left: `${left}%`,
@@ -56,7 +57,7 @@ export function LatencyWaterfall({ steps, className }: LatencyWaterfallProps) {
             <span
               className={cn(
                 'h-2 w-2 rounded-sm',
-                step.color || defaultColors[index % defaultColors.length]
+                step.color || defaultColors[index % defaultColors.length],
               )}
             />
             <span className="text-xxs text-muted-foreground">{step.name}</span>

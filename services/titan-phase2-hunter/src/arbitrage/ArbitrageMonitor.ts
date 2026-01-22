@@ -20,8 +20,10 @@ export class ArbitrageMonitor {
 
   public updatePrice(update: ExchangePrice): ArbitrageOpportunity[] {
     if (!this.prices.has(update.symbol)) {
+      // eslint-disable-next-line functional/immutable-data
       this.prices.set(update.symbol, new Map());
     }
+    // eslint-disable-next-line functional/immutable-data
     this.prices.get(update.symbol)!.set(update.exchange, update);
 
     return this.checkArbitrage(update.symbol);
@@ -35,7 +37,9 @@ export class ArbitrageMonitor {
     const exchanges = Array.from(exchangePrices.values());
 
     // Compare every pair
+    // eslint-disable-next-line functional/no-let
     for (let i = 0; i < exchanges.length; i++) {
+      // eslint-disable-next-line functional/no-let
       for (let j = 0; j < exchanges.length; j++) {
         if (i === j) continue;
 
@@ -63,6 +67,7 @@ export class ArbitrageMonitor {
               timestamp: new Date(),
             };
 
+            // eslint-disable-next-line functional/immutable-data
             opportunities.push(opportunity);
 
             getLogger().info('Arbitrage Opportunity Detected', {
@@ -89,7 +94,9 @@ export class ArbitrageMonitor {
     const spreads: PriceSpread[] = [];
     const exchanges = Array.from(exchangePrices.values());
 
+    // eslint-disable-next-line functional/no-let
     for (let i = 0; i < exchanges.length; i++) {
+      // eslint-disable-next-line functional/no-let
       for (let j = i + 1; j < exchanges.length; j++) {
         const exA = exchanges[i];
         const exB = exchanges[j];
@@ -110,6 +117,7 @@ export class ArbitrageMonitor {
           spreadPercentage: spreadPercentage,
           timestamp: new Date(),
         };
+        // eslint-disable-next-line functional/immutable-data
         spreads.push(spreadData);
 
         // Log significant spreads (e.g. > 0.1% or < -0.1%)

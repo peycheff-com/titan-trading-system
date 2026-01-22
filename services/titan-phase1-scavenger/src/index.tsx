@@ -155,6 +155,7 @@ class TitanScavengerApp {
     try {
       // 1. Initialize configuration
       this.addLiveEvent('INFO', 'Loading configuration...');
+      // eslint-disable-next-line functional/immutable-data
       this.configManager = new ConfigManager();
       await this.configManager.initialize();
       // Config loaded but reference not needed directly here as ConfigManager retains it
@@ -162,22 +163,26 @@ class TitanScavengerApp {
 
       // 2. Initialize credential manager
       this.addLiveEvent('INFO', 'Loading credentials...');
+      // eslint-disable-next-line functional/immutable-data
       this.credentialManager = new CredentialManager();
       const credentials = await this.credentialManager.loadCredentials();
       this.logger.info('✅ Credentials loaded');
 
       // 3. Initialize logger
       this.addLiveEvent('INFO', 'Initializing logger...');
+      // eslint-disable-next-line functional/immutable-data
       this.logger = new Logger();
       this.logger.info('✅ Logger initialized');
 
       // 4. Initialize event emitter
+      // eslint-disable-next-line functional/immutable-data
       this.eventEmitter = new EventEmitter();
       this.setupEventListeners();
       this.logger.info('✅ Event emitter initialized');
 
       // 4.5. Initialize Console Client (for pushing real-time updates)
       const consoleUrl = process.env.CONSOLE_URL || '';
+      // eslint-disable-next-line functional/immutable-data
       this.consoleClient = new ConsoleClient({
         config: {
           consoleUrl,
@@ -194,6 +199,7 @@ class TitanScavengerApp {
 
       // 4.6 Initialize NATS Client (Power Law Metrics)
       this.addLiveEvent('INFO', 'Connecting to NATS (Metrics)...');
+      // eslint-disable-next-line functional/immutable-data
       this.natsClient = new NatsClient({
         servers: process.env.NATS_URL || 'nats://localhost:4222',
         name: 'titan-scavenger-metrics',
@@ -205,12 +211,14 @@ class TitanScavengerApp {
       this.addLiveEvent('INFO', 'Connecting to Binance Spot...');
 
       // Binance Spot Client (Signal Validator)
+      // eslint-disable-next-line functional/immutable-data
       this.binanceClient = new BinanceSpotClient();
       // Note: Trade callbacks will be set up after trap map is initialized
       this.logger.info('✅ Binance Spot client initialized');
 
       // NOTE: Bybit/MEXC execution is now handled by titan-execution service via Fast Path IPC,
       // but TitanTrap still needs BybitPerpsClient for read-only market data and equity checks.
+      // eslint-disable-next-line functional/immutable-data
       this.bybitClient = new BybitPerpsClient(
         credentials.bybit.apiKey,
         credentials.bybit.apiSecret,
@@ -220,19 +228,28 @@ class TitanScavengerApp {
 
       // 6. Initialize calculators
       this.addLiveEvent('INFO', 'Initializing calculators...');
+      // eslint-disable-next-line functional/immutable-data
       this.tripwireCalculators = new TripwireCalculators();
+      // eslint-disable-next-line functional/immutable-data
       this.velocityCalculator = new VelocityCalculator();
+      // eslint-disable-next-line functional/immutable-data
       this.positionSizeCalculator = new PositionSizeCalculator();
+      // eslint-disable-next-line functional/immutable-data
       this.cvdCalculator = new CVDCalculator();
+      // eslint-disable-next-line functional/immutable-data
       this.volumeValidator = new VolumeValidator();
       this.logger.info('✅ Calculators initialized');
 
       // 7. Initialize detectors
       this.addLiveEvent('INFO', 'Initializing structural flaw detectors...');
       // NOTE: Detectors now use null for bybitClient since execution is handled by titan-execution
+      // eslint-disable-next-line functional/immutable-data
       this.oiDetector = new OIWipeoutDetector(this.bybitClient, this.cvdCalculator);
+      // eslint-disable-next-line functional/immutable-data
       this.fundingDetector = new FundingSqueezeDetector(this.bybitClient, this.cvdCalculator);
+      // eslint-disable-next-line functional/immutable-data
       this.basisDetector = new BasisArbDetector(this.binanceClient, this.bybitClient);
+      // eslint-disable-next-line functional/immutable-data
       this.ultimateProtocol = new UltimateBulgariaProtocol(
         this.bybitClient,
         this.binanceClient,
@@ -249,6 +266,7 @@ class TitanScavengerApp {
 
       // 8. Initialize TitanTrap engine
       this.addLiveEvent('INFO', 'Initializing TitanTrap engine...');
+      // eslint-disable-next-line functional/immutable-data
       this.titanTrap = new TitanTrap({
         binanceClient: this.binanceClient,
         bybitClient: this.bybitClient, // Execution handled by titan-execution service
@@ -268,6 +286,7 @@ class TitanScavengerApp {
       // 9. Initialize Health Server (port 8081)
       // Requirements: System Integration 11.2, 22.3
       this.addLiveEvent('INFO', 'Initializing Health Server...');
+      // eslint-disable-next-line functional/immutable-data
       this.healthServer = new HealthServer({
         port: this.healthPort,
         getStatus: () => this.getHealthStatus(),
@@ -375,6 +394,7 @@ class TitanScavengerApp {
     const executionConnected = this.consoleClient?.isConnectedToConsole() || false;
 
     // Determine overall status
+    // eslint-disable-next-line functional/no-let
     let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
     if (!binanceConnected) {
       status = 'unhealthy';
@@ -408,6 +428,7 @@ class TitanScavengerApp {
   private setupEventListeners(): void {
     // TRAP_MAP_UPDATED event
     this.eventEmitter.on('TRAP_MAP_UPDATED', (data: TrapMapUpdateData) => {
+      // eslint-disable-next-line functional/immutable-data
       this.state.trapMap = this.titanTrap.getTrapMap();
       this.addLiveEvent('INFO', `Trap Map updated: ${data.symbolCount} symbols`);
 
@@ -437,6 +458,7 @@ class TitanScavengerApp {
       );
 
       // Track last trap sprung time for health status
+      // eslint-disable-next-line functional/immutable-data
       this.lastTrapSprungTime = Date.now();
 
       // Push to Console
@@ -509,6 +531,7 @@ class TitanScavengerApp {
    */
   private onBinanceTick(symbol: string, price: number, trades: Trade[]): void {
     // Update tick counter for sensor monitoring
+    // eslint-disable-next-line functional/immutable-data
     this.binanceTickCounter++;
 
     // Skip if paused
@@ -522,6 +545,7 @@ class TitanScavengerApp {
    * Start sensor monitoring (update sensor status every second)
    */
   private startSensorMonitoring(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.sensorMonitorInterval = setInterval(() => {
       this.updateSensorMetrics();
     }, 1000);
@@ -540,7 +564,9 @@ class TitanScavengerApp {
       this.updateSensorStatus('binanceTickRate', tickRate);
 
       // Reset counter
+      // eslint-disable-next-line functional/immutable-data
       this.binanceTickCounter = 0;
+      // eslint-disable-next-line functional/immutable-data
       this.lastTickTime = now;
 
       // NOTE: Bybit ping is now handled by titan-execution service
@@ -549,6 +575,7 @@ class TitanScavengerApp {
       this.updateSensorStatus('slippage', 0);
 
       // Update equity and P&L
+      // eslint-disable-next-line functional/immutable-data
       this.state.equity = this.titanTrap.getCachedEquity();
 
       // Push sensor status to Console
@@ -578,6 +605,7 @@ class TitanScavengerApp {
    * Update sensor status field
    */
   private updateSensorStatus<K extends keyof SensorStatus>(field: K, value: SensorStatus[K]): void {
+    // eslint-disable-next-line functional/immutable-data
     this.state.sensorStatus = {
       ...this.state.sensorStatus,
       [field]: value,
@@ -600,10 +628,12 @@ class TitanScavengerApp {
       this.logger.info(`${message} [${type}]`);
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.state.liveFeed.push(event);
 
     // Keep only last 50 events
     if (this.state.liveFeed.length > 50) {
+      // eslint-disable-next-line functional/immutable-data
       this.state.liveFeed = this.state.liveFeed.slice(-50);
     }
   }
@@ -612,6 +642,7 @@ class TitanScavengerApp {
    * Render Trap Monitor dashboard
    */
   private renderDashboard(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.inkInstance = render(
       <TrapMonitor
         trapMap={this.state.trapMap}
@@ -700,6 +731,7 @@ class TitanScavengerApp {
    * Handle pause/resume command
    */
   private handlePause(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.state.isPaused = !this.state.isPaused;
 
     if (this.state.isPaused) {

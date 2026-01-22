@@ -2,7 +2,7 @@ const isCI = process.env.CI === 'true';
 const isDevelopment = process.env.NODE_ENV === 'development';
 
 module.exports = {
-  preset: 'ts-jest',
+  preset: 'ts-jest/presets/default-esm',
   testEnvironment: 'node',
   roots: ['<rootDir>/tests'],
   
@@ -37,6 +37,7 @@ module.exports = {
   transform: {
     '^.+\\.ts$': ['ts-jest', {
       tsconfig: 'tsconfig.test.json',
+      useESM: true,
     }],
   },
   
@@ -47,6 +48,7 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^(.*/monitoring/index)(\\.js)?$': '<rootDir>/tests/mocks/monitoring.ts',
+    '^(.*/db/DatabaseManager)(\\.js)?$': '<rootDir>/tests/mocks/DatabaseManager.ts',
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   

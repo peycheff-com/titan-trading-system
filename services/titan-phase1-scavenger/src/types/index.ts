@@ -9,47 +9,42 @@ export interface OHLCV {
 
 export interface OrderParams {
   symbol: string;
-  side: "Buy" | "Sell";
-  type: "MARKET" | "LIMIT" | "POST_ONLY";
+  side: 'Buy' | 'Sell';
+  type: 'MARKET' | 'LIMIT' | 'POST_ONLY';
   price?: number;
   qty: number;
   leverage: number;
   stopLoss?: number;
   takeProfit?: number;
-  timeInForce?: "IOC" | "GTC" | "PostOnly";
+  timeInForce?: 'IOC' | 'GTC' | 'PostOnly';
 }
 
 export interface OrderResult {
   orderId: string;
   symbol: string;
-  side: "Buy" | "Sell";
+  side: 'Buy' | 'Sell';
   qty: number;
   price: number;
   status: OrderStatus;
   timestamp: number;
 }
 
-export type OrderStatus =
-  | "NEW"
-  | "PARTIALLY_FILLED"
-  | "FILLED"
-  | "CANCELLED"
-  | "REJECTED";
+export type OrderStatus = 'NEW' | 'PARTIALLY_FILLED' | 'FILLED' | 'CANCELLED' | 'REJECTED';
 
 export type TrapType =
-  | "LIQUIDATION"
-  | "DAILY_LEVEL"
-  | "BOLLINGER"
-  | "OI_WIPEOUT"
-  | "FUNDING_SQUEEZE"
-  | "BASIS_ARB"
-  | "ULTIMATE_BULGARIA"
-  | "PREDICTION_SPIKE"
-  | "SIGMA_FADE"
-  | "BREAKOUT"
-  | "BREAKDOWN"
-  | "PULLBACK"
-  | "REVERSAL";
+  | 'LIQUIDATION'
+  | 'DAILY_LEVEL'
+  | 'BOLLINGER'
+  | 'OI_WIPEOUT'
+  | 'FUNDING_SQUEEZE'
+  | 'BASIS_ARB'
+  | 'ULTIMATE_BULGARIA'
+  | 'PREDICTION_SPIKE'
+  | 'SIGMA_FADE'
+  | 'BREAKOUT'
+  | 'BREAKDOWN'
+  | 'PULLBACK'
+  | 'REVERSAL';
 
 export interface Trade {
   symbol: string;
@@ -64,7 +59,7 @@ export interface Tripwire {
   created?: number;
   symbol: string;
   triggerPrice: number;
-  direction: "LONG" | "SHORT";
+  direction: 'LONG' | 'SHORT';
   trapType: TrapType;
   confidence: number; // 80-98
   leverage: number; // 10x-20x
@@ -85,20 +80,20 @@ export interface Tripwire {
   };
   // Alpha Logic
   adx?: number;
-  trend?: "UP" | "DOWN" | "RANGING";
+  trend?: 'UP' | 'DOWN' | 'RANGING';
 }
 
 export interface SensorStatus {
-  binanceHealth: "OK" | "DEGRADED" | "DOWN";
+  binanceHealth: 'OK' | 'DEGRADED' | 'DOWN';
   binanceTickRate: number; // Ticks per second
-  bybitStatus: "ARMED" | "DEGRADED" | "DOWN";
+  bybitStatus: 'ARMED' | 'DEGRADED' | 'DOWN';
   bybitPing: number; // Milliseconds
   slippage: number; // Percentage
 }
 
 export interface LiveEvent {
   timestamp: number;
-  type: "TRAP_SPRUNG" | "TRAP_SET" | "EXECUTION_COMPLETE" | "ERROR" | "INFO";
+  type: 'TRAP_SPRUNG' | 'TRAP_SET' | 'EXECUTION_COMPLETE' | 'ERROR' | 'INFO';
   message: string;
 }
 

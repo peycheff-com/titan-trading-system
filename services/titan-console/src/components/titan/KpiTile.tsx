@@ -31,7 +31,7 @@ export function KpiTile({
         'hover:border-primary/30 hover:bg-card/80',
         size === 'sm' && 'p-2',
         size === 'lg' && 'p-4',
-        className
+        className,
       )}
     >
       <div className="flex items-start justify-between gap-2">
@@ -44,7 +44,7 @@ export function KpiTile({
               'flex items-center gap-0.5 text-xxs font-medium',
               trend === 'up' && 'text-pnl-positive',
               trend === 'down' && 'text-pnl-negative',
-              trend === 'neutral' && 'text-muted-foreground'
+              trend === 'neutral' && 'text-muted-foreground',
             )}
           >
             <TrendIcon className="h-3 w-3" />
@@ -61,14 +61,12 @@ export function KpiTile({
           variant === 'positive' && 'text-pnl-positive',
           variant === 'negative' && 'text-pnl-negative',
           variant === 'warning' && 'text-warning',
-          variant === 'default' && 'text-foreground'
+          variant === 'default' && 'text-foreground',
         )}
       >
         {value}
       </div>
-      {subValue && (
-        <div className="mt-0.5 text-xxs text-muted-foreground">{subValue}</div>
-      )}
+      {subValue && <div className="mt-0.5 text-xxs text-muted-foreground">{subValue}</div>}
     </div>
   );
 }

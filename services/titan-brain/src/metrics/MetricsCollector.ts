@@ -180,7 +180,9 @@ export class MetricsCollector extends EventEmitter {
    */
   private createHistogramBuckets(buckets: number[]): HistogramBuckets {
     const values = new Map<number, number>();
+    // eslint-disable-next-line functional/immutable-data
     buckets.forEach((bucket) => values.set(bucket, 0));
+    // eslint-disable-next-line functional/immutable-data
     values.set(Infinity, 0); // +Inf bucket
 
     return {
@@ -316,7 +318,9 @@ export class MetricsCollector extends EventEmitter {
    * Register a new metric
    */
   registerMetric(definition: MetricDefinition): void {
+    // eslint-disable-next-line functional/immutable-data
     this.metrics.set(definition.name, definition);
+    // eslint-disable-next-line functional/immutable-data
     this.values.set(definition.name, []);
 
     this.logger.debug('Registered metric', undefined, {
@@ -337,6 +341,7 @@ export class MetricsCollector extends EventEmitter {
     responseSize: number,
   ): void {
     // Increment total requests
+    // eslint-disable-next-line functional/immutable-data
     this.httpMetrics.requestsTotal++;
     this.incrementCounter('http_requests_total', {
       method,
@@ -359,6 +364,7 @@ export class MetricsCollector extends EventEmitter {
    * Record HTTP request start (increment in-flight counter)
    */
   recordHttpRequestStart(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.httpMetrics.requestsInFlight++;
     this.setGauge('http_requests_in_flight', this.httpMetrics.requestsInFlight);
   }
@@ -367,6 +373,7 @@ export class MetricsCollector extends EventEmitter {
    * Record HTTP request end (decrement in-flight counter)
    */
   recordHttpRequestEnd(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.httpMetrics.requestsInFlight = Math.max(0, this.httpMetrics.requestsInFlight - 1);
     this.setGauge('http_requests_in_flight', this.httpMetrics.requestsInFlight);
   }
@@ -375,8 +382,11 @@ export class MetricsCollector extends EventEmitter {
    * Record database connection metrics
    */
   recordDatabaseConnections(active: number, idle: number, waiting: number): void {
+    // eslint-disable-next-line functional/immutable-data
     this.databaseMetrics.connectionsActive = active;
+    // eslint-disable-next-line functional/immutable-data
     this.databaseMetrics.connectionsIdle = idle;
+    // eslint-disable-next-line functional/immutable-data
     this.databaseMetrics.connectionsWaiting = waiting;
 
     this.setGauge('database_connections_active', active);
@@ -390,8 +400,10 @@ export class MetricsCollector extends EventEmitter {
    * Record database query metrics
    */
   recordDatabaseQuery(operation: string, duration: number, success: boolean): void {
+    // eslint-disable-next-line functional/immutable-data
     this.databaseMetrics.queriesTotal++;
     if (!success) {
+      // eslint-disable-next-line functional/immutable-data
       this.databaseMetrics.queryErrors++;
     }
 
@@ -409,6 +421,7 @@ export class MetricsCollector extends EventEmitter {
    * Record health check metrics
    */
   recordHealthCheck(healthy: boolean, duration: number): void {
+    // eslint-disable-next-line functional/immutable-data
     this.healthMetrics.healthCheckStatus = healthy ? 1 : 0;
     this.recordHistogram(this.healthMetrics.healthCheckDuration, duration);
 
@@ -423,6 +436,7 @@ export class MetricsCollector extends EventEmitter {
    */
   recordComponentHealth(component: string, healthy: boolean): void {
     const status = healthy ? 1 : 0;
+    // eslint-disable-next-line functional/immutable-data
     this.healthMetrics.componentStatus.set(component, status);
     this.setGauge('component_health_status', status, { component });
 
@@ -433,6 +447,7 @@ export class MetricsCollector extends EventEmitter {
    * Record business metrics
    */
   recordSignalProcessed(type: string, success: boolean): void {
+    // eslint-disable-next-line functional/immutable-data
     this.businessMetrics.signalsProcessed++;
     this.incrementCounter('signals_processed_total', {
       type,
@@ -446,6 +461,7 @@ export class MetricsCollector extends EventEmitter {
    * Record order execution
    */
   recordOrderExecuted(side: string, success: boolean): void {
+    // eslint-disable-next-line functional/immutable-data
     this.businessMetrics.ordersExecuted++;
     this.incrementCounter('orders_executed_total', {
       side,
@@ -459,6 +475,7 @@ export class MetricsCollector extends EventEmitter {
    * Record error
    */
   recordError(type: string, component: string): void {
+    // eslint-disable-next-line functional/immutable-data
     this.businessMetrics.errorsTotal++;
     this.incrementCounter('errors_total', { type, component });
 
@@ -475,9 +492,11 @@ export class MetricsCollector extends EventEmitter {
     if (existingIndex >= 0) {
       values[existingIndex].value += value;
     } else {
+      // eslint-disable-next-line functional/immutable-data
       values.push({ value, labels, timestamp: Date.now() });
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.values.set(name, values);
   }
 
@@ -490,11 +509,14 @@ export class MetricsCollector extends EventEmitter {
 
     if (existingIndex >= 0) {
       values[existingIndex].value = value;
+      // eslint-disable-next-line functional/immutable-data
       values[existingIndex].timestamp = Date.now();
     } else {
+      // eslint-disable-next-line functional/immutable-data
       values.push({ value, labels, timestamp: Date.now() });
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.values.set(name, values);
   }
 
@@ -509,7 +531,9 @@ export class MetricsCollector extends EventEmitter {
     // This is a simplified histogram recording - in a real implementation,
     // you'd want to maintain separate bucket counts per label combination
     const values = this.values.get(name) || [];
+    // eslint-disable-next-line functional/immutable-data
     values.push({ value, labels, timestamp: Date.now() });
+    // eslint-disable-next-line functional/immutable-data
     this.values.set(name, values);
   }
 
@@ -517,16 +541,20 @@ export class MetricsCollector extends EventEmitter {
    * Record value in histogram buckets
    */
   private recordHistogram(histogram: HistogramBuckets, value: number): void {
+    // eslint-disable-next-line functional/immutable-data
     histogram.sum += value;
+    // eslint-disable-next-line functional/immutable-data
     histogram.count++;
 
     // Increment bucket counters
     for (const bucket of histogram.buckets) {
       if (value <= bucket) {
+        // eslint-disable-next-line functional/immutable-data
         histogram.values.set(bucket, (histogram.values.get(bucket) || 0) + 1);
       }
     }
     // Always increment +Inf bucket
+    // eslint-disable-next-line functional/immutable-data
     histogram.values.set(Infinity, (histogram.values.get(Infinity) || 0) + 1);
   }
 
@@ -549,6 +577,7 @@ export class MetricsCollector extends EventEmitter {
    * Get all metrics in Prometheus format
    */
   getPrometheusMetrics(): string {
+    // eslint-disable-next-line functional/no-let
     let output = '';
 
     // Add process metrics
@@ -615,11 +644,17 @@ export class MetricsCollector extends EventEmitter {
    * Reset all metrics (useful for testing)
    */
   reset(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.values.clear();
+    // eslint-disable-next-line functional/immutable-data
     this.httpMetrics = this.initializeHttpMetrics();
+    // eslint-disable-next-line functional/immutable-data
     this.databaseMetrics = this.initializeDatabaseMetrics();
+    // eslint-disable-next-line functional/immutable-data
     this.healthMetrics = this.initializeHealthMetrics();
+    // eslint-disable-next-line functional/immutable-data
     this.businessMetrics = this.initializeBusinessMetrics();
+    // eslint-disable-next-line functional/immutable-data
     this.startTime = Date.now(); // Reset start time for accurate uptime calculation
 
     this.logger.info('Metrics collector reset');

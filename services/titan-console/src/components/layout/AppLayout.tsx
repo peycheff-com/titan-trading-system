@@ -15,10 +15,7 @@ export function AppLayout() {
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
       <div className="flex flex-1 flex-col overflow-hidden">
-        <TopBar
-          safetyLocked={safetyLocked}
-          onSafetyToggle={() => setSafetyLocked(!safetyLocked)}
-        />
+        <TopBar safetyLocked={safetyLocked} onSafetyToggle={() => setSafetyLocked(!safetyLocked)} />
         <main className="flex-1 overflow-y-auto scrollbar-titan">
           <div className="container py-6">
             <Outlet context={{ safetyLocked }} />

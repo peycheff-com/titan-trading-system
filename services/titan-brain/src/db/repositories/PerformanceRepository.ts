@@ -1,7 +1,7 @@
 /**
  * Performance Repository
  * Handles persistence of phase performance and trade records
- * 
+ *
  * Requirements: 2.7, 9.1, 9.2, 9.3
  */
 
@@ -46,7 +46,7 @@ export class PerformanceRepository extends BaseRepository<TradeRow> {
       symbol: trade.symbol || null,
       side: trade.side || null,
     });
-    
+
     return this.mapTradeRowToRecord(row);
   }
 
@@ -59,10 +59,10 @@ export class PerformanceRepository extends BaseRepository<TradeRow> {
       `SELECT * FROM ${this.tableName} 
        WHERE phase_id = $1 AND timestamp >= $2 
        ORDER BY timestamp DESC`,
-      [phaseId, cutoff]
+      [phaseId, cutoff],
     );
-    
-    return rows.map(row => this.mapTradeRowToRecord(row));
+
+    return rows.map((row) => this.mapTradeRowToRecord(row));
   }
 
   /**
@@ -73,9 +73,9 @@ export class PerformanceRepository extends BaseRepository<TradeRow> {
     const result = await this.db.queryOne<{ count: string }>(
       `SELECT COUNT(*) as count FROM ${this.tableName} 
        WHERE phase_id = $1 AND timestamp >= $2`,
-      [phaseId, cutoff]
+      [phaseId, cutoff],
     );
-    
+
     return parseInt(result?.count || '0', 10);
   }
 
@@ -87,9 +87,9 @@ export class PerformanceRepository extends BaseRepository<TradeRow> {
     const result = await this.db.queryOne<{ total: string }>(
       `SELECT COALESCE(SUM(pnl), 0) as total FROM ${this.tableName} 
        WHERE phase_id = $1 AND timestamp >= $2`,
-      [phaseId, cutoff]
+      [phaseId, cutoff],
     );
-    
+
     return parseFloat(result?.total || '0');
   }
 
@@ -102,10 +102,10 @@ export class PerformanceRepository extends BaseRepository<TradeRow> {
        WHERE phase_id = $1 
        ORDER BY timestamp DESC 
        LIMIT $2`,
-      [phaseId, limit]
+      [phaseId, limit],
     );
-    
-    return rows.map(row => this.mapTradeRowToRecord(row));
+
+    return rows.map((row) => this.mapTradeRowToRecord(row));
   }
 
   /**
@@ -120,7 +120,7 @@ export class PerformanceRepository extends BaseRepository<TradeRow> {
       sharpe_ratio: record.sharpeRatio,
       modifier: record.modifier,
     });
-    
+
     return this.mapPerformanceRowToRecord(row);
   }
 
@@ -133,9 +133,9 @@ export class PerformanceRepository extends BaseRepository<TradeRow> {
        WHERE phase_id = $1 
        ORDER BY timestamp DESC 
        LIMIT 1`,
-      [phaseId]
+      [phaseId],
     );
-    
+
     return row ? this.mapPerformanceRowToRecord(row) : null;
   }
 
@@ -143,18 +143,18 @@ export class PerformanceRepository extends BaseRepository<TradeRow> {
    * Get performance history for a phase
    */
   async getPerformanceHistory(
-    phaseId: PhaseId, 
-    startTime: number, 
-    endTime: number
+    phaseId: PhaseId,
+    startTime: number,
+    endTime: number,
   ): Promise<PerformanceRecord[]> {
     const rows = await this.db.queryAll<PerformanceRow>(
       `SELECT * FROM phase_performance 
        WHERE phase_id = $1 AND timestamp >= $2 AND timestamp <= $3 
        ORDER BY timestamp DESC`,
-      [phaseId, startTime, endTime]
+      [phaseId, startTime, endTime],
     );
-    
-    return rows.map(row => this.mapPerformanceRowToRecord(row));
+
+    return rows.map((row) => this.mapPerformanceRowToRecord(row));
   }
 
   /**
@@ -168,19 +168,22 @@ export class PerformanceRepository extends BaseRepository<TradeRow> {
          COUNT(*) as total
        FROM ${this.tableName} 
        WHERE phase_id = $1 AND timestamp >= $2`,
-      [phaseId, cutoff]
+      [phaseId, cutoff],
     );
-    
+
     const wins = parseInt(result?.wins || '0', 10);
     const total = parseInt(result?.total || '0', 10);
-    
+
     return total > 0 ? wins / total : 0;
   }
 
   /**
    * Get average win and loss for a phase
    */
-  async getAvgWinLoss(phaseId: PhaseId, windowMs: number): Promise<{ avgWin: number; avgLoss: number }> {
+  async getAvgWinLoss(
+    phaseId: PhaseId,
+    windowMs: number,
+  ): Promise<{ avgWin: number; avgLoss: number }> {
     const cutoff = Date.now() - windowMs;
     const result = await this.db.queryOne<{ avg_win: string; avg_loss: string }>(
       `SELECT 
@@ -188,9 +191,9 @@ export class PerformanceRepository extends BaseRepository<TradeRow> {
          COALESCE(AVG(pnl) FILTER (WHERE pnl < 0), 0) as avg_loss
        FROM ${this.tableName} 
        WHERE phase_id = $1 AND timestamp >= $2`,
-      [phaseId, cutoff]
+      [phaseId, cutoff],
     );
-    
+
     return {
       avgWin: parseFloat(result?.avg_win || '0'),
       avgLoss: parseFloat(result?.avg_loss || '0'),

@@ -145,6 +145,7 @@ export class CacheManager extends EventEmitter {
    */
   static createConfigFromEnv(): CacheConfig {
     const redisUrl = process.env.REDIS_URL;
+    // eslint-disable-next-line functional/no-let
     let redisConfig: CacheConfig['redis'] = undefined;
     const redisDisabled = process.env.REDIS_DISABLED === 'true';
 
@@ -181,6 +182,7 @@ export class CacheManager extends EventEmitter {
       await this.initializeRedis();
     } else {
       logger.info('Redis not configured, using in-memory cache only');
+      // eslint-disable-next-line functional/immutable-data
       this.metrics.fallbackActive = true;
     }
 
@@ -195,6 +197,7 @@ export class CacheManager extends EventEmitter {
     if (!this.config.redis) return;
 
     try {
+      // eslint-disable-next-line functional/immutable-data
       this.redisClient = createClient({
         url: this.config.redis.url,
         socket: {
@@ -205,13 +208,17 @@ export class CacheManager extends EventEmitter {
 
       this.redisClient.on('error', (err) => {
         logger.error('Redis error:', err);
+        // eslint-disable-next-line functional/immutable-data
         this.metrics.redisConnected = false;
+        // eslint-disable-next-line functional/immutable-data
         this.metrics.fallbackActive = true;
       });
 
       this.redisClient.on('connect', () => {
         logger.info('Redis connected');
+        // eslint-disable-next-line functional/immutable-data
         this.metrics.redisConnected = true;
+        // eslint-disable-next-line functional/immutable-data
         this.metrics.fallbackActive = false;
       });
 
@@ -220,7 +227,9 @@ export class CacheManager extends EventEmitter {
       (logger as any).warn('Failed to connect to Redis, using fallback:', undefined, {
         error,
       });
+      // eslint-disable-next-line functional/immutable-data
       this.metrics.redisConnected = false;
+      // eslint-disable-next-line functional/immutable-data
       this.metrics.fallbackActive = true;
     }
   }
@@ -238,6 +247,7 @@ export class CacheManager extends EventEmitter {
    */
   async get<T>(arg1: string | CacheNamespace, arg2?: string): Promise<CacheResult<T>> {
     const startTime = Date.now();
+    // eslint-disable-next-line functional/no-let
     let key: string;
 
     if (arg2) {
@@ -246,6 +256,7 @@ export class CacheManager extends EventEmitter {
       key = arg1 as string;
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.metrics.totalOperations++;
 
     // Try Redis first
@@ -253,9 +264,11 @@ export class CacheManager extends EventEmitter {
       try {
         const value = await this.redisClient.get(key);
         const duration = Date.now() - startTime;
+        // eslint-disable-next-line functional/immutable-data
         this.totalResponseTime += duration;
 
         if (value) {
+          // eslint-disable-next-line functional/immutable-data
           this.metrics.redisHits++;
           this.emit('cache:hit', { source: 'redis', key, duration });
           return {
@@ -264,6 +277,7 @@ export class CacheManager extends EventEmitter {
             source: 'redis',
           };
         } else {
+          // eslint-disable-next-line functional/immutable-data
           this.metrics.redisMisses++;
           this.emit('cache:miss', { source: 'redis', key, duration });
           return {
@@ -272,6 +286,7 @@ export class CacheManager extends EventEmitter {
           };
         }
       } catch (err) {
+        // eslint-disable-next-line functional/immutable-data
         this.metrics.errors++;
         const duration = Date.now() - startTime;
         this.emit('cache:error', {
@@ -288,9 +303,11 @@ export class CacheManager extends EventEmitter {
     if (this.config.enableInMemoryFallback) {
       const value = this.inMemoryCache.get<T>(key);
       const duration = Date.now() - startTime;
+      // eslint-disable-next-line functional/immutable-data
       this.totalResponseTime += duration;
 
       if (value !== undefined) {
+        // eslint-disable-next-line functional/immutable-data
         this.metrics.memoryHits++;
         this.emit('cache:hit', { source: 'memory', key, duration });
         return {
@@ -299,6 +316,7 @@ export class CacheManager extends EventEmitter {
           source: 'memory',
         };
       } else {
+        // eslint-disable-next-line functional/immutable-data
         this.metrics.memoryMisses++;
         this.emit('cache:miss', { source: 'memory', key, duration });
         return {
@@ -324,8 +342,11 @@ export class CacheManager extends EventEmitter {
     arg3?: T | number,
     arg4?: number,
   ): Promise<CacheResult<void>> {
+    // eslint-disable-next-line functional/no-let
     let key: string;
+    // eslint-disable-next-line functional/no-let
     let value: T;
+    // eslint-disable-next-line functional/no-let
     let ttl: number | undefined;
 
     // Check if first argument is a namespace enum
@@ -345,6 +366,7 @@ export class CacheManager extends EventEmitter {
     }
 
     const stringValue = JSON.stringify(value);
+    // eslint-disable-next-line functional/immutable-data
     this.metrics.totalOperations++;
 
     // Try Redis first
@@ -360,6 +382,7 @@ export class CacheManager extends EventEmitter {
           source: 'redis',
         };
       } catch (err) {
+        // eslint-disable-next-line functional/immutable-data
         this.metrics.errors++;
         logger.error('Redis set error:', err);
         // Fall through to memory cache
@@ -387,6 +410,7 @@ export class CacheManager extends EventEmitter {
    * Supports delete(key) and delete(namespace, key)
    */
   async delete(arg1: string | CacheNamespace, arg2?: string): Promise<CacheResult<void>> {
+    // eslint-disable-next-line functional/no-let
     let key: string;
     if (arg2) {
       key = this.getKey(arg1, arg2);
@@ -394,8 +418,11 @@ export class CacheManager extends EventEmitter {
       key = arg1 as string;
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.metrics.totalOperations++;
+    // eslint-disable-next-line functional/no-let
     let redisSuccess = false;
+    // eslint-disable-next-line functional/no-let
     let memorySuccess = false;
 
     if (this.redisClient && this.metrics.redisConnected) {
@@ -403,6 +430,7 @@ export class CacheManager extends EventEmitter {
         await this.redisClient.del(key);
         redisSuccess = true;
       } catch (err) {
+        // eslint-disable-next-line functional/immutable-data
         this.metrics.errors++;
         logger.error('Redis delete error:', err);
       }
@@ -452,8 +480,11 @@ export class CacheManager extends EventEmitter {
   }
 
   async clear(): Promise<CacheResult<void>> {
+    // eslint-disable-next-line functional/immutable-data
     this.metrics.totalOperations++;
+    // eslint-disable-next-line functional/no-let
     let redisSuccess = false;
+    // eslint-disable-next-line functional/no-let
     let memorySuccess = false;
 
     if (this.redisClient && this.metrics.redisConnected) {
@@ -461,6 +492,7 @@ export class CacheManager extends EventEmitter {
         await this.redisClient.flushDb();
         redisSuccess = true;
       } catch (err) {
+        // eslint-disable-next-line functional/immutable-data
         this.metrics.errors++;
         logger.error('Redis clear error:', err);
       }
@@ -516,6 +548,7 @@ export class CacheManager extends EventEmitter {
   }
 
   async shutdown(): Promise<void> {
+    // eslint-disable-next-line functional/immutable-data
     this.isShuttingDown = true;
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval);

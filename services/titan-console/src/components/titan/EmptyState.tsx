@@ -17,19 +17,12 @@ export function EmptyState({
   className,
 }: EmptyStateProps) {
   return (
-    <div
-      className={cn(
-        'flex flex-col items-center justify-center py-12 text-center',
-        className
-      )}
-    >
+    <div className={cn('flex flex-col items-center justify-center py-12 text-center', className)}>
       <div className="rounded-full bg-muted p-3">
         <Icon className="h-6 w-6 text-muted-foreground" />
       </div>
       <h3 className="mt-4 text-sm font-medium text-foreground">{title}</h3>
-      {description && (
-        <p className="mt-1 text-xs text-muted-foreground">{description}</p>
-      )}
+      {description && <p className="mt-1 text-xs text-muted-foreground">{description}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
   );
@@ -49,12 +42,7 @@ export function ErrorState({
   className,
 }: ErrorStateProps) {
   return (
-    <div
-      className={cn(
-        'flex flex-col items-center justify-center py-12 text-center',
-        className
-      )}
-    >
+    <div className={cn('flex flex-col items-center justify-center py-12 text-center', className)}>
       <div className="rounded-full bg-destructive/10 p-3">
         <AlertCircle className="h-6 w-6 text-destructive" />
       </div>
@@ -77,14 +65,7 @@ interface SkeletonProps {
 }
 
 export function Skeleton({ className }: SkeletonProps) {
-  return (
-    <div
-      className={cn(
-        'animate-pulse rounded-md bg-muted',
-        className
-      )}
-    />
-  );
+  return <div className={cn('animate-pulse rounded-md bg-muted', className)} />;
 }
 
 export function LoadingState({ className }: { className?: string }) {

@@ -112,17 +112,23 @@ export class ExchangeWebSocketClient extends EventEmitter {
       return;
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.isClosing = false;
     return new Promise((resolve, reject) => {
       try {
         const url = this.buildWebSocketUrl();
+        // eslint-disable-next-line functional/immutable-data
         this.ws = new WebSocket(url);
+        // eslint-disable-next-line functional/immutable-data
         this.connectionStartTime = Date.now();
 
         this.ws.on('open', () => {
           console.log(`🔗 ${this.config.exchange.toUpperCase()} WebSocket connected`);
+          // eslint-disable-next-line functional/immutable-data
           this.reconnectAttempts = 0;
+          // eslint-disable-next-line functional/immutable-data
           this.isReconnecting = false;
+          // eslint-disable-next-line functional/immutable-data
           this.lastMessageTime = Date.now();
           this.startHeartbeat();
           this.subscribeToStreams();
@@ -136,8 +142,10 @@ export class ExchangeWebSocketClient extends EventEmitter {
 
         this.ws.on('pong', () => {
           const latency = Date.now() - this.pingTime;
+          // eslint-disable-next-line functional/immutable-data
           this.latencyMeasurements.push(latency);
           if (this.latencyMeasurements.length > 10) {
+            // eslint-disable-next-line functional/immutable-data
             this.latencyMeasurements.shift();
           }
         });
@@ -171,15 +179,19 @@ export class ExchangeWebSocketClient extends EventEmitter {
    * Disconnect from the exchange WebSocket
    */
   async disconnect(): Promise<void> {
+    // eslint-disable-next-line functional/immutable-data
     this.isClosing = true;
     this.stopHeartbeat();
 
     if (this.ws) {
       this.ws.close();
+      // eslint-disable-next-line functional/immutable-data
       this.ws = null;
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.reconnectAttempts = 0;
+    // eslint-disable-next-line functional/immutable-data
     this.isReconnecting = false;
   }
 
@@ -220,7 +232,9 @@ export class ExchangeWebSocketClient extends EventEmitter {
 
     // Reset message count periodically
     if (timeSinceReset > 60) {
+      // eslint-disable-next-line functional/immutable-data
       this.messageCount = 0;
+      // eslint-disable-next-line functional/immutable-data
       this.lastMessageCountReset = now;
     }
 
@@ -304,7 +318,9 @@ export class ExchangeWebSocketClient extends EventEmitter {
    * Handle incoming WebSocket message
    */
   private handleMessage(data: WebSocket.Data): void {
+    // eslint-disable-next-line functional/immutable-data
     this.lastMessageTime = Date.now();
+    // eslint-disable-next-line functional/immutable-data
     this.messageCount++;
 
     try {
@@ -422,6 +438,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
    */
   private convertSymbolToKraken(symbol: string): string {
     // Kraken uses XBT for BTC
+    // eslint-disable-next-line functional/no-let
     let converted = symbol.replace('BTC', 'XBT');
 
     if (converted.endsWith('USDT')) {
@@ -446,9 +463,11 @@ export class ExchangeWebSocketClient extends EventEmitter {
   private startHeartbeat(): void {
     this.stopHeartbeat();
 
+    // eslint-disable-next-line functional/immutable-data
     this.heartbeatTimer = setInterval(() => {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
         // Send ping
+        // eslint-disable-next-line functional/immutable-data
         this.pingTime = Date.now();
         this.ws.ping();
 
@@ -472,6 +491,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
   private stopHeartbeat(): void {
     if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer);
+      // eslint-disable-next-line functional/immutable-data
       this.heartbeatTimer = null;
     }
   }
@@ -490,7 +510,9 @@ export class ExchangeWebSocketClient extends EventEmitter {
       return;
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.isReconnecting = true;
+    // eslint-disable-next-line functional/immutable-data
     this.reconnectAttempts++;
 
     const delay = Math.min(
@@ -512,6 +534,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
         await this.connect();
       } catch (error) {
         console.error(`❌ ${this.config.exchange.toUpperCase()} reconnect failed:`, error);
+        // eslint-disable-next-line functional/immutable-data
         this.isReconnecting = false;
         this.attemptReconnect();
       }
@@ -522,6 +545,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
    * Update symbols to subscribe to
    */
   updateSymbols(symbols: string[]): void {
+    // eslint-disable-next-line functional/immutable-data
     this.config.symbols = symbols;
 
     // Reconnect to apply new symbols

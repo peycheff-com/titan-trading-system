@@ -25,6 +25,7 @@ export class InefficiencyMapper {
     // Need at least 3 candles for FVG detection
     if (candles.length < 3) return fvgs;
 
+    // eslint-disable-next-line functional/no-let
     for (let i = 0; i < candles.length - 2; i++) {
       const candle1 = candles[i];
       const candle2 = candles[i + 1];
@@ -36,6 +37,7 @@ export class InefficiencyMapper {
         const bottom = candle1.high;
         const midpoint = (top + bottom) / 2;
 
+        // eslint-disable-next-line functional/immutable-data
         fvgs.push({
           type: 'BULLISH',
           top,
@@ -54,6 +56,7 @@ export class InefficiencyMapper {
         const bottom = candle3.high;
         const midpoint = (top + bottom) / 2;
 
+        // eslint-disable-next-line functional/immutable-data
         fvgs.push({
           type: 'BEARISH',
           top,
@@ -91,6 +94,7 @@ export class InefficiencyMapper {
 
       // For Bullish BOS, find last down-candle (red candle)
       if (bosEvent.direction === 'BULLISH') {
+        // eslint-disable-next-line functional/no-let
         for (let i = bosBarIndex - 1; i >= 0; i--) {
           const candle = candles[i];
           if (!candle) continue;
@@ -103,6 +107,7 @@ export class InefficiencyMapper {
             const volumeRatio = candle.volume / avgVolume;
             const baseConfidence = Math.min(90, 60 + volumeRatio * 15);
 
+            // eslint-disable-next-line functional/immutable-data
             orderBlocks.push({
               type: 'BULLISH',
               high: candle.high,
@@ -119,6 +124,7 @@ export class InefficiencyMapper {
 
       // For Bearish BOS, find last up-candle (green candle)
       if (bosEvent.direction === 'BEARISH') {
+        // eslint-disable-next-line functional/no-let
         for (let i = bosBarIndex - 1; i >= 0; i--) {
           const candle = candles[i];
           if (!candle) continue;
@@ -131,6 +137,7 @@ export class InefficiencyMapper {
             const volumeRatio = candle.volume / avgVolume;
             const baseConfidence = Math.min(90, 60 + volumeRatio * 15);
 
+            // eslint-disable-next-line functional/immutable-data
             orderBlocks.push({
               type: 'BEARISH',
               high: candle.high,
@@ -183,6 +190,7 @@ export class InefficiencyMapper {
 
       // Only create pools with meaningful strength (> 20)
       if (strength > 20) {
+        // eslint-disable-next-line functional/immutable-data
         pools.push({
           type: fractal.type === 'HIGH' ? 'HIGH' : 'LOW',
           price: fractal.price,
@@ -219,12 +227,14 @@ export class InefficiencyMapper {
 
       // Bullish FVG is mitigated if price fills the gap (goes below bottom)
       if (fvg.type === 'BULLISH' && currentPrice <= fvg.bottom) {
+        // eslint-disable-next-line functional/immutable-data
         (fvg as any).mitigated = true;
         return false;
       }
 
       // Bearish FVG is mitigated if price fills the gap (goes above top)
       if (fvg.type === 'BEARISH' && currentPrice >= fvg.top) {
+        // eslint-disable-next-line functional/immutable-data
         (fvg as any).mitigated = true;
         return false;
       }
@@ -235,12 +245,14 @@ export class InefficiencyMapper {
           0,
           Math.min(100, ((fvg.top - currentPrice) / (fvg.top - fvg.bottom)) * 100)
         );
+        // eslint-disable-next-line functional/immutable-data
         (fvg as any).fillPercent = fillPercent;
       } else {
         const fillPercent = Math.max(
           0,
           Math.min(100, ((currentPrice - fvg.bottom) / (fvg.top - fvg.bottom)) * 100)
         );
+        // eslint-disable-next-line functional/immutable-data
         (fvg as any).fillPercent = fillPercent;
       }
     }
@@ -251,12 +263,14 @@ export class InefficiencyMapper {
 
       // Bullish OB is mitigated if price closes below the low
       if (ob.type === 'BULLISH' && currentPrice < ob.low) {
+        // eslint-disable-next-line functional/immutable-data
         (ob as any).mitigated = true;
         return false;
       }
 
       // Bearish OB is mitigated if price closes above the high
       if (ob.type === 'BEARISH' && currentPrice > ob.high) {
+        // eslint-disable-next-line functional/immutable-data
         (ob as any).mitigated = true;
         return false;
       }
@@ -265,6 +279,7 @@ export class InefficiencyMapper {
       const age = Date.now() - ob.timestamp;
       const ageHours = age / (1000 * 60 * 60);
       const decayFactor = Math.max(0.3, 1 - ageHours / 168); // Decay over 1 week
+      // eslint-disable-next-line functional/immutable-data
       (ob as any).confidence = ob.confidence * decayFactor;
     }
 
@@ -276,11 +291,13 @@ export class InefficiencyMapper {
       const sweepThreshold = 0.001; // 0.1% threshold
 
       if (pool.type === 'HIGH' && currentPrice > pool.price * (1 + sweepThreshold)) {
+        // eslint-disable-next-line functional/immutable-data
         (pool as any).swept = true;
         return false;
       }
 
       if (pool.type === 'LOW' && currentPrice < pool.price * (1 - sweepThreshold)) {
+        // eslint-disable-next-line functional/immutable-data
         (pool as any).swept = true;
         return false;
       }
@@ -289,6 +306,7 @@ export class InefficiencyMapper {
       const age = Date.now() - pool.timestamp;
       const ageHours = age / (1000 * 60 * 60);
       const decayFactor = Math.max(0.2, 1 - ageHours / 72); // Decay over 3 days
+      // eslint-disable-next-line functional/immutable-data
       (pool as any).strength = pool.strength * decayFactor;
     }
 
@@ -307,9 +325,12 @@ export class InefficiencyMapper {
     const start = Math.max(0, index - period + 1);
     const end = Math.min(candles.length, index + 1);
 
+    // eslint-disable-next-line functional/no-let
     let totalVolume = 0;
+    // eslint-disable-next-line functional/no-let
     let count = 0;
 
+    // eslint-disable-next-line functional/no-let
     for (let i = start; i < end; i++) {
       totalVolume += candles[i].volume;
       count++;
@@ -330,14 +351,17 @@ export class InefficiencyMapper {
     const merged: LiquidityPool[] = [];
     const processed = new Set<number>();
 
+    // eslint-disable-next-line functional/no-let
     for (let i = 0; i < pools.length; i++) {
       if (processed.has(i)) continue;
 
       const pool = pools[i];
       const nearbyPools: LiquidityPool[] = [pool];
+      // eslint-disable-next-line functional/immutable-data
       processed.add(i);
 
       // Find nearby pools (within 1% price range)
+      // eslint-disable-next-line functional/no-let
       for (let j = i + 1; j < pools.length; j++) {
         if (processed.has(j)) continue;
 
@@ -345,7 +369,9 @@ export class InefficiencyMapper {
         const priceDiff = Math.abs(pool.price - otherPool.price) / pool.price;
 
         if (priceDiff <= 0.01 && pool.type === otherPool.type) {
+          // eslint-disable-next-line functional/immutable-data
           nearbyPools.push(otherPool);
+          // eslint-disable-next-line functional/immutable-data
           processed.add(j);
         }
       }
@@ -358,6 +384,7 @@ export class InefficiencyMapper {
         const oldestBarIndex =
           nearbyPools.find(p => p.timestamp === oldestTimestamp)?.barIndex || pool.barIndex;
 
+        // eslint-disable-next-line functional/immutable-data
         merged.push({
           type: pool.type,
           price: avgPrice,
@@ -367,6 +394,7 @@ export class InefficiencyMapper {
           swept: false,
         });
       } else {
+        // eslint-disable-next-line functional/immutable-data
         merged.push(pool);
       }
     }
@@ -428,6 +456,7 @@ export class InefficiencyMapper {
       if (processed.has(poi)) continue;
 
       const group: POI[] = [poi];
+      // eslint-disable-next-line functional/immutable-data
       processed.add(poi);
 
       const poiPrice = this.getPOIPrice(poi);
@@ -440,13 +469,16 @@ export class InefficiencyMapper {
         const priceDiff = Math.abs(poiPrice - otherPrice) / poiPrice;
 
         if (priceDiff <= proximityThreshold) {
+          // eslint-disable-next-line functional/immutable-data
           group.push(otherPOI);
+          // eslint-disable-next-line functional/immutable-data
           processed.add(otherPOI);
         }
       }
 
       // Only consider groups with multiple POIs as "aligned"
       if (group.length > 1) {
+        // eslint-disable-next-line functional/immutable-data
         alignedGroups.push(group);
       }
     }

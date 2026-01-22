@@ -1,7 +1,7 @@
 /**
  * Breaker Repository
  * Handles persistence of circuit breaker events
- * 
+ *
  * Requirements: 5.7, 9.1, 9.2, 9.3
  */
 
@@ -39,7 +39,7 @@ export class BreakerRepository extends BaseRepository<BreakerRow> {
       operator_id: event.operatorId || null,
       metadata: event.metadata ? JSON.stringify(event.metadata) : null,
     });
-    
+
     return this.mapRowToEvent(row);
   }
 
@@ -48,9 +48,9 @@ export class BreakerRepository extends BaseRepository<BreakerRow> {
    */
   async getLatestEvent(): Promise<BreakerEvent | null> {
     const row = await this.db.queryOne<BreakerRow>(
-      `SELECT * FROM ${this.tableName} ORDER BY timestamp DESC LIMIT 1`
+      `SELECT * FROM ${this.tableName} ORDER BY timestamp DESC LIMIT 1`,
     );
-    
+
     return row ? this.mapRowToEvent(row) : null;
   }
 
@@ -62,9 +62,9 @@ export class BreakerRepository extends BaseRepository<BreakerRow> {
       `SELECT * FROM ${this.tableName} 
        WHERE event_type = 'TRIGGER' 
        ORDER BY timestamp DESC 
-       LIMIT 1`
+       LIMIT 1`,
     );
-    
+
     return row ? this.mapRowToEvent(row) : null;
   }
 
@@ -74,11 +74,11 @@ export class BreakerRepository extends BaseRepository<BreakerRow> {
   async isActive(): Promise<boolean> {
     // Get the most recent event
     const latestEvent = await this.getLatestEvent();
-    
+
     if (!latestEvent) {
       return false;
     }
-    
+
     // If the latest event is a TRIGGER, breaker is active
     // If the latest event is a RESET, breaker is inactive
     return latestEvent.eventType === 'TRIGGER';
@@ -92,10 +92,10 @@ export class BreakerRepository extends BaseRepository<BreakerRow> {
       `SELECT * FROM ${this.tableName} 
        ORDER BY timestamp DESC 
        LIMIT $1`,
-      [limit]
+      [limit],
     );
-    
-    return rows.map(row => this.mapRowToEvent(row));
+
+    return rows.map((row) => this.mapRowToEvent(row));
   }
 
   /**
@@ -106,10 +106,10 @@ export class BreakerRepository extends BaseRepository<BreakerRow> {
       `SELECT * FROM ${this.tableName} 
        WHERE event_type = 'TRIGGER' AND timestamp >= $1 AND timestamp <= $2 
        ORDER BY timestamp DESC`,
-      [startTime, endTime]
+      [startTime, endTime],
     );
-    
-    return rows.map(row => this.mapRowToEvent(row));
+
+    return rows.map((row) => this.mapRowToEvent(row));
   }
 
   /**
@@ -123,14 +123,15 @@ export class BreakerRepository extends BaseRepository<BreakerRow> {
        WHERE event_type = 'TRIGGER' AND timestamp >= $1 
        GROUP BY reason 
        ORDER BY count DESC`,
-      [cutoff]
+      [cutoff],
     );
-    
+
     const summary = new Map<string, number>();
     for (const row of rows) {
+      // eslint-disable-next-line functional/immutable-data
       summary.set(row.reason, parseInt(row.count, 10));
     }
-    
+
     return summary;
   }
 
@@ -143,10 +144,10 @@ export class BreakerRepository extends BaseRepository<BreakerRow> {
        WHERE operator_id = $1 
        ORDER BY timestamp DESC 
        LIMIT $2`,
-      [operatorId, limit]
+      [operatorId, limit],
     );
-    
-    return rows.map(row => this.mapRowToEvent(row));
+
+    return rows.map((row) => this.mapRowToEvent(row));
   }
 
   /**
@@ -154,11 +155,11 @@ export class BreakerRepository extends BaseRepository<BreakerRow> {
    */
   async getTimeSinceLastTrigger(): Promise<number | null> {
     const latestTrigger = await this.getLatestTrigger();
-    
+
     if (!latestTrigger) {
       return null;
     }
-    
+
     return Date.now() - latestTrigger.timestamp;
   }
 

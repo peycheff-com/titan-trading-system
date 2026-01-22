@@ -105,6 +105,7 @@ export class UltimateBulgariaProtocol {
   private metrics: Map<string, PowerLawMetric> = new Map();
 
   updatePowerLawMetrics(symbol: string, data: PowerLawMetric) {
+    // eslint-disable-next-line functional/immutable-data
     this.metrics.set(symbol, data);
   }
 
@@ -147,6 +148,7 @@ export class UltimateBulgariaProtocol {
         const metric = this.metrics.get(symbol);
 
         // Default Thresholds (fallback)
+        // eslint-disable-next-line functional/no-let
         let dropThreshold = 0.03; // 3%
 
         if (metric) {
@@ -176,6 +178,7 @@ export class UltimateBulgariaProtocol {
         // Only flag if drop > threshold AND BTC is flat (< 0.5%)
         // This filters out market-wide crashes (beta) and finds liquidation cascades (alpha)
         if (drop > dropThreshold && btcDrop < 0.005) {
+          // eslint-disable-next-line functional/immutable-data
           crashes.push(symbol);
           console.log(
             `💀 Idiosyncratic crash detected: ${symbol} (-${(drop * 100).toFixed(
@@ -202,6 +205,7 @@ export class UltimateBulgariaProtocol {
     this.ofiCalculator.reset();
 
     // 5 samples * 200ms = 1 second window
+    // eslint-disable-next-line functional/no-let
     for (let i = 0; i < 5; i++) {
       try {
         const ticker = await this.bybitClient.getTicker(symbol);

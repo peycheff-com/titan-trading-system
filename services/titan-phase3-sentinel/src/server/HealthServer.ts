@@ -8,18 +8,18 @@
  * - GET /status - Returns detailed mode and actions
  */
 
-import http from "http";
+import http from 'http';
 // import { NatsClient } from '@titan/shared'; // Assuming shared NATS client wrapper available or similar
 
 export interface HealthStatus {
-  status: "healthy" | "degraded" | "unhealthy";
+  status: 'healthy' | 'degraded' | 'unhealthy';
   service: string;
   version: string;
   uptime: number;
   dependencies: {
-    nats: "connected" | "disconnected" | "reconnecting";
-    binance: "connected" | "disconnected";
-    bybit: "connected" | "disconnected";
+    nats: 'connected' | 'disconnected' | 'reconnecting';
+    binance: 'connected' | 'disconnected';
+    bybit: 'connected' | 'disconnected';
   };
   metrics: {
     regime: string;
@@ -29,7 +29,7 @@ export interface HealthStatus {
 }
 
 export interface DetailedStatus {
-  mode: "NORMAL" | "CAUTIOUS" | "DEFENSIVE" | "EMERGENCY";
+  mode: 'NORMAL' | 'CAUTIOUS' | 'DEFENSIVE' | 'EMERGENCY';
   reasons: string[];
   actions: string[];
   unsafe_actions: string[];
@@ -56,15 +56,14 @@ export class HealthServer {
    */
   async start(): Promise<void> {
     return new Promise((resolve, reject) => {
+      // eslint-disable-next-line functional/immutable-data
       this.server = http.createServer((req, res) => {
         this.handleRequest(req, res);
       });
 
-      this.server.on("error", (error: NodeJS.ErrnoException) => {
-        if (error.code === "EADDRINUSE") {
-          console.warn(
-            `⚠️ Health server port ${this.config.port} already in use`,
-          );
+      this.server.on('error', (error: NodeJS.ErrnoException) => {
+        if (error.code === 'EADDRINUSE') {
+          console.warn(`⚠️ Health server port ${this.config.port} already in use`);
           resolve(); // Don't fail startup if port is in use
         } else {
           reject(error);
@@ -85,7 +84,7 @@ export class HealthServer {
     return new Promise((resolve) => {
       if (this.server) {
         this.server.close(() => {
-          console.log("✅ Health server stopped");
+          console.log('✅ Health server stopped');
           resolve();
         });
       } else {
@@ -97,32 +96,29 @@ export class HealthServer {
   /**
    * Handle incoming HTTP requests
    */
-  private handleRequest(
-    req: http.IncomingMessage,
-    res: http.ServerResponse,
-  ): void {
+  private handleRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
     // Set CORS headers
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
-    res.setHeader("Content-Type", "application/json");
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Content-Type', 'application/json');
 
     // Handle OPTIONS (CORS preflight)
-    if (req.method === "OPTIONS") {
+    if (req.method === 'OPTIONS') {
       res.writeHead(204);
       res.end();
       return;
     }
 
     // Route requests
-    const url = req.url || "/";
+    const url = req.url || '/';
 
-    if (req.method === "GET" && (url === "/health" || url === "/")) {
+    if (req.method === 'GET' && (url === '/health' || url === '/')) {
       this.handleHealthCheck(res);
-    } else if (req.method === "GET" && url === "/status") {
+    } else if (req.method === 'GET' && url === '/status') {
       this.handleStatusCheck(res);
     } else {
       res.writeHead(404);
-      res.end(JSON.stringify({ error: "Not found" }));
+      res.end(JSON.stringify({ error: 'Not found' }));
     }
   }
 
@@ -133,11 +129,8 @@ export class HealthServer {
   private handleHealthCheck(res: http.ServerResponse): void {
     try {
       const status = this.config.getStatus();
-      const httpStatus = status.status === "healthy"
-        ? 200
-        : status.status === "degraded"
-        ? 200
-        : 503;
+      const httpStatus =
+        status.status === 'healthy' ? 200 : status.status === 'degraded' ? 200 : 503;
 
       res.writeHead(httpStatus);
       res.end(JSON.stringify(status, null, 2));
@@ -145,8 +138,8 @@ export class HealthServer {
       res.writeHead(500);
       res.end(
         JSON.stringify({
-          status: "unhealthy",
-          error: error instanceof Error ? error.message : "Unknown error",
+          status: 'unhealthy',
+          error: error instanceof Error ? error.message : 'Unknown error',
           timestamp: new Date().toISOString(),
         }),
       );
@@ -164,7 +157,7 @@ export class HealthServer {
       res.end(JSON.stringify(status, null, 2));
     } catch (error) {
       res.writeHead(500);
-      res.end(JSON.stringify({ error: "Internal Error" }));
+      res.end(JSON.stringify({ error: 'Internal Error' }));
     }
   }
 }

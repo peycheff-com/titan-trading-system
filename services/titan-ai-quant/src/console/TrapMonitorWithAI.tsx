@@ -1,11 +1,11 @@
 /**
  * TrapMonitorWithAI Component
- * 
+ *
  * Enhanced TrapMonitor that integrates the AI Advisor panel and Chat Interface.
  * Adds keyboard binding 'A' to toggle the AI Advisor panel.
  * Adds keyboard binding 'Cmd+K' to open/close the Chat Interface.
  * Displays morning briefing on startup if available.
- * 
+ *
  * Requirements: 4.1, 4.2, 4.5, 5.1, 5.2, 5.3, 5.4, 6.4
  */
 
@@ -23,7 +23,14 @@ export interface Tripwire {
   symbol: string;
   triggerPrice: number;
   direction: 'LONG' | 'SHORT';
-  trapType: 'LIQUIDATION' | 'DAILY_LEVEL' | 'BOLLINGER' | 'OI_WIPEOUT' | 'FUNDING_SQUEEZE' | 'BASIS_ARB' | 'ULTIMATE_BULGARIA';
+  trapType:
+    | 'LIQUIDATION'
+    | 'DAILY_LEVEL'
+    | 'BOLLINGER'
+    | 'OI_WIPEOUT'
+    | 'FUNDING_SQUEEZE'
+    | 'BASIS_ARB'
+    | 'ULTIMATE_BULGARIA';
   confidence: number;
   leverage: number;
   estimatedCascadeSize: number;
@@ -100,14 +107,22 @@ export interface TrapMonitorWithAIProps {
  */
 function formatTrapType(trapType: string): string {
   switch (trapType) {
-    case 'LIQUIDATION': return 'LIQ_HUNT';
-    case 'DAILY_LEVEL': return 'BREAKOUT';
-    case 'BOLLINGER': return 'BREAKOUT';
-    case 'OI_WIPEOUT': return 'OI_WIPEOUT';
-    case 'FUNDING_SQUEEZE': return 'FUNDING_SQZ';
-    case 'BASIS_ARB': return 'BASIS_ARB';
-    case 'ULTIMATE_BULGARIA': return 'ULTIMATE';
-    default: return trapType;
+    case 'LIQUIDATION':
+      return 'LIQ_HUNT';
+    case 'DAILY_LEVEL':
+      return 'BREAKOUT';
+    case 'BOLLINGER':
+      return 'BREAKOUT';
+    case 'OI_WIPEOUT':
+      return 'OI_WIPEOUT';
+    case 'FUNDING_SQUEEZE':
+      return 'FUNDING_SQZ';
+    case 'BASIS_ARB':
+      return 'BASIS_ARB';
+    case 'ULTIMATE_BULGARIA':
+      return 'ULTIMATE';
+    default:
+      return trapType;
   }
 }
 
@@ -116,13 +131,14 @@ function formatTrapType(trapType: string): string {
  */
 function TrapTable({ trapMap }: { trapMap: Map<string, Tripwire[]> }): React.ReactElement {
   const allTraps: Array<{ symbol: string; trap: Tripwire }> = [];
-  
+
   trapMap.forEach((trapList, symbol) => {
-    trapList.forEach(trap => {
+    trapList.forEach((trap) => {
+      // eslint-disable-next-line functional/immutable-data
       allTraps.push({ symbol, trap });
     });
   });
-  
+
   return (
     <Box flexDirection="column" marginTop={1}>
       <Box>
@@ -134,20 +150,21 @@ function TrapTable({ trapMap }: { trapMap: Map<string, Tripwire[]> }): React.Rea
           {'LEAD TIME'.padEnd(12)}
         </Text>
       </Box>
-      
+
       {allTraps.length > 0 ? (
         allTraps.slice(0, 10).map(({ symbol, trap }, idx) => {
           const currentPrice = trap.currentPrice || trap.triggerPrice;
           const proximity = ((trap.triggerPrice - currentPrice) / currentPrice) * 100;
           const absProximity = Math.abs(proximity);
-          
+
+          // eslint-disable-next-line functional/no-let
           let proximityColor: 'red' | 'yellow' | 'white' = 'white';
           if (absProximity < 0.5) proximityColor = 'red';
           else if (absProximity < 2.0) proximityColor = 'yellow';
-          
+
           const trapTypeDisplay = formatTrapType(trap.trapType);
           const leadTimeDisplay = trap.estimatedLeadTime ? `~${trap.estimatedLeadTime}ms` : 'N/A';
-          
+
           return (
             <Box key={`${symbol}-${idx}`}>
               <Text color={proximityColor}>
@@ -173,20 +190,26 @@ function TrapTable({ trapMap }: { trapMap: Map<string, Tripwire[]> }): React.Rea
  * SensorStatusDisplay Component
  */
 function SensorStatusDisplay({ data }: { data: SensorStatus }): React.ReactElement {
-  const binanceColor = data.binanceHealth === 'OK' ? 'green' : data.binanceHealth === 'DEGRADED' ? 'yellow' : 'red';
-  const bybitColor = data.bybitStatus === 'ARMED' ? 'green' : data.bybitStatus === 'DEGRADED' ? 'yellow' : 'red';
+  const binanceColor =
+    data.binanceHealth === 'OK' ? 'green' : data.binanceHealth === 'DEGRADED' ? 'yellow' : 'red';
+  const bybitColor =
+    data.bybitStatus === 'ARMED' ? 'green' : data.bybitStatus === 'DEGRADED' ? 'yellow' : 'red';
   const slippageColor = data.slippage < 0.1 ? 'green' : data.slippage < 0.3 ? 'yellow' : 'red';
-  
+
   return (
     <Box flexDirection="column" marginTop={1}>
       <Box>
         <Text>Binance: </Text>
-        <Text bold color={binanceColor}>{data.binanceHealth}</Text>
+        <Text bold color={binanceColor}>
+          {data.binanceHealth}
+        </Text>
         <Text dimColor> ({data.binanceTickRate.toLocaleString()} t/s)</Text>
       </Box>
       <Box>
         <Text>Bybit: </Text>
-        <Text bold color={bybitColor}>{data.bybitStatus}</Text>
+        <Text bold color={bybitColor}>
+          {data.bybitStatus}
+        </Text>
         <Text dimColor> ({data.bybitPing}ms)</Text>
       </Box>
       <Box>
@@ -202,20 +225,27 @@ function SensorStatusDisplay({ data }: { data: SensorStatus }): React.ReactEleme
  */
 function LiveFeed({ events }: { events: LiveEvent[] }): React.ReactElement {
   const recentEvents = events.slice(-5);
-  
+
   return (
     <Box flexDirection="column" marginTop={1}>
       {recentEvents.length > 0 ? (
         recentEvents.map((event, idx) => {
+          // eslint-disable-next-line functional/no-let
           let eventColor: 'green' | 'red' | 'yellow' | 'white' = 'white';
           switch (event.type) {
-            case 'TRAP_SPRUNG': eventColor = 'green'; break;
-            case 'ERROR': eventColor = 'red'; break;
-            case 'TRAP_SET': eventColor = 'yellow'; break;
+            case 'TRAP_SPRUNG':
+              eventColor = 'green';
+              break;
+            case 'ERROR':
+              eventColor = 'red';
+              break;
+            case 'TRAP_SET':
+              eventColor = 'yellow';
+              break;
           }
-          
+
           const timestamp = new Date(event.timestamp).toLocaleTimeString();
-          
+
           return (
             <Box key={idx}>
               <Text dimColor>[{timestamp}] </Text>
@@ -224,7 +254,9 @@ function LiveFeed({ events }: { events: LiveEvent[] }): React.ReactElement {
           );
         })
       ) : (
-        <Box><Text dimColor>No events yet...</Text></Box>
+        <Box>
+          <Text dimColor>No events yet...</Text>
+        </Box>
       )}
     </Box>
   );
@@ -232,9 +264,9 @@ function LiveFeed({ events }: { events: LiveEvent[] }): React.ReactElement {
 
 /**
  * TrapMonitorWithAI Component
- * 
+ *
  * Main dashboard with integrated AI Advisor panel and Chat Interface.
- * 
+ *
  * Keyboard bindings:
  * - A: Toggle AI Advisor panel
  * - Cmd+K: Open/close Chat Interface
@@ -262,13 +294,13 @@ export function TrapMonitorWithAI({
   currentConfig,
   configVersion,
   morningBriefing: initialBriefing,
-  loadMorningBriefing
+  loadMorningBriefing,
 }: TrapMonitorWithAIProps): React.ReactElement {
   const [showAIAdvisor, setShowAIAdvisor] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showBriefing, setShowBriefing] = useState(false);
   const [briefing, setBriefing] = useState<MorningBriefing | null>(initialBriefing ?? null);
-  
+
   // Load morning briefing on startup (Requirement 6.4)
   useEffect(() => {
     if (initialBriefing) {
@@ -282,63 +314,65 @@ export function TrapMonitorWithAI({
       }
     }
   }, []);
-  
+
   // Get pending proposals
-  const pendingProposals = proposals.filter(p => p.status === 'pending');
+  const pendingProposals = proposals.filter((p) => p.status === 'pending');
   const currentProposal = pendingProposals[0];
-  
+
   // Handle keyboard input
-  useInput((input: string, key: { return: boolean; escape: boolean; f1?: boolean; meta?: boolean }) => {
-    // Cmd+K to toggle Chat Interface (Requirement 5.1)
-    if (key.meta && input.toLowerCase() === 'k') {
-      setShowChat((prev: boolean) => !prev);
-      return;
-    }
-    
-    // If chat is open, let it handle its own input
-    if (showChat) {
-      return;
-    }
-    
-    // Dismiss morning briefing with 'D' key (Requirement 6.4)
-    if (input.toLowerCase() === 'd' && showBriefing) {
-      setShowBriefing(false);
-      return;
-    }
-    
-    // Toggle AI Advisor with 'A' key
-    if (input.toLowerCase() === 'a') {
-      setShowAIAdvisor((prev: boolean) => !prev);
-      return;
-    }
-    
-    // Handle proposal approval/rejection when AI panel is visible
-    if (showAIAdvisor && currentProposal?.id !== undefined) {
-      if (key.return) {
-        onApproveProposal?.(currentProposal.id);
+  useInput(
+    (input: string, key: { return: boolean; escape: boolean; f1?: boolean; meta?: boolean }) => {
+      // Cmd+K to toggle Chat Interface (Requirement 5.1)
+      if (key.meta && input.toLowerCase() === 'k') {
+        setShowChat((prev: boolean) => !prev);
         return;
       }
-      if (key.escape) {
-        onRejectProposal?.(currentProposal.id);
+
+      // If chat is open, let it handle its own input
+      if (showChat) {
         return;
       }
-    }
-    
-    // Other keyboard shortcuts
-    if (input.toLowerCase() === 'q') {
-      onQuit?.();
-      return;
-    }
-    if (input === ' ') {
-      onPause?.();
-      return;
-    }
-    if (key.f1) {
-      onConfig?.();
-      return;
-    }
-  });
-  
+
+      // Dismiss morning briefing with 'D' key (Requirement 6.4)
+      if (input.toLowerCase() === 'd' && showBriefing) {
+        setShowBriefing(false);
+        return;
+      }
+
+      // Toggle AI Advisor with 'A' key
+      if (input.toLowerCase() === 'a') {
+        setShowAIAdvisor((prev: boolean) => !prev);
+        return;
+      }
+
+      // Handle proposal approval/rejection when AI panel is visible
+      if (showAIAdvisor && currentProposal?.id !== undefined) {
+        if (key.return) {
+          onApproveProposal?.(currentProposal.id);
+          return;
+        }
+        if (key.escape) {
+          onRejectProposal?.(currentProposal.id);
+          return;
+        }
+      }
+
+      // Other keyboard shortcuts
+      if (input.toLowerCase() === 'q') {
+        onQuit?.();
+        return;
+      }
+      if (input === ' ') {
+        onPause?.();
+        return;
+      }
+      if (key.f1) {
+        onConfig?.();
+        return;
+      }
+    },
+  );
+
   return (
     <Box flexDirection="column">
       {/* Chat Interface Modal (Requirement 5.1) */}
@@ -354,7 +388,7 @@ export function TrapMonitorWithAI({
           configVersion={configVersion}
         />
       )}
-      
+
       {/* Main Dashboard (hidden when chat is open) */}
       {!showChat && (
         <>
@@ -366,53 +400,75 @@ export function TrapMonitorWithAI({
               onDismiss={() => setShowBriefing(false)}
             />
           )}
-          
+
           {/* Header */}
           <Box borderStyle="double" borderColor="cyan" padding={1}>
             <Text bold color="cyan">
-              🕸️  TITAN PREDESTINATION | 💰 ${equity.toFixed(2)} ({pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(1)}%)
+              🕸️ TITAN PREDESTINATION | 💰 ${equity.toFixed(2)} ({pnlPct >= 0 ? '+' : ''}
+              {pnlPct.toFixed(1)}%)
             </Text>
             {pendingProposals.length > 0 && (
               <Text color="yellow"> | 🤖 {pendingProposals.length} pending</Text>
             )}
           </Box>
-          
+
           {/* Keyboard Shortcuts Bar */}
           <Box marginTop={1}>
             <Text dimColor>
-              [F1] CONFIG  [SPACE] PAUSE  [Q] QUIT  
+              [F1] CONFIG [SPACE] PAUSE [Q] QUIT
               <Text color={showAIAdvisor ? 'cyan' : undefined}>[A] AI ADVISOR</Text>
               {'  '}
               <Text color="magenta">[Cmd+K] CHAT</Text>
               {showBriefing && (
-                <>{'  '}<Text color="yellow">[D] DISMISS BRIEFING</Text></>
+                <>
+                  {'  '}
+                  <Text color="yellow">[D] DISMISS BRIEFING</Text>
+                </>
               )}
             </Text>
           </Box>
-          
+
           {/* Main Content Area */}
           <Box marginTop={1} flexDirection="row">
             {/* Left Panel - Trap Monitor */}
             <Box flexDirection="column" flexGrow={1} marginRight={showAIAdvisor ? 1 : 0}>
               {/* Active Tripwires Table */}
               <Box borderStyle="single" borderColor="green" padding={1} flexDirection="column">
-                <Text bold color="green">🎯 ACTIVE TRIPWIRES</Text>
+                <Text bold color="green">
+                  🎯 ACTIVE TRIPWIRES
+                </Text>
                 <TrapTable trapMap={trapMap} />
               </Box>
-              
+
               {/* Sensor Status */}
-              <Box marginTop={1} borderStyle="single" borderColor="yellow" padding={1} flexDirection="column">
-                <Text bold color="yellow">📡 SENSORS</Text>
+              <Box
+                marginTop={1}
+                borderStyle="single"
+                borderColor="yellow"
+                padding={1}
+                flexDirection="column"
+              >
+                <Text bold color="yellow">
+                  📡 SENSORS
+                </Text>
                 <SensorStatusDisplay data={sensorStatus} />
               </Box>
-              
+
               {/* Live Feed */}
-              <Box marginTop={1} borderStyle="single" borderColor="gray" padding={1} flexDirection="column">
-                <Text bold color="gray">📝 LIVE FEED</Text>
+              <Box
+                marginTop={1}
+                borderStyle="single"
+                borderColor="gray"
+                padding={1}
+                flexDirection="column"
+              >
+                <Text bold color="gray">
+                  📝 LIVE FEED
+                </Text>
                 <LiveFeed events={liveFeed} />
               </Box>
             </Box>
-            
+
             {/* Right Panel - AI Advisor (when visible) */}
             {showAIAdvisor && (
               <Box width={50}>

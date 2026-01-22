@@ -10,8 +10,8 @@ import {
   PhaseId,
   PhasePerformance,
   TradeRecord,
-} from "../types/index.js";
-import { DatabaseManager } from "../db/DatabaseManager.js";
+} from '../types/index.js';
+import { DatabaseManager } from '../db/DatabaseManager.js';
 
 /** Milliseconds per day */
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -47,10 +47,10 @@ export class PerformanceTracker {
     pnl: number,
     timestamp: number,
     symbol?: string,
-    side?: "BUY" | "SELL",
+    side?: 'BUY' | 'SELL',
   ): Promise<void> {
     if (!this.db) {
-      throw new Error("Database not configured for PerformanceTracker");
+      throw new Error('Database not configured for PerformanceTracker');
     }
 
     await this.db.query(
@@ -60,6 +60,7 @@ export class PerformanceTracker {
     );
 
     // Update daily PnL (simple in-memory tracking)
+    // eslint-disable-next-line functional/immutable-data
     this.dailyPnL += pnl;
   }
 
@@ -71,10 +72,7 @@ export class PerformanceTracker {
     if (!this.db) return;
 
     // Clear cache for this phase
-    await this.db.query(
-      "DELETE FROM phase_performance_cache WHERE phase_id = $1",
-      [phaseId],
-    );
+    await this.db.query('DELETE FROM phase_performance_cache WHERE phase_id = $1', [phaseId]);
 
     // Recalculate from phase_trades
     // In a real scenario, we might need to query 'fills' table if 'phase_trades' isn't arguably the source of truth.
@@ -92,9 +90,9 @@ export class PerformanceTracker {
     await this.persistPerformanceSnapshot(phaseId);
 
     console.log(
-      `[PerformanceTracker] Rebuilt history for ${phaseId}: PnL=${totalPnL}, Sharpe=${
-        sharpe.toFixed(2)
-      }`,
+      `[PerformanceTracker] Rebuilt history for ${phaseId}: PnL=${totalPnL}, Sharpe=${sharpe.toFixed(
+        2,
+      )}`,
     );
   }
 
@@ -125,10 +123,7 @@ export class PerformanceTracker {
    * @param windowDays - Number of days to look back
    * @returns Array of trade records
    */
-  async getTradesInWindow(
-    phaseId: PhaseId,
-    windowDays: number,
-  ): Promise<TradeRecord[]> {
+  async getTradesInWindow(phaseId: PhaseId, windowDays: number): Promise<TradeRecord[]> {
     if (!this.db) {
       return [];
     }
@@ -156,7 +151,7 @@ export class PerformanceTracker {
       pnl: parseFloat(row.pnl),
       timestamp: parseInt(row.timestamp, 10),
       symbol: row.symbol ?? undefined,
-      side: row.side as "BUY" | "SELL" | undefined,
+      side: row.side as 'BUY' | 'SELL' | undefined,
     }));
   }
 
@@ -181,7 +176,7 @@ export class PerformanceTracker {
       [phaseId, windowStart],
     );
 
-    return parseInt(result.rows[0]?.count ?? "0", 10);
+    return parseInt(result.rows[0]?.count ?? '0', 10);
   }
 
   /**
@@ -245,8 +240,7 @@ export class PerformanceTracker {
     if (values.length < 2) return 0;
     const m = mean ?? this.calculateMean(values);
     const squaredDiffs = values.map((v) => Math.pow(v - m, 2));
-    const variance = squaredDiffs.reduce((sum, v) => sum + v, 0) /
-      (values.length - 1);
+    const variance = squaredDiffs.reduce((sum, v) => sum + v, 0) / (values.length - 1);
     return Math.sqrt(variance);
   }
 
@@ -263,10 +257,7 @@ export class PerformanceTracker {
    * @returns Performance modifier between 0.5 and 1.2
    */
   async getPerformanceModifier(phaseId: PhaseId): Promise<number> {
-    const tradeCount = await this.getTradeCount(
-      phaseId,
-      this.config.windowDays,
-    );
+    const tradeCount = await this.getTradeCount(phaseId, this.config.windowDays);
 
     // Requirement 2.8: Insufficient trade history uses base weight
     if (tradeCount < this.config.minTradeCount) {
@@ -307,10 +298,7 @@ export class PerformanceTracker {
    * @returns PhasePerformance object with all metrics
    */
   async getPhasePerformance(phaseId: PhaseId): Promise<PhasePerformance> {
-    const trades = await this.getTradesInWindow(
-      phaseId,
-      this.config.windowDays,
-    );
+    const trades = await this.getTradesInWindow(phaseId, this.config.windowDays);
     const pnlValues = trades.map((t) => t.pnl);
 
     const totalPnL = pnlValues.reduce((sum, v) => sum + v, 0);
@@ -321,14 +309,11 @@ export class PerformanceTracker {
 
     const winRate = tradeCount > 0 ? wins.length / tradeCount : 0;
     const avgWin = wins.length > 0 ? this.calculateMean(wins) : 0;
-    const avgLoss = losses.length > 0
-      ? Math.abs(this.calculateMean(losses))
-      : 0;
+    const avgLoss = losses.length > 0 ? Math.abs(this.calculateMean(losses)) : 0;
 
     const sharpeRatio = this.calculateSharpeRatio(pnlValues);
-    const modifier = tradeCount >= this.config.minTradeCount
-      ? this.calculateModifier(sharpeRatio)
-      : 1.0;
+    const modifier =
+      tradeCount >= this.config.minTradeCount ? this.calculateModifier(sharpeRatio) : 1.0;
 
     return {
       phaseId,
@@ -348,7 +333,7 @@ export class PerformanceTracker {
    * @returns Array of PhasePerformance for all phases
    */
   async getAllPhasePerformance(): Promise<PhasePerformance[]> {
-    const phases: PhaseId[] = ["phase1", "phase2", "phase3"];
+    const phases: PhaseId[] = ['phase1', 'phase2', 'phase3'];
     return Promise.all(phases.map((p) => this.getPhasePerformance(p)));
   }
 
@@ -360,7 +345,7 @@ export class PerformanceTracker {
    */
   async persistPerformanceSnapshot(phaseId: PhaseId): Promise<void> {
     if (!this.db) {
-      throw new Error("Database not configured for PerformanceTracker");
+      throw new Error('Database not configured for PerformanceTracker');
     }
 
     const performance = await this.getPhasePerformance(phaseId);

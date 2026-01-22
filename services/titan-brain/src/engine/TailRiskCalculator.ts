@@ -24,6 +24,7 @@ export class TailRiskCalculator {
    * @returns Total Expected Shortfall in USD terms for a 20% crash event adjusted by probability
    */
   calculateAPTR(positions: Position[], alphas: Map<string, number>): number {
+    // eslint-disable-next-line functional/no-let
     let totalRisk = 0;
 
     for (const position of positions) {
@@ -47,6 +48,7 @@ export class TailRiskCalculator {
       // Stability Factor = 1 / (Alpha - 1) (Mean of Pareto is x_min * (alpha / alpha - 1))
       // Variance is infinite if Alpha < 2.
 
+      // eslint-disable-next-line functional/no-let
       let riskMultiplier = 1.0;
       if (alpha <= 1.5) {
         riskMultiplier = 10.0; // Extreme Danger

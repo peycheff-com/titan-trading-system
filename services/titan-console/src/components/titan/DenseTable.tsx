@@ -34,7 +34,12 @@ export function DenseTable<T>({
 }: DenseTableProps<T>) {
   if (data.length === 0) {
     return (
-      <div className={cn('flex items-center justify-center py-8 text-sm text-muted-foreground', className)}>
+      <div
+        className={cn(
+          'flex items-center justify-center py-8 text-sm text-muted-foreground',
+          className,
+        )}
+      >
         {emptyMessage}
       </div>
     );
@@ -54,7 +59,7 @@ export function DenseTable<T>({
                 className={cn(
                   'whitespace-nowrap text-xxs font-semibold uppercase tracking-wider text-muted-foreground',
                   col.align === 'center' && 'text-center',
-                  col.align === 'right' && 'text-right'
+                  col.align === 'right' && 'text-right',
                 )}
                 style={{ width: col.width }}
               >
@@ -75,7 +80,7 @@ export function DenseTable<T>({
                 className={cn(
                   'border-b border-border/50 bg-card transition-colors',
                   onRowClick && 'cursor-pointer hover:bg-accent/50',
-                  isSelected && 'bg-primary/10'
+                  isSelected && 'bg-primary/10',
                 )}
               >
                 {columns.map((col) => (
@@ -84,7 +89,7 @@ export function DenseTable<T>({
                     className={cn(
                       'whitespace-nowrap font-mono text-xs text-foreground',
                       col.align === 'center' && 'text-center',
-                      col.align === 'right' && 'text-right'
+                      col.align === 'right' && 'text-right',
                     )}
                   >
                     {col.render

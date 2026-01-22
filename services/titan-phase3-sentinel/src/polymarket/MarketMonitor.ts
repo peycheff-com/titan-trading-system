@@ -1,34 +1,38 @@
 import { Market, PolymarketClient } from './PolymarketClient.js';
 import { ArbEngine, ArbSignal } from './ArbEngine.js';
-import { ExecutionClient } from '../execution/ExecutionClient.js';
-import { v4 as uuidv4 } from 'uuid'; // Need to make sure uuid is available or use crypto for random id
+import { SignalClient } from '@titan/shared';
+// import { v4 as uuidv4 } from 'uuid';
 
 export class MarketMonitor {
   private client: PolymarketClient;
   private engine: ArbEngine;
-  private executionClient: ExecutionClient;
+  private signalClient: SignalClient;
   private isRunning: boolean = false;
   private pollingInterval: NodeJS.Timeout | null = null;
 
   constructor(private intervalMs: number = 5000) {
     this.client = new PolymarketClient();
     this.engine = new ArbEngine();
-    this.executionClient = new ExecutionClient();
+    this.signalClient = new SignalClient({ source: 'sentinel' });
   }
 
   async start() {
     if (this.isRunning) return;
+    // eslint-disable-next-line functional/immutable-data
     this.isRunning = true;
     console.log('Starting Market Monitor...');
 
     this.poll(); // Initial poll
+    // eslint-disable-next-line functional/immutable-data
     this.pollingInterval = setInterval(() => this.poll(), this.intervalMs);
   }
 
   async stop() {
+    // eslint-disable-next-line functional/immutable-data
     this.isRunning = false;
     if (this.pollingInterval) {
       clearInterval(this.pollingInterval);
+      // eslint-disable-next-line functional/immutable-data
       this.pollingInterval = null;
     }
     console.log('Market Monitor stopped.');
@@ -54,26 +58,46 @@ export class MarketMonitor {
   }
 
   private async processSignals(signals: ArbSignal[], market: Market) {
+    // Connect Signal Client if needed
+    if (!this.signalClient.isConnected()) {
+      await this.signalClient.connect();
+    }
+
     for (const signal of signals) {
       console.log(`[SIGNAL] ${signal.type} on ${market.slug} (${signal.outcomeId})`);
 
-      // Dispatch to Titan Execution
-      const sent = await this.executionClient.sendSignal({
-        signal_id: `sentinel-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-        type: 'PREPARE', // Initiate a trade preparation
-        symbol: 'POLYMARKET', // Special symbol? Or map to related asset?
-        phase_id: 'phase3',
-        market_id: market.id,
-        outcome_id: signal.outcomeId,
-        direction: 'LONG', // Buying the outcome
-        price: signal.price,
+      // Dispatch to Titan Brain via SignalClient
+      // signal_id generation can be handled here or in client
+      const signalId = `sentinel-poly-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+      const prepareResp = await this.signalClient.sendPrepare({
+        signal_id: signalId,
+        source: 'sentinel',
+        symbol: 'POLYMARKET', // Sentinel logic should resolve this or pass metadata
+        direction: 'LONG',
+        type: 'BUY_SETUP',
+        entry_zone: { min: signal.price, max: signal.price * 1.05 },
+        stop_loss: 0,
+        take_profits: [],
+        size: 0,
         confidence: signal.confidence,
+        timestamp: Date.now(),
+        metadata: {
+          market_id: market.id,
+          outcome_id: signal.outcomeId,
+          market_slug: market.slug,
+        },
       });
 
-      if (sent) {
-        console.log('  > Dispatched to Titan Execution ✓');
+      if (prepareResp.prepared) {
+        const confirmResp = await this.signalClient.sendConfirm(signalId);
+        if (confirmResp.executed) {
+          console.log('  > Dispatched to Titan Brain (SignalClient) ✓');
+        } else {
+          console.log('  > Brain Rejected ✗: ' + confirmResp.reason);
+        }
       } else {
-        console.log('  > Dispatch FAILED ✗');
+        console.log('  > Prepare FAILED ✗: ' + prepareResp.reason);
       }
     }
   }

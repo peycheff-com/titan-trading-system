@@ -19,14 +19,14 @@ interface TopBarProps {
 export function TopBar({ safetyLocked, onSafetyToggle }: TopBarProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [clockSynced, setClockSynced] = useState(true);
-  
+
   // Determine environment from VITE_APP_ENV or MODE or window location
   const getInitialEnv = (): Environment => {
     const envVar = import.meta.env.VITE_APP_ENV as string;
     if (envVar === 'prod' || envVar === 'production') return 'prod';
     if (envVar === 'testnet') return 'testnet';
     if (envVar === 'local') return 'local';
-    
+
     // Check hostname for production indicators
     if (typeof window !== 'undefined') {
       const hostname = window.location.hostname;
@@ -56,7 +56,7 @@ export function TopBar({ safetyLocked, onSafetyToggle }: TopBarProps) {
         <span
           className={cn(
             'rounded-full px-2.5 py-0.5 text-xxs font-semibold uppercase tracking-wider',
-            env.color
+            env.color,
           )}
         >
           {env.label}
@@ -95,7 +95,7 @@ export function TopBar({ safetyLocked, onSafetyToggle }: TopBarProps) {
             'flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
             safetyLocked
               ? 'bg-status-critical/10 text-status-critical hover:bg-status-critical/20'
-              : 'bg-status-healthy/10 text-status-healthy hover:bg-status-healthy/20'
+              : 'bg-status-healthy/10 text-status-healthy hover:bg-status-healthy/20',
           )}
         >
           {safetyLocked ? (

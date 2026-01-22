@@ -179,6 +179,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
       // Start periodic updates
       this.startPeriodicUpdates();
 
+      // eslint-disable-next-line functional/immutable-data
       this.isInitialized = true;
       console.log('✅ Global Liquidity Aggregator initialized');
       this.logInfo('Global Liquidity Aggregator initialized successfully');
@@ -209,6 +210,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
     // Disconnect from exchanges
     await this.exchangeManager.disconnect();
 
+    // eslint-disable-next-line functional/immutable-data
     this.isInitialized = false;
     console.log('✅ Global Liquidity Aggregator shutdown complete');
   }
@@ -394,6 +396,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
    */
   private handleCVDUpdate(symbol: string, globalCVD: GlobalCVDData): void {
     // Store last CVD
+    // eslint-disable-next-line functional/immutable-data
     this.lastGlobalCVD.set(symbol, globalCVD);
 
     // Analyze for manipulation
@@ -441,6 +444,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
     if (this.fallbackState.active) return;
 
     // Find the connected exchange
+    // eslint-disable-next-line functional/no-let
     let fallbackExchange: 'binance' | 'coinbase' | 'kraken' | null = null;
 
     if (status.binance === ConnectionStatus.CONNECTED) {
@@ -451,6 +455,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
       fallbackExchange = 'kraken';
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.fallbackState = {
       active: true,
       reason: `Only ${status.connectedCount} exchange(s) connected`,
@@ -473,6 +478,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
   private deactivateFallback(): void {
     if (!this.fallbackState.active) return;
 
+    // eslint-disable-next-line functional/immutable-data
     this.fallbackState = {
       active: false,
       reason: '',
@@ -515,6 +521,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
   private startPeriodicUpdates(): void {
     if (this.updateTimer) return;
 
+    // eslint-disable-next-line functional/immutable-data
     this.updateTimer = setInterval(() => {
       // Emit updates for all tracked symbols
       for (const symbol of this.config.symbols) {
@@ -532,6 +539,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
   private stopPeriodicUpdates(): void {
     if (this.updateTimer) {
       clearInterval(this.updateTimer);
+      // eslint-disable-next-line functional/immutable-data
       this.updateTimer = null;
     }
   }
@@ -592,6 +600,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
    * Update symbols to track
    */
   updateSymbols(symbols: string[]): void {
+    // eslint-disable-next-line functional/immutable-data
     this.config.symbols = symbols;
     this.exchangeManager.updateSymbols(symbols);
   }
@@ -607,6 +616,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
    * Update configuration
    */
   updateConfig(config: Partial<GlobalLiquidityAggregatorConfig>): void {
+    // eslint-disable-next-line functional/immutable-data
     this.config = { ...this.config, ...config };
 
     // Update component configs

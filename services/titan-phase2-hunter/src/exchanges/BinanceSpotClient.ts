@@ -75,6 +75,7 @@ export class BinanceSpotClient {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
+      // eslint-disable-next-line functional/immutable-data
       this.isInitialized = true;
       console.log('✅ Binance Spot Client initialized');
     } catch (error) {
@@ -97,20 +98,26 @@ export class BinanceSpotClient {
       // Close WebSocket connection
       if (this.ws) {
         this.ws.close();
+        // eslint-disable-next-line functional/immutable-data
         this.ws = null;
       }
 
       // Clear heartbeat interval
       if (this.heartbeatInterval) {
         clearInterval(this.heartbeatInterval);
+        // eslint-disable-next-line functional/immutable-data
         this.heartbeatInterval = null;
       }
 
       // Clear subscriptions
+      // eslint-disable-next-line functional/immutable-data
       this.subscriptions.clear();
+      // eslint-disable-next-line functional/immutable-data
       this.errorCallbacks.clear();
+      // eslint-disable-next-line functional/immutable-data
       this.reconnectCallbacks.clear();
 
+      // eslint-disable-next-line functional/immutable-data
       this.isInitialized = false;
       console.log('✅ Binance Spot Client disconnected');
     } catch (error) {
@@ -129,8 +136,10 @@ export class BinanceSpotClient {
 
     // Add callback to subscriptions
     if (!this.subscriptions.has(normalizedSymbol)) {
+      // eslint-disable-next-line functional/immutable-data
       this.subscriptions.set(normalizedSymbol, new Set());
     }
+    // eslint-disable-next-line functional/immutable-data
     this.subscriptions.get(normalizedSymbol)!.add(callback);
 
     // Connect WebSocket if not already connected
@@ -152,10 +161,12 @@ export class BinanceSpotClient {
     const callbacks = this.subscriptions.get(normalizedSymbol);
 
     if (callbacks) {
+      // eslint-disable-next-line functional/immutable-data
       callbacks.delete(callback);
 
       // If no more callbacks for this symbol, unsubscribe from stream
       if (callbacks.size === 0) {
+        // eslint-disable-next-line functional/immutable-data
         this.subscriptions.delete(normalizedSymbol);
         this.unsubscribeFromStream(normalizedSymbol);
       }
@@ -191,6 +202,7 @@ export class BinanceSpotClient {
    * @param callback - Error callback function
    */
   public onError(callback: ErrorCallback): void {
+    // eslint-disable-next-line functional/immutable-data
     this.errorCallbacks.add(callback);
   }
 
@@ -199,6 +211,7 @@ export class BinanceSpotClient {
    * @param callback - Reconnect callback function
    */
   public onReconnect(callback: ReconnectCallback): void {
+    // eslint-disable-next-line functional/immutable-data
     this.reconnectCallbacks.add(callback);
   }
 
@@ -207,6 +220,7 @@ export class BinanceSpotClient {
    * @param callback - Error callback function to remove
    */
   public removeErrorCallback(callback: ErrorCallback): void {
+    // eslint-disable-next-line functional/immutable-data
     this.errorCallbacks.delete(callback);
   }
 
@@ -215,6 +229,7 @@ export class BinanceSpotClient {
    * @param callback - Reconnect callback function to remove
    */
   public removeReconnectCallback(callback: ReconnectCallback): void {
+    // eslint-disable-next-line functional/immutable-data
     this.reconnectCallbacks.delete(callback);
   }
 
@@ -245,18 +260,25 @@ export class BinanceSpotClient {
   public close(): void {
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
+      // eslint-disable-next-line functional/immutable-data
       this.heartbeatInterval = null;
     }
 
     if (this.ws) {
       this.ws.close();
+      // eslint-disable-next-line functional/immutable-data
       this.ws = null;
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.subscriptions.clear();
+    // eslint-disable-next-line functional/immutable-data
     this.errorCallbacks.clear();
+    // eslint-disable-next-line functional/immutable-data
     this.reconnectCallbacks.clear();
+    // eslint-disable-next-line functional/immutable-data
     this.reconnectAttempts = 0;
+    // eslint-disable-next-line functional/immutable-data
     this.isReconnecting = false;
   }
 
@@ -271,12 +293,16 @@ export class BinanceSpotClient {
       const streams = Array.from(this.subscriptions.keys()).map(symbol => `${symbol}@aggTrade`);
       const streamUrl = streams.length > 0 ? `${this.wsUrl}/${streams.join('/')}` : this.wsUrl;
 
+      // eslint-disable-next-line functional/immutable-data
       this.ws = new WebSocket(streamUrl);
+      // eslint-disable-next-line functional/immutable-data
       this.lastPongTime = Date.now();
 
       this.ws.on('open', () => {
         console.log('🔗 Binance WebSocket connected');
+        // eslint-disable-next-line functional/immutable-data
         this.reconnectAttempts = 0;
+        // eslint-disable-next-line functional/immutable-data
         this.isReconnecting = false;
 
         // Subscribe to all existing symbols
@@ -299,6 +325,7 @@ export class BinanceSpotClient {
       });
 
       this.ws.on('pong', () => {
+        // eslint-disable-next-line functional/immutable-data
         this.lastPongTime = Date.now();
       });
 
@@ -309,6 +336,7 @@ export class BinanceSpotClient {
 
       this.ws.on('close', (code: number, reason: Buffer) => {
         console.log(`🔌 Binance WebSocket closed: ${code} ${reason.toString()}`);
+        // eslint-disable-next-line functional/immutable-data
         this.ws = null;
 
         // Attempt reconnection if we have active subscriptions
@@ -409,7 +437,9 @@ export class BinanceSpotClient {
       return;
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.isReconnecting = true;
+    // eslint-disable-next-line functional/immutable-data
     this.reconnectAttempts++;
 
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1); // Exponential backoff
@@ -427,6 +457,7 @@ export class BinanceSpotClient {
    * Setup heartbeat to detect connection issues
    */
   private setupHeartbeat(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.heartbeatInterval = setInterval(() => {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
         // Check if we received a pong recently

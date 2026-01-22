@@ -118,6 +118,7 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
    */
   private initializePhaseWebhooks(): void {
     if (this.config.phase1WebhookUrl) {
+      // eslint-disable-next-line functional/immutable-data
       this.phaseWebhooks.set('phase1', {
         url: this.config.phase1WebhookUrl,
         enabled: true,
@@ -127,6 +128,7 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
     }
 
     if (this.config.phase2WebhookUrl) {
+      // eslint-disable-next-line functional/immutable-data
       this.phaseWebhooks.set('phase2', {
         url: this.config.phase2WebhookUrl,
         enabled: true,
@@ -136,6 +138,7 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
     }
 
     if (this.config.phase3WebhookUrl) {
+      // eslint-disable-next-line functional/immutable-data
       this.phaseWebhooks.set('phase3', {
         url: this.config.phase3WebhookUrl,
         enabled: true,
@@ -160,6 +163,7 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
     }
 
     // Start periodic health checks
+    // eslint-disable-next-line functional/immutable-data
     this.healthCheckInterval = setInterval(async () => {
       await this.checkAllPhasesHealth();
     }, 60000); // Every 60 seconds
@@ -173,6 +177,7 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
   async shutdown(): Promise<void> {
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval);
+      // eslint-disable-next-line functional/immutable-data
       this.healthCheckInterval = null;
     }
     console.log('🔌 Phase Integration Service shutdown');
@@ -372,10 +377,13 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
 
     try {
       const response = await this.makeRequest(webhook.url, '/health', 'GET', undefined, 2000);
+      // eslint-disable-next-line functional/immutable-data
       webhook.healthy = response.status === 'healthy' || response.status === 'ok';
+      // eslint-disable-next-line functional/immutable-data
       webhook.lastContact = Date.now();
       return webhook.healthy;
     } catch (error) {
+      // eslint-disable-next-line functional/immutable-data
       webhook.healthy = false;
       return false;
     }
@@ -393,6 +401,7 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
     };
 
     for (const phaseId of ['phase1', 'phase2', 'phase3'] as PhaseId[]) {
+      // eslint-disable-next-line functional/immutable-data
       results[phaseId] = await this.checkPhaseHealth(phaseId);
     }
 
@@ -422,6 +431,7 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
    * Register a phase webhook URL
    */
   registerPhaseWebhook(phaseId: PhaseId, url: string): void {
+    // eslint-disable-next-line functional/immutable-data
     this.phaseWebhooks.set(phaseId, {
       url,
       enabled: true,
@@ -435,6 +445,7 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
    * Unregister a phase webhook
    */
   unregisterPhaseWebhook(phaseId: PhaseId): void {
+    // eslint-disable-next-line functional/immutable-data
     this.phaseWebhooks.delete(phaseId);
     console.log(`📝 Unregistered webhook for ${phaseId}`);
   }
@@ -469,6 +480,7 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
       const signature = createHmac('sha256', this.config.hmacSecret)
         .update(bodyString)
         .digest('hex');
+      // eslint-disable-next-line functional/immutable-data
       headers['x-signature'] = signature;
     }
 
@@ -476,8 +488,10 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
     const timeoutId = setTimeout(() => controller.abort(), requestTimeout);
 
     const maxRetries = this.config.maxRetries || 2;
+    // eslint-disable-next-line functional/no-let
     let lastError: Error | null = null;
 
+    // eslint-disable-next-line functional/no-let
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const response = await fetch(url, {

@@ -58,7 +58,7 @@ export function StatusPill({
         size === 'xs' && 'px-1.5 py-0.5 text-xxs',
         size === 'sm' && 'px-2 py-0.5 text-xs',
         size === 'md' && 'px-2.5 py-1 text-xs',
-        className
+        className,
       )}
     >
       {showDot && (
@@ -69,7 +69,7 @@ export function StatusPill({
             config.pulse,
             size === 'xs' && 'h-1 w-1',
             size === 'sm' && 'h-1.5 w-1.5',
-            size === 'md' && 'h-2 w-2'
+            size === 'md' && 'h-2 w-2',
           )}
         />
       )}
@@ -97,7 +97,7 @@ export function StatusDot({ status, size = 'sm', className }: StatusDotProps) {
         size === 'xs' && 'h-1.5 w-1.5',
         size === 'sm' && 'h-2 w-2',
         size === 'md' && 'h-2.5 w-2.5',
-        className
+        className,
       )}
       title={config.label}
     />

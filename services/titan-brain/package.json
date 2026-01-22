@@ -9,6 +9,8 @@
     "start": "echo '[DEBUG] STARTING_BUILD' && npm run build && echo '[DEBUG] BUILD_COMPLETE' && npm run migrate && node dist/index.js",
     "dev": "tsc && node --watch dist/index.js",
     "test": "npm run test:unit",
+    "task:rebuild": "node dist/index.js task:rebuild",
+    "task:reconcile": "node dist/index.js task:reconcile",
     "test:unit": "jest --config jest.config.cjs",
     "test:integration": "jest --config jest.integration.config.cjs",
     "test:all": "npm run test:unit && npm run test:integration",

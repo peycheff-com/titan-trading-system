@@ -188,6 +188,7 @@ export class PredictiveAnalytics extends EventEmitter {
 
     this.telemetry.info('PredictiveAnalytics', 'Starting predictive analytics');
 
+    // eslint-disable-next-line functional/immutable-data
     this.updateTimer = setInterval(() => {
       this.runAnalyticsCycle().catch((error) => {
         this.telemetry.error('PredictiveAnalytics', 'Analytics cycle failed', error);
@@ -195,6 +196,7 @@ export class PredictiveAnalytics extends EventEmitter {
     }, this.config.updateInterval);
 
     if (this.config.enableMLModels) {
+      // eslint-disable-next-line functional/immutable-data
       this.modelUpdateTimer = setInterval(() => {
         this.updateMLModels().catch((error) => {
           this.telemetry.error('PredictiveAnalytics', 'Model update failed', error);
@@ -211,11 +213,13 @@ export class PredictiveAnalytics extends EventEmitter {
   stop(): void {
     if (this.updateTimer) {
       clearInterval(this.updateTimer);
+      // eslint-disable-next-line functional/immutable-data
       this.updateTimer = null;
     }
 
     if (this.modelUpdateTimer) {
       clearInterval(this.modelUpdateTimer);
+      // eslint-disable-next-line functional/immutable-data
       this.modelUpdateTimer = null;
     }
 
@@ -228,6 +232,7 @@ export class PredictiveAnalytics extends EventEmitter {
    */
   addMarketData(symbol: string, ohlcv: OHLCV[]): void {
     if (!this.marketData.has(symbol)) {
+      // eslint-disable-next-line functional/immutable-data
       this.marketData.set(symbol, []);
     }
 
@@ -245,10 +250,12 @@ export class PredictiveAnalytics extends EventEmitter {
         typeof d.volume === 'number',
     );
 
+    // eslint-disable-next-line functional/immutable-data
     data.push(...validOHLCV);
 
     // Keep only recent data
     const cutoff = Date.now() - this.config.lookbackPeriod * 60 * 1000;
+    // eslint-disable-next-line functional/immutable-data
     this.marketData.set(
       symbol,
       data.filter((d) => d && d.timestamp > cutoff),
@@ -264,14 +271,17 @@ export class PredictiveAnalytics extends EventEmitter {
     const symbol = snapshot.symbol;
 
     if (!this.regimeHistory.has(symbol)) {
+      // eslint-disable-next-line functional/immutable-data
       this.regimeHistory.set(symbol, []);
     }
 
     const history = this.regimeHistory.get(symbol)!;
+    // eslint-disable-next-line functional/immutable-data
     history.push(snapshot);
 
     // Keep only recent snapshots
     const cutoff = Date.now() - this.config.lookbackPeriod * 60 * 1000;
+    // eslint-disable-next-line functional/immutable-data
     this.regimeHistory.set(
       symbol,
       history.filter((s) => s.timestamp > cutoff),
@@ -290,10 +300,12 @@ export class PredictiveAnalytics extends EventEmitter {
    * Add trade data
    */
   addTrade(trade: Trade): void {
+    // eslint-disable-next-line functional/immutable-data
     this.tradeHistory.push(trade);
 
     // Keep only recent trades
     const cutoff = Date.now() - this.config.lookbackPeriod * 60 * 1000;
+    // eslint-disable-next-line functional/immutable-data
     this.tradeHistory = this.tradeHistory.filter((t) => t.timestamp > cutoff);
 
     this.emit('tradeAdded', trade);
@@ -382,13 +394,16 @@ export class PredictiveAnalytics extends EventEmitter {
     const pairs: CorrelationAnalysis['pairs'] = [];
 
     // Calculate pairwise correlations
+    // eslint-disable-next-line functional/no-let
     for (let i = 0; i < symbols.length; i++) {
+      // eslint-disable-next-line functional/no-let
       for (let j = i + 1; j < symbols.length; j++) {
         const symbol1 = symbols[i];
         const symbol2 = symbols[j];
 
         const correlation = this.calculateCorrelation(symbol1, symbol2);
         if (correlation !== null) {
+          // eslint-disable-next-line functional/immutable-data
           pairs.push({
             symbol1,
             symbol2,
@@ -475,6 +490,7 @@ export class PredictiveAnalytics extends EventEmitter {
 
     // Check for high correlation risk
     if (correlationAnalysis.portfolioCorrelation > 0.8) {
+      // eslint-disable-next-line functional/immutable-data
       adjustments.push({
         timestamp: Date.now(),
         trigger: 'correlation_increase',
@@ -495,6 +511,7 @@ export class PredictiveAnalytics extends EventEmitter {
         volatilityPrediction &&
         volatilityPrediction.predictedVolatility > volatilityPrediction.currentVolatility * 1.5
       ) {
+        // eslint-disable-next-line functional/immutable-data
         adjustments.push({
           timestamp: Date.now(),
           trigger: 'volatility_spike',
@@ -511,6 +528,7 @@ export class PredictiveAnalytics extends EventEmitter {
     // Check for regime changes
     for (const [symbol, regime] of this.currentRegimes) {
       if (regime === 'risk_off' || regime === 'high_volatility') {
+        // eslint-disable-next-line functional/immutable-data
         adjustments.push({
           timestamp: Date.now(),
           trigger: 'regime_change',
@@ -538,6 +556,7 @@ export class PredictiveAnalytics extends EventEmitter {
       for (const symbol of this.marketData.keys()) {
         const regime = this.detectMarketRegime(symbol);
         if (regime) {
+          // eslint-disable-next-line functional/immutable-data
           this.currentRegimes.set(symbol, regime);
         }
       }
@@ -549,6 +568,7 @@ export class PredictiveAnalytics extends EventEmitter {
       for (const symbol of this.marketData.keys()) {
         const volPrediction = this.predictVolatility(symbol);
         if (volPrediction) {
+          // eslint-disable-next-line functional/immutable-data
           volatilityPredictions.push(volPrediction);
         }
 
@@ -557,6 +577,7 @@ export class PredictiveAnalytics extends EventEmitter {
         for (const strategy of strategies) {
           const strategyPrediction = this.predictStrategyPerformance(strategy, symbol);
           if (strategyPrediction) {
+            // eslint-disable-next-line functional/immutable-data
             strategyPredictions.push(strategyPrediction);
           }
         }
@@ -615,6 +636,7 @@ export class PredictiveAnalytics extends EventEmitter {
       accuracy: 0.75 + Math.random() * 0.2, // Simulated accuracy
     };
 
+    // eslint-disable-next-line functional/immutable-data
     this.volatilityModels.set(symbol, model);
     this.telemetry.debug('PredictiveAnalytics', `Updated volatility model for ${symbol}`, {
       accuracy: model.accuracy,
@@ -652,6 +674,7 @@ export class PredictiveAnalytics extends EventEmitter {
   private updateCurrentRegime(symbol: string, snapshot: RegimeSnapshot): void {
     const regime = this.detectMarketRegime(symbol);
     if (regime) {
+      // eslint-disable-next-line functional/immutable-data
       this.currentRegimes.set(symbol, regime);
     }
   }
@@ -661,8 +684,10 @@ export class PredictiveAnalytics extends EventEmitter {
    */
   private calculateReturns(data: OHLCV[]): number[] {
     const returns: number[] = [];
+    // eslint-disable-next-line functional/no-let
     for (let i = 1; i < data.length; i++) {
       const ret = (data[i].close - data[i - 1].close) / data[i - 1].close;
+      // eslint-disable-next-line functional/immutable-data
       returns.push(ret);
     }
     return returns;
@@ -712,7 +737,9 @@ export class PredictiveAnalytics extends EventEmitter {
     if (returns.length < 2) return 0;
 
     // Simple autocorrelation at lag 1
+    // eslint-disable-next-line functional/no-let
     let sum = 0;
+    // eslint-disable-next-line functional/no-let
     for (let i = 1; i < returns.length; i++) {
       sum += returns[i] * returns[i - 1];
     }
@@ -752,10 +779,12 @@ export class PredictiveAnalytics extends EventEmitter {
   private calculateRollingVolatility(data: OHLCV[], window: number): number[] {
     const volatilities: number[] = [];
 
+    // eslint-disable-next-line functional/no-let
     for (let i = window; i < data.length; i++) {
       const windowData = data.slice(i - window, i);
       const returns = this.calculateReturns(windowData);
       const vol = this.calculateVolatility(returns);
+      // eslint-disable-next-line functional/immutable-data
       volatilities.push(vol);
     }
 
@@ -770,8 +799,10 @@ export class PredictiveAnalytics extends EventEmitter {
 
     // Simple exponential smoothing
     const alpha = 0.3;
+    // eslint-disable-next-line functional/no-let
     let forecast = volatilityHistory[0];
 
+    // eslint-disable-next-line functional/no-let
     for (let i = 1; i < volatilityHistory.length; i++) {
       forecast = alpha * volatilityHistory[i] + (1 - alpha) * forecast;
     }
@@ -809,10 +840,14 @@ export class PredictiveAnalytics extends EventEmitter {
     const mean1 = r1.reduce((sum, r) => sum + r, 0) / r1.length;
     const mean2 = r2.reduce((sum, r) => sum + r, 0) / r2.length;
 
+    // eslint-disable-next-line functional/no-let
     let numerator = 0;
+    // eslint-disable-next-line functional/no-let
     let sum1Sq = 0;
+    // eslint-disable-next-line functional/no-let
     let sum2Sq = 0;
 
+    // eslint-disable-next-line functional/no-let
     for (let i = 0; i < r1.length; i++) {
       const diff1 = r1[i] - mean1;
       const diff2 = r2[i] - mean2;
@@ -836,8 +871,11 @@ export class PredictiveAnalytics extends EventEmitter {
    * Calculate maximum drawdown
    */
   private calculateMaxDrawdown(returns: number[]): number {
+    // eslint-disable-next-line functional/no-let
     let peak = 0;
+    // eslint-disable-next-line functional/no-let
     let maxDrawdown = 0;
+    // eslint-disable-next-line functional/no-let
     let cumulative = 0;
 
     for (const ret of returns) {
@@ -959,10 +997,12 @@ export class PredictiveAnalytics extends EventEmitter {
     const regimeHistory: Record<string, number> = {};
 
     for (const [symbol, data] of this.marketData) {
+      // eslint-disable-next-line functional/immutable-data
       dataPoints[symbol] = data.length;
     }
 
     for (const [symbol, history] of this.regimeHistory) {
+      // eslint-disable-next-line functional/immutable-data
       regimeHistory[symbol] = history.length;
     }
 

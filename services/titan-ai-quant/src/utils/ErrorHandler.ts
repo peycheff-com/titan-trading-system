@@ -218,8 +218,10 @@ export async function withRetry<T>(
 ): Promise<T> {
   const { maxRetries } = { ...DEFAULT_BACKOFF_CONFIG, ...config };
 
+  // eslint-disable-next-line functional/no-let
   let lastError: unknown;
 
+  // eslint-disable-next-line functional/no-let
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await fn();
@@ -379,10 +381,12 @@ export class ErrorLogger {
       // Close current stream
       if (this.writeStream) {
         this.writeStream.end();
+        // eslint-disable-next-line functional/immutable-data
         this.writeStream = null;
       }
 
       // Rotate existing backups
+      // eslint-disable-next-line functional/no-let
       for (let i = this.config.maxBackups - 1; i >= 1; i--) {
         const oldPath = `${this.config.logPath}.${i}`;
         const newPath = `${this.config.logPath}.${i + 1}`;
@@ -460,12 +464,14 @@ export class ErrorLogger {
   close(): void {
     if (this.writeStream) {
       this.writeStream.end();
+      // eslint-disable-next-line functional/immutable-data
       this.writeStream = null;
     }
   }
 }
 
 // Global error logger instance
+// eslint-disable-next-line functional/no-let
 let globalLogger: ErrorLogger | null = null;
 
 /**

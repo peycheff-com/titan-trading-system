@@ -166,6 +166,7 @@ export class Logger {
   static getInstance(component: string = 'shared'): Logger {
     if (!Logger.instance) {
       const config = Logger.createConfigFromEnv(component);
+      // eslint-disable-next-line functional/immutable-data
       Logger.instance = new Logger(config);
     }
     return Logger.instance;
@@ -203,8 +204,10 @@ export class Logger {
       for (const [key, value] of Object.entries(obj)) {
         const lowerKey = key.toLowerCase();
         if (this.config.sensitiveFields.some((field) => lowerKey.includes(field.toLowerCase()))) {
+          // eslint-disable-next-line functional/immutable-data
           masked[key] = '[MASKED]';
         } else {
+          // eslint-disable-next-line functional/immutable-data
           masked[key] = this.maskSensitiveData(value);
         }
       }
@@ -243,14 +246,21 @@ export class Logger {
     const activeSpan = trace.getSpan(context.active());
     if (activeSpan) {
       const spanContext = activeSpan.spanContext();
+      // eslint-disable-next-line functional/immutable-data
       entry.traceId = spanContext.traceId;
+      // eslint-disable-next-line functional/immutable-data
       entry.spanId = spanContext.spanId;
     }
 
+    // eslint-disable-next-line functional/immutable-data
     if (correlationId) entry.correlationId = correlationId;
+    // eslint-disable-next-line functional/immutable-data
     if (operation) entry.operation = operation;
+    // eslint-disable-next-line functional/immutable-data
     if (duration !== undefined) entry.duration = duration;
+    // eslint-disable-next-line functional/immutable-data
     if (metadata) entry.metadata = this.maskSensitiveData(metadata);
+    // eslint-disable-next-line functional/immutable-data
     if (error) entry.error = this.formatError(error);
     return entry;
   }
@@ -361,6 +371,7 @@ export class Logger {
   // Performance Logging
   startTimer(operation: string, correlationId?: string, metadata?: Record<string, any>): string {
     const timerId = randomUUID();
+    // eslint-disable-next-line functional/immutable-data
     this.activeTimers.set(timerId, {
       operation,
       startTime: Date.now(),
@@ -383,6 +394,7 @@ export class Logger {
       return null;
     }
     const duration = Date.now() - timer.startTime;
+    // eslint-disable-next-line functional/immutable-data
     this.activeTimers.delete(timerId);
     if (this.config.enablePerformanceLogging) {
       this.writeLog(
@@ -706,6 +718,7 @@ export class Logger {
    * Update log level
    */
   setLogLevel(level: LogLevel): void {
+    // eslint-disable-next-line functional/immutable-data
     this.config.level = level;
     this.info(`Log level changed to ${LogLevel[level]}`);
   }
@@ -721,6 +734,7 @@ export class Logger {
    * Clear all active timers (useful for testing)
    */
   clearTimers(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.activeTimers.clear();
   }
 }

@@ -7,15 +7,15 @@
  * Requirements: 1.1.1, 1.1.2, 1.1.3, 1.1.4, 1.1.5
  */
 
-import { EventEmitter } from "events";
+import { EventEmitter } from 'events';
 
 /**
  * Health status levels
  */
 export enum HealthStatus {
-  HEALTHY = "healthy",
-  DEGRADED = "degraded",
-  UNHEALTHY = "unhealthy",
+  HEALTHY = 'healthy',
+  DEGRADED = 'degraded',
+  UNHEALTHY = 'unhealthy',
 }
 
 /**
@@ -67,7 +67,7 @@ export interface HealthManagerConfig {
  * Database health component
  */
 export class DatabaseHealthComponent implements HealthComponent {
-  name = "database";
+  name = 'database';
   isRequired = true;
   timeout = 5000;
 
@@ -81,33 +81,33 @@ export class DatabaseHealthComponent implements HealthComponent {
         return {
           name: this.name,
           status: HealthStatus.UNHEALTHY,
-          message: "Database manager not initialized",
+          message: 'Database manager not initialized',
           duration: Date.now() - startTime,
           timestamp: Date.now(),
         };
       }
 
-      const hasHealthCheck =
-        typeof this.databaseManager.healthCheck === "function";
-      const hasIsConnected =
-        typeof this.databaseManager.isConnected === "function";
+      const hasHealthCheck = typeof this.databaseManager.healthCheck === 'function';
+      const hasIsConnected = typeof this.databaseManager.isConnected === 'function';
       const isHealthy = hasHealthCheck
         ? await this.databaseManager.healthCheck()
         : hasIsConnected
-        ? this.databaseManager.isConnected()
-        : false;
-      const metrics = typeof this.databaseManager.getMetrics === "function"
-        ? this.databaseManager.getMetrics()
-        : null;
-      const poolStats = typeof this.databaseManager.getPoolStats === "function"
-        ? this.databaseManager.getPoolStats()
-        : null;
+          ? this.databaseManager.isConnected()
+          : false;
+      const metrics =
+        typeof this.databaseManager.getMetrics === 'function'
+          ? this.databaseManager.getMetrics()
+          : null;
+      const poolStats =
+        typeof this.databaseManager.getPoolStats === 'function'
+          ? this.databaseManager.getPoolStats()
+          : null;
 
       if (!isHealthy) {
         return {
           name: this.name,
           status: HealthStatus.UNHEALTHY,
-          message: "Database connection unhealthy",
+          message: 'Database connection unhealthy',
           duration: Date.now() - startTime,
           timestamp: Date.now(),
           details: {
@@ -120,7 +120,7 @@ export class DatabaseHealthComponent implements HealthComponent {
       return {
         name: this.name,
         status: HealthStatus.HEALTHY,
-        message: "Database connection healthy",
+        message: 'Database connection healthy',
         duration: Date.now() - startTime,
         timestamp: Date.now(),
         details: {
@@ -132,9 +132,7 @@ export class DatabaseHealthComponent implements HealthComponent {
       return {
         name: this.name,
         status: HealthStatus.UNHEALTHY,
-        message: error instanceof Error
-          ? error.message
-          : "Database check failed",
+        message: error instanceof Error ? error.message : 'Database check failed',
         duration: Date.now() - startTime,
         timestamp: Date.now(),
       };
@@ -146,7 +144,7 @@ export class DatabaseHealthComponent implements HealthComponent {
  * Configuration health component
  */
 export class ConfigHealthComponent implements HealthComponent {
-  name = "configuration";
+  name = 'configuration';
   isRequired = true;
   timeout = 1000;
 
@@ -163,21 +161,21 @@ export class ConfigHealthComponent implements HealthComponent {
         return {
           name: this.name,
           status: HealthStatus.UNHEALTHY,
-          message: "Missing required configuration: port",
+          message: 'Missing required configuration: port',
           duration: Date.now() - startTime,
           timestamp: Date.now(),
-          details: { missingFields: ["port"] },
+          details: { missingFields: ['port'] },
         };
       }
 
       return {
         name: this.name,
         status: HealthStatus.HEALTHY,
-        message: "Configuration valid",
+        message: 'Configuration valid',
         duration: Date.now() - startTime,
         timestamp: Date.now(),
         details: {
-          nodeEnv: nodeEnv || "unknown",
+          nodeEnv: nodeEnv || 'unknown',
           port,
         },
       };
@@ -185,9 +183,7 @@ export class ConfigHealthComponent implements HealthComponent {
       return {
         name: this.name,
         status: HealthStatus.UNHEALTHY,
-        message: error instanceof Error
-          ? error.message
-          : "Configuration check failed",
+        message: error instanceof Error ? error.message : 'Configuration check failed',
         duration: Date.now() - startTime,
         timestamp: Date.now(),
       };
@@ -199,7 +195,7 @@ export class ConfigHealthComponent implements HealthComponent {
  * Memory health component
  */
 export class MemoryHealthComponent implements HealthComponent {
-  name = "memory";
+  name = 'memory';
   isRequired = false;
   timeout = 1000;
 
@@ -215,14 +211,14 @@ export class MemoryHealthComponent implements HealthComponent {
       const usedMemory = memUsage.heapUsed;
       const memoryUsageRatio = usedMemory / totalMemory;
 
+      // eslint-disable-next-line functional/no-let
       let status = HealthStatus.HEALTHY;
-      let message = "Memory usage normal";
+      // eslint-disable-next-line functional/no-let
+      let message = 'Memory usage normal';
 
       if (memoryUsageRatio > this.CRITICAL_THRESHOLD) {
         status = HealthStatus.UNHEALTHY;
-        message = `Critical memory usage: ${
-          (memoryUsageRatio * 100).toFixed(1)
-        }%`;
+        message = `Critical memory usage: ${(memoryUsageRatio * 100).toFixed(1)}%`;
       } else if (memoryUsageRatio > this.WARNING_THRESHOLD) {
         status = HealthStatus.DEGRADED;
         message = `High memory usage: ${(memoryUsageRatio * 100).toFixed(1)}%`;
@@ -246,7 +242,7 @@ export class MemoryHealthComponent implements HealthComponent {
       return {
         name: this.name,
         status: HealthStatus.UNHEALTHY,
-        message: error instanceof Error ? error.message : "Memory check failed",
+        message: error instanceof Error ? error.message : 'Memory check failed',
         duration: Date.now() - startTime,
         timestamp: Date.now(),
       };
@@ -258,7 +254,7 @@ export class MemoryHealthComponent implements HealthComponent {
  * Redis health component (optional)
  */
 export class RedisHealthComponent implements HealthComponent {
-  name = "redis";
+  name = 'redis';
   isRequired = false;
   timeout = 3000;
 
@@ -272,7 +268,7 @@ export class RedisHealthComponent implements HealthComponent {
         return {
           name: this.name,
           status: HealthStatus.DEGRADED,
-          message: "Redis not configured (using in-memory fallback)",
+          message: 'Redis not configured (using in-memory fallback)',
           duration: Date.now() - startTime,
           timestamp: Date.now(),
         };
@@ -284,7 +280,7 @@ export class RedisHealthComponent implements HealthComponent {
         return {
           name: this.name,
           status: HealthStatus.DEGRADED,
-          message: "Redis unavailable (using in-memory fallback)",
+          message: 'Redis unavailable (using in-memory fallback)',
           duration: Date.now() - startTime,
           timestamp: Date.now(),
         };
@@ -293,7 +289,7 @@ export class RedisHealthComponent implements HealthComponent {
       return {
         name: this.name,
         status: HealthStatus.HEALTHY,
-        message: "Redis connection healthy",
+        message: 'Redis connection healthy',
         duration: Date.now() - startTime,
         timestamp: Date.now(),
       };
@@ -301,7 +297,7 @@ export class RedisHealthComponent implements HealthComponent {
       return {
         name: this.name,
         status: HealthStatus.DEGRADED,
-        message: "Redis check failed (using in-memory fallback)",
+        message: 'Redis check failed (using in-memory fallback)',
         duration: Date.now() - startTime,
         timestamp: Date.now(),
       };
@@ -335,16 +331,18 @@ export class HealthManager extends EventEmitter {
    * Register a health component
    */
   registerComponent(component: HealthComponent): void {
+    // eslint-disable-next-line functional/immutable-data
     this.components.set(component.name, component);
-    this.emit("component:registered", { name: component.name });
+    this.emit('component:registered', { name: component.name });
   }
 
   /**
    * Unregister a health component
    */
   unregisterComponent(name: string): void {
+    // eslint-disable-next-line functional/immutable-data
     this.components.delete(name);
-    this.emit("component:unregistered", { name });
+    this.emit('component:unregistered', { name });
   }
 
   /**
@@ -361,9 +359,9 @@ export class HealthManager extends EventEmitter {
       }
     }
 
-    const componentChecks = Array.from(this.components.values()).map((
-      component,
-    ) => this.checkComponent(component));
+    const componentChecks = Array.from(this.components.values()).map((component) =>
+      this.checkComponent(component),
+    );
 
     const componentResults = await Promise.all(componentChecks);
 
@@ -375,12 +373,13 @@ export class HealthManager extends EventEmitter {
       timestamp: Date.now(),
       duration: Date.now() - startTime,
       components: componentResults,
-      version: process.env.npm_package_version || "1.0.0",
+      version: process.env.npm_package_version || '1.0.0',
       uptime: Date.now() - this.startTime,
     };
 
+    // eslint-disable-next-line functional/immutable-data
     this.lastHealthCheck = systemHealth;
-    this.emit("health:checked", systemHealth);
+    this.emit('health:checked', systemHealth);
 
     return systemHealth;
   }
@@ -388,33 +387,29 @@ export class HealthManager extends EventEmitter {
   /**
    * Check individual component with timeout
    */
-  private async checkComponent(
-    component: HealthComponent,
-  ): Promise<ComponentHealth> {
+  private async checkComponent(component: HealthComponent): Promise<ComponentHealth> {
     try {
       const timeout = component.timeout || this.config.componentTimeout;
 
       const result = await Promise.race([
         component.check(),
         new Promise<ComponentHealth>((_, reject) =>
-          setTimeout(() => reject(new Error("Health check timeout")), timeout)
+          setTimeout(() => reject(new Error('Health check timeout')), timeout),
         ),
       ]);
 
-      this.emit("component:checked", result);
+      this.emit('component:checked', result);
       return result;
     } catch (error) {
       const result: ComponentHealth = {
         name: component.name,
         status: HealthStatus.UNHEALTHY,
-        message: error instanceof Error
-          ? error.message
-          : "Component check failed",
+        message: error instanceof Error ? error.message : 'Component check failed',
         duration: component.timeout || this.config.componentTimeout,
         timestamp: Date.now(),
       };
 
-      this.emit("component:failed", result);
+      this.emit('component:failed', result);
       return result;
     }
   }
@@ -449,15 +444,16 @@ export class HealthManager extends EventEmitter {
       clearInterval(this.healthCheckInterval);
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.healthCheckInterval = setInterval(async () => {
       try {
         await this.checkHealth();
       } catch (error) {
-        this.emit("health:error", error);
+        this.emit('health:error', error);
       }
     }, this.config.checkInterval);
 
-    this.emit("periodic:started", { interval: this.config.checkInterval });
+    this.emit('periodic:started', { interval: this.config.checkInterval });
   }
 
   /**
@@ -466,10 +462,11 @@ export class HealthManager extends EventEmitter {
   stopPeriodicChecks(): void {
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval);
+      // eslint-disable-next-line functional/immutable-data
       this.healthCheckInterval = null;
     }
 
-    this.emit("periodic:stopped");
+    this.emit('periodic:stopped');
   }
 
   /**
@@ -498,8 +495,10 @@ export class HealthManager extends EventEmitter {
    */
   shutdown(): void {
     this.stopPeriodicChecks();
+    // eslint-disable-next-line functional/immutable-data
     this.components.clear();
+    // eslint-disable-next-line functional/immutable-data
     this.lastHealthCheck = null;
-    this.emit("shutdown");
+    this.emit('shutdown');
   }
 }

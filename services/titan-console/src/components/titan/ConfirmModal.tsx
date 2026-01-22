@@ -1,4 +1,11 @@
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import { useState } from 'react';
@@ -43,30 +50,23 @@ export function ConfirmModal({
       <DialogContent className="border-border bg-card sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-foreground">
-            {variant === 'destructive' && (
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-            )}
+            {variant === 'destructive' && <AlertTriangle className="h-5 w-5 text-destructive" />}
             {title}
           </DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            {description}
-          </DialogDescription>
+          <DialogDescription className="text-muted-foreground">{description}</DialogDescription>
         </DialogHeader>
 
         {showBackendWarning && (
           <div className="rounded-md border border-warning/30 bg-warning/10 p-3">
             <p className="text-xs text-warning">
-              ⚠️ This action will be saved as a local Draft only. Actual system changes require backend integration.
+              ⚠️ This action will be saved as a local Draft only. Actual system changes require
+              backend integration.
             </p>
           </div>
         )}
 
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            className="border-border"
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="border-border">
             {cancelLabel}
           </Button>
           <Button
@@ -74,7 +74,7 @@ export function ConfirmModal({
             onClick={handleConfirm}
             disabled={isPending}
             className={cn(
-              variant === 'default' && 'bg-primary text-primary-foreground hover:bg-primary/90'
+              variant === 'default' && 'bg-primary text-primary-foreground hover:bg-primary/90',
             )}
           >
             {isPending ? (
@@ -112,6 +112,7 @@ export function HoldToConfirm({
     setIsHolding(true);
     const interval = 50;
     const steps = holdDuration / interval;
+    // eslint-disable-next-line functional/no-let
     let current = 0;
 
     const timer = setInterval(() => {
@@ -144,7 +145,7 @@ export function HoldToConfirm({
         'hover:border-destructive hover:bg-destructive/20',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive',
         isHolding && 'border-destructive',
-        className
+        className,
       )}
     >
       <span

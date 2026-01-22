@@ -173,6 +173,7 @@ export class FastPathOrderExecutor implements IOrderExecutor {
    * Update price cache (called from external market data)
    */
   updatePriceCache(symbol: string, price: number): void {
+    // eslint-disable-next-line functional/immutable-data
     this.priceCache.set(symbol, { price, timestamp: Date.now() });
   }
 

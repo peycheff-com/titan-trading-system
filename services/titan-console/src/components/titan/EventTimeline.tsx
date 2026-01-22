@@ -29,11 +29,7 @@ const phaseConfig = {
   sentinel: { bg: 'bg-phase-sentinel/10', text: 'text-phase-sentinel' },
 };
 
-export function EventTimeline({
-  events,
-  maxItems = 10,
-  className,
-}: EventTimelineProps) {
+export function EventTimeline({ events, maxItems = 10, className }: EventTimelineProps) {
   const displayEvents = events.slice(0, maxItems);
 
   return (
@@ -48,7 +44,7 @@ export function EventTimeline({
             className={cn(
               'flex items-start gap-2 rounded-sm border-l-2 bg-card/50 px-2 py-1.5',
               'transition-titan hover:bg-card',
-              severityConfig[event.severity]
+              severityConfig[event.severity],
             )}
           >
             <Icon className={cn('mt-0.5 h-3.5 w-3.5 flex-shrink-0', typeConfig.color)} />
@@ -69,7 +65,7 @@ export function EventTimeline({
                     className={cn(
                       'rounded px-1 py-0.5 text-xxs font-medium capitalize',
                       phaseConfig[event.phase].bg,
-                      phaseConfig[event.phase].text
+                      phaseConfig[event.phase].text,
                     )}
                   >
                     {event.phase}

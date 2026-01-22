@@ -1,0 +1,2 @@
+{"type": "INTENT", "data": {"signal_id": "replay-1", "symbol": "BTC/USDT", "direction": 1, "intent_type": "BuySetup", "entry_zone": [50000.0], "stop_loss": 49000.0, "take_profits": [52000.0], "size": 0.1, "status": "Pending", "t_signal": 1700000000000}}
+{"type": "INTENT", "data": {"signal_id": "replay-2", "symbol": "BTC/USDT", "direction": -1, "intent_type": "Close", "size": 0.05, "status": "Pending", "t_signal": 1700000100000}}

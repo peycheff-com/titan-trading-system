@@ -4,23 +4,23 @@
  */
 
 // Load environment variables from .env file
-import "dotenv/config";
+import 'dotenv/config';
 // import { loadSecretsFromFiles } from "@titan/shared";
 // // loadSecretsFromFiles();
 // loadSecretsFromFiles();
 
-import { Pool } from "pg";
-import { DatabaseManager } from "./DatabaseManager.js";
-import * as migration001 from "./migrations/001_initial_schema.js";
-import * as migration003 from "./migrations/003_disable_rls.js";
-import * as migration004 from "./migrations/004_precision_upgrade.js";
-import * as migration005 from "./migrations/005_split_system_state.js";
-import * as migration006 from "./migrations/006_add_fill_details.js";
-import * as migration008 from "./migrations/008_event_log.js";
-import * as migration009 from "./migrations/009_position_snapshots.js";
-import * as migration010 from "./migrations/010_truth_layer.js";
-import * as migration011 from "./migrations/011_idempotent_fills.js";
-import * as migration012 from "./migrations/012_create_ledger_tables.js";
+import { Pool } from 'pg';
+import { DatabaseManager } from './DatabaseManager.js';
+import * as migration001 from './migrations/001_initial_schema.js';
+import * as migration003 from './migrations/003_disable_rls.js';
+import * as migration004 from './migrations/004_precision_upgrade.js';
+import * as migration005 from './migrations/005_split_system_state.js';
+import * as migration006 from './migrations/006_add_fill_details.js';
+import * as migration008 from './migrations/008_event_log.js';
+import * as migration009 from './migrations/009_position_snapshots.js';
+import * as migration010 from './migrations/010_truth_layer.js';
+import * as migration011 from './migrations/011_idempotent_fills.js';
+import * as migration012 from './migrations/012_create_ledger_tables.js';
 
 interface Migration {
   version: number;
@@ -60,7 +60,7 @@ export async function runMigrations(db: DatabaseManager): Promise<void> {
 
   // Get applied migrations
   const result = await db.query<{ version: number }>(
-    "SELECT version FROM migrations ORDER BY version",
+    'SELECT version FROM migrations ORDER BY version',
   );
   const appliedVersions = new Set(result.rows.map((r) => r.version));
 
@@ -78,7 +78,7 @@ export async function runMigrations(db: DatabaseManager): Promise<void> {
           // Transactional migration for PostgreSQL
           const client = await pool.connect();
           try {
-            await client.query("BEGIN");
+            await client.query('BEGIN');
 
             // IMPORTANT: New migrations (003+) expect a Kysely instance.
             // Legacy (001) expects a Pool.
@@ -120,9 +120,9 @@ export async function runMigrations(db: DatabaseManager): Promise<void> {
             // We'll pass `pool` for now. If the migration expects Kysely, we will likely need to fix the migration content.
             await migration.up(pool);
 
-            await client.query("COMMIT");
+            await client.query('COMMIT');
           } catch (err) {
-            await client.query("ROLLBACK");
+            await client.query('ROLLBACK');
             throw err;
           } finally {
             client.release();
@@ -156,7 +156,7 @@ export async function runMigrations(db: DatabaseManager): Promise<void> {
         throw error;
       }
 
-      await db.query("INSERT INTO migrations (version, name) VALUES ($1, $2)", [
+      await db.query('INSERT INTO migrations (version, name) VALUES ($1, $2)', [
         migration.version,
         migration.name,
       ]);
@@ -165,16 +165,13 @@ export async function runMigrations(db: DatabaseManager): Promise<void> {
     }
   }
 
-  console.log("All migrations completed");
+  console.log('All migrations completed');
 }
 
 /**
  * Run migration SQL for a specific version
  */
-async function runMigrationSQL(
-  db: DatabaseManager,
-  version: number,
-): Promise<void> {
+async function runMigrationSQL(db: DatabaseManager, version: number): Promise<void> {
   if (version === 1) {
     // Initial schema migration
     await db.query(`
@@ -335,11 +332,11 @@ async function runMigrationSQL(
 export async function rollbackMigration(db: DatabaseManager): Promise<void> {
   // Get last applied migration
   const result = await db.query<{ version: number }>(
-    "SELECT version FROM migrations ORDER BY version DESC LIMIT 1",
+    'SELECT version FROM migrations ORDER BY version DESC LIMIT 1',
   );
 
   if (result.rows.length === 0) {
-    console.log("No migrations to rollback");
+    console.log('No migrations to rollback');
     return;
   }
 
@@ -354,24 +351,23 @@ export async function rollbackMigration(db: DatabaseManager): Promise<void> {
 
   // For SQLite compatibility, we'll handle rollback through DatabaseManager
   // For now, just remove the migration record (tables will remain)
-  console.log("Note: Table rollback not implemented for SQLite compatibility");
+  console.log('Note: Table rollback not implemented for SQLite compatibility');
 
-  await db.query("DELETE FROM migrations WHERE version = $1", [lastVersion]);
+  await db.query('DELETE FROM migrations WHERE version = $1', [lastVersion]);
 
   console.log(`Migration ${migration.version} rolled back`);
 }
 
 // CLI entry point
-if (process.argv[1]?.endsWith("migrate.js")) {
-  const command = process.argv[2] || "up";
+if (process.argv[1]?.endsWith('migrate.js')) {
+  const command = process.argv[2] || 'up';
 
   const config = {
-    host: process.env.TITAN_DB_HOST || process.env.DB_HOST || "localhost",
-    port: parseInt(process.env.TITAN_DB_PORT || process.env.DB_PORT || "5432"),
-    database: process.env.TITAN_DB_NAME || process.env.DB_NAME || "titan_brain",
-    user: process.env.TITAN_DB_USER || process.env.DB_USER || "postgres",
-    password: process.env.TITAN_DB_PASSWORD || process.env.DB_PASSWORD ||
-      "postgres",
+    host: process.env.TITAN_DB_HOST || process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.TITAN_DB_PORT || process.env.DB_PORT || '5432'),
+    database: process.env.TITAN_DB_NAME || process.env.DB_NAME || 'titan_brain',
+    user: process.env.TITAN_DB_USER || process.env.DB_USER || 'postgres',
+    password: process.env.TITAN_DB_PASSWORD || process.env.DB_PASSWORD || 'postgres',
     maxConnections: 10,
     idleTimeout: 30000,
   };
@@ -382,9 +378,9 @@ if (process.argv[1]?.endsWith("migrate.js")) {
     try {
       await db.connect();
 
-      if (command === "up") {
+      if (command === 'up') {
         await runMigrations(db);
-      } else if (command === "down") {
+      } else if (command === 'down') {
         await rollbackMigration(db);
       } else {
         console.error(`Unknown command: ${command}`);
@@ -394,7 +390,7 @@ if (process.argv[1]?.endsWith("migrate.js")) {
       await db.disconnect();
       process.exit(0);
     } catch (error) {
-      console.error("Migration failed:", error);
+      console.error('Migration failed:', error);
       process.exit(1);
     }
   })();

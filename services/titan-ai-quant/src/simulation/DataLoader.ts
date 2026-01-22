@@ -67,6 +67,7 @@ export class DataLoader {
     try {
       // Try JSON format first
       const jsonPath = path.join(this.config.dataDir, 'ohlcv', `${symbol}.json`);
+      // eslint-disable-next-line functional/no-let
       let data: OHLCV[] = [];
 
       if (fs.existsSync(jsonPath)) {
@@ -141,6 +142,7 @@ export class DataLoader {
 
     try {
       const filePath = path.join(this.config.dataDir, 'regime', `${symbol}.json`);
+      // eslint-disable-next-line functional/no-let
       let data: RegimeSnapshot[] = [];
 
       if (fs.existsSync(filePath)) {
@@ -207,6 +209,7 @@ export class DataLoader {
 
     try {
       const filePath = path.join(this.config.dataDir, 'trades.json');
+      // eslint-disable-next-line functional/no-let
       let data: Trade[] = [];
 
       if (fs.existsSync(filePath)) {
@@ -250,6 +253,7 @@ export class DataLoader {
    * Clear all cached data
    */
   clearCache(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.cache.clear();
   }
 
@@ -310,8 +314,10 @@ export class DataLoader {
     const interval = 5 * 60 * 1000; // 5 minutes
 
     const data: OHLCV[] = [];
+    // eslint-disable-next-line functional/no-let
     let price = 50000; // Starting price
 
+    // eslint-disable-next-line functional/no-let
     for (let timestamp = start; timestamp <= end; timestamp += interval) {
       // Simple random walk with some volatility
       const change = (Math.random() - 0.5) * 0.02; // ±1% max change
@@ -321,6 +327,7 @@ export class DataLoader {
       const low = newPrice * (1 - Math.random() * 0.005); // Up to 0.5% lower
       const volume = Math.random() * 1000000; // Random volume
 
+      // eslint-disable-next-line functional/immutable-data
       data.push({
         timestamp,
         open: price,
@@ -350,7 +357,9 @@ export class DataLoader {
 
     const data: RegimeSnapshot[] = [];
 
+    // eslint-disable-next-line functional/no-let
     for (let timestamp = start; timestamp <= end; timestamp += interval) {
+      // eslint-disable-next-line functional/immutable-data
       data.push({
         timestamp,
         symbol,
@@ -386,6 +395,7 @@ export class DataLoader {
     // Generate 50-200 trades
     const tradeCount = 50 + Math.floor(Math.random() * 150);
 
+    // eslint-disable-next-line functional/no-let
     for (let i = 0; i < tradeCount; i++) {
       const timestamp = start + Math.random() * (end - start);
       const symbol = symbols[Math.floor(Math.random() * symbols.length)];
@@ -408,6 +418,7 @@ export class DataLoader {
         quantity * leverage * (side === 'long' ? exitPrice - entryPrice : entryPrice - exitPrice);
       const pnlPercent = (pnl / (quantity * entryPrice * leverage)) * 100;
 
+      // eslint-disable-next-line functional/immutable-data
       trades.push({
         id: `trade_${i + 1}`,
         timestamp,
@@ -427,6 +438,7 @@ export class DataLoader {
       });
     }
 
+    // eslint-disable-next-line functional/immutable-data
     return trades.sort((a, b) => a.timestamp - b.timestamp);
   }
 
@@ -439,6 +451,7 @@ export class DataLoader {
 
     const now = Date.now();
     if (now - cached.timestamp > this.config.cacheTTL) {
+      // eslint-disable-next-line functional/immutable-data
       this.cache.delete(key);
       return null;
     }
@@ -450,6 +463,7 @@ export class DataLoader {
    * Set cached data
    */
   private setCachedData(key: string, data: any): void {
+    // eslint-disable-next-line functional/immutable-data
     this.cache.set(key, {
       data,
       timestamp: Date.now(),

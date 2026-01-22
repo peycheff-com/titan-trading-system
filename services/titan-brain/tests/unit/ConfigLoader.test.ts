@@ -47,6 +47,7 @@ describe("Configuration", () => {
           metricUpdateInterval: 30000,
           dashboardCacheTTL: 10000,
           maxQueueSize: 50,
+          initialCapital: 10000,
         },
       };
 

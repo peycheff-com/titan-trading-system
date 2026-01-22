@@ -39,6 +39,7 @@ export class CVDCalculator {
    */
   recordTrade(trade: Trade): void {
     if (!this.tradeHistory.has(trade.symbol)) {
+      // eslint-disable-next-line functional/immutable-data
       this.tradeHistory.set(trade.symbol, []);
     }
 
@@ -47,6 +48,7 @@ export class CVDCalculator {
     // Add trade to history
     // isBuyerMaker = false means the buyer was the aggressor (market buy = bullish)
     // isBuyerMaker = true means the seller was the aggressor (market sell = bearish)
+    // eslint-disable-next-line functional/immutable-data
     history.push({
       qty: trade.qty,
       time: trade.time,
@@ -55,6 +57,7 @@ export class CVDCalculator {
 
     // Keep only last MAX_HISTORY_SECONDS
     const cutoff = trade.time - this.MAX_HISTORY_SECONDS * 1000;
+    // eslint-disable-next-line functional/immutable-data
     this.tradeHistory.set(
       trade.symbol,
       history.filter((t) => t.time > cutoff),
@@ -105,7 +108,9 @@ export class CVDCalculator {
     }
 
     // Calculate CVD: Buy Volume - Sell Volume
+    // eslint-disable-next-line functional/no-let
     let buyVolume = 0;
+    // eslint-disable-next-line functional/no-let
     let sellVolume = 0;
 
     for (const trade of tradesInWindow) {
@@ -132,6 +137,7 @@ export class CVDCalculator {
    * Clear trade history for a symbol (for testing)
    */
   clearTradeHistory(symbol: string): void {
+    // eslint-disable-next-line functional/immutable-data
     this.tradeHistory.delete(symbol);
   }
 

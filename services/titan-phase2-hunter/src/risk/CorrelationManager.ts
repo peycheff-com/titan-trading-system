@@ -148,7 +148,9 @@ export class CorrelationManager extends EventEmitter {
     proposedSize: number
   ): Promise<CorrelationResult> {
     try {
+      // eslint-disable-next-line functional/no-let
       let maxCorrelation = 0;
+      // eslint-disable-next-line functional/no-let
       let conflictSymbol = '';
 
       // Check correlation with all open positions
@@ -233,17 +235,21 @@ export class CorrelationManager extends EventEmitter {
       const correlatedGroups: Position[][] = [];
       const processed = new Set<string>();
 
+      // eslint-disable-next-line functional/no-let
       for (let i = 0; i < symbols.length; i++) {
         if (processed.has(symbols[i])) continue;
 
         const group: Position[] = [];
         const position1 = openPositions.find(p => p.symbol === symbols[i]);
         if (position1) {
+          // eslint-disable-next-line functional/immutable-data
           group.push(position1);
+          // eslint-disable-next-line functional/immutable-data
           processed.add(symbols[i]);
         }
 
         // Find correlated positions
+        // eslint-disable-next-line functional/no-let
         for (let j = i + 1; j < symbols.length; j++) {
           if (processed.has(symbols[j])) continue;
 
@@ -251,18 +257,22 @@ export class CorrelationManager extends EventEmitter {
           if (correlation >= this.config.groupCorrelationThreshold) {
             const position2 = openPositions.find(p => p.symbol === symbols[j]);
             if (position2) {
+              // eslint-disable-next-line functional/immutable-data
               group.push(position2);
+              // eslint-disable-next-line functional/immutable-data
               processed.add(symbols[j]);
             }
           }
         }
 
         if (group.length > 1) {
+          // eslint-disable-next-line functional/immutable-data
           correlatedGroups.push(group);
         }
       }
 
       // Calculate total correlated exposure
+      // eslint-disable-next-line functional/no-let
       let totalCorrelatedExposure = 0;
       for (const group of correlatedGroups) {
         const groupExposure = group.reduce((sum, pos) => {
@@ -305,9 +315,11 @@ export class CorrelationManager extends EventEmitter {
         if (symbol === btcSymbol) continue;
 
         const correlation = Math.abs(await this.calcCorrelation(symbol, btcSymbol));
+        // eslint-disable-next-line functional/immutable-data
         correlations.push(correlation);
 
         if (correlation >= this.config.highBetaThreshold) {
+          // eslint-disable-next-line functional/immutable-data
           affectedSymbols.push(symbol);
         }
       }
@@ -329,6 +341,7 @@ export class CorrelationManager extends EventEmitter {
 
       // Update state and emit event if changed
       if (!this.highBetaState || this.highBetaState.isHighBeta !== isHighBeta) {
+        // eslint-disable-next-line functional/immutable-data
         this.highBetaState = highBetaState;
         this.emit('correlation:high_beta', highBetaState);
 
@@ -363,19 +376,26 @@ export class CorrelationManager extends EventEmitter {
   public async generateCorrelationMatrix(symbols: string[]): Promise<CorrelationMatrix> {
     try {
       const n = symbols.length;
+      // eslint-disable-next-line functional/immutable-data
       const matrix: number[][] = Array(n)
         .fill(null)
+        // eslint-disable-next-line functional/immutable-data
         .map(() => Array(n).fill(0));
 
       // Calculate correlation for each pair
+      // eslint-disable-next-line functional/no-let
       for (let i = 0; i < n; i++) {
+        // eslint-disable-next-line functional/no-let
         for (let j = 0; j < n; j++) {
           if (i === j) {
+            // eslint-disable-next-line functional/immutable-data
             matrix[i][j] = 1.0; // Perfect correlation with self
           } else if (i < j) {
             // Calculate correlation for upper triangle
             const correlation = await this.calcCorrelation(symbols[i], symbols[j]);
+            // eslint-disable-next-line functional/immutable-data
             matrix[i][j] = correlation;
+            // eslint-disable-next-line functional/immutable-data
             matrix[j][i] = correlation; // Mirror to lower triangle
           }
         }
@@ -419,6 +439,7 @@ export class CorrelationManager extends EventEmitter {
 
       // Fetch fresh 24-hour data (hourly candles)
       const data = await this.bybitClient.fetchOHLCV(symbol, '1h', 24);
+      // eslint-disable-next-line functional/immutable-data
       this.priceHistory.set(symbol, data);
 
       return data;
@@ -450,11 +471,13 @@ export class CorrelationManager extends EventEmitter {
     const commonTimestamps = Array.from(timestamps1).filter(t => timestamps2.has(t));
 
     // Align data
+    // eslint-disable-next-line functional/immutable-data
     for (const timestamp of commonTimestamps.sort()) {
       const price1 = map1.get(timestamp);
       const price2 = map2.get(timestamp);
 
       if (price1 !== undefined && price2 !== undefined) {
+        // eslint-disable-next-line functional/immutable-data
         aligned.push({ timestamp, price1, price2 });
       }
     }
@@ -470,8 +493,10 @@ export class CorrelationManager extends EventEmitter {
   private calculateReturns(prices: number[]): number[] {
     const returns: number[] = [];
 
+    // eslint-disable-next-line functional/no-let
     for (let i = 1; i < prices.length; i++) {
       const returnValue = (prices[i] - prices[i - 1]) / prices[i - 1];
+      // eslint-disable-next-line functional/immutable-data
       returns.push(returnValue);
     }
 
@@ -496,10 +521,14 @@ export class CorrelationManager extends EventEmitter {
     const meanY = y.reduce((sum, val) => sum + val, 0) / n;
 
     // Calculate numerator and denominators
+    // eslint-disable-next-line functional/no-let
     let numerator = 0;
+    // eslint-disable-next-line functional/no-let
     let sumXSquared = 0;
+    // eslint-disable-next-line functional/no-let
     let sumYSquared = 0;
 
+    // eslint-disable-next-line functional/no-let
     for (let i = 0; i < n; i++) {
       const xDiff = x[i] - meanX;
       const yDiff = y[i] - meanY;
@@ -528,10 +557,12 @@ export class CorrelationManager extends EventEmitter {
     const key = [symbol1, symbol2].sort().join('-');
 
     if (!this.correlationCache.has(key)) {
+      // eslint-disable-next-line functional/immutable-data
       this.correlationCache.set(key, []);
     }
 
     const cache = this.correlationCache.get(key)!;
+    // eslint-disable-next-line functional/immutable-data
     cache.push({
       symbol1,
       symbol2,
@@ -541,6 +572,7 @@ export class CorrelationManager extends EventEmitter {
 
     // Keep only last 24 hours of data
     const cutoff = Date.now() - this.config.rollingWindowHours * 60 * 60 * 1000;
+    // eslint-disable-next-line functional/immutable-data
     this.correlationCache.set(
       key,
       cache.filter(c => c.timestamp > cutoff)
@@ -555,6 +587,7 @@ export class CorrelationManager extends EventEmitter {
       clearInterval(this.updateInterval);
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.updateInterval = setInterval(async () => {
       await this.updateCorrelations();
     }, this.config.updateIntervalMs);
@@ -570,6 +603,7 @@ export class CorrelationManager extends EventEmitter {
   public stopMonitoring(): void {
     if (this.updateInterval) {
       clearInterval(this.updateInterval);
+      // eslint-disable-next-line functional/immutable-data
       this.updateInterval = null;
     }
     console.log(`📊 Correlation Manager: Stopped monitoring`);
@@ -586,8 +620,10 @@ export class CorrelationManager extends EventEmitter {
       for (const [key, cache] of Array.from(this.correlationCache.entries())) {
         const filtered = cache.filter(c => c.timestamp > cutoff);
         if (filtered.length === 0) {
+          // eslint-disable-next-line functional/immutable-data
           this.correlationCache.delete(key);
         } else {
+          // eslint-disable-next-line functional/immutable-data
           this.correlationCache.set(key, filtered);
         }
       }
@@ -596,8 +632,10 @@ export class CorrelationManager extends EventEmitter {
       for (const [symbol, history] of Array.from(this.priceHistory.entries())) {
         const filtered = history.filter(h => h.timestamp > cutoff);
         if (filtered.length === 0) {
+          // eslint-disable-next-line functional/immutable-data
           this.priceHistory.delete(symbol);
         } else {
+          // eslint-disable-next-line functional/immutable-data
           this.priceHistory.set(symbol, filtered);
         }
       }
@@ -641,6 +679,7 @@ export class CorrelationManager extends EventEmitter {
    * @param newConfig - New configuration
    */
   public updateConfig(newConfig: Partial<CorrelationManagerConfig>): void {
+    // eslint-disable-next-line functional/immutable-data
     this.config = { ...this.config, ...newConfig };
     console.log(`📊 Correlation Manager: Configuration updated`);
   }
@@ -649,8 +688,11 @@ export class CorrelationManager extends EventEmitter {
    * Clear all cached data
    */
   public clearCache(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.correlationCache.clear();
+    // eslint-disable-next-line functional/immutable-data
     this.priceHistory.clear();
+    // eslint-disable-next-line functional/immutable-data
     this.highBetaState = null;
     console.log(`📊 Correlation Manager: Cache cleared`);
   }

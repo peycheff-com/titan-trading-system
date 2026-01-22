@@ -131,6 +131,7 @@ export class OptimizationWorkflow {
       console.log(`Applied ${appliedProposals.length} proposals`);
 
       // Step 5: Performance monitoring (if any proposals were applied)
+      // eslint-disable-next-line functional/no-let
       let performanceComparison;
       if (appliedProposals.length > 0) {
         performanceComparison = await this.monitorPerformance(historicalData);
@@ -170,7 +171,9 @@ export class OptimizationWorkflow {
 
       // Load OHLCV data for major symbols
       const symbols = ['BTCUSDT', 'ETHUSDT', 'ADAUSDT'];
+      // eslint-disable-next-line functional/no-let
       let ohlcvData: OHLCV[] = [];
+      // eslint-disable-next-line functional/no-let
       let regimeSnapshots: RegimeSnapshot[] = [];
 
       for (const symbol of symbols) {
@@ -243,6 +246,7 @@ export class OptimizationWorkflow {
           )})`,
         );
 
+        // eslint-disable-next-line functional/immutable-data
         results.push({
           proposal,
           validation,
@@ -250,6 +254,7 @@ export class OptimizationWorkflow {
         });
       } catch (error) {
         console.error(`Failed to process insight "${insight.topic}":`, error);
+        // eslint-disable-next-line functional/immutable-data
         results.push({
           proposal: {} as OptimizationProposal,
           validation: {} as ValidationReport,
@@ -301,14 +306,18 @@ export class OptimizationWorkflow {
           const applyResult = await this.analyst.applyProposal(proposal, validation);
 
           if (applyResult.success) {
+            // eslint-disable-next-line functional/immutable-data
             result.applied = true;
+            // eslint-disable-next-line functional/immutable-data
             appliedProposals.push(result);
             console.log(`Successfully applied proposal: ${proposal.targetKey}`);
           } else {
+            // eslint-disable-next-line functional/immutable-data
             result.error = applyResult.error;
             console.error(`Failed to apply proposal: ${applyResult.error}`);
           }
         } catch (error) {
+          // eslint-disable-next-line functional/immutable-data
           result.error = error instanceof Error ? error.message : 'Unknown error';
           console.error(`Error applying proposal:`, error);
         }

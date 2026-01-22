@@ -87,6 +87,7 @@ export class ExecutionClient extends EventEmitter {
     }
 
     // Storage for Confirm phase
+    // eslint-disable-next-line functional/immutable-data
     this.pendingSignals.set(signal.signal_id, signal);
 
     return {
@@ -134,6 +135,7 @@ export class ExecutionClient extends EventEmitter {
     const validation = validateIntentPayload(rustPayload);
     if (!validation.valid) {
       await this.publishDlq(rustPayload, validation.errors.join('; '));
+      // eslint-disable-next-line functional/immutable-data
       this.pendingSignals.delete(signal_id);
       return { executed: false, reason: 'Invalid intent payload' };
     }
@@ -146,10 +148,15 @@ export class ExecutionClient extends EventEmitter {
     const account = 'main';
     const subject = `${TitanSubject.CMD_EXEC_PLACE}.${venue}.${account}.${symbolToken}`;
 
+    // Create Envelope
+    const { createIntentMessage } = await import('../schemas/intentSchema.js');
+    const envelope = createIntentMessage(validation.data!, 'titan-brain', signal.signal_id);
+
     try {
-      await this.nats.publish(subject, rustPayload);
+      await this.nats.publish(subject, envelope);
 
       // Cleanup
+      // eslint-disable-next-line functional/immutable-data
       this.pendingSignals.delete(signal_id);
 
       return {
@@ -163,6 +170,7 @@ export class ExecutionClient extends EventEmitter {
   }
 
   async sendAbort(signal_id: string): Promise<AbortResponse> {
+    // eslint-disable-next-line functional/immutable-data
     this.pendingSignals.delete(signal_id);
     return { aborted: true };
   }

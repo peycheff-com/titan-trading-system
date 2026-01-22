@@ -28,7 +28,9 @@ export class CostCalculator {
     const notional = price * size;
     const feeAmount = notional * feeRate;
 
+    // eslint-disable-next-line functional/no-let
     let totalCost: number;
+    // eslint-disable-next-line functional/no-let
     let effectivePrice: number;
 
     if (side === 'BUY') {

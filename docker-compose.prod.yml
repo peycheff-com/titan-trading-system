@@ -33,9 +33,12 @@ services:
   # INFRASTRUCTURE
   # =============================================================================
   nats:
-    image: nats:latest
+    image: nats:2.10.22-alpine
     container_name: titan-nats
     command: ['-js', '-m', '8222']
+
+# ... (startline is 36, so I will just replace the NATS block first)
+
     ports:
       - '4222:4222' # Client
       - '8222:8222' # Monitoring
@@ -52,7 +55,7 @@ services:
   # REDIS - Cache & Message Queue
   # =============================================================================
   redis:
-    image: redis:7-alpine
+    image: redis:7.2.4-alpine3.19
     container_name: titan-redis
     # Ports removed for security (internal access only)
     volumes:
@@ -70,7 +73,7 @@ services:
   # POSTGRES - Database
   # =============================================================================
   postgres:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     container_name: titan-postgres
     environment:
       POSTGRES_USER: ${TITAN_DB_USER:-titan}

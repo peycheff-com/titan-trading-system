@@ -23,7 +23,7 @@ export function RowDetailDrawer({
         className={cn(
           'w-full border-l border-border bg-card sm:max-w-lg',
           'scrollbar-titan overflow-y-auto',
-          className
+          className,
         )}
       >
         <SheetHeader className="flex-row items-center justify-between border-b border-border pb-4">

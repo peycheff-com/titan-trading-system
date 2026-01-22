@@ -36,6 +36,7 @@ export class FractalMath {
     const lows = new Float64Array(candles.map(c => c.low));
 
     // Start from index 2 (need 2 bars on each side)
+    // eslint-disable-next-line functional/no-let
     for (let i = 2; i < candles.length - 2; i++) {
       const current = candles[i];
 
@@ -47,6 +48,7 @@ export class FractalMath {
         highs[i] > highs[i + 2];
 
       if (isSwingHigh) {
+        // eslint-disable-next-line functional/immutable-data
         fractals.push({
           type: 'HIGH',
           price: highs[i],
@@ -64,6 +66,7 @@ export class FractalMath {
         lows[i] < lows[i + 2];
 
       if (isSwingLow) {
+        // eslint-disable-next-line functional/immutable-data
         fractals.push({
           type: 'LOW',
           price: lows[i],
@@ -110,6 +113,7 @@ export class FractalMath {
     const breachedLows = new Set<number>();
 
     // Check each candle for BOS
+    // eslint-disable-next-line functional/no-let
     for (let i = 0; i < candles.length; i++) {
       const candle = candles[i];
 
@@ -120,6 +124,7 @@ export class FractalMath {
           closes[i] > swingHigh.price &&
           !breachedHighs.has(swingHigh.barIndex)
         ) {
+          // eslint-disable-next-line functional/immutable-data
           bosEvents.push({
             direction: 'BULLISH',
             price: closes[i],
@@ -128,6 +133,7 @@ export class FractalMath {
             fractalsBreached: [swingHigh],
           });
 
+          // eslint-disable-next-line functional/immutable-data
           breachedHighs.add(swingHigh.barIndex);
         }
       }
@@ -139,6 +145,7 @@ export class FractalMath {
           closes[i] < swingLow.price &&
           !breachedLows.has(swingLow.barIndex)
         ) {
+          // eslint-disable-next-line functional/immutable-data
           bosEvents.push({
             direction: 'BEARISH',
             price: closes[i],
@@ -147,6 +154,7 @@ export class FractalMath {
             fractalsBreached: [swingLow],
           });
 
+          // eslint-disable-next-line functional/immutable-data
           breachedLows.add(swingLow.barIndex);
         }
       }
@@ -222,13 +230,17 @@ export class FractalMath {
     const lowPrices = new Float64Array(recentLows.map(f => f.price));
 
     // Find the highest high and lowest low
+    // eslint-disable-next-line functional/no-let
     let high = highPrices[0];
+    // eslint-disable-next-line functional/no-let
     let low = lowPrices[0];
 
+    // eslint-disable-next-line functional/no-let
     for (let i = 1; i < highPrices.length; i++) {
       if (highPrices[i] > high) high = highPrices[i];
     }
 
+    // eslint-disable-next-line functional/no-let
     for (let i = 1; i < lowPrices.length; i++) {
       if (lowPrices[i] < low) low = lowPrices[i];
     }
@@ -299,6 +311,7 @@ export class FractalMath {
     }
 
     // Validate each candle has required properties
+    // eslint-disable-next-line functional/no-let
     for (let i = 0; i < candles.length; i++) {
       const candle = candles[i];
       if (

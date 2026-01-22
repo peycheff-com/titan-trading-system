@@ -35,9 +35,11 @@ export class LeadLagDetector {
     const pricesMap = source === 'BINANCE' ? this.binancePrices : this.bybitPrices;
 
     if (!pricesMap.has(symbol)) {
+      // eslint-disable-next-line functional/immutable-data
       pricesMap.set(symbol, new Map());
     }
 
+    // eslint-disable-next-line functional/immutable-data
     pricesMap.get(symbol)!.set(bucket, price);
 
     // Cleanup old data occasionally (per symbol check to avoid global scan)
@@ -49,6 +51,7 @@ export class LeadLagDetector {
     const lastCalc = this.lastCalculation.get(symbol) || 0;
     if (Date.now() - lastCalc > this.calculationInterval) {
       this.calculateLeadLag(symbol);
+      // eslint-disable-next-line functional/immutable-data
       this.lastCalculation.set(symbol, Date.now());
     }
   }
@@ -70,6 +73,7 @@ export class LeadLagDetector {
     const binanceMap = this.binancePrices.get(symbol);
     if (binanceMap) {
       for (const t of binanceMap.keys()) {
+        // eslint-disable-next-line functional/immutable-data
         if (t < cutoff) binanceMap.delete(t);
       }
     }
@@ -77,6 +81,7 @@ export class LeadLagDetector {
     const bybitMap = this.bybitPrices.get(symbol);
     if (bybitMap) {
       for (const t of bybitMap.keys()) {
+        // eslint-disable-next-line functional/immutable-data
         if (t < cutoff) bybitMap.delete(t);
       }
     }
@@ -97,13 +102,16 @@ export class LeadLagDetector {
     const bybitSeries: number[] = [];
 
     // Fill series
+    // eslint-disable-next-line functional/no-let
     for (let t = start; t <= end; t += this.bucketSize) {
       // Find nearest price if exact bucket missing (Zero-Order Hold)
       const pA = this.findNearest(binanceMap, t);
       const pB = this.findNearest(bybitMap, t);
 
       if (pA !== undefined && pB !== undefined) {
+        // eslint-disable-next-line functional/immutable-data
         binanceSeries.push(pA);
+        // eslint-disable-next-line functional/immutable-data
         bybitSeries.push(pB);
       }
     }
@@ -115,6 +123,7 @@ export class LeadLagDetector {
     const rPlus = this.correlationCoefficient(binanceSeries, bybitSeries, 1); // Shift Bybit forward (Binance leads)
     const rMinus = this.correlationCoefficient(binanceSeries, bybitSeries, -1); // Shift Bybit backward (Bybit leads)
 
+    // eslint-disable-next-line functional/immutable-data
     this.correlation.set(symbol, r0);
 
     // Simple heuristic
@@ -125,6 +134,7 @@ export class LeadLagDetector {
             3,
           )} vs R-=${rMinus.toFixed(3)})`,
         );
+        // eslint-disable-next-line functional/immutable-data
         this.currentLeader.set(symbol, 'BINANCE');
       }
     } else if (rMinus > rPlus && rMinus > r0) {
@@ -134,6 +144,7 @@ export class LeadLagDetector {
             3,
           )} vs R+=${rPlus.toFixed(3)})`,
         );
+        // eslint-disable-next-line functional/immutable-data
         this.currentLeader.set(symbol, 'BYBIT');
       }
     }
@@ -142,6 +153,7 @@ export class LeadLagDetector {
   private findNearest(map: Map<number, number>, target: number): number | undefined {
     if (map.has(target)) return map.get(target);
     // Look back up to 5 buckets
+    // eslint-disable-next-line functional/no-let
     for (let i = 1; i <= 5; i++) {
       if (map.has(target - i * this.bucketSize)) {
         return map.get(target - i * this.bucketSize);
@@ -152,6 +164,7 @@ export class LeadLagDetector {
 
   private correlationCoefficient(x: number[], y: number[], lag: number): number {
     // Apply lag
+    // eslint-disable-next-line functional/no-let
     let x_s: number[], y_s: number[];
 
     if (lag === 0) {

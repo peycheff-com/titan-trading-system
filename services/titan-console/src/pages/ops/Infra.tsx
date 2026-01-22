@@ -1,9 +1,18 @@
-import { useState } from 'react';
 import { ServiceHealthCard } from '@/components/titan/ServiceHealthCard';
 import { ConfirmModal } from '@/components/titan/ConfirmModal';
+import { HazardButton } from '@/components/titan/HazardButton';
+import { useSafety } from '@/context/SafetyContext';
 import { formatTimeAgo } from '@/types';
 import { cn } from '@/lib/utils';
-import { Server, Database, RefreshCw, AlertTriangle, Check, Clock } from 'lucide-react';
+import {
+  Server,
+  Database,
+  RefreshCw,
+  AlertTriangle,
+  Check,
+  Clock,
+  ShieldAlert,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 const standbyConfig: any = {
@@ -21,6 +30,7 @@ const defaultInfraStatus = {
 export default function InfraPage() {
   const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [showFailoverModal, setShowFailoverModal] = useState(false);
+  const { isArmed, arm, disarm, expiresAt } = useSafety();
 
   const { services, backups, standby } = defaultInfraStatus;
   const sbConfig = standbyConfig[standby.status];
@@ -40,6 +50,21 @@ export default function InfraPage() {
             </p>
           </div>
         </div>
+
+        <button
+          onClick={() => (isArmed ? disarm() : arm())}
+          className={cn(
+            'flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-colors border',
+            isArmed
+              ? 'bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20'
+              : 'bg-muted text-muted-foreground border-transparent hover:bg-muted/80',
+          )}
+        >
+          <ShieldAlert className="h-4 w-4" />
+          {isArmed
+            ? `System ARMED (${Math.ceil((expiresAt! - Date.now()) / 1000)}s)`
+            : 'Arm System'}
+        </button>
       </div>
 
       {/* Service Health Grid */}
@@ -81,7 +106,7 @@ export default function InfraPage() {
                         'flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xxs font-medium',
                         backup.status === 'success'
                           ? 'bg-status-healthy/10 text-status-healthy'
-                          : 'bg-status-critical/10 text-status-critical'
+                          : 'bg-status-critical/10 text-status-critical',
                       )}
                     >
                       {backup.status === 'success' ? (
@@ -98,13 +123,14 @@ export default function InfraPage() {
                     <span>{backup.size}</span>
                   </div>
                 </div>
-                <button
+                <HazardButton
                   onClick={() => setShowRestoreModal(true)}
-                  className="flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+                  className="h-7 text-xs px-2"
+                  variant="outline"
                 >
                   <RefreshCw className="h-3 w-3" />
                   Restore
-                </button>
+                </HazardButton>
               </div>
             ))}
           </div>
@@ -125,7 +151,7 @@ export default function InfraPage() {
                   className={cn(
                     'flex items-center gap-1 rounded-full px-2 py-0.5 text-xxs font-medium',
                     sbConfig.bg,
-                    sbConfig.color
+                    sbConfig.color,
                   )}
                 >
                   <span
@@ -133,7 +159,7 @@ export default function InfraPage() {
                       'h-1.5 w-1.5 rounded-full',
                       standby.status === 'ready' && 'bg-status-healthy pulse-healthy',
                       standby.status === 'syncing' && 'bg-warning pulse-warning',
-                      standby.status === 'stale' && 'bg-status-critical'
+                      standby.status === 'stale' && 'bg-status-critical',
                     )}
                   />
                   {sbConfig.label}
@@ -158,13 +184,9 @@ export default function InfraPage() {
             </div>
 
             <div className="mt-4 pt-4 border-t border-border">
-              <button
-                onClick={() => setShowFailoverModal(true)}
-                className="flex w-full items-center justify-center gap-2 rounded-md border border-destructive/50 bg-destructive/10 px-4 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/20"
-              >
-                <AlertTriangle className="h-4 w-4" />
+              <HazardButton onClick={() => setShowFailoverModal(true)} className="w-full">
                 Initiate Failover
-              </button>
+              </HazardButton>
               <p className="mt-2 text-xxs text-muted-foreground text-center">
                 Failover requires backend integration and operator confirmation
               </p>

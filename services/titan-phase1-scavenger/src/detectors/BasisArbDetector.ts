@@ -118,6 +118,7 @@ export class BasisArbDetector {
           console.warn(
             `⛔ Geo-blocking detected for ${symbol} (HTTP 403). Disabling BasisArbDetector.`,
           );
+          // eslint-disable-next-line functional/immutable-data
           this.isGeoBlocked = true;
         }
         return null;

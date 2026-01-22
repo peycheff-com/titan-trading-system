@@ -6,8 +6,18 @@ import { toast } from 'sonner';
 
 const severityConfig: any = {
   info: { icon: Info, color: 'text-primary', bg: 'bg-primary/10', border: 'border-primary/20' },
-  warning: { icon: AlertTriangle, color: 'text-warning', bg: 'bg-warning/10', border: 'border-warning/20' },
-  critical: { icon: AlertCircle, color: 'text-status-critical', bg: 'bg-status-critical/10', border: 'border-status-critical/20' },
+  warning: {
+    icon: AlertTriangle,
+    color: 'text-warning',
+    bg: 'bg-warning/10',
+    border: 'border-warning/20',
+  },
+  critical: {
+    icon: AlertCircle,
+    color: 'text-status-critical',
+    bg: 'bg-status-critical/10',
+    border: 'border-status-critical/20',
+  },
 };
 
 export default function AlertsPage() {
@@ -17,9 +27,7 @@ export default function AlertsPage() {
   const acknowledged = alertList.filter((a) => a.acknowledged);
 
   const handleAcknowledge = (id: string) => {
-    setAlertList((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, acknowledged: true } : a))
-    );
+    setAlertList((prev) => prev.map((a) => (a.id === id ? { ...a, acknowledged: true } : a)));
     toast.success('Alert acknowledged (local only)');
   };
 
@@ -60,9 +68,7 @@ export default function AlertsPage() {
           <span className="text-xxs font-medium uppercase tracking-wider text-muted-foreground">
             Unacknowledged
           </span>
-          <div className="mt-1 text-xl font-semibold text-warning">
-            {unacknowledged.length}
-          </div>
+          <div className="mt-1 text-xl font-semibold text-warning">{unacknowledged.length}</div>
         </div>
         <div className="rounded-md border border-border bg-card p-3">
           <span className="text-xxs font-medium uppercase tracking-wider text-muted-foreground">
@@ -76,9 +82,7 @@ export default function AlertsPage() {
           <span className="text-xxs font-medium uppercase tracking-wider text-muted-foreground">
             Today
           </span>
-          <div className="mt-1 text-xl font-semibold text-foreground">
-            {alertList.length}
-          </div>
+          <div className="mt-1 text-xl font-semibold text-foreground">{alertList.length}</div>
         </div>
       </div>
 
@@ -97,7 +101,7 @@ export default function AlertsPage() {
                   className={cn(
                     'flex items-start gap-3 rounded-lg border p-4',
                     config.border,
-                    config.bg
+                    config.bg,
                   )}
                 >
                   <Icon className={cn('mt-0.5 h-5 w-5 flex-shrink-0', config.color)} />
@@ -108,7 +112,7 @@ export default function AlertsPage() {
                         className={cn(
                           'rounded-full px-1.5 py-0.5 text-xxs font-medium uppercase',
                           config.bg,
-                          config.color
+                          config.color,
                         )}
                       >
                         {alert.severity}
@@ -170,9 +174,7 @@ export default function AlertsPage() {
             <Bell className="h-6 w-6 text-muted-foreground" />
           </div>
           <h3 className="mt-4 text-sm font-medium text-foreground">No alerts</h3>
-          <p className="mt-1 text-xs text-muted-foreground">
-            System is operating normally
-          </p>
+          <p className="mt-1 text-xs text-muted-foreground">System is operating normally</p>
         </div>
       )}
     </div>

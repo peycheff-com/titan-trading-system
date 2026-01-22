@@ -21,9 +21,11 @@ export class PerformanceTracker {
   }
 
   recordTrade(trade: Trade): void {
+    // eslint-disable-next-line functional/immutable-data
     this.trades.push(trade);
 
     // Deduct entry fees immediately
+    // eslint-disable-next-line functional/immutable-data
     this.currentEquity -= trade.fees;
     this.updateRiskMetrics();
   }
@@ -42,10 +44,13 @@ export class PerformanceTracker {
     const trade = this.trades.find((t) => t.id === tradeId);
     if (!trade) return;
 
+    // eslint-disable-next-line functional/immutable-data
     trade.exitTime = exitTime;
+    // eslint-disable-next-line functional/immutable-data
     trade.exitBasis = exitBasis;
 
     // Calculate PnL based on Strategy Type
+    // eslint-disable-next-line functional/no-let
     let grossPnL = 0;
 
     if (trade.type === 'BASIS_SCALP') {
@@ -62,14 +67,18 @@ export class PerformanceTracker {
     }
 
     const exitFees = trade.size * exitPrice * 0.0005; // 5 bps takers estimate
+    // eslint-disable-next-line functional/immutable-data
     trade.fees += exitFees;
+    // eslint-disable-next-line functional/immutable-data
     trade.realizedPnL = grossPnL;
 
     // Update Equity
+    // eslint-disable-next-line functional/immutable-data
     this.currentEquity += grossPnL - exitFees;
 
     // Record Return % for Sharpe
     const tradeReturn = (grossPnL - trade.fees) / this.initialCapital;
+    // eslint-disable-next-line functional/immutable-data
     this.returns.push(tradeReturn);
 
     this.updateRiskMetrics();
@@ -78,20 +87,25 @@ export class PerformanceTracker {
   private updateRiskMetrics(): void {
     // Update HWM
     if (this.currentEquity > this.highWaterMark) {
+      // eslint-disable-next-line functional/immutable-data
       this.highWaterMark = this.currentEquity;
     }
 
     // Update Max Drawdown
     const currentDrawdown = (this.highWaterMark - this.currentEquity) / this.highWaterMark;
     if (currentDrawdown > this.maxDrawdown) {
+      // eslint-disable-next-line functional/immutable-data
       this.maxDrawdown = currentDrawdown;
     }
   }
 
   getMetrics(): PerformanceMetrics {
     const totalTrades = this.trades.filter((t) => t.exitTime > 0).length;
+    // eslint-disable-next-line functional/no-let
     let winningTrades = 0;
+    // eslint-disable-next-line functional/no-let
     let totalYield = 0;
+    // eslint-disable-next-line functional/no-let
     let basisScalpPnL = 0;
 
     for (const t of this.trades) {
@@ -109,6 +123,7 @@ export class PerformanceTracker {
     const winRate = totalTrades > 0 ? winningTrades / totalTrades : 0;
 
     // Sharpe Calcs
+    // eslint-disable-next-line functional/no-let
     let sharpe = 0;
     if (this.returns.length > 1) {
       const meanReturn = this.returns.reduce((a, b) => a + b, 0) / this.returns.length;

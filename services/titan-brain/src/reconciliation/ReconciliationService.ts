@@ -48,16 +48,19 @@ export class ReconciliationService {
   }
 
   setExecutionEngine(client: ExecutionEngineClient): void {
+    // eslint-disable-next-line functional/immutable-data
     this.executionClient = client;
   }
 
   setDriftListener(listener: (hasDrift: boolean) => void): void {
+    // eslint-disable-next-line functional/immutable-data
     this.driftListener = listener;
   }
 
   start(): void {
     if (this.intervalId) return;
     logger.info('🔄 Starting Reconciliation Service...');
+    // eslint-disable-next-line functional/immutable-data
     this.intervalId = setInterval(
       () => this.runScheduledReconciliation(),
       this.config.intervalMs,
@@ -67,6 +70,7 @@ export class ReconciliationService {
   stop(): void {
     if (this.intervalId) {
       clearInterval(this.intervalId);
+      // eslint-disable-next-line functional/immutable-data
       this.intervalId = null;
       logger.info('🛑 Reconciliation Service stopped');
     }
@@ -85,12 +89,14 @@ export class ReconciliationService {
     const reports: ReconciliationReport[] = [];
     for (const exchange of this.config.exchanges) {
       const report = await this.reconcile(exchange);
+      // eslint-disable-next-line functional/immutable-data
       reports.push(report);
     }
 
     // Reconcile Brain vs Database
     if (this.positionRepository) {
       const dbReport = await this.reconcileBrainVsDb();
+      // eslint-disable-next-line functional/immutable-data
       reports.push(dbReport);
     }
 
@@ -146,8 +152,10 @@ export class ReconciliationService {
     if (!this.truthRepository) {
       // Fallback to local confidence if no repo
       if (hasMismatch) {
+        // eslint-disable-next-line functional/immutable-data
         this.currentConfidence = Math.max(0, this.currentConfidence - 0.2);
       } else {
+        // eslint-disable-next-line functional/immutable-data
         this.currentConfidence = Math.min(1.0, this.currentConfidence + 0.05);
       }
       return;
@@ -155,6 +163,7 @@ export class ReconciliationService {
 
     try {
       // Get current confidence
+      // eslint-disable-next-line functional/no-let
       let confidence = await this.truthRepository.getConfidence(scope);
       if (!confidence) {
         confidence = {
@@ -168,27 +177,37 @@ export class ReconciliationService {
 
       // Adjust
       if (hasMismatch) {
+        // eslint-disable-next-line functional/immutable-data
         confidence.score = Math.max(0, confidence.score - 0.2); // Decay fast
+        // eslint-disable-next-line functional/immutable-data
         if (confidence.score < 0.8) confidence.state = 'DEGRADED';
+        // eslint-disable-next-line functional/immutable-data
         if (confidence.score < 0.5) confidence.state = 'LOW'; // Changed from UNTRUSTED to match type
         if (!confidence.reasons.includes('Recent mismatch')) {
+          // eslint-disable-next-line functional/immutable-data
           confidence.reasons.push('Recent mismatch');
         }
       } else {
+        // eslint-disable-next-line functional/immutable-data
         confidence.score = Math.min(1.0, confidence.score + 0.01); // Recover slow
+        // eslint-disable-next-line functional/immutable-data
         if (confidence.score >= 0.8) confidence.state = 'HIGH';
+        // eslint-disable-next-line functional/immutable-data
         else if (confidence.score >= 0.5) confidence.state = 'DEGRADED';
 
         // Clear old reasons if healthy
         if (confidence.score === 1.0) {
+          // eslint-disable-next-line functional/immutable-data
           confidence.reasons = [];
         }
       }
 
+      // eslint-disable-next-line functional/immutable-data
       confidence.lastUpdateTs = Date.now();
       await this.truthRepository.updateConfidence(confidence);
 
       // Emit event
+      // eslint-disable-next-line functional/immutable-data
       this.currentConfidence = confidence.score;
     } catch (err) {
       logger.error('Failed to compute confidence', err as Error);
@@ -199,6 +218,7 @@ export class ReconciliationService {
     const reconciliationId = uuidv4();
     const startTime = Date.now();
     const mismatches: MismatchDetail[] = [];
+    // eslint-disable-next-line functional/no-let
     let runId: number | undefined;
 
     // 1. Start Run
@@ -326,6 +346,7 @@ export class ReconciliationService {
         // If it's effectively zero, ignore
         if ((internalPos.size || 0) <= 0.0001) continue;
 
+        // eslint-disable-next-line functional/immutable-data
         mismatches.push({
           symbol: internalPos.symbol,
           reason: 'GHOST_POSITION',
@@ -337,6 +358,7 @@ export class ReconciliationService {
         // Compare sizes
         const externalPos = externalMap.get(key)!;
         if (Math.abs((internalPos.size || 0) - externalPos.size) > 0.0001) {
+          // eslint-disable-next-line functional/immutable-data
           mismatches.push({
             symbol: internalPos.symbol,
             reason: 'SIZE_MISMATCH',
@@ -354,6 +376,7 @@ export class ReconciliationService {
       if (externalPos.size <= 0.0001) continue;
 
       if (!internalMap.has(key)) {
+        // eslint-disable-next-line functional/immutable-data
         mismatches.push({
           symbol: externalPos.symbol,
           reason: 'UNTRACKED_POSITION',
@@ -485,6 +508,7 @@ export class ReconciliationService {
           if ((internalPos.size || 0) <= 0.0001) continue;
           // Only warn if significant time passed since last snapshot?
           // For now, let's treat as WARNING
+          // eslint-disable-next-line functional/immutable-data
           mismatches.push({
             symbol: internalPos.symbol,
             reason: 'MISSING_IN_DB_SNAPSHOT',
@@ -495,6 +519,7 @@ export class ReconciliationService {
         } else {
           const dbPos = dbMap.get(key)!;
           if (Math.abs((internalPos.size || 0) - dbPos.size) > 0.0001) {
+            // eslint-disable-next-line functional/immutable-data
             mismatches.push({
               symbol: internalPos.symbol,
               reason: 'DB_SIZE_MISMATCH',
@@ -512,6 +537,7 @@ export class ReconciliationService {
         if (dbPos.size <= 0.0001) continue;
 
         if (!internalMap.has(key)) {
+          // eslint-disable-next-line functional/immutable-data
           mismatches.push({
             symbol: dbPos.symbol,
             reason: 'BRAIN_STATE_LOSS',

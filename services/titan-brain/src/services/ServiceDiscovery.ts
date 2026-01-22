@@ -73,6 +73,7 @@ export class ServiceDiscovery {
    * Register a service endpoint
    */
   registerService(endpoint: ServiceEndpoint): void {
+    // eslint-disable-next-line functional/immutable-data
     this.services.set(endpoint.name, endpoint);
 
     // Create service client with proper configuration
@@ -83,9 +84,11 @@ export class ServiceDiscovery {
     };
 
     const client = new ServiceClient(clientConfig, this.logger);
+    // eslint-disable-next-line functional/immutable-data
     this.serviceClients.set(endpoint.name, client);
 
     // Initialize service status
+    // eslint-disable-next-line functional/immutable-data
     this.serviceStatus.set(endpoint.name, {
       name: endpoint.name,
       url: endpoint.url,
@@ -153,6 +156,7 @@ export class ServiceDiscovery {
           },
         };
 
+        // eslint-disable-next-line functional/immutable-data
         services.push(endpoint);
       }
     }
@@ -177,6 +181,7 @@ export class ServiceDiscovery {
               },
             };
 
+            // eslint-disable-next-line functional/immutable-data
             services.push(endpoint);
           }
         }
@@ -279,6 +284,7 @@ export class ServiceDiscovery {
     this.performHealthChecks();
 
     // Schedule periodic health checks
+    // eslint-disable-next-line functional/immutable-data
     this.healthCheckInterval = setInterval(() => {
       this.performHealthChecks();
     }, this.config.healthCheckInterval);
@@ -295,6 +301,7 @@ export class ServiceDiscovery {
   stopHealthChecking(): void {
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval);
+      // eslint-disable-next-line functional/immutable-data
       this.healthCheckInterval = null;
     }
 
@@ -335,10 +342,15 @@ export class ServiceDiscovery {
       const responseTime = Date.now() - startTime;
 
       // Update status - healthy
+      // eslint-disable-next-line functional/immutable-data
       status.healthy = true;
+      // eslint-disable-next-line functional/immutable-data
       status.lastCheck = Date.now();
+      // eslint-disable-next-line functional/immutable-data
       status.responseTime = responseTime;
+      // eslint-disable-next-line functional/immutable-data
       status.error = null;
+      // eslint-disable-next-line functional/immutable-data
       status.consecutiveFailures = 0;
 
       return true;
@@ -346,10 +358,15 @@ export class ServiceDiscovery {
       const responseTime = Date.now() - startTime;
 
       // Update status - unhealthy
+      // eslint-disable-next-line functional/immutable-data
       status.consecutiveFailures++;
+      // eslint-disable-next-line functional/immutable-data
       status.healthy = status.consecutiveFailures < this.config.maxConsecutiveFailures;
+      // eslint-disable-next-line functional/immutable-data
       status.lastCheck = Date.now();
+      // eslint-disable-next-line functional/immutable-data
       status.responseTime = responseTime;
+      // eslint-disable-next-line functional/immutable-data
       status.error = error instanceof Error ? error.message : String(error);
 
       if (status.consecutiveFailures >= this.config.maxConsecutiveFailures) {
@@ -427,11 +444,27 @@ export class ServiceDiscovery {
    */
   shutdown(): void {
     this.stopHealthChecking();
+    // eslint-disable-next-line functional/immutable-data
     this.services.clear();
+    // eslint-disable-next-line functional/immutable-data
     this.serviceClients.clear();
+    // eslint-disable-next-line functional/immutable-data
     this.serviceStatus.clear();
 
     this.logger.info('Service discovery shutdown complete');
+  }
+  /**
+   * Alias for getAllServiceStatuses (compatibility)
+   */
+  getAllServices(): ServiceStatus[] {
+    return this.getAllServiceStatuses();
+  }
+
+  /**
+   * Alias for getServiceStatus (compatibility)
+   */
+  getService(serviceName: string): ServiceStatus | null {
+    return this.getServiceStatus(serviceName);
   }
 }
 

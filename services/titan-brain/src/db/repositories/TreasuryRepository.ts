@@ -5,9 +5,9 @@
  * Requirements: 4.7, 9.1, 9.2, 9.3
  */
 
-import { DatabaseManager } from "../DatabaseManager.js";
-import { BaseRepository } from "./BaseRepository.js";
-import { TreasuryOperation } from "../../types/index.js";
+import { DatabaseManager } from '../DatabaseManager.js';
+import { BaseRepository } from './BaseRepository.js';
+import { TreasuryOperation } from '../../types/index.js';
 
 interface TreasuryRow {
   id: number;
@@ -30,15 +30,13 @@ interface HighWatermarkRow {
 
 export class TreasuryRepository extends BaseRepository<TreasuryRow> {
   constructor(db: DatabaseManager) {
-    super(db, "treasury_operations");
+    super(db, 'treasury_operations');
   }
 
   /**
    * Record a treasury operation
    */
-  async recordOperation(
-    operation: Omit<TreasuryOperation, "id">,
-  ): Promise<TreasuryOperation> {
+  async recordOperation(operation: Omit<TreasuryOperation, 'id'>): Promise<TreasuryOperation> {
     const row = await this.db.insert<TreasuryRow>(this.tableName, {
       timestamp: operation.timestamp,
       operation_type: operation.operationType,
@@ -62,7 +60,7 @@ export class TreasuryRepository extends BaseRepository<TreasuryRow> {
        WHERE operation_type = 'SWEEP' AND to_wallet = 'SPOT'`,
     );
 
-    return parseFloat(result?.total || "0");
+    return parseFloat(result?.total || '0');
   }
 
   /**
@@ -83,12 +81,8 @@ export class TreasuryRepository extends BaseRepository<TreasuryRow> {
   /**
    * Get sweep statistics
    */
-  async getSweepStats(): Promise<
-    { count: number; totalAmount: number; avgAmount: number }
-  > {
-    const result = await this.db.queryOne<
-      { count: string; total: string; avg: string }
-    >(
+  async getSweepStats(): Promise<{ count: number; totalAmount: number; avgAmount: number }> {
+    const result = await this.db.queryOne<{ count: string; total: string; avg: string }>(
       `SELECT 
          COUNT(*) as count,
          COALESCE(SUM(amount), 0) as total,
@@ -98,19 +92,16 @@ export class TreasuryRepository extends BaseRepository<TreasuryRow> {
     );
 
     return {
-      count: parseInt(result?.count || "0", 10),
-      totalAmount: parseFloat(result?.total || "0"),
-      avgAmount: parseFloat(result?.avg || "0"),
+      count: parseInt(result?.count || '0', 10),
+      totalAmount: parseFloat(result?.total || '0'),
+      avgAmount: parseFloat(result?.avg || '0'),
     };
   }
 
   /**
    * Get operations within a time range
    */
-  async getOperationsInRange(
-    startTime: number,
-    endTime: number,
-  ): Promise<TreasuryOperation[]> {
+  async getOperationsInRange(startTime: number, endTime: number): Promise<TreasuryOperation[]> {
     const rows = await this.db.queryAll<TreasuryRow>(
       `SELECT * FROM ${this.tableName} 
        WHERE timestamp >= $1 AND timestamp <= $2 
@@ -140,10 +131,10 @@ export class TreasuryRepository extends BaseRepository<TreasuryRow> {
 
     // Only update if new value is higher (monotonically increasing)
     if (value > currentValue) {
-      await this.db.query(
-        `INSERT INTO high_watermark (value, updated_at) VALUES ($1, $2)`,
-        [value, Date.now()],
-      );
+      await this.db.query(`INSERT INTO high_watermark (value, updated_at) VALUES ($1, $2)`, [
+        value,
+        Date.now(),
+      ]);
     }
   }
 
@@ -181,10 +172,10 @@ export class TreasuryRepository extends BaseRepository<TreasuryRow> {
     return {
       id: row.id,
       timestamp: parseInt(row.timestamp, 10),
-      operationType: row.operation_type as "SWEEP" | "MANUAL_TRANSFER",
+      operationType: row.operation_type as 'SWEEP' | 'MANUAL_TRANSFER',
       amount: parseFloat(row.amount),
-      fromWallet: row.from_wallet as "FUTURES" | "SPOT",
-      toWallet: row.to_wallet as "FUTURES" | "SPOT",
+      fromWallet: row.from_wallet as 'FUTURES' | 'SPOT',
+      toWallet: row.to_wallet as 'FUTURES' | 'SPOT',
       reason: row.reason || undefined,
       highWatermark: parseFloat(row.high_watermark),
     };

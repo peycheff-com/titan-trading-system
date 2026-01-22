@@ -14,24 +14,30 @@ const __dirname = dirname(__filename);
 export const up = async (pool: Pool): Promise<void> => {
   const schemaPath = join(__dirname, '..', 'schema.sql');
   const schema = readFileSync(schemaPath, 'utf-8');
-  
+
   await pool.query(schema);
-  
+
   // Insert initial high watermark
-  await pool.query(`
+  await pool.query(
+    `
     INSERT INTO high_watermark (value, updated_at)
     VALUES (200.00, $1)
     ON CONFLICT DO NOTHING
-  `, [Date.now()]);
-  
+  `,
+    [Date.now()],
+  );
+
   // Insert initial system state
-  await pool.query(`
+  await pool.query(
+    `
     INSERT INTO system_state (key, value, updated_at)
     VALUES 
       ('allocation_vector', '{"w1": 1.0, "w2": 0.0, "w3": 0.0, "timestamp": 0}', $1),
       ('circuit_breaker', '{"active": false}', $1)
     ON CONFLICT (key) DO NOTHING
-  `, [Date.now()]);
+  `,
+    [Date.now()],
+  );
 };
 
 export const down = async (pool: Pool): Promise<void> => {

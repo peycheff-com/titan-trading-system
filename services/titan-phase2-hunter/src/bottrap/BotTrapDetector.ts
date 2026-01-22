@@ -127,6 +127,7 @@ export class BotTrapDetector extends EventEmitter {
       };
     }
 
+    // eslint-disable-next-line functional/no-let
     let trapAnalysis: PrecisionAnalysisResult;
 
     // Analyze based on POI type
@@ -150,6 +151,7 @@ export class BotTrapDetector extends EventEmitter {
 
     // Cache analysis
     const cacheKey = this.getPOICacheKey(poi);
+    // eslint-disable-next-line functional/immutable-data
     this.analysisCache.set(cacheKey, trapAnalysis);
 
     // Record for learning
@@ -187,6 +189,7 @@ export class BotTrapDetector extends EventEmitter {
    */
   validateEntry(poi: POI, flowValidation: FlowValidation | null): EntryValidationResult {
     const cacheKey = this.getPOICacheKey(poi);
+    // eslint-disable-next-line functional/no-let
     let trapAnalysis = this.analysisCache.get(cacheKey);
 
     // Analyze if not cached
@@ -213,6 +216,7 @@ export class BotTrapDetector extends EventEmitter {
   generateAnalysis(pois: POI[]): BotTrapAnalysis {
     const analyses = pois.map(poi => {
       const cacheKey = this.getPOICacheKey(poi);
+      // eslint-disable-next-line functional/no-let
       let analysis = this.analysisCache.get(cacheKey);
 
       if (!analysis) {
@@ -368,6 +372,7 @@ export class BotTrapDetector extends EventEmitter {
    * Clear analysis cache
    */
   clearCache(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.analysisCache.clear();
   }
 
@@ -375,6 +380,7 @@ export class BotTrapDetector extends EventEmitter {
    * Reset detector (for testing)
    */
   reset(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.analysisCache.clear();
     this.precisionAnalyzer.clearHistory();
     this.learningEngine.reset();

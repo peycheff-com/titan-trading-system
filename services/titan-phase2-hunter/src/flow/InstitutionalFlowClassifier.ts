@@ -75,10 +75,12 @@ export class InstitutionalFlowClassifier extends EventEmitter {
    */
   public recordTrade(trade: CVDTrade): void {
     if (!this.tradeBuffer.has(trade.symbol)) {
+      // eslint-disable-next-line functional/immutable-data
       this.tradeBuffer.set(trade.symbol, []);
     }
 
     const buffer = this.tradeBuffer.get(trade.symbol)!;
+    // eslint-disable-next-line functional/immutable-data
     buffer.push(trade);
 
     // Prune old trades
@@ -87,6 +89,7 @@ export class InstitutionalFlowClassifier extends EventEmitter {
     // Optimization: Only prune if buffer is getting large or periodically
     // For now, simple prune from start if old
     while (buffer.length > 0 && buffer[0].time < cutoff) {
+      // eslint-disable-next-line functional/immutable-data
       buffer.shift();
     }
 
@@ -112,11 +115,15 @@ export class InstitutionalFlowClassifier extends EventEmitter {
     evidence: string[];
   } {
     const evidence: string[] = [];
+    // eslint-disable-next-line functional/no-let
     let strength = 0;
 
     // Analyze trade patterns
+    // eslint-disable-next-line functional/no-let
     let passiveBuyVolume = 0;
+    // eslint-disable-next-line functional/no-let
     let aggressiveSellVolume = 0;
+    // eslint-disable-next-line functional/no-let
     let totalVolume = 0;
 
     for (const trade of trades) {
@@ -135,9 +142,11 @@ export class InstitutionalFlowClassifier extends EventEmitter {
 
     if (absorptionRatio >= this.config.passiveThreshold) {
       strength += 40;
+      // eslint-disable-next-line functional/immutable-data
       evidence.push(`High absorption ratio: ${(absorptionRatio * 100).toFixed(1)}%`);
     } else if (absorptionRatio >= this.config.passiveThreshold * 0.7) {
       strength += 20;
+      // eslint-disable-next-line functional/immutable-data
       evidence.push(`Moderate absorption ratio: ${(absorptionRatio * 100).toFixed(1)}%`);
     }
 
@@ -150,9 +159,11 @@ export class InstitutionalFlowClassifier extends EventEmitter {
 
       if (priceStability > 0.99) {
         strength += 30;
+        // eslint-disable-next-line functional/immutable-data
         evidence.push('Price stable during absorption');
       } else if (priceStability > 0.98) {
         strength += 15;
+        // eslint-disable-next-line functional/immutable-data
         evidence.push('Price relatively stable');
       }
     }
@@ -162,6 +173,7 @@ export class InstitutionalFlowClassifier extends EventEmitter {
       const isIceberg = this.icebergDetector.isIcebergAtLevel(symbol, priceLevel);
       if (isIceberg) {
         strength += 30;
+        // eslint-disable-next-line functional/immutable-data
         evidence.push('Iceberg order detected at absorption level');
       }
     }
@@ -189,11 +201,15 @@ export class InstitutionalFlowClassifier extends EventEmitter {
     evidence: string[];
   } {
     const evidence: string[] = [];
+    // eslint-disable-next-line functional/no-let
     let strength = 0;
 
     // Analyze trade patterns
+    // eslint-disable-next-line functional/no-let
     let aggressiveBuyVolume = 0;
+    // eslint-disable-next-line functional/no-let
     let aggressiveSellVolume = 0;
+    // eslint-disable-next-line functional/no-let
     let totalVolume = 0;
 
     for (const trade of trades) {
@@ -217,9 +233,11 @@ export class InstitutionalFlowClassifier extends EventEmitter {
 
     if (aggressiveRatio >= this.config.aggressiveThreshold) {
       strength += 40;
+      // eslint-disable-next-line functional/immutable-data
       evidence.push(`High aggressive ratio: ${(aggressiveRatio * 100).toFixed(1)}% ${direction}`);
     } else if (aggressiveRatio >= this.config.aggressiveThreshold * 0.7) {
       strength += 20;
+      // eslint-disable-next-line functional/immutable-data
       evidence.push(`Moderate aggressive ratio: ${(aggressiveRatio * 100).toFixed(1)}%`);
     }
 
@@ -232,6 +250,7 @@ export class InstitutionalFlowClassifier extends EventEmitter {
 
       if (Math.abs(priceChange) > 0.001) {
         strength += 30;
+        // eslint-disable-next-line functional/immutable-data
         evidence.push(`Price moved ${(priceChange * 100).toFixed(2)}% during pushing`);
       }
     }
@@ -240,6 +259,7 @@ export class InstitutionalFlowClassifier extends EventEmitter {
     const sweepResult = this.sweepDetector.analyzeSweeps(symbol, trades);
     if (sweepResult.sweeps.length > 0) {
       strength += 30;
+      // eslint-disable-next-line functional/immutable-data
       evidence.push(`${sweepResult.sweeps.length} sweep pattern(s) detected`);
     }
 
@@ -274,6 +294,7 @@ export class InstitutionalFlowClassifier extends EventEmitter {
     const sweepResult = this.sweepDetector.analyzeSweeps(symbol, trades);
 
     // Analyze iceberg (if price level provided)
+    // eslint-disable-next-line functional/no-let
     let icebergDensity = 0;
     if (priceLevel) {
       const icebergAnalysis = this.icebergDetector.calculateIcebergDensity(
@@ -285,6 +306,7 @@ export class InstitutionalFlowClassifier extends EventEmitter {
     }
 
     // Determine flow type
+    // eslint-disable-next-line functional/no-let
     let flowType: 'passive_absorption' | 'aggressive_pushing' | 'neutral' = 'neutral';
     if (absorption.detected && absorption.strength > pushing.strength) {
       flowType = 'passive_absorption';
@@ -327,6 +349,7 @@ export class InstitutionalFlowClassifier extends EventEmitter {
     sweepResult: SweepDetectionResult,
     icebergDensity: number
   ): number {
+    // eslint-disable-next-line functional/no-let
     let probability = 0;
 
     // Absorption contributes to institutional probability
@@ -369,6 +392,7 @@ export class InstitutionalFlowClassifier extends EventEmitter {
     const sweepResult = this.sweepDetector.analyzeSweeps(symbol, trades);
 
     // Analyze iceberg
+    // eslint-disable-next-line functional/no-let
     let icebergAnalysis: IcebergAnalysis | null = null;
     if (priceLevel) {
       icebergAnalysis = this.icebergDetector.calculateIcebergDensity(symbol, priceLevel, trades);
@@ -382,17 +406,21 @@ export class InstitutionalFlowClassifier extends EventEmitter {
 
     // Build reasoning
     if (absorption.detected) {
+      // eslint-disable-next-line functional/immutable-data
       reasoning.push(...absorption.evidence);
     }
     if (pushing.detected) {
+      // eslint-disable-next-line functional/immutable-data
       reasoning.push(...pushing.evidence);
     }
     if (sweepResult.sweeps.length > 0) {
+      // eslint-disable-next-line functional/immutable-data
       reasoning.push(
         `${sweepResult.sweeps.length} sweep(s) with ${sweepResult.dominantDirection} direction`
       );
     }
     if (icebergAnalysis?.isIceberg) {
+      // eslint-disable-next-line functional/immutable-data
       reasoning.push(`Iceberg detected with ${icebergAnalysis.density.toFixed(1)}% density`);
     }
 
@@ -445,7 +473,9 @@ export class InstitutionalFlowClassifier extends EventEmitter {
    * Calculate CVD-based score
    */
   private calculateCVDScore(trades: CVDTrade[]): number {
+    // eslint-disable-next-line functional/no-let
     let cvd = 0;
+    // eslint-disable-next-line functional/no-let
     let totalVolume = 0;
 
     for (const trade of trades) {
@@ -510,6 +540,7 @@ export class InstitutionalFlowClassifier extends EventEmitter {
     distribution?: Distribution | null
   ): CVDIntegrationResult {
     // Determine CVD direction
+    // eslint-disable-next-line functional/no-let
     let cvdDirection: 'bullish' | 'bearish' | 'neutral' = 'neutral';
     if (cvdValue > 0) {
       cvdDirection = 'bullish';
@@ -521,7 +552,9 @@ export class InstitutionalFlowClassifier extends EventEmitter {
     const flowResult = this.classifyFlow(symbol, trades);
 
     // Check for confirmation
+    // eslint-disable-next-line functional/no-let
     let cvdConfirmed = false;
+    // eslint-disable-next-line functional/no-let
     let confidenceAdjustment = 0;
 
     // CVD confirms passive absorption (bullish)
@@ -579,13 +612,16 @@ export class InstitutionalFlowClassifier extends EventEmitter {
    */
   private cacheClassification(symbol: string, result: FlowClassificationResult): void {
     if (!this.classificationCache.has(symbol)) {
+      // eslint-disable-next-line functional/immutable-data
       this.classificationCache.set(symbol, []);
     }
 
     const cache = this.classificationCache.get(symbol)!;
+    // eslint-disable-next-line functional/immutable-data
     cache.push(result);
 
     if (cache.length > this.MAX_CACHE_SIZE) {
+      // eslint-disable-next-line functional/immutable-data
       cache.shift();
     }
   }
@@ -625,6 +661,7 @@ export class InstitutionalFlowClassifier extends EventEmitter {
    * Update configuration
    */
   updateConfig(config: Partial<FlowClassifierConfig>): void {
+    // eslint-disable-next-line functional/immutable-data
     this.config = { ...this.config, ...config };
     this.emit('configUpdated', this.config);
   }
@@ -661,6 +698,7 @@ export class InstitutionalFlowClassifier extends EventEmitter {
     sweepStats: ReturnType<SweepDetector['getStats']>;
     icebergStats: ReturnType<IcebergDetector['getStats']>;
   } {
+    // eslint-disable-next-line functional/no-let
     let cachedClassifications = 0;
     for (const cache of this.classificationCache.values()) {
       cachedClassifications += cache.length;
@@ -679,6 +717,7 @@ export class InstitutionalFlowClassifier extends EventEmitter {
    * Cleanup resources
    */
   destroy(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.classificationCache.clear();
     this.footprintAnalyzer.destroy();
     this.sweepDetector.destroy();

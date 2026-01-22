@@ -38,7 +38,7 @@ import {
 } from "./types";
 import { getLogger, logError } from "./logging/Logger";
 import {
-  ExecutionClient,
+  SignalClient,
   getNatsClient,
   type IntentSignal,
   loadSecretsFromFiles,
@@ -67,7 +67,7 @@ class HunterApplication {
   private inefficiencyMapper: InefficiencyMapper;
   private cvdValidator: CVDValidator;
   private institutionalFlowClassifier: InstitutionalFlowClassifier;
-  private executionClient: ExecutionClient;
+  private signalClient: SignalClient;
   private logger = getLogger();
 
   // Application state
@@ -116,16 +116,16 @@ class HunterApplication {
     this.inefficiencyMapper = new InefficiencyMapper();
     this.cvdValidator = new CVDValidator();
 
-    // Initialize IPC client for execution
-    this.executionClient = new ExecutionClient({
+    // Initialize IPC client for execution (Now SignalClient)
+    this.signalClient = new SignalClient({
       source: "hunter",
     });
 
-    // CRITICAL: Handle ExecutionClient error events to prevent Node.js crash
-    this.executionClient.on("error", (error: Error) => {
+    // CRITICAL: Handle SignalClient error events to prevent Node.js crash
+    this.signalClient.on("error", (error: Error) => {
       this.logEvent(
         "WARN",
-        `⚠️ [Execution] Client error (non-fatal): ${error.message}`,
+        `⚠️ [SignalClient] Client error (non-fatal): ${error.message}`,
         { error: error.message },
       );
     });
@@ -311,12 +311,12 @@ class HunterApplication {
       // Initialize IPC connection to execution engine
       this.logEvent("INFO", "🔗 Connecting to execution engine via NATS...");
       try {
-        await this.executionClient.connect();
-        this.logEvent("INFO", "✅ Execution connection established");
+        await this.signalClient.connect();
+        this.logEvent("INFO", "✅ SignalClient connection established");
       } catch (error) {
         this.logEvent(
           "WARN",
-          "⚠️ Execution connection failed, signals will be logged only:",
+          "⚠️ SignalClient connection failed, signals will be logged only:",
           { error: (error as Error).message },
         );
       }
@@ -759,93 +759,66 @@ class HunterApplication {
   }
 
   /**
-   * Forward signal to execution engine via IPC
-   * Uses PREPARE/CONFIRM flow for sub-millisecond execution
+   * Forward signal to Titan Brain via Webhook
+   * Refactored to comply with Brain-Mediated Execution (Req 7.1)
    */
   private async forwardSignalToExecution(signal: SignalData): Promise<void> {
-    if (!this.executionClient.isConnected()) {
-      this.logEvent(
-        "WARN",
-        `⚠️ Execution client not connected, signal for ${signal.symbol} logged only`,
-      );
-      return;
-    }
-
+    // Use SignalClient (NATS) instead of Webhook for lower latency and Brain mediation
     try {
-      // Convert SignalData to IntentSignal format
+      const signalId = `hunter-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+
       const intentSignal: IntentSignal = {
-        signal_id: `hunter-${Date.now()}-${
-          Math.random().toString(36).substring(7)
-        }`,
+        signal_id: signalId,
         source: "hunter",
         symbol: signal.symbol,
-        direction: signal.direction,
-        entry_zone: {
-          min: signal.entryPrice * 0.998, // 0.2% below entry
-          max: signal.entryPrice * 1.002, // 0.2% above entry
-        },
+        direction: signal.direction as "LONG" | "SHORT",
+        entry_zone: { min: signal.entryPrice * 0.999, max: signal.entryPrice * 1.001 }, // Expand slightly for zone
         stop_loss: signal.stopLoss,
         take_profits: [signal.takeProfit],
         confidence: signal.confidence || 0.7,
-        leverage: signal.leverage || 3,
+        leverage: signal.leverage || 5,
         timestamp: Date.now(),
       };
 
-      this.logEvent("INFO", `📤 Sending PREPARE for ${signal.symbol}...`, {
-        intentSignal,
+      this.logEvent("INFO", `📤 Sending Signal to Brain via NATS: ${signal.symbol}`, {
+        signalId,
       });
 
-      // Calculate conviction-based position size
-      // We use the enhanced engine to get the exact size based on current conviction
-      // and the dynamically updated base position size (from Budget)
-      const convictionSizing = await this.enhancedEngine.calculatePositionSize(
-        this.enhancedEngine.getConfig().basePositionSize,
-        signal.symbol,
-      );
+      // Fire and Forget (Optimistic) or Wait for Brain Confirmation?
+      // Brain will publish to EXEC subject, preventing double-execution requires Brain idemp check.
+      // We start with Prepare -> Confirm sequence for local tracking if needed.
+      
+      await this.signalClient.sendPrepare(intentSignal);
+      const confirmResponse = await this.signalClient.sendConfirm(signalId);
 
-      // Enforce Truth Layer: The Phase (Hunter) determines the size, not the Execution Service
-      // We pass the calculated usd_size in the payload for the Execution Service to respect
-      const finalSignal: IntentSignal = {
-        ...intentSignal,
-        position_size: convictionSizing.finalSize,
-      };
-
-      const prepareResponse = await this.executionClient.sendPrepare(
-        finalSignal,
-      );
-
-      if (prepareResponse.prepared) {
-        this.logEvent(
-          "INFO",
-          `✅ PREPARE confirmed for ${signal.symbol}, sending CONFIRM...`,
-        );
-        const confirmResponse = await this.executionClient.sendConfirm(
-          finalSignal.signal_id,
-        );
-
-        if (confirmResponse.executed) {
-          this.logEvent(
-            "INFO",
-            `✅ CONFIRM sent via Fast Path IPC (High Priority) - Size: $${
-              convictionSizing.finalSize.toFixed(
-                2,
-              )
-            } - Price: ${confirmResponse.fill_price}`,
-          );
-        } else {
-          this.logEvent(
-            "WARN",
-            `⚠️ CONFIRM rejected: ${confirmResponse.reason}`,
-          );
-        }
+      if (confirmResponse.executed) {
+         this.logEvent("INFO", `✅ Signal submitted to Brain: ${signalId}`);
       } else {
-        this.logEvent("WARN", `⚠️ PREPARE rejected: ${prepareResponse.reason}`);
+         this.logEvent("ERROR", `❌ Signal submission failed: ${confirmResponse.reason}`);
       }
     } catch (error) {
-      this.logEvent("ERROR", "❌ Failed to send signal to execution:", {
-        error,
+        this.logEvent("ERROR", `❌ Signal submission error: ${(error as Error).message}`);
+    }
+  }
+        body: JSON.stringify(payload),
       });
-      // Fallback: Use standard NATS if IPC fails (ExecutionClient handles this internally, but we log here)
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        this.logEvent("ERROR", `❌ Brain Rejected Signal: ${response.status}`, {
+          error: errorText,
+        });
+        return;
+      }
+
+      const responseData = await response.json();
+      this.logEvent("INFO", `✅ Brain Accepted Signal: ${signalId}`, {
+        decision: responseData,
+      });
+    } catch (error) {
+      this.logEvent("ERROR", "❌ Failed to send signal to Brain", {
+        error: (error as Error).message,
+      });
     }
   }
 

@@ -5,9 +5,12 @@
  * Broadcasts state updates, signals, trades, and alerts.
  */
 
+import { IncomingMessage } from 'http';
+import { URL } from 'url';
 import { WebSocket, WebSocketServer } from 'ws';
 import { TitanBrain } from '../engine/TitanBrain.js';
 import { getLogger } from '../monitoring/index.js';
+import { AuthMiddleware } from '../security/AuthMiddleware.js';
 
 /**
  * WebSocket message types
@@ -128,10 +131,12 @@ export class WebSocketService {
   private masterArm: boolean = false;
   private positions: Position[] = [];
   private logger = getLogger();
+  private authMiddleware: AuthMiddleware;
 
   constructor(brain: TitanBrain, config: Partial<WebSocketServiceConfig> = {}) {
     this.brain = brain;
     this.config = { ...DEFAULT_CONFIG, ...config };
+    this.authMiddleware = new AuthMiddleware(this.logger as any);
   }
 
   /**
@@ -139,9 +144,11 @@ export class WebSocketService {
    */
   attachToServer(server: { server: unknown }): void {
     // Create WebSocket server attached to the HTTP server
+    // eslint-disable-next-line functional/immutable-data
     this.wss = new WebSocketServer({
       server: server.server as import('http').Server,
       path: '/ws/console',
+      verifyClient: this.handleVerifyClient.bind(this),
     });
 
     this.setupWebSocketServer();
@@ -155,7 +162,12 @@ export class WebSocketService {
    * Create standalone WebSocket server on a specific port
    */
   listen(port: number, host: string = '0.0.0.0'): void {
-    this.wss = new WebSocketServer({ port, host });
+    // eslint-disable-next-line functional/immutable-data
+    this.wss = new WebSocketServer({
+      port,
+      host,
+      verifyClient: this.handleVerifyClient.bind(this),
+    });
 
     this.setupWebSocketServer();
     this.startPingInterval();
@@ -163,6 +175,38 @@ export class WebSocketService {
 
     this.logger.info(`WebSocket service listening on ws://${host}:${port}`);
     console.log(`📡 WebSocket server listening on ws://${host}:${port}`);
+  }
+
+  /**
+   * Handle WebSocket connection verification
+   */
+  private handleVerifyClient(
+    info: { origin: string; secure: boolean; req: IncomingMessage },
+    callback: (res: boolean, code?: number, message?: string) => void,
+  ): void {
+    try {
+      const url = new URL(info.req.url || '', `http://${info.req.headers.host}`);
+      const token = url.searchParams.get('token');
+
+      if (!token) {
+        this.logger.warn('WebSocket connection attempt missing token');
+        callback(false, 401, 'Unauthorized: Missing token');
+        return;
+      }
+
+      // Verify token
+      this.authMiddleware.verifyTokenString(token);
+
+      // Token valid
+      callback(true);
+    } catch (error) {
+      this.logger.warn(
+        `WebSocket authentication failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      callback(false, 401, 'Unauthorized: Invalid token');
+    }
   }
 
   /**
@@ -182,6 +226,7 @@ export class WebSocketService {
         endpoint,
       };
 
+      // eslint-disable-next-line functional/immutable-data
       this.clients.set(ws, clientInfo);
       this.logger.info(`WebSocket client connected: ${clientId} on ${endpoint}`);
 
@@ -199,6 +244,7 @@ export class WebSocketService {
         if (info) {
           this.logger.info(`WebSocket client disconnected: ${info.id}`);
         }
+        // eslint-disable-next-line functional/immutable-data
         this.clients.delete(ws);
       });
 
@@ -253,12 +299,14 @@ export class WebSocketService {
         case 'ping':
           this.sendToClient(ws, { type: 'pong', timestamp: Date.now() });
           if (clientInfo) {
+            // eslint-disable-next-line functional/immutable-data
             clientInfo.lastPing = Date.now();
           }
           break;
 
         case 'pong':
           if (clientInfo) {
+            // eslint-disable-next-line functional/immutable-data
             clientInfo.lastPing = Date.now();
           }
           break;
@@ -385,6 +433,7 @@ export class WebSocketService {
    * Update master arm state
    */
   setMasterArm(enabled: boolean): void {
+    // eslint-disable-next-line functional/immutable-data
     this.masterArm = enabled;
     this.broadcastStateUpdate();
   }
@@ -393,6 +442,7 @@ export class WebSocketService {
    * Update positions
    */
   setPositions(positions: Position[]): void {
+    // eslint-disable-next-line functional/immutable-data
     this.positions = positions;
     this.broadcastStateUpdate();
   }
@@ -428,6 +478,7 @@ export class WebSocketService {
    * Start ping interval to keep connections alive
    */
   private startPingInterval(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.pingIntervalId = setInterval(() => {
       const now = Date.now();
 
@@ -436,6 +487,7 @@ export class WebSocketService {
         if (now - info.lastPing > this.config.pingTimeout + this.config.pingInterval) {
           this.logger.warn(`Client ${info.id} timed out, closing connection`);
           ws.terminate();
+          // eslint-disable-next-line functional/immutable-data
           this.clients.delete(ws);
           return;
         }
@@ -457,6 +509,7 @@ export class WebSocketService {
       return;
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.stateUpdateIntervalId = setInterval(() => {
       if (this.clients.size > 0) {
         this.broadcastStateUpdate();
@@ -485,11 +538,13 @@ export class WebSocketService {
     // Stop intervals
     if (this.pingIntervalId) {
       clearInterval(this.pingIntervalId);
+      // eslint-disable-next-line functional/immutable-data
       this.pingIntervalId = null;
     }
 
     if (this.stateUpdateIntervalId) {
       clearInterval(this.stateUpdateIntervalId);
+      // eslint-disable-next-line functional/immutable-data
       this.stateUpdateIntervalId = null;
     }
 
@@ -497,6 +552,7 @@ export class WebSocketService {
     this.clients.forEach((info, ws) => {
       ws.close(1000, 'Server shutting down');
     });
+    // eslint-disable-next-line functional/immutable-data
     this.clients.clear();
 
     // Close WebSocket server
@@ -504,6 +560,7 @@ export class WebSocketService {
       await new Promise<void>((resolve) => {
         this.wss!.close(() => resolve());
       });
+      // eslint-disable-next-line functional/immutable-data
       this.wss = null;
     }
 

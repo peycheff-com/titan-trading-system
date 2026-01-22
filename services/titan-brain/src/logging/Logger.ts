@@ -6,12 +6,8 @@
  * Requirements: 4.1.1, 4.1.2, 4.1.3, 4.1.4, 4.1.5
  */
 
-import { Logger as SharedLogger, SharedLogLevel } from "@titan/shared";
-import type {
-  LoggerConfig,
-  PerformanceTimer,
-  SharedLogEntry as LogEntry,
-} from "@titan/shared";
+import { Logger as SharedLogger, SharedLogLevel } from '@titan/shared';
+import type { LoggerConfig, PerformanceTimer, SharedLogEntry as LogEntry } from '@titan/shared';
 
 // Re-export types
 export type { LogEntry, LoggerConfig, PerformanceTimer };
@@ -22,14 +18,14 @@ export class Logger extends SharedLogger {
   /**
    * Create logger configuration from environment variables
    */
-  static createConfigFromEnv(component: string = "titan-brain"): LoggerConfig {
+  static createConfigFromEnv(component: string = 'titan-brain'): LoggerConfig {
     return SharedLogger.createConfigFromEnv(component);
   }
 
   /**
    * Get or create singleton logger instance
    */
-  static getInstance(component: string = "titan-brain"): Logger {
+  static getInstance(component: string = 'titan-brain'): Logger {
     // Return the shared singleton, cast to Logger since we know it has a compatible interface
     return SharedLogger.getInstance(component) as unknown as Logger;
   }

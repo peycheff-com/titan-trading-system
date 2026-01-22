@@ -82,7 +82,9 @@ export class Journal {
     if (this.regimeLoaded) return;
 
     if (!fs.existsSync(this.regimeFilePath)) {
+      // eslint-disable-next-line functional/immutable-data
       this.regimeSnapshots = [];
+      // eslint-disable-next-line functional/immutable-data
       this.regimeLoaded = true;
       return;
     }
@@ -98,6 +100,7 @@ export class Journal {
       if (line.trim()) {
         try {
           const snapshot = JSON.parse(line) as RegimeSnapshot;
+          // eslint-disable-next-line functional/immutable-data
           snapshots.push(snapshot);
         } catch {
           // Skip malformed lines
@@ -106,7 +109,9 @@ export class Journal {
     }
 
     // Sort by timestamp for binary search
+    // eslint-disable-next-line functional/immutable-data
     this.regimeSnapshots = snapshots.sort((a, b) => a.timestamp - b.timestamp);
+    // eslint-disable-next-line functional/immutable-data
     this.regimeLoaded = true;
   }
 
@@ -141,6 +146,7 @@ export class Journal {
           const trade = JSON.parse(line) as Trade;
           // Validate required fields
           if (this.isValidTrade(trade)) {
+            // eslint-disable-next-line functional/immutable-data
             trades.push(trade);
           }
         } catch {
@@ -215,8 +221,11 @@ export class Journal {
 
     // Binary search for the closest regime snapshot <= trade timestamp
     const targetTimestamp = trade.timestamp;
+    // eslint-disable-next-line functional/no-let
     let left = 0;
+    // eslint-disable-next-line functional/no-let
     let right = this.regimeSnapshots.length - 1;
+    // eslint-disable-next-line functional/no-let
     let result: RegimeSnapshot | null = null;
 
     while (left <= right) {
@@ -242,6 +251,7 @@ export class Journal {
     const results = new Map<string, RegimeSnapshot | null>();
 
     for (const trade of trades) {
+      // eslint-disable-next-line functional/immutable-data
       results.set(trade.id, this.getRegimeContext(trade));
     }
 
@@ -260,12 +270,14 @@ export class Journal {
     for (const trade of failedTrades) {
       const regime = this.getRegimeContext(trade);
       if (regime) {
+        // eslint-disable-next-line functional/immutable-data
         narratives.push(this.summarizeTrade(trade, regime));
       } else {
         // Create narrative without regime context
         const resultPercent = (trade.pnlPercent * 100).toFixed(2);
         const durationSec = Math.round(trade.duration / 1000);
         const slippagePercent = (trade.slippage * 100).toFixed(2);
+        // eslint-disable-next-line functional/immutable-data
         narratives.push(
           `Symbol: ${trade.symbol}, Type: ${trade.trapType.toUpperCase()}, Result: ${resultPercent}%, Duration: ${durationSec}s, Slippage: ${slippagePercent}%, Regime: Unknown`,
         );
@@ -279,7 +291,9 @@ export class Journal {
    * Set regime snapshots directly (useful for testing)
    */
   setRegimeSnapshots(snapshots: RegimeSnapshot[]): void {
+    // eslint-disable-next-line functional/immutable-data
     this.regimeSnapshots = snapshots.sort((a, b) => a.timestamp - b.timestamp);
+    // eslint-disable-next-line functional/immutable-data
     this.regimeLoaded = true;
   }
 
@@ -294,7 +308,9 @@ export class Journal {
    * Reset the journal state (useful for testing)
    */
   reset(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.regimeSnapshots = [];
+    // eslint-disable-next-line functional/immutable-data
     this.regimeLoaded = false;
   }
 }

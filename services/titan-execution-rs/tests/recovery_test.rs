@@ -63,6 +63,7 @@ fn test_state_recovery() {
             true,
             dec!(0),
             "USDT".to_string(),
+            "MOCK",
         );
 
         // B. Partial Close (Create Trade History)
@@ -101,6 +102,7 @@ fn test_state_recovery() {
             true,
             dec!(0),
             "USDT".to_string(),
+            "MOCK",
         );
 
         // Verify state A

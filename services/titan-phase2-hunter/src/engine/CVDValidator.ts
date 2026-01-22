@@ -45,6 +45,7 @@ export class CVDValidator extends EventEmitter {
     const cutoff = Date.now() - windowMs;
     const recentTrades = trades.filter(t => t.time > cutoff);
 
+    // eslint-disable-next-line functional/no-let
     let cvd = 0;
     for (const trade of recentTrades) {
       const volume = trade.qty * trade.price; // Dollar volume
@@ -189,6 +190,7 @@ export class CVDValidator extends EventEmitter {
     absorption: Absorption | null = null,
     distribution: Distribution | null = null
   ): number {
+    // eslint-disable-next-line functional/no-let
     let confidenceAdjustment = 0;
 
     // Check if POI type matches CVD signal
@@ -237,16 +239,19 @@ export class CVDValidator extends EventEmitter {
    */
   recordTrade(trade: CVDTrade): void {
     if (!this.tradeHistory.has(trade.symbol)) {
+      // eslint-disable-next-line functional/immutable-data
       this.tradeHistory.set(trade.symbol, []);
     }
 
     const history = this.tradeHistory.get(trade.symbol)!;
+    // eslint-disable-next-line functional/immutable-data
     history.push(trade);
 
     // Keep only trades within the history window (10 minutes)
     const cutoff = Date.now() - this.HISTORY_WINDOW_MS;
     const filteredHistory = history.filter(t => t.time > cutoff);
 
+    // eslint-disable-next-line functional/immutable-data
     this.tradeHistory.set(trade.symbol, filteredHistory);
 
     // Log if history is getting large (performance monitoring)
@@ -278,6 +283,7 @@ export class CVDValidator extends EventEmitter {
   getCurrentCVD(symbol: string, windowMs: number = this.CVD_WINDOW_MS): number {
     const trades = this.getTradeHistory(symbol, windowMs);
     // Don't pass windowMs again since trades are already filtered
+    // eslint-disable-next-line functional/no-let
     let cvd = 0;
     for (const trade of trades) {
       const volume = trade.qty * trade.price; // Dollar volume
@@ -300,6 +306,7 @@ export class CVDValidator extends EventEmitter {
    * @param symbol - Symbol to clear history for
    */
   clearHistory(symbol: string): void {
+    // eslint-disable-next-line functional/immutable-data
     this.tradeHistory.delete(symbol);
   }
 
@@ -313,6 +320,7 @@ export class CVDValidator extends EventEmitter {
     totalTrades: number;
     memoryUsage: string;
   } {
+    // eslint-disable-next-line functional/no-let
     let totalTrades = 0;
     for (const history of this.tradeHistory.values()) {
       totalTrades += history.length;

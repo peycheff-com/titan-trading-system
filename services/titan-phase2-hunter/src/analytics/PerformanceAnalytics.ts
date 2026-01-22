@@ -310,10 +310,12 @@ export class PerformanceAnalytics extends EventEmitter {
    * Record a completed trade with enhancement data
    */
   recordTrade(trade: EnhancedTradeRecord): void {
+    // eslint-disable-next-line functional/immutable-data
     this.tradeRecords.push(trade);
     this.emit('tradeRecorded', trade);
 
     // Remove from pending if exists
+    // eslint-disable-next-line functional/immutable-data
     this.pendingSignals.delete(trade.id);
 
     if (this.config.enableDetailedLogging) {
@@ -337,6 +339,7 @@ export class PerformanceAnalytics extends EventEmitter {
       usedEnhancements: boolean;
     }
   ): void {
+    // eslint-disable-next-line functional/immutable-data
     this.pendingSignals.set(signalId, { ...signal, enhancementData });
   }
 
@@ -344,6 +347,7 @@ export class PerformanceAnalytics extends EventEmitter {
    * Record a vetoed signal for effectiveness tracking
    */
   recordVetoedSignal(record: VetoedSignalRecord): void {
+    // eslint-disable-next-line functional/immutable-data
     this.vetoedSignals.push(record);
     this.emit('signalVetoed', record);
 
@@ -365,8 +369,11 @@ export class PerformanceAnalytics extends EventEmitter {
   ): void {
     const record = this.vetoedSignals.find(v => v.id === signalId);
     if (record) {
+      // eslint-disable-next-line functional/immutable-data
       record.actualPriceAfter = actualPriceAfter;
+      // eslint-disable-next-line functional/immutable-data
       record.wouldHaveWon = wouldHaveWon;
+      // eslint-disable-next-line functional/immutable-data
       record.potentialPnlPercent = potentialPnlPercent;
     }
   }
@@ -697,7 +704,9 @@ export class PerformanceAnalytics extends EventEmitter {
   private calculateMultiplierContribution(trades: EnhancedTradeRecord[]): number {
     if (trades.length === 0) return 0;
 
+    // eslint-disable-next-line functional/no-let
     let actualProfit = 0;
+    // eslint-disable-next-line functional/no-let
     let baseProfit = 0;
 
     for (const trade of trades) {
@@ -846,8 +855,11 @@ export class PerformanceAnalytics extends EventEmitter {
    * Clear all data
    */
   clearData(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.tradeRecords = [];
+    // eslint-disable-next-line functional/immutable-data
     this.vetoedSignals = [];
+    // eslint-disable-next-line functional/immutable-data
     this.pendingSignals.clear();
   }
 
@@ -865,10 +877,12 @@ export class PerformanceAnalytics extends EventEmitter {
    * Import data from persistence
    */
   importData(data: { trades: EnhancedTradeRecord[]; vetoed: VetoedSignalRecord[] }): void {
+    // eslint-disable-next-line functional/immutable-data
     this.tradeRecords = data.trades.map(t => ({
       ...t,
       timestamp: new Date(t.timestamp),
     }));
+    // eslint-disable-next-line functional/immutable-data
     this.vetoedSignals = data.vetoed.map(v => ({
       ...v,
       timestamp: new Date(v.timestamp),

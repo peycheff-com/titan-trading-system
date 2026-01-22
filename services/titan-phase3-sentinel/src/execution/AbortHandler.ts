@@ -18,6 +18,7 @@ export class AbortHandler extends EventEmitter {
   abort(reason?: string): void {
     if (this._isAborted) return;
 
+    // eslint-disable-next-line functional/immutable-data
     this._isAborted = true;
     this.controller.abort(reason);
     this.emit('abort', reason);
@@ -41,7 +42,9 @@ export class AbortHandler extends EventEmitter {
    * Reset the handler (create new controller)
    */
   reset(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.controller = new AbortController();
+    // eslint-disable-next-line functional/immutable-data
     this._isAborted = false;
   }
 }

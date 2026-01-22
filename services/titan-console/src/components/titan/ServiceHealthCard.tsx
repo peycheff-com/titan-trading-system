@@ -31,7 +31,7 @@ export function ServiceHealthCard({
         className={cn(
           'flex items-center gap-2 rounded-md border border-border bg-card px-2.5 py-1.5',
           'transition-titan hover:border-primary/30',
-          className
+          className,
         )}
       >
         <StatusDot status={status} size="sm" />
@@ -51,7 +51,7 @@ export function ServiceHealthCard({
       className={cn(
         'rounded-md border border-border bg-card p-3',
         'transition-titan hover:border-primary/30',
-        className
+        className,
       )}
     >
       <div className="flex items-start justify-between">
@@ -60,9 +60,7 @@ export function ServiceHealthCard({
           <span className="text-sm font-medium text-foreground">{name}</span>
         </div>
         {uptime !== undefined && (
-          <span className="font-mono text-xs text-muted-foreground">
-            {uptime.toFixed(2)}%
-          </span>
+          <span className="font-mono text-xs text-muted-foreground">{uptime.toFixed(2)}%</span>
         )}
       </div>
 
@@ -83,7 +81,7 @@ export function ServiceHealthCard({
             <span
               className={cn(
                 'font-mono',
-                errorRate > 1 ? 'text-status-critical' : 'text-foreground'
+                errorRate > 1 ? 'text-status-critical' : 'text-foreground',
               )}
             >
               {errorRate.toFixed(2)}%

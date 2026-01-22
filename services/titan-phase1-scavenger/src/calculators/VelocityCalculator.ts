@@ -27,14 +27,17 @@ export class VelocityCalculator {
    */
   recordPrice(symbol: string, price: number, exchangeTime: number): void {
     if (!this.priceHistory.has(symbol)) {
+      // eslint-disable-next-line functional/immutable-data
       this.priceHistory.set(symbol, []);
     }
 
     const history = this.priceHistory.get(symbol)!;
+    // eslint-disable-next-line functional/immutable-data
     history.push({ price, timestamp: exchangeTime });
 
     // Keep only last 10 seconds (based on exchange time)
     const cutoff = exchangeTime - 10000;
+    // eslint-disable-next-line functional/immutable-data
     this.priceHistory.set(
       symbol,
       history.filter((h) => h.timestamp > cutoff),
@@ -92,6 +95,7 @@ export class VelocityCalculator {
    * Useful for cleanup or testing
    */
   clearHistory(symbol: string): void {
+    // eslint-disable-next-line functional/immutable-data
     this.priceHistory.delete(symbol);
   }
 

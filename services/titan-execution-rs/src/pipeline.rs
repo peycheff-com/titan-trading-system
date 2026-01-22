@@ -149,6 +149,18 @@ impl ExecutionPipeline {
                         exchange_name,
                         response.order_id
                     );
+
+                    // 0. Record Child Order (ShadowState) - Always track, even if Pending
+                    {
+                        let mut state = self.shadow_state.write();
+                        state.record_child_order(
+                            &processed_intent.signal_id,
+                            exchange_name.clone(),
+                            request.client_order_id.clone(),
+                            response.order_id.clone(),
+                            request.quantity, // We record Attempted Quantity (Child Size)
+                        );
+                    }
                     
                     let fill_price = response.avg_price.unwrap_or(decision.limit_price.unwrap_or_default());
 
@@ -169,8 +181,12 @@ impl ExecutionPipeline {
                             correlation_id = %correlation_id,
                             executed_qty = %response.executed_qty,
                             fill_price = %fill_price,
-                            "Skipping zero/invalid fill report"
+                            "Order Placed but PENDING/Zero Fill - Tracking in ShadowState"
                         );
+                        // We continue here, but we MUST add a FillReport for the ACK???
+                        // No, FillReport implies a FILL.
+                        // But we might want to emit an "ExecutionReport" saying "New/Pending".
+                        // For Phase 4, we stick to Fills-only for events, but State has it.
                         continue;
                     }
                     
@@ -183,7 +199,8 @@ impl ExecutionPipeline {
                             response.executed_qty, 
                             true,
                             response.fee.unwrap_or(Decimal::ZERO),
-                            response.fee_asset.unwrap_or("USDT".to_string())
+                            response.fee_asset.unwrap_or("USDT".to_string()),
+                            &exchange_name // Pass exchange name
                         );
                         let exposure = state.calculate_exposure();
                         (events, exposure)
@@ -191,17 +208,7 @@ impl ExecutionPipeline {
 
                     pipeline_result.events.extend(events_to_publish);
                     pipeline_result.exposure = Some(exposure);
-                    
-                    {
-                        let mut state = self.shadow_state.write();
-                        state.record_child_order(
-                            &processed_intent.signal_id,
-                            exchange_name.clone(),
-                            request.client_order_id.clone(),
-                            response.order_id.clone(),
-                            request.quantity,
-                        );
-                    }
+
 
                     let fill_report = FillReport {
                         fill_id: response.order_id.clone(),

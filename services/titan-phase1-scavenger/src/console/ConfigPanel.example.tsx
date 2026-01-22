@@ -1,6 +1,6 @@
 /**
  * ConfigPanel Integration Example
- * 
+ *
  * This example shows how to integrate the ConfigPanel with the TrapMonitor
  * and handle F1 key press to toggle between views.
  */
@@ -17,7 +17,7 @@ import { ConfigManager } from '../config/ConfigManager';
 function App() {
   const [showConfig, setShowConfig] = useState(false);
   const [configManager] = useState(() => new ConfigManager());
-  
+
   // Mock data for demonstration
   const [trapMonitorData, setTrapMonitorData] = useState<TrapMonitorProps>({
     trapMap: new Map(),
@@ -40,46 +40,46 @@ function App() {
         message: 'BTCUSDT trap set at $45,123.45',
       },
     ],
-    equity: 1250.50,
+    equity: 1250.5,
     pnlPct: 12.5,
   });
-  
+
   /**
    * Handle keyboard input
    */
   useInput((input, key) => {
     // F1 key - Toggle config panel
     if (key.f1) {
-      setShowConfig(prev => !prev);
+      setShowConfig((prev) => !prev);
     }
-    
+
     // ESC key - Close config panel
     if (key.escape && showConfig) {
       setShowConfig(false);
     }
-    
+
     // Q key - Quit application
     if (input === 'q' && !showConfig) {
       process.exit(0);
     }
-    
+
     // S key - Save config (when panel is open)
     if (input === 's' && showConfig) {
       // Save is handled by ConfigPanel's onSave callback
     }
-    
+
     // C key - Cancel config (when panel is open)
     if (input === 'c' && showConfig) {
       setShowConfig(false);
     }
-    
+
     // Number keys 1-5 - Switch config sections (when panel is open)
     if (showConfig && ['1', '2', '3', '4', '5'].includes(input)) {
       // Section switching is handled internally by ConfigPanel
       // This is just for demonstration
     }
   });
-  
+
   /**
    * Handle config save
    */
@@ -92,7 +92,7 @@ function App() {
       console.error('❌ Failed to save configuration:', error);
     }
   };
-  
+
   /**
    * Handle config cancel
    */
@@ -100,7 +100,7 @@ function App() {
     console.log('📝 Configuration changes discarded');
     setShowConfig(false);
   };
-  
+
   /**
    * Render the appropriate view
    */
@@ -120,18 +120,18 @@ function App() {
  */
 export function startTrapMonitor() {
   const { unmount } = render(<App />);
-  
+
   // Handle cleanup on exit
   process.on('SIGINT', () => {
     unmount();
     process.exit(0);
   });
-  
+
   process.on('SIGTERM', () => {
     unmount();
     process.exit(0);
   });
-  
+
   return unmount;
 }
 
@@ -140,12 +140,12 @@ export default App;
 
 /**
  * Usage in main application (index.ts):
- * 
+ *
  * import { startTrapMonitor } from './console/ConfigPanel.example';
- * 
+ *
  * // Start the trap monitor with config panel support
  * startTrapMonitor();
- * 
+ *
  * // The application will:
  * // 1. Show TrapMonitor by default
  * // 2. Press F1 to open ConfigPanel
@@ -156,13 +156,13 @@ export default App;
 
 /**
  * Advanced Integration with Real Data:
- * 
+ *
  * import { TitanTrap } from '../engine/TitanTrap';
  * import { ConfigManager } from '../config/ConfigManager';
- * 
+ *
  * const titanTrap = new TitanTrap();
  * const configManager = new ConfigManager();
- * 
+ *
  * // Update trap monitor data in real-time
  * setInterval(() => {
  *   setTrapMonitorData({
@@ -173,7 +173,7 @@ export default App;
  *     pnlPct: titanTrap.getPnL(),
  *   });
  * }, 1000);
- * 
+ *
  * // Apply config changes to TitanTrap
  * const handleConfigSave = (newConfig) => {
  *   configManager.saveConfig(newConfig);

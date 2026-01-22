@@ -94,6 +94,7 @@ export class NightlyOptimize {
       return; // Already running
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.job = schedule.scheduleJob(this.config.schedule, async () => {
       try {
         await this.runOptimization();
@@ -111,6 +112,7 @@ export class NightlyOptimize {
   stop(): void {
     if (this.job) {
       this.job.cancel();
+      // eslint-disable-next-line functional/immutable-data
       this.job = null;
       console.log('NightlyOptimize job stopped');
     }
@@ -181,8 +183,10 @@ export class NightlyOptimize {
             validationReport: validation,
             status: 'pending',
           });
+          // eslint-disable-next-line functional/immutable-data
           proposal.id = proposalId;
 
+          // eslint-disable-next-line functional/immutable-data
           proposals.push({ proposal, validation });
           console.log(`Generated proposal for: ${proposal.targetKey}`);
         }
@@ -221,14 +225,17 @@ export class NightlyOptimize {
 
     // Build summary text
     const summaryParts: string[] = [];
+    // eslint-disable-next-line functional/immutable-data
     summaryParts.push(`Analyzed ${insights.length} pattern${insights.length !== 1 ? 's' : ''}`);
     if (proposals.length > 0) {
+      // eslint-disable-next-line functional/immutable-data
       summaryParts.push(
         `generated ${proposals.length} optimization proposal${proposals.length !== 1 ? 's' : ''}`,
       );
     }
     if (trades && trades.length > 0) {
       const failedCount = trades.filter((t) => t.pnl < 0).length;
+      // eslint-disable-next-line functional/immutable-data
       summaryParts.push(`reviewed ${trades.length} trades (${failedCount} losses)`);
     }
 

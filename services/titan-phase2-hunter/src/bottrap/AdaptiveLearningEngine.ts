@@ -143,6 +143,7 @@ export class AdaptiveLearningEngine {
       timestamp: new Date(),
     };
 
+    // eslint-disable-next-line functional/immutable-data
     this.outcomeRecords.push(record);
 
     // Clean old records
@@ -166,6 +167,7 @@ export class AdaptiveLearningEngine {
     );
 
     if (record) {
+      // eslint-disable-next-line functional/immutable-data
       record.outcome = outcome;
 
       // Determine if flag was correct
@@ -175,10 +177,12 @@ export class AdaptiveLearningEngine {
       if (record.wasFlagged) {
         // Pattern was flagged as suspect
         // Flag is correct if it would have been a loss (trap confirmed)
+        // eslint-disable-next-line functional/immutable-data
         record.flagCorrect = wasLoss;
       } else {
         // Pattern was not flagged
         // Flag is correct (not flagging) if it was profitable
+        // eslint-disable-next-line functional/immutable-data
         record.flagCorrect = !wasLoss;
       }
 
@@ -203,6 +207,7 @@ export class AdaptiveLearningEngine {
 
     if (record) {
       // For avoided patterns, we infer the outcome
+      // eslint-disable-next-line functional/immutable-data
       record.flagCorrect = subsequentPriceAction.wouldHaveLost;
 
       this.checkForParameterUpdate();
@@ -234,7 +239,9 @@ export class AdaptiveLearningEngine {
     const stats = this.calculateStatistics(records);
 
     // Calculate adjustment direction and magnitude
+    // eslint-disable-next-line functional/no-let
     let adjustment = 0;
+    // eslint-disable-next-line functional/no-let
     let reason = '';
 
     // High false positive rate - need to increase threshold (be more selective)
@@ -267,12 +274,14 @@ export class AdaptiveLearningEngine {
       adjustment = Math.max(-maxAdjustment, Math.min(maxAdjustment, adjustment));
 
       const previousThreshold = this.currentPrecisionThreshold;
+      // eslint-disable-next-line functional/immutable-data
       this.currentPrecisionThreshold = Math.max(
         70,
         Math.min(99, this.currentPrecisionThreshold + adjustment)
       );
 
       // Record adjustment
+      // eslint-disable-next-line functional/immutable-data
       this.parameterHistory.push({
         parameter: 'precisionThreshold',
         previousValue: previousThreshold,
@@ -296,6 +305,7 @@ export class AdaptiveLearningEngine {
    */
   private cleanOldRecords(): void {
     const cutoff = Date.now() - this.config.recentWindowHours * 2 * 60 * 60 * 1000;
+    // eslint-disable-next-line functional/immutable-data
     this.outcomeRecords = this.outcomeRecords.filter(r => r.timestamp.getTime() > cutoff);
   }
 
@@ -308,9 +318,13 @@ export class AdaptiveLearningEngine {
     const targetRecords = records || this.getRecentRecords();
     const recordsWithOutcome = targetRecords.filter(r => r.flagCorrect !== null);
 
+    // eslint-disable-next-line functional/no-let
     let truePositives = 0;
+    // eslint-disable-next-line functional/no-let
     let falsePositives = 0;
+    // eslint-disable-next-line functional/no-let
     let trueNegatives = 0;
+    // eslint-disable-next-line functional/no-let
     let falseNegatives = 0;
 
     for (const record of recordsWithOutcome) {
@@ -389,9 +403,13 @@ export class AdaptiveLearningEngine {
     }
 
     // Simulate what would have happened with proposed threshold
+    // eslint-disable-next-line functional/no-let
     let projectedTP = 0;
+    // eslint-disable-next-line functional/no-let
     let projectedFP = 0;
+    // eslint-disable-next-line functional/no-let
     let projectedTN = 0;
+    // eslint-disable-next-line functional/no-let
     let projectedFN = 0;
 
     for (const record of records) {
@@ -438,6 +456,7 @@ export class AdaptiveLearningEngine {
     // Validate: new threshold should improve or maintain F1 score
     const valid = projectedF1 >= currentStats.f1Score * 0.95; // Allow 5% degradation
 
+    // eslint-disable-next-line functional/no-let
     let recommendation: string;
     if (projectedF1 > currentStats.f1Score) {
       recommendation = `Proposed threshold improves F1 score from ${(currentStats.f1Score * 100).toFixed(1)}% to ${(projectedF1 * 100).toFixed(1)}%`;
@@ -457,8 +476,10 @@ export class AdaptiveLearningEngine {
     const validation = this.validateProposedThreshold(newThreshold);
 
     const previousThreshold = this.currentPrecisionThreshold;
+    // eslint-disable-next-line functional/immutable-data
     this.currentPrecisionThreshold = newThreshold;
 
+    // eslint-disable-next-line functional/immutable-data
     this.parameterHistory.push({
       parameter: 'precisionThreshold',
       previousValue: previousThreshold,
@@ -492,12 +513,15 @@ export class AdaptiveLearningEngine {
     currentPrecisionThreshold?: number;
   }): void {
     if (data.outcomeRecords) {
+      // eslint-disable-next-line functional/immutable-data
       this.outcomeRecords = data.outcomeRecords;
     }
     if (data.parameterHistory) {
+      // eslint-disable-next-line functional/immutable-data
       this.parameterHistory = data.parameterHistory;
     }
     if (data.currentPrecisionThreshold !== undefined) {
+      // eslint-disable-next-line functional/immutable-data
       this.currentPrecisionThreshold = data.currentPrecisionThreshold;
     }
   }
@@ -506,9 +530,13 @@ export class AdaptiveLearningEngine {
    * Reset learning engine (for testing)
    */
   reset(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.outcomeRecords = [];
+    // eslint-disable-next-line functional/immutable-data
     this.parameterHistory = [];
+    // eslint-disable-next-line functional/immutable-data
     this.currentPrecisionThreshold = 95;
+    // eslint-disable-next-line functional/immutable-data
     this.pendingAdjustments.clear();
   }
 }

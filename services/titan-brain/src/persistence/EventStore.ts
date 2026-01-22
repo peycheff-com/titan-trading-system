@@ -75,17 +75,22 @@ export class EventStore {
    * Replay all events (e.g. for state reconstruction)
    */
   async replayAll(options?: { startTime?: Date; type?: string }): Promise<TitanEvent[]> {
+    // eslint-disable-next-line functional/no-let
     let query = `SELECT * FROM event_log`;
     const params: any[] = [];
     const conditions: string[] = [];
 
     if (options?.startTime) {
+      // eslint-disable-next-line functional/immutable-data
       conditions.push(`created_at >= $${params.length + 1}`);
+      // eslint-disable-next-line functional/immutable-data
       params.push(options.startTime);
     }
 
     if (options?.type) {
+      // eslint-disable-next-line functional/immutable-data
       conditions.push(`type = $${params.length + 1}`);
+      // eslint-disable-next-line functional/immutable-data
       params.push(options.type);
     }
 

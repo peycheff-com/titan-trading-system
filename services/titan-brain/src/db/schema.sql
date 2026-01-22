@@ -150,8 +150,10 @@ CREATE TABLE IF NOT EXISTS operators (
 CREATE INDEX IF NOT EXISTS idx_operators_operator_id ON operators(operator_id);
 
 -- Fills (Accounting)
-CREATE TABLE IF NOT EXISTS fills (
-  fill_id VARCHAR(100) PRIMARY KEY,
+-- Fills (Accounting) - Partitioned by month
+DROP TABLE IF EXISTS fills CASCADE;
+CREATE TABLE fills (
+  fill_id VARCHAR(100) NOT NULL,
   signal_id VARCHAR(100),
   symbol VARCHAR(20) NOT NULL,
   side VARCHAR(10) NOT NULL,
@@ -166,26 +168,42 @@ CREATE TABLE IF NOT EXISTS fills (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   execution_id VARCHAR(100),
   order_id VARCHAR(100),
-  CONSTRAINT uq_fills_fill_id UNIQUE (fill_id)
-);
+  PRIMARY KEY (fill_id, created_at)
+) PARTITION BY RANGE (created_at);
 
-CREATE INDEX IF NOT EXISTS idx_fills_signal_id ON fills(signal_id);
-CREATE INDEX IF NOT EXISTS idx_fills_created_at ON fills(created_at DESC);
+-- Initial partitions
+CREATE TABLE fills_default PARTITION OF fills DEFAULT;
+CREATE TABLE fills_2026_01 PARTITION OF fills FOR VALUES FROM ('2026-01-01') TO ('2026-02-01');
+CREATE TABLE fills_2026_02 PARTITION OF fills FOR VALUES FROM ('2026-02-01') TO ('2026-03-01');
+CREATE TABLE fills_2026_03 PARTITION OF fills FOR VALUES FROM ('2026-03-01') TO ('2026-04-01');
+
+CREATE INDEX idx_fills_signal_id ON fills(signal_id);
+CREATE INDEX idx_fills_created_at ON fills(created_at DESC);
+CREATE INDEX idx_fills_symbol_time ON fills(symbol, created_at DESC);
 
 -- Event Log (Event Sourcing)
-CREATE TABLE IF NOT EXISTS event_log (
-  id UUID PRIMARY KEY,
+-- Event Log (Event Sourcing) - Partitioned by month
+DROP TABLE IF EXISTS event_log CASCADE;
+CREATE TABLE event_log (
+  id UUID NOT NULL,
   type VARCHAR(50) NOT NULL,
   aggregate_id VARCHAR(100) NOT NULL,
   payload JSONB NOT NULL,
   metadata JSONB NOT NULL,
   version INTEGER NOT NULL DEFAULT 1,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id, created_at)
+) PARTITION BY RANGE (created_at);
 
-CREATE INDEX IF NOT EXISTS idx_event_log_aggregate_id ON event_log(aggregate_id);
-CREATE INDEX IF NOT EXISTS idx_event_log_type ON event_log(type);
-CREATE INDEX IF NOT EXISTS idx_event_log_created_at ON event_log(created_at DESC);
+-- Initial partitions
+CREATE TABLE event_log_default PARTITION OF event_log DEFAULT;
+CREATE TABLE event_log_2026_01 PARTITION OF event_log FOR VALUES FROM ('2026-01-01') TO ('2026-02-01');
+CREATE TABLE event_log_2026_02 PARTITION OF event_log FOR VALUES FROM ('2026-02-01') TO ('2026-03-01');
+CREATE TABLE event_log_2026_03 PARTITION OF event_log FOR VALUES FROM ('2026-03-01') TO ('2026-04-01');
+
+CREATE INDEX idx_event_log_aggregate_id ON event_log(aggregate_id);
+CREATE INDEX idx_event_log_type ON event_log(type);
+CREATE INDEX idx_event_log_created_at ON event_log(created_at DESC);
 
 -- Ledger System
 CREATE TABLE IF NOT EXISTS ledger_accounts (
@@ -238,3 +256,20 @@ ALTER TABLE event_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ledger_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ledger_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ledger_entries ENABLE ROW LEVEL SECURITY;
+
+-- Retention Policy Function
+CREATE OR REPLACE FUNCTION maintain_retention_policy() RETURNS void AS $$
+DECLARE
+  retention_days INT := 90;
+  old_date TIMESTAMP;
+BEGIN
+  old_date := NOW() - (retention_days || ' days')::INTERVAL;
+  
+  -- NOTE: Actual dropping of partitions should be handled carefully.
+  -- This function is a placeholder for the automated maintenance job
+  -- that would typically detach and then drop/archive old partitions.
+  -- For now, we just log.
+  
+  RAISE NOTICE 'Retention policy check: cutoff date %', old_date;
+END;
+$$ LANGUAGE plpgsql;

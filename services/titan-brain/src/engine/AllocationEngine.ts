@@ -76,10 +76,14 @@ export class AllocationEngine {
     const effectiveStartP3 = this.hasEnteredPhase3 ? startP3 * this.HYSTERESIS_BUFFER : startP3;
 
     // State Updates
+    // eslint-disable-next-line functional/immutable-data
     if (safeEquity >= startP2) this.hasEnteredPhase2 = true;
+    // eslint-disable-next-line functional/immutable-data
     if (safeEquity < effectiveStartP2) this.hasEnteredPhase2 = false;
 
+    // eslint-disable-next-line functional/immutable-data
     if (safeEquity >= startP3) this.hasEnteredPhase3 = true;
+    // eslint-disable-next-line functional/immutable-data
     if (safeEquity < effectiveStartP3) this.hasEnteredPhase3 = false;
 
     // Phase 1 Only (MICRO tier)

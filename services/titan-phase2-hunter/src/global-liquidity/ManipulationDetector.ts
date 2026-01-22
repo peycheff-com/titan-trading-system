@@ -193,7 +193,9 @@ export class ManipulationDetector extends EventEmitter {
     const avgVolume = flows.reduce((sum, f) => sum + f.volume, 0) / flows.length;
 
     // Find the exchange with highest absolute CVD (potential leader)
+    // eslint-disable-next-line functional/no-let
     let maxAbsCVD = 0;
+    // eslint-disable-next-line functional/no-let
     let leadingExchange: 'binance' | 'coinbase' | 'kraken' | null = null;
     const laggingExchanges: ('binance' | 'coinbase' | 'kraken')[] = [];
 
@@ -205,6 +207,7 @@ export class ManipulationDetector extends EventEmitter {
     }
 
     // Calculate divergence from leader
+    // eslint-disable-next-line functional/no-let
     let maxDivergence = 0;
     for (const flow of flows) {
       if (flow.exchange !== leadingExchange) {
@@ -222,6 +225,7 @@ export class ManipulationDetector extends EventEmitter {
           Math.sign(flow.cvd) !== Math.sign(leaderCVD) ||
           Math.abs(flow.cvd) < Math.abs(leaderCVD) * 0.3
         ) {
+          // eslint-disable-next-line functional/immutable-data
           laggingExchanges.push(flow.exchange);
         }
       }
@@ -272,8 +276,11 @@ export class ManipulationDetector extends EventEmitter {
     const volumeStdDev = this.calculateStdDev(volumeValues, volumeMean);
 
     // Find outliers
+    // eslint-disable-next-line functional/no-let
     let maxDeviation = 0;
+    // eslint-disable-next-line functional/no-let
     let outlierExchange: 'binance' | 'coinbase' | 'kraken' | null = null;
+    // eslint-disable-next-line functional/no-let
     let outlierType: 'cvd' | 'volume' | 'price' | 'none' = 'none';
 
     for (const flow of flows) {
@@ -319,7 +326,9 @@ export class ManipulationDetector extends EventEmitter {
     // Look for consistent single-exchange CVD divergence over time
     const recentHistory = history.slice(-this.config.minDataPoints);
 
+    // eslint-disable-next-line functional/no-let
     let consistentOutlierCount = 0;
+    // eslint-disable-next-line functional/no-let
     let lastOutlier: string | null = null;
 
     for (const point of recentHistory) {
@@ -360,8 +369,11 @@ export class ManipulationDetector extends EventEmitter {
     reasoning: string[];
   } {
     const reasoning: string[] = [];
+    // eslint-disable-next-line functional/no-let
     let confidence = 0;
+    // eslint-disable-next-line functional/no-let
     let pattern: ManipulationPattern = 'none';
+    // eslint-disable-next-line functional/no-let
     let suspectExchange: 'binance' | 'coinbase' | 'kraken' | null = null;
 
     // Check for single exchange outlier
@@ -369,6 +381,7 @@ export class ManipulationDetector extends EventEmitter {
       confidence += outlier.outlierScore * 0.4;
       pattern = 'single_exchange_outlier';
       suspectExchange = outlier.outlierExchange;
+      // eslint-disable-next-line functional/immutable-data
       reasoning.push(
         `${outlier.outlierExchange} shows ${outlier.outlierType} outlier (${outlier.deviation.toFixed(1)} std devs)`
       );
@@ -383,6 +396,7 @@ export class ManipulationDetector extends EventEmitter {
       if (!suspectExchange) {
         suspectExchange = divergence.leadingExchange;
       }
+      // eslint-disable-next-line functional/immutable-data
       reasoning.push(
         `Exchange divergence detected: ${divergence.leadingExchange} leading, ${divergence.laggingExchanges.join(', ')} lagging`
       );
@@ -396,6 +410,7 @@ export class ManipulationDetector extends EventEmitter {
         if (pattern === 'none') {
           pattern = 'volume_spike';
         }
+        // eslint-disable-next-line functional/immutable-data
         reasoning.push(
           `${flow.exchange} volume spike: ${((flow.volume / avgVolume) * 100).toFixed(0)}% of average`
         );
@@ -404,16 +419,20 @@ export class ManipulationDetector extends EventEmitter {
     }
 
     // Determine recommendation
+    // eslint-disable-next-line functional/no-let
     let recommendation: 'proceed' | 'caution' | 'veto';
     if (confidence >= 70) {
       recommendation = 'veto';
+      // eslint-disable-next-line functional/immutable-data
       reasoning.push('High manipulation confidence - signal vetoed');
     } else if (confidence >= 40) {
       recommendation = 'caution';
+      // eslint-disable-next-line functional/immutable-data
       reasoning.push('Moderate manipulation risk - proceed with caution');
     } else {
       recommendation = 'proceed';
       if (reasoning.length === 0) {
+        // eslint-disable-next-line functional/immutable-data
         reasoning.push('No significant manipulation patterns detected');
       }
     }
@@ -434,6 +453,7 @@ export class ManipulationDetector extends EventEmitter {
   private calculateVolumeDivergence(flows: ExchangeFlow[], avgVolume: number): number {
     if (avgVolume === 0) return 0;
 
+    // eslint-disable-next-line functional/no-let
     let maxDivergence = 0;
     for (const flow of flows) {
       const divergence = (Math.abs(flow.volume - avgVolume) / avgVolume) * 100;
@@ -465,10 +485,12 @@ export class ManipulationDetector extends EventEmitter {
     aggregatedCVD: number
   ): void {
     if (!this.historicalData.has(symbol)) {
+      // eslint-disable-next-line functional/immutable-data
       this.historicalData.set(symbol, []);
     }
 
     const history = this.historicalData.get(symbol)!;
+    // eslint-disable-next-line functional/immutable-data
     history.push({
       timestamp: Date.now(),
       exchangeFlows: [...exchangeFlows],
@@ -478,6 +500,7 @@ export class ManipulationDetector extends EventEmitter {
     // Cleanup old data
     const cutoff = Date.now() - this.config.analysisWindow;
     const filtered = history.filter(h => h.timestamp > cutoff);
+    // eslint-disable-next-line functional/immutable-data
     this.historicalData.set(symbol, filtered);
   }
 
@@ -517,6 +540,7 @@ export class ManipulationDetector extends EventEmitter {
    * Clear historical data
    */
   clearHistory(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.historicalData.clear();
   }
 
@@ -531,6 +555,7 @@ export class ManipulationDetector extends EventEmitter {
    * Update configuration
    */
   updateConfig(config: Partial<ManipulationDetectorConfig>): void {
+    // eslint-disable-next-line functional/immutable-data
     this.config = { ...this.config, ...config };
   }
 }

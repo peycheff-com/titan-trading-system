@@ -1,0 +1,2 @@
+{"type": "INTENT", "data": {"signal_id": "bad-1", "symbol": "BTC/USDT", "direction": 1, "intent_type": "BuySetup", "size": -0.1}}
+{"type": "INTENT", "data": {"signal_id": "bad-2", "symbol": "BTC/USDT", "missing_field": "direction"}}

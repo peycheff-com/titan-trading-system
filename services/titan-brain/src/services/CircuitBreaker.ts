@@ -109,10 +109,12 @@ export class CircuitBreaker extends EventEmitter {
       throw error;
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.totalRequests++;
 
     // Track half-open calls
     if (this.state === CircuitBreakerState.HALF_OPEN) {
+      // eslint-disable-next-line functional/immutable-data
       this.halfOpenCallsCount++;
     }
 
@@ -185,7 +187,9 @@ export class CircuitBreaker extends EventEmitter {
    * Handle successful request
    */
   private onSuccess(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.successCount++;
+    // eslint-disable-next-line functional/immutable-data
     this.lastSuccessTime = Date.now();
 
     if (this.state === CircuitBreakerState.HALF_OPEN) {
@@ -195,6 +199,7 @@ export class CircuitBreaker extends EventEmitter {
       }
     } else if (this.state === CircuitBreakerState.CLOSED) {
       // Reset failure count on success in closed state
+      // eslint-disable-next-line functional/immutable-data
       this.failureCount = 0;
     }
   }
@@ -203,7 +208,9 @@ export class CircuitBreaker extends EventEmitter {
    * Handle failed request
    */
   private onFailure(error: unknown): void {
+    // eslint-disable-next-line functional/immutable-data
     this.failureCount++;
+    // eslint-disable-next-line functional/immutable-data
     this.lastFailureTime = Date.now();
 
     if (this.state === CircuitBreakerState.CLOSED) {
@@ -222,9 +229,13 @@ export class CircuitBreaker extends EventEmitter {
    */
   private transitionToClosed(): void {
     const previousState = this.state;
+    // eslint-disable-next-line functional/immutable-data
     this.state = CircuitBreakerState.CLOSED;
+    // eslint-disable-next-line functional/immutable-data
     this.failureCount = 0;
+    // eslint-disable-next-line functional/immutable-data
     this.halfOpenCallsCount = 0;
+    // eslint-disable-next-line functional/immutable-data
     this.nextAttemptTime = null;
 
     this.logger.info('Circuit breaker transitioned to CLOSED', undefined, {
@@ -245,8 +256,11 @@ export class CircuitBreaker extends EventEmitter {
    */
   private transitionToOpen(): void {
     const previousState = this.state;
+    // eslint-disable-next-line functional/immutable-data
     this.state = CircuitBreakerState.OPEN;
+    // eslint-disable-next-line functional/immutable-data
     this.nextAttemptTime = Date.now() + this.config.recoveryTimeout;
+    // eslint-disable-next-line functional/immutable-data
     this.halfOpenCallsCount = 0;
 
     this.logger.warn('Circuit breaker transitioned to OPEN', undefined, {
@@ -268,8 +282,11 @@ export class CircuitBreaker extends EventEmitter {
    */
   private transitionToHalfOpen(): void {
     const previousState = this.state;
+    // eslint-disable-next-line functional/immutable-data
     this.state = CircuitBreakerState.HALF_OPEN;
+    // eslint-disable-next-line functional/immutable-data
     this.halfOpenCallsCount = 0;
+    // eslint-disable-next-line functional/immutable-data
     this.nextAttemptTime = null;
 
     this.logger.info('Circuit breaker transitioned to HALF_OPEN', undefined, {
@@ -334,11 +351,17 @@ export class CircuitBreaker extends EventEmitter {
    * Reset circuit breaker statistics
    */
   reset(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.failureCount = 0;
+    // eslint-disable-next-line functional/immutable-data
     this.successCount = 0;
+    // eslint-disable-next-line functional/immutable-data
     this.totalRequests = 0;
+    // eslint-disable-next-line functional/immutable-data
     this.lastFailureTime = null;
+    // eslint-disable-next-line functional/immutable-data
     this.lastSuccessTime = null;
+    // eslint-disable-next-line functional/immutable-data
     this.halfOpenCallsCount = 0;
 
     this.logger.info('Circuit breaker statistics reset');

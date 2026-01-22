@@ -70,9 +70,11 @@ export class CredentialManager {
    */
   setMasterPassword(password?: string): void {
     if (password) {
+      // eslint-disable-next-line functional/immutable-data
       this.masterPassword = password;
     } else {
       // Try to get from environment variable
+      // eslint-disable-next-line functional/immutable-data
       this.masterPassword = process.env.TITAN_MASTER_PASSWORD || null;
 
       if (!this.masterPassword) {
@@ -111,6 +113,7 @@ export class CredentialManager {
 
       // Encrypt credentials
       const credentialsJson = JSON.stringify(credentials);
+      // eslint-disable-next-line functional/no-let
       let encrypted = cipher.update(credentialsJson, 'utf8', 'hex');
       encrypted += cipher.final('hex');
 
@@ -166,6 +169,7 @@ export class CredentialManager {
       const decipher = createDecipheriv(this.algorithm, key, iv);
 
       // Decrypt credentials
+      // eslint-disable-next-line functional/no-let
       let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
       decrypted += decipher.final('utf8');
 
@@ -222,6 +226,7 @@ export class CredentialManager {
     apiKey: string,
     apiSecret: string
   ): void {
+    // eslint-disable-next-line functional/no-let
     let credentials: ExchangeCredentials;
 
     try {
@@ -242,6 +247,7 @@ export class CredentialManager {
     }
 
     // Update specific exchange
+    // eslint-disable-next-line functional/immutable-data
     credentials[exchange] = { apiKey, apiSecret };
 
     // Save updated credentials
@@ -265,40 +271,51 @@ export class CredentialManager {
 
     // Check structure
     if (!credentials) {
+      // eslint-disable-next-line functional/immutable-data
       errors.push('Credentials object is null or undefined');
       return { isValid: false, errors, warnings };
     }
 
     // Validate Binance credentials
     if (!credentials.binance) {
+      // eslint-disable-next-line functional/immutable-data
       errors.push('Missing Binance credentials');
     } else {
       if (!credentials.binance.apiKey || credentials.binance.apiKey.trim() === '') {
+        // eslint-disable-next-line functional/immutable-data
         errors.push('Binance API key is empty');
       } else if (credentials.binance.apiKey.length < 32) {
+        // eslint-disable-next-line functional/immutable-data
         warnings.push('Binance API key seems too short');
       }
 
       if (!credentials.binance.apiSecret || credentials.binance.apiSecret.trim() === '') {
+        // eslint-disable-next-line functional/immutable-data
         errors.push('Binance API secret is empty');
       } else if (credentials.binance.apiSecret.length < 32) {
+        // eslint-disable-next-line functional/immutable-data
         warnings.push('Binance API secret seems too short');
       }
     }
 
     // Validate Bybit credentials
     if (!credentials.bybit) {
+      // eslint-disable-next-line functional/immutable-data
       errors.push('Missing Bybit credentials');
     } else {
       if (!credentials.bybit.apiKey || credentials.bybit.apiKey.trim() === '') {
+        // eslint-disable-next-line functional/immutable-data
         errors.push('Bybit API key is empty');
       } else if (credentials.bybit.apiKey.length < 16) {
+        // eslint-disable-next-line functional/immutable-data
         warnings.push('Bybit API key seems too short');
       }
 
       if (!credentials.bybit.apiSecret || credentials.bybit.apiSecret.trim() === '') {
+        // eslint-disable-next-line functional/immutable-data
         errors.push('Bybit API secret is empty');
       } else if (credentials.bybit.apiSecret.length < 16) {
+        // eslint-disable-next-line functional/immutable-data
         warnings.push('Bybit API secret seems too short');
       }
     }
@@ -330,7 +347,9 @@ export class CredentialManager {
     if (exists) {
       try {
         const stats = require('fs').statSync(this.credentialsPath);
+        // eslint-disable-next-line functional/immutable-data
         info.size = stats.size;
+        // eslint-disable-next-line functional/immutable-data
         info.modified = stats.mtime;
       } catch (error) {
         // Ignore stat errors
@@ -365,6 +384,7 @@ export class CredentialManager {
 
     // Set new password
     const oldPassword = this.masterPassword;
+    // eslint-disable-next-line functional/immutable-data
     this.masterPassword = newPassword;
 
     try {
@@ -373,6 +393,7 @@ export class CredentialManager {
       console.log('🔐 Master password changed successfully');
     } catch (error) {
       // Restore old password on failure
+      // eslint-disable-next-line functional/immutable-data
       this.masterPassword = oldPassword;
       throw error;
     }

@@ -145,12 +145,14 @@ export class EventMapper extends EventEmitter {
 
     // Load default mappings
     for (const mapping of DEFAULT_SYMBOL_MAPPINGS) {
+      // eslint-disable-next-line functional/immutable-data
       this.symbolMappings.set(mapping.symbol, mapping);
     }
 
     // Add custom mappings
     if (customMappings) {
       for (const mapping of customMappings) {
+        // eslint-disable-next-line functional/immutable-data
         this.symbolMappings.set(mapping.symbol, mapping);
       }
     }
@@ -164,6 +166,7 @@ export class EventMapper extends EventEmitter {
    * Add or update a symbol mapping
    */
   addSymbolMapping(mapping: SymbolEventMapping): void {
+    // eslint-disable-next-line functional/immutable-data
     this.symbolMappings.set(mapping.symbol, mapping);
     this.clearRelevanceCache(mapping.symbol);
     this.emit('mappingUpdated', { symbol: mapping.symbol });
@@ -173,6 +176,7 @@ export class EventMapper extends EventEmitter {
    * Remove a symbol mapping
    */
   removeSymbolMapping(symbol: string): boolean {
+    // eslint-disable-next-line functional/immutable-data
     const removed = this.symbolMappings.delete(symbol);
     if (removed) {
       this.clearRelevanceCache(symbol);
@@ -216,11 +220,13 @@ export class EventMapper extends EventEmitter {
     for (const event of events) {
       const relevance = this.calculateEventRelevance(event, mapping);
       if (relevance.relevanceScore > 0) {
+        // eslint-disable-next-line functional/immutable-data
         relevantEvents.push(relevance);
       }
     }
 
     // Sort by relevance score (highest first)
+    // eslint-disable-next-line functional/immutable-data
     relevantEvents.sort((a, b) => b.relevanceScore - a.relevanceScore);
 
     // Calculate total relevance
@@ -244,24 +250,29 @@ export class EventMapper extends EventEmitter {
     event: PredictionMarketEvent,
     mapping: SymbolEventMapping
   ): EventRelevance {
+    // eslint-disable-next-line functional/no-let
     let relevanceScore = 0;
     const matchDetails: string[] = [];
+    // eslint-disable-next-line functional/no-let
     let matchType: 'direct' | 'keyword' | 'category' | 'correlated' = 'category';
 
     // Check for direct event match (highest priority)
     if (mapping.directEvents.includes(event.id)) {
       relevanceScore += 50;
+      // eslint-disable-next-line functional/immutable-data
       matchDetails.push('Direct event match');
       matchType = 'direct';
     }
 
     // Check keyword matches
     const eventText = `${event.title} ${event.description}`.toLowerCase();
+    // eslint-disable-next-line functional/no-let
     let keywordMatches = 0;
 
     for (const keyword of mapping.keywords) {
       if (eventText.includes(keyword.toLowerCase())) {
         keywordMatches++;
+        // eslint-disable-next-line functional/immutable-data
         matchDetails.push(`Keyword: ${keyword}`);
       }
     }
@@ -277,6 +288,7 @@ export class EventMapper extends EventEmitter {
     // Check category match
     if (mapping.categories.includes(event.category)) {
       relevanceScore += 15;
+      // eslint-disable-next-line functional/immutable-data
       matchDetails.push(`Category: ${event.category}`);
       if (matchType !== 'direct' && matchType !== 'keyword') {
         matchType = 'category';
@@ -316,6 +328,7 @@ export class EventMapper extends EventEmitter {
       const eventText = `${event.title} ${event.description}`.toLowerCase();
 
       if (eventText.includes(baseAsset)) {
+        // eslint-disable-next-line functional/immutable-data
         relevantEvents.push({
           event,
           symbol,
@@ -324,6 +337,7 @@ export class EventMapper extends EventEmitter {
           matchDetails: [`Base asset match: ${baseAsset}`],
         });
       } else if (event.category === EventCategory.CRYPTO_PRICE) {
+        // eslint-disable-next-line functional/immutable-data
         relevantEvents.push({
           event,
           symbol,
@@ -334,6 +348,7 @@ export class EventMapper extends EventEmitter {
       }
     }
 
+    // eslint-disable-next-line functional/immutable-data
     relevantEvents.sort((a, b) => b.relevanceScore - a.relevanceScore);
 
     return {
@@ -403,10 +418,13 @@ export class EventMapper extends EventEmitter {
     for (const relevance of events) {
       const category = relevance.event.category;
       const currentScore = categoryScores.get(category) || 0;
+      // eslint-disable-next-line functional/immutable-data
       categoryScores.set(category, currentScore + relevance.relevanceScore);
     }
 
+    // eslint-disable-next-line functional/no-let
     let dominantCategory: EventCategory | null = null;
+    // eslint-disable-next-line functional/no-let
     let highestScore = 0;
 
     for (const [category, score] of categoryScores) {
@@ -481,6 +499,7 @@ export class EventMapper extends EventEmitter {
    * Clear relevance cache for a symbol
    */
   private clearRelevanceCache(symbol: string): void {
+    // eslint-disable-next-line functional/immutable-data
     this.relevanceCache.delete(symbol);
   }
 
@@ -488,8 +507,11 @@ export class EventMapper extends EventEmitter {
    * Clear all caches
    */
   clearAllCaches(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.eventCache.clear();
+    // eslint-disable-next-line functional/immutable-data
     this.relevanceCache.clear();
+    // eslint-disable-next-line functional/immutable-data
     this.lastCacheUpdate = 0;
   }
 

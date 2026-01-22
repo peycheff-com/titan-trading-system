@@ -7,28 +7,22 @@
  * Requirements: 16.1-16.7 (Signal Execution Logging)
  */
 
-import * as path from "path";
+import * as path from 'path';
 import {
   Logger as SharedLogger,
   LoggerConfig as SharedLoggerConfig,
   SharedLogLevel,
-} from "@titan/shared";
-import {
-  ExecutionData,
-  HologramState,
-  OrderResult,
-  SessionType,
-  SignalData,
-} from "../types";
+} from '@titan/shared';
+import { ExecutionData, HologramState, OrderResult, SessionType, SignalData } from '../types';
 
 /**
  * Signal log entry structure
  */
 export interface SignalLogEntry {
   timestamp: number;
-  type: "signal";
+  type: 'signal';
   symbol: string;
-  strategyType: "holographic";
+  strategyType: 'holographic';
   confidence: number;
   leverage: number;
   entryPrice: number;
@@ -43,9 +37,9 @@ export interface SignalLogEntry {
   };
   rsScore: number;
   sessionType: SessionType;
-  poiType: "FVG" | "ORDER_BLOCK" | "LIQUIDITY_POOL";
+  poiType: 'FVG' | 'ORDER_BLOCK' | 'LIQUIDITY_POOL';
   cvdStatus: boolean;
-  direction: "LONG" | "SHORT";
+  direction: 'LONG' | 'SHORT';
   positionSize: number;
 }
 
@@ -54,15 +48,15 @@ export interface SignalLogEntry {
  */
 export interface ExecutionLogEntry {
   timestamp: number;
-  type: "execution";
+  type: 'execution';
   signalId?: string;
   orderId: string;
   symbol: string;
-  side: "Buy" | "Sell";
+  side: 'Buy' | 'Sell';
   qty: number;
   fillPrice: number;
   fillTimestamp: number;
-  orderType: "MARKET" | "LIMIT" | "POST_ONLY";
+  orderType: 'MARKET' | 'LIMIT' | 'POST_ONLY';
   slippage: number;
   fees?: number;
 }
@@ -72,19 +66,14 @@ export interface ExecutionLogEntry {
  */
 export interface CloseLogEntry {
   timestamp: number;
-  type: "close";
+  type: 'close';
   positionId: string;
   symbol: string;
-  side: "LONG" | "SHORT";
+  side: 'LONG' | 'SHORT';
   exitPrice: number;
   exitTimestamp: number;
   profitPercentage: number;
-  closeReason:
-    | "STOP_LOSS"
-    | "TAKE_PROFIT"
-    | "TRAILING_STOP"
-    | "MANUAL"
-    | "EMERGENCY";
+  closeReason: 'STOP_LOSS' | 'TAKE_PROFIT' | 'TRAILING_STOP' | 'MANUAL' | 'EMERGENCY';
   holdTime: number; // milliseconds
   entryPrice: number;
   rValue: number; // R multiple
@@ -95,12 +84,12 @@ export interface CloseLogEntry {
  */
 export interface ErrorLogEntry {
   timestamp: number;
-  type: "error";
-  level: "WARNING" | "ERROR" | "CRITICAL";
+  type: 'error';
+  level: 'WARNING' | 'ERROR' | 'CRITICAL';
   message: string;
   context: {
     symbol?: string;
-    phase: "phase2";
+    phase: 'phase2';
     component?: string;
     function?: string;
     stack?: string;
@@ -110,7 +99,7 @@ export interface ErrorLogEntry {
 
 export interface GenericLogEntry {
   timestamp: number;
-  type: "info" | "debug" | "warn";
+  type: 'info' | 'debug' | 'warn';
   message: string;
   data?: any;
 }
@@ -121,12 +110,12 @@ export interface GenericLogEntry {
  */
 export interface EnhancedHologramLogEntry {
   timestamp: number;
-  type: "enhanced_hologram";
+  type: 'enhanced_hologram';
   symbol: string;
   classicScore: number;
   enhancedScore: number;
-  alignment: "A+" | "A" | "B" | "C" | "VETO";
-  convictionLevel: "low" | "medium" | "high" | "extreme";
+  alignment: 'A+' | 'A' | 'B' | 'C' | 'VETO';
+  convictionLevel: 'low' | 'medium' | 'high' | 'extreme';
   oracle: {
     sentiment: number;
     confidence: number;
@@ -156,7 +145,7 @@ export interface EnhancedHologramLogEntry {
  */
 export interface ConvictionSizingLogEntry {
   timestamp: number;
-  type: "conviction_sizing";
+  type: 'conviction_sizing';
   symbol: string;
   baseSize: number;
   oracleMultiplier: number;
@@ -199,15 +188,14 @@ export class Logger extends SharedLogger {
 
   constructor(config?: Partial<LoggerConfig>) {
     // Determine configuration based on legacy arguments
-    const logDir = config?.logDir || path.join(process.cwd(), "logs");
-    const logFileName = config?.logFileName || "trades.jsonl";
+    const logDir = config?.logDir || path.join(process.cwd(), 'logs');
+    const logFileName = config?.logFileName || 'trades.jsonl';
     const tradeLogPath = path.join(logDir, logFileName);
-    const enableConsole = config?.enableConsoleOutput ??
-      (process.env.NODE_ENV !== "production");
+    const enableConsole = config?.enableConsoleOutput ?? process.env.NODE_ENV !== 'production';
 
     const sharedConfig: SharedLoggerConfig = {
       level: SharedLogLevel.INFO,
-      component: "phase2-hunter",
+      component: 'phase2-hunter',
       enableConsole: enableConsole,
       enableFile: false, // We mostly use tradeLogPath for JSONL
       enablePerformanceLogging: true,
@@ -242,14 +230,14 @@ export class Logger extends SharedLogger {
     signal: SignalData,
     hologramState: HologramState,
     sessionType: SessionType,
-    poiType: "FVG" | "ORDER_BLOCK" | "LIQUIDITY_POOL",
-    cvdConfirmation: boolean,
+    poiType: 'FVG' | 'ORDER_BLOCK' | 'LIQUIDITY_POOL',
+    cvdConfirmation: boolean
   ): void {
     const logEntry: SignalLogEntry = {
       timestamp: Date.now(),
-      type: "signal",
+      type: 'signal',
       symbol: signal.symbol,
-      strategyType: "holographic",
+      strategyType: 'holographic',
       confidence: signal.confidence,
       leverage: signal.leverage,
       entryPrice: signal.entryPrice,
@@ -260,9 +248,7 @@ export class Logger extends SharedLogger {
         score: hologramState.alignmentScore,
         daily: `${hologramState.daily.trend}_${hologramState.daily.location}`,
         h4: `${hologramState.h4.trend}_${hologramState.h4.location}`,
-        m15: `${hologramState.m15.trend}_${
-          hologramState.m15.mss ? "MSS" : "NO_MSS"
-        }`,
+        m15: `${hologramState.m15.trend}_${hologramState.m15.mss ? 'MSS' : 'NO_MSS'}`,
       },
       rsScore: hologramState.rsScore,
       sessionType,
@@ -276,9 +262,9 @@ export class Logger extends SharedLogger {
 
     if (this.localConfig.enableConsoleOutput) {
       console.log(
-        `📊 SIGNAL: ${signal.symbol} ${signal.direction} @ ${signal.entryPrice} (${hologramState.status}, RS:${
-          hologramState.rsScore.toFixed(3)
-        })`,
+        `📊 SIGNAL: ${signal.symbol} ${signal.direction} @ ${signal.entryPrice} (${hologramState.status}, RS:${hologramState.rsScore.toFixed(
+          3
+        )})`
       );
     }
   }
@@ -293,11 +279,11 @@ export class Logger extends SharedLogger {
     orderResult: OrderResult,
     slippage: number,
     signalId?: string,
-    fees?: number,
+    fees?: number
   ): void {
     const logEntry: ExecutionLogEntry = {
       timestamp: Date.now(),
-      type: "execution",
+      type: 'execution',
       signalId,
       orderId: orderResult.orderId,
       symbol: orderResult.symbol,
@@ -305,7 +291,7 @@ export class Logger extends SharedLogger {
       qty: orderResult.qty,
       fillPrice: orderResult.price,
       fillTimestamp: orderResult.timestamp,
-      orderType: "LIMIT", // Phase 2 uses Post-Only Limit Orders
+      orderType: 'LIMIT', // Phase 2 uses Post-Only Limit Orders
       slippage,
       fees,
     };
@@ -314,9 +300,9 @@ export class Logger extends SharedLogger {
 
     if (this.localConfig.enableConsoleOutput) {
       console.log(
-        `✅ FILL: ${orderResult.symbol} ${orderResult.side} ${orderResult.qty} @ ${orderResult.price} (slippage: ${
-          (slippage * 100).toFixed(3)
-        }%)`,
+        `✅ FILL: ${orderResult.symbol} ${orderResult.side} ${orderResult.qty} @ ${orderResult.price} (slippage: ${(
+          slippage * 100
+        ).toFixed(3)}%)`
       );
     }
   }
@@ -329,22 +315,17 @@ export class Logger extends SharedLogger {
   public logPhase2PositionClose(
     positionId: string,
     symbol: string,
-    side: "LONG" | "SHORT",
+    side: 'LONG' | 'SHORT',
     entryPrice: number,
     exitPrice: number,
     profitPercentage: number,
-    closeReason:
-      | "STOP_LOSS"
-      | "TAKE_PROFIT"
-      | "TRAILING_STOP"
-      | "MANUAL"
-      | "EMERGENCY",
+    closeReason: 'STOP_LOSS' | 'TAKE_PROFIT' | 'TRAILING_STOP' | 'MANUAL' | 'EMERGENCY',
     holdTime: number,
-    rValue: number,
+    rValue: number
   ): void {
     const logEntry: CloseLogEntry = {
       timestamp: Date.now(),
-      type: "close",
+      type: 'close',
       positionId,
       symbol,
       side,
@@ -360,11 +341,11 @@ export class Logger extends SharedLogger {
     this.logTradeEntry(logEntry as any);
 
     if (this.localConfig.enableConsoleOutput) {
-      const pnlColor = profitPercentage >= 0 ? "\x1b[32m" : "\x1b[31m";
+      const pnlColor = profitPercentage >= 0 ? '\x1b[32m' : '\x1b[31m';
       console.log(
-        `${pnlColor}💰 CLOSE: ${symbol} ${side} ${
-          profitPercentage.toFixed(2)
-        }% (${rValue.toFixed(2)}R) - ${closeReason}\x1b[0m`,
+        `${pnlColor}💰 CLOSE: ${symbol} ${side} ${profitPercentage.toFixed(
+          2
+        )}% (${rValue.toFixed(2)}R) - ${closeReason}\x1b[0m`
       );
     }
   }
@@ -373,7 +354,7 @@ export class Logger extends SharedLogger {
    * Log error with context - Compatibility method
    */
   public logError(
-    level: "WARNING" | "ERROR" | "CRITICAL",
+    level: 'WARNING' | 'ERROR' | 'CRITICAL',
     message: string,
     context: {
       symbol?: string;
@@ -381,7 +362,7 @@ export class Logger extends SharedLogger {
       function?: string;
       stack?: string;
       data?: any;
-    } = {},
+    } = {}
   ): void {
     this.logPhase2Error(level, message, context);
   }
@@ -390,7 +371,7 @@ export class Logger extends SharedLogger {
    * Log error with context - Internal implementation
    */
   public logPhase2Error(
-    level: "WARNING" | "ERROR" | "CRITICAL",
+    level: 'WARNING' | 'ERROR' | 'CRITICAL',
     message: string,
     context: {
       symbol?: string;
@@ -398,16 +379,16 @@ export class Logger extends SharedLogger {
       function?: string;
       stack?: string;
       data?: any;
-    } = {},
+    } = {}
   ): void {
     const logEntry: ErrorLogEntry = {
       timestamp: Date.now(),
-      type: "error",
+      type: 'error',
       level,
       message,
       context: {
         ...context,
-        phase: "phase2",
+        phase: 'phase2',
       },
     };
 
@@ -415,7 +396,7 @@ export class Logger extends SharedLogger {
     this.logTradeEntry(logEntry as any);
 
     // Also use SharedLogger specific methods for standard error logging
-    if (level === "CRITICAL" || level === "ERROR") {
+    if (level === 'CRITICAL' || level === 'ERROR') {
       // error(message, error?, correlationId?, metadata?)
       this.error(message, new Error(message), undefined, context);
     } else {
@@ -432,8 +413,8 @@ export class Logger extends SharedLogger {
     state: {
       classicScore: number;
       enhancedScore: number;
-      alignment: "A+" | "A" | "B" | "C" | "VETO";
-      convictionLevel: "low" | "medium" | "high" | "extreme";
+      alignment: 'A+' | 'A' | 'B' | 'C' | 'VETO';
+      convictionLevel: 'low' | 'medium' | 'high' | 'extreme';
       oracleScore: {
         sentiment: number;
         confidence: number;
@@ -455,11 +436,11 @@ export class Logger extends SharedLogger {
         manipulation: { detected: boolean };
       } | null;
       enhancementsActive: boolean;
-    },
+    }
   ): void {
     const logEntry: EnhancedHologramLogEntry = {
       timestamp: Date.now(),
-      type: "enhanced_hologram",
+      type: 'enhanced_hologram',
       symbol,
       classicScore: state.classicScore,
       enhancedScore: state.enhancedScore,
@@ -467,32 +448,31 @@ export class Logger extends SharedLogger {
       convictionLevel: state.convictionLevel,
       oracle: state.oracleScore
         ? {
-          sentiment: state.oracleScore.sentiment,
-          confidence: state.oracleScore.confidence,
-          veto: state.oracleScore.veto,
-          convictionMultiplier: state.oracleScore.convictionMultiplier,
-        }
+            sentiment: state.oracleScore.sentiment,
+            confidence: state.oracleScore.confidence,
+            veto: state.oracleScore.veto,
+            convictionMultiplier: state.oracleScore.convictionMultiplier,
+          }
         : null,
       flow: state.flowValidation
         ? {
-          flowType: state.flowValidation.flowType,
-          confidence: state.flowValidation.confidence,
-          institutionalProbability:
-            state.flowValidation.institutionalProbability,
-        }
+            flowType: state.flowValidation.flowType,
+            confidence: state.flowValidation.confidence,
+            institutionalProbability: state.flowValidation.institutionalProbability,
+          }
         : null,
       botTrap: state.botTrapAnalysis
         ? {
-          isSuspect: state.botTrapAnalysis.isSuspect,
-          suspicionScore: state.botTrapAnalysis.suspicionScore,
-        }
+            isSuspect: state.botTrapAnalysis.isSuspect,
+            suspicionScore: state.botTrapAnalysis.suspicionScore,
+          }
         : null,
       globalCVD: state.globalCVD
         ? {
-          consensus: state.globalCVD.consensus,
-          confidence: state.globalCVD.confidence,
-          manipulationDetected: state.globalCVD.manipulation.detected,
-        }
+            consensus: state.globalCVD.consensus,
+            confidence: state.globalCVD.confidence,
+            manipulationDetected: state.globalCVD.manipulation.detected,
+          }
         : null,
       enhancementsActive: state.enhancementsActive,
     };
@@ -501,9 +481,9 @@ export class Logger extends SharedLogger {
 
     if (this.localConfig.enableConsoleOutput) {
       console.log(
-        `🔮 ENHANCED HOLOGRAM: ${symbol} ${state.alignment} (${
-          state.enhancedScore.toFixed(1)
-        }) - ${state.convictionLevel} conviction`,
+        `🔮 ENHANCED HOLOGRAM: ${symbol} ${state.alignment} (${state.enhancedScore.toFixed(
+          1
+        )}) - ${state.convictionLevel} conviction`
       );
     }
   }
@@ -522,11 +502,11 @@ export class Logger extends SharedLogger {
       finalSize: number;
       cappedAt: number;
       reasoning: string[];
-    },
+    }
   ): void {
     const logEntry: ConvictionSizingLogEntry = {
       timestamp: Date.now(),
-      type: "conviction_sizing",
+      type: 'conviction_sizing',
       symbol,
       baseSize: sizing.baseSize,
       oracleMultiplier: sizing.oracleMultiplier,
@@ -542,11 +522,9 @@ export class Logger extends SharedLogger {
 
     if (this.localConfig.enableConsoleOutput) {
       console.log(
-        `📊 CONVICTION SIZING: ${symbol} base=${
-          sizing.baseSize.toFixed(2)
-        } → final=${
-          sizing.finalSize.toFixed(2)
-        } (capped at ${sizing.cappedAt}x)`,
+        `📊 CONVICTION SIZING: ${symbol} base=${sizing.baseSize.toFixed(
+          2
+        )} → final=${sizing.finalSize.toFixed(2)} (capped at ${sizing.cappedAt}x)`
       );
     }
   }
@@ -555,9 +533,10 @@ export class Logger extends SharedLogger {
    * Update logger configuration
    */
   public updateConfig(newConfig: Partial<LoggerConfig>): void {
+    // eslint-disable-next-line functional/immutable-data
     this.localConfig = { ...this.localConfig, ...newConfig };
     console.log(
-      "📊 Logger: Configuration updated locally (Shared logger config immutable at runtime)",
+      '📊 Logger: Configuration updated locally (Shared logger config immutable at runtime)'
     );
   }
 
@@ -606,12 +585,13 @@ export class Logger extends SharedLogger {
  * Default logger instance for Phase 2
  * Lazy initialization to avoid issues with mocking in tests
  */
+// eslint-disable-next-line functional/no-let
 let _logger: Logger | null = null;
 
 export const getLogger = (): Logger => {
   if (!_logger) {
     _logger = new Logger({
-      enableConsoleOutput: process.env.NODE_ENV !== "production",
+      enableConsoleOutput: process.env.NODE_ENV !== 'production',
     });
   }
   return _logger;
@@ -624,23 +604,17 @@ export const logSignal = (
   signal: SignalData,
   hologramState: HologramState,
   sessionType: SessionType,
-  poiType: "FVG" | "ORDER_BLOCK" | "LIQUIDITY_POOL",
-  cvdConfirmation: boolean,
+  poiType: 'FVG' | 'ORDER_BLOCK' | 'LIQUIDITY_POOL',
+  cvdConfirmation: boolean
 ): void => {
-  getLogger().logPhase2Signal(
-    signal,
-    hologramState,
-    sessionType,
-    poiType,
-    cvdConfirmation,
-  );
+  getLogger().logPhase2Signal(signal, hologramState, sessionType, poiType, cvdConfirmation);
 };
 
 export const logExecution = (
   orderResult: OrderResult,
   slippage: number,
   signalId?: string,
-  fees?: number,
+  fees?: number
 ): void => {
   getLogger().logPhase2Execution(orderResult, slippage, signalId, fees);
 };
@@ -648,18 +622,13 @@ export const logExecution = (
 export const logPositionClose = (
   positionId: string,
   symbol: string,
-  side: "LONG" | "SHORT",
+  side: 'LONG' | 'SHORT',
   entryPrice: number,
   exitPrice: number,
   profitPercentage: number,
-  closeReason:
-    | "STOP_LOSS"
-    | "TAKE_PROFIT"
-    | "TRAILING_STOP"
-    | "MANUAL"
-    | "EMERGENCY",
+  closeReason: 'STOP_LOSS' | 'TAKE_PROFIT' | 'TRAILING_STOP' | 'MANUAL' | 'EMERGENCY',
   holdTime: number,
-  rValue: number,
+  rValue: number
 ): void => {
   getLogger().logPhase2PositionClose(
     positionId,
@@ -670,14 +639,14 @@ export const logPositionClose = (
     profitPercentage,
     closeReason,
     holdTime,
-    rValue,
+    rValue
   );
 };
 
 export const logError = (
-  level: "WARNING" | "ERROR" | "CRITICAL",
+  level: 'WARNING' | 'ERROR' | 'CRITICAL',
   message: string,
-  context?: any,
+  context?: any
 ): void => {
   getLogger().logPhase2Error(level, message, context);
 };

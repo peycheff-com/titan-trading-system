@@ -59,11 +59,16 @@ export function CommandPalette() {
     setOpen(false);
   };
 
-  const groups = routes.reduce((acc, route) => {
-    if (!acc[route.group]) acc[route.group] = [];
-    acc[route.group].push(route);
-    return acc;
-  }, {} as Record<string, typeof routes>);
+  const groups = routes.reduce(
+    (acc, route) => {
+      // eslint-disable-next-line functional/immutable-data
+      if (!acc[route.group]) acc[route.group] = [];
+      // eslint-disable-next-line functional/immutable-data
+      acc[route.group].push(route);
+      return acc;
+    },
+    {} as Record<string, typeof routes>,
+  );
 
   return (
     <>

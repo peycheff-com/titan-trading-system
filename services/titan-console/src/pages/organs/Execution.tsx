@@ -9,16 +9,16 @@ import { Zap, Check, AlertTriangle, Clock } from 'lucide-react';
 import { useTitanData } from '@/hooks/useTitanData';
 
 const statusConfig: any = {
-FILLED: { color: 'text-status-healthy', bg: 'bg-status-healthy/10' },
-PARTIAL: { color: 'text-warning', bg: 'bg-warning/10' },
-OPEN: { color: 'text-primary', bg: 'bg-primary/10' },
-CANCELLED: { color: 'text-muted-foreground', bg: 'bg-muted' },
+  FILLED: { color: 'text-status-healthy', bg: 'bg-status-healthy/10' },
+  PARTIAL: { color: 'text-warning', bg: 'bg-warning/10' },
+  OPEN: { color: 'text-primary', bg: 'bg-primary/10' },
+  CANCELLED: { color: 'text-muted-foreground', bg: 'bg-muted' },
 };
 
 const phaseColors: any = {
-scavenger: 'bg-phase-scavenger/10 text-phase-scavenger',
-hunter: 'bg-phase-hunter/10 text-phase-hunter',
-sentinel: 'bg-phase-sentinel/10 text-phase-sentinel',
+  scavenger: 'bg-phase-scavenger/10 text-phase-scavenger',
+  hunter: 'bg-phase-hunter/10 text-phase-hunter',
+  sentinel: 'bg-phase-sentinel/10 text-phase-sentinel',
 };
 
 export default function ExecutionPage() {
@@ -40,7 +40,7 @@ export default function ExecutionPage() {
             qty: t.size,
             filled: t.size,
             price: t.entry_price || t.price,
-            phase: t.phase || 'scavenger'
+            phase: t.phase || 'scavenger',
           }));
           setOrders(normalized);
         }
@@ -64,7 +64,7 @@ export default function ExecutionPage() {
     obi: { imbalance: 0, status: 'pass' },
     depth: { ratio: 0, status: 'pass' },
     slippage: { actual: 0, expected: 0, status: 'pass' },
-    twoPhaseCommit: { prepare: { status: 'pending' }, confirm: { status: 'pending' } }
+    twoPhaseCommit: { prepare: { status: 'pending' }, confirm: { status: 'pending' } },
   };
   const latencySteps = [
     { name: 'Signal', duration: validator.latencyBreakdown.signal },
@@ -115,7 +115,11 @@ export default function ExecutionPage() {
             Avg Latency
           </span>
           <div className="mt-1 font-mono text-xl font-semibold text-foreground">
-            {Math.round(orders.filter((o) => o.latency).reduce((sum, o) => sum + (o.latency || 0), 0) / orders.filter((o) => o.latency).length)}ms
+            {Math.round(
+              orders.filter((o) => o.latency).reduce((sum, o) => sum + (o.latency || 0), 0) /
+                orders.filter((o) => o.latency).length,
+            )}
+            ms
           </div>
         </div>
         <div className="rounded-md border border-border bg-card p-3">
@@ -136,9 +140,7 @@ export default function ExecutionPage() {
               key: 'timestamp',
               header: 'Time',
               render: (order) => (
-                <span className="text-muted-foreground">
-                  {formatTimestamp(order.timestamp)}
-                </span>
+                <span className="text-muted-foreground">{formatTimestamp(order.timestamp)}</span>
               ),
             },
             { key: 'symbol', header: 'Symbol' },
@@ -149,7 +151,7 @@ export default function ExecutionPage() {
                 <span
                   className={cn(
                     'font-medium',
-                    order.side === 'BUY' ? 'text-pnl-positive' : 'text-pnl-negative'
+                    order.side === 'BUY' ? 'text-pnl-positive' : 'text-pnl-negative',
                   )}
                 >
                   {order.side}
@@ -180,7 +182,7 @@ export default function ExecutionPage() {
                 <span
                   className={cn(
                     'rounded px-1.5 py-0.5 text-xxs font-medium capitalize',
-                    phaseColors[order.phase]
+                    phaseColors[order.phase],
                   )}
                 >
                   {order.phase}
@@ -195,7 +197,7 @@ export default function ExecutionPage() {
                   className={cn(
                     'rounded px-1.5 py-0.5 text-xxs font-medium',
                     statusConfig[order.status].bg,
-                    statusConfig[order.status].color
+                    statusConfig[order.status].color,
                   )}
                 >
                   {order.status}
@@ -238,7 +240,7 @@ export default function ExecutionPage() {
                   <span
                     className={cn(
                       'font-medium',
-                      selectedOrder.side === 'BUY' ? 'text-pnl-positive' : 'text-pnl-negative'
+                      selectedOrder.side === 'BUY' ? 'text-pnl-positive' : 'text-pnl-negative',
                     )}
                   >
                     {selectedOrder.side}
@@ -248,7 +250,10 @@ export default function ExecutionPage() {
               <DetailRow label="Type" value={selectedOrder.type} />
               <DetailRow label="Price" value={formatCurrency(selectedOrder.price)} />
               <DetailRow label="Quantity" value={`${selectedOrder.filled}/${selectedOrder.qty}`} />
-              <DetailRow label="Phase" value={<span className="capitalize">{selectedOrder.phase}</span>} />
+              <DetailRow
+                label="Phase"
+                value={<span className="capitalize">{selectedOrder.phase}</span>}
+              />
             </DetailSection>
 
             {/* Validator Snapshot */}
@@ -256,7 +261,9 @@ export default function ExecutionPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between rounded-md bg-muted/30 px-3 py-2">
                   <div>
-                    <span className="text-xs text-muted-foreground">OBI (Order Book Imbalance)</span>
+                    <span className="text-xs text-muted-foreground">
+                      OBI (Order Book Imbalance)
+                    </span>
                     <div className="font-mono text-sm text-foreground">
                       {validator.obi.imbalance.toFixed(2)}
                     </div>
@@ -266,7 +273,7 @@ export default function ExecutionPage() {
                       'flex items-center gap-1 rounded px-1.5 py-0.5 text-xxs font-medium',
                       validator.obi.status === 'pass'
                         ? 'bg-status-healthy/10 text-status-healthy'
-                        : 'bg-status-critical/10 text-status-critical'
+                        : 'bg-status-critical/10 text-status-critical',
                     )}
                   >
                     {validator.obi.status === 'pass' ? (
@@ -290,7 +297,7 @@ export default function ExecutionPage() {
                       'flex items-center gap-1 rounded px-1.5 py-0.5 text-xxs font-medium',
                       validator.depth.status === 'pass'
                         ? 'bg-status-healthy/10 text-status-healthy'
-                        : 'bg-status-critical/10 text-status-critical'
+                        : 'bg-status-critical/10 text-status-critical',
                     )}
                   >
                     {validator.depth.status === 'pass' ? (
@@ -306,7 +313,8 @@ export default function ExecutionPage() {
                   <div>
                     <span className="text-xs text-muted-foreground">Slippage</span>
                     <div className="font-mono text-sm text-foreground">
-                      {(validator.slippage.actual * 100).toFixed(3)}% (exp: {(validator.slippage.expected * 100).toFixed(3)}%)
+                      {(validator.slippage.actual * 100).toFixed(3)}% (exp:{' '}
+                      {(validator.slippage.expected * 100).toFixed(3)}%)
                     </div>
                   </div>
                   <span
@@ -314,7 +322,7 @@ export default function ExecutionPage() {
                       'flex items-center gap-1 rounded px-1.5 py-0.5 text-xxs font-medium',
                       validator.slippage.status === 'pass'
                         ? 'bg-status-healthy/10 text-status-healthy'
-                        : 'bg-status-critical/10 text-status-critical'
+                        : 'bg-status-critical/10 text-status-critical',
                     )}
                   >
                     {validator.slippage.status === 'pass' ? (
@@ -341,10 +349,12 @@ export default function ExecutionPage() {
                       'mt-1 text-sm font-medium',
                       validator.twoPhaseCommit.prepare.status === 'completed'
                         ? 'text-status-healthy'
-                        : 'text-muted-foreground'
+                        : 'text-muted-foreground',
                     )}
                   >
-                    {validator.twoPhaseCommit.prepare.status === 'completed' ? '✓ Completed' : 'Pending'}
+                    {validator.twoPhaseCommit.prepare.status === 'completed'
+                      ? '✓ Completed'
+                      : 'Pending'}
                   </div>
                 </div>
                 <div className="flex items-center text-muted-foreground">→</div>
@@ -358,10 +368,12 @@ export default function ExecutionPage() {
                       'mt-1 text-sm font-medium',
                       validator.twoPhaseCommit.confirm.status === 'completed'
                         ? 'text-status-healthy'
-                        : 'text-muted-foreground'
+                        : 'text-muted-foreground',
                     )}
                   >
-                    {validator.twoPhaseCommit.confirm.status === 'completed' ? '✓ Completed' : 'Pending'}
+                    {validator.twoPhaseCommit.confirm.status === 'completed'
+                      ? '✓ Completed'
+                      : 'Pending'}
                   </div>
                 </div>
               </div>
