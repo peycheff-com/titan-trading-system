@@ -2,9 +2,9 @@ name: Titan Monorepo CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 jobs:
   # ===========================================================================
@@ -87,7 +87,6 @@ jobs:
       - name: Check Contract Drift
         run: ./scripts/ci/check_contracts.sh
 
-
   # ===========================================================================
   # Node.js Services Matrix (Lint, Test, Build)
   # ===========================================================================
@@ -154,18 +153,6 @@ jobs:
       run:
         working-directory: services/titan-execution-rs
 
-    services:
-      nats:
-        image: nats:2.10.22-alpine
-        ports:
-          - 4222:4222
-        options: >-
-          --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:8222/varz || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-          --cmd "-js -m 8222"
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -184,10 +171,25 @@ jobs:
       - name: Lint (Clippy)
         run: cargo clippy -- -D warnings
 
+      - name: Start NATS
+        run: |
+          docker run -d --name nats -p 4222:4222 nats:2.10.22-alpine -js -m 8222
+          echo "Waiting for NATS..."
+          for i in {1..30}; do
+            if wget --no-verbose --spider --tries=1 http://localhost:8222/varz; then
+              echo "NATS is up"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "NATS failed to start"
+          docker logs nats
+          exit 1
+
       - name: Run Tests
         env:
-           NATS_URL: nats://localhost:4222
-           RUST_LOG: info
+          NATS_URL: nats://localhost:4222
+          RUST_LOG: info
         run: cargo test
 
       - name: Build
