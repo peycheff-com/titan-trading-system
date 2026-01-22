@@ -177,10 +177,8 @@ export class BybitPerpsClient {
    * @param callback - Callback for ticker updates
    */
   public subscribeTicker(symbols: string[], callback: TickerCallback): void {
-    // eslint-disable-next-line functional/immutable-data
     this.tickerCallbacks.clear();
     for (const symbol of symbols) {
-      // eslint-disable-next-line functional/immutable-data
       this.tickerCallbacks.set(symbol, callback);
     }
 
@@ -192,7 +190,6 @@ export class BybitPerpsClient {
   }
 
   private connectWebSocket(symbols: string[]): void {
-    // eslint-disable-next-line functional/immutable-data
     this.ws = new WebSocket(this.WS_URL);
 
     this.ws.on('open', () => {
@@ -207,7 +204,6 @@ export class BybitPerpsClient {
       this.ws?.send(JSON.stringify(msg));
 
       // Start heartbeat
-      // eslint-disable-next-line functional/immutable-data
       this.wsPingInterval = setInterval(() => {
         if (this.ws?.readyState === WebSocket.OPEN) {
           this.ws.send(JSON.stringify({ op: 'ping' }));
@@ -252,7 +248,6 @@ export class BybitPerpsClient {
     if (this.ws) {
       this.ws.removeAllListeners(); // Prevent reconnect loop
       this.ws.close();
-      // eslint-disable-next-line functional/immutable-data
       this.ws = null;
     }
   }
@@ -330,7 +325,6 @@ export class BybitPerpsClient {
       }));
 
       // Sort by timestamp (oldest first)
-      // eslint-disable-next-line functional/immutable-data
       ohlcv.sort((a, b) => a.timestamp - b.timestamp);
 
       this.setCache(cacheKey, ohlcv, this.CACHE_TTL);
@@ -460,17 +454,14 @@ export class BybitPerpsClient {
         if (!params.price) {
           throw new Error('Price is required for limit orders');
         }
-        // eslint-disable-next-line functional/immutable-data
         orderParams.price = params.price.toString();
       }
 
       // Add stop loss and take profit if provided
       if (params.stopLoss) {
-        // eslint-disable-next-line functional/immutable-data
         orderParams.stopLoss = params.stopLoss.toString();
       }
       if (params.takeProfit) {
-        // eslint-disable-next-line functional/immutable-data
         orderParams.takeProfit = params.takeProfit.toString();
       }
 
@@ -508,10 +499,8 @@ export class BybitPerpsClient {
     params: OrderParams,
     maxRetries: number = 2,
   ): Promise<OrderResult> {
-    // eslint-disable-next-line functional/no-let
     let lastError: Error;
 
-    // eslint-disable-next-line functional/no-let
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         // Set timeout for each attempt
@@ -551,9 +540,7 @@ export class BybitPerpsClient {
     signed: boolean = false,
   ): Promise<any> {
     const timestamp = Date.now().toString();
-    // eslint-disable-next-line functional/no-let
     let url = `${this.baseUrl}${endpoint}`;
-    // eslint-disable-next-line functional/no-let
     let body = '';
 
     // Prepare headers
@@ -564,7 +551,6 @@ export class BybitPerpsClient {
     };
 
     if (signed) {
-      // eslint-disable-next-line functional/immutable-data
       headers['X-BAPI-API-KEY'] = this.apiKey;
     }
 
@@ -585,7 +571,6 @@ export class BybitPerpsClient {
         this.apiKey +
         '5000' +
         (method === 'GET' ? new URLSearchParams(params).toString() : body);
-      // eslint-disable-next-line functional/immutable-data
       headers['X-BAPI-SIGN'] = createHmac('sha256', this.apiSecret)
         .update(signaturePayload)
         .digest('hex');
@@ -671,7 +656,6 @@ export class BybitPerpsClient {
 
     const now = Date.now();
     if (now - entry.timestamp > entry.ttl) {
-      // eslint-disable-next-line functional/immutable-data
       this.cache.delete(key);
       return null;
     }
@@ -686,7 +670,6 @@ export class BybitPerpsClient {
    * @param ttl - Time to live in milliseconds
    */
   private setCache<T>(key: string, data: T, ttl: number): void {
-    // eslint-disable-next-line functional/immutable-data
     this.cache.set(key, {
       data,
       timestamp: Date.now(),
@@ -707,7 +690,6 @@ export class BybitPerpsClient {
    * Clear cache
    */
   public clearCache(): void {
-    // eslint-disable-next-line functional/immutable-data
     this.cache.clear();
   }
 

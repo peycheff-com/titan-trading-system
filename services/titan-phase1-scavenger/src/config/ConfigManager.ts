@@ -209,7 +209,6 @@ export class ConfigManager extends EventEmitter {
     };
 
     if (rawPhase) {
-      // eslint-disable-next-line functional/immutable-data
       this.currentConfig = this.buildMergedConfig(rawPhase, brainOverrides);
     }
   }

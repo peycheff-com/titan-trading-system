@@ -47,7 +47,6 @@ export class HealthServer {
    */
   async start(): Promise<void> {
     return new Promise((resolve, reject) => {
-      // eslint-disable-next-line functional/immutable-data
       this.server = http.createServer((req, res) => {
         this.handleRequest(req, res);
       });

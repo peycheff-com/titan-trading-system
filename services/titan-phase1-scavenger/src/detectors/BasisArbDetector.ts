@@ -25,7 +25,7 @@
  * - Leverage: 10x
  */
 
-import { Tripwire } from '../types/index.js';
+import { Tripwire } from "../types/index.js";
 
 interface BinanceClient {
   getSpotPrice(symbol: string): Promise<number>;
@@ -38,12 +38,12 @@ interface BybitClient {
 
 export class BasisArbDetector {
   private binanceClient: BinanceClient;
-  private bybitClient: BybitClient;
+  private bybitClient: BybitClient | null;
   private isGeoBlocked: boolean = false;
 
   constructor(binanceClient: BinanceClient, bybitClient: BybitClient | null) {
     this.binanceClient = binanceClient;
-    this.bybitClient = bybitClient as any; // Can be null when using titan-execution service
+    this.bybitClient = bybitClient; // Can be null when using titan-execution service
   }
 
   /**
@@ -62,6 +62,7 @@ export class BasisArbDetector {
       const spotPrice = await this.binanceClient.getSpotPrice(symbol);
 
       // 2. Get Perp price from Bybit
+      if (!this.bybitClient) return null;
       const perpPrice = await this.bybitClient.getCurrentPrice(symbol);
 
       // 3. Calculate basis: (Spot - Perp) / Spot
@@ -73,7 +74,11 @@ export class BasisArbDetector {
         return null;
       }
 
-      console.log(`🔍 Checking basis arb: ${symbol} (Basis: ${(basis * 100).toFixed(2)}%)`);
+      console.log(
+        `🔍 Checking basis arb: ${symbol} (Basis: ${
+          (basis * 100).toFixed(2)
+        }%)`,
+      );
 
       // 5. Validate with volume (ensure it's not a dead market)
       const volume = await this.bybitClient.get24hVolume(symbol);
@@ -94,16 +99,18 @@ export class BasisArbDetector {
       console.log(`   Basis: ${(basis * 100).toFixed(2)}%`);
       console.log(`   Volume: $${(volume / 1000000).toFixed(1)}M`);
       console.log(
-        `   Target: ${targetPrice.toFixed(2)} (+${((targetPrice / perpPrice - 1) * 100).toFixed(
-          1,
-        )}%)`,
+        `   Target: ${targetPrice.toFixed(2)} (+${
+          ((targetPrice / perpPrice - 1) * 100).toFixed(
+            1,
+          )
+        }%)`,
       );
 
       return {
         symbol,
         triggerPrice: perpPrice * 1.001, // Aggressive entry (+0.1%)
-        direction: 'LONG',
-        trapType: 'BASIS_ARB',
+        direction: "LONG",
+        trapType: "BASIS_ARB",
         confidence: 85,
         leverage: 10,
         estimatedCascadeSize: basis, // Expected convergence
@@ -111,14 +118,14 @@ export class BasisArbDetector {
         targetPrice,
         stopLoss,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Check for Geo-blocking (HTTP 403)
-      if (error && (error.message || '').includes('403')) {
+      const err = error as { message?: string };
+      if (err && (err.message || "").includes("403")) {
         if (!this.isGeoBlocked) {
           console.warn(
             `⛔ Geo-blocking detected for ${symbol} (HTTP 403). Disabling BasisArbDetector.`,
           );
-          // eslint-disable-next-line functional/immutable-data
           this.isGeoBlocked = true;
         }
         return null;

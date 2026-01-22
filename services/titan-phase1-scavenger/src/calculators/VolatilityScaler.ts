@@ -47,7 +47,6 @@ export class VolatilityScaler {
     // Cap ratio to avoid extreme values (0.5x to 3.0x)
     const clampedRatio = Math.min(Math.max(ratio, 0.5), 3.0);
 
-    // eslint-disable-next-line functional/no-let
     let regime: VolatilityMetrics['regime'] = 'NORMAL';
     if (clampedRatio < 0.8) regime = 'LOW';
     else if (clampedRatio > 1.5) regime = 'HIGH';
@@ -78,7 +77,6 @@ export class VolatilityScaler {
     const trueRanges: number[] = [];
 
     // Start from index 1 (need previous close)
-    // eslint-disable-next-line functional/no-let
     for (let i = ohlcv.length - period - 1; i < ohlcv.length; i++) {
       if (i <= 0) continue; // Skip first candle if it's index 0
 
@@ -91,7 +89,6 @@ export class VolatilityScaler {
         Math.abs(current.low - prev.close),
       );
 
-      // eslint-disable-next-line functional/immutable-data
       trueRanges.push(tr);
     }
 

@@ -32,19 +32,14 @@ export class OrderFlowImbalanceCalculator {
   update(bestBid: number, bestBidSize: number, bestAsk: number, bestAskSize: number): number {
     // Skip first tick
     if (this.lastBestBid === 0 || this.lastBestAsk === 0) {
-      // eslint-disable-next-line functional/immutable-data
       this.lastBestBid = bestBid;
-      // eslint-disable-next-line functional/immutable-data
       this.lastBestBidSize = bestBidSize;
-      // eslint-disable-next-line functional/immutable-data
       this.lastBestAsk = bestAsk;
-      // eslint-disable-next-line functional/immutable-data
       this.lastBestAskSize = bestAskSize;
       return 0;
     }
 
     // Calculate Bid OFI Contribution
-    // eslint-disable-next-line functional/no-let
     let bidOfi = 0;
     if (bestBid > this.lastBestBid) {
       bidOfi = bestBidSize;
@@ -55,7 +50,6 @@ export class OrderFlowImbalanceCalculator {
     }
 
     // Calculate Ask OFI Contribution
-    // eslint-disable-next-line functional/no-let
     let askOfi = 0;
     if (bestAsk < this.lastBestAsk) {
       askOfi = bestAskSize;
@@ -68,21 +62,15 @@ export class OrderFlowImbalanceCalculator {
     const ofi = bidOfi - askOfi;
 
     // Update History smoothed
-    // eslint-disable-next-line functional/immutable-data
     this.history.push(ofi);
     if (this.history.length > this.WINDOW_SIZE) {
-      // eslint-disable-next-line functional/immutable-data
       this.history.shift();
     }
 
     // Update Last State
-    // eslint-disable-next-line functional/immutable-data
     this.lastBestBid = bestBid;
-    // eslint-disable-next-line functional/immutable-data
     this.lastBestBidSize = bestBidSize;
-    // eslint-disable-next-line functional/immutable-data
     this.lastBestAsk = bestAsk;
-    // eslint-disable-next-line functional/immutable-data
     this.lastBestAskSize = bestAskSize;
 
     return ofi;
@@ -105,15 +93,10 @@ export class OrderFlowImbalanceCalculator {
   }
 
   reset(): void {
-    // eslint-disable-next-line functional/immutable-data
     this.lastBestBid = 0;
-    // eslint-disable-next-line functional/immutable-data
     this.lastBestBidSize = 0;
-    // eslint-disable-next-line functional/immutable-data
     this.lastBestAsk = 0;
-    // eslint-disable-next-line functional/immutable-data
     this.lastBestAskSize = 0;
-    // eslint-disable-next-line functional/immutable-data
     this.history = [];
   }
 }

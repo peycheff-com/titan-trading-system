@@ -32,7 +32,6 @@ export class TrapStateManager {
   }
 
   setTrapMap(map: Map<string, Tripwire[]>): void {
-    // eslint-disable-next-line functional/immutable-data
     this.trapMap = map;
   }
 
@@ -41,7 +40,6 @@ export class TrapStateManager {
   }
 
   setTraps(symbol: string, traps: Tripwire[]): void {
-    // eslint-disable-next-line functional/immutable-data
     this.trapMap.set(symbol, traps);
   }
 
@@ -50,7 +48,6 @@ export class TrapStateManager {
   }
 
   clearTraps(): void {
-    // eslint-disable-next-line functional/immutable-data
     this.trapMap.clear();
   }
 
@@ -60,12 +57,10 @@ export class TrapStateManager {
   }
 
   setVolumeCounter(symbol: string, counter: VolumeCounter): void {
-    // eslint-disable-next-line functional/immutable-data
     this.volumeCounters.set(symbol, counter);
   }
 
   deleteVolumeCounter(symbol: string): void {
-    // eslint-disable-next-line functional/immutable-data
     this.volumeCounters.delete(symbol);
   }
 
@@ -75,7 +70,6 @@ export class TrapStateManager {
   }
 
   setLatestPrice(symbol: string, price: number): void {
-    // eslint-disable-next-line functional/immutable-data
     this.latestPrices.set(symbol, price);
   }
 
@@ -85,7 +79,6 @@ export class TrapStateManager {
   }
 
   setLastActivationTime(symbol: string, time: number): void {
-    // eslint-disable-next-line functional/immutable-data
     this.lastActivationTime.set(symbol, time);
   }
 
@@ -95,13 +88,11 @@ export class TrapStateManager {
 
   incrementFailedAttempts(symbol: string): number {
     const current = this.getFailedAttempts(symbol);
-    // eslint-disable-next-line functional/immutable-data
     this.failedAttempts.set(symbol, current + 1);
     return current + 1;
   }
 
   resetFailedAttempts(symbol: string): void {
-    // eslint-disable-next-line functional/immutable-data
     this.failedAttempts.set(symbol, 0);
   }
 
@@ -110,7 +101,6 @@ export class TrapStateManager {
   }
 
   blacklistSymbol(symbol: string, until: number): void {
-    // eslint-disable-next-line functional/immutable-data
     this.blacklistedUntil.set(symbol, until);
   }
 

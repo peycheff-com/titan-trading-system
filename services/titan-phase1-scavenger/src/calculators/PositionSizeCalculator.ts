@@ -90,7 +90,6 @@ export class PositionSizeCalculator {
     const finalKellyPercent = Math.max(0, safeKellyPercent);
 
     // Calculate position size in USD
-    // eslint-disable-next-line functional/no-let
     let positionSize = equity * finalKellyPercent;
 
     // Cap at max position size from config
