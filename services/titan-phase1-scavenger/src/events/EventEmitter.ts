@@ -43,11 +43,9 @@ export class EventEmitter {
    */
   on(event: EventType, handler: EventHandler): void {
     if (!this.listeners.has(event)) {
-      // eslint-disable-next-line functional/immutable-data
       this.listeners.set(event, []);
     }
 
-    // eslint-disable-next-line functional/immutable-data
     this.listeners.get(event)!.push(handler);
   }
 
@@ -60,7 +58,6 @@ export class EventEmitter {
 
     const index = handlers.indexOf(handler);
     if (index !== -1) {
-      // eslint-disable-next-line functional/immutable-data
       handlers.splice(index, 1);
     }
   }
@@ -86,10 +83,8 @@ export class EventEmitter {
    */
   removeAllListeners(event?: EventType): void {
     if (event) {
-      // eslint-disable-next-line functional/immutable-data
       this.listeners.delete(event);
     } else {
-      // eslint-disable-next-line functional/immutable-data
       this.listeners.clear();
     }
   }

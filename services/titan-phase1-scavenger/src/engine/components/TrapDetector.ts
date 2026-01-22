@@ -89,7 +89,6 @@ export class TrapDetector {
       if (priceDistance > 0.001) continue;
 
       // Volume Accumulation
-      // eslint-disable-next-line functional/no-let
       let counter = this.stateManager.getVolumeCounter(symbol);
       if (!counter) {
         counter = {
@@ -101,16 +100,13 @@ export class TrapDetector {
         this.stateManager.setVolumeCounter(symbol, counter);
       }
 
-      // eslint-disable-next-line functional/immutable-data
       counter.count += trades.length;
 
       // Micro-CVD
       for (const trade of trades) {
         if (!trade.isBuyerMaker) {
-          // eslint-disable-next-line functional/immutable-data
           counter.buyVolume += trade.qty; // Taker BUY
         } else {
-          // eslint-disable-next-line functional/immutable-data
           counter.sellVolume += trade.qty; // Taker SELL
         }
       }
@@ -167,7 +163,6 @@ export class TrapDetector {
       return;
     }
 
-    // eslint-disable-next-line functional/no-let
     let isHolding = false;
 
     if (trap.direction === 'LONG') {

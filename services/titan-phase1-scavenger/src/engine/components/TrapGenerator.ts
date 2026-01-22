@@ -56,7 +56,6 @@ export class TrapGenerator {
   }
 
   setOnTickerCallback(callback: (symbol: string, price: number, timestamp: number) => void): void {
-    // eslint-disable-next-line functional/immutable-data
     this.onTickerCallback = callback;
   }
 
@@ -105,7 +104,6 @@ export class TrapGenerator {
 
             // Pattern: Range Breakout
             if (structure.regime === 'RANGE') {
-              // eslint-disable-next-line functional/immutable-data
               tripwires.push({
                 id: `${symbol}-L-${Date.now()}`,
                 symbol,
@@ -119,7 +117,6 @@ export class TrapGenerator {
                 estimatedCascadeSize: 0.02,
                 activated: false,
               });
-              // eslint-disable-next-line functional/immutable-data
               tripwires.push({
                 id: `${symbol}-S-${Date.now()}`,
                 symbol,
@@ -137,7 +134,6 @@ export class TrapGenerator {
 
             // Pattern: Trend Continuation (Pullback)
             if (structure.regime === 'TREND_UP') {
-              // eslint-disable-next-line functional/immutable-data
               tripwires.push({
                 id: `${symbol}-L-PB-${Date.now()}`,
                 symbol,
@@ -152,7 +148,6 @@ export class TrapGenerator {
                 activated: false,
               });
             } else if (structure.regime === 'TREND_DOWN') {
-              // eslint-disable-next-line functional/immutable-data
               tripwires.push({
                 id: `${symbol}-S-PB-${Date.now()}`,
                 symbol,
@@ -169,11 +164,8 @@ export class TrapGenerator {
             }
 
             // Add Detected Traps
-            // eslint-disable-next-line functional/immutable-data
             if (oiTrap) tripwires.push(oiTrap);
-            // eslint-disable-next-line functional/immutable-data
             if (fundingTrap) tripwires.push(fundingTrap);
-            // eslint-disable-next-line functional/immutable-data
             if (basisTrap) tripwires.push(basisTrap);
 
             // Store Traps
@@ -239,9 +231,7 @@ export class TrapGenerator {
       return { atr: 0, regime: 'LOW_VOL', positionSizeMultiplier: 1 };
     }
 
-    // eslint-disable-next-line functional/no-let
     let trSum = 0;
-    // eslint-disable-next-line functional/no-let
     for (let i = 1; i < ohlcv.length; i++) {
       const high = ohlcv[i].high;
       const low = ohlcv[i].low;

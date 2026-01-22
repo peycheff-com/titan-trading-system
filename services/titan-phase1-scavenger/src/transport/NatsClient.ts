@@ -53,11 +53,8 @@ export class NatsClient {
     // Remove flattened metadata fields if they exist to avoid duplication in payload
     // const { t_signal, timestamp, meta, ...cleanSignal } = signal;
     const cleanSignal = { ...signal };
-    // eslint-disable-next-line functional/immutable-data
     delete cleanSignal.t_signal;
-    // eslint-disable-next-line functional/immutable-data
     delete cleanSignal.timestamp;
-    // eslint-disable-next-line functional/immutable-data
     delete cleanSignal.meta;
 
     try {
@@ -93,7 +90,6 @@ export class NatsClient {
     // Shared client handles callback execution safely
     await this.client.subscribe('powerlaw.metrics.>', (data: unknown, subject: string) => {
       // Dual Read: Check if it's an Envelope or raw data
-      // eslint-disable-next-line functional/no-let
       let payload = data;
 
       // Simple heuristic for Envelope: has 'payload' and 'type'

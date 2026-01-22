@@ -177,7 +177,6 @@ export class TitanTrap {
     await this.updateSubscriptions();
 
     const updateInterval = this.config.getConfig().updateInterval || 60000;
-    // eslint-disable-next-line functional/immutable-data
     this.preComputationInterval = setInterval(async () => {
       await this.generator.updateTrapMap();
       await this.updateSubscriptions();
@@ -238,7 +237,6 @@ export class TitanTrap {
    */
 
   private startMemoryMonitoring(): void {
-    // eslint-disable-next-line functional/immutable-data
     this.memoryMonitorInterval = setInterval(() => {
       const memoryUsage = process.memoryUsage();
       const heapUsedMB = memoryUsage.heapUsed / 1024 / 1024;
@@ -261,7 +259,6 @@ export class TitanTrap {
   }
 
   private startStateBroadcast(): void {
-    // eslint-disable-next-line functional/immutable-data
     this.stateBroadcastInterval = setInterval(() => {
       this.broadcastState();
     }, 5000);

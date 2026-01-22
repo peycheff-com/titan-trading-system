@@ -25,7 +25,7 @@
  * - Leverage: 20x
  */
 
-import { Tripwire } from '../types/index.js';
+import { Tripwire } from "../types/index.js";
 
 interface OIHistoryPoint {
   oi: number;
@@ -53,12 +53,12 @@ interface CVDCalculator {
 
 export class OIWipeoutDetector {
   private oiHistory: Map<string, OIHistoryPoint[]> = new Map();
-  private bybitClient: BybitClient;
+  private bybitClient: BybitClient | null;
   private cvdCalculator: CVDCalculator;
   private isGeoBlocked: boolean = false;
 
   constructor(bybitClient: BybitClient | null, cvdCalculator: CVDCalculator) {
-    this.bybitClient = bybitClient as any; // Can be null when using titan-execution service
+    this.bybitClient = bybitClient; // Can be null when using titan-execution service
     this.cvdCalculator = cvdCalculator;
   }
 
@@ -74,13 +74,17 @@ export class OIWipeoutDetector {
     if (this.isGeoBlocked) return null;
 
     try {
+      if (!this.bybitClient) return null;
+
       // 1. Get current Open Interest
       const currentOI = await this.bybitClient.getOpenInterest(symbol);
       const currentPrice = await this.bybitClient.getCurrentPrice(symbol);
 
       // 2. Get OI from 5 minutes ago
       const history = this.oiHistory.get(symbol) || [];
-      const fiveMinAgo = history.find((h) => Date.now() - h.timestamp >= 300000);
+      const fiveMinAgo = history.find((h) =>
+        Date.now() - h.timestamp >= 300000
+      );
 
       if (!fiveMinAgo) {
         // Not enough history yet
@@ -91,7 +95,7 @@ export class OIWipeoutDetector {
       const oiDrop = (fiveMinAgo.oi - currentOI) / fiveMinAgo.oi;
 
       // 4. Calculate price drop %
-      const priceHistory = await this.bybitClient.fetchOHLCV(symbol, '1m', 5);
+      const priceHistory = await this.bybitClient.fetchOHLCV(symbol, "1m", 5);
       if (priceHistory.length < 5) {
         return null;
       }
@@ -122,18 +126,20 @@ export class OIWipeoutDetector {
       console.log(`💀 OI WIPEOUT DETECTED: ${symbol}`);
       console.log(`   Price Drop: ${(priceDrop * 100).toFixed(1)}%`);
       console.log(`   OI Drop: ${(oiDrop * 100).toFixed(1)}%`);
-      console.log(`   CVD: ${cvd > 0 ? 'GREEN' : 'RED'}`);
+      console.log(`   CVD: ${cvd > 0 ? "GREEN" : "RED"}`);
       console.log(
-        `   Target: ${targetPrice.toFixed(2)} (+${((targetPrice / currentPrice - 1) * 100).toFixed(
-          1,
-        )}%)`,
+        `   Target: ${targetPrice.toFixed(2)} (+${
+          ((targetPrice / currentPrice - 1) * 100).toFixed(
+            1,
+          )
+        }%)`,
       );
 
       return {
         symbol,
         triggerPrice: currentPrice, // Enter immediately
-        direction: 'LONG',
-        trapType: 'OI_WIPEOUT',
+        direction: "LONG",
+        trapType: "OI_WIPEOUT",
         confidence: 95,
         leverage: 20,
         estimatedCascadeSize: 0.05, // 5% bounce expected
@@ -141,14 +147,14 @@ export class OIWipeoutDetector {
         targetPrice,
         stopLoss: currentPrice * 0.98, // -2% stop
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Check for Geo-blocking (HTTP 403)
-      if (error && (error.message || '').includes('403')) {
+      const err = error as { message?: string };
+      if (err && (err.message || "").includes("403")) {
         if (!this.isGeoBlocked) {
           console.warn(
             `⛔ Geo-blocking detected for ${symbol} (HTTP 403). Disabling OIWipeoutDetector.`,
           );
-          // eslint-disable-next-line functional/immutable-data
           this.isGeoBlocked = true;
         }
         return null;
@@ -169,17 +175,14 @@ export class OIWipeoutDetector {
    */
   recordOI(symbol: string, oi: number): void {
     if (!this.oiHistory.has(symbol)) {
-      // eslint-disable-next-line functional/immutable-data
       this.oiHistory.set(symbol, []);
     }
 
     const history = this.oiHistory.get(symbol)!;
-    // eslint-disable-next-line functional/immutable-data
     history.push({ oi, timestamp: Date.now() });
 
     // Keep only last 10 minutes
     const cutoff = Date.now() - 600000;
-    // eslint-disable-next-line functional/immutable-data
     this.oiHistory.set(
       symbol,
       history.filter((h) => h.timestamp > cutoff),
@@ -197,7 +200,6 @@ export class OIWipeoutDetector {
    * Clear OI history for a symbol (for testing)
    */
   clearOIHistory(symbol: string): void {
-    // eslint-disable-next-line functional/immutable-data
     this.oiHistory.delete(symbol);
   }
 }

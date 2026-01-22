@@ -19,7 +19,6 @@ export class ExecutionStrategy {
     leaderStatus: 'BYBIT' | 'BINANCE' | 'EQUAL',
   ): ExecutionParams {
     // 1. Lead/Lag Slippage Adjustment
-    // eslint-disable-next-line functional/no-let
     let maxSlippageBps = 50;
     if (leaderStatus === 'BYBIT') {
       maxSlippageBps = 30;
@@ -27,9 +26,7 @@ export class ExecutionStrategy {
     }
 
     // 2. Dynamic Velocity Thresholds
-    // eslint-disable-next-line functional/no-let
     let extremeVelocity = config.extremeVelocityThreshold || 0.005;
-    // eslint-disable-next-line functional/no-let
     let moderateVelocity = config.moderateVelocityThreshold || 0.001;
 
     if (trap.volatilityMetrics?.atr) {
@@ -46,9 +43,7 @@ export class ExecutionStrategy {
 
     // 3. Order Type Logic
     const aggressiveMarkup = config.aggressiveLimitMarkup || 0.002;
-    // eslint-disable-next-line functional/no-let
     let orderType: 'MARKET' | 'LIMIT';
-    // eslint-disable-next-line functional/no-let
     let limitPrice: number | undefined;
 
     if (velocity > extremeVelocity) {
