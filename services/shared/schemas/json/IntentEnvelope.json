@@ -7,7 +7,7 @@
         "id": {
           "type": "string",
           "pattern": "^[0-9A-Z]{26}$",
-          "default": "01KFKJR9RKWNHA37XD7KMWFP2J"
+          "default": "00000000000000000000000000"
         },
         "type": {
           "type": "string"
@@ -17,14 +17,14 @@
         },
         "ts": {
           "type": "integer",
-          "default": 1769109989139
+          "default": 0
         },
         "producer": {
           "type": "string"
         },
         "correlation_id": {
           "type": "string",
-          "default": "01KFKJR9RK7TSG4G5GNE1WX8MV"
+          "default": "00000000000000000000000000"
         },
         "causation_id": {
           "type": "string"
