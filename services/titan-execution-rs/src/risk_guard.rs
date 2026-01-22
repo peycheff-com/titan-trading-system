@@ -359,6 +359,8 @@ mod tests {
             metadata: None,
             exchange: None,
             position_mode: None,
+            child_fills: vec![],
+            filled_size: dec!(0),
         }
     }
 
@@ -366,7 +368,7 @@ mod tests {
     fn test_whitelist_rejection() {
         let (p, path) = create_test_persistence();
         let ctx = Arc::new(ExecutionContext::new_system());
-        let state = Arc::new(RwLock::new(ShadowState::new(p, ctx)));
+        let state = Arc::new(RwLock::new(ShadowState::new(p, ctx, Some(10000.0))));
         let mut policy = RiskPolicy::default();
         policy.symbol_whitelist.clear();
         policy.symbol_whitelist.insert("BTC/USDT".to_string());
@@ -390,7 +392,7 @@ mod tests {
     fn test_max_notional_rejection() {
         let (p, path) = create_test_persistence();
         let ctx = Arc::new(ExecutionContext::new_system());
-        let state = Arc::new(RwLock::new(ShadowState::new(p, ctx)));
+        let state = Arc::new(RwLock::new(ShadowState::new(p, ctx, Some(10000.0))));
         let mut policy = RiskPolicy::default();
         policy.max_position_notional = dec!(10000.0); // Max $10k
 
@@ -415,9 +417,9 @@ mod tests {
     fn test_daily_loss_rejection() {
         let (p, path) = create_test_persistence();
         let ctx = Arc::new(ExecutionContext::new_system());
-        let state = Arc::new(RwLock::new(ShadowState::new(p, ctx)));
+        let state = Arc::new(RwLock::new(ShadowState::new(p, ctx, Some(10000.0))));
         let mut policy = RiskPolicy::default();
-        policy.max_daily_loss = dec!(-1000.0);
+        policy.max_daily_loss = dec!(-800.0);
 
         let guard = RiskGuard::new(policy, state.clone());
 
@@ -431,8 +433,9 @@ mod tests {
             s.process_intent(open.clone());
             s.confirm_execution(
                 &open.signal_id,
-                dec!(10.0),
-                dec!(100.0),
+                "child-open",
+                dec!(100.0), // fill price
+                dec!(10.0),  // fill size
                 true,
                 dec!(0),
                 "USDT".to_string(),
@@ -447,8 +450,9 @@ mod tests {
             s.process_intent(close.clone());
             s.confirm_execution(
                 &close.signal_id,
+                "child-close",
                 dec!(5.0),
-                dec!(100.0),
+                dec!(5.0),
                 true,
                 dec!(0),
                 "USDT".to_string(),
@@ -463,8 +467,9 @@ mod tests {
             s.process_intent(open);
             s.confirm_execution(
                 &sid,
-                dec!(10.0),
+                "child-open",
                 dec!(100.0),
+                dec!(10.0),
                 true,
                 dec!(0),
                 "USDT".to_string(),
@@ -475,8 +480,9 @@ mod tests {
             s.process_intent(close);
             s.confirm_execution(
                 &sid2,
+                "child-close",
+                dec!(5.0),
                 dec!(4.0),
-                dec!(100.0),
                 true,
                 dec!(0),
                 "USDT".to_string(),

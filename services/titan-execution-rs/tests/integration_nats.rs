@@ -20,6 +20,9 @@ use titan_execution_rs::risk_policy::RiskPolicy;
 use titan_execution_rs::persistence::store::PersistenceStore;
 use titan_execution_rs::persistence::redb_store::RedbStore;
 use titan_execution_rs::persistence::wal::WalManager;
+use hmac::{Hmac, Mac};
+use sha2::Sha256;
+use hex;
 
 
 fn create_test_persistence() -> (Arc<PersistenceStore>, String) {
@@ -38,11 +41,12 @@ async fn test_full_execution_flow() {
         .try_init();
 
     // 1. Core Setup
+    std::env::set_var("HMAC_SECRET", "test-secret-123");
     let market_data = Arc::new(MarketDataEngine::new(None));
     let halt = Arc::new(GlobalHalt::new());
     let (persistence, _db_path) = create_test_persistence();
     let ctx = Arc::new(ExecutionContext::new_system());
-    let shadow_state = Arc::new(RwLock::new(ShadowState::new(persistence, ctx.clone())));
+    let shadow_state = Arc::new(RwLock::new(ShadowState::new(persistence, ctx.clone(), Some(10000.0))));
     // Risk Guard
     let risk_policy = RiskPolicy::default(); // Assumes Default impl or I need to construct one
     let risk_guard = Arc::new(RiskGuard::new(risk_policy, shadow_state.clone()));
@@ -107,7 +111,8 @@ async fn test_full_execution_flow() {
         sim_engine.clone(),
         halt.clone(),
         risk_guard.clone(),
-        ctx.clone()
+        ctx.clone(),
+        5000 // freshness threshold
     ).await.expect("Failed to start engine");
 
     // 4. Test Subscription (Listen for Fills + DLQ)
@@ -138,7 +143,28 @@ async fn test_full_execution_flow() {
         "position_mode": "one_way"
     });
     
-    let payload = serde_json::to_vec(&intent_payload).unwrap();
+    let ts = Utc::now().timestamp_millis();
+    let nonce = uuid::Uuid::new_v4().to_string();
+    let payload_str = serde_json::to_string(&intent_payload).unwrap();
+    let canonical = format!("{}.{}.{}", ts, nonce, payload_str);
+    
+    type HmacSha256 = Hmac<Sha256>;
+    let mut mac = HmacSha256::new_from_slice(b"test-secret-123").unwrap();
+    mac.update(canonical.as_bytes());
+    let sig = hex::encode(mac.finalize().into_bytes());
+
+    let envelope = serde_json::json!({
+        "type": "titan.cmd.exec.place.v1",
+        "version": 1,
+        "producer": "test-suite",
+        "ts": ts,
+        "nonce": nonce,
+        "sig": sig,
+        "payload": intent_payload,
+        "correlation_id": format!("corr-{}", uuid::Uuid::new_v4())
+    });
+    
+    let payload = serde_json::to_vec(&envelope).unwrap();
     let intent_subject = format!(
         "titan.cmd.exec.place.v1.binance.main.{}",
         symbol_token

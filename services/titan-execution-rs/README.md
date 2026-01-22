@@ -7,8 +7,8 @@ High-performance order execution microservice for the Titan Trading System.
 - **Sub-millisecond latency** — <1ms P99 order execution
 - **NATS JetStream** — Event-driven architecture for trade events
 - **FastPath IPC** — Unix Domain Socket communication with HMAC signing
+- **Multi-Venue Routing** — Weighted splitting across multiple exchanges with aggregated state tracking
 - **Shadow State** — Real-time position tracking with exchange reconciliation
-- **Multi-Exchange** — Bybit, Binance, MEXC adapter support
 
 ## Architecture
 

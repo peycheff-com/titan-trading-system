@@ -112,6 +112,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 metadata: None,
                 exchange: None,
                 position_mode: None,
+                child_fills: vec![],
+                filled_size: dec!(0),
             };
             write_event(&mut file, ReplayEvent::Signal(intent))?;
         }

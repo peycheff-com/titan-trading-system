@@ -58,6 +58,8 @@ pub struct ExecutionConfig {
     pub port: Option<u16>,
     pub nats_url: Option<String>,
     pub routing: Option<RoutingConfig>,
+    pub initial_balance: Option<f64>,
+    pub freshness_threshold_ms: Option<u64>,
 }
 
 #[derive(Debug, Deserialize, Clone, Default)]

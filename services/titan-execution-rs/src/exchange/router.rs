@@ -72,7 +72,7 @@ impl ExecutionRouter {
         let mut targets: Vec<RouteTarget> = Vec::new();
         let map = self.adapters.read();
 
-        // 1. Explicit routing wins
+        // 1. Explicit routing wins (always 1-to-1)
         if let Some(exchange) = &intent.exchange {
             let ex_lower = exchange.to_lowercase();
             if let Some(adapter) = map.get(&ex_lower) {
@@ -88,7 +88,8 @@ impl ExecutionRouter {
         }
 
         let rule = self.resolve_rule(intent.source.as_ref());
-        let fanout = rule.fanout.unwrap_or(false);
+        // fanout is ignored by Policy A, but filtering kept for reference or future re-enablement
+        let _fanout = rule.fanout.unwrap_or(false);
 
         // 2. Weight-based routing (explicit)
         if let Some(weights) = rule.weights {
@@ -104,56 +105,54 @@ impl ExecutionRouter {
                     warn!("⚠️ Weighted exchange '{}' not registered", exchange);
                 }
             }
-
-            if !targets.is_empty() {
-                return targets;
-            }
         }
 
-        // 3. Fallback to source-based routing
-        if let Some(source) = &intent.source {
-            match source.as_str() {
-                "scavenger" => {
-                    if let Some(adapter) = map.get("bybit") {
-                        targets.push(RouteTarget {
-                            name: "bybit".to_string(),
-                            adapter: adapter.clone(),
-                            weight: 1.0,
-                        });
+        // 3. Fallback to source-based routing (only if no targets yet)
+        if targets.is_empty() {
+            if let Some(source) = &intent.source {
+                match source.as_str() {
+                    "scavenger" => {
+                        if let Some(adapter) = map.get("bybit") {
+                            targets.push(RouteTarget {
+                                name: "bybit".to_string(),
+                                adapter: adapter.clone(),
+                                weight: 1.0,
+                            });
+                        }
+                        if let Some(adapter) = map.get("mexc") {
+                            targets.push(RouteTarget {
+                                name: "mexc".to_string(),
+                                adapter: adapter.clone(),
+                                weight: 1.0,
+                            });
+                        }
                     }
-                    if let Some(adapter) = map.get("mexc") {
-                        targets.push(RouteTarget {
-                            name: "mexc".to_string(),
-                            adapter: adapter.clone(),
-                            weight: 1.0,
-                        });
+                    "hunter" | "sentinel" => {
+                        if let Some(adapter) = map.get("binance") {
+                            targets.push(RouteTarget {
+                                name: "binance".to_string(),
+                                adapter: adapter.clone(),
+                                weight: 1.0,
+                            });
+                        }
+                    }
+                    _ => {
+                        if let Some(adapter) = map.get("binance") {
+                            targets.push(RouteTarget {
+                                name: "binance".to_string(),
+                                adapter: adapter.clone(),
+                                weight: 1.0,
+                            });
+                        }
                     }
                 }
-                "hunter" | "sentinel" => {
-                    if let Some(adapter) = map.get("binance") {
-                        targets.push(RouteTarget {
-                            name: "binance".to_string(),
-                            adapter: adapter.clone(),
-                            weight: 1.0,
-                        });
-                    }
-                }
-                _ => {
-                    if let Some(adapter) = map.get("binance") {
-                        targets.push(RouteTarget {
-                            name: "binance".to_string(),
-                            adapter: adapter.clone(),
-                            weight: 1.0,
-                        });
-                    }
-                }
+            } else if let Some(adapter) = map.get("binance") {
+                targets.push(RouteTarget {
+                    name: "binance".to_string(),
+                    adapter: adapter.clone(),
+                    weight: 1.0,
+                });
             }
-        } else if let Some(adapter) = map.get("binance") {
-            targets.push(RouteTarget {
-                name: "binance".to_string(),
-                adapter: adapter.clone(),
-                weight: 1.0,
-            });
         }
 
         if targets.is_empty() {
@@ -161,12 +160,16 @@ impl ExecutionRouter {
             return targets;
         }
 
-        if !fanout && targets.len() > 1 {
-            warn!(
-                "⚠️ Fan-out disabled; routing intent to first exchange only (count={})",
+        // Respect Fanout Configuration
+        let fanout_allowed = rule.fanout.unwrap_or(false);
+        if !fanout_allowed && targets.len() > 1 {
+             warn!(
+                "⚠️ Fanout disabled. Clamping to single target (from {} candidates).",
                 targets.len()
             );
-            return vec![targets[0].clone()];
+            // Sort by weight descending to pick the "best" one
+            targets.sort_by(|a, b| b.weight.partial_cmp(&a.weight).unwrap_or(std::cmp::Ordering::Equal));
+            targets.truncate(1);
         }
 
         targets
@@ -207,6 +210,8 @@ impl ExecutionRouter {
                 remaining_qty
             } else {
                 let weight_dec = Decimal::from_f64_retain(weight).unwrap_or(Decimal::ZERO);
+                // Round weight to avoid fp precision issues (e.g. 0.7 -> 0.6999999)
+                let weight_dec = weight_dec.round_dp(4); 
                 let portion = order_req.quantity * weight_dec;
                 remaining_qty -= portion;
                 portion
@@ -325,11 +330,13 @@ mod tests {
             metadata: None,
             exchange: None,
             position_mode: None,
+            child_fills: vec![],
+            filled_size: Decimal::ZERO,
         }
     }
 
     #[tokio::test]
-    async fn test_routing_weight_split() {
+    async fn test_weighted_split() {
         let mut routing = RoutingConfig::default();
         routing.fanout = Some(true);
         routing.weights = Some(HashMap::from([
@@ -354,14 +361,18 @@ mod tests {
         };
 
         let results = router.execute(&intent, order_req).await;
+        
+        // Multi-Venue: Should return 2 results
         assert_eq!(results.len(), 2);
-
-        let total_qty: Decimal = results
-            .iter()
-            .map(|(_, req, _)| req.quantity)
-            .sum();
-
-        assert_eq!(total_qty, dec!(10.0));
+        
+        // Verify Quantities (Order depends on hash map iteration, so checking sum is safer, 
+        // but implementation iterates `routes` which came from `resolve_routes` which iterates config map.
+        // `resolve_routes` creates vector. 
+        // Let's check that we have one 7.0 and one 3.0
+        
+        let quantities: Vec<Decimal> = results.iter().map(|(_, req, _)| req.quantity).collect();
+        assert!(quantities.contains(&dec!(7.0)));
+        assert!(quantities.contains(&dec!(3.0)));
     }
 
     #[tokio::test]
@@ -387,5 +398,50 @@ mod tests {
 
         let results = router.execute(&intent, order_req).await;
         assert_eq!(results.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_weighted_split_preserves_dust() {
+        let mut routing = RoutingConfig::default();
+        routing.fanout = Some(true);
+        routing.weights = Some(HashMap::from([
+            ("A".to_string(), 0.33),
+            ("B".to_string(), 0.33),
+            ("C".to_string(), 0.33),
+            // Sum = 0.99. The remaining 0.01 should conceptually be handled by normalization or the last-bucket logic.
+            // Wait, normalized weights will handle the sum != 1.0 case by dividing by sum.
+            // But let's verify weird decimal quantities.
+        ]));
+
+        let router = ExecutionRouter::with_routing(routing);
+        router.register("A", Arc::new(MockAdapter));
+        router.register("B", Arc::new(MockAdapter));
+        router.register("C", Arc::new(MockAdapter));
+
+        let intent = base_intent();
+        // Use a quantity that doesn't divide cleanly: 1.0 / 3 = 0.333333...
+        // 0.33 * 3 = 0.99. We expect 1.0 total.
+        let order_req = OrderRequest {
+            symbol: "BTCUSDT".to_string(),
+            side: Side::Buy,
+            order_type: OrderType::Market,
+            quantity: dec!(1.0),
+            price: None,
+            stop_price: None,
+            client_order_id: "root".to_string(),
+            reduce_only: false,
+        };
+
+        let results = router.execute(&intent, order_req).await;
+        
+        assert_eq!(results.len(), 3);
+        
+        let total_qty: Decimal = results.iter().map(|(_, req, _)| req.quantity).sum();
+        assert_eq!(total_qty, dec!(1.0));
+        
+        // Ensure no route got 0 size or negative (implicit in sum check, but good to know)
+        for (_, req, _) in &results {
+            assert!(req.quantity > Decimal::ZERO);
+        }
     }
 }

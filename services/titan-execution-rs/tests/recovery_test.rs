@@ -31,6 +31,8 @@ fn create_test_intent(signal_id: &str) -> Intent {
         metadata: None,
         exchange: None,
         position_mode: None,
+        child_fills: vec![],
+        filled_size: dec!(0),
     }
 }
 
@@ -46,7 +48,7 @@ fn test_state_recovery() {
 
         let persistence = Arc::new(PersistenceStore::new(redb, wal));
         let ctx = Arc::new(ExecutionContext::new_system());
-        let mut state = ShadowState::new(persistence, ctx);
+        let mut state = ShadowState::new(persistence, ctx, Some(10000.0));
 
         // A. Open Position
         let intent = create_test_intent("sig-1");
@@ -55,6 +57,7 @@ fn test_state_recovery() {
         // Confirm execution (creates position)
         let _events = state.confirm_execution(
             "sig-1",
+            "child-1",
             dec!(50000.0),
             dec!(0.1),
             true,
@@ -86,10 +89,13 @@ fn test_state_recovery() {
             metadata: None,
             exchange: None,
             position_mode: None,
+            child_fills: vec![],
+            filled_size: dec!(0),
         };
         state.process_intent(close_intent);
         state.confirm_execution(
             "sig-close-1",
+            "child-close-1",
             dec!(51000.0), // Profit taking
             dec!(0.05),
             true,
@@ -116,7 +122,7 @@ fn test_state_recovery() {
         let persistence = Arc::new(PersistenceStore::new(redb, wal));
 
         let ctx = Arc::new(ExecutionContext::new_system());
-        let state = ShadowState::new(persistence, ctx);
+        let state = ShadowState::new(persistence, ctx, Some(10000.0));
 
         // Verify Position Persisted
         let pos = state.get_position("BTC/USDT");

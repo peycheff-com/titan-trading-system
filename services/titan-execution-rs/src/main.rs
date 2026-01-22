@@ -1,4 +1,6 @@
 use tracing::{info, error, Level};
+mod auth_middleware;
+use auth_middleware::AuthMiddleware;
 use tracing_subscriber::FmtSubscriber;
 use std::env;
 use std::fs;
@@ -162,6 +164,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         }
     };
 
+    // Load Configuration
+    use titan_execution_rs::config::Settings;
+    let settings = Settings::new().expect("❌ critical: Failed to load configuration");
+    let exchanges = settings.exchanges.as_ref();
+
     // Initialize Core Components
     // Initialize Persistence (Redb)
     let persistence_path = env::var("PERSISTENCE_PATH").unwrap_or_else(|_| "titan_execution.redb".to_string());
@@ -171,7 +178,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     // Wrap ShadowState in Arc<RwLock> for sharing between NATS (write) and API (read)
     // Pass persistence to ShadowState
-    let shadow_state = Arc::new(RwLock::new(ShadowState::new(persistence, ctx.clone())));
+    let execution_config = settings.execution.clone().unwrap_or_default();
+    let initial_balance = execution_config.initial_balance;
+    
+    let shadow_state = Arc::new(RwLock::new(ShadowState::new(persistence, ctx.clone(), initial_balance)));
 
     // Initialize Market Data Engine (Truth Layer) - Moved up for dependency injection
     let market_data_engine = Arc::new(MarketDataEngine::new(Some(nats_client.clone())));
@@ -195,10 +205,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Initialize Simulation Engine (Shadow Layer)
     let simulation_engine = Arc::new(SimulationEngine::new(market_data_engine.clone(), ctx.clone()));
 
-    // Load Configuration
-    use titan_execution_rs::config::Settings;
-    let settings = Settings::new().expect("❌ critical: Failed to load configuration");
-    let exchanges = settings.exchanges.as_ref();
+
 
     // Initialize Execution Router (with routing config if present)
     let routing = settings
@@ -272,6 +279,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         global_halt,
         risk_guard.clone(),
         ctx.clone(),
+        execution_config.freshness_threshold_ms.unwrap_or(5000),
     ).await?;
 
     // --- API Server Task ---
@@ -289,6 +297,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
         App::new()
             .wrap(cors)
+            .wrap(AuthMiddleware)
             .wrap(prometheus.clone())
             .app_data(web::Data::new(state_for_api.clone()))
             .app_data(web::Data::new(nats_client.clone()))

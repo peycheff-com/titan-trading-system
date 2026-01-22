@@ -45,16 +45,24 @@ pub enum IntentType {
     Close,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum IntentStatus {
     #[serde(rename = "PENDING")]
     Pending,
     #[serde(rename = "VALIDATED")]
     Validated,
-    #[serde(rename = "REJECTED")]
-    Rejected,
+    #[serde(rename = "PARTIALLY_FILLED")]
+    PartiallyFilled,
     #[serde(rename = "EXECUTED")]
     Executed,
+    #[serde(rename = "PARTIALLY_COMPLETED")]
+    PartiallyCompleted, // Terminal state: e.g. time expired with some fills
+    #[serde(rename = "CANCELLED")]
+    Cancelled,
+    #[serde(rename = "FAILED_WITH_EXPOSURE")]
+    FailedWithExposure, // Terminal state: bad state, requires operator
+    #[serde(rename = "REJECTED")]
+    Rejected,
     #[serde(rename = "EXPIRED")]
     Expired,
 }
@@ -77,6 +85,12 @@ pub struct Intent {
     #[serde(default)]
     pub size: Decimal,
     pub status: IntentStatus,
+
+    // Execution Progress (Multi-Venue Aggregation)
+    #[serde(default)]
+    pub filled_size: Decimal,
+    #[serde(default)]
+    pub child_fills: Vec<String>, // List of idempotent execution_ids processed
 
     // Time enforcement
     #[serde(alias = "timestamp")]
@@ -116,9 +130,8 @@ pub struct Position {
     #[serde(default)]
     pub exchange: Option<String>,
     #[serde(default)]
-
     pub position_mode: Option<String>,
-    
+
     // PnL & Fees
     #[serde(default)]
     pub realized_pnl: Decimal,
