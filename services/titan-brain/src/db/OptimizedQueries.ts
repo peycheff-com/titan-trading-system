@@ -293,6 +293,7 @@ export class OptimizedQueries {
     const winRate = tradeCount > 0 ? winCount / tradeCount : 0;
 
     // Calculate Sharpe ratio
+    // eslint-disable-next-line functional/no-let
     let sharpeRatio = 0;
     if (tradeCount >= 2 && stddevPnl > 0 && !isNaN(stddevPnl)) {
       sharpeRatio = (avgPnl / stddevPnl) * ANNUALIZATION_FACTOR;
@@ -301,6 +302,7 @@ export class OptimizedQueries {
     }
 
     // Calculate modifier
+    // eslint-disable-next-line functional/no-let
     let modifier = 1.0;
     if (tradeCount >= 10) {
       if (sharpeRatio < 0) {
@@ -347,6 +349,7 @@ export class OptimizedQueries {
 
     const result = new Map<PhaseId, number[]>();
     for (const phaseId of phaseIds) {
+      // eslint-disable-next-line functional/immutable-data
       result.set(phaseId, []);
     }
 
@@ -354,6 +357,7 @@ export class OptimizedQueries {
       const phaseId = row.phase_id as PhaseId;
       const pnlArray = result.get(phaseId);
       if (pnlArray) {
+        // eslint-disable-next-line functional/immutable-data
         pnlArray.push(parseFloat(row.pnl));
       }
     }

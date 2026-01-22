@@ -5,6 +5,7 @@ export class MockAdapter {
   private engine: ActiveInferenceEngine | null = null;
 
   registerEngine(engine: ActiveInferenceEngine) {
+    // eslint-disable-next-line functional/immutable-data
     this.engine = engine;
   }
 

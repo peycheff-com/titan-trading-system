@@ -36,6 +36,7 @@ export class NatsPublisher {
       await this.nats.connect({
         servers: [natsUrl || process.env.NATS_URL || 'nats://localhost:4222'],
       });
+      // eslint-disable-next-line functional/immutable-data
       this.connected = true;
       this.logger.info('NatsPublisher connected');
     } catch (err) {
@@ -75,12 +76,14 @@ export class NatsPublisher {
   async close(): Promise<void> {
     if (this.connected) {
       await this.nats.close();
+      // eslint-disable-next-line functional/immutable-data
       this.connected = false;
     }
   }
 }
 
 // Singleton instance
+// eslint-disable-next-line functional/no-let
 let publisherInstance: NatsPublisher | null = null;
 
 export function getNatsPublisher(): NatsPublisher {

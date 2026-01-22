@@ -156,14 +156,20 @@ export class SentimentCalculator extends EventEmitter {
     }
 
     const contributions: EventContribution[] = [];
+    // eslint-disable-next-line functional/no-let
     let totalWeight = 0;
+    // eslint-disable-next-line functional/no-let
     let weightedSentiment = 0;
+    // eslint-disable-next-line functional/no-let
     let bullishScore = 0;
+    // eslint-disable-next-line functional/no-let
     let bearishScore = 0;
+    // eslint-disable-next-line functional/no-let
     let neutralScore = 0;
 
     for (const event of events) {
       const contribution = this.calculateEventContribution(event, direction);
+      // eslint-disable-next-line functional/immutable-data
       contributions.push(contribution);
 
       // Accumulate weighted sentiment
@@ -216,10 +222,15 @@ export class SentimentCalculator extends EventEmitter {
     }
 
     const contributions: EventContribution[] = [];
+    // eslint-disable-next-line functional/no-let
     let totalWeight = 0;
+    // eslint-disable-next-line functional/no-let
     let weightedSentiment = 0;
+    // eslint-disable-next-line functional/no-let
     let bullishScore = 0;
+    // eslint-disable-next-line functional/no-let
     let bearishScore = 0;
+    // eslint-disable-next-line functional/no-let
     let neutralScore = 0;
 
     for (const relevance of relevances) {
@@ -228,6 +239,7 @@ export class SentimentCalculator extends EventEmitter {
         direction,
         relevance.relevanceScore / 100 // Use relevance as additional weight
       );
+      // eslint-disable-next-line functional/immutable-data
       contributions.push(contribution);
 
       totalWeight += contribution.weight;
@@ -275,6 +287,7 @@ export class SentimentCalculator extends EventEmitter {
     const eventDirection = this.determineEventDirection(event);
 
     // Calculate base contribution from probability
+    // eslint-disable-next-line functional/no-let
     let contribution = this.calculateBaseContribution(event, eventDirection);
 
     // Adjust for trading direction
@@ -449,8 +462,11 @@ export class SentimentCalculator extends EventEmitter {
       return 0.5; // Single event = neutral agreement
     }
 
+    // eslint-disable-next-line functional/no-let
     let bullishCount = 0;
+    // eslint-disable-next-line functional/no-let
     let bearishCount = 0;
+    // eslint-disable-next-line functional/no-let
     let neutralCount = 0;
 
     for (const contribution of contributions) {
@@ -495,9 +511,11 @@ export class SentimentCalculator extends EventEmitter {
    * Update configuration
    */
   updateConfig(config: Partial<SentimentCalculatorConfig>): void {
+    // eslint-disable-next-line functional/immutable-data
     this.config = { ...this.config, ...config };
 
     if (config.categoryWeights) {
+      // eslint-disable-next-line functional/immutable-data
       this.config.categoryWeights = {
         ...this.config.categoryWeights,
         ...config.categoryWeights,

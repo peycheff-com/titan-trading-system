@@ -6,12 +6,23 @@ import { DiffViewer } from '@/components/titan/DiffViewer';
 import { ConfirmModal } from '@/components/titan/ConfirmModal';
 import { formatCurrency } from '@/types';
 import { cn } from '@/lib/utils';
-import { Target, AlertTriangle, Edit3, TrendingUp, TrendingDown, Brain, Zap, ShieldAlert, Cpu, Settings } from 'lucide-react';
+import {
+  Target,
+  AlertTriangle,
+  Edit3,
+  TrendingUp,
+  TrendingDown,
+  Brain,
+  Zap,
+  ShieldAlert,
+  Cpu,
+  Settings,
+} from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
 import { toast } from 'sonner';
 import { getApiBaseUrl } from '@/lib/api-config';
 
-import { Button } from "@/components/ui/button"
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -20,11 +31,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Slider } from "@/components/ui/slider"
-
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
 
 interface ContextType {
   safetyLocked: boolean;
@@ -36,10 +46,10 @@ const mockDraftConfig = {
 };
 
 interface HunterConfig {
-    oracleSentimentThreshold: number;
-    globalCVDConsensus: number;
-    botTrapSuspicion: number;
-    maxConvictionMultiplier: number;
+  oracleSentimentThreshold: number;
+  globalCVDConsensus: number;
+  botTrapSuspicion: number;
+  maxConvictionMultiplier: number;
 }
 
 export default function HunterPhase() {
@@ -52,10 +62,10 @@ export default function HunterPhase() {
 
   // Configuration State
   const [config, setConfig] = useState<HunterConfig>({
-      oracleSentimentThreshold: 0.5,
-      globalCVDConsensus: 0.6,
-      botTrapSuspicion: 0.7,
-      maxConvictionMultiplier: 2.0
+    oracleSentimentThreshold: 0.5,
+    globalCVDConsensus: 0.6,
+    botTrapSuspicion: 0.7,
+    maxConvictionMultiplier: 2.0,
   });
 
   // Fetch Enhanced Holograms
@@ -82,7 +92,7 @@ export default function HunterPhase() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'F3') {
         e.preventDefault();
-        setEnhancedMode(prev => {
+        setEnhancedMode((prev) => {
           const newState = !prev;
           toast.info(newState ? 'Enhanced HUD Activated' : 'Enhanced HUD Deactivated');
           return newState;
@@ -93,9 +103,13 @@ export default function HunterPhase() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  const status = {
+    status: 'offline' as const,
+    enabled: false,
+    allocationWeight: 0,
+    activeStrategies: 0,
+  };
 
-  const status = { status: 'offline' as const, enabled: false, allocationWeight: 0, activeStrategies: 0 };
-  
   const handleCreateDraft = () => {
     if (safetyLocked) {
       toast.error('Safety lock is enabled. Unlock to make changes.');
@@ -106,91 +120,136 @@ export default function HunterPhase() {
   };
 
   const handleApplyConfig = () => {
-      setHasDraft(true);
-      toast.success("Configuration updated and staged for draft.");
-  }
+    setHasDraft(true);
+    toast.success('Configuration updated and staged for draft.');
+  };
 
-  const columns = enhancedMode ? [
-    { key: 'symbol', header: 'Symbol' },
-    {
-        key: 'alignment',
-        header: 'Align',
-        render: (item: any) => (
-            <span className={cn(
+  const columns = enhancedMode
+    ? [
+        { key: 'symbol', header: 'Symbol' },
+        {
+          key: 'alignment',
+          header: 'Align',
+          render: (item: any) => (
+            <span
+              className={cn(
                 'font-mono font-bold',
                 item.alignment.startsWith('A') && 'text-status-healthy',
                 item.alignment === 'B' && 'text-warning',
-                (item.alignment === 'C' || item.alignment === 'VETO') && 'text-status-critical'
-            )}>{item.alignment}</span>
-        )
-    },
-    {
-        key: 'score',
-        header: 'Score',
-        render: (item: any) => (
-            <div className="flex flex-col">
-                <span className="font-mono text-xs">{item.score.toFixed(2)}</span>
-                <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
-                    <div 
-                        className={cn("h-full", item.score > 0.8 ? "bg-status-healthy" : item.score > 0.5 ? "bg-warning" : "bg-muted-foreground")} 
-                        style={{ width: `${item.score * 100}%` }}
-                    />
-                </div>
-            </div>
-        )
-    },
-    {
-        key: 'oracle',
-        header: 'Oracle',
-        render: (item: any) => (
-            <div className="flex items-center gap-2">
-                <Brain className={cn("h-3 w-3", item.oracleScore.sentiment > config.oracleSentimentThreshold ? "text-status-healthy" : item.oracleScore.sentiment < -config.oracleSentimentThreshold ? "text-status-critical" : "text-muted-foreground")} />
-                <span className="text-xxs font-mono">{item.oracleScore.confidence.toFixed(2)}</span>
-            </div>
-        )
-    },
-    {
-        key: 'flow',
-        header: 'Global CVD',
-        render: (item: any) => (
-            <div className="flex items-center gap-2">
-                 <TrendingUp className={cn("h-3 w-3", 
-                    item.globalCVD.consensus === 'BULLISH' ? "text-status-healthy" : 
-                    item.globalCVD.consensus === 'BEARISH' ? "text-status-critical" : "text-muted-foreground"
-                 )} />
-                 {item.globalCVD.manipulation.detected && (
-                     <ShieldAlert className="h-3 w-3 text-status-critical animate-pulse" />
-                 )}
-            </div>
-        )
-    },
-    {
-        key: 'conviction',
-        header: 'Mult',
-        align: 'right',
-        render: (item: any) => (
-            <span className={cn("font-mono text-xs", item.oracleScore.convictionMultiplier > 1.2 && "text-status-healthy font-bold")}>
-                x{Math.min(item.oracleScore.convictionMultiplier, config.maxConvictionMultiplier).toFixed(1)}
+                (item.alignment === 'C' || item.alignment === 'VETO') && 'text-status-critical',
+              )}
+            >
+              {item.alignment}
             </span>
-        )
-    }
-  ] : [
-    { key: 'symbol', header: 'Symbol' },
-    {
-      key: 'status',
-      header: 'Status',
-      render: (item: any) => (
-        <StatusPill status={item.status === 'A+' ? 'active' : item.status === 'B' ? 'warning' : 'offline'} size="sm" />
-      ),
-    },
-     {
-      key: 'score',
-      header: 'Score',
-      align: 'right',
-      render: (item: any) => item.score.toFixed(2),
-    },
-    { key: 'timestamp', header: 'Updated', align: 'right', render: (item: any) => new Date(item.timestamp).toLocaleTimeString() },
-  ];
+          ),
+        },
+        {
+          key: 'score',
+          header: 'Score',
+          render: (item: any) => (
+            <div className="flex flex-col">
+              <span className="font-mono text-xs">{item.score.toFixed(2)}</span>
+              <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+                <div
+                  className={cn(
+                    'h-full',
+                    item.score > 0.8
+                      ? 'bg-status-healthy'
+                      : item.score > 0.5
+                        ? 'bg-warning'
+                        : 'bg-muted-foreground',
+                  )}
+                  style={{ width: `${item.score * 100}%` }}
+                />
+              </div>
+            </div>
+          ),
+        },
+        {
+          key: 'oracle',
+          header: 'Oracle',
+          render: (item: any) => (
+            <div className="flex items-center gap-2">
+              <Brain
+                className={cn(
+                  'h-3 w-3',
+                  item.oracleScore.sentiment > config.oracleSentimentThreshold
+                    ? 'text-status-healthy'
+                    : item.oracleScore.sentiment < -config.oracleSentimentThreshold
+                      ? 'text-status-critical'
+                      : 'text-muted-foreground',
+                )}
+              />
+              <span className="text-xxs font-mono">{item.oracleScore.confidence.toFixed(2)}</span>
+            </div>
+          ),
+        },
+        {
+          key: 'flow',
+          header: 'Global CVD',
+          render: (item: any) => (
+            <div className="flex items-center gap-2">
+              <TrendingUp
+                className={cn(
+                  'h-3 w-3',
+                  item.globalCVD.consensus === 'BULLISH'
+                    ? 'text-status-healthy'
+                    : item.globalCVD.consensus === 'BEARISH'
+                      ? 'text-status-critical'
+                      : 'text-muted-foreground',
+                )}
+              />
+              {item.globalCVD.manipulation.detected && (
+                <ShieldAlert className="h-3 w-3 text-status-critical animate-pulse" />
+              )}
+            </div>
+          ),
+        },
+        {
+          key: 'conviction',
+          header: 'Mult',
+          align: 'right',
+          render: (item: any) => (
+            <span
+              className={cn(
+                'font-mono text-xs',
+                item.oracleScore.convictionMultiplier > 1.2 && 'text-status-healthy font-bold',
+              )}
+            >
+              x
+              {Math.min(
+                item.oracleScore.convictionMultiplier,
+                config.maxConvictionMultiplier,
+              ).toFixed(1)}
+            </span>
+          ),
+        },
+      ]
+    : [
+        { key: 'symbol', header: 'Symbol' },
+        {
+          key: 'status',
+          header: 'Status',
+          render: (item: any) => (
+            <StatusPill
+              status={item.status === 'A+' ? 'active' : item.status === 'B' ? 'warning' : 'offline'}
+              size="sm"
+            />
+          ),
+        },
+        {
+          key: 'score',
+          header: 'Score',
+          align: 'right',
+          render: (item: any) => item.score.toFixed(2),
+        },
+        {
+          key: 'timestamp',
+          header: 'Updated',
+          align: 'right',
+          render: (item: any) => new Date(item.timestamp).toLocaleTimeString(),
+        },
+      ];
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -202,76 +261,103 @@ export default function HunterPhase() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-semibold text-foreground">Hunter Phase</h1>
-                 {enhancedMode && (
-                    <span className="px-2 py-0.5 rounded-full bg-primary/20 text-primary text-xxs font-mono border border-primary/30 flex items-center gap-1">
-                        <Zap className="h-3 w-3" /> ENHANCED HUD
-                    </span>
-                 )}
+              <h1 className="text-2xl font-semibold text-foreground">Hunter Phase</h1>
+              {enhancedMode && (
+                <span className="px-2 py-0.5 rounded-full bg-primary/20 text-primary text-xxs font-mono border border-primary/30 flex items-center gap-1">
+                  <Zap className="h-3 w-3" /> ENHANCED HUD
+                </span>
+              )}
             </div>
             <p className="text-sm text-muted-foreground">
-              {enhancedMode ? "Real-time Holographic Market Structure & Flow Analysis" : "Structure-based strategies using POIs and order flow"}
+              {enhancedMode
+                ? 'Real-time Holographic Market Structure & Flow Analysis'
+                : 'Structure-based strategies using POIs and order flow'}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-            <Dialog>
-                <DialogTrigger asChild>
-                    <Button variant="outline" size="icon" disabled={safetyLocked}>
-                        <Settings className="h-4 w-4" />
-                    </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                    <DialogTitle>Enhanced HUD Configuration</DialogTitle>
-                    <DialogDescription>
-                        Tune the sensitivity of 2026 Enhanced Signals.
-                    </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="oracle-sentiment">Oracle Sentiment Threshold ({config.oracleSentimentThreshold.toFixed(2)})</Label>
-                            <Slider 
-                                id="oracle-sentiment" 
-                                min={0.1} max={0.9} step={0.05} 
-                                value={[config.oracleSentimentThreshold]} 
-                                onValueChange={(vals) => setConfig(prev => ({ ...prev, oracleSentimentThreshold: vals[0] }))}
-                            />
-                        </div>
-                         <div className="grid gap-2">
-                            <Label htmlFor="cvd-consensus">Global CVD Consensus ({config.globalCVDConsensus.toFixed(2)})</Label>
-                            <Slider 
-                                id="cvd-consensus" 
-                                min={0.5} max={1.0} step={0.05} 
-                                value={[config.globalCVDConsensus]} 
-                                onValueChange={(vals) => setConfig(prev => ({ ...prev, globalCVDConsensus: vals[0] }))}
-                            />
-                        </div>
-                         <div className="grid gap-2">
-                            <Label htmlFor="trap-suspicion">Bot Trap Suspicion ({config.botTrapSuspicion.toFixed(2)})</Label>
-                            <Slider 
-                                id="trap-suspicion" 
-                                min={0.3} max={0.9} step={0.05} 
-                                value={[config.botTrapSuspicion]} 
-                                onValueChange={(vals) => setConfig(prev => ({ ...prev, botTrapSuspicion: vals[0] }))}
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="max-multiplier">Max Conviction Multiplier (x)</Label>
-                            <Input
-                                id="max-multiplier"
-                                type="number"
-                                value={config.maxConvictionMultiplier}
-                                onChange={(e) => setConfig(prev => ({ ...prev, maxConvictionMultiplier: parseFloat(e.target.value) }))}
-                            />
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button type="submit" onClick={handleApplyConfig}>Save Changes</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-            <StatusPill status={status.status} size="md" />
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="icon" disabled={safetyLocked}>
+                <Settings className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Enhanced HUD Configuration</DialogTitle>
+                <DialogDescription>
+                  Tune the sensitivity of 2026 Enhanced Signals.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="oracle-sentiment">
+                    Oracle Sentiment Threshold ({config.oracleSentimentThreshold.toFixed(2)})
+                  </Label>
+                  <Slider
+                    id="oracle-sentiment"
+                    min={0.1}
+                    max={0.9}
+                    step={0.05}
+                    value={[config.oracleSentimentThreshold]}
+                    onValueChange={(vals) =>
+                      setConfig((prev) => ({ ...prev, oracleSentimentThreshold: vals[0] }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="cvd-consensus">
+                    Global CVD Consensus ({config.globalCVDConsensus.toFixed(2)})
+                  </Label>
+                  <Slider
+                    id="cvd-consensus"
+                    min={0.5}
+                    max={1.0}
+                    step={0.05}
+                    value={[config.globalCVDConsensus]}
+                    onValueChange={(vals) =>
+                      setConfig((prev) => ({ ...prev, globalCVDConsensus: vals[0] }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="trap-suspicion">
+                    Bot Trap Suspicion ({config.botTrapSuspicion.toFixed(2)})
+                  </Label>
+                  <Slider
+                    id="trap-suspicion"
+                    min={0.3}
+                    max={0.9}
+                    step={0.05}
+                    value={[config.botTrapSuspicion]}
+                    onValueChange={(vals) =>
+                      setConfig((prev) => ({ ...prev, botTrapSuspicion: vals[0] }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="max-multiplier">Max Conviction Multiplier (x)</Label>
+                  <Input
+                    id="max-multiplier"
+                    type="number"
+                    value={config.maxConvictionMultiplier}
+                    onChange={(e) =>
+                      setConfig((prev) => ({
+                        ...prev,
+                        maxConvictionMultiplier: parseFloat(e.target.value),
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit" onClick={handleApplyConfig}>
+                  Save Changes
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          <StatusPill status={status.status} size="md" />
         </div>
       </div>
 
@@ -279,31 +365,33 @@ export default function HunterPhase() {
       <div className="rounded-lg border border-border bg-card p-4">
         <h2 className="text-sm font-semibold text-foreground">Phase Intent</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Hunter identifies high-probability Points of Interest (POIs) using market structure analysis.
-          It executes directional trades at key levels with defined risk parameters, targeting
-          liquidity pools and fair value gaps.
+          Hunter identifies high-probability Points of Interest (POIs) using market structure
+          analysis. It executes directional trades at key levels with defined risk parameters,
+          targeting liquidity pools and fair value gaps.
         </p>
         <div className="mt-4 flex items-center gap-4">
-            <span className="text-xs text-muted-foreground">Press <kbd className="bg-muted px-1 rounded">F3</kbd> to toggle Enhanced HUD</span>
+          <span className="text-xs text-muted-foreground">
+            Press <kbd className="bg-muted px-1 rounded">F3</kbd> to toggle Enhanced HUD
+          </span>
         </div>
       </div>
 
       {/* KPIs */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {enhancedMode ? (
-             <>
-                <KpiTile label="Oracle Sentiment" value="Bullish" icon={Brain} trend="up" />
-                <KpiTile label="Global CVD" value="$12.5M" icon={TrendingUp} trend="up" />
-                <KpiTile label="Bot Traps" value="2 Detected" icon={ShieldAlert} trend="neutral" />
-                <KpiTile label="System Load" value="12%" icon={Cpu} />
-             </>
+          <>
+            <KpiTile label="Oracle Sentiment" value="Bullish" icon={Brain} trend="up" />
+            <KpiTile label="Global CVD" value="$12.5M" icon={TrendingUp} trend="up" />
+            <KpiTile label="Bot Traps" value="2 Detected" icon={ShieldAlert} trend="neutral" />
+            <KpiTile label="System Load" value="12%" icon={Cpu} />
+          </>
         ) : (
-            <>
-                <KpiTile label="Active POIs" value={holograms.length} />
-                <KpiTile label="Avg Distance" value="2.6%" />
-                <KpiTile label="Hits Today" value={5} trend="up" />
-                <KpiTile label="Win Rate" value="58.2%" trend="neutral" />
-            </>
+          <>
+            <KpiTile label="Active POIs" value={holograms.length} />
+            <KpiTile label="Avg Distance" value="2.6%" />
+            <KpiTile label="Hits Today" value={5} trend="up" />
+            <KpiTile label="Win Rate" value="58.2%" trend="neutral" />
+          </>
         )}
       </div>
 
@@ -311,7 +399,9 @@ export default function HunterPhase() {
         {/* Hologram List */}
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-foreground">{enhancedMode ? "Enhanced Holograms" : "Points of Interest"}</h2>
+            <h2 className="text-sm font-semibold text-foreground">
+              {enhancedMode ? 'Enhanced Holograms' : 'Points of Interest'}
+            </h2>
             <div className="flex items-center gap-2">
               <span className="text-xxs text-muted-foreground">Timeframe:</span>
               <select
@@ -354,9 +444,7 @@ export default function HunterPhase() {
                 disabled={safetyLocked}
                 className={cn(
                   'flex w-full items-center justify-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium transition-colors',
-                  safetyLocked
-                    ? 'cursor-not-allowed opacity-50'
-                    : 'hover:bg-muted'
+                  safetyLocked ? 'cursor-not-allowed opacity-50' : 'hover:bg-muted',
                 )}
               >
                 <Edit3 className="h-4 w-4" />
@@ -369,10 +457,7 @@ export default function HunterPhase() {
                   <span className="text-xs font-medium text-primary">Draft Active</span>
                 </div>
 
-                <DiffViewer
-                  before={mockDraftConfig.before}
-                  after={mockDraftConfig.after}
-                />
+                <DiffViewer before={mockDraftConfig.before} after={mockDraftConfig.after} />
 
                 <div className="flex gap-2">
                   <button

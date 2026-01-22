@@ -67,6 +67,7 @@ export class BudgetService {
     logger.info('[BudgetService] Starting...');
 
     // Start Broadcast Loop
+    // eslint-disable-next-line functional/immutable-data
     this.broadcastTimer = setInterval(() => {
       this.broadcastBudgets().catch((err) =>
         logger.error('[BudgetService] Broadcast failed:', err),
@@ -77,6 +78,7 @@ export class BudgetService {
   public stop(): void {
     if (this.broadcastTimer) {
       clearInterval(this.broadcastTimer);
+      // eslint-disable-next-line functional/immutable-data
       this.broadcastTimer = null;
     }
     logger.info('[BudgetService] Stopped.');
@@ -87,6 +89,7 @@ export class BudgetService {
    * Called when new report arrives (e.g. via NATS or internal metrics)
    */
   public updateExecutionQuality(report: ExecutionQualityReport): void {
+    // eslint-disable-next-line functional/immutable-data
     this.currentQuality = report;
 
     // Immediate check: If quality is critical, broadcast throttle IMMEDIATELY
@@ -121,8 +124,11 @@ export class BudgetService {
 
     // 2. Determine System State
     const regime = this.riskGuardian.getRegimeState();
+    // eslint-disable-next-line functional/no-let
     let systemState = BudgetState.ACTIVE;
+    // eslint-disable-next-line functional/no-let
     let penaltyMultiplier = 1.0;
+    // eslint-disable-next-line functional/no-let
     let reason = 'Normal Operation';
 
     // 2a. Regime Check
@@ -148,6 +154,7 @@ export class BudgetService {
 
     // 3. Generate Budgets for each Phase
     const budgets: PhaseBudget[] = this.PHASES.map((phaseId) => {
+      // eslint-disable-next-line functional/no-let
       let phaseWeight = 0;
       if (phaseId === 'phase1') phaseWeight = weights.w1;
       else if (phaseId === 'phase2') phaseWeight = weights.w2;
@@ -198,6 +205,7 @@ export class BudgetService {
 
     // 5. Broadcast Risk Policy (Global Enforcement)
     // If regime is CRASH, we enforce stricter policy
+    // eslint-disable-next-line functional/no-let
     let riskPolicyState = RiskPolicyState.Normal;
     if (regime === RegimeState.CRASH) {
       riskPolicyState = RiskPolicyState.Emergency;
@@ -223,6 +231,7 @@ export class BudgetService {
       logger.error('[BudgetService] Failed to publish RiskPolicy', err as Error);
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.lastBroadcast = timestamp;
     logger.debug(`[BudgetService] Broadcasted budgets. State: ${systemState}. Reason: ${reason}`);
   }

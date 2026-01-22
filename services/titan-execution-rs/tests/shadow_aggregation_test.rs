@@ -56,7 +56,23 @@ fn test_aggregation_partial_fill() {
     let intent = create_test_intent("sig-1", dec!(1.0));
     state.process_intent(intent);
 
-    // 1. Partial Fill (0.4)
+    // Record child orders first (simulating Pipeline)
+    state.record_child_order(
+        "sig-1",
+        "BINANCE".to_string(),
+        "client-1".to_string(),
+        "fill-1".to_string(),
+        dec!(0.4),
+    );
+    state.record_child_order(
+        "sig-1",
+        "BYBIT".to_string(),
+        "client-2".to_string(),
+        "fill-2".to_string(),
+        dec!(0.6),
+    );
+
+    // 1. Partial Fill (0.4) on BINANCE
     let events = state.confirm_execution(
         "sig-1",
         "fill-1",
@@ -65,9 +81,22 @@ fn test_aggregation_partial_fill() {
         true,
         dec!(1.0),
         "USDT".to_string(),
+        "BINANCE",
     );
 
     assert!(!events.is_empty(), "Should emit Open event");
+
+    // Verify Child Status
+    let children = state
+        .get_child_orders("sig-1")
+        .expect("Children should exist");
+    let child_1 = children
+        .iter()
+        .find(|c| c.execution_order_id == "fill-1")
+        .unwrap();
+    assert_eq!(child_1.status, "FILLED"); // Or FILLED logic depending on EXACT match of size
+                                          // In my logic: if fill_size < child.size -> PARTIALLY_FILLED.
+                                          // Here record_child_order size is 0.4, fill_size is 0.4. So FILLED.
 
     // 2. Duplicate Fill (Idempotency)
     let events_dup = state.confirm_execution(
@@ -78,10 +107,11 @@ fn test_aggregation_partial_fill() {
         true,
         dec!(0),
         "USDT".to_string(),
+        "BINANCE",
     );
     assert!(events_dup.is_empty(), "Duplicate fill should be ignored");
 
-    // 3. Complete Fill (0.6)
+    // 3. Complete Fill (0.6) on BYBIT
     let events_final = state.confirm_execution(
         "sig-1",
         "fill-2",
@@ -90,8 +120,17 @@ fn test_aggregation_partial_fill() {
         true,
         dec!(1.0),
         "USDT".to_string(),
+        "BYBIT",
     );
     assert!(!events_final.is_empty(), "Should emit Update event");
+
+    // Verify Child 2 Status
+    let children = state.get_child_orders("sig-1").unwrap();
+    let child_2 = children
+        .iter()
+        .find(|c| c.execution_order_id == "fill-2")
+        .unwrap();
+    assert_eq!(child_2.status, "FILLED");
 
     // 4. Verify Intent Removed (Executed)
     // Try to fill again -> should warn "Intent not found" and return empty
@@ -103,6 +142,7 @@ fn test_aggregation_partial_fill() {
         true,
         dec!(0),
         "USDT".to_string(),
+        "BYBIT",
     );
     assert!(
         events_gone.is_empty(),
@@ -141,6 +181,7 @@ fn test_aggregation_time_budget() {
         true,
         dec!(0),
         "USDT".to_string(),
+        "BINANCE",
     );
 
     // Should process the fill (Open position 0.1)
@@ -157,6 +198,7 @@ fn test_aggregation_time_budget() {
         true,
         dec!(0),
         "USDT".to_string(),
+        "BINANCE",
     );
     assert!(
         events_gone.is_empty(),

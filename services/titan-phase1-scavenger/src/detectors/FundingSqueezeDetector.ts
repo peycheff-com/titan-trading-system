@@ -146,6 +146,7 @@ export class FundingSqueezeDetector {
           console.warn(
             `⛔ Geo-blocking detected for ${symbol} (HTTP 403). Disabling FundingSqueezeDetector.`,
           );
+          // eslint-disable-next-line functional/immutable-data
           this.isGeoBlocked = true;
         }
         return null;

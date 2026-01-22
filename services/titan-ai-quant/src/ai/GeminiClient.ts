@@ -248,6 +248,7 @@ export class GeminiClient {
    * Parse JSON from response, handling markdown code blocks
    */
   private parseJSON<T>(response: string): T {
+    // eslint-disable-next-line functional/no-let
     let jsonStr = response.trim();
 
     // Remove markdown code blocks if present

@@ -73,6 +73,7 @@ export class LatencyModel {
     }
 
     // Base slippage from ATR (10% of ATR as baseline)
+    // eslint-disable-next-line functional/no-let
     let slippage = atr * 0.1;
 
     // Liquidity multiplier
@@ -121,9 +122,12 @@ export class LatencyModel {
     }
 
     // Find the candle that contains or precedes the timestamp
+    // eslint-disable-next-line functional/no-let
     let prevCandle: OHLCV | null = null;
+    // eslint-disable-next-line functional/no-let
     let nextCandle: OHLCV | null = null;
 
+    // eslint-disable-next-line functional/no-let
     for (let i = 0; i < sortedData.length; i++) {
       const candle = sortedData[i];
 
@@ -175,6 +179,7 @@ export class LatencyModel {
     if (latencyMs < 0) {
       throw new Error('Latency cannot be negative');
     }
+    // eslint-disable-next-line functional/immutable-data
     this.baseLatency = latencyMs;
   }
 

@@ -6,7 +6,7 @@ import { StatusDot } from '@/components/titan/StatusPill';
 const systemHealth: any = {
   brain: { status: 'healthy' },
   execution: { status: 'healthy' },
-  marketWs: { status: 'healthy' }
+  marketWs: { status: 'healthy' },
 };
 import {
   LayoutDashboard,
@@ -84,7 +84,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     <aside
       className={cn(
         'flex h-screen flex-col border-r border-border bg-sidebar transition-all duration-200',
-        collapsed ? 'w-14' : 'w-56'
+        collapsed ? 'w-14' : 'w-56',
       )}
     >
       {/* Logo */}
@@ -101,14 +101,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           onClick={onToggle}
           className={cn(
             'rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground',
-            collapsed && 'mx-auto'
+            collapsed && 'mx-auto',
           )}
         >
-          {collapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
+          {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </button>
       </div>
 
@@ -161,14 +157,14 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                         isActive
                           ? 'bg-primary/10 text-primary'
                           : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                        collapsed && 'justify-center px-0'
+                        collapsed && 'justify-center px-0',
                       )}
                       title={collapsed ? item.name : undefined}
                     >
                       <Icon
                         className={cn(
                           'h-4 w-4 flex-shrink-0',
-                          item.phase && !isActive && phaseColors[item.phase]
+                          item.phase && !isActive && phaseColors[item.phase],
                         )}
                       />
                       {!collapsed && <span>{item.name}</span>}

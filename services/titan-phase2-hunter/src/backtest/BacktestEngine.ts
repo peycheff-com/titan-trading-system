@@ -245,6 +245,7 @@ export class BacktestEngine {
 
           // Fetch data in chunks if needed (Bybit limit is 1000 candles per request)
           const allCandles: OHLCV[] = [];
+          // eslint-disable-next-line functional/no-let
           let currentEndTime = endDate;
 
           while (currentEndTime > startDate && allCandles.length < requiredCandles) {
@@ -259,6 +260,7 @@ export class BacktestEngine {
               candle => candle.timestamp >= startDate && candle.timestamp <= endDate
             );
 
+            // eslint-disable-next-line functional/immutable-data
             allCandles.unshift(...filteredCandles);
 
             // Update currentEndTime for next chunk
@@ -273,6 +275,7 @@ export class BacktestEngine {
             new Map(allCandles.map(candle => [candle.timestamp, candle])).values()
           ).sort((a, b) => a.timestamp - b.timestamp);
 
+          // eslint-disable-next-line functional/immutable-data
           historicalData.set(symbol, uniqueCandles);
           console.log(`✅ Fetched ${uniqueCandles.length} candles for ${symbol}`);
         } catch (error) {
@@ -307,7 +310,9 @@ export class BacktestEngine {
     orderType: 'POST_ONLY' | 'IOC' | 'MARKET',
     currentPrice: number
   ): { fillPrice: number; slippage: number; filled: boolean } {
+    // eslint-disable-next-line functional/no-let
     let slippagePercent: number;
+    // eslint-disable-next-line functional/no-let
     let filled = true;
 
     // Apply slippage based on order type
@@ -348,6 +353,7 @@ export class BacktestEngine {
    * Requirements: 17.3
    */
   public applyFees(notionalValue: number, orderType: 'POST_ONLY' | 'IOC' | 'MARKET'): number {
+    // eslint-disable-next-line functional/no-let
     let feeRate: number;
 
     // Apply fees based on order type
@@ -386,10 +392,15 @@ export class BacktestEngine {
     const totalSlippage = trades.reduce((sum, t) => sum + t.slippage, 0);
 
     // Calculate equity curve for drawdown analysis
+    // eslint-disable-next-line functional/no-let
     let runningEquity = config.initialEquity;
+    // eslint-disable-next-line functional/no-let
     let maxEquity = config.initialEquity;
+    // eslint-disable-next-line functional/no-let
     let maxDrawdown = 0;
+    // eslint-disable-next-line functional/no-let
     let currentDrawdownStart = 0;
+    // eslint-disable-next-line functional/no-let
     let maxDrawdownDuration = 0;
 
     for (const trade of trades) {
@@ -460,9 +471,13 @@ export class BacktestEngine {
     const averageHoldTime = trades.reduce((sum, t) => sum + t.holdTime, 0) / trades.length;
 
     // Consecutive wins/losses
+    // eslint-disable-next-line functional/no-let
     let maxConsecutiveWins = 0;
+    // eslint-disable-next-line functional/no-let
     let maxConsecutiveLosses = 0;
+    // eslint-disable-next-line functional/no-let
     let currentWinStreak = 0;
+    // eslint-disable-next-line functional/no-let
     let currentLossStreak = 0;
 
     for (const trade of trades) {
@@ -519,11 +534,15 @@ export class BacktestEngine {
    */
   public generateEquityCurve(trades: BacktestTrade[], initialEquity: number): EquityPoint[] {
     const equityCurve: EquityPoint[] = [];
+    // eslint-disable-next-line functional/no-let
     let runningEquity = initialEquity;
+    // eslint-disable-next-line functional/no-let
     let maxEquity = initialEquity;
+    // eslint-disable-next-line functional/no-let
     let openPositions = 0;
 
     // Add starting point
+    // eslint-disable-next-line functional/immutable-data
     equityCurve.push({
       timestamp: trades.length > 0 ? trades[0].entryTime : Date.now(),
       equity: initialEquity,
@@ -534,6 +553,7 @@ export class BacktestEngine {
     for (const trade of trades) {
       // Entry point
       openPositions++;
+      // eslint-disable-next-line functional/immutable-data
       equityCurve.push({
         timestamp: trade.entryTime,
         equity: runningEquity,
@@ -549,6 +569,7 @@ export class BacktestEngine {
         maxEquity = runningEquity;
       }
 
+      // eslint-disable-next-line functional/immutable-data
       equityCurve.push({
         timestamp: trade.exitTime,
         equity: runningEquity,
@@ -569,7 +590,9 @@ export class BacktestEngine {
     historicalData: Map<string, OHLCV[]>
   ): LosingPeriod[] {
     const losingPeriods: LosingPeriod[] = [];
+    // eslint-disable-next-line functional/no-let
     let currentPeriod: Partial<LosingPeriod> | null = null;
+    // eslint-disable-next-line functional/no-let
     let consecutiveLosses = 0;
 
     for (const trade of trades) {
@@ -586,8 +609,10 @@ export class BacktestEngine {
           };
         } else {
           // Continue losing period
+          // eslint-disable-next-line functional/immutable-data
           currentPeriod.consecutiveLosses = consecutiveLosses;
           currentPeriod.totalLoss! += trade.pnl;
+          // eslint-disable-next-line functional/immutable-data
           currentPeriod.maxDrawdown = Math.max(
             currentPeriod.maxDrawdown!,
             Math.abs(currentPeriod.totalLoss!)
@@ -596,10 +621,13 @@ export class BacktestEngine {
       } else {
         // End losing period if it exists
         if (currentPeriod && consecutiveLosses >= 3) {
+          // eslint-disable-next-line functional/immutable-data
           currentPeriod.endTime = trade.entryTime;
+          // eslint-disable-next-line functional/immutable-data
           currentPeriod.duration = currentPeriod.endTime - currentPeriod.startTime!;
 
           // Analyze market conditions during this period
+          // eslint-disable-next-line functional/immutable-data
           currentPeriod.marketConditions = this.analyzeMarketConditions(
             currentPeriod.startTime!,
             currentPeriod.endTime,
@@ -607,10 +635,12 @@ export class BacktestEngine {
           );
 
           // Generate suggested adjustments
+          // eslint-disable-next-line functional/immutable-data
           currentPeriod.suggestedAdjustments = this.generateAdjustmentSuggestions(
             currentPeriod as LosingPeriod
           );
 
+          // eslint-disable-next-line functional/immutable-data
           losingPeriods.push(currentPeriod as LosingPeriod);
         }
 
@@ -622,16 +652,21 @@ export class BacktestEngine {
     // Handle ongoing losing period at end
     if (currentPeriod && consecutiveLosses >= 3) {
       const lastTrade = trades[trades.length - 1];
+      // eslint-disable-next-line functional/immutable-data
       currentPeriod.endTime = lastTrade.exitTime;
+      // eslint-disable-next-line functional/immutable-data
       currentPeriod.duration = currentPeriod.endTime - currentPeriod.startTime!;
+      // eslint-disable-next-line functional/immutable-data
       currentPeriod.marketConditions = this.analyzeMarketConditions(
         currentPeriod.startTime!,
         currentPeriod.endTime,
         historicalData
       );
+      // eslint-disable-next-line functional/immutable-data
       currentPeriod.suggestedAdjustments = this.generateAdjustmentSuggestions(
         currentPeriod as LosingPeriod
       );
+      // eslint-disable-next-line functional/immutable-data
       losingPeriods.push(currentPeriod as LosingPeriod);
     }
 
@@ -646,7 +681,9 @@ export class BacktestEngine {
       throw new Error('Backtest is already running');
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.isRunning = true;
+    // eslint-disable-next-line functional/immutable-data
     this.config = { ...this.config, ...config };
 
     try {
@@ -701,6 +738,7 @@ export class BacktestEngine {
       console.error('❌ Backtest failed:', error);
       throw error;
     } finally {
+      // eslint-disable-next-line functional/immutable-data
       this.isRunning = false;
     }
   }
@@ -711,17 +749,20 @@ export class BacktestEngine {
   private async simulateTrading(historicalData: Map<string, OHLCV[]>): Promise<BacktestTrade[]> {
     const trades: BacktestTrade[] = [];
     const openPositions = new Map<string, BacktestTrade>();
+    // eslint-disable-next-line functional/no-let
     let currentEquity = this.config.initialEquity;
 
     // Get all timestamps across all symbols
     const allTimestamps = new Set<number>();
     for (const candles of Array.from(historicalData.values())) {
+      // eslint-disable-next-line functional/immutable-data
       candles.forEach(candle => allTimestamps.add(candle.timestamp));
     }
     const sortedTimestamps = Array.from(allTimestamps).sort((a, b) => a - b);
 
     console.log(`🔄 Simulating trading across ${sortedTimestamps.length} time periods...`);
 
+    // eslint-disable-next-line functional/no-let
     for (let i = 0; i < sortedTimestamps.length; i++) {
       const timestamp = sortedTimestamps[i];
 
@@ -736,9 +777,13 @@ export class BacktestEngine {
         const exitResult = this.checkExit(position, currentCandle);
         if (exitResult.shouldExit) {
           // Close position
+          // eslint-disable-next-line functional/immutable-data
           position.exitTime = timestamp;
+          // eslint-disable-next-line functional/immutable-data
           position.exitPrice = exitResult.exitPrice;
+          // eslint-disable-next-line functional/immutable-data
           position.exitReason = exitResult.reason;
+          // eslint-disable-next-line functional/immutable-data
           position.holdTime = position.exitTime - position.entryTime;
 
           // Calculate PnL
@@ -747,22 +792,29 @@ export class BacktestEngine {
               ? (position.exitPrice - position.entryPrice) / position.entryPrice
               : (position.entryPrice - position.exitPrice) / position.entryPrice;
 
+          // eslint-disable-next-line functional/immutable-data
           position.pnl =
             position.quantity * position.entryPrice * pnlMultiplier * position.leverage;
+          // eslint-disable-next-line functional/immutable-data
           position.pnlPercent = pnlMultiplier * position.leverage;
+          // eslint-disable-next-line functional/immutable-data
           position.rValue =
             position.pnl /
             (Math.abs(position.entryPrice - position.signal.stopLoss) * position.quantity);
 
           // Apply fees and slippage
           const notionalValue = position.quantity * position.exitPrice;
+          // eslint-disable-next-line functional/immutable-data
           position.fees += this.applyFees(notionalValue, 'IOC'); // Assume IOC for exits
 
           const slippageResult = this.simulateTrade(position.signal, 'IOC', position.exitPrice);
+          // eslint-disable-next-line functional/immutable-data
           position.slippage += slippageResult.slippage;
 
           currentEquity += position.pnl - position.fees - position.slippage;
+          // eslint-disable-next-line functional/immutable-data
           trades.push(position);
+          // eslint-disable-next-line functional/immutable-data
           openPositions.delete(symbol);
         }
       }
@@ -788,6 +840,7 @@ export class BacktestEngine {
 
           // Generate signal using enhanced SignalGenerator
           // Try LONG
+          // eslint-disable-next-line functional/no-let
           let signal = await this.signalGenerator.generateSignal(
             symbol,
             'LONG',
@@ -835,6 +888,7 @@ export class BacktestEngine {
               rValue: 0,
             };
 
+            // eslint-disable-next-line functional/immutable-data
             openPositions.set(symbol, position);
           }
         }
@@ -853,9 +907,13 @@ export class BacktestEngine {
     for (const position of Array.from(openPositions.values())) {
       const lastCandle = historicalData.get(position.symbol)?.slice(-1)[0];
       if (lastCandle) {
+        // eslint-disable-next-line functional/immutable-data
         position.exitTime = lastCandle.timestamp;
+        // eslint-disable-next-line functional/immutable-data
         position.exitPrice = lastCandle.close;
+        // eslint-disable-next-line functional/immutable-data
         position.exitReason = 'MANUAL';
+        // eslint-disable-next-line functional/immutable-data
         position.holdTime = position.exitTime - position.entryTime;
 
         const pnlMultiplier =
@@ -863,12 +921,16 @@ export class BacktestEngine {
             ? (position.exitPrice - position.entryPrice) / position.entryPrice
             : (position.entryPrice - position.exitPrice) / position.entryPrice;
 
+        // eslint-disable-next-line functional/immutable-data
         position.pnl = position.quantity * position.entryPrice * pnlMultiplier * position.leverage;
+        // eslint-disable-next-line functional/immutable-data
         position.pnlPercent = pnlMultiplier * position.leverage;
+        // eslint-disable-next-line functional/immutable-data
         position.rValue =
           position.pnl /
           (Math.abs(position.entryPrice - position.signal.stopLoss) * position.quantity);
 
+        // eslint-disable-next-line functional/immutable-data
         trades.push(position);
       }
     }
@@ -957,7 +1019,9 @@ export class BacktestEngine {
 
   private generateDrawdownCurve(equityCurve: EquityPoint[]): DrawdownPoint[] {
     const drawdownCurve: DrawdownPoint[] = [];
+    // eslint-disable-next-line functional/no-let
     let maxEquity = 0;
+    // eslint-disable-next-line functional/no-let
     let drawdownStart = 0;
 
     for (const point of equityCurve) {
@@ -972,6 +1036,7 @@ export class BacktestEngine {
         drawdownStart = point.timestamp;
       }
 
+      // eslint-disable-next-line functional/immutable-data
       drawdownCurve.push({
         timestamp: point.timestamp,
         drawdown,
@@ -1004,14 +1069,17 @@ export class BacktestEngine {
     const suggestions: string[] = [];
 
     if (period.marketConditions.volatility > 0.03) {
+      // eslint-disable-next-line functional/immutable-data
       suggestions.push('Reduce position sizes during high volatility periods');
     }
 
     if (period.marketConditions.btcCorrelation > 0.9) {
+      // eslint-disable-next-line functional/immutable-data
       suggestions.push('Avoid trading during high BTC correlation periods');
     }
 
     if (period.consecutiveLosses > 5) {
+      // eslint-disable-next-line functional/immutable-data
       suggestions.push('Implement circuit breaker after 3 consecutive losses');
     }
 
@@ -1088,6 +1156,7 @@ export class BacktestEngine {
    * Update configuration
    */
   public updateConfig(newConfig: Partial<BacktestConfig>): void {
+    // eslint-disable-next-line functional/immutable-data
     this.config = { ...this.config, ...newConfig };
     console.log('📝 BacktestEngine configuration updated');
   }

@@ -1,7 +1,7 @@
 /**
  * Risk Repository
  * Handles persistence of risk snapshots
- * 
+ *
  * Requirements: 9.1, 9.2, 9.3, 9.6
  */
 
@@ -37,7 +37,7 @@ export class RiskRepository extends BaseRepository<RiskRow> {
       portfolio_beta: snapshot.portfolioBeta,
       var_95: snapshot.var95,
     });
-    
+
     return this.mapRowToSnapshot(row);
   }
 
@@ -46,9 +46,9 @@ export class RiskRepository extends BaseRepository<RiskRow> {
    */
   async getLatest(): Promise<RiskSnapshot | null> {
     const row = await this.db.queryOne<RiskRow>(
-      `SELECT * FROM ${this.tableName} ORDER BY timestamp DESC LIMIT 1`
+      `SELECT * FROM ${this.tableName} ORDER BY timestamp DESC LIMIT 1`,
     );
-    
+
     return row ? this.mapRowToSnapshot(row) : null;
   }
 
@@ -60,10 +60,10 @@ export class RiskRepository extends BaseRepository<RiskRow> {
       `SELECT * FROM ${this.tableName} 
        WHERE timestamp >= $1 AND timestamp <= $2 
        ORDER BY timestamp DESC`,
-      [startTime, endTime]
+      [startTime, endTime],
     );
-    
-    return rows.map(row => this.mapRowToSnapshot(row));
+
+    return rows.map((row) => this.mapRowToSnapshot(row));
   }
 
   /**
@@ -92,9 +92,9 @@ export class RiskRepository extends BaseRepository<RiskRow> {
          COALESCE(AVG(var_95), 0) as avg_var
        FROM ${this.tableName} 
        WHERE timestamp >= $1`,
-      [cutoff]
+      [cutoff],
     );
-    
+
     return {
       avgLeverage: parseFloat(result?.avg_leverage || '0'),
       avgDelta: parseFloat(result?.avg_delta || '0'),
@@ -113,9 +113,9 @@ export class RiskRepository extends BaseRepository<RiskRow> {
       `SELECT COALESCE(MAX(global_leverage), 0) as max_leverage 
        FROM ${this.tableName} 
        WHERE timestamp >= $1`,
-      [cutoff]
+      [cutoff],
     );
-    
+
     return parseFloat(result?.max_leverage || '0');
   }
 
@@ -128,9 +128,9 @@ export class RiskRepository extends BaseRepository<RiskRow> {
       `SELECT COALESCE(MAX(var_95), 0) as max_var 
        FROM ${this.tableName} 
        WHERE timestamp >= $1`,
-      [cutoff]
+      [cutoff],
     );
-    
+
     return parseFloat(result?.max_var || '0');
   }
 
@@ -142,10 +142,10 @@ export class RiskRepository extends BaseRepository<RiskRow> {
       `SELECT * FROM ${this.tableName} 
        ORDER BY timestamp DESC 
        LIMIT $1`,
-      [limit]
+      [limit],
     );
-    
-    return rows.map(row => this.mapRowToSnapshot(row));
+
+    return rows.map((row) => this.mapRowToSnapshot(row));
   }
 
   /**
@@ -157,10 +157,10 @@ export class RiskRepository extends BaseRepository<RiskRow> {
        WHERE global_leverage > $1 
        ORDER BY timestamp DESC 
        LIMIT $2`,
-      [threshold, limit]
+      [threshold, limit],
     );
-    
-    return rows.map(row => this.mapRowToSnapshot(row));
+
+    return rows.map((row) => this.mapRowToSnapshot(row));
   }
 
   /**

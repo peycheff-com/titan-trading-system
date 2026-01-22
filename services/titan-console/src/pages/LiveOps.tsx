@@ -15,10 +15,36 @@ const latencySteps = [
   { name: 'Exchange ACK', duration: 1 },
 ];
 
+interface LiveOpsEvent {
+  id: number;
+  timestamp: number;
+  type: string;
+  severity: string;
+  symbol: string;
+  message: string;
+}
+
+interface LiveOpsOrder {
+  id: number;
+  symbol: string;
+  side: string;
+  size: number;
+  price: number;
+  latency: number;
+}
+
+interface LiveOpsService {
+  name: string;
+  status: 'healthy' | 'degraded' | 'down'; // Matching ServiceHealthCard props if possible
+  lastRestart?: number;
+  uptime?: number;
+  errorRate?: number;
+}
+
 interface LiveOpsData {
-  events: any[];
-  orders: any[];
-  services: any[];
+  events: LiveOpsEvent[];
+  orders: LiveOpsOrder[];
+  services: LiveOpsService[];
 }
 
 export default function LiveOps() {
@@ -28,12 +54,32 @@ export default function LiveOps() {
   const { lastMessage } = useTitanWebSocket();
 
   const handleMessage = useCallback((msg: any) => {
-    if (msg?.type === 'EVENT_STREAM') {
-      setData(prev => ({ ...prev, events: [msg.event, ...prev.events].slice(0, 50) }));
-    } else if (msg?.type === 'ORDER_UPDATE') {
-      setData(prev => ({ ...prev, orders: [msg.order, ...prev.orders].slice(0, 20) }));
+    // Map Backend types to Frontend expected structure
+    if (msg?.type === 'ALERT' || msg?.type === 'SIGNAL') {
+      const event: any = {
+        // Using any cast internally to simplify TimelineEvent compatibility for now until types are strictly shared
+        id: String(msg.timestamp), // TimelineEvent wants string id
+        timestamp: msg.timestamp,
+        type: msg.type === 'ALERT' ? 'alert' : 'system',
+        severity: (msg.data.level as any) || 'info', // TODO: Strictly map 'level' to Severity type
+        message: msg.data.message || JSON.stringify(msg.data),
+        symbol: msg.data.symbol || 'System',
+        phase: null, // Backend doesn't send phase on generic alerts yet
+      };
+      setData((prev) => ({ ...prev, events: [event, ...prev.events].slice(0, 50) }));
+    } else if (msg?.type === 'TRADE') {
+      const order = {
+        id: msg.timestamp,
+        symbol: msg.data.symbol,
+        side: msg.data.side,
+        size: msg.data.size,
+        price: msg.data.price,
+        latency: 0, // Not currently sent
+      };
+      setData((prev) => ({ ...prev, orders: [order, ...prev.orders].slice(0, 20) }));
     } else if (msg?.type === 'SERVICE_STATUS') {
-      setData(prev => ({ ...prev, services: msg.services }));
+      // Keep this if we decide to implement explicit service status broadcast later
+      setData((prev) => ({ ...prev, services: msg.services }));
     }
   }, []);
 
@@ -120,7 +166,7 @@ export default function LiveOps() {
         {/* Service Status */}
         <div className="space-y-4">
           <h2 className="text-sm font-semibold text-foreground">Service Status</h2>
-          
+
           <div className="space-y-3">
             {data.services.map((service: any) => (
               <ServiceHealthCard
@@ -147,7 +193,7 @@ export default function LiveOps() {
                     <span
                       className={cn(
                         'font-medium',
-                        order.side === 'BUY' ? 'text-pnl-positive' : 'text-pnl-negative'
+                        order.side === 'BUY' ? 'text-pnl-positive' : 'text-pnl-negative',
                       )}
                     >
                       {order.side}

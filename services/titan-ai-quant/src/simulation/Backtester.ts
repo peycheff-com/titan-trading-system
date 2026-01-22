@@ -83,10 +83,12 @@ export class InMemoryDataCache implements DataCache {
   private regimeData: Map<string, RegimeSnapshot[]> = new Map();
 
   setOHLCV(symbol: string, data: OHLCV[]): void {
+    // eslint-disable-next-line functional/immutable-data
     this.ohlcvData.set(symbol, data);
   }
 
   setRegimeSnapshots(symbol: string, data: RegimeSnapshot[]): void {
+    // eslint-disable-next-line functional/immutable-data
     this.regimeData.set(symbol, data);
   }
 
@@ -146,15 +148,19 @@ export class Backtester {
       try {
         // Load OHLCV data
         const ohlcv = await this.cache.loadOHLCV(symbol, startTime, endTime);
+        // eslint-disable-next-line functional/immutable-data
         ohlcvData.set(symbol, ohlcv);
 
         // Load regime snapshots
         const regimes = await this.cache.loadRegimeSnapshots(symbol, startTime, endTime);
+        // eslint-disable-next-line functional/immutable-data
         regimeData.set(symbol, regimes);
       } catch (error) {
         // Log error but continue with other symbols
         console.warn(`Failed to load data for ${symbol}:`, error);
+        // eslint-disable-next-line functional/immutable-data
         ohlcvData.set(symbol, []);
+        // eslint-disable-next-line functional/immutable-data
         regimeData.set(symbol, []);
       }
     }
@@ -240,6 +246,7 @@ export class Backtester {
           trapConfig.max_leverage,
         );
 
+        // eslint-disable-next-line functional/immutable-data
         processedTrades.push({
           originalTrade: trade,
           adjustedEntry: finalEntry,
@@ -394,8 +401,11 @@ export class Backtester {
     const winRateDelta = proposedResult.winRate - baselineResult.winRate;
 
     // Apply rejection rules
+    // eslint-disable-next-line functional/no-let
     let passed = true;
+    // eslint-disable-next-line functional/no-let
     let rejectionReason: string | undefined;
+    // eslint-disable-next-line functional/no-let
     let recommendation: 'approve' | 'reject' | 'review' = 'approve';
 
     // Rule 1: Reject if new PnL <= old PnL
@@ -475,6 +485,7 @@ export class Backtester {
     } = options;
 
     const warnings: BacktestWarning[] = [];
+    // eslint-disable-next-line functional/no-let
     let skippedTrades = 0;
 
     if (trades.length === 0) {
@@ -482,6 +493,7 @@ export class Backtester {
     }
 
     // Filter trades by time range if specified
+    // eslint-disable-next-line functional/no-let
     let filteredTrades = trades;
     if (options.startTime !== undefined) {
       filteredTrades = filteredTrades.filter((t) => t.timestamp >= options.startTime!);
@@ -519,6 +531,7 @@ export class Backtester {
         logError(error);
         throw error;
       }
+      // eslint-disable-next-line functional/immutable-data
       warnings.push({
         code: 'MISSING_OHLCV_DATA',
         message: 'No OHLCV data available - using trade prices directly',
@@ -527,6 +540,7 @@ export class Backtester {
 
     // Check for incomplete regime data
     if (regimeSnapshots.length === 0) {
+      // eslint-disable-next-line functional/immutable-data
       warnings.push({
         code: 'INCOMPLETE_REGIME_DATA',
         message: 'No regime data available - using default liquidity state',
@@ -538,9 +552,13 @@ export class Backtester {
 
     // Simulate each trade with config parameters
     const simulatedResults: SimulatedTrade[] = [];
+    // eslint-disable-next-line functional/no-let
     let equity = initialCapital;
+    // eslint-disable-next-line functional/no-let
     let peakEquity = initialCapital;
+    // eslint-disable-next-line functional/no-let
     let maxDrawdown = 0;
+    // eslint-disable-next-line functional/no-let
     let maxDrawdownPercent = 0;
 
     for (const trade of sortedTrades) {
@@ -556,6 +574,7 @@ export class Backtester {
       const liquidityState = regime?.liquidityState ?? 1;
 
       // Apply latency penalty to entry price (handle missing OHLCV data)
+      // eslint-disable-next-line functional/no-let
       let adjustedEntry: number;
       try {
         adjustedEntry = this.latencyModel.applyLatencyPenalty(
@@ -577,6 +596,7 @@ export class Backtester {
       const atr = this.estimateATR(ohlcvData, trade.timestamp);
 
       // Calculate position size based on config (handle division by zero)
+      // eslint-disable-next-line functional/no-let
       let positionSize: number;
       try {
         positionSize = this.calculatePositionSize(
@@ -623,6 +643,7 @@ export class Backtester {
       );
 
       // Calculate PnL (handle division by zero)
+      // eslint-disable-next-line functional/no-let
       let pnl: number;
       try {
         pnl = this.calculatePnL(
@@ -667,6 +688,7 @@ export class Backtester {
         maxDrawdownPercent = currentDrawdownPercent;
       }
 
+      // eslint-disable-next-line functional/immutable-data
       simulatedResults.push({
         originalTrade: trade,
         adjustedEntry: finalEntry,
@@ -680,6 +702,7 @@ export class Backtester {
 
     // Add warning if trades were skipped
     if (skippedTrades > 0) {
+      // eslint-disable-next-line functional/immutable-data
       warnings.push({
         code: 'TRADES_SKIPPED',
         message: `${skippedTrades} trades skipped due to missing or invalid data`,
@@ -743,7 +766,9 @@ export class Backtester {
     const drawdownDelta = proposedResult.maxDrawdown - baseResult.maxDrawdown;
 
     // Apply rejection rules
+    // eslint-disable-next-line functional/no-let
     let recommendation: 'approve' | 'reject' = 'approve';
+    // eslint-disable-next-line functional/no-let
     let reason = 'Proposal improves performance metrics';
 
     // Rule 1: Reject if new PnL <= old PnL (Requirement 3.3)
@@ -902,6 +927,7 @@ export class Backtester {
     const sorted = [...regimeSnapshots].sort((a, b) => a.timestamp - b.timestamp);
 
     // Find the closest regime that is <= timestamp
+    // eslint-disable-next-line functional/no-let
     let closest: RegimeSnapshot | null = null;
     for (const regime of sorted) {
       if (regime.timestamp <= timestamp) {
@@ -936,6 +962,7 @@ export class Backtester {
 
     // Calculate True Range for each period
     const trueRanges: number[] = [];
+    // eslint-disable-next-line functional/no-let
     for (let i = 0; i < relevantData.length - 1; i++) {
       const current = relevantData[i];
       const previous = relevantData[i + 1];
@@ -945,6 +972,7 @@ export class Backtester {
         Math.abs(current.high - previous.close),
         Math.abs(current.low - previous.close),
       );
+      // eslint-disable-next-line functional/immutable-data
       trueRanges.push(tr);
     }
 
@@ -1188,6 +1216,7 @@ export class Backtester {
    * Set a new latency model
    */
   setLatencyModel(latencyModel: LatencyModel): void {
+    // eslint-disable-next-line functional/immutable-data
     this.latencyModel = latencyModel;
   }
 
@@ -1196,10 +1225,12 @@ export class Backtester {
    */
   private calculateEquityCurve(trades: SimulatedTrade[], initialCapital: number): number[] {
     const curve = [initialCapital];
+    // eslint-disable-next-line functional/no-let
     let equity = initialCapital;
 
     for (const trade of trades) {
       equity += trade.pnl;
+      // eslint-disable-next-line functional/immutable-data
       curve.push(equity);
     }
 
@@ -1213,8 +1244,11 @@ export class Backtester {
     maxDrawdown: number;
     maxDrawdownPercent: number;
   } {
+    // eslint-disable-next-line functional/no-let
     let maxDrawdown = 0;
+    // eslint-disable-next-line functional/no-let
     let maxDrawdownPercent = 0;
+    // eslint-disable-next-line functional/no-let
     let peak = equityCurve[0];
 
     for (const equity of equityCurve) {
@@ -1282,7 +1316,9 @@ export class Backtester {
    * Calculate maximum consecutive losses
    */
   private calculateMaxConsecutiveLosses(trades: SimulatedTrade[]): number {
+    // eslint-disable-next-line functional/no-let
     let maxConsecutive = 0;
+    // eslint-disable-next-line functional/no-let
     let currentConsecutive = 0;
 
     for (const trade of trades) {

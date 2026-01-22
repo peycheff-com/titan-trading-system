@@ -152,6 +152,7 @@ export class Oracle extends EventEmitter {
       // Start periodic updates
       this.startPeriodicUpdates();
 
+      // eslint-disable-next-line functional/immutable-data
       this.isInitialized = true;
       this.emit('initialized');
       return true;
@@ -169,6 +170,7 @@ export class Oracle extends EventEmitter {
       clearInterval(this.updateInterval);
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.updateInterval = setInterval(
       () => this.refreshEvents(),
       this.config.updateInterval * 1000
@@ -181,6 +183,7 @@ export class Oracle extends EventEmitter {
   stopPeriodicUpdates(): void {
     if (this.updateInterval) {
       clearInterval(this.updateInterval);
+      // eslint-disable-next-line functional/immutable-data
       this.updateInterval = null;
     }
   }
@@ -201,23 +204,28 @@ export class Oracle extends EventEmitter {
 
       for (const market of [...cryptoEvents, ...macroEvents, ...regulatoryEvents]) {
         const event = this.polymarketClient.convertToPredictionEvent(market);
+        // eslint-disable-next-line functional/immutable-data
         allEvents.push(event);
       }
 
       // Deduplicate by ID
       const uniqueEvents = new Map<string, PredictionMarketEvent>();
       for (const event of allEvents) {
+        // eslint-disable-next-line functional/immutable-data
         uniqueEvents.set(event.id, event);
       }
 
       // Update cache
+      // eslint-disable-next-line functional/immutable-data
       this.eventCache.set('all', Array.from(uniqueEvents.values()));
+      // eslint-disable-next-line functional/immutable-data
       this.lastUpdate = new Date();
 
       // Detect changes
       this.eventMonitor.detectSignificantChanges(Array.from(uniqueEvents.values()));
 
       // Clear score cache (events changed)
+      // eslint-disable-next-line functional/immutable-data
       this.scoreCache.clear();
 
       this.emit('eventsRefreshed', { count: uniqueEvents.size });
@@ -270,6 +278,7 @@ export class Oracle extends EventEmitter {
     };
 
     // Cache the score
+    // eslint-disable-next-line functional/immutable-data
     this.scoreCache.set(cacheKey, { score, timestamp: Date.now() });
 
     return score;
@@ -353,6 +362,7 @@ export class Oracle extends EventEmitter {
   ): Promise<ConvictionResult> {
     const score = oracleScore || (await this.calculateOracleScore(signal.symbol, signal.direction));
 
+    // eslint-disable-next-line functional/no-let
     let multiplier = 1.0;
     const factors = {
       oracleAlignment: 1.0,
@@ -366,13 +376,17 @@ export class Oracle extends EventEmitter {
 
     if (isAligned && Math.abs(score.sentiment) >= 60) {
       // Strong alignment: Apply 1.5x multiplier
+      // eslint-disable-next-line functional/immutable-data
       factors.oracleAlignment = this.config.convictionMultiplierMax;
+      // eslint-disable-next-line functional/immutable-data
       reasons.push(`Oracle strongly aligned (sentiment: ${score.sentiment})`);
     } else if (isAligned && Math.abs(score.sentiment) >= 40) {
       // Moderate alignment: Apply partial multiplier
       const alignmentStrength = Math.abs(score.sentiment) / 100;
+      // eslint-disable-next-line functional/immutable-data
       factors.oracleAlignment =
         1.0 + (this.config.convictionMultiplierMax - 1.0) * alignmentStrength;
+      // eslint-disable-next-line functional/immutable-data
       reasons.push(`Oracle moderately aligned (sentiment: ${score.sentiment})`);
     }
 
@@ -380,7 +394,9 @@ export class Oracle extends EventEmitter {
     if (signal.direction === 'LONG' && signal.symbol.includes('BTC')) {
       const btcAthProb = this.getBTCATHProbability();
       if (btcAthProb > this.config.btcAthBoostThreshold) {
+        // eslint-disable-next-line functional/immutable-data
         factors.btcAthBoost = 1.5;
+        // eslint-disable-next-line functional/immutable-data
         reasons.push(`BTC ATH probability high (${btcAthProb.toFixed(1)}%)`);
       }
     }
@@ -389,7 +405,9 @@ export class Oracle extends EventEmitter {
     const conflictScore = this.calculateConflictScore(signal, score);
     if (conflictScore > 20 && conflictScore <= this.config.conflictThreshold) {
       // Partial conflict: reduce multiplier
+      // eslint-disable-next-line functional/immutable-data
       factors.conflictPenalty = 1.0 - (conflictScore / 100) * 0.3;
+      // eslint-disable-next-line functional/immutable-data
       reasons.push(`Partial Oracle conflict (${conflictScore.toFixed(1)} points)`);
     }
 
@@ -464,14 +482,18 @@ export class Oracle extends EventEmitter {
 
     // Check for veto
     const vetoResult = await this.shouldVetoSignal(signal, score);
+    // eslint-disable-next-line functional/immutable-data
     score.veto = vetoResult.shouldVeto;
+    // eslint-disable-next-line functional/immutable-data
     score.vetoReason = vetoResult.reason;
 
     // Calculate conviction multiplier (only if not vetoed)
     if (!score.veto) {
       const convictionResult = await this.getConvictionMultiplier(signal, score);
+      // eslint-disable-next-line functional/immutable-data
       score.convictionMultiplier = convictionResult.multiplier;
     } else {
+      // eslint-disable-next-line functional/immutable-data
       score.convictionMultiplier = 0; // Vetoed signals get 0 multiplier
     }
 
@@ -546,7 +568,9 @@ export class Oracle extends EventEmitter {
   updateConfig(config: Partial<OracleConfig>): void {
     // Update config manager
     this.configManager.updateOracleConfig(config);
+    // eslint-disable-next-line functional/immutable-data
     this.config = this.configManager.getOracleConfig();
+    // eslint-disable-next-line functional/immutable-data
     this.cacheTTL = this.config.updateInterval * 1000;
 
     // Restart periodic updates if interval changed
@@ -556,6 +580,7 @@ export class Oracle extends EventEmitter {
     }
 
     // Clear caches
+    // eslint-disable-next-line functional/immutable-data
     this.scoreCache.clear();
 
     this.emit('configUpdated', this.config);
@@ -591,7 +616,9 @@ export class Oracle extends EventEmitter {
    * Clear all caches
    */
   clearCaches(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.eventCache.clear();
+    // eslint-disable-next-line functional/immutable-data
     this.scoreCache.clear();
     this.polymarketClient.clearCache();
   }

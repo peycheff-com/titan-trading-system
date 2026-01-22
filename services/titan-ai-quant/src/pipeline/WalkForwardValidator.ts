@@ -52,7 +52,9 @@ export class WalkForwardValidator {
       return [];
     }
 
+    // eslint-disable-next-line functional/no-let
     let currentStart = dataStartMs;
+    // eslint-disable-next-line functional/no-let
     let windowId = 1;
 
     while (true) {
@@ -71,6 +73,7 @@ export class WalkForwardValidator {
         break;
       }
 
+      // eslint-disable-next-line functional/immutable-data
       windows.push({
         id: windowId++,
         train: { start: trainStart, end: trainEnd },

@@ -174,11 +174,13 @@ export class NotificationService {
 
     // Send via Telegram if enabled
     if (this.config.telegram.enabled) {
+      // eslint-disable-next-line functional/immutable-data
       promises.push(this.sendTelegramNotification(message));
     }
 
     // Send via Email if enabled
     if (this.config.email.enabled) {
+      // eslint-disable-next-line functional/immutable-data
       promises.push(this.sendEmailNotification(message));
     }
 
@@ -315,8 +317,10 @@ _${new Date(message.timestamp).toISOString()}_`;
    * Retry mechanism for network requests
    */
   private async retryRequest(fn: () => Promise<void>): Promise<void> {
+    // eslint-disable-next-line functional/no-let
     let lastError: Error | null = null;
 
+    // eslint-disable-next-line functional/no-let
     for (let attempt = 1; attempt <= this.retryAttempts; attempt++) {
       try {
         await fn();
@@ -342,6 +346,7 @@ _${new Date(message.timestamp).toISOString()}_`;
    * Update configuration
    */
   updateConfig(config: NotificationConfig): void {
+    // eslint-disable-next-line functional/immutable-data
     this.config = config;
   }
 
@@ -362,6 +367,7 @@ _${new Date(message.timestamp).toISOString()}_`;
           timestamp: Date.now(),
         };
         await this.sendTelegramNotification(testMessage);
+        // eslint-disable-next-line functional/immutable-data
         results.telegram = true;
       } catch (error) {
         console.error('Telegram test failed:', error);
@@ -379,6 +385,7 @@ _${new Date(message.timestamp).toISOString()}_`;
           timestamp: Date.now(),
         };
         await this.sendEmailNotification(testMessage);
+        // eslint-disable-next-line functional/immutable-data
         results.email = true;
       } catch (error) {
         console.error('Email test failed:', error);

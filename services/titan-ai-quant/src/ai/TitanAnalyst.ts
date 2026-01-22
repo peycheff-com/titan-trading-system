@@ -92,27 +92,36 @@ export class TitanAnalyst {
       const optimizationPath = path.join(this.promptsDir, 'optimization.txt');
 
       if (fs.existsSync(analysisPath)) {
+        // eslint-disable-next-line functional/immutable-data
         this.analysisPromptTemplate = fs.readFileSync(analysisPath, 'utf-8');
       } else {
+        // eslint-disable-next-line functional/immutable-data
         this.analysisPromptTemplate = this.getDefaultAnalysisPrompt();
       }
 
       if (fs.existsSync(optimizationPath)) {
+        // eslint-disable-next-line functional/immutable-data
         this.optimizationPromptTemplate = fs.readFileSync(optimizationPath, 'utf-8');
       } else {
+        // eslint-disable-next-line functional/immutable-data
         this.optimizationPromptTemplate = this.getDefaultOptimizationPrompt();
       }
 
       const deepThinkPath = path.join(this.promptsDir, 'deep_think.txt');
       if (fs.existsSync(deepThinkPath)) {
+        // eslint-disable-next-line functional/immutable-data
         this.deepThinkPromptTemplate = fs.readFileSync(deepThinkPath, 'utf-8');
       } else {
+        // eslint-disable-next-line functional/immutable-data
         this.deepThinkPromptTemplate = this.getDefaultDeepThinkPrompt();
       }
     } catch {
       // Use default prompts if files can't be read
+      // eslint-disable-next-line functional/immutable-data
       this.analysisPromptTemplate = this.getDefaultAnalysisPrompt();
+      // eslint-disable-next-line functional/immutable-data
       this.optimizationPromptTemplate = this.getDefaultOptimizationPrompt();
+      // eslint-disable-next-line functional/immutable-data
       this.deepThinkPromptTemplate = this.getDefaultDeepThinkPrompt();
     }
   }
@@ -142,6 +151,7 @@ export class TitanAnalyst {
     for (const trade of failedTrades) {
       const regime = this.journal.getRegimeContext(trade);
       if (regime) {
+        // eslint-disable-next-line functional/immutable-data
         narratives.push(this.journal.summarizeTrade(trade, regime));
       }
     }
@@ -370,7 +380,9 @@ export class TitanAnalyst {
       await this.saveConfig(newConfig);
 
       // Update proposal status
+      // eslint-disable-next-line functional/immutable-data
       proposal.status = 'applied';
+      // eslint-disable-next-line functional/immutable-data
       proposal.validationReport = validationReport;
 
       return {
@@ -434,8 +446,11 @@ export class TitanAnalyst {
     const sharpeImprovement = afterMetrics.sharpeRatio - beforeMetrics.sharpeRatio;
 
     // Determine if changes should be kept
+    // eslint-disable-next-line functional/no-let
     let improvement = true;
+    // eslint-disable-next-line functional/no-let
     let recommendation: 'keep' | 'rollback' = 'keep';
+    // eslint-disable-next-line functional/no-let
     let reason = 'Performance metrics improved';
 
     // Apply rollback rules
@@ -535,16 +550,20 @@ export class TitanAnalyst {
       for (const trap of insight.affectedTraps) {
         const trapKey = trap.toLowerCase().replace(/ /g, '_');
         if (trapKey in config.traps) {
+          // eslint-disable-next-line functional/immutable-data
           relevant[`traps.${trapKey}`] = config.traps[trapKey as keyof typeof config.traps];
         }
       }
     } else {
       // Include all trap configs if no specific traps mentioned
+      // eslint-disable-next-line functional/immutable-data
       relevant['traps'] = config.traps;
     }
 
     // Always include risk and execution config
+    // eslint-disable-next-line functional/immutable-data
     relevant['risk'] = config.risk;
+    // eslint-disable-next-line functional/immutable-data
     relevant['execution'] = config.execution;
 
     return relevant;
@@ -801,10 +820,13 @@ Provide a concise reasoning paragraph (plain text).`;
     const keyPath = proposal.targetKey.split('.');
 
     // Navigate to the target object
+    // eslint-disable-next-line functional/no-let
     let target = newConfig;
+    // eslint-disable-next-line functional/no-let
     for (let i = 0; i < keyPath.length - 1; i++) {
       const key = keyPath[i];
       if (!(key in target)) {
+        // eslint-disable-next-line functional/immutable-data
         target[key] = {};
       }
       target = target[key];
@@ -812,6 +834,7 @@ Provide a concise reasoning paragraph (plain text).`;
 
     // Set the new value
     const finalKey = keyPath[keyPath.length - 1];
+    // eslint-disable-next-line functional/immutable-data
     target[finalKey] = proposal.suggestedValue;
 
     return newConfig;
@@ -882,8 +905,11 @@ Provide a concise reasoning paragraph (plain text).`;
     // Determine recommendation based on expected impact
     const { pnlImprovement, riskChange, confidenceScore } = proposal.expectedImpact;
 
+    // eslint-disable-next-line functional/no-let
     let passed = true;
+    // eslint-disable-next-line functional/no-let
     let rejectionReason: string | undefined;
+    // eslint-disable-next-line functional/no-let
     let recommendation: 'approve' | 'reject' | 'review' = 'review';
 
     // Apply rejection rules from design

@@ -93,6 +93,7 @@ export class HMACValidator {
    * Generate HMAC signature for a payload
    */
   generateSignature(payload: string, timestamp?: number): string {
+    // eslint-disable-next-line functional/no-let
     let data = payload;
 
     // Include timestamp in signature if provided
@@ -121,7 +122,9 @@ export class HMACValidator {
       }
 
       // Get timestamp from headers if required
+      // eslint-disable-next-line functional/no-let
       let timestamp: number | undefined;
+      // eslint-disable-next-line functional/no-let
       let age: number | undefined;
 
       if (this.config.requireTimestamp) {
@@ -209,6 +212,7 @@ export class HMACValidator {
     name: string,
   ): string | undefined {
     // Try exact match first
+    // eslint-disable-next-line functional/no-let
     let value = headers[name];
 
     // Try case-insensitive match
@@ -275,13 +279,16 @@ export class HMACValidator {
   createHeaders(payload: string, includeTimestamp: boolean = true): Record<string, string> {
     const headers: Record<string, string> = {};
 
+    // eslint-disable-next-line functional/no-let
     let timestamp: number | undefined;
     if (includeTimestamp) {
       timestamp = Math.floor(Date.now() / 1000);
+      // eslint-disable-next-line functional/immutable-data
       headers[this.config.timestampHeaderName] = timestamp.toString();
     }
 
     const signature = this.generateSignature(payload, timestamp);
+    // eslint-disable-next-line functional/immutable-data
     headers[this.config.headerName] = signature;
 
     return headers;
@@ -310,6 +317,7 @@ export class HMACValidator {
       throw new Error('HMAC secret cannot be empty');
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.config.secret = newSecret;
     this.logger.info('HMAC secret updated');
   }
@@ -359,6 +367,7 @@ export function createHMACMiddleware(validator: HMACValidator, logger?: Logger) 
     }
 
     // Add validation result to request for logging
+    // eslint-disable-next-line functional/immutable-data
     request.hmacValidation = result;
 
     middlewareLogger.debug('HMAC validation successful', undefined, {

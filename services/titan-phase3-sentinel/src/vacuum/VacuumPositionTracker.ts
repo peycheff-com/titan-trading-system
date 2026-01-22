@@ -11,6 +11,7 @@ export class VacuumPositionTracker {
   }
 
   addPosition(position: VacuumPosition): void {
+    // eslint-disable-next-line functional/immutable-data
     this.positions.set(position.symbol, position);
   }
 
@@ -19,6 +20,7 @@ export class VacuumPositionTracker {
   }
 
   removePosition(symbol: string): void {
+    // eslint-disable-next-line functional/immutable-data
     this.positions.delete(symbol);
   }
 

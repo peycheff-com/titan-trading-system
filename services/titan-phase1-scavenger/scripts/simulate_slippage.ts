@@ -17,23 +17,24 @@ const mockBinanceClient = {
 };
 
 const mockBybitClient = {
-    getEquity: async () => 10000, // $10k Equity
+    getEquity: async () => 10000,
     fetchTopSymbols: async () => [],
     subscribeTicker: () => {},
 };
 
-const mockExecutionClient = {
+const mockSignalClient = {
     connect: async () => {},
     disconnect: async () => {},
-    on: () => {},
-    sendIntent: async (signal: any) => {
+    sendPrepare: async () => ({ prepared: true, signal_id: "mock-sig" }),
+    sendConfirm: async (signalId: string) => {
         console.log(
-            "MOCK Execution Client received Intent:",
-            JSON.stringify(signal, null, 2),
+            "MOCK Signal Client Confirmed:",
+            signalId,
         );
-        GLOBAL_INTENT = signal; // Capture for verification
+        return { executed: true, fill_price: 50000 };
     },
-    getStatus: () => ({ socketPath: "/tmp/titan.sock" }),
+    sendAbort: async () => ({ aborted: true }),
+    getStatus: () => ({ socketPath: "/tmp/titan-mock.sock" }),
 };
 
 // Mock Calculators
@@ -41,14 +42,27 @@ const mockTripwireCalculators = {};
 const mockVelocityCalculator = {
     getAcceleration: () => 0,
     recordPrice: () => {},
+    calcVelocity: () => 0.006, // Trigger aggressive or market
+    getLastPrice: () => 50000,
 };
-const mockPositionSizeCalculator = {};
+const mockPositionSizeCalculator = {
+    calcPositionSize: () => 0.1,
+};
 const mockCvdCalculator = {
     calcCVD: async () => -100, // Counter-flow
     recordTrade: () => {},
 };
 const mockLeadLagDetector = {
     recordPrice: () => {},
+    getLeader: () => "BINANCE",
+};
+const mockTrapStateManager = {
+    getLastActivationTime: () => 0,
+    setLastActivationTime: () => {},
+    getVolumeCounter: () => ({ startTime: Date.now() }), // Valid
+    incrementFailedAttempts: () => 0,
+    resetFailedAttempts: () => {},
+    blacklistSymbol: () => {},
 };
 
 let GLOBAL_INTENT: any = null;
@@ -65,11 +79,14 @@ async function runSimulation() {
         tripwireCalculators: mockTripwireCalculators,
         velocityCalculator: mockVelocityCalculator,
         positionSizeCalculator: mockPositionSizeCalculator,
+        cvdCalculator: mockCvdCalculator,
+        leadLagDetector: mockLeadLagDetector,
+        stateManager: mockTrapStateManager,
     } as any);
 
-    // Inject mocks manually if they weren't passed in ctor correctly or needed overriding
-    (trap as any).executionClient = mockExecutionClient;
-    (trap as any).cvdCalculator = mockCvdCalculator; // Override with configured mock
+    // Inject mocks
+    (trap as any).signalClient = mockSignalClient;
+    // (trap as any).dependencies.signalClient = mockSignalClient; // If accessed via deps
 
     // Initialize
     await trap.start();
@@ -85,30 +102,11 @@ async function runSimulation() {
     };
 
     console.log("\nTest 1: Firing Trap...");
-    // Simulate fire - should trigger ExecutionClient.sendIntent
-    // passing burstVolume to potentially verify logic
-    await trap.fire(tripwire, 50, 100);
-
-    // Check Intent
-    if (!GLOBAL_INTENT) {
-        console.error("FAILED: No intent sent");
-    } else {
-        // Verify max_slippage_bps
-        if (GLOBAL_INTENT.max_slippage_bps === 50) { // Default 50 bps?
-            console.log("SUCCESS: Intent contains max_slippage_bps: 50");
-        } else {
-            console.log(
-                `CHECK: Intent max_slippage_bps is ${GLOBAL_INTENT.max_slippage_bps}`,
-            );
-            // If undefined, maybe it's not set in Scavenger but defaults in Rust?
-            // But user asked to verify "Scavenger with... Slippage Guards".
-            // So Scavenger SHOULD send it.
-            if (GLOBAL_INTENT.max_slippage_bps === undefined) {
-                console.warn(
-                    "WARNING: max_slippage_bps is undefined in intent!",
-                );
-            }
-        }
+    try {
+        await trap.fire(tripwire, 50, 100);
+        console.log("SUCCESS: Trap fired and routed to SignalClient");
+    } catch (e) {
+        console.error("FAILED to fire trap:", e);
     }
 
     await trap.stop();

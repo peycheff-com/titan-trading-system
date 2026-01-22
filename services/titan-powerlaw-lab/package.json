@@ -10,6 +10,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@titan/shared": "^1.0.0",
     "nats": "^2.19.0",
     "numeric": "^1.2.6"
   },

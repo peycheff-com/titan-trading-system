@@ -245,39 +245,50 @@ export function ConfigPanel({ config, onSave, onCancel }: ConfigPanelProps) {
 
     switch (param) {
       case 'daily':
+        // eslint-disable-next-line functional/immutable-data
         newConfig.alignmentWeights = { ...newConfig.alignmentWeights, daily: value };
         break;
       case 'h4':
+        // eslint-disable-next-line functional/immutable-data
         newConfig.alignmentWeights = { ...newConfig.alignmentWeights, h4: value };
         break;
       case 'm15':
+        // eslint-disable-next-line functional/immutable-data
         newConfig.alignmentWeights = { ...newConfig.alignmentWeights, m15: value };
         break;
       case 'rsThreshold':
+        // eslint-disable-next-line functional/immutable-data
         newConfig.rsConfig = { ...newConfig.rsConfig, threshold: value };
         break;
       case 'rsLookback':
+        // eslint-disable-next-line functional/immutable-data
         newConfig.rsConfig = { ...newConfig.rsConfig, lookbackPeriod: value };
         break;
       case 'maxLeverage':
+        // eslint-disable-next-line functional/immutable-data
         newConfig.riskConfig = { ...newConfig.riskConfig, maxLeverage: value };
         break;
       case 'stopLoss':
+        // eslint-disable-next-line functional/immutable-data
         newConfig.riskConfig = { ...newConfig.riskConfig, stopLossPercent: value };
         break;
       case 'target':
+        // eslint-disable-next-line functional/immutable-data
         newConfig.riskConfig = { ...newConfig.riskConfig, targetPercent: value };
         break;
       case 'maxPositions':
+        // eslint-disable-next-line functional/immutable-data
         newConfig.portfolioConfig = {
           ...newConfig.portfolioConfig,
           maxConcurrentPositions: Math.round(value),
         };
         break;
       case 'maxHeat':
+        // eslint-disable-next-line functional/immutable-data
         newConfig.portfolioConfig = { ...newConfig.portfolioConfig, maxPortfolioHeat: value };
         break;
       case 'correlation':
+        // eslint-disable-next-line functional/immutable-data
         newConfig.portfolioConfig = { ...newConfig.portfolioConfig, correlationThreshold: value };
         break;
     }
@@ -296,12 +307,14 @@ export function ConfigPanel({ config, onSave, onCancel }: ConfigPanelProps) {
     const total =
       config.alignmentWeights.daily + config.alignmentWeights.h4 + config.alignmentWeights.m15;
     if (Math.abs(total - 100) > 0.1) {
+      // eslint-disable-next-line functional/immutable-data
       errors.push(`Alignment weights must sum to 100% (currently ${total.toFixed(1)}%)`);
     }
 
     // Validate R:R ratio
     const rrRatio = config.riskConfig.targetPercent / config.riskConfig.stopLossPercent;
     if (rrRatio < 2.0) {
+      // eslint-disable-next-line functional/immutable-data
       errors.push(`R:R ratio too low (${rrRatio.toFixed(1)}:1, minimum 2:1 recommended)`);
     }
 
@@ -346,8 +359,11 @@ export function ConfigPanel({ config, onSave, onCancel }: ConfigPanelProps) {
       const newTotal = newWeights.daily + newWeights.h4 + newWeights.m15;
       if (newTotal !== 100) {
         const largest = Math.max(newWeights.daily, newWeights.h4, newWeights.m15);
+        // eslint-disable-next-line functional/immutable-data
         if (newWeights.daily === largest) newWeights.daily += 100 - newTotal;
+        // eslint-disable-next-line functional/immutable-data
         else if (newWeights.h4 === largest) newWeights.h4 += 100 - newTotal;
+        // eslint-disable-next-line functional/immutable-data
         else newWeights.m15 += 100 - newTotal;
       }
 

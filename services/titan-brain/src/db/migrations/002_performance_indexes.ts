@@ -1,7 +1,7 @@
 /**
  * Migration 002: Performance Indexes
  * Adds additional indexes for query optimization
- * 
+ *
  * Requirements: 2.2, 9.1
  */
 

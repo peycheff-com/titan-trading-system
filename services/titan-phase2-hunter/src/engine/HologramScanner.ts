@@ -14,17 +14,13 @@
  * Requirements: 9.1-9.7 (Hologram Scanning Engine)
  */
 
-import { EventEmitter } from "events";
-import {
-  EnhancedHolographicState,
-  HologramState,
-  HologramStatus,
-} from "../types";
-import { HologramEngine } from "./HologramEngine";
-import { EnhancedHolographicEngine } from "./enhanced/EnhancedHolographicEngine";
-import { BybitPerpsClient } from "../exchanges/BybitPerpsClient";
-import { InstitutionalFlowClassifier } from "../flow/InstitutionalFlowClassifier";
-import { getLogger } from "../logging/Logger";
+import { EventEmitter } from 'events';
+import { EnhancedHolographicState, HologramState, HologramStatus } from '../types';
+import { HologramEngine } from './HologramEngine';
+import { EnhancedHolographicEngine } from './enhanced/EnhancedHolographicEngine';
+import { BybitPerpsClient } from '../exchanges/BybitPerpsClient';
+import { InstitutionalFlowClassifier } from '../flow/InstitutionalFlowClassifier';
+import { getLogger } from '../logging/Logger';
 
 export interface ScanResult {
   symbols: EnhancedHolographicState[];
@@ -70,7 +66,7 @@ export class HologramScanner extends EventEmitter {
     // Initialize (fire and forget for now, or await if possible - keeping sync in constructor, relying on lazy init or error handling if not ready)
     this.enhancedEngine
       .initialize()
-      .catch((err) => console.error("Failed to init enhanced engine:", err));
+      .catch(err => console.error('Failed to init enhanced engine:', err));
   }
 
   /**
@@ -81,18 +77,23 @@ export class HologramScanner extends EventEmitter {
    */
   public async scan(): Promise<ScanResult> {
     if (this.isScanning) {
-      throw new Error("Scan already in progress");
+      throw new Error('Scan already in progress');
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.isScanning = true;
     const startTime = Date.now();
+    // eslint-disable-next-line functional/no-let
     let symbols: string[] = [];
+    // eslint-disable-next-line functional/no-let
     let holograms: EnhancedHolographicState[] = [];
+    // eslint-disable-next-line functional/no-let
     let successCount = 0;
+    // eslint-disable-next-line functional/no-let
     let errorCount = 0;
 
     try {
-      getLogger().info("🔍 Starting hologram scan...");
+      getLogger().info('🔍 Starting hologram scan...');
 
       // Step 1: Fetch top 100 symbols by volume
       symbols = await this.fetchTopSymbols();
@@ -116,14 +117,15 @@ export class HologramScanner extends EventEmitter {
 
       // Step 5: Check for slow scan warning
       if (scanDuration > this.SCAN_WARNING_THRESHOLD) {
+        // eslint-disable-next-line functional/immutable-data
         this.scanStats.slowScans++;
-        this.emit("scanSlow", {
+        this.emit('scanSlow', {
           duration: scanDuration,
           threshold: this.SCAN_WARNING_THRESHOLD,
           symbolCount: symbols.length,
         });
         getLogger().warn(
-          `⚠️ Slow scan detected: ${scanDuration}ms (threshold: ${this.SCAN_WARNING_THRESHOLD}ms)`,
+          `⚠️ Slow scan detected: ${scanDuration}ms (threshold: ${this.SCAN_WARNING_THRESHOLD}ms)`
         );
       }
 
@@ -141,15 +143,13 @@ export class HologramScanner extends EventEmitter {
       };
 
       // Emit scan complete event
-      this.emit("scanComplete", result);
+      this.emit('scanComplete', result);
 
       getLogger().info(
-        `✅ Hologram scan complete: ${successCount}/${symbols.length} symbols analyzed in ${scanDuration}ms`,
+        `✅ Hologram scan complete: ${successCount}/${symbols.length} symbols analyzed in ${scanDuration}ms`
       );
       getLogger().info(
-        `🎯 Top 20 symbols selected: ${
-          top20.map((h) => `${h.symbol}(${h.alignment})`).join(", ")
-        }`,
+        `🎯 Top 20 symbols selected: ${top20.map(h => `${h.symbol}(${h.alignment})`).join(', ')}`
       );
 
       return result;
@@ -157,19 +157,18 @@ export class HologramScanner extends EventEmitter {
       const scanDuration = Date.now() - startTime;
       this.updateScanStats(scanDuration, successCount, symbols.length);
 
-      this.emit("scanError", {
-        error: error instanceof Error ? error.message : "Unknown error",
+      this.emit('scanError', {
+        error: error instanceof Error ? error.message : 'Unknown error',
         duration: scanDuration,
         symbolsProcessed: successCount,
         totalSymbols: symbols.length,
       });
 
       throw new Error(
-        `Hologram scan failed: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+        `Hologram scan failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     } finally {
+      // eslint-disable-next-line functional/immutable-data
       this.isScanning = false;
     }
   }
@@ -182,23 +181,21 @@ export class HologramScanner extends EventEmitter {
    * @param holograms - Array of hologram states
    * @returns Sorted array with highest alignment first
    */
-  public rankByAlignment(
-    holograms: EnhancedHolographicState[],
-  ): EnhancedHolographicState[] {
+  public rankByAlignment(holograms: EnhancedHolographicState[]): EnhancedHolographicState[] {
     // Define status priority (lower number = higher priority)
     // New 2026 Enhanced Alignments: A+, A, B, C, VETO
     const statusPriority: { [key: string]: number } = {
-      "A+": 1,
+      'A+': 1,
       A: 2,
       B: 3,
       C: 4,
       VETO: 5,
     };
 
+    // eslint-disable-next-line functional/immutable-data
     return holograms.sort((a, b) => {
       // First sort by status priority
-      const statusDiff = (statusPriority[a.alignment] || 99) -
-        (statusPriority[b.alignment] || 99);
+      const statusDiff = (statusPriority[a.alignment] || 99) - (statusPriority[b.alignment] || 99);
       if (statusDiff !== 0) {
         return statusDiff;
       }
@@ -222,12 +219,10 @@ export class HologramScanner extends EventEmitter {
    * @param rankedSymbols - Symbols ranked by alignment
    * @returns Top 20 symbols for monitoring
    */
-  public selectTop20(
-    rankedSymbols: EnhancedHolographicState[],
-  ): EnhancedHolographicState[] {
+  public selectTop20(rankedSymbols: EnhancedHolographicState[]): EnhancedHolographicState[] {
     // First, try to get 20 tradeable symbols (A+, A, and B)
     const tradeableSymbols = rankedSymbols.filter(
-      (h) => h.alignment === "A+" || h.alignment === "A" || h.alignment === "B",
+      h => h.alignment === 'A+' || h.alignment === 'A' || h.alignment === 'B'
     );
 
     if (tradeableSymbols.length >= 20) {
@@ -236,7 +231,7 @@ export class HologramScanner extends EventEmitter {
 
     // If we don't have 20 tradeable symbols, take the best available
     console.warn(
-      `⚠️ Only ${tradeableSymbols.length} tradeable symbols found, selecting top 20 overall`,
+      `⚠️ Only ${tradeableSymbols.length} tradeable symbols found, selecting top 20 overall`
     );
     return rankedSymbols.slice(0, 20);
   }
@@ -252,16 +247,14 @@ export class HologramScanner extends EventEmitter {
       const symbols = await this.bybitClient.fetchTopSymbols();
 
       if (symbols.length === 0) {
-        throw new Error("No symbols returned from exchange");
+        throw new Error('No symbols returned from exchange');
       }
 
       // Ensure we have exactly 100 symbols (or less if exchange returns fewer)
       return symbols.slice(0, 100);
     } catch (error) {
       throw new Error(
-        `Failed to fetch top symbols: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+        `Failed to fetch top symbols: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
   }
@@ -273,48 +266,36 @@ export class HologramScanner extends EventEmitter {
    * @param symbols - Array of symbol names to analyze
    * @returns Promise with array of successful hologram states
    */
-  private async analyzeSymbolsParallel(
-    symbols: string[],
-  ): Promise<EnhancedHolographicState[]> {
+  private async analyzeSymbolsParallel(symbols: string[]): Promise<EnhancedHolographicState[]> {
     const results: EnhancedHolographicState[] = [];
     const errors: string[] = [];
 
     // Process symbols in batches to control concurrency
+    // eslint-disable-next-line functional/no-let
     for (let i = 0; i < symbols.length; i += this.MAX_PARALLEL_REQUESTS) {
       const batch = symbols.slice(i, i + this.MAX_PARALLEL_REQUESTS);
 
       console.log(
-        `📈 Analyzing batch ${Math.floor(i / this.MAX_PARALLEL_REQUESTS) + 1}/${
-          Math.ceil(
-            symbols.length / this.MAX_PARALLEL_REQUESTS,
-          )
-        } (${batch.length} symbols)`,
+        `📈 Analyzing batch ${Math.floor(i / this.MAX_PARALLEL_REQUESTS) + 1}/${Math.ceil(
+          symbols.length / this.MAX_PARALLEL_REQUESTS
+        )} (${batch.length} symbols)`
       );
 
       // Create promises for this batch with timeout
-      const batchPromises = batch.map(async (symbol) => {
+      const batchPromises = batch.map(async symbol => {
         try {
           // Add timeout to individual symbol analysis
           const timeoutPromise = new Promise<never>((_, reject) => {
-            setTimeout(
-              () => reject(new Error(`Analysis timeout for ${symbol}`)),
-              10000,
-            );
+            setTimeout(() => reject(new Error(`Analysis timeout for ${symbol}`)), 10000);
           });
 
-          const analysisPromise = this.enhancedEngine.calculateEnhancedState(
-            symbol,
-          );
-          const hologram = await Promise.race([
-            analysisPromise,
-            timeoutPromise,
-          ]);
+          const analysisPromise = this.enhancedEngine.calculateEnhancedState(symbol);
+          const hologram = await Promise.race([analysisPromise, timeoutPromise]);
 
           return { success: true, hologram, symbol };
         } catch (error) {
-          const errorMsg = `${symbol}: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`;
+          const errorMsg = `${symbol}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          // eslint-disable-next-line functional/immutable-data
           errors.push(errorMsg);
           return { success: false, error: errorMsg, symbol };
         }
@@ -325,7 +306,8 @@ export class HologramScanner extends EventEmitter {
 
       // Collect successful results
       for (const result of batchResults) {
-        if (result.success && "hologram" in result && result.hologram) {
+        if (result.success && 'hologram' in result && result.hologram) {
+          // eslint-disable-next-line functional/immutable-data
           results.push(result.hologram);
         }
       }
@@ -339,7 +321,7 @@ export class HologramScanner extends EventEmitter {
     // Log errors if any
     if (errors.length > 0) {
       console.warn(`⚠️ ${errors.length} symbols failed analysis:`);
-      errors.slice(0, 5).forEach((error) => console.warn(`  - ${error}`));
+      errors.slice(0, 5).forEach(error => console.warn(`  - ${error}`));
       if (errors.length > 5) {
         console.warn(`  ... and ${errors.length - 5} more`);
       }
@@ -356,22 +338,21 @@ export class HologramScanner extends EventEmitter {
    * @param successCount - Number of successful analyses
    * @param totalCount - Total number of symbols attempted
    */
-  private updateScanStats(
-    duration: number,
-    successCount: number,
-    totalCount: number,
-  ): void {
+  private updateScanStats(duration: number, successCount: number, totalCount: number): void {
+    // eslint-disable-next-line functional/immutable-data
     this.scanStats.totalScans++;
+    // eslint-disable-next-line functional/immutable-data
     this.scanStats.lastScanDuration = duration;
 
     // Update average duration (rolling average)
+    // eslint-disable-next-line functional/immutable-data
     this.scanStats.averageDuration =
-      (this.scanStats.averageDuration * (this.scanStats.totalScans - 1) +
-        duration) /
+      (this.scanStats.averageDuration * (this.scanStats.totalScans - 1) + duration) /
       this.scanStats.totalScans;
 
     // Update success rate (simple calculation based on current scan)
     if (totalCount > 0) {
+      // eslint-disable-next-line functional/immutable-data
       this.scanStats.successRate = successCount / totalCount;
     }
   }
@@ -397,6 +378,7 @@ export class HologramScanner extends EventEmitter {
    * Useful for testing or performance monitoring reset
    */
   public resetStats(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.scanStats = {
       totalScans: 0,
       averageDuration: 0,
@@ -419,7 +401,7 @@ export class HologramScanner extends EventEmitter {
       return HologramEngine.getHologramSummary(hologram);
     } catch (error) {
       return `❌ ${symbol}: Analysis failed - ${
-        error instanceof Error ? error.message : "Unknown error"
+        error instanceof Error ? error.message : 'Unknown error'
       }`;
     }
   }
@@ -430,7 +412,7 @@ export class HologramScanner extends EventEmitter {
    * @returns Promise that resolves after delay
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**

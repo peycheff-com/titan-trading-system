@@ -55,6 +55,7 @@ export class PredictionMarketDetector {
             )}%, +${(spike * 100).toFixed(0)}%)`,
           );
 
+          // eslint-disable-next-line functional/immutable-data
           tripwires.push({
             symbol: 'BTCUSDT',
             triggerPrice: currentPrice, // Trigger NOW (Market/Aggressive)
@@ -76,13 +77,16 @@ export class PredictionMarketDetector {
 
   private recordHistory(id: string, price: number) {
     if (!this.history.has(id)) {
+      // eslint-disable-next-line functional/immutable-data
       this.history.set(id, []);
     }
     const arr = this.history.get(id)!;
+    // eslint-disable-next-line functional/immutable-data
     arr.push({ price, time: Date.now() });
 
     // Prune > 10 min
     const cutoff = Date.now() - 600000;
+    // eslint-disable-next-line functional/immutable-data
     this.history.set(
       id,
       arr.filter((x) => x.time > cutoff),

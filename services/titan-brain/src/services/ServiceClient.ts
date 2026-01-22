@@ -7,18 +7,14 @@
  * Requirements: 2.1.1, 2.1.2, 2.1.3, 2.1.4, 2.1.5
  */
 
-import { EventEmitter } from "events";
-import {
-  CircuitBreaker,
-  CircuitBreakerConfig,
-  CircuitBreakerDefaults,
-} from "./CircuitBreaker.js";
-import { Logger } from "../logging/Logger.js";
+import { EventEmitter } from 'events';
+import { CircuitBreaker, CircuitBreakerConfig, CircuitBreakerDefaults } from './CircuitBreaker.js';
+import { Logger } from '../logging/Logger.js';
 
 /**
  * HTTP methods supported by ServiceClient
  */
-export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
 /**
  * Request configuration
@@ -75,9 +71,7 @@ export interface ServiceClientConfig {
 /**
  * Request/Response interceptor functions
  */
-export type RequestInterceptor = (
-  config: RequestConfig,
-) => RequestConfig | Promise<RequestConfig>;
+export type RequestInterceptor = (config: RequestConfig) => RequestConfig | Promise<RequestConfig>;
 export type ResponseInterceptor<T = any> = (
   response: ServiceResponse<T>,
 ) => ServiceResponse<T> | Promise<ServiceResponse<T>>;
@@ -97,7 +91,7 @@ export class ServiceClientError extends Error {
     public readonly cause?: Error,
   ) {
     super(message);
-    this.name = "ServiceClientError";
+    this.name = 'ServiceClientError';
   }
 
   /**
@@ -123,7 +117,7 @@ export class ServiceClientError extends Error {
    * Check if error is a timeout
    */
   isTimeout(): boolean {
-    return this.message.includes("timeout") || this.status === 408;
+    return this.message.includes('timeout') || this.status === 408;
   }
 
   /**
@@ -143,7 +137,7 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
   maxDelay: 30000, // 30 seconds
   backoffMultiplier: 2,
   retryableStatusCodes: [408, 429, 500, 502, 503, 504],
-  retryableErrors: ["ECONNRESET", "ENOTFOUND", "ECONNREFUSED", "ETIMEDOUT"],
+  retryableErrors: ['ECONNRESET', 'ENOTFOUND', 'ECONNREFUSED', 'ETIMEDOUT'],
 };
 
 /**
@@ -152,8 +146,8 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
 const DEFAULT_CONFIG: ServiceClientConfig = {
   defaultTimeout: 10000, // 10 seconds
   defaultHeaders: {
-    "Content-Type": "application/json",
-    "User-Agent": "TitanBrain/1.0.0",
+    'Content-Type': 'application/json',
+    'User-Agent': 'TitanBrain/1.0.0',
   },
   retry: DEFAULT_RETRY_CONFIG,
   circuitBreaker: CircuitBreakerDefaults.http,
@@ -177,20 +171,17 @@ export class ServiceClient extends EventEmitter {
     super();
 
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.logger = logger ?? Logger.getInstance("service-client");
+    this.logger = logger ?? Logger.getInstance('service-client');
 
     // Initialize circuit breaker
-    this.circuitBreaker = new CircuitBreaker(
-      { ...this.config.circuitBreaker },
-      this.logger,
-    );
+    this.circuitBreaker = new CircuitBreaker({ ...this.config.circuitBreaker }, this.logger);
 
     // Forward circuit breaker events
-    this.circuitBreaker.on("stateChange", (event) => {
-      this.emit("circuitBreakerStateChange", event);
+    this.circuitBreaker.on('stateChange', (event) => {
+      this.emit('circuitBreakerStateChange', event);
     });
 
-    this.logger.info("Service client initialized", undefined, {
+    this.logger.info('Service client initialized', undefined, {
       baseUrl: this.config.baseUrl,
       defaultTimeout: this.config.defaultTimeout,
       maxRetries: this.config.retry.maxRetries,
@@ -203,6 +194,7 @@ export class ServiceClient extends EventEmitter {
    */
   async request<T = any>(config: RequestConfig): Promise<ServiceResponse<T>> {
     // Apply request interceptors
+    // eslint-disable-next-line functional/no-let
     let processedConfig = config;
     for (const interceptor of this.requestInterceptors) {
       processedConfig = await interceptor(processedConfig);
@@ -222,17 +214,20 @@ export class ServiceClient extends EventEmitter {
 
     // Add correlation ID if not present
     if (!finalConfig.correlationId) {
+      // eslint-disable-next-line functional/immutable-data
       finalConfig.correlationId = this.generateCorrelationId();
     }
 
     // Add correlation ID to headers
-    finalConfig.headers!["x-correlation-id"] = finalConfig.correlationId;
+    // eslint-disable-next-line functional/immutable-data
+    finalConfig.headers!['x-correlation-id'] = finalConfig.correlationId;
 
     // Build full URL
     const fullUrl = this.buildUrl(finalConfig.url);
+    // eslint-disable-next-line functional/immutable-data
     finalConfig.url = fullUrl;
 
-    this.logger.debug("Making HTTP request", finalConfig.correlationId, {
+    this.logger.debug('Making HTTP request', finalConfig.correlationId, {
       method: finalConfig.method,
       url: fullUrl,
       timeout: finalConfig.timeout,
@@ -246,31 +241,33 @@ export class ServiceClient extends EventEmitter {
       });
 
       // Apply response interceptors
+      // eslint-disable-next-line functional/no-let
       let processedResponse = response;
       for (const interceptor of this.responseInterceptors) {
-        processedResponse =
-          (await interceptor(processedResponse)) as ServiceResponse<T>;
+        processedResponse = (await interceptor(processedResponse)) as ServiceResponse<T>;
       }
 
-      this.emit("response", processedResponse);
+      this.emit('response', processedResponse);
       return processedResponse as ServiceResponse<T>;
     } catch (error) {
-      let processedError = error instanceof ServiceClientError
-        ? error
-        : new ServiceClientError(
-          error instanceof Error ? error.message : String(error),
-          undefined,
-          undefined,
-          finalConfig,
-          error instanceof Error ? error : undefined,
-        );
+      // eslint-disable-next-line functional/no-let
+      let processedError =
+        error instanceof ServiceClientError
+          ? error
+          : new ServiceClientError(
+              error instanceof Error ? error.message : String(error),
+              undefined,
+              undefined,
+              finalConfig,
+              error instanceof Error ? error : undefined,
+            );
 
       // Apply error interceptors
       for (const interceptor of this.errorInterceptors) {
         processedError = await interceptor(processedError);
       }
 
-      this.emit("error", processedError);
+      this.emit('error', processedError);
       throw processedError;
     }
   }
@@ -278,47 +275,44 @@ export class ServiceClient extends EventEmitter {
   /**
    * Execute request with retry logic
    */
-  private async executeWithRetry<T>(
-    config: RequestConfig,
-  ): Promise<ServiceResponse<T>> {
+  private async executeWithRetry<T>(config: RequestConfig): Promise<ServiceResponse<T>> {
+    // eslint-disable-next-line functional/no-let
     let lastError: ServiceClientError | undefined;
     const maxRetries = config.retries || 0;
 
     // Try initial request + retries
+    // eslint-disable-next-line functional/no-let
     for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
       try {
         const response = await this.executeRequest<T>(config, attempt);
 
         if (attempt > 1) {
-          this.logger.info(
-            "Request succeeded after retry",
-            config.correlationId,
-            {
-              attempt,
-              url: config.url,
-              method: config.method,
-            },
-          );
+          this.logger.info('Request succeeded after retry', config.correlationId, {
+            attempt,
+            url: config.url,
+            method: config.method,
+          });
         }
 
         return response;
       } catch (error) {
-        lastError = error instanceof ServiceClientError
-          ? error
-          : new ServiceClientError(
-            error instanceof Error ? error.message : String(error),
-            undefined,
-            undefined,
-            config,
-            error instanceof Error ? error : undefined,
-          );
+        lastError =
+          error instanceof ServiceClientError
+            ? error
+            : new ServiceClientError(
+                error instanceof Error ? error.message : String(error),
+                undefined,
+                undefined,
+                config,
+                error instanceof Error ? error : undefined,
+              );
 
         // Check if we should retry (not on last attempt and error is retryable)
         const isLastAttempt = attempt >= maxRetries + 1;
         if (!isLastAttempt && lastError.isRetryable()) {
           const delay = this.calculateRetryDelay(attempt);
 
-          this.logger.warn("Request failed, retrying", config.correlationId, {
+          this.logger.warn('Request failed, retrying', config.correlationId, {
             attempt,
             maxRetries: maxRetries,
             delay,
@@ -332,17 +326,12 @@ export class ServiceClient extends EventEmitter {
         }
 
         // No more retries or not retryable
-        this.logger.error(
-          "Request failed permanently",
-          lastError,
-          config.correlationId,
-          {
-            attempt,
-            maxRetries: maxRetries,
-            url: config.url,
-            method: config.method,
-          },
-        );
+        this.logger.error('Request failed permanently', lastError, config.correlationId, {
+          attempt,
+          maxRetries: maxRetries,
+          url: config.url,
+          method: config.method,
+        });
 
         throw lastError;
       }
@@ -363,7 +352,7 @@ export class ServiceClient extends EventEmitter {
     try {
       // Log request
       if (this.config.logRequests) {
-        this.logger.debug("HTTP request", config.correlationId, {
+        this.logger.debug('HTTP request', config.correlationId, {
           method: config.method,
           url: config.url,
           attempt,
@@ -389,10 +378,11 @@ export class ServiceClient extends EventEmitter {
       const duration = Date.now() - startTime;
 
       // Parse response
+      // eslint-disable-next-line functional/no-let
       let data: T;
-      const contentType = response.headers.get("content-type") || "";
+      const contentType = response.headers.get('content-type') || '';
 
-      if (contentType.includes("application/json")) {
+      if (contentType.includes('application/json')) {
         data = (await response.json()) as T;
       } else {
         data = (await response.text()) as T;
@@ -401,6 +391,7 @@ export class ServiceClient extends EventEmitter {
       // Build response headers object
       const responseHeaders: Record<string, string> = {};
       response.headers.forEach((value, key) => {
+        // eslint-disable-next-line functional/immutable-data
         responseHeaders[key] = value;
       });
 
@@ -415,7 +406,7 @@ export class ServiceClient extends EventEmitter {
 
       // Log response
       if (this.config.logResponses) {
-        this.logger.debug("HTTP response", config.correlationId, {
+        this.logger.debug('HTTP response', config.correlationId, {
           status: response.status,
           statusText: response.statusText,
           duration,
@@ -444,7 +435,7 @@ export class ServiceClient extends EventEmitter {
 
       // Handle fetch errors
       if (error instanceof Error) {
-        if (error.name === "AbortError") {
+        if (error.name === 'AbortError') {
           throw new ServiceClientError(
             `Request timeout after ${config.timeout}ms`,
             408,
@@ -463,23 +454,14 @@ export class ServiceClient extends EventEmitter {
         );
       }
 
-      throw new ServiceClientError(
-        "Unknown error occurred",
-        undefined,
-        undefined,
-        config,
-      );
+      throw new ServiceClientError('Unknown error occurred', undefined, undefined, config);
     }
   }
 
   /**
    * Check if error should be retried
    */
-  private shouldRetry(
-    error: ServiceClientError,
-    attempt: number,
-    maxRetries: number,
-  ): boolean {
+  private shouldRetry(error: ServiceClientError, attempt: number, maxRetries: number): boolean {
     // Don't retry if we've reached max attempts
     if (attempt > maxRetries) {
       return false;
@@ -497,8 +479,8 @@ export class ServiceClient extends EventEmitter {
    * Calculate retry delay with exponential backoff
    */
   private calculateRetryDelay(attempt: number): number {
-    const delay = this.config.retry.initialDelay *
-      Math.pow(this.config.retry.backoffMultiplier, attempt - 1);
+    const delay =
+      this.config.retry.initialDelay * Math.pow(this.config.retry.backoffMultiplier, attempt - 1);
     return Math.min(delay, this.config.retry.maxDelay);
   }
 
@@ -506,15 +488,15 @@ export class ServiceClient extends EventEmitter {
    * Build full URL from base URL and path
    */
   private buildUrl(url: string): string {
-    if (url.startsWith("http://") || url.startsWith("https://")) {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
       return url;
     }
 
     if (this.config.baseUrl) {
-      const baseUrl = this.config.baseUrl.endsWith("/")
+      const baseUrl = this.config.baseUrl.endsWith('/')
         ? this.config.baseUrl.slice(0, -1)
         : this.config.baseUrl;
-      const path = url.startsWith("/") ? url : `/${url}`;
+      const path = url.startsWith('/') ? url : `/${url}`;
       return `${baseUrl}${path}`;
     }
 
@@ -531,16 +513,16 @@ export class ServiceClient extends EventEmitter {
   /**
    * Sanitize headers for logging (remove sensitive values)
    */
-  private sanitizeHeaders(
-    headers: Record<string, string>,
-  ): Record<string, string> {
+  private sanitizeHeaders(headers: Record<string, string>): Record<string, string> {
     const sanitized: Record<string, string> = {};
-    const sensitiveHeaders = ["authorization", "x-api-key", "x-signature"];
+    const sensitiveHeaders = ['authorization', 'x-api-key', 'x-signature'];
 
     for (const [key, value] of Object.entries(headers)) {
       if (sensitiveHeaders.includes(key.toLowerCase())) {
-        sanitized[key] = "[REDACTED]";
+        // eslint-disable-next-line functional/immutable-data
+        sanitized[key] = '[REDACTED]';
       } else {
+        // eslint-disable-next-line functional/immutable-data
         sanitized[key] = value;
       }
     }
@@ -552,7 +534,7 @@ export class ServiceClient extends EventEmitter {
    * Get response size for logging
    */
   private getResponseSize(data: any): number {
-    if (typeof data === "string") {
+    if (typeof data === 'string') {
       return data.length;
     }
     return JSON.stringify(data).length;
@@ -562,23 +544,19 @@ export class ServiceClient extends EventEmitter {
    * Truncate response body for logging
    */
   private truncateResponseBody(data: any): any {
-    const str = typeof data === "string" ? data : JSON.stringify(data);
+    const str = typeof data === 'string' ? data : JSON.stringify(data);
     if (str.length <= this.config.maxResponseBodyLogSize) {
       return data;
     }
 
-    return str.substring(0, this.config.maxResponseBodyLogSize) +
-      "... [truncated]";
+    return str.substring(0, this.config.maxResponseBodyLogSize) + '... [truncated]';
   }
 
   /**
    * Convenience methods for common HTTP verbs
    */
-  async get<T = any>(
-    url: string,
-    config?: Partial<RequestConfig>,
-  ): Promise<ServiceResponse<T>> {
-    return this.request<T>({ method: "GET", url, ...config });
+  async get<T = any>(url: string, config?: Partial<RequestConfig>): Promise<ServiceResponse<T>> {
+    return this.request<T>({ method: 'GET', url, ...config });
   }
 
   async post<T = any>(
@@ -586,7 +564,7 @@ export class ServiceClient extends EventEmitter {
     body?: any,
     config?: Partial<RequestConfig>,
   ): Promise<ServiceResponse<T>> {
-    return this.request<T>({ method: "POST", url, body, ...config });
+    return this.request<T>({ method: 'POST', url, body, ...config });
   }
 
   async put<T = any>(
@@ -594,14 +572,11 @@ export class ServiceClient extends EventEmitter {
     body?: any,
     config?: Partial<RequestConfig>,
   ): Promise<ServiceResponse<T>> {
-    return this.request<T>({ method: "PUT", url, body, ...config });
+    return this.request<T>({ method: 'PUT', url, body, ...config });
   }
 
-  async delete<T = any>(
-    url: string,
-    config?: Partial<RequestConfig>,
-  ): Promise<ServiceResponse<T>> {
-    return this.request<T>({ method: "DELETE", url, ...config });
+  async delete<T = any>(url: string, config?: Partial<RequestConfig>): Promise<ServiceResponse<T>> {
+    return this.request<T>({ method: 'DELETE', url, ...config });
   }
 
   async patch<T = any>(
@@ -609,13 +584,14 @@ export class ServiceClient extends EventEmitter {
     body?: any,
     config?: Partial<RequestConfig>,
   ): Promise<ServiceResponse<T>> {
-    return this.request<T>({ method: "PATCH", url, body, ...config });
+    return this.request<T>({ method: 'PATCH', url, body, ...config });
   }
 
   /**
    * Add request interceptor
    */
   addRequestInterceptor(interceptor: RequestInterceptor): void {
+    // eslint-disable-next-line functional/immutable-data
     this.requestInterceptors.push(interceptor);
   }
 
@@ -623,6 +599,7 @@ export class ServiceClient extends EventEmitter {
    * Add response interceptor
    */
   addResponseInterceptor(interceptor: ResponseInterceptor): void {
+    // eslint-disable-next-line functional/immutable-data
     this.responseInterceptors.push(interceptor);
   }
 
@@ -630,6 +607,7 @@ export class ServiceClient extends EventEmitter {
    * Add error interceptor
    */
   addErrorInterceptor(interceptor: ErrorInterceptor): void {
+    // eslint-disable-next-line functional/immutable-data
     this.errorInterceptors.push(interceptor);
   }
 

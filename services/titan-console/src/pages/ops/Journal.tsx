@@ -18,16 +18,15 @@ export default function JournalPage() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [journalEntries, setJournalEntries] = useState<any[]>([]);
   // In a real implementation, we would fetch from /api/console/trades or /api/console/journal
-  
+
   useEffect(() => {
     // Placeholder for data fetching logic
     // const fetchJournal = async () => { ... }
-    setJournalEntries([]); 
+    setJournalEntries([]);
   }, []);
 
-  const filteredEntries = typeFilter === 'all'
-    ? journalEntries
-    : journalEntries.filter((e) => e.type === typeFilter);
+  const filteredEntries =
+    typeFilter === 'all' ? journalEntries : journalEntries.filter((e) => e.type === typeFilter);
 
   const handleRowClick = (entry: any) => {
     setSelectedEntry(entry);
@@ -73,9 +72,7 @@ export default function JournalPage() {
             key: 'timestamp',
             header: 'Time',
             render: (entry) => (
-              <span className="text-muted-foreground">
-                {formatTimestamp(entry.timestamp)}
-              </span>
+              <span className="text-muted-foreground">{formatTimestamp(entry.timestamp)}</span>
             ),
           },
           {
@@ -86,7 +83,7 @@ export default function JournalPage() {
                 className={cn(
                   'rounded px-1.5 py-0.5 text-xxs font-medium capitalize',
                   typeConfig[entry.type].bg,
-                  typeConfig[entry.type].color
+                  typeConfig[entry.type].color,
                 )}
               >
                 {entry.type}
@@ -114,7 +111,7 @@ export default function JournalPage() {
                 <span
                   className={cn(
                     'font-mono',
-                    entry.pnl >= 0 ? 'text-pnl-positive' : 'text-pnl-negative'
+                    entry.pnl >= 0 ? 'text-pnl-positive' : 'text-pnl-negative',
                   )}
                 >
                   {formatCurrency(entry.pnl)}
@@ -141,11 +138,7 @@ export default function JournalPage() {
       />
 
       {/* Detail Drawer */}
-      <RowDetailDrawer
-        open={drawerOpen}
-        onOpenChange={setDrawerOpen}
-        title="Journal Entry"
-      >
+      <RowDetailDrawer open={drawerOpen} onOpenChange={setDrawerOpen} title="Journal Entry">
         {selectedEntry && (
           <div className="space-y-6">
             <DetailSection title="Entry Details">
@@ -157,16 +150,14 @@ export default function JournalPage() {
                     className={cn(
                       'rounded px-1.5 py-0.5 text-xxs font-medium capitalize',
                       typeConfig[selectedEntry.type].bg,
-                      typeConfig[selectedEntry.type].color
+                      typeConfig[selectedEntry.type].color,
                     )}
                   >
                     {selectedEntry.type}
                   </span>
                 }
               />
-              {selectedEntry.symbol && (
-                <DetailRow label="Symbol" value={selectedEntry.symbol} />
-              )}
+              {selectedEntry.symbol && <DetailRow label="Symbol" value={selectedEntry.symbol} />}
               <DetailRow label="Action" value={selectedEntry.action} />
             </DetailSection>
 
@@ -175,9 +166,7 @@ export default function JournalPage() {
                 {selectedEntry.price && (
                   <DetailRow label="Price" value={formatCurrency(selectedEntry.price)} />
                 )}
-                {selectedEntry.qty && (
-                  <DetailRow label="Quantity" value={selectedEntry.qty} />
-                )}
+                {selectedEntry.qty && <DetailRow label="Quantity" value={selectedEntry.qty} />}
                 {selectedEntry.pnl !== null && (
                   <DetailRow
                     label="PnL"
@@ -185,7 +174,7 @@ export default function JournalPage() {
                       <span
                         className={cn(
                           'font-mono',
-                          selectedEntry.pnl >= 0 ? 'text-pnl-positive' : 'text-pnl-negative'
+                          selectedEntry.pnl >= 0 ? 'text-pnl-positive' : 'text-pnl-negative',
                         )}
                       >
                         {formatCurrency(selectedEntry.pnl)}

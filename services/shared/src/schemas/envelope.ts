@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { ulid } from "ulid";
+import { z } from 'zod';
+import { ulid } from 'ulid';
 
 export interface Envelope<T> {
   id: string; // ULID
@@ -22,7 +22,7 @@ export interface Envelope<T> {
 export const EnvelopeSchema = z.object({
   id: z
     .string()
-    .regex(/^[0-9A-Z]{26}$/, "Invalid ULID")
+    .regex(/^[0-9A-Z]{26}$/, 'Invalid ULID')
     .default(() => ulid()),
   type: z.string(),
   version: z.number().int(),
@@ -44,7 +44,7 @@ export const EnvelopeSchema = z.object({
 export function createEnvelope<T>(
   type: string,
   payload: T,
-  meta: Partial<Omit<Envelope<T>, "payload" | "type" | "version">> & {
+  meta: Partial<Omit<Envelope<T>, 'payload' | 'type' | 'version'>> & {
     version: number;
   },
 ): Envelope<T> {
@@ -53,7 +53,7 @@ export function createEnvelope<T>(
     type,
     version: meta.version,
     ts: meta.ts || Date.now(),
-    producer: meta.producer || "unknown",
+    producer: meta.producer || 'unknown',
     correlation_id: meta.correlation_id || ulid(),
     causation_id: meta.causation_id,
     partition_key: meta.partition_key,

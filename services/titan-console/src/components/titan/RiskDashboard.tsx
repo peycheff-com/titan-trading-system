@@ -1,8 +1,8 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, ShieldCheck, Zap } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
+import { AlertTriangle, ShieldCheck, Zap } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface RiskMetrics {
   marginUtilization: number;
@@ -49,14 +49,14 @@ export function RiskDashboard({ metrics }: RiskDashboardProps) {
           <div className="space-y-1">
             <div className="flex justify-between text-xs">
               <span className="text-muted-foreground">Margin Used</span>
-              <span className={cn("font-medium", isHighRisk && "text-destructive")}>
+              <span className={cn('font-medium', isHighRisk && 'text-destructive')}>
                 {data.marginUtilization}%
               </span>
             </div>
-            <Progress 
-              value={data.marginUtilization} 
-              className={cn("h-2", isHighRisk ? "bg-destructive/20" : "")} 
-              indicatorClassName={cn(isHighRisk ? "bg-destructive" : "bg-primary")}
+            <Progress
+              value={data.marginUtilization}
+              className={cn('h-2', isHighRisk ? 'bg-destructive/20' : '')}
+              indicatorClassName={cn(isHighRisk ? 'bg-destructive' : 'bg-primary')}
             />
           </div>
 
@@ -68,10 +68,10 @@ export function RiskDashboard({ metrics }: RiskDashboardProps) {
                 ${Math.abs(data.dailyLoss)} / ${data.maxDailyLoss}
               </span>
             </div>
-            <Progress 
-              value={(Math.abs(data.dailyLoss) / data.maxDailyLoss) * 100} 
+            <Progress
+              value={(Math.abs(data.dailyLoss) / data.maxDailyLoss) * 100}
               className="h-2"
-              indicatorClassName={isCircuitBreakerNear ? "bg-warning" : "bg-emerald-500"}
+              indicatorClassName={isCircuitBreakerNear ? 'bg-warning' : 'bg-emerald-500'}
             />
           </div>
 
@@ -84,12 +84,16 @@ export function RiskDashboard({ metrics }: RiskDashboardProps) {
                 <p className="text-[10px] text-muted-foreground">Avg Liq. Dist</p>
               </div>
             </div>
-             <div className="flex flex-col justify-center rounded-md border p-2 gap-1">
-                <span className="text-[10px] text-muted-foreground">Exposure</span>
-                <div className="flex gap-1">
-                    <Badge variant="outline" className="text-[10px] h-4 px-1">BTC {data.exposureRaw.btc}%</Badge>
-                    <Badge variant="outline" className="text-[10px] h-4 px-1">ETH {data.exposureRaw.eth}%</Badge>
-                </div>
+            <div className="flex flex-col justify-center rounded-md border p-2 gap-1">
+              <span className="text-[10px] text-muted-foreground">Exposure</span>
+              <div className="flex gap-1">
+                <Badge variant="outline" className="text-[10px] h-4 px-1">
+                  BTC {data.exposureRaw.btc}%
+                </Badge>
+                <Badge variant="outline" className="text-[10px] h-4 px-1">
+                  ETH {data.exposureRaw.eth}%
+                </Badge>
+              </div>
             </div>
           </div>
         </div>

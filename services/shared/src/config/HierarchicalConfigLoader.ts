@@ -132,6 +132,7 @@ export class HierarchicalConfigLoader {
    */
   async loadBrainConfig(): Promise<ConfigLoadResult<BrainConfig>> {
     const sources: Array<{ source: ConfigSource; path?: string; keys: string[] }> = [];
+    // eslint-disable-next-line functional/no-let
     let config = { ...DEFAULT_CONFIGS.brain };
 
     // 1. Load base configuration file
@@ -139,6 +140,7 @@ export class HierarchicalConfigLoader {
     if (existsSync(baseConfigPath)) {
       const baseConfig = this.loadJsonFile(baseConfigPath);
       config = this.mergeConfigs(config, baseConfig);
+      // eslint-disable-next-line functional/immutable-data
       sources.push({
         source: 'base-file',
         path: baseConfigPath,
@@ -155,6 +157,7 @@ export class HierarchicalConfigLoader {
       if (existsSync(envConfigPath)) {
         const envConfig = this.loadJsonFile(envConfigPath);
         config = this.mergeConfigs(config, envConfig);
+        // eslint-disable-next-line functional/immutable-data
         sources.push({
           source: 'env-file',
           path: envConfigPath,
@@ -168,6 +171,7 @@ export class HierarchicalConfigLoader {
         if (baseConfig.environments?.[this.options.environment]) {
           const envOverrides = baseConfig.environments[this.options.environment];
           config = this.mergeConfigs(config, envOverrides);
+          // eslint-disable-next-line functional/immutable-data
           sources.push({
             source: 'env-file',
             path: `${baseConfigPath}:environments.${this.options.environment}`,
@@ -182,6 +186,7 @@ export class HierarchicalConfigLoader {
       const envVars = this.loadEnvironmentVariables('brain');
       if (Object.keys(envVars).length > 0) {
         config = this.mergeConfigs(config, envVars);
+        // eslint-disable-next-line functional/immutable-data
         sources.push({
           source: 'environment',
           keys: Object.keys(envVars),
@@ -190,6 +195,7 @@ export class HierarchicalConfigLoader {
     }
 
     // 4. Validate configuration
+    // eslint-disable-next-line functional/no-let
     let validation: ValidationResult = { valid: true, errors: [], warnings: [] };
     if (this.options.validateSchema) {
       validation = ConfigValidator.validateBrainConfig(config);
@@ -210,6 +216,7 @@ export class HierarchicalConfigLoader {
    */
   async loadPhaseConfig(phase: string): Promise<ConfigLoadResult<PhaseConfig>> {
     const sources: Array<{ source: ConfigSource; path?: string; keys: string[] }> = [];
+    // eslint-disable-next-line functional/no-let
     let config = { ...DEFAULT_CONFIGS.phase };
 
     // 1. Load base configuration file
@@ -217,6 +224,7 @@ export class HierarchicalConfigLoader {
     if (existsSync(baseConfigPath)) {
       const baseConfig = this.loadJsonFile(baseConfigPath);
       config = this.mergeConfigs(config, baseConfig);
+      // eslint-disable-next-line functional/immutable-data
       sources.push({
         source: 'base-file',
         path: baseConfigPath,
@@ -233,6 +241,7 @@ export class HierarchicalConfigLoader {
       if (existsSync(envConfigPath)) {
         const envConfig = this.loadJsonFile(envConfigPath);
         config = this.mergeConfigs(config, envConfig);
+        // eslint-disable-next-line functional/immutable-data
         sources.push({
           source: 'env-file',
           path: envConfigPath,
@@ -246,6 +255,7 @@ export class HierarchicalConfigLoader {
         if (baseConfig.environments?.[this.options.environment]) {
           const envOverrides = baseConfig.environments[this.options.environment];
           config = this.mergeConfigs(config, envOverrides);
+          // eslint-disable-next-line functional/immutable-data
           sources.push({
             source: 'env-file',
             path: `${baseConfigPath}:environments.${this.options.environment}`,
@@ -260,6 +270,7 @@ export class HierarchicalConfigLoader {
       const envVars = this.loadEnvironmentVariables('phase', phase);
       if (Object.keys(envVars).length > 0) {
         config = this.mergeConfigs(config, envVars);
+        // eslint-disable-next-line functional/immutable-data
         sources.push({
           source: 'environment',
           keys: Object.keys(envVars),
@@ -268,6 +279,7 @@ export class HierarchicalConfigLoader {
     }
 
     // 4. Validate configuration
+    // eslint-disable-next-line functional/no-let
     let validation: ValidationResult = { valid: true, errors: [], warnings: [] };
     if (this.options.validateSchema) {
       validation = ConfigValidator.validatePhaseConfig(config);
@@ -288,6 +300,7 @@ export class HierarchicalConfigLoader {
    */
   async loadInfrastructureConfig(): Promise<ConfigLoadResult<InfrastructureConfig>> {
     const sources: Array<{ source: ConfigSource; path?: string; keys: string[] }> = [];
+    // eslint-disable-next-line functional/no-let
     let config: any = {};
 
     // 1. Load base configuration file
@@ -295,6 +308,7 @@ export class HierarchicalConfigLoader {
     if (existsSync(baseConfigPath)) {
       const baseConfig = this.loadJsonFile(baseConfigPath);
       config = this.mergeConfigs(config, baseConfig);
+      // eslint-disable-next-line functional/immutable-data
       sources.push({
         source: 'base-file',
         path: baseConfigPath,
@@ -311,6 +325,7 @@ export class HierarchicalConfigLoader {
       if (existsSync(envConfigPath)) {
         const envConfig = this.loadJsonFile(envConfigPath);
         config = this.mergeConfigs(config, envConfig);
+        // eslint-disable-next-line functional/immutable-data
         sources.push({
           source: 'env-file',
           path: envConfigPath,
@@ -323,6 +338,7 @@ export class HierarchicalConfigLoader {
         if (baseConfig.environments?.[this.options.environment]) {
           const envOverrides = baseConfig.environments[this.options.environment];
           config = this.mergeConfigs(config, envOverrides);
+          // eslint-disable-next-line functional/immutable-data
           sources.push({
             source: 'env-file',
             path: `${baseConfigPath}:environments.${this.options.environment}`,
@@ -333,6 +349,7 @@ export class HierarchicalConfigLoader {
     }
 
     // 3. Validate configuration
+    // eslint-disable-next-line functional/no-let
     let validation: ValidationResult = { valid: true, errors: [], warnings: [] };
     if (this.options.validateSchema) {
       validation = ConfigValidator.validateInfrastructureConfig(config);
@@ -353,6 +370,7 @@ export class HierarchicalConfigLoader {
    */
   async loadDeploymentConfig(): Promise<ConfigLoadResult<DeploymentConfig>> {
     const sources: Array<{ source: ConfigSource; path?: string; keys: string[] }> = [];
+    // eslint-disable-next-line functional/no-let
     let config: any = {};
 
     // 1. Load base configuration file
@@ -360,6 +378,7 @@ export class HierarchicalConfigLoader {
     if (existsSync(baseConfigPath)) {
       const baseConfig = this.loadJsonFile(baseConfigPath);
       config = this.mergeConfigs(config, baseConfig);
+      // eslint-disable-next-line functional/immutable-data
       sources.push({
         source: 'base-file',
         path: baseConfigPath,
@@ -376,6 +395,7 @@ export class HierarchicalConfigLoader {
       if (existsSync(envConfigPath)) {
         const envConfig = this.loadJsonFile(envConfigPath);
         config = this.mergeConfigs(config, envConfig);
+        // eslint-disable-next-line functional/immutable-data
         sources.push({
           source: 'env-file',
           path: envConfigPath,
@@ -388,6 +408,7 @@ export class HierarchicalConfigLoader {
         if (baseConfig.environments?.[this.options.environment]) {
           const envOverrides = baseConfig.environments[this.options.environment];
           config = this.mergeConfigs(config, envOverrides);
+          // eslint-disable-next-line functional/immutable-data
           sources.push({
             source: 'env-file',
             path: `${baseConfigPath}:environments.${this.options.environment}`,
@@ -398,6 +419,7 @@ export class HierarchicalConfigLoader {
     }
 
     // 3. Validate configuration
+    // eslint-disable-next-line functional/no-let
     let validation: ValidationResult = { valid: true, errors: [], warnings: [] };
     if (this.options.validateSchema) {
       validation = ConfigValidator.validateDeploymentConfig(config);
@@ -418,6 +440,7 @@ export class HierarchicalConfigLoader {
    */
   async loadServiceConfig(service: string): Promise<ConfigLoadResult<any>> {
     const sources: Array<{ source: ConfigSource; path?: string; keys: string[] }> = [];
+    // eslint-disable-next-line functional/no-let
     let config: any = {};
 
     // 1. Load base configuration file
@@ -425,6 +448,7 @@ export class HierarchicalConfigLoader {
     if (existsSync(baseConfigPath)) {
       const baseConfig = this.loadJsonFile(baseConfigPath);
       config = this.mergeConfigs(config, baseConfig);
+      // eslint-disable-next-line functional/immutable-data
       sources.push({
         source: 'base-file',
         path: baseConfigPath,
@@ -441,6 +465,7 @@ export class HierarchicalConfigLoader {
       if (existsSync(envConfigPath)) {
         const envConfig = this.loadJsonFile(envConfigPath);
         config = this.mergeConfigs(config, envConfig);
+        // eslint-disable-next-line functional/immutable-data
         sources.push({
           source: 'env-file',
           path: envConfigPath,
@@ -453,6 +478,7 @@ export class HierarchicalConfigLoader {
         if (baseConfig.environments?.[this.options.environment]) {
           const envOverrides = baseConfig.environments[this.options.environment];
           config = this.mergeConfigs(config, envOverrides);
+          // eslint-disable-next-line functional/immutable-data
           sources.push({
             source: 'env-file',
             path: `${baseConfigPath}:environments.${this.options.environment}`,
@@ -463,6 +489,7 @@ export class HierarchicalConfigLoader {
     }
 
     // 3. Validate configuration if schema exists
+    // eslint-disable-next-line functional/no-let
     let validation: ValidationResult = { valid: true, errors: [], warnings: [] };
     if (this.options.validateSchema) {
       validation = ConfigValidator.validateServiceConfig(service, config);
@@ -508,6 +535,7 @@ export class HierarchicalConfigLoader {
 
       if (rawValue !== undefined) {
         // Convert string values to appropriate types
+        // eslint-disable-next-line functional/no-let
         let value: any = rawValue;
         if (rawValue === 'true') value = true;
         else if (rawValue === 'false') value = false;
@@ -525,8 +553,10 @@ export class HierarchicalConfigLoader {
    */
   private setNestedValue(obj: any, path: string, value: any): void {
     const keys = path.split('.');
+    // eslint-disable-next-line functional/no-let
     let current = obj;
 
+    // eslint-disable-next-line functional/no-let
     for (let i = 0; i < keys.length - 1; i++) {
       const key = keys[i];
       if (!(key in current) || typeof current[key] !== 'object') {
@@ -553,9 +583,11 @@ export class HierarchicalConfigLoader {
           !Array.isArray((result as any)[key])
         ) {
           // Deep merge objects
+          // eslint-disable-next-line functional/immutable-data
           (result as any)[key] = this.mergeConfigs((result as any)[key], value);
         } else {
           // Direct assignment for primitives, arrays, and null values
+          // eslint-disable-next-line functional/immutable-data
           (result as any)[key] = value;
         }
       }
@@ -577,14 +609,18 @@ export class HierarchicalConfigLoader {
 
     // Add phase configs
     const phaseConfigs = ['phase1', 'phase2', 'phase3'];
+    // eslint-disable-next-line functional/immutable-data
     configFiles.push(...phaseConfigs);
 
     // Add service configs
     const serviceConfigs = ConfigValidator.getAvailableServiceSchemas();
+    // eslint-disable-next-line functional/immutable-data
     configFiles.push(...serviceConfigs);
 
     const enabledSources: ConfigSource[] = ['base-file', 'default'];
+    // eslint-disable-next-line functional/immutable-data
     if (this.options.enableEnvironmentFiles) enabledSources.push('env-file');
+    // eslint-disable-next-line functional/immutable-data
     if (this.options.enableEnvironmentVariables) enabledSources.push('environment');
 
     return {

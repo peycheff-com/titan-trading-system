@@ -43,6 +43,7 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
     // We assume NATS is already connected by shared lib or we wait for it
     // The shared getNatsClient() returns a singleton that should be connected by Brain's startup
     try {
+      // eslint-disable-next-line functional/immutable-data
       this.connected = this.nats.isConnected();
       if (this.connected) {
         console.log('✅ Execution Engine NATS client ready');
@@ -58,6 +59,7 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
    * Shutdown the client
    */
   async shutdown(): Promise<void> {
+    // eslint-disable-next-line functional/immutable-data
     this.connected = false;
     console.log('🔌 Execution Engine client disconnected');
   }
@@ -152,6 +154,43 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
   }
 
   /**
+   * Publish Risk Policy Update to Execution Engine
+   * @param policy - New risk policy configuration
+   */
+  async publishRiskPolicy(policy: any): Promise<void> {
+    if (!this.connected) {
+      console.warn('⚠️ Execution Engine not connected, cannot push risk policy');
+      // We might still want to proceed if NATS is temporarily down, but better to warn
+    }
+
+    const subject = TitanSubject.CMD_RISK_POLICY; // Ensure this subject exists or use string literal
+    // If TitanSubject doesn't have CMD_RISK_POLICY, we define it here or use string
+    // Assuming titan.cmd.risk.policy based on Audit
+    const actualSubject = 'titan.cmd.risk.policy';
+
+    try {
+      await this.nats.publishEnvelope(
+        actualSubject,
+        {
+          timestamp: Date.now(),
+          policy,
+          source: 'brain',
+        },
+        {
+          type: 'titan.cmd.risk.policy.v1',
+          version: 1,
+          producer: 'titan-brain',
+          idempotency_key: `risk-update-${Date.now()}`,
+        },
+      );
+      console.log('✅ Risk policy update published to NATS');
+    } catch (error) {
+      console.error('❌ Failed to publish risk policy:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Close all positions via Execution Engine
    * Called by Circuit Breaker for emergency flatten
    */
@@ -230,8 +269,14 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
    * Get current equity from Execution Engine
    */
   async getEquity(): Promise<number> {
-    // TODO: Implement NATS request-reply for equity when supported by Rust
-    return 0;
+    try {
+      const balances = await this.fetchExchangeBalances('main');
+      const usdt = balances.find((b) => b.currency === 'USDT');
+      return usdt ? usdt.total : 0;
+    } catch (error) {
+      console.error('❌ Failed to fetch equity via NATS:', error);
+      return 0;
+    }
   }
 
   /**

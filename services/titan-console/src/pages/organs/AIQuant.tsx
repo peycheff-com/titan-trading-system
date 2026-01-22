@@ -8,9 +8,19 @@ import { Cpu, Check, X, AlertTriangle, TrendingUp, TrendingDown, Minus } from 'l
 import { toast } from 'sonner';
 
 const backtestConfig: any = {
-  improved: { icon: TrendingUp, color: 'text-pnl-positive', bg: 'bg-pnl-positive/10', label: 'Improved' },
+  improved: {
+    icon: TrendingUp,
+    color: 'text-pnl-positive',
+    bg: 'bg-pnl-positive/10',
+    label: 'Improved',
+  },
   unchanged: { icon: Minus, color: 'text-muted-foreground', bg: 'bg-muted', label: 'Unchanged' },
-  worse: { icon: TrendingDown, color: 'text-pnl-negative', bg: 'bg-pnl-negative/10', label: 'Worse' },
+  worse: {
+    icon: TrendingDown,
+    color: 'text-pnl-negative',
+    bg: 'bg-pnl-negative/10',
+    label: 'Worse',
+  },
 };
 
 export default function AIQuantPage() {
@@ -31,8 +41,8 @@ export default function AIQuantPage() {
         prev.map((p) =>
           p.id === selectedProposal
             ? { ...p, status: confirmAction === 'approve' ? 'approved' : 'rejected' }
-            : p
-        )
+            : p,
+        ),
       );
     }
     setShowConfirm(false);
@@ -105,9 +115,7 @@ export default function AIQuantPage() {
                   {/* Header */}
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-foreground">
-                        {proposal.hypothesis}
-                      </p>
+                      <p className="text-sm font-medium text-foreground">{proposal.hypothesis}</p>
                       <span className="text-xxs text-muted-foreground">
                         Created {formatTimeAgo(proposal.createdAt)}
                       </span>
@@ -115,7 +123,7 @@ export default function AIQuantPage() {
                     <div
                       className={cn(
                         'flex items-center gap-1 rounded-full px-2 py-0.5',
-                        btConfig.bg
+                        btConfig.bg,
                       )}
                     >
                       <BacktestIcon className={cn('h-3 w-3', btConfig.color)} />
@@ -135,8 +143,8 @@ export default function AIQuantPage() {
                           proposal.sharpeImprovement > 0
                             ? 'text-pnl-positive'
                             : proposal.sharpeImprovement < 0
-                            ? 'text-pnl-negative'
-                            : 'text-foreground'
+                              ? 'text-pnl-negative'
+                              : 'text-foreground',
                         )}
                       >
                         {proposal.sharpeImprovement > 0 ? '+' : ''}
@@ -151,8 +159,8 @@ export default function AIQuantPage() {
                           proposal.drawdownChange < 0
                             ? 'text-pnl-positive'
                             : proposal.drawdownChange > 0
-                            ? 'text-pnl-negative'
-                            : 'text-foreground'
+                              ? 'text-pnl-negative'
+                              : 'text-foreground',
                         )}
                       >
                         {proposal.drawdownChange > 0 ? '+' : ''}
@@ -226,7 +234,7 @@ export default function AIQuantPage() {
                     'ml-4 rounded-full px-2 py-0.5 text-xxs font-medium',
                     proposal.status === 'approved'
                       ? 'bg-pnl-positive/10 text-pnl-positive'
-                      : 'bg-pnl-negative/10 text-pnl-negative'
+                      : 'bg-pnl-negative/10 text-pnl-negative',
                   )}
                 >
                   {proposal.status === 'approved' ? 'Approved' : 'Rejected'}

@@ -25,6 +25,10 @@ export interface IntentSignal {
   /** Optional: stop loss distance or price */
   /** Optional: stop loss distance or price */
   stopLossPrice?: number;
+  /** Target price (take profit) */
+  targetPrice?: number;
+  /** Estimated confidence score (0-100) */
+  confidence?: number;
   /** Expected edge/profit margin for this trade (e.g. 0.005 for 0.5%) */
   expectedEdge?: number;
   /** Optional: latency profile for feedback loop */
@@ -39,6 +43,10 @@ export interface IntentSignal {
   positionMode?: 'ONE_WAY' | 'HEDGE';
   /** Intent Type */
   type?: 'MANUAL' | 'STRATEGY' | 'RECONCILIATION' | 'LIQUIDATION';
+  /** Trap Type for Bayesian Calibration (Phase 1) */
+  trap_type?: string;
+  /** Additional metadata (source, velocity, orderType, etc.) */
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -143,6 +151,12 @@ export interface RiskGuardianConfig {
     [key: string]: PhaseRiskConstraints;
   };
   riskAversionLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
+  /** Cost-Ensure Veto Configuration */
+  costVeto?: {
+    enabled: boolean;
+    minExpectancyRatio: number; // e.g. 5.0 (Expected Profit must be > 5x Cost)
+    baseFeeBps: number; // e.g. 6 bps (Taker + Spread)
+  };
 }
 
 /**

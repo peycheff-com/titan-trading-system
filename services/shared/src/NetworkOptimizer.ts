@@ -1,9 +1,9 @@
 /**
  * Network Optimizer for Titan Trading System
- * 
+ *
  * Provides network optimization strategies including co-location simulation,
  * latency monitoring, and connection optimization for high-frequency trading.
- * 
+ *
  * Requirements: 10.1 - Co-location and network optimization strategies
  */
 
@@ -142,14 +142,14 @@ export interface NetworkMetrics {
 class LatencyMonitor extends EventEmitter {
   private measurements = new Map<string, LatencyMeasurement[]>();
   private monitoringTimer: NodeJS.Timeout | null = null;
-  
+
   constructor(
     private endpoints: Map<string, NetworkEndpoint>,
-    private config: NetworkOptimizerConfig
+    private config: NetworkOptimizerConfig,
   ) {
     super();
   }
-  
+
   /**
    * Start latency monitoring
    */
@@ -157,47 +157,51 @@ class LatencyMonitor extends EventEmitter {
     if (this.monitoringTimer) {
       return;
     }
-    
+
+    // eslint-disable-next-line functional/immutable-data
     this.monitoringTimer = setInterval(() => {
       this.measureAllEndpoints();
     }, this.config.measurementInterval);
-    
-    console.log(colors.green(`📡 Latency monitoring started (${this.config.measurementInterval}ms interval)`));
+
+    console.log(
+      colors.green(`📡 Latency monitoring started (${this.config.measurementInterval}ms interval)`),
+    );
   }
-  
+
   /**
    * Stop latency monitoring
    */
   stop(): void {
     if (this.monitoringTimer) {
       clearInterval(this.monitoringTimer);
+      // eslint-disable-next-line functional/immutable-data
       this.monitoringTimer = null;
     }
   }
-  
+
   /**
    * Measure latency to all endpoints
    */
   private async measureAllEndpoints(): Promise<void> {
-    const promises = Array.from(this.endpoints.values()).map(endpoint => 
-      this.measureEndpoint(endpoint)
+    const promises = Array.from(this.endpoints.values()).map((endpoint) =>
+      this.measureEndpoint(endpoint),
     );
-    
+
     await Promise.allSettled(promises);
   }
-  
+
   /**
    * Measure latency to specific endpoint
    */
   private async measureEndpoint(endpoint: NetworkEndpoint): Promise<void> {
     const startTime = performance.now();
-    
+
     try {
       // Simulate network measurement
       const baseLatency = endpoint.isCoLocated ? 50 : 500; // Microseconds
       const jitter = Math.random() * 100; // Random jitter
       const packetLoss = Math.random() * 0.1; // Up to 0.1% packet loss
-      
+
       const measurement: LatencyMeasurement = {
         endpointId: endpoint.id,
         timestamp: Date.now(),
@@ -205,32 +209,34 @@ class LatencyMonitor extends EventEmitter {
         jitterMicros: jitter,
         packetLoss,
         bandwidth: endpoint.bandwidth * (1 - packetLoss / 100),
-        measurementType: 'APPLICATION'
+        measurementType: 'APPLICATION',
       };
-      
+
       // Store measurement
       if (!this.measurements.has(endpoint.id)) {
+        // eslint-disable-next-line functional/immutable-data
         this.measurements.set(endpoint.id, []);
       }
-      
+
       const endpointMeasurements = this.measurements.get(endpoint.id)!;
+      // eslint-disable-next-line functional/immutable-data
       endpointMeasurements.push(measurement);
-      
+
       // Keep only last 1000 measurements
       if (endpointMeasurements.length > 1000) {
+        // eslint-disable-next-line functional/immutable-data
         endpointMeasurements.splice(0, endpointMeasurements.length - 1000);
       }
-      
+
       // Check thresholds
       this.checkThresholds(measurement);
-      
+
       this.emit('measurement', measurement);
-      
     } catch (error) {
       console.error(colors.red(`❌ Failed to measure endpoint ${endpoint.id}:`), error);
     }
   }
-  
+
   /**
    * Check measurement against thresholds
    */
@@ -240,29 +246,29 @@ class LatencyMonitor extends EventEmitter {
         endpointId: measurement.endpointId,
         latency: measurement.latencyMicros,
         threshold: this.config.latencyThreshold,
-        severity: 'HIGH'
+        severity: 'HIGH',
       });
     }
-    
+
     if (measurement.jitterMicros > this.config.jitterThreshold) {
       this.emit('jitterAlert', {
         endpointId: measurement.endpointId,
         jitter: measurement.jitterMicros,
         threshold: this.config.jitterThreshold,
-        severity: 'MEDIUM'
+        severity: 'MEDIUM',
       });
     }
-    
+
     if (measurement.packetLoss > this.config.packetLossThreshold) {
       this.emit('packetLossAlert', {
         endpointId: measurement.endpointId,
         packetLoss: measurement.packetLoss,
         threshold: this.config.packetLossThreshold,
-        severity: 'HIGH'
+        severity: 'HIGH',
       });
     }
   }
-  
+
   /**
    * Get measurements for endpoint
    */
@@ -270,17 +276,17 @@ class LatencyMonitor extends EventEmitter {
     const measurements = this.measurements.get(endpointId) || [];
     return measurements.slice(-count);
   }
-  
+
   /**
    * Get average latency for endpoint
    */
   getAverageLatency(endpointId: string, windowMs: number = 60000): number {
     const measurements = this.measurements.get(endpointId) || [];
     const cutoff = Date.now() - windowMs;
-    
-    const recentMeasurements = measurements.filter(m => m.timestamp > cutoff);
+
+    const recentMeasurements = measurements.filter((m) => m.timestamp > cutoff);
     if (recentMeasurements.length === 0) return 0;
-    
+
     const sum = recentMeasurements.reduce((acc, m) => acc + m.latencyMicros, 0);
     return sum / recentMeasurements.length;
   }
@@ -292,12 +298,12 @@ class LatencyMonitor extends EventEmitter {
 class PathOptimizer {
   private paths = new Map<string, NetworkPath>();
   private optimizationTimer: NodeJS.Timeout | null = null;
-  
+
   constructor(
     private endpoints: Map<string, NetworkEndpoint>,
-    private config: NetworkOptimizerConfig
+    private config: NetworkOptimizerConfig,
   ) {}
-  
+
   /**
    * Start path optimization
    */
@@ -305,44 +311,53 @@ class PathOptimizer {
     if (this.optimizationTimer) {
       return;
     }
-    
+
+    // eslint-disable-next-line functional/immutable-data
     this.optimizationTimer = setInterval(() => {
       this.optimizePaths();
     }, this.config.pathOptimizationInterval);
-    
-    console.log(colors.green(`🛣️ Path optimization started (${this.config.pathOptimizationInterval}ms interval)`));
+
+    console.log(
+      colors.green(
+        `🛣️ Path optimization started (${this.config.pathOptimizationInterval}ms interval)`,
+      ),
+    );
   }
-  
+
   /**
    * Stop path optimization
    */
   stop(): void {
     if (this.optimizationTimer) {
       clearInterval(this.optimizationTimer);
+      // eslint-disable-next-line functional/immutable-data
       this.optimizationTimer = null;
     }
   }
-  
+
   /**
    * Optimize all network paths
    */
   private optimizePaths(): void {
     const endpoints = Array.from(this.endpoints.values());
-    
+
     // Create paths between all endpoint pairs
+    // eslint-disable-next-line functional/no-let
     for (let i = 0; i < endpoints.length; i++) {
+      // eslint-disable-next-line functional/no-let
       for (let j = i + 1; j < endpoints.length; j++) {
         const source = endpoints[i];
         const destination = endpoints[j];
-        
+
         const pathId = `${source.id}-${destination.id}`;
         const path = this.calculateOptimalPath(source, destination);
-        
+
+        // eslint-disable-next-line functional/immutable-data
         this.paths.set(pathId, path);
       }
     }
   }
-  
+
   /**
    * Calculate optimal path between two endpoints
    */
@@ -350,46 +365,47 @@ class PathOptimizer {
     // Simplified path calculation
     const distance = this.calculateDistance(source, destination);
     const baseLatency = distance * 5; // 5 microseconds per km (simplified)
-    
+
     // Add co-location bonus
+    // eslint-disable-next-line functional/no-let
     let latencyMultiplier = 1;
     if (source.isCoLocated && destination.isCoLocated) {
       latencyMultiplier = 0.1; // 90% latency reduction for co-located
     } else if (source.isCoLocated || destination.isCoLocated) {
       latencyMultiplier = 0.5; // 50% latency reduction for one co-located
     }
-    
+
     const hops: NetworkHop[] = [
       {
         id: `hop-${source.id}`,
         host: source.host,
         latencyMicros: baseLatency * latencyMultiplier * 0.3,
         packetLoss: 0.01,
-        isBottleneck: false
+        isBottleneck: false,
       },
       {
         id: `hop-${destination.id}`,
         host: destination.host,
         latencyMicros: baseLatency * latencyMultiplier * 0.7,
         packetLoss: 0.01,
-        isBottleneck: false
-      }
+        isBottleneck: false,
+      },
     ];
-    
+
     const totalLatency = hops.reduce((sum, hop) => sum + hop.latencyMicros, 0);
-    
+
     return {
       id: `${source.id}-${destination.id}`,
       source: source.id,
       destination: destination.id,
       hops,
       totalLatencyMicros: totalLatency,
-      reliability: 99.9 - (hops.length * 0.1),
+      reliability: 99.9 - hops.length * 0.1,
       cost: distance * 0.01,
-      isOptimal: totalLatency < 1000 // Consider optimal if under 1ms
+      isOptimal: totalLatency < 1000, // Consider optimal if under 1ms
     };
   }
-  
+
   /**
    * Calculate distance between endpoints (simplified)
    */
@@ -398,23 +414,25 @@ class PathOptimizer {
     if (source.location.datacenter === destination.location.datacenter) {
       return 1; // Same datacenter
     }
-    
+
     if (source.location.region === destination.location.region) {
       return 100; // Same region
     }
-    
+
     return 1000; // Different regions
   }
-  
+
   /**
    * Get optimal path between endpoints
    */
   getOptimalPath(sourceId: string, destinationId: string): NetworkPath | null {
-    return this.paths.get(`${sourceId}-${destinationId}`) || 
-           this.paths.get(`${destinationId}-${sourceId}`) || 
-           null;
+    return (
+      this.paths.get(`${sourceId}-${destinationId}`) ||
+      this.paths.get(`${destinationId}-${sourceId}`) ||
+      null
+    );
   }
-  
+
   /**
    * Get all paths
    */
@@ -434,10 +452,10 @@ export class NetworkOptimizer extends EventEmitter {
   private coLocationConfig: CoLocationConfig | null = null;
   private metrics: NetworkMetrics;
   private isRunning = false;
-  
+
   constructor(config: Partial<NetworkOptimizerConfig> = {}) {
     super();
-    
+
     this.config = {
       enableLatencyMonitoring: true,
       enablePathOptimization: true,
@@ -455,14 +473,14 @@ export class NetworkOptimizer extends EventEmitter {
         enableNagle: false,
         enableTcpNoDelay: true,
         socketBufferSize: 65536,
-        keepAliveInterval: 30000
+        keepAliveInterval: 30000,
       },
-      ...config
+      ...config,
     };
-    
+
     this.latencyMonitor = new LatencyMonitor(this.endpoints, this.config);
     this.pathOptimizer = new PathOptimizer(this.endpoints, this.config);
-    
+
     this.metrics = {
       totalMeasurements: 0,
       averageLatencyMicros: 0,
@@ -475,15 +493,15 @@ export class NetworkOptimizer extends EventEmitter {
       totalBandwidth: 0,
       pathOptimizations: 0,
       failovers: 0,
-      lastOptimizationTime: 0
+      lastOptimizationTime: 0,
     };
-    
+
     // Set up event listeners
     this.setupEventListeners();
-    
+
     console.log(colors.blue('🌐 Network Optimizer initialized'));
   }
-  
+
   /**
    * Start network optimization
    */
@@ -491,20 +509,21 @@ export class NetworkOptimizer extends EventEmitter {
     if (this.isRunning) {
       return;
     }
-    
+
+    // eslint-disable-next-line functional/immutable-data
     this.isRunning = true;
-    
+
     if (this.config.enableLatencyMonitoring) {
       this.latencyMonitor.start();
     }
-    
+
     if (this.config.enablePathOptimization) {
       this.pathOptimizer.start();
     }
-    
+
     console.log(colors.green('🚀 Network Optimizer started'));
   }
-  
+
   /**
    * Stop network optimization
    */
@@ -512,31 +531,38 @@ export class NetworkOptimizer extends EventEmitter {
     if (!this.isRunning) {
       return;
     }
-    
+
+    // eslint-disable-next-line functional/immutable-data
     this.isRunning = false;
-    
+
     this.latencyMonitor.stop();
     this.pathOptimizer.stop();
-    
+
     console.log(colors.yellow('🛑 Network Optimizer stopped'));
   }
-  
+
   /**
    * Add network endpoint
    */
   addEndpoint(endpoint: NetworkEndpoint): void {
+    // eslint-disable-next-line functional/immutable-data
     this.endpoints.set(endpoint.id, endpoint);
-    
+
     // Update total bandwidth
+    // eslint-disable-next-line functional/immutable-data
     this.metrics.totalBandwidth += endpoint.bandwidth;
-    
-    console.log(colors.green(`➕ Added endpoint: ${endpoint.name} (${endpoint.host}:${endpoint.port})`));
-    
+
+    console.log(
+      colors.green(`➕ Added endpoint: ${endpoint.name} (${endpoint.host}:${endpoint.port})`),
+    );
+
     if (endpoint.isCoLocated) {
-      console.log(colors.cyan(`🏢 Co-located endpoint: ${endpoint.name} in ${endpoint.location.datacenter}`));
+      console.log(
+        colors.cyan(`🏢 Co-located endpoint: ${endpoint.name} in ${endpoint.location.datacenter}`),
+      );
     }
   }
-  
+
   /**
    * Remove network endpoint
    */
@@ -545,33 +571,41 @@ export class NetworkOptimizer extends EventEmitter {
     if (!endpoint) {
       return false;
     }
-    
+
+    // eslint-disable-next-line functional/immutable-data
     this.endpoints.delete(endpointId);
+    // eslint-disable-next-line functional/immutable-data
     this.metrics.totalBandwidth -= endpoint.bandwidth;
-    
+
     console.log(colors.yellow(`➖ Removed endpoint: ${endpointId}`));
     return true;
   }
-  
+
   /**
    * Configure co-location settings
    */
   configureCoLocation(config: CoLocationConfig): void {
+    // eslint-disable-next-line functional/immutable-data
     this.coLocationConfig = config;
-    
+
     if (config.enabled) {
-      console.log(colors.cyan(`🏢 Co-location configured: ${config.datacenter} (target: ${config.latencyTarget}μs)`));
-      
+      console.log(
+        colors.cyan(
+          `🏢 Co-location configured: ${config.datacenter} (target: ${config.latencyTarget}μs)`,
+        ),
+      );
+
       // Apply co-location optimizations to existing endpoints
       for (const endpoint of this.endpoints.values()) {
         if (endpoint.location.datacenter === config.datacenter) {
+          // eslint-disable-next-line functional/immutable-data
           endpoint.isCoLocated = true;
           console.log(colors.cyan(`🔧 Enabled co-location for ${endpoint.name}`));
         }
       }
     }
   }
-  
+
   /**
    * Optimize TCP connection settings
    */
@@ -580,64 +614,72 @@ export class NetworkOptimizer extends EventEmitter {
     if (!endpoint) {
       return;
     }
-    
+
     const { tcpOptimizations } = this.config;
-    
+
     console.log(colors.cyan(`🔧 Optimizing TCP settings for ${endpoint.name}:`));
-    console.log(colors.gray(`  - Nagle Algorithm: ${tcpOptimizations.enableNagle ? 'Enabled' : 'Disabled'}`));
-    console.log(colors.gray(`  - TCP_NODELAY: ${tcpOptimizations.enableTcpNoDelay ? 'Enabled' : 'Disabled'}`));
+    console.log(
+      colors.gray(`  - Nagle Algorithm: ${tcpOptimizations.enableNagle ? 'Enabled' : 'Disabled'}`),
+    );
+    console.log(
+      colors.gray(`  - TCP_NODELAY: ${tcpOptimizations.enableTcpNoDelay ? 'Enabled' : 'Disabled'}`),
+    );
     console.log(colors.gray(`  - Socket Buffer: ${tcpOptimizations.socketBufferSize} bytes`));
     console.log(colors.gray(`  - Keep-Alive: ${tcpOptimizations.keepAliveInterval}ms`));
-    
+
     // In a real implementation, these would be applied to actual socket connections
   }
-  
+
   /**
    * Get optimal endpoint for connection
    */
-  getOptimalEndpoint(criteria: {
-    maxLatency?: number;
-    minBandwidth?: number;
-    requireCoLocation?: boolean;
-    preferredRegion?: string;
-  } = {}): NetworkEndpoint | null {
+  getOptimalEndpoint(
+    criteria: {
+      maxLatency?: number;
+      minBandwidth?: number;
+      requireCoLocation?: boolean;
+      preferredRegion?: string;
+    } = {},
+  ): NetworkEndpoint | null {
+    // eslint-disable-next-line functional/no-let
     let candidates = Array.from(this.endpoints.values());
-    
+
     // Apply filters
     if (criteria.requireCoLocation) {
-      candidates = candidates.filter(ep => ep.isCoLocated);
+      candidates = candidates.filter((ep) => ep.isCoLocated);
     }
-    
+
     if (criteria.minBandwidth) {
-      candidates = candidates.filter(ep => ep.bandwidth >= criteria.minBandwidth!);
+      candidates = candidates.filter((ep) => ep.bandwidth >= criteria.minBandwidth!);
     }
-    
+
     if (criteria.preferredRegion) {
-      const preferred = candidates.filter(ep => ep.location.region === criteria.preferredRegion);
+      const preferred = candidates.filter((ep) => ep.location.region === criteria.preferredRegion);
       if (preferred.length > 0) {
         candidates = preferred;
       }
     }
-    
+
     if (candidates.length === 0) {
       return null;
     }
-    
+
     // Sort by priority and latency
+    // eslint-disable-next-line functional/immutable-data
     candidates.sort((a, b) => {
       const latencyA = this.latencyMonitor.getAverageLatency(a.id);
       const latencyB = this.latencyMonitor.getAverageLatency(b.id);
-      
+
       // First by priority, then by latency
       if (a.priority !== b.priority) {
         return b.priority - a.priority;
       }
-      
+
       return latencyA - latencyB;
     });
-    
+
     const optimal = candidates[0];
-    
+
     // Check latency criteria
     if (criteria.maxLatency) {
       const avgLatency = this.latencyMonitor.getAverageLatency(optimal.id);
@@ -645,10 +687,10 @@ export class NetworkOptimizer extends EventEmitter {
         return null;
       }
     }
-    
+
     return optimal;
   }
-  
+
   /**
    * Setup event listeners
    */
@@ -656,43 +698,64 @@ export class NetworkOptimizer extends EventEmitter {
     this.latencyMonitor.on('measurement', (measurement: LatencyMeasurement) => {
       this.updateMetrics(measurement);
     });
-    
+
     this.latencyMonitor.on('latencyAlert', (alert) => {
-      console.warn(colors.yellow(`⚠️ High latency alert: ${alert.endpointId} (${alert.latency.toFixed(2)}μs > ${alert.threshold}μs)`));
-      
+      console.warn(
+        colors.yellow(
+          `⚠️ High latency alert: ${alert.endpointId} (${alert.latency.toFixed(2)}μs > ${alert.threshold}μs)`,
+        ),
+      );
+
       if (this.config.enableFailover && alert.latency > this.config.failoverLatencyThreshold) {
         this.triggerFailover(alert.endpointId);
       }
-      
+
       this.emit('latencyAlert', alert);
     });
-    
+
     this.latencyMonitor.on('packetLossAlert', (alert) => {
-      console.warn(colors.red(`⚠️ Packet loss alert: ${alert.endpointId} (${alert.packetLoss.toFixed(2)}% > ${alert.threshold}%)`));
+      console.warn(
+        colors.red(
+          `⚠️ Packet loss alert: ${alert.endpointId} (${alert.packetLoss.toFixed(2)}% > ${alert.threshold}%)`,
+        ),
+      );
       this.emit('packetLossAlert', alert);
     });
   }
-  
+
   /**
    * Update performance metrics
    */
   private updateMetrics(measurement: LatencyMeasurement): void {
+    // eslint-disable-next-line functional/immutable-data
     this.metrics.totalMeasurements++;
-    
+
     // Update averages (simple moving average)
-    this.metrics.averageLatencyMicros = (this.metrics.averageLatencyMicros + measurement.latencyMicros) / 2;
-    this.metrics.averageJitterMicros = (this.metrics.averageJitterMicros + measurement.jitterMicros) / 2;
+    // eslint-disable-next-line functional/immutable-data
+    this.metrics.averageLatencyMicros =
+      (this.metrics.averageLatencyMicros + measurement.latencyMicros) / 2;
+    // eslint-disable-next-line functional/immutable-data
+    this.metrics.averageJitterMicros =
+      (this.metrics.averageJitterMicros + measurement.jitterMicros) / 2;
+    // eslint-disable-next-line functional/immutable-data
     this.metrics.averagePacketLoss = (this.metrics.averagePacketLoss + measurement.packetLoss) / 2;
-    
+
     // Update max latency
-    this.metrics.maxLatencyMicros = Math.max(this.metrics.maxLatencyMicros, measurement.latencyMicros);
-    
+    // eslint-disable-next-line functional/immutable-data
+    this.metrics.maxLatencyMicros = Math.max(
+      this.metrics.maxLatencyMicros,
+      measurement.latencyMicros,
+    );
+
     // Calculate percentiles (simplified - would need proper implementation)
+    // eslint-disable-next-line functional/immutable-data
     this.metrics.p50LatencyMicros = this.metrics.averageLatencyMicros * 0.9;
+    // eslint-disable-next-line functional/immutable-data
     this.metrics.p95LatencyMicros = this.metrics.averageLatencyMicros * 1.5;
+    // eslint-disable-next-line functional/immutable-data
     this.metrics.p99LatencyMicros = this.metrics.averageLatencyMicros * 2.0;
   }
-  
+
   /**
    * Trigger failover for problematic endpoint
    */
@@ -701,58 +764,63 @@ export class NetworkOptimizer extends EventEmitter {
     if (!endpoint) {
       return;
     }
-    
+
     // Find alternative endpoint
     const alternative = this.getOptimalEndpoint({
       preferredRegion: endpoint.location.region,
-      requireCoLocation: endpoint.isCoLocated
+      requireCoLocation: endpoint.isCoLocated,
     });
-    
+
     if (alternative && alternative.id !== endpointId) {
       console.log(colors.magenta(`🔄 Triggering failover: ${endpointId} → ${alternative.id}`));
-      
+
+      // eslint-disable-next-line functional/immutable-data
       this.metrics.failovers++;
-      
+
       this.emit('failover', {
         fromEndpoint: endpointId,
         toEndpoint: alternative.id,
         reason: 'High latency detected',
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }
   }
-  
+
   /**
    * Get network performance metrics
    */
   getMetrics(): NetworkMetrics {
     return { ...this.metrics };
   }
-  
+
   /**
    * Get endpoint statistics
    */
-  getEndpointStats(): Record<string, {
-    averageLatency: number;
-    measurements: number;
-    isOptimal: boolean;
-  }> {
+  getEndpointStats(): Record<
+    string,
+    {
+      averageLatency: number;
+      measurements: number;
+      isOptimal: boolean;
+    }
+  > {
     const stats: Record<string, any> = {};
-    
+
     for (const endpoint of this.endpoints.values()) {
       const avgLatency = this.latencyMonitor.getAverageLatency(endpoint.id);
       const measurements = this.latencyMonitor.getMeasurements(endpoint.id, 100);
-      
+
+      // eslint-disable-next-line functional/immutable-data
       stats[endpoint.id] = {
         averageLatency: avgLatency,
         measurements: measurements.length,
-        isOptimal: avgLatency < this.config.latencyThreshold
+        isOptimal: avgLatency < this.config.latencyThreshold,
       };
     }
-    
+
     return stats;
   }
-  
+
   /**
    * Get network topology
    */
@@ -764,24 +832,26 @@ export class NetworkOptimizer extends EventEmitter {
     return {
       endpoints: Array.from(this.endpoints.values()),
       paths: this.pathOptimizer.getAllPaths(),
-      coLocationConfig: this.coLocationConfig
+      coLocationConfig: this.coLocationConfig,
     };
   }
-  
+
   /**
    * Update configuration
    */
   updateConfig(config: Partial<NetworkOptimizerConfig>): void {
+    // eslint-disable-next-line functional/immutable-data
     this.config = { ...this.config, ...config };
     console.log(colors.blue('⚙️ Network optimizer configuration updated'));
   }
-  
+
   /**
    * Shutdown and cleanup
    */
   shutdown(): void {
     console.log(colors.blue('🛑 Shutting down Network Optimizer...'));
     this.stop();
+    // eslint-disable-next-line functional/immutable-data
     this.endpoints.clear();
     this.removeAllListeners();
   }
@@ -807,13 +877,14 @@ export const DEFAULT_NETWORK_OPTIMIZER_CONFIG: NetworkOptimizerConfig = {
     enableNagle: false,
     enableTcpNoDelay: true,
     socketBufferSize: 65536,
-    keepAliveInterval: 30000
-  }
+    keepAliveInterval: 30000,
+  },
 };
 
 /**
  * Singleton Network Optimizer instance
  */
+// eslint-disable-next-line functional/no-let
 let networkOptimizerInstance: NetworkOptimizer | null = null;
 
 /**

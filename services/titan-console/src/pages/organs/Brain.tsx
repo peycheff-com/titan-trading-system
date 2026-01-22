@@ -24,7 +24,7 @@ export default function BrainPage() {
   const brainAllocation = {
     phases: [] as any[],
     riskMetrics: { portfolioBeta: 0, correlationBTC: 0, valueAtRisk: 0, expectedShortfall: 0 },
-    circuitBreaker: { state: 'OK', currentDrawdown: 0, drawdownThreshold: 5, lastTripped: null }
+    circuitBreaker: { state: 'OK', currentDrawdown: 0, drawdownThreshold: 5, lastTripped: null },
   };
   const correlationMatrix = { assets: [], data: [] };
 
@@ -52,7 +52,7 @@ export default function BrainPage() {
       {/* Allocation View */}
       <div className="rounded-lg border border-border bg-card p-4">
         <h2 className="text-sm font-semibold text-foreground mb-4">Capital Allocation</h2>
-        
+
         {/* Allocation Bar */}
         <div className="mb-4">
           <div className="flex h-8 overflow-hidden rounded-lg">
@@ -62,9 +62,7 @@ export default function BrainPage() {
                 className={cn('flex items-center justify-center', phaseColors[phase.phase])}
                 style={{ width: `${phase.current}%` }}
               >
-                <span className="text-xs font-semibold text-white capitalize">
-                  {phase.phase}
-                </span>
+                <span className="text-xs font-semibold text-white capitalize">{phase.phase}</span>
               </div>
             ))}
           </div>
@@ -73,20 +71,12 @@ export default function BrainPage() {
         {/* Allocation Details */}
         <div className="grid gap-4 sm:grid-cols-3">
           {phases.map((phase) => (
-            <div
-              key={phase.phase}
-              className="rounded-md border border-border bg-muted/20 p-3"
-            >
+            <div key={phase.phase} className="rounded-md border border-border bg-muted/20 p-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium capitalize text-foreground">
                   {phase.phase}
                 </span>
-                <span
-                  className={cn(
-                    'h-2 w-2 rounded-full',
-                    phaseColors[phase.phase]
-                  )}
-                />
+                <span className={cn('h-2 w-2 rounded-full', phaseColors[phase.phase])} />
               </div>
               <div className="mt-2 space-y-1">
                 <div className="flex items-center justify-between text-xs">
@@ -127,10 +117,7 @@ export default function BrainPage() {
               value={riskMetrics.correlationBTC.toFixed(2)}
               variant={riskMetrics.correlationBTC > 0.8 ? 'warning' : 'default'}
             />
-            <KpiTile
-              label="Value at Risk (95%)"
-              value={formatCurrency(riskMetrics.valueAtRisk)}
-            />
+            <KpiTile label="Value at Risk (95%)" value={formatCurrency(riskMetrics.valueAtRisk)} />
             <KpiTile
               label="Expected Shortfall"
               value={formatCurrency(riskMetrics.expectedShortfall)}
@@ -152,8 +139,8 @@ export default function BrainPage() {
                   circuitBreaker.currentDrawdown / circuitBreaker.drawdownThreshold > 0.8
                     ? 'bg-status-critical'
                     : circuitBreaker.currentDrawdown / circuitBreaker.drawdownThreshold > 0.5
-                    ? 'bg-warning'
-                    : 'bg-status-healthy'
+                      ? 'bg-warning'
+                      : 'bg-status-healthy',
                 )}
                 style={{
                   width: `${(circuitBreaker.currentDrawdown / circuitBreaker.drawdownThreshold) * 100}%`,
@@ -171,10 +158,7 @@ export default function BrainPage() {
           </div>
 
           <div className="rounded-lg border border-border bg-card p-4">
-            <CorrelationHeatmap
-              assets={correlationMatrix.assets}
-              data={correlationMatrix.data}
-            />
+            <CorrelationHeatmap assets={correlationMatrix.assets} data={correlationMatrix.data} />
           </div>
         </div>
       </div>
@@ -186,24 +170,17 @@ export default function BrainPage() {
             <AlertTriangle className="h-4 w-4 text-warning" />
             <h2 className="text-sm font-semibold text-foreground">Circuit Breaker</h2>
           </div>
-          <div
-            className={cn(
-              'flex items-center gap-2 rounded-full px-3 py-1',
-              cbConfig.bg
-            )}
-          >
+          <div className={cn('flex items-center gap-2 rounded-full px-3 py-1', cbConfig.bg)}>
             <span
               className={cn(
                 'h-2 w-2 rounded-full',
                 circuitBreaker.state === 'OK' && 'bg-status-healthy pulse-healthy',
                 circuitBreaker.state === 'Armed' && 'bg-warning pulse-warning',
                 circuitBreaker.state === 'Tripped' && 'bg-status-critical pulse-critical',
-                circuitBreaker.state === 'Cooldown' && 'bg-primary'
+                circuitBreaker.state === 'Cooldown' && 'bg-primary',
               )}
             />
-            <span className={cn('text-xs font-medium', cbConfig.color)}>
-              {cbConfig.label}
-            </span>
+            <span className={cn('text-xs font-medium', cbConfig.color)}>{cbConfig.label}</span>
           </div>
         </div>
 
@@ -223,7 +200,9 @@ export default function BrainPage() {
           <div className="flex items-center justify-between rounded-md bg-muted/30 px-3 py-2">
             <span className="text-xs text-muted-foreground">Last Tripped</span>
             <span className="font-mono text-xs text-foreground">
-              {circuitBreaker.lastTripped ? new Date(circuitBreaker.lastTripped).toLocaleDateString() : 'Never'}
+              {circuitBreaker.lastTripped
+                ? new Date(circuitBreaker.lastTripped).toLocaleDateString()
+                : 'Never'}
             </span>
           </div>
         </div>

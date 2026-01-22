@@ -26,6 +26,7 @@ export class VolumeValidator {
    */
   validateVolume(symbol: string, tradeCount: number): boolean {
     // Get or create counter for this symbol
+    // eslint-disable-next-line functional/no-let
     let counter = this.volumeCounters.get(symbol);
 
     if (!counter) {
@@ -34,11 +35,13 @@ export class VolumeValidator {
         count: tradeCount,
         startTime: Date.now(),
       };
+      // eslint-disable-next-line functional/immutable-data
       this.volumeCounters.set(symbol, counter);
       return false; // Not enough time elapsed yet
     }
 
     // Add trades to counter
+    // eslint-disable-next-line functional/immutable-data
     counter.count += tradeCount;
 
     // Check if 100ms window has elapsed
@@ -49,6 +52,7 @@ export class VolumeValidator {
       const isValid = counter.count >= this.MIN_TRADES;
 
       // Reset counter after validation
+      // eslint-disable-next-line functional/immutable-data
       this.volumeCounters.delete(symbol);
 
       return isValid;
@@ -65,6 +69,7 @@ export class VolumeValidator {
    * @param symbol - Trading symbol to reset
    */
   resetCounter(symbol: string): void {
+    // eslint-disable-next-line functional/immutable-data
     this.volumeCounters.delete(symbol);
   }
 
@@ -73,6 +78,7 @@ export class VolumeValidator {
    * Useful for cleanup or testing
    */
   resetAllCounters(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.volumeCounters.clear();
   }
 

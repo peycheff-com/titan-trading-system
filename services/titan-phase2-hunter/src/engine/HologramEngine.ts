@@ -133,6 +133,7 @@ export class HologramEngine {
     const trend = FractalMath.getTrendState(bos);
 
     // Detect Market Structure Shift (only for 15m timeframe as trigger)
+    // eslint-disable-next-line functional/no-let
     let mss: MSS | null = null;
     if (timeframe === '15m' && bos.length > 0) {
       mss = FractalMath.detectMSS(candles, fractals, trend);
@@ -175,6 +176,7 @@ export class HologramEngine {
     m15: TimeframeState,
     flowScore: number = 50
   ): number {
+    // eslint-disable-next-line functional/no-let
     let score = 0;
 
     // Daily-4H agreement (40 points)
@@ -397,6 +399,7 @@ export class HologramEngine {
     const data = await this.bybitClient.fetchOHLCV(symbol, interval, limit);
 
     // Cache the data
+    // eslint-disable-next-line functional/immutable-data
     this.cache.set(cacheKey, {
       data,
       timestamp: Date.now(),
@@ -413,9 +416,11 @@ export class HologramEngine {
   private calcVolatility(candles: OHLCV[]): number {
     if (candles.length < 15) return 0;
 
+    // eslint-disable-next-line functional/no-let
     let sumTr = 0;
     const period = 14;
 
+    // eslint-disable-next-line functional/no-let
     for (let i = 1; i < period + 1; i++) {
       const idx = candles.length - i;
       const high = candles[idx].high;
@@ -449,6 +454,7 @@ export class HologramEngine {
    * Useful for testing or forcing fresh data fetch
    */
   public clearCache(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.cache.clear();
   }
 

@@ -1,13 +1,18 @@
 /**
  * Enhanced AI Integration Console
- * 
+ *
  * Interactive console for monitoring and controlling the enhanced AI integration
  * including real-time optimization, predictive analytics, and adaptive risk management.
  */
 
 import React, { useState, useEffect } from 'react';
 import { Box, Text, Newline, Spacer } from 'ink';
-import { EnhancedAIIntegration, AIIntegrationStatus, StrategySelection, AdaptiveRiskConfig } from '../ai/EnhancedAIIntegration.js';
+import {
+  EnhancedAIIntegration,
+  AIIntegrationStatus,
+  StrategySelection,
+  AdaptiveRiskConfig,
+} from '../ai/EnhancedAIIntegration.js';
 import { MarketRegime } from '../ai/PredictiveAnalytics.js';
 
 interface EnhancedAIConsoleProps {
@@ -33,7 +38,7 @@ export const EnhancedAIConsole: React.FC<EnhancedAIConsoleProps> = ({ aiIntegrat
     riskConfig: null,
     performanceHistory: [],
     isRunning: false,
-    lastUpdate: 0
+    lastUpdate: 0,
   });
 
   useEffect(() => {
@@ -50,14 +55,14 @@ export const EnhancedAIConsole: React.FC<EnhancedAIConsoleProps> = ({ aiIntegrat
         riskConfig,
         performanceHistory,
         isRunning: status.realTimeOptimizer.isRunning && status.predictiveAnalytics.isRunning,
-        lastUpdate: Date.now()
+        lastUpdate: Date.now(),
       });
     }, 2000);
 
     // Listen for events
     const handleEvent = (eventName: string) => (data: any) => {
       // Update last update time when events occur
-      setState(prev => ({ ...prev, lastUpdate: Date.now() }));
+      setState((prev) => ({ ...prev, lastUpdate: Date.now() }));
     };
 
     aiIntegration.on('parameterOptimized', handleEvent('parameterOptimized'));
@@ -81,22 +86,33 @@ export const EnhancedAIConsole: React.FC<EnhancedAIConsoleProps> = ({ aiIntegrat
 
   const getRegimeColor = (regime: MarketRegime): string => {
     switch (regime) {
-      case 'bull_trending': return 'green';
-      case 'bear_trending': return 'red';
-      case 'high_volatility': return 'yellow';
-      case 'risk_off': return 'red';
-      case 'risk_on': return 'green';
-      default: return 'white';
+      case 'bull_trending':
+        return 'green';
+      case 'bear_trending':
+        return 'red';
+      case 'high_volatility':
+        return 'yellow';
+      case 'risk_off':
+        return 'red';
+      case 'risk_on':
+        return 'green';
+      default:
+        return 'white';
     }
   };
 
   const getRiskLevelColor = (level: string): string => {
     switch (level) {
-      case 'low': return 'green';
-      case 'medium': return 'yellow';
-      case 'high': return 'red';
-      case 'critical': return 'magenta';
-      default: return 'white';
+      case 'low':
+        return 'green';
+      case 'medium':
+        return 'yellow';
+      case 'high':
+        return 'red';
+      case 'critical':
+        return 'magenta';
+      default:
+        return 'white';
     }
   };
 
@@ -112,7 +128,9 @@ export const EnhancedAIConsole: React.FC<EnhancedAIConsoleProps> = ({ aiIntegrat
     <Box flexDirection="column" padding={1}>
       {/* Header */}
       <Box flexDirection="row" borderStyle="double" borderColor="cyan" padding={1}>
-        <Text color="cyan" bold>🧠 Enhanced AI Integration Console</Text>
+        <Text color="cyan" bold>
+          🧠 Enhanced AI Integration Console
+        </Text>
         <Spacer />
         <Text color={state.isRunning ? 'green' : 'red'}>
           {state.isRunning ? '🟢 ACTIVE' : '🔴 INACTIVE'}
@@ -123,9 +141,11 @@ export const EnhancedAIConsole: React.FC<EnhancedAIConsoleProps> = ({ aiIntegrat
 
       {/* Status Overview */}
       <Box flexDirection="column" borderStyle="single" borderColor="blue" padding={1}>
-        <Text color="blue" bold>📊 System Status</Text>
+        <Text color="blue" bold>
+          📊 System Status
+        </Text>
         <Newline />
-        
+
         <Box flexDirection="row">
           <Box flexDirection="column" width="50%">
             <Text>Real-Time Optimizer:</Text>
@@ -135,7 +155,7 @@ export const EnhancedAIConsole: React.FC<EnhancedAIConsoleProps> = ({ aiIntegrat
             <Text>Optimizations: {state.status.realTimeOptimizer.optimizationCount}</Text>
             <Text>Active A/B Tests: {state.status.realTimeOptimizer.activeABTests}</Text>
           </Box>
-          
+
           <Box flexDirection="column" width="50%">
             <Text>Predictive Analytics:</Text>
             <Text color={state.status.predictiveAnalytics.isRunning ? 'green' : 'red'}>
@@ -147,10 +167,18 @@ export const EnhancedAIConsole: React.FC<EnhancedAIConsoleProps> = ({ aiIntegrat
         </Box>
 
         <Newline />
-        
+
         <Box flexDirection="row">
           <Text>Performance Score: </Text>
-          <Text color={state.status.performanceScore > 70 ? 'green' : state.status.performanceScore > 40 ? 'yellow' : 'red'}>
+          <Text
+            color={
+              state.status.performanceScore > 70
+                ? 'green'
+                : state.status.performanceScore > 40
+                  ? 'yellow'
+                  : 'red'
+            }
+          >
             {state.status.performanceScore.toFixed(1)}/100
           </Text>
           <Spacer />
@@ -165,14 +193,20 @@ export const EnhancedAIConsole: React.FC<EnhancedAIConsoleProps> = ({ aiIntegrat
 
       {/* Market Regimes */}
       <Box flexDirection="column" borderStyle="single" borderColor="yellow" padding={1}>
-        <Text color="yellow" bold>🌍 Market Regimes</Text>
+        <Text color="yellow" bold>
+          🌍 Market Regimes
+        </Text>
         <Newline />
-        
+
         {Object.entries(state.status.currentRegimes).length > 0 ? (
           Object.entries(state.status.currentRegimes).map(([symbol, regime]) => (
             <Box key={symbol} flexDirection="row">
-              <Box width={12}><Text>{symbol}:</Text></Box>
-              <Text color={getRegimeColor(regime)}>{(regime as string).replace('_', ' ').toUpperCase()}</Text>
+              <Box width={12}>
+                <Text>{symbol}:</Text>
+              </Box>
+              <Text color={getRegimeColor(regime)}>
+                {(regime as string).replace('_', ' ').toUpperCase()}
+              </Text>
             </Box>
           ))
         ) : (
@@ -184,16 +218,22 @@ export const EnhancedAIConsole: React.FC<EnhancedAIConsoleProps> = ({ aiIntegrat
 
       {/* Strategy Selections */}
       <Box flexDirection="column" borderStyle="single" borderColor="green" padding={1}>
-        <Text color="green" bold>🎯 Active Strategies</Text>
+        <Text color="green" bold>
+          🎯 Active Strategies
+        </Text>
         <Newline />
-        
+
         {state.strategySelections.size > 0 ? (
           Array.from(state.strategySelections.entries()).map(([symbol, selection]) => (
             <Box key={symbol} flexDirection="column" marginBottom={1}>
-              <Text color="cyan">{symbol} ({selection.regime.replace('_', ' ')}):</Text>
+              <Text color="cyan">
+                {symbol} ({selection.regime.replace('_', ' ')}):
+              </Text>
               {selection.selectedStrategies.map((strategy, index) => (
                 <Box key={index} flexDirection="row" marginLeft={2}>
-                  <Box width={20}><Text>{strategy.strategy}:</Text></Box>
+                  <Box width={20}>
+                    <Text>{strategy.strategy}:</Text>
+                  </Box>
                   <Text color="green">{formatPercentage(strategy.allocation)}</Text>
                   <Text color="gray"> (conf: {(strategy.confidence * 100).toFixed(0)}%)</Text>
                 </Box>
@@ -223,12 +263,22 @@ export const EnhancedAIConsole: React.FC<EnhancedAIConsoleProps> = ({ aiIntegrat
       {state.riskConfig && (
         <>
           <Box flexDirection="column" borderStyle="single" borderColor="red" padding={1}>
-            <Text color="red" bold>⚠️ Risk Management</Text>
+            <Text color="red" bold>
+              ⚠️ Risk Management
+            </Text>
             <Newline />
-            
+
             <Box flexDirection="row">
               <Text>Risk Score: </Text>
-              <Text color={state.riskConfig.riskScore > 75 ? 'red' : state.riskConfig.riskScore > 50 ? 'yellow' : 'green'}>
+              <Text
+                color={
+                  state.riskConfig.riskScore > 75
+                    ? 'red'
+                    : state.riskConfig.riskScore > 50
+                      ? 'yellow'
+                      : 'green'
+                }
+              >
                 {state.riskConfig.riskScore.toFixed(1)}/100
               </Text>
               <Spacer />
@@ -243,10 +293,15 @@ export const EnhancedAIConsole: React.FC<EnhancedAIConsoleProps> = ({ aiIntegrat
               <Box key={index} flexDirection="column" marginLeft={2}>
                 <Box flexDirection="row">
                   <Text color="red">{adjustment.trigger.replace('_', ' ')}:</Text>
-                  <Text> {adjustment.currentRisk.toFixed(3)} → {adjustment.recommendedRisk.toFixed(3)}</Text>
+                  <Text>
+                    {' '}
+                    {adjustment.currentRisk.toFixed(3)} → {adjustment.recommendedRisk.toFixed(3)}
+                  </Text>
                   <Text color="gray"> ({adjustment.urgency})</Text>
                 </Box>
-                <Box marginLeft={2}><Text color="gray">{adjustment.reasoning}</Text></Box>
+                <Box marginLeft={2}>
+                  <Text color="gray">{adjustment.reasoning}</Text>
+                </Box>
               </Box>
             ))}
           </Box>
@@ -257,9 +312,11 @@ export const EnhancedAIConsole: React.FC<EnhancedAIConsoleProps> = ({ aiIntegrat
 
       {/* Performance History */}
       <Box flexDirection="column" borderStyle="single" borderColor="magenta" padding={1}>
-        <Text color="magenta" bold>📈 Performance Trend</Text>
+        <Text color="magenta" bold>
+          📈 Performance Trend
+        </Text>
         <Newline />
-        
+
         {state.performanceHistory.length > 0 ? (
           <Box flexDirection="row">
             {state.performanceHistory.slice(-10).map((point, index) => {

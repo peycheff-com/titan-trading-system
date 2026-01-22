@@ -235,12 +235,40 @@ impl ShadowState {
         filled: bool,
         fee: Decimal,
         fee_asset: String,
+        exchange: &str,
     ) -> Vec<ExecutionEvent> {
         println!(
             "DEBUG: confirm_execution: {}, child: {}",
             signal_id, child_order_id
         );
         let mut events = Vec::new();
+
+        // 0. Update Child Order Status
+        if let Some(children) = self.order_children.get_mut(signal_id) {
+            for child in children {
+                // Heuristic: matching execution_id OR client_order_id if execution_id unknown
+                if child.execution_order_id == child_order_id
+                    || child.client_order_id == child_order_id
+                {
+                    match filled {
+                        true => child.status = "FILLED".to_string(),
+                        false => child.status = "REJECTED".to_string(), // Or Partial if fill_size > 0
+                    }
+                    // Refined logic: if fill_size > 0 but not filled, assume PARTIAL?
+                    // Function arg `filled` means "Is this a terminal fill/reject event?"
+                    // Wait, `filled` arg is boolean? "filled: bool".
+                    // Looking at usage, it means "Is this a valid fill (true) or a reject (false)?"
+
+                    if !filled {
+                        child.status = "REJECTED".to_string();
+                    } else if fill_size < child.size {
+                        child.status = "PARTIALLY_FILLED".to_string();
+                    } else {
+                        child.status = "FILLED".to_string();
+                    }
+                }
+            }
+        }
 
         // 1. Retrieve Intent & Determine Status
         // Returns: (should_remove, intent_snapshot)
@@ -263,8 +291,10 @@ impl ShadowState {
 
             if !filled {
                 // Child Rejected - Fail Fast for Single Access
+                // Only if ALL children failed? Or just one?
+                // For simplicity Phase 4: Any reject = Intent Rejected (Fail Fast)
                 intent.status = IntentStatus::Rejected;
-                intent.rejection_reason = Some("Child order rejected".to_string());
+                intent.rejection_reason = Some(format!("Child order rejected on {}", exchange));
                 (true, Some(intent.clone()))
             } else {
                 // 4. Validate Fill

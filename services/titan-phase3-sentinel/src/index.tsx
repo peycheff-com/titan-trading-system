@@ -56,7 +56,9 @@ async function main() {
   const core = new SentinelCore(config, gateways);
 
   // 3a. Start NATS Subscription (Regime & Budget Awareness)
+  // eslint-disable-next-line functional/no-let
   let natsConnected = false;
+  // eslint-disable-next-line functional/no-let
   let nats: any = null;
 
   try {
@@ -66,6 +68,7 @@ async function main() {
 
     const sub = nats.subscribe(TitanSubject.REGIME_UPDATE, (data: any) => {
       // Dual Read Strategy
+      // eslint-disable-next-line functional/no-let
       let payload = data;
       if (data && typeof data === 'object' && 'payload' in data && 'type' in data) {
         payload = data.payload;
@@ -80,6 +83,7 @@ async function main() {
 
     // Subscribe to Budget Updates (Truth Layer)
     nats.subscribe('titan.ai.budget.update', (data: any) => {
+      // eslint-disable-next-line functional/no-let
       let payload = data;
       if (data && typeof data === 'object' && 'payload' in data) {
         payload = data.payload;

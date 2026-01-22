@@ -24,11 +24,16 @@ export default function SentinelPhase() {
   const [hasDraft, setHasDraft] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const status = { status: 'offline' as const, enabled: false, allocationWeight: 0, activeStrategies: 0 };
+  const status = {
+    status: 'offline' as const,
+    enabled: false,
+    allocationWeight: 0,
+    activeStrategies: 0,
+  };
   const sentinelData = {
     basisTrades: [] as any[],
     fundingRates: [] as any[],
-    hedgeStatus: { hedgeRatio: 0, targetRatio: 0, deltaExposure: 0 }
+    hedgeStatus: { hedgeRatio: 0, targetRatio: 0, deltaExposure: 0 },
   };
   const { basisTrades, fundingRates, hedgeStatus } = sentinelData;
 
@@ -63,17 +68,19 @@ export default function SentinelPhase() {
       <div className="rounded-lg border border-border bg-card p-4">
         <h2 className="text-sm font-semibold text-foreground">Phase Intent</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Sentinel maintains delta-neutral positions through basis trades and funding rate arbitrage.
-          It provides stable, low-volatility returns by exploiting structural inefficiencies between
-          spot and perpetual markets.
+          Sentinel maintains delta-neutral positions through basis trades and funding rate
+          arbitrage. It provides stable, low-volatility returns by exploiting structural
+          inefficiencies between spot and perpetual markets.
         </p>
         <div className="mt-4 flex items-center gap-4">
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Status:</span>
-            <span className={cn(
-              'text-xs font-medium',
-              status.enabled ? 'text-status-healthy' : 'text-muted-foreground'
-            )}>
+            <span
+              className={cn(
+                'text-xs font-medium',
+                status.enabled ? 'text-status-healthy' : 'text-muted-foreground',
+              )}
+            >
               {status.enabled ? 'Enabled' : 'Disabled'}
             </span>
           </div>
@@ -94,7 +101,11 @@ export default function SentinelPhase() {
           label="Hedge Ratio"
           value={`${(hedgeStatus.hedgeRatio * 100).toFixed(0)}%`}
           subValue={`Target: ${(hedgeStatus.targetRatio * 100).toFixed(0)}%`}
-          variant={Math.abs(hedgeStatus.hedgeRatio - hedgeStatus.targetRatio) > 0.05 ? 'warning' : 'default'}
+          variant={
+            Math.abs(hedgeStatus.hedgeRatio - hedgeStatus.targetRatio) > 0.05
+              ? 'warning'
+              : 'default'
+          }
         />
         <KpiTile
           label="Delta Exposure"
@@ -125,10 +136,12 @@ export default function SentinelPhase() {
                 header: 'Current',
                 align: 'right',
                 render: (t) => (
-                  <span className={cn(
-                    'font-mono',
-                    t.currentBasis > t.avgBasis ? 'text-pnl-positive' : 'text-pnl-negative'
-                  )}>
+                  <span
+                    className={cn(
+                      'font-mono',
+                      t.currentBasis > t.avgBasis ? 'text-pnl-positive' : 'text-pnl-negative',
+                    )}
+                  >
                     {(t.currentBasis * 100).toFixed(3)}%
                   </span>
                 ),
@@ -154,10 +167,12 @@ export default function SentinelPhase() {
                 header: 'PnL',
                 align: 'right',
                 render: (t) => (
-                  <span className={cn(
-                    'font-mono',
-                    t.pnl >= 0 ? 'text-pnl-positive' : 'text-pnl-negative'
-                  )}>
+                  <span
+                    className={cn(
+                      'font-mono',
+                      t.pnl >= 0 ? 'text-pnl-positive' : 'text-pnl-negative',
+                    )}
+                  >
                     {formatCurrency(t.pnl)}
                   </span>
                 ),
@@ -183,10 +198,12 @@ export default function SentinelPhase() {
                 header: 'Current',
                 align: 'right',
                 render: (f) => (
-                  <span className={cn(
-                    'font-mono',
-                    f.current >= 0 ? 'text-pnl-positive' : 'text-pnl-negative'
-                  )}>
+                  <span
+                    className={cn(
+                      'font-mono',
+                      f.current >= 0 ? 'text-pnl-positive' : 'text-pnl-negative',
+                    )}
+                  >
                     {formatPercent(f.current * 100, 4)}
                   </span>
                 ),
@@ -220,7 +237,8 @@ export default function SentinelPhase() {
                 <div className="flex items-center justify-between text-xs mb-1">
                   <span className="text-muted-foreground">Hedge Ratio</span>
                   <span className="font-mono text-foreground">
-                    {(hedgeStatus.hedgeRatio * 100).toFixed(1)}% / {(hedgeStatus.targetRatio * 100).toFixed(1)}%
+                    {(hedgeStatus.hedgeRatio * 100).toFixed(1)}% /{' '}
+                    {(hedgeStatus.targetRatio * 100).toFixed(1)}%
                   </span>
                 </div>
                 <div className="h-2 rounded-full bg-muted">
@@ -232,10 +250,12 @@ export default function SentinelPhase() {
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">Delta Exposure</span>
-                <span className={cn(
-                  'font-mono',
-                  hedgeStatus.deltaExposure < 0 ? 'text-pnl-negative' : 'text-pnl-positive'
-                )}>
+                <span
+                  className={cn(
+                    'font-mono',
+                    hedgeStatus.deltaExposure < 0 ? 'text-pnl-negative' : 'text-pnl-positive',
+                  )}
+                >
                   {formatCurrency(hedgeStatus.deltaExposure)}
                 </span>
               </div>
@@ -261,9 +281,7 @@ export default function SentinelPhase() {
                 disabled={safetyLocked}
                 className={cn(
                   'flex w-full items-center justify-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium transition-colors',
-                  safetyLocked
-                    ? 'cursor-not-allowed opacity-50'
-                    : 'hover:bg-muted'
+                  safetyLocked ? 'cursor-not-allowed opacity-50' : 'hover:bg-muted',
                 )}
               >
                 <Edit3 className="h-4 w-4" />
@@ -276,10 +294,7 @@ export default function SentinelPhase() {
                   <span className="text-xs font-medium text-primary">Draft Active</span>
                 </div>
 
-                <DiffViewer
-                  before={mockDraftConfig.before}
-                  after={mockDraftConfig.after}
-                />
+                <DiffViewer before={mockDraftConfig.before} after={mockDraftConfig.after} />
 
                 <div className="flex gap-2">
                   <button

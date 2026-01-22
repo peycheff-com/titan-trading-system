@@ -5,15 +5,15 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { formatCurrency, formatPercent } from "@/types";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { formatCurrency, formatPercent } from '@/types';
+import { cn } from '@/lib/utils';
 
 export interface Position {
   symbol: string;
-  side: "Buy" | "Sell";
+  side: 'Buy' | 'Sell';
   size: number;
   entryPrice: number;
   markPrice: number;
@@ -53,8 +53,11 @@ export function PositionsTable({ positions, onClosePosition }: PositionsTablePro
         </TableHeader>
         <TableBody>
           {positions.map((pos) => {
-             const pnlPercent = ((pos.markPrice - pos.entryPrice) / pos.entryPrice) * 100 * (pos.side === 'Buy' ? 1 : -1);
-             return (
+            const pnlPercent =
+              ((pos.markPrice - pos.entryPrice) / pos.entryPrice) *
+              100 *
+              (pos.side === 'Buy' ? 1 : -1);
+            return (
               <TableRow key={pos.symbol}>
                 <TableCell className="font-medium">
                   {pos.symbol}
@@ -65,8 +68,8 @@ export function PositionsTable({ positions, onClosePosition }: PositionsTablePro
                 <TableCell>
                   <span
                     className={cn(
-                      "font-medium",
-                      pos.side === "Buy" ? "text-emerald-500" : "text-red-500"
+                      'font-medium',
+                      pos.side === 'Buy' ? 'text-emerald-500' : 'text-red-500',
                     )}
                   >
                     {pos.side}
@@ -75,19 +78,28 @@ export function PositionsTable({ positions, onClosePosition }: PositionsTablePro
                 <TableCell className="text-right">{pos.size}</TableCell>
                 <TableCell className="text-right">{formatCurrency(pos.entryPrice)}</TableCell>
                 <TableCell className="text-right">{formatCurrency(pos.markPrice)}</TableCell>
-                <TableCell className="text-right text-orange-500">{formatCurrency(pos.liquidationPrice)}</TableCell>
+                <TableCell className="text-right text-orange-500">
+                  {formatCurrency(pos.liquidationPrice)}
+                </TableCell>
                 <TableCell className="text-right">
-                  <div className={cn("text-sm font-medium", pos.unrealizedPnl >= 0 ? "text-emerald-500" : "text-red-500")}>
+                  <div
+                    className={cn(
+                      'text-sm font-medium',
+                      pos.unrealizedPnl >= 0 ? 'text-emerald-500' : 'text-red-500',
+                    )}
+                  >
                     {formatCurrency(pos.unrealizedPnl)}
                   </div>
-                  <div className={cn("text-xs", pnlPercent >= 0 ? "text-emerald-500" : "text-red-500")}>
+                  <div
+                    className={cn('text-xs', pnlPercent >= 0 ? 'text-emerald-500' : 'text-red-500')}
+                  >
                     {formatPercent(pnlPercent)}
                   </div>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button 
-                    variant="destructive" 
-                    size="sm" 
+                  <Button
+                    variant="destructive"
+                    size="sm"
                     className="h-7 text-xs"
                     onClick={() => onClosePosition(pos.symbol)}
                   >

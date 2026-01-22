@@ -46,7 +46,7 @@ export function CorrelationHeatmap({ assets, data, className }: CorrelationHeatm
                 className={cn(
                   'flex h-10 w-14 items-center justify-center rounded-sm border border-background/50 font-mono text-xxs transition-all hover:scale-105',
                   getCorrelationColor(value),
-                  i === j && 'opacity-50'
+                  i === j && 'opacity-50',
                 )}
                 title={`${assets[i]} / ${assets[j]}: ${value.toFixed(2)}`}
               >

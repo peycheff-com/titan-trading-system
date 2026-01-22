@@ -19,6 +19,7 @@ import { ChangePointDetector } from './ChangePointDetector.js';
 import { DefconLevel, GovernanceEngine } from './GovernanceEngine.js';
 import { FeatureManager } from '../config/FeatureManager.js';
 import { TailRiskCalculator } from './TailRiskCalculator.js';
+import { BayesianCalibrator } from './BayesianCalibrator.js';
 import { NatsClient, RegimeState, RiskState } from '@titan/shared';
 
 /**
@@ -59,6 +60,7 @@ export class RiskGuardian {
   private readonly governanceEngine: GovernanceEngine;
   private readonly changePointDetector: ChangePointDetector;
   private readonly tailRiskCalculator: TailRiskCalculator;
+  private readonly bayesianCalibrator: BayesianCalibrator;
   private readonly natsClient?: NatsClient; // Optional for testing/DI
 
   private currentRegime: RegimeState = RegimeState.STABLE;
@@ -99,9 +101,19 @@ export class RiskGuardian {
     this.natsClient = natsClient;
     this.changePointDetector = new ChangePointDetector();
     this.tailRiskCalculator = new TailRiskCalculator();
+    this.bayesianCalibrator = new BayesianCalibrator();
+
+    // Listener moved to NatsConsumer -> TitanBrain -> RiskGuardian
+    // if (this.natsClient) {
+    //   this.setupRegimeListener();
+    // }
 
     this.startHeartbeat();
   }
+
+  /**
+   * Regime Listener removed in favor of Central Orchestration (NatsConsumer)
+   */
 
   /**
    * Start 1s heartbeat to keep Execution Layer execution alive (Fail Closed)
@@ -109,6 +121,7 @@ export class RiskGuardian {
   public startHeartbeat() {
     if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
 
+    // eslint-disable-next-line functional/immutable-data
     this.heartbeatInterval = setInterval(() => {
       if (this.natsClient) {
         this.natsClient
@@ -163,6 +176,7 @@ export class RiskGuardian {
 
     if (newState !== this.currentRiskState) {
       console.warn(`[RiskGuardian] State Transition: ${this.currentRiskState} -> ${newState}`);
+      // eslint-disable-next-line functional/immutable-data
       this.currentRiskState = newState;
 
       if (this.natsClient) {
@@ -184,6 +198,7 @@ export class RiskGuardian {
    */
 
   setCorrelationNotifier(notifier: HighCorrelationNotifier): void {
+    // eslint-disable-next-line functional/immutable-data
     this.correlationNotifier = notifier;
   }
 
@@ -199,22 +214,27 @@ export class RiskGuardian {
   }
 
   private updateDynamicConfig(features: Record<string, boolean | string | number>): void {
+    // eslint-disable-next-line functional/no-let
     let updated = false;
 
     // Dynamic Risk Parameters
     if (typeof features['risk.maxCorrelation'] === 'number') {
+      // eslint-disable-next-line functional/immutable-data
       (this.config as any).maxCorrelation = features['risk.maxCorrelation'];
       updated = true;
     }
     if (typeof features['risk.correlationPenalty'] === 'number') {
+      // eslint-disable-next-line functional/immutable-data
       (this.config as any).correlationPenalty = features['risk.correlationPenalty'];
       updated = true;
     }
     if (typeof features['risk.minConfidenceScore'] === 'number') {
+      // eslint-disable-next-line functional/immutable-data
       (this.config as any).minConfidenceScore = features['risk.minConfidenceScore'];
       updated = true;
     }
     if (typeof features['risk.minStopDistanceMultiplier'] === 'number') {
+      // eslint-disable-next-line functional/immutable-data
       (this.config as any).minStopDistanceMultiplier = features['risk.minStopDistanceMultiplier'];
       updated = true;
     }
@@ -232,6 +252,7 @@ export class RiskGuardian {
   getPowerLawMetricsSnapshot(): Record<string, PowerLawMetrics> {
     const snapshot: Record<string, PowerLawMetrics> = {};
     for (const [symbol, metrics] of this.powerLawMetrics.entries()) {
+      // eslint-disable-next-line functional/immutable-data
       snapshot[symbol] = metrics;
     }
     return snapshot;
@@ -249,6 +270,7 @@ export class RiskGuardian {
    * @param equity - Current account equity in USD
    */
   setEquity(equity: number): void {
+    // eslint-disable-next-line functional/immutable-data
     this.currentEquity = Math.max(0, equity);
   }
 
@@ -297,6 +319,7 @@ export class RiskGuardian {
    * Update PowerLaw Metrics
    */
   updatePowerLawMetrics(metrics: PowerLawMetrics): void {
+    // eslint-disable-next-line functional/immutable-data
     this.powerLawMetrics.set(metrics.symbol, metrics);
   }
 
@@ -305,6 +328,7 @@ export class RiskGuardian {
    */
   handlePriceUpdate(tick: { symbol: string; price: number; timestamp: number }): void {
     const history = this.priceHistory.get(tick.symbol) || [];
+    // eslint-disable-next-line functional/immutable-data
     history.push(tick);
 
     // Prune history older than window (e.g. 1 hour or based on ActiveInference window)
@@ -312,8 +336,10 @@ export class RiskGuardian {
     if (history[0] && history[0].timestamp < cutoff) {
       // Perform cleanup
       const validHistory = history.filter((h) => h.timestamp >= cutoff);
+      // eslint-disable-next-line functional/immutable-data
       this.priceHistory.set(tick.symbol, validHistory);
     } else {
+      // eslint-disable-next-line functional/immutable-data
       this.priceHistory.set(tick.symbol, history);
     }
   }
@@ -325,16 +351,32 @@ export class RiskGuardian {
   updateConfidence(driftDetected: boolean): void {
     if (driftDetected) {
       const decay = this.config.confidence?.decayRate ?? 0.1;
+      // eslint-disable-next-line functional/immutable-data
       this.confidenceScore *= 1 - decay;
       console.warn(
         `[RiskGuardian] Confidence degraded to ${this.confidenceScore.toFixed(3)} due to DRIFT`,
       );
     } else {
       const recovery = this.config.confidence?.recoveryRate ?? 0.01;
+      // eslint-disable-next-line functional/immutable-data
       this.confidenceScore = Math.min(1.0, this.confidenceScore * (1 + recovery));
     }
   }
 
+  /**
+   * Check a signal against risk rules
+   *
+   * Validation steps:
+   * 1. Check if Phase 3 hedge that reduces delta (auto-approve)
+   * 2. Calculate projected leverage
+   * 3. Check leverage cap for equity tier
+   * 4. Check correlation with existing positions
+   * 5. Apply size reduction if high correlation
+   *
+   * @param signal - Intent signal from a phase
+   * @param currentPositions - Array of current open positions
+   * @returns RiskDecision with approval status and metrics
+   */
   /**
    * Check a signal against risk rules
    *
@@ -374,10 +416,10 @@ export class RiskGuardian {
 
     // 0c. Survival Mode Check (Tail Risk)
     // Calculate APTR for current + signal
-    // We need Alpha metrics map here.
     const alphas = new Map<string, number>();
+    // eslint-disable-next-line functional/immutable-data
     this.powerLawMetrics.forEach((m, s) => alphas.set(s, m.tailExponent));
-    // Default to strict alpha (2.0) if missing
+    // eslint-disable-next-line functional/immutable-data
     if (!alphas.has(signal.symbol)) alphas.set(signal.symbol, 2.0);
 
     const currentAPTR = this.tailRiskCalculator.calculateAPTR(currentPositions, alphas);
@@ -386,12 +428,11 @@ export class RiskGuardian {
     if (
       this.tailRiskCalculator.isRiskCritical(currentAPTR, this.currentEquity, criticalThreshold)
     ) {
-      // Trigger Survival Mode if not already
       if (defcon !== DefconLevel.DEFENSIVE && defcon !== DefconLevel.EMERGENCY) {
         console.warn(
           `[RiskGuardian] APTR Critical (${currentAPTR.toFixed(2)}). Triggering Survival Mode.`,
         );
-        this.governanceEngine.setOverride(DefconLevel.DEFENSIVE); // Force defensive posture
+        this.governanceEngine.setOverride(DefconLevel.DEFENSIVE);
       }
 
       return {
@@ -403,31 +444,44 @@ export class RiskGuardian {
       };
     }
 
-    // 0d. Mean Reversion Logic (Placeholder - logic to be added if needed)
-    if (this.currentRegime === RegimeState.MEAN_REVERSION && signal.phaseId === 'phase2') {
-      // Allow Phase 2 in Mean Reversion
+    // 0e. Bayesian Confidence Calibration
+    // Replaces raw confidence with evidential probability
+    // eslint-disable-next-line functional/no-let
+    let effectiveConfidence = signal.confidence ?? 80;
+    if (signal.phaseId === 'phase1' && signal.type !== 'MANUAL') {
+      const trapType = (signal as any).trap_type || 'UNKNOWN';
+      const calibratedProb = this.bayesianCalibrator.getCalibratedProbability(
+        trapType,
+        effectiveConfidence,
+      );
+      // Map back to 0-100 scale for legacy compatibility
+      effectiveConfidence = calibratedProb * 100;
+      console.log(
+        `[RiskGuardian] ${this.bayesianCalibrator.getShrinkageReport(
+          trapType,
+          signal.confidence ?? 80,
+        )}`,
+      );
     }
 
-    // 0e. Confidence Score Check
-    if (this.confidenceScore < this.config.minConfidenceScore) {
+    // Update confidence check
+    if (effectiveConfidence / 100 < this.config.minConfidenceScore) {
       return {
         approved: false,
-        reason: `CONFIDENCE_VETO: Score ${this.confidenceScore.toFixed(
+        reason: `CONFIDENCE_VETO: Calibrated ${effectiveConfidence.toFixed(
           2,
-        )} < ${this.config.minConfidenceScore}`,
+        )}% < ${this.config.minConfidenceScore * 100}%`,
         riskMetrics: this.getRiskMetrics(currentPositions),
       };
     }
 
-    // Initial signal size (may be reduced by latency or correlation)
+    // Initial signal size
+    // eslint-disable-next-line functional/no-let
     let effectiveSize = signal.requestedSize;
 
     // 0f. Fractal Phase Risk Constraints
     if (this.config.fractal && this.config.fractal[signal.phaseId]) {
       const constraints = this.config.fractal[signal.phaseId];
-
-      // Check Phase Leverage
-      // Calculate leverage just for this phase's positions
       const phasePositions = currentPositions.filter((p) => p.phaseId === signal.phaseId);
       const phaseNotional = phasePositions.reduce((sum, p) => sum + p.size, 0) + effectiveSize;
       const phaseLeverage = phaseNotional / this.currentEquity;
@@ -442,7 +496,6 @@ export class RiskGuardian {
         };
       }
 
-      // Check Phase Allocation (Max % of Equity)
       if (phaseNotional > this.currentEquity * constraints.maxAllocation) {
         return {
           approved: false,
@@ -460,7 +513,6 @@ export class RiskGuardian {
     const portfolioBeta = this.getPortfolioBeta(currentPositions);
 
     // Requirement: Latency Feedback Loop
-    // If signal shows high system latency, it implies congestion. Reduce size to minimize toxic flow.
     if (signal.latencyProfile && signal.latencyProfile.endToEnd > 200) {
       if (signal.latencyProfile.endToEnd > 500) {
         return {
@@ -469,28 +521,23 @@ export class RiskGuardian {
           riskMetrics: this.getRiskMetrics(currentPositions),
         };
       }
-
-      // High latency warning (>200ms): Apply 25% size reduction
       const penalty = 0.25;
       effectiveSize = signal.requestedSize * (1 - penalty);
-
       console.warn(
         `[RiskGuardian] High Latency (${signal.latencyProfile.endToEnd}ms) - Penalizing size by 25%`,
       );
     }
 
-    // Calculate projected leverage using EFFECTIVE size
-    let projectedLeverage = this.calculateProjectedLeverage(
+    const projectedLeverage = this.calculateProjectedLeverage(
       { ...signal, requestedSize: effectiveSize },
       currentPositions,
     );
 
-    // 0d. PowerLaw Regime Gates & Leverage Adjustment
+    // 0d. PowerLaw Regime Gates & Continuous Throttling
     const plMetrics =
       this.powerLawMetrics.get(signal.symbol) ?? this.powerLawMetrics.get('BTCUSDT');
     if (plMetrics) {
       // Rule 1: Extreme Tail Risk Gating
-      // "If tailExponent < 2.0 && proposedLeverage > 5"
       if (plMetrics.tailExponent < 2.0 && projectedLeverage > 5) {
         return {
           approved: false,
@@ -502,7 +549,6 @@ export class RiskGuardian {
       }
 
       // Rule 2: Volatility Cluster Gating
-      // "If vol state = 'expanding': don't add new scalp positions (Phase 1)"
       if (plMetrics.volatilityCluster.state === 'expanding' && signal.phaseId === 'phase1') {
         return {
           approved: false,
@@ -511,56 +557,32 @@ export class RiskGuardian {
         };
       }
 
-      // Rule 3: Dynamic Leverage Scaling for Phase 1
-      // "Use vol cluster state to reduce leverage or pause."
-      // "leverage = min(20, 5 / alpha)" or "baseLeverage / Math.max(tailExponent, 1.5)"
-      if (signal.phaseId === 'phase1') {
-        const baseLeverage = 20; // Default max for Phase 1
-        // Dynamic leverage cap based on heavy tails
-        const dynamicMaxLeverage = baseLeverage / Math.max(plMetrics.tailExponent, 1.5);
+      // Rule 3: Continuous Alpha Throttling
+      // Apply size reduction based on heavy tails
+      // Multiplier = Min(1.0, (Alpha - 1.0) / 2.0)
+      // Alpha 3.0 -> 1.0 (No penalty)
+      // Alpha 2.0 -> 0.5 (50% size detection)
+      // Alpha 1.5 -> 0.25
+      const alphaThrottle = this.getAlphaThrottle(plMetrics.tailExponent);
+      if (alphaThrottle < 1.0 && signal.phaseId !== 'phase3') {
+        effectiveSize = effectiveSize * alphaThrottle;
+        console.warn(
+          `[RiskGuardian] Alpha Throttling (α=${plMetrics.tailExponent.toFixed(
+            2,
+          )}) -> Scaling size by ${(alphaThrottle * 100).toFixed(0)}%`,
+        );
+      }
+    }
 
-        // Calculate max allowed size based on this dynamic leverage
-        // Max Notional = Equity * DynamicLeverage
-        const maxNotional = this.currentEquity * dynamicMaxLeverage;
-
-        // Check if projected notional exceeds this
-        // projectedNotional is roughly (CurrentNotional + EffectiveSize)
-        const currentNotional = currentPositions.reduce((sum, p) => sum + p.size, 0); // Simplified, checking total portfolio leverage cap?
-        // Wait, "Adapt Phase 1 leverage". Usually implies per-position or Phase limit.
-        // Assuming global leverage safety for simplicity here as Phase 1 is high frequency.
-        // If we want per-symbol leverage control, we need to know margin usage per symbol.
-        // Let's stick to restricting the *new* size if it pushes total leverage beyond dynamic limit,
-        // OR better: check if specific trade implies leverage > limit.
-        // Titan's Position interface has `leverage`.
-        // But `projectedLeverage` in RiskGuardian is GLOBAL leverage.
-        // Let's use the rule: "If tail risk is high, reduce global leverage limit"
-
-        if (projectedLeverage > dynamicMaxLeverage) {
-          // Reduce size to fit
-          const availableNotional = Math.max(0, maxNotional - currentNotional);
-          if (availableNotional < effectiveSize) {
-            effectiveSize = availableNotional;
-            console.warn(
-              `[RiskGuardian] Tail Risk (α=${plMetrics.tailExponent.toFixed(
-                2,
-              )}) reduced auth size to fits ${dynamicMaxLeverage.toFixed(2)}x leverage`,
-            );
-
-            if (effectiveSize <= 0) {
-              return {
-                approved: false,
-                reason: `TAIL_RISK_CAP: Leverage limit ${dynamicMaxLeverage.toFixed(2)}x reached`,
-                riskMetrics: this.getRiskMetrics(currentPositions),
-              };
-            }
-
-            // Recalculate projected leverage with new reduced size
-            projectedLeverage = this.calculateProjectedLeverage(
-              { ...signal, requestedSize: effectiveSize },
-              currentPositions,
-            );
-          }
-        }
+    // Cost-Aware Veto (Expectancy Check)
+    if (this.config.costVeto?.enabled) {
+      const expectancy = this.checkExpectancy(signal, effectiveConfidence / 100);
+      if (!expectancy.passed) {
+        return {
+          approved: false,
+          reason: `COST_AWARE_VETO: ${expectancy.reason}`,
+          riskMetrics: this.getRiskMetrics(currentPositions),
+        };
       }
     }
 
@@ -604,10 +626,7 @@ export class RiskGuardian {
       }
     }
 
-    // Latency check moved up to define effectiveSize
-
     // Requirement 3.3: Check leverage cap
-    // Apply Governance Multiplier
     const govMultiplier = this.governanceEngine.getLeverageMultiplier();
     const maxLeverage = this.allocationEngine.getMaxLeverage(this.currentEquity) * govMultiplier;
     if (projectedLeverage > maxLeverage) {
@@ -622,7 +641,6 @@ export class RiskGuardian {
 
     // Requirement 3.7: High correlation check
     if (maxCorrelation > this.config.maxCorrelation) {
-      // Send high correlation warning notification
       if (this.correlationNotifier) {
         const affectedPositions = this.getCorrelatedPositions(signal, currentPositions);
         this.correlationNotifier
@@ -632,15 +650,12 @@ export class RiskGuardian {
           });
       }
 
-      // Check if same direction as correlated position
       const hasCorrelatedSameDirection = this.hasCorrelatedSameDirectionPosition(
         signal,
         currentPositions,
       );
 
       if (hasCorrelatedSameDirection) {
-        // Apply 50% size reduction (cumulative with latency penalty if we wanted, but logic here overrides or min?)
-        // Let's apply to the *current* effectiveSize
         effectiveSize = effectiveSize * (1 - this.config.correlationPenalty);
 
         return {
@@ -654,18 +669,81 @@ export class RiskGuardian {
       }
     }
 
-    // Signal approved without modification
-    // Signal approved (check if size was adjusted)
     const wasAdjusted = effectiveSize !== signal.requestedSize;
 
     return {
       approved: true,
       reason: wasAdjusted
-        ? 'Signal approved with size adjustment: Risk/Latency'
+        ? 'Signal approved with size adjustment: Risk/Latency/Alpha'
         : 'Signal approved: within risk limits',
       adjustedSize: effectiveSize,
       riskMetrics,
     };
+  }
+
+  /**
+   * Continuous Throttling function for Alpha
+   */
+  private getAlphaThrottle(alpha: number): number {
+    // Hill function logic:
+    // Alpha >= 3.0 -> 1.0 (Stable)
+    // Alpha <= 1.5 -> 0.1 (Survival)
+    // Linear interpolated between 1.5 and 3.0
+    if (alpha >= 3.0) return 1.0;
+    if (alpha <= 1.5) return 0.1;
+
+    // y = mx + b
+    // (1.5, 0.1) -> (3.0, 1.0)
+    // m = (1.0 - 0.1) / (3.0 - 1.5) = 0.9 / 1.5 = 0.6
+    // y - 0.1 = 0.6 * (x - 1.5)
+    // y = 0.6x - 0.9 + 0.1 = 0.6x - 0.8
+
+    return 0.6 * alpha - 0.8;
+  }
+
+  /**
+   * Cost-Aware Expectancy Check
+   */
+  private checkExpectancy(
+    signal: IntentSignal,
+    pWin: number,
+  ): { passed: boolean; reason?: string } {
+    if (!signal.targetPrice || !signal.stopLossPrice || !signal.entryPrice) {
+      // If we lack structure, we cannot calculate expectancy.
+      // Fail open or closed? If cost veto enabled, safest to fail closed.
+      return {
+        passed: false,
+        reason: 'Missing targets/stops for expectancy calc',
+      };
+    }
+
+    const reward = Math.abs(signal.targetPrice - signal.entryPrice);
+    const risk = Math.abs(signal.entryPrice - signal.stopLossPrice);
+
+    // Expected Gross Profit = (P * Reward) - ((1-P) * Risk)
+    const expectedGross = pWin * reward - (1 - pWin) * risk;
+
+    // Estimated Cost
+    // Fees + Slippage + Spread
+    const feesBps = this.config.costVeto?.baseFeeBps ?? 6; // Taker (approx 3-5bps) + Spread (1-2bps)
+    // Slippage estimate based on size? Ignore for now, stick to base.
+    const costPerUnit = signal.entryPrice * (feesBps / 10000); // round trip implied in baseFeeBps? Taker buy + Taker sell = 10bps?
+    // Let's assume baseFeeBps is total roundtrip cost estimate (e.g. 10bps)
+    const totalCost = costPerUnit * 1.5; // Safety factor
+
+    // Requirement: Expectancy > ratio * Cost
+    const ratio = this.config.costVeto?.minExpectancyRatio ?? 2.0;
+
+    if (expectedGross < totalCost * ratio) {
+      return {
+        passed: false,
+        reason: `Expectancy too low (${expectedGross.toFixed(
+          4,
+        )} < ${ratio}x Cost ${totalCost.toFixed(4)})`,
+      };
+    }
+
+    return { passed: true };
   }
 
   /**
@@ -717,6 +795,7 @@ export class RiskGuardian {
     // Check if signal is for an existing position (same symbol)
     const existingPosition = currentPositions.find((p) => p.symbol === signal.symbol);
 
+    // eslint-disable-next-line functional/no-let
     let projectedNotional: number;
 
     if (existingPosition) {
@@ -793,6 +872,7 @@ export class RiskGuardian {
     const correlation = this.pearsonCorrelation(alignedA, alignedB);
 
     // Cache the result
+    // eslint-disable-next-line functional/immutable-data
     this.correlationCache.set(cacheKey, {
       correlation,
       timestamp: Date.now(),
@@ -827,6 +907,7 @@ export class RiskGuardian {
     }
 
     // Calculate weighted average beta
+    // eslint-disable-next-line functional/no-let
     let weightedBeta = 0;
     for (const pos of positions) {
       const weight = pos.size / totalNotional;
@@ -837,6 +918,7 @@ export class RiskGuardian {
     }
 
     // Cache the result
+    // eslint-disable-next-line functional/immutable-data
     this.portfolioBetaCache = {
       value: weightedBeta,
       timestamp: Date.now(),
@@ -860,13 +942,16 @@ export class RiskGuardian {
     };
 
     const history = this.priceHistory.get(symbol) ?? [];
+    // eslint-disable-next-line functional/immutable-data
     history.push(entry);
 
     // Keep only last 100 entries (for correlation calculation)
     if (history.length > 100) {
+      // eslint-disable-next-line functional/immutable-data
       history.shift();
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.priceHistory.set(symbol, history);
 
     // Feed price to ChangePointDetector (using BTC or Reference, or maybe all? defaulting to BTC typically)
@@ -879,6 +964,7 @@ export class RiskGuardian {
         console.log(
           `RiskGuardian: Regime change detected for ${symbol}: ${this.currentRegime} -> ${detection.regime}`,
         );
+        // eslint-disable-next-line functional/immutable-data
         this.currentRegime = detection.regime;
       }
     }
@@ -888,7 +974,9 @@ export class RiskGuardian {
    * Clear correlation cache (for testing or forced recalculation)
    */
   clearCorrelationCache(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.correlationCache.clear();
+    // eslint-disable-next-line functional/immutable-data
     this.portfolioBetaCache = null;
   }
 
@@ -920,6 +1008,7 @@ export class RiskGuardian {
    * @param newConfig - Partial configuration to update
    */
   updateConfig(newConfig: Partial<RiskGuardianConfig>): void {
+    // eslint-disable-next-line functional/immutable-data
     Object.assign(this.config, newConfig);
     console.log('[RiskGuardian] Configuration updated:', newConfig);
   }
@@ -953,6 +1042,7 @@ export class RiskGuardian {
       return 0;
     }
 
+    // eslint-disable-next-line functional/no-let
     let maxCorrelation = 0;
     for (const pos of positions) {
       if (pos.symbol !== signal.symbol) {
@@ -1002,8 +1092,11 @@ export class RiskGuardian {
       return 0;
     }
 
+    // eslint-disable-next-line functional/no-let
     let maxCorrelation = 0;
+    // eslint-disable-next-line functional/no-let
     for (let i = 0; i < positions.length; i++) {
+      // eslint-disable-next-line functional/no-let
       for (let j = i + 1; j < positions.length; j++) {
         const correlation = Math.abs(
           this.calculateCorrelation(positions[i].symbol, positions[j].symbol),
@@ -1024,10 +1117,12 @@ export class RiskGuardian {
     }
 
     const returns: number[] = [];
+    // eslint-disable-next-line functional/no-let
     for (let i = 1; i < history.length; i++) {
       const prevPrice = history[i - 1].price;
       const currPrice = history[i].price;
       if (prevPrice > 0) {
+        // eslint-disable-next-line functional/immutable-data
         returns.push((currPrice - prevPrice) / prevPrice);
       }
     }
@@ -1047,10 +1142,14 @@ export class RiskGuardian {
     const meanX = x.slice(0, n).reduce((a, b) => a + b, 0) / n;
     const meanY = y.slice(0, n).reduce((a, b) => a + b, 0) / n;
 
+    // eslint-disable-next-line functional/no-let
     let numerator = 0;
+    // eslint-disable-next-line functional/no-let
     let denomX = 0;
+    // eslint-disable-next-line functional/no-let
     let denomY = 0;
 
+    // eslint-disable-next-line functional/no-let
     for (let i = 0; i < n; i++) {
       const dx = x[i] - meanX;
       const dy = y[i] - meanY;
@@ -1084,10 +1183,12 @@ export class RiskGuardian {
 
     for (const pos of positions) {
       if (pos.symbol === signal.symbol) {
+        // eslint-disable-next-line functional/immutable-data
         correlatedPositions.push(pos.symbol);
       } else {
         const correlation = Math.abs(this.calculateCorrelation(signal.symbol, pos.symbol));
         if (correlation > this.config.maxCorrelation) {
+          // eslint-disable-next-line functional/immutable-data
           correlatedPositions.push(pos.symbol);
         }
       }

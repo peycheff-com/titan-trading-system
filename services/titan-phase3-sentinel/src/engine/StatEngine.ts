@@ -34,13 +34,17 @@ export class CircularBuffer<T> {
    * Returns the removed item if buffer was full, undefined otherwise
    */
   add(item: T): T | undefined {
+    // eslint-disable-next-line functional/no-let
     let removed: T | undefined;
     if (this.isFull()) {
       removed = this.buffer[this.index];
     }
+    // eslint-disable-next-line functional/immutable-data
     this.buffer[this.index] = item;
+    // eslint-disable-next-line functional/immutable-data
     this.index = (this.index + 1) % this.size;
     if (this.count < this.size) {
+      // eslint-disable-next-line functional/immutable-data
       this.count++;
     }
     return removed;
@@ -75,8 +79,11 @@ export class CircularBuffer<T> {
    * Clear the buffer
    */
   clear(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.buffer = new Array(this.size);
+    // eslint-disable-next-line functional/immutable-data
     this.index = 0;
+    // eslint-disable-next-line functional/immutable-data
     this.count = 0;
   }
 }
@@ -113,10 +120,13 @@ export class RollingStatistics {
   }
 
   private addValue(value: number): void {
+    // eslint-disable-next-line functional/immutable-data
     this.count++;
     const delta = value - this.mean;
+    // eslint-disable-next-line functional/immutable-data
     this.mean += delta / this.count;
     const delta2 = value - this.mean;
+    // eslint-disable-next-line functional/immutable-data
     this.m2 += delta * delta2;
   }
 
@@ -125,9 +135,12 @@ export class RollingStatistics {
 
     // Welford removal logic
     const delta = value - this.mean;
+    // eslint-disable-next-line functional/immutable-data
     this.mean -= delta / (this.count - 1);
     const delta2 = value - this.mean;
+    // eslint-disable-next-line functional/immutable-data
     this.m2 -= delta * delta2;
+    // eslint-disable-next-line functional/immutable-data
     this.count--;
   }
 
@@ -188,8 +201,11 @@ export class RollingStatistics {
    */
   clear(): void {
     this.buffer.clear();
+    // eslint-disable-next-line functional/immutable-data
     this.mean = 0;
+    // eslint-disable-next-line functional/immutable-data
     this.m2 = 0;
+    // eslint-disable-next-line functional/immutable-data
     this.count = 0;
   }
 }
@@ -226,8 +242,11 @@ export class BasisCalculator {
    * Calculate VWAP for a given size through order book levels
    */
   private calculateVwap(levels: Array<[price: number, size: number]>, targetSize: number): number {
+    // eslint-disable-next-line functional/no-let
     let remainingSize = targetSize;
+    // eslint-disable-next-line functional/no-let
     let totalCost = 0;
+    // eslint-disable-next-line functional/no-let
     let totalFilled = 0;
 
     for (const [price, size] of levels) {
@@ -281,6 +300,7 @@ export class SignalGenerator {
    */
   updateBasis(symbol: string, basis: number): void {
     if (!this.stats.has(symbol)) {
+      // eslint-disable-next-line functional/immutable-data
       this.stats.set(symbol, new RollingStatistics());
     }
     this.stats.get(symbol)!.add(basis);
@@ -300,6 +320,7 @@ export class SignalGenerator {
     const zScore = stats.getZScore(currentBasis);
     const confidence = this.calculateConfidence(stats);
 
+    // eslint-disable-next-line functional/no-let
     let action: SignalAction = 'HOLD';
     if (zScore >= this.thresholds.expandZScore) {
       action = 'EXPAND';
@@ -383,6 +404,7 @@ export class SignalGenerator {
    * Clear statistics for a symbol
    */
   clearSymbol(symbol: string): void {
+    // eslint-disable-next-line functional/immutable-data
     this.stats.delete(symbol);
   }
 
@@ -390,6 +412,7 @@ export class SignalGenerator {
    * Clear all statistics
    */
   clearAll(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.stats.clear();
   }
 }

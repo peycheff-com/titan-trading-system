@@ -1,0 +1,35 @@
+name: Nightly Chaos Engineering
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # Run at 2 AM daily
+  workflow_dispatch:
+
+jobs:
+  chaos-matrix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Start Stack (Production Mode)
+        run: docker compose -f docker-compose.prod.yml up -d
+
+      - name: Install Chaos Deps
+        run: npm ci
+
+      - name: Run Chaos Suite (Burst & Timeout)
+        run: npx tsx scripts/verification/chaos-tests.ts all
+        env:
+            TITAN_IPC_SOCKET: /tmp/titan-ipc.sock
+            TITAN_HMAC_SECRET: ${{ secrets.HMAC_SECRET }}
+
+      - name: Audit Logs
+        if: failure()
+        run: docker compose -f docker-compose.prod.yml logs --tail=100

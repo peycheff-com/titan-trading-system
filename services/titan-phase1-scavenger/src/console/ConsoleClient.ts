@@ -92,6 +92,7 @@ export class ConsoleClient {
       clearTimeout(timeoutId);
 
       if (response.ok) {
+        // eslint-disable-next-line functional/immutable-data
         this.isConnected = true;
         this.logger.info(`✅ Connected to Console at ${this.config.consoleUrl}`);
         return true;
@@ -149,8 +150,10 @@ export class ConsoleClient {
    * Send event to Console with retry logic
    */
   private async sendEvent(eventType: string, data: any): Promise<void> {
+    // eslint-disable-next-line functional/no-let
     let lastError: Error | null = null;
 
+    // eslint-disable-next-line functional/no-let
     for (let attempt = 1; attempt <= (this.config.retryAttempts || 3); attempt++) {
       try {
         const controller = new AbortController();

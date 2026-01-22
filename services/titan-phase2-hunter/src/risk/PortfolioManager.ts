@@ -218,6 +218,7 @@ export class PortfolioManager extends EventEmitter {
     });
 
     // Sort by composite score (highest first)
+    // eslint-disable-next-line functional/immutable-data
     scoredSignals.sort((a, b) => b.compositeScore - a.compositeScore);
 
     // Assign ranks and take top signals
@@ -301,7 +302,9 @@ export class PortfolioManager extends EventEmitter {
     const longPercentage = longPositions / totalPositions;
     const shortPercentage = shortPositions / totalPositions;
 
+    // eslint-disable-next-line functional/no-let
     let directionalBias: 'LONG' | 'SHORT' | 'NEUTRAL' = 'NEUTRAL';
+    // eslint-disable-next-line functional/no-let
     let biasPercentage = 0;
 
     if (longPercentage >= this.config.directionalBiasThreshold) {
@@ -313,6 +316,7 @@ export class PortfolioManager extends EventEmitter {
     }
 
     // Apply reduction if new position adds to existing bias
+    // eslint-disable-next-line functional/no-let
     let adjustedSize = basePositionSize;
 
     if (
@@ -355,7 +359,9 @@ export class PortfolioManager extends EventEmitter {
     const shortPositions = openPositions.filter(p => p.side === 'SHORT').length;
     const totalOpenPositions = openPositions.length;
 
+    // eslint-disable-next-line functional/no-let
     let directionalBias: 'LONG' | 'SHORT' | 'NEUTRAL' = 'NEUTRAL';
+    // eslint-disable-next-line functional/no-let
     let biasPercentage = 0;
 
     if (totalOpenPositions > 0) {
@@ -377,6 +383,7 @@ export class PortfolioManager extends EventEmitter {
     const totalPnL = totalUnrealizedPnL + totalRealizedPnL;
 
     // Update portfolio state
+    // eslint-disable-next-line functional/immutable-data
     this.portfolioState = {
       totalEquity,
       totalExposure,
@@ -391,7 +398,9 @@ export class PortfolioManager extends EventEmitter {
     };
 
     // Update positions map
+    // eslint-disable-next-line functional/immutable-data
     this.positions.clear();
+    // eslint-disable-next-line functional/immutable-data
     positions.forEach(pos => this.positions.set(pos.id, pos));
 
     this.emit('portfolio:updated', this.portfolioState);
@@ -482,6 +491,7 @@ export class PortfolioManager extends EventEmitter {
    * @param newConfig - New configuration
    */
   public updateConfig(newConfig: Partial<PortfolioManagerConfig>): void {
+    // eslint-disable-next-line functional/immutable-data
     this.config = { ...this.config, ...newConfig };
     console.log(`📊 Portfolio Manager: Configuration updated`);
   }
@@ -491,6 +501,7 @@ export class PortfolioManager extends EventEmitter {
    * @param position - Position to add
    */
   public addPosition(position: Position): void {
+    // eslint-disable-next-line functional/immutable-data
     this.positions.set(position.id, position);
     console.log(
       `📊 Portfolio Manager: Added position ${position.id} (${position.symbol} ${position.side})`
@@ -502,6 +513,7 @@ export class PortfolioManager extends EventEmitter {
    * @param positionId - Position ID to remove
    */
   public removePosition(positionId: string): void {
+    // eslint-disable-next-line functional/immutable-data
     if (this.positions.delete(positionId)) {
       console.log(`📊 Portfolio Manager: Removed position ${positionId}`);
     }
@@ -513,6 +525,7 @@ export class PortfolioManager extends EventEmitter {
    */
   public updatePosition(position: Position): void {
     if (this.positions.has(position.id)) {
+      // eslint-disable-next-line functional/immutable-data
       this.positions.set(position.id, position);
     }
   }
@@ -545,7 +558,9 @@ export class PortfolioManager extends EventEmitter {
    * Clear all positions (for testing/reset)
    */
   public clearPositions(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.positions.clear();
+    // eslint-disable-next-line functional/immutable-data
     this.portfolioState.openPositions = [];
     console.log(`📊 Portfolio Manager: All positions cleared`);
   }
@@ -554,6 +569,7 @@ export class PortfolioManager extends EventEmitter {
    * Cleanup resources
    */
   public destroy(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.positions.clear();
     this.removeAllListeners();
     console.log(`📊 Portfolio Manager: Destroyed`);

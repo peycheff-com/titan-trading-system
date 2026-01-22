@@ -23,23 +23,20 @@ jobs:
       - name: Validate configuration
         run: npm run validate:config
 
+      - name: Verify Environment Keys
+        run: node scripts/ops/verify_env.js .env.example .env
+        continue-on-error: true # For now, warn but don't fail until VPS env is synced
+
       - name: Copy files to VPS
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          source: "."
+          source: "services,config,scripts,docker-compose.yml,docker-compose.prod.yml,.env.example,package.json,package-lock.json,tsconfig.json"
           target: "/opt/titan"
           rm: false
           strip_components: 0
-          exclude: |
-            .git/
-            node_modules/
-            .env
-            *.log
-            coverage/
-            dist/
 
       - name: Deploy on VPS
         uses: appleboy/ssh-action@v1.0.3
@@ -51,9 +48,10 @@ jobs:
             cd /opt/titan
             # Ensure permissions
             mkdir -p services/titan-brain/dist/db
-            
-            # Start services
-            docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
+            chmod +x scripts/ops/*.sh
+
+            # Safe Deploy (includes Backup, Build, Health Check, Rollback)
+            ./scripts/ops/deploy_safe.sh
             
             # Prune unused images to save space
             docker system prune -f

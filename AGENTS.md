@@ -56,3 +56,33 @@ Run `npm run sota:all` before any major PR to catch invisible issues.
 - **No God Classes**: If you touch a >400 LOC file, extract at least one function.
 - **No Flakes**: Flaky tests are bugs. Use `sota:flake` to repro and fix.
 
+# Agent Coding Rules (Strict Compliance)
+
+You are an advanced AI engineer. You MUST follow these rules when writing code for this repository.
+
+## 1. Functional Programming & Immutability
+This project enforces strict immutability.
+- **NEVER** use `let`. Use `const` for everything.
+- **NEVER** use mutator methods like `push`, `pop`, `splice`, `shift`, `unshift`, `sort`, `reverse`.
+    - BAD: `arr.push(item)`
+    - GOOD: `const newArr = [...arr, item]`
+- **NEVER** mutate objects properties directly.
+    - BAD: `obj.prop = value`
+    - GOOD: `const newObj = { ...obj, prop: value }`
+- **NEVER** use `delete`.
+    - BAD: `delete obj.prop`
+    - GOOD: `const { prop, ...rest } = obj`
+- **Maps/Sets**: Treat them as immutable where possible, or encapsulate strictly.
+
+## 2. Type Safety
+- **NEVER** use `any`. Use `unknown` if necessary, or define a type.
+- **ALWAYS** define return types for functions.
+- **ALWAYS** handling null/undefined explicitly.
+
+## 3. Complexity
+- **Modules**: Keep files under 200 lines. Break large logic into sub-modules or strategy patterns.
+- **Functions**: Keep functions simple. Cyclomatic complexity should be < 10.
+
+## 4. Architecture
+- **Dependency Inspection**: Always check dependencies in `package.json` before importing.
+- **Circular Dependencies**: Do not create circular imports. Use interfaces or dependency injection.

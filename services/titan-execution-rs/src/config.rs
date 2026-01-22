@@ -60,6 +60,14 @@ pub struct ExecutionConfig {
     pub routing: Option<RoutingConfig>,
     pub initial_balance: Option<f64>,
     pub freshness_threshold_ms: Option<u64>,
+    pub risk_guard: RiskGuardConfig,
+}
+
+#[derive(Debug, Deserialize, Clone, Default)]
+pub struct RiskGuardConfig {
+    pub max_leverage: f64,
+    pub daily_loss_limit: f64,
+    pub symbol_whitelist: Vec<String>,
 }
 
 #[derive(Debug, Deserialize, Clone, Default)]
@@ -105,6 +113,25 @@ impl Settings {
                 if nats_url.trim().is_empty() {
                     return Err(ConfigError::Message("NATS URL cannot be empty".to_string()));
                 }
+            }
+
+            // Validate Risk Guard (GAP-03)
+            let risk = &exec.risk_guard;
+            if risk.max_leverage > 20.0 {
+                return Err(ConfigError::Message(format!(
+                    "Risk Guard: Max leverage {:.1} exceeds safety limit of 20.0",
+                    risk.max_leverage
+                )));
+            }
+            if risk.daily_loss_limit <= 0.0 {
+                return Err(ConfigError::Message(
+                    "Risk Guard: Daily loss limit must be positive".to_string(),
+                ));
+            }
+            if risk.symbol_whitelist.is_empty() {
+                return Err(ConfigError::Message(
+                    "Risk Guard: Symbol whitelist cannot be empty".to_string(),
+                ));
             }
         }
 
@@ -277,6 +304,27 @@ mod tests {
                 assert!(msg.contains("API Key is missing"));
             }
             _ => panic!("Expected ConfigError::Message"),
+        }
+    }
+
+    #[test]
+    fn test_risk_guard_validation() {
+        let mut settings = Settings::default();
+        settings.execution = Some(ExecutionConfig {
+            risk_guard: RiskGuardConfig {
+                max_leverage: 100.0, // Unsafe
+                daily_loss_limit: 1000.0,
+                symbol_whitelist: vec!["BTC/USDT".into()],
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+
+        let result = settings.validate();
+        assert!(result.is_err());
+        match result {
+            Err(ConfigError::Message(msg)) => assert!(msg.contains("exceeds safety limit")),
+            _ => panic!("Should fail on leverage"),
         }
     }
 }

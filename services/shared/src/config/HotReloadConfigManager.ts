@@ -148,6 +148,7 @@ export class HotReloadConfigManager extends EventEmitter {
    */
   async loadAndWatchBrainConfig(): Promise<BrainConfig> {
     const result = await this.hierarchicalLoader.loadBrainConfig();
+    // eslint-disable-next-line functional/no-let
     let config = result.config;
 
     // Decrypt encrypted fields if present
@@ -156,6 +157,7 @@ export class HotReloadConfigManager extends EventEmitter {
     }
 
     // Store current config and backup
+    // eslint-disable-next-line functional/immutable-data
     this.currentConfigs.set('brain', config);
     this.createBackup('brain', 'brain', config, false);
 
@@ -174,6 +176,7 @@ export class HotReloadConfigManager extends EventEmitter {
    */
   async loadAndWatchPhaseConfig(phase: string): Promise<PhaseConfig> {
     const result = await this.hierarchicalLoader.loadPhaseConfig(phase);
+    // eslint-disable-next-line functional/no-let
     let config = result.config;
 
     // Decrypt encrypted fields if present
@@ -182,6 +185,7 @@ export class HotReloadConfigManager extends EventEmitter {
     }
 
     // Store current config and backup
+    // eslint-disable-next-line functional/immutable-data
     this.currentConfigs.set(phase, config);
     this.createBackup('phase', phase, config, false);
 
@@ -200,6 +204,7 @@ export class HotReloadConfigManager extends EventEmitter {
    */
   async loadAndWatchServiceConfig(service: string): Promise<any> {
     const result = await this.hierarchicalLoader.loadServiceConfig(service);
+    // eslint-disable-next-line functional/no-let
     let config = result.config;
 
     // Decrypt encrypted fields if present
@@ -208,6 +213,7 @@ export class HotReloadConfigManager extends EventEmitter {
     }
 
     // Store current config and backup
+    // eslint-disable-next-line functional/immutable-data
     this.currentConfigs.set(service, config);
     this.createBackup('service', service, config, false);
 
@@ -229,11 +235,13 @@ export class HotReloadConfigManager extends EventEmitter {
       return; // Reload already in progress
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.reloadInProgress.add('brain');
 
     try {
       const oldConfig = this.currentConfigs.get('brain');
       const result = await this.hierarchicalLoader.loadBrainConfig();
+      // eslint-disable-next-line functional/no-let
       let newConfig = result.config;
 
       // Decrypt encrypted fields if present
@@ -254,6 +262,7 @@ export class HotReloadConfigManager extends EventEmitter {
       }
 
       // Update current config and create backup
+      // eslint-disable-next-line functional/immutable-data
       this.currentConfigs.set('brain', newConfig);
       this.createBackup('brain', 'brain', newConfig, false);
 
@@ -286,6 +295,7 @@ export class HotReloadConfigManager extends EventEmitter {
 
       console.error('❌ Failed to hot-reload brain configuration:', errorMessage);
     } finally {
+      // eslint-disable-next-line functional/immutable-data
       this.reloadInProgress.delete('brain');
     }
   }
@@ -298,11 +308,13 @@ export class HotReloadConfigManager extends EventEmitter {
       return; // Reload already in progress
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.reloadInProgress.add(phase);
 
     try {
       const oldConfig = this.currentConfigs.get(phase);
       const result = await this.hierarchicalLoader.loadPhaseConfig(phase);
+      // eslint-disable-next-line functional/no-let
       let newConfig = result.config;
 
       // Decrypt encrypted fields if present
@@ -323,6 +335,7 @@ export class HotReloadConfigManager extends EventEmitter {
       }
 
       // Update current config and create backup
+      // eslint-disable-next-line functional/immutable-data
       this.currentConfigs.set(phase, newConfig);
       this.createBackup('phase', phase, newConfig, false);
 
@@ -355,6 +368,7 @@ export class HotReloadConfigManager extends EventEmitter {
 
       console.error(`❌ Failed to hot-reload ${phase} configuration:`, errorMessage);
     } finally {
+      // eslint-disable-next-line functional/immutable-data
       this.reloadInProgress.delete(phase);
     }
   }
@@ -367,11 +381,13 @@ export class HotReloadConfigManager extends EventEmitter {
       return; // Reload already in progress
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.reloadInProgress.add(service);
 
     try {
       const oldConfig = this.currentConfigs.get(service);
       const result = await this.hierarchicalLoader.loadServiceConfig(service);
+      // eslint-disable-next-line functional/no-let
       let newConfig = result.config;
 
       // Decrypt encrypted fields if present
@@ -397,6 +413,7 @@ export class HotReloadConfigManager extends EventEmitter {
       }
 
       // Update current config and create backup
+      // eslint-disable-next-line functional/immutable-data
       this.currentConfigs.set(service, newConfig);
       this.createBackup('service', service, newConfig, false);
 
@@ -429,6 +446,7 @@ export class HotReloadConfigManager extends EventEmitter {
 
       console.error(`❌ Failed to hot-reload ${service} configuration:`, errorMessage);
     } finally {
+      // eslint-disable-next-line functional/immutable-data
       this.reloadInProgress.delete(service);
     }
   }
@@ -441,6 +459,7 @@ export class HotReloadConfigManager extends EventEmitter {
     configKey: string,
     config: any,
   ): Promise<void> {
+    // eslint-disable-next-line functional/no-let
     let configToSave = { ...config };
 
     // Encrypt sensitive fields if encryption is enabled
@@ -480,6 +499,7 @@ export class HotReloadConfigManager extends EventEmitter {
     const backupToRestore = backups[backups.length - steps - 1];
 
     // Restore configuration
+    // eslint-disable-next-line functional/immutable-data
     this.currentConfigs.set(configKey, backupToRestore.data);
 
     // Emit rollback event
@@ -524,6 +544,7 @@ export class HotReloadConfigManager extends EventEmitter {
     }
 
     const stats = statSync(filePath);
+    // eslint-disable-next-line functional/immutable-data
     this.watchedFiles.set(filePath, {
       mtime: stats.mtime,
       size: stats.size,
@@ -552,10 +573,12 @@ export class HotReloadConfigManager extends EventEmitter {
   ): ChangeValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
+    // eslint-disable-next-line functional/no-let
     let requiresRestart = false;
     const affectedServices: string[] = [];
 
     // Schema validation
+    // eslint-disable-next-line functional/no-let
     let validation: ValidationResult;
     if (configType === 'brain') {
       validation = ConfigValidator.validateBrainConfig(newConfig);
@@ -566,9 +589,11 @@ export class HotReloadConfigManager extends EventEmitter {
     }
 
     if (!validation.valid) {
+      // eslint-disable-next-line functional/immutable-data
       errors.push(...validation.errors);
     }
 
+    // eslint-disable-next-line functional/immutable-data
     warnings.push(...validation.warnings);
 
     // Check for changes that require restart
@@ -577,7 +602,9 @@ export class HotReloadConfigManager extends EventEmitter {
       for (const field of criticalFields) {
         if (oldConfig?.[field] !== newConfig?.[field]) {
           requiresRestart = true;
+          // eslint-disable-next-line functional/immutable-data
           affectedServices.push(configKey);
+          // eslint-disable-next-line functional/immutable-data
           warnings.push(`Change to ${field} requires service restart`);
         }
       }
@@ -604,12 +631,14 @@ export class HotReloadConfigManager extends EventEmitter {
     const backupKey = `${configType}:${configKey}`;
 
     if (!this.configBackups.has(backupKey)) {
+      // eslint-disable-next-line functional/immutable-data
       this.configBackups.set(backupKey, []);
     }
 
     const backups = this.configBackups.get(backupKey)!;
 
     // Add new backup
+    // eslint-disable-next-line functional/immutable-data
     backups.push({
       timestamp: Date.now(),
       configType,
@@ -620,6 +649,7 @@ export class HotReloadConfigManager extends EventEmitter {
 
     // Keep only last 10 backups
     if (backups.length > 10) {
+      // eslint-disable-next-line functional/immutable-data
       backups.shift();
     }
   }
@@ -656,9 +686,13 @@ export class HotReloadConfigManager extends EventEmitter {
       unwatchFile(filePath);
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.watchedFiles.clear();
+    // eslint-disable-next-line functional/immutable-data
     this.configBackups.clear();
+    // eslint-disable-next-line functional/immutable-data
     this.currentConfigs.clear();
+    // eslint-disable-next-line functional/immutable-data
     this.reloadInProgress.clear();
     this.removeAllListeners();
 

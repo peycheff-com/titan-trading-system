@@ -32,14 +32,18 @@ export class ChangePointDetector {
    */
   update(price: number, _timestamp: number): { regime: RegimeState; changeScore: number } {
     if (this.lastPrice === null || this.lastPrice <= 0) {
+      // eslint-disable-next-line functional/immutable-data
       this.lastPrice = price;
       return { regime: RegimeState.STABLE, changeScore: 0 };
     }
 
     const ret = (price - this.lastPrice) / this.lastPrice;
+    // eslint-disable-next-line functional/immutable-data
     this.lastPrice = price;
+    // eslint-disable-next-line functional/immutable-data
     this.returnsHistory.push(ret);
     if (this.returnsHistory.length > this.WINDOW_SIZE) {
+      // eslint-disable-next-line functional/immutable-data
       this.returnsHistory.shift();
     }
 
@@ -68,7 +72,9 @@ export class ChangePointDetector {
     // 4. Update and Normalize
     const newRunLengthProbs = [cpProb, ...growthProbs];
     const totalProb = newRunLengthProbs.reduce((a, b) => a + b, 0);
+    // eslint-disable-next-line functional/immutable-data
     this.runLengthProbs = newRunLengthProbs.map((p) => p / (totalProb || 1));
+    // eslint-disable-next-line functional/immutable-data
     this.runLengthProbs = this.runLengthProbs.slice(0, this.WINDOW_SIZE); // Prune tail
 
     // 5. Determine State

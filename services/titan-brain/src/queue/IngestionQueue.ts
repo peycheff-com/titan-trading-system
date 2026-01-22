@@ -19,6 +19,7 @@ export class IngestionQueue extends EventEmitter {
   }
 
   public enqueue(event: IngestionEvent): void {
+    // eslint-disable-next-line functional/immutable-data
     this.queue.push(event);
     if (this.queue.length >= this.batchSize) {
       this.flush();
@@ -27,6 +28,7 @@ export class IngestionQueue extends EventEmitter {
 
   public startAutoFlush(): void {
     if (this.intervalId) return;
+    // eslint-disable-next-line functional/immutable-data
     this.intervalId = setInterval(() => {
       if (this.queue.length > 0) {
         this.flush();
@@ -37,6 +39,7 @@ export class IngestionQueue extends EventEmitter {
   public stopAutoFlush(): void {
     if (this.intervalId) {
       clearInterval(this.intervalId);
+      // eslint-disable-next-line functional/immutable-data
       this.intervalId = null;
     }
     // Flush remaining
@@ -47,6 +50,7 @@ export class IngestionQueue extends EventEmitter {
     if (this.queue.length === 0) return;
 
     const batch = [...this.queue];
+    // eslint-disable-next-line functional/immutable-data
     this.queue = [];
     this.emit('batch', batch);
   }

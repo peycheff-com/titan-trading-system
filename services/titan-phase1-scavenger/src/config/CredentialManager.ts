@@ -139,6 +139,7 @@ export class CredentialManager {
       const plaintext = JSON.stringify(credentials);
 
       // Encrypt data
+      // eslint-disable-next-line functional/no-let
       let encrypted = cipher.update(plaintext, 'utf8', 'base64');
       encrypted += cipher.final('base64');
 
@@ -219,6 +220,7 @@ export class CredentialManager {
       decipher.setAuthTag(authTag);
 
       // Decrypt data
+      // eslint-disable-next-line functional/no-let
       let decrypted = decipher.update(encryptedData.encryptedData, 'base64', 'utf8');
       decrypted += decipher.final('utf8');
 
@@ -345,24 +347,30 @@ export class CredentialManager {
 
     // Validate Binance credentials
     if (!credentials.binance) {
+      // eslint-disable-next-line functional/immutable-data
       errors.push('Binance credentials missing');
     } else {
       if (!credentials.binance.apiKey || credentials.binance.apiKey.trim() === '') {
+        // eslint-disable-next-line functional/immutable-data
         errors.push('Binance API key is required');
       }
       if (!credentials.binance.apiSecret || credentials.binance.apiSecret.trim() === '') {
+        // eslint-disable-next-line functional/immutable-data
         errors.push('Binance API secret is required');
       }
     }
 
     // Validate Bybit credentials
     if (!credentials.bybit) {
+      // eslint-disable-next-line functional/immutable-data
       errors.push('Bybit credentials missing');
     } else {
       if (!credentials.bybit.apiKey || credentials.bybit.apiKey.trim() === '') {
+        // eslint-disable-next-line functional/immutable-data
         errors.push('Bybit API key is required');
       }
       if (!credentials.bybit.apiSecret || credentials.bybit.apiSecret.trim() === '') {
+        // eslint-disable-next-line functional/immutable-data
         errors.push('Bybit API secret is required');
       }
     }
@@ -370,9 +378,11 @@ export class CredentialManager {
     // Validate MEXC credentials (optional, but if provided must be complete)
     if (credentials.mexc) {
       if (credentials.mexc.apiKey && !credentials.mexc.apiSecret) {
+        // eslint-disable-next-line functional/immutable-data
         errors.push('MEXC API secret is required when API key is provided');
       }
       if (!credentials.mexc.apiKey && credentials.mexc.apiSecret) {
+        // eslint-disable-next-line functional/immutable-data
         errors.push('MEXC API key is required when API secret is provided');
       }
     }
@@ -417,6 +427,7 @@ export class CredentialManager {
     skipValidation: boolean = false,
   ): void {
     // Load existing credentials or create new
+    // eslint-disable-next-line functional/no-let
     let credentials: ExchangeCredentials;
 
     try {
@@ -426,6 +437,7 @@ export class CredentialManager {
     }
 
     // Update specific exchange
+    // eslint-disable-next-line functional/immutable-data
     credentials[exchange] = {
       apiKey: apiKey.trim(),
       apiSecret: apiSecret.trim(),
@@ -459,6 +471,7 @@ export class CredentialManager {
 
     // Temporarily set new password in environment
     const oldPassword = process.env.TITAN_MASTER_PASSWORD;
+    // eslint-disable-next-line functional/immutable-data
     process.env.TITAN_MASTER_PASSWORD = newPassword;
 
     try {
@@ -467,6 +480,7 @@ export class CredentialManager {
       console.log('✅ Master password changed successfully');
     } catch (error) {
       // Restore old password on failure
+      // eslint-disable-next-line functional/immutable-data
       process.env.TITAN_MASTER_PASSWORD = oldPassword;
       throw error;
     }

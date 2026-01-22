@@ -149,6 +149,7 @@ mod tests {
             true,
             dec!(0),
             "USDT".to_string(),
+            "BYBIT",
         );
         assert!(!events.is_empty());
 
@@ -207,6 +208,7 @@ mod tests {
             true,
             dec!(0),
             "USDT".to_string(),
+            "BYBIT",
         );
         assert!(!close_events.is_empty());
         assert!(close_events
@@ -304,6 +306,7 @@ mod tests {
             true,
             dec!(0),
             "USDT".to_string(),
+            "BYBIT",
         );
 
         // Reduce with opposite (short) fill
@@ -343,6 +346,7 @@ mod tests {
             true,
             dec!(0),
             "USDT".to_string(),
+            "BYBIT",
         );
         assert!(reduce_events
             .iter()
@@ -390,6 +394,7 @@ mod tests {
             true,
             dec!(0),
             "USDT".to_string(),
+            "BYBIT",
         );
         assert!(flip_events
             .iter()

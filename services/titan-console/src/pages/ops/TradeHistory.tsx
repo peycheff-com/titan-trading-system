@@ -17,10 +17,11 @@ const MOCK_TRADES: Trade[] = [
     latency: 124,
     strategy: 'Phase 1 (Scavenger)',
     forensics: {
-        signalScore: 0.89,
-        marketImpact: 0.001,
-        aiReasoning: 'Detected localized volatility burst with CVD divergence + 2-sigma volume spike. Anticipating mean reversion.',
-    }
+      signalScore: 0.89,
+      marketImpact: 0.001,
+      aiReasoning:
+        'Detected localized volatility burst with CVD divergence + 2-sigma volume spike. Anticipating mean reversion.',
+    },
   },
   {
     id: 'tr_2',
@@ -35,10 +36,10 @@ const MOCK_TRADES: Trade[] = [
     latency: 98,
     strategy: 'Phase 2 (Hunter)',
     forensics: {
-        signalScore: 0.72,
-        marketImpact: 0.02,
-        aiReasoning: 'Fractal structure breakdown on M15. FVG target at 3420.',
-    }
+      signalScore: 0.72,
+      marketImpact: 0.02,
+      aiReasoning: 'Fractal structure breakdown on M15. FVG target at 3420.',
+    },
   },
   {
     id: 'tr_3',
@@ -51,10 +52,10 @@ const MOCK_TRADES: Trade[] = [
     reason: 'Risk Gated',
     latency: 4,
     forensics: {
-        rejectionReason: 'Max Daily Loss Limit Approaching (95%)',
-        aiReasoning: 'Strong momentum signal but rejected by RiskGuardian hard gate.',
-    }
-  }
+      rejectionReason: 'Max Daily Loss Limit Approaching (95%)',
+      aiReasoning: 'Strong momentum signal but rejected by RiskGuardian hard gate.',
+    },
+  },
 ];
 
 export default function TradeHistory() {
@@ -73,17 +74,17 @@ export default function TradeHistory() {
           </p>
         </div>
         <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-                <Filter className="mr-2 h-4 w-4" /> Filter
-            </Button>
-            <Button variant="ghost" size="sm">
-                <Download className="mr-2 h-4 w-4" /> Export
-            </Button>
+          <Button variant="outline" size="sm">
+            <Filter className="mr-2 h-4 w-4" /> Filter
+          </Button>
+          <Button variant="ghost" size="sm">
+            <Download className="mr-2 h-4 w-4" /> Export
+          </Button>
         </div>
       </div>
 
       <div className="bg-card rounded-lg border border-border p-4 shadow-sm">
-         <TradeHistoryTable trades={trades} />
+        <TradeHistoryTable trades={trades} />
       </div>
     </div>
   );

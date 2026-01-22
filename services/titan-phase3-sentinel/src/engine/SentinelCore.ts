@@ -10,7 +10,7 @@ import type { Signal } from '../types/signals.js';
 import type { IExchangeGateway } from '../exchanges/interfaces.js';
 import { DEFAULT_SIGNAL_THRESHOLDS } from '../types/signals.js';
 import type { HealthReport, PerformanceMetrics, RiskStatus } from '../types/portfolio.js';
-import { ExecutionClient, getNatsClient, type IntentSignal, TitanSubject } from '@titan/shared';
+import { getNatsClient, type IntentSignal, SignalClient, TitanSubject } from '@titan/shared';
 
 export interface SentinelConfig {
   updateIntervalMs: number;
@@ -42,7 +42,7 @@ export class SentinelCore extends EventEmitter {
   public performance: PerformanceTracker;
   public signals: SignalGenerator;
   public priceMonitor: PriceMonitor;
-  private executionClient: ExecutionClient;
+  private signalClient: SignalClient;
 
   // State from NATS
   private currentRegime: string = 'STABLE';
@@ -52,6 +52,7 @@ export class SentinelCore extends EventEmitter {
   // ... (constructor) ...
 
   public updateBudget(equity: number) {
+    // eslint-disable-next-line functional/immutable-data
     this.allocatedEquity = equity;
     this.emit('log', `💰 Budget Updated: $${equity.toFixed(2)}`);
   }
@@ -89,31 +90,34 @@ export class SentinelCore extends EventEmitter {
     this.signals = new SignalGenerator(DEFAULT_SIGNAL_THRESHOLDS);
     this.vacuum = new VacuumMonitor(this.signals); // Pass signalGenerator
     this.performance = new PerformanceTracker(config.initialCapital);
-    this.executionClient = new ExecutionClient({ source: 'sentinel' });
+    this.signalClient = new SignalClient({ source: 'sentinel' });
   }
 
   async start(): Promise<void> {
     if (this.isRunning) return;
+    // eslint-disable-next-line functional/immutable-data
     this.isRunning = true;
     this.emit('log', 'Sentinel Core Starting...');
 
     // Initialize Portfolio
     await this.portfolio.initialize();
 
-    // Connect Execution Client
+    // Connect Signal Client
     try {
-      await this.executionClient.connect();
-      this.emit('log', '✅ Execution Client Connected');
+      await this.signalClient.connect();
+      this.emit('log', '✅ Signal Client Connected');
     } catch (e) {
-      this.emit('log', `⚠️ Execution Client Connect Failed: ${e}`);
+      this.emit('log', `⚠️ Signal Client Connect Failed: ${e}`);
     }
 
     // Start Loops
+    // eslint-disable-next-line functional/immutable-data
     this.tickInterval = setInterval(() => this.onTick(), this.config.updateIntervalMs);
     this.emit('log', 'Sentinel Core Started.');
   }
 
   async stop(): Promise<void> {
+    // eslint-disable-next-line functional/immutable-data
     this.isRunning = false;
     if (this.tickInterval) clearInterval(this.tickInterval);
     this.emit('log', 'Sentinel Core Stopped.');
@@ -121,7 +125,9 @@ export class SentinelCore extends EventEmitter {
 
   public updateRegime(regime: string, aptr: number) {
     const oldRegime = this.currentRegime;
+    // eslint-disable-next-line functional/immutable-data
     this.currentRegime = regime;
+    // eslint-disable-next-line functional/immutable-data
     this.currentAPTR = aptr;
 
     if (oldRegime !== regime) {
@@ -218,6 +224,7 @@ export class SentinelCore extends EventEmitter {
       }
 
       // 5. Signal Generation (Basis Arb)
+      // eslint-disable-next-line functional/no-let
       let currentSignals: Signal[] = [];
       // currentBasis is already defined above at line 176
 
@@ -307,6 +314,7 @@ export class SentinelCore extends EventEmitter {
     // VOLATILE: 5% of capital per trade
     // CRASH: 0% (Handled by regime rejection earlier, but safe to default 0)
 
+    // eslint-disable-next-line functional/no-let
     let sizingPercentage = 0.1;
     if (this.currentRegime === 'VOLATILE') {
       sizingPercentage = 0.05;
@@ -360,10 +368,10 @@ export class SentinelCore extends EventEmitter {
 
     try {
       this.emit('log', `📤 Sending PREPARE...`);
-      const prepareResult = await this.executionClient.sendPrepare(intent);
+      const prepareResult = await this.signalClient.sendPrepare(intent);
 
       if (prepareResult.prepared) {
-        const confirmResult = await this.executionClient.sendConfirm(intent.signal_id);
+        const confirmResult = await this.signalClient.sendConfirm(intent.signal_id);
         this.emit('log', `✅ CONFIRM Executed: ${confirmResult.executed}`);
 
         // Simple performance tracking (approximate)

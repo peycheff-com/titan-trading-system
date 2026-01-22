@@ -7,13 +7,13 @@
  * Requirements: 18.1-18.8 (Runtime Configuration)
  */
 
-import { EventEmitter } from "events";
+import { EventEmitter } from 'events';
 import {
   ConfigManager as SharedConfigManager,
   getConfigManager,
   PhaseConfig as SharedPhaseConfig,
-} from "@titan/shared";
-import { HunterConfigSchema } from "./schema";
+} from '@titan/shared';
+import { HunterConfigSchema } from './schema';
 
 /**
  * Alignment weight configuration
@@ -71,15 +71,18 @@ export interface Phase2Config {
   maxDrawdown: number;
   maxPositionSize: number;
   riskPerTrade: number;
-  exchanges: Record<string, {
-    enabled: boolean;
-    executeOn: boolean;
-    testnet: boolean;
-    rateLimit: number;
-    timeout: number;
-    apiKey?: string;
-    apiSecret?: string;
-  }>;
+  exchanges: Record<
+    string,
+    {
+      enabled: boolean;
+      executeOn: boolean;
+      testnet: boolean;
+      rateLimit: number;
+      timeout: number;
+      apiKey?: string;
+      apiSecret?: string;
+    }
+  >;
   parameters?: Record<string, any>;
 
   // Hunter Specifics
@@ -106,7 +109,7 @@ export interface ValidationResult {
  * Configuration change event
  */
 export interface ConfigChangeEvent {
-  section: keyof Phase2Config | "all";
+  section: keyof Phase2Config | 'all';
   oldValue: any;
   newValue: any;
   timestamp: number;
@@ -161,10 +164,10 @@ const DEFAULT_CONFIG: Phase2Config = {
 export class ConfigManager extends EventEmitter {
   private config: Phase2Config;
   private sharedManager: SharedConfigManager;
-  private readonly phaseName = "phase2-hunter";
+  private readonly phaseName = 'phase2-hunter';
   private environment: string;
 
-  constructor(environment: string = process.env.NODE_ENV || "development") {
+  constructor(environment: string = process.env.NODE_ENV || 'development') {
     super();
     this.environment = environment;
 
@@ -185,25 +188,25 @@ export class ConfigManager extends EventEmitter {
     // Merge with defaults to ensure we have all fields before Zod validation
     // (Shared config might strictly be "PhaseConfig" and miss Hunter fields)
     const pendingConfig = this.mergeWithDefaults(
-      rawPhaseConfig as unknown as Partial<Phase2Config>,
+      rawPhaseConfig as unknown as Partial<Phase2Config>
     );
 
     if (!rawPhaseConfig || Object.keys(rawPhaseConfig).length === 0) {
-      console.log("📋 Initializing default configuration for Hunter...");
+      console.log('📋 Initializing default configuration for Hunter...');
       await this.saveConfig(pendingConfig); // Save defaults (also validates)
     } else {
       this.updateLocalState(pendingConfig);
 
-      console.log("✅ Configuration loaded and validated successfully via Zod");
+      console.log('✅ Configuration loaded and validated successfully via Zod');
     }
 
     // Setup Event Listeners
-    this.sharedManager.on("configChanged", (event) => {
-      if (event.level === "phase" && event.key === this.phaseName) {
+    this.sharedManager.on('configChanged', event => {
+      if (event.level === 'phase' && event.key === this.phaseName) {
         const oldConfig = { ...this.config };
         this.updateLocalState();
-        this.emit("configReloaded", {
-          section: "all",
+        this.emit('configReloaded', {
+          section: 'all',
           oldValue: oldConfig,
           newValue: this.config,
           timestamp: Date.now(),
@@ -211,12 +214,12 @@ export class ConfigManager extends EventEmitter {
       }
     });
 
-    this.sharedManager.on("configReloaded", () => {
+    this.sharedManager.on('configReloaded', () => {
       // Full reload logic
       const oldConfig = { ...this.config };
       this.updateLocalState();
-      this.emit("configReloaded", {
-        section: "all",
+      this.emit('configReloaded', {
+        section: 'all',
         oldValue: oldConfig,
         newValue: this.config,
         timestamp: Date.now(),
@@ -224,34 +227,29 @@ export class ConfigManager extends EventEmitter {
       } as ConfigChangeEvent);
     });
 
-    console.log(
-      "✅ ConfigManager Adapter initialized via @titan/shared + Zod Rule Engine",
-    );
+    console.log('✅ ConfigManager Adapter initialized via @titan/shared + Zod Rule Engine');
   }
 
   private updateLocalState(forceConfig?: Phase2Config) {
     if (forceConfig) {
+      // eslint-disable-next-line functional/immutable-data
       this.config = forceConfig;
       return;
     }
 
-    const rawConfig = this.sharedManager.getPhaseConfig(
-      this.phaseName,
-    ) as unknown as Phase2Config;
+    const rawConfig = this.sharedManager.getPhaseConfig(this.phaseName) as unknown as Phase2Config;
 
     if (rawConfig) {
       const merged = this.mergeWithDefaults(rawConfig);
       // Validate merged config using Zod
       const result = HunterConfigSchema.safeParse(merged);
       if (!result.success) {
-        console.error(
-          "❌ Configuration validation failed after reload:",
-          result.error.format(),
-        );
+        console.error('❌ Configuration validation failed after reload:', result.error.format());
         // Fallback or throw? For now, we keep the old config or warn
         // In production, invalid config on reload should probably be rejected
         return;
       }
+      // eslint-disable-next-line functional/immutable-data
       this.config = result.data as Phase2Config;
     }
   }
@@ -262,7 +260,9 @@ export class ConfigManager extends EventEmitter {
   saveConfig(config: Phase2Config): void {
     try {
       // Update metadata
+      // eslint-disable-next-line functional/immutable-data
       config.version = (config.version || 0) + 1;
+      // eslint-disable-next-line functional/immutable-data
       config.lastModified = Date.now();
 
       // Validate with Zod
@@ -270,6 +270,7 @@ export class ConfigManager extends EventEmitter {
       const validatedConfig = HunterConfigSchema.parse(config);
 
       // Sync specific fields to shared fields
+      // eslint-disable-next-line functional/immutable-data
       validatedConfig.maxLeverage = validatedConfig.riskConfig.maxLeverage;
       // We could sync others (riskPerTrade etc) but we'll leave them to defaults or manual set
 
@@ -277,21 +278,22 @@ export class ConfigManager extends EventEmitter {
       // Cast to unknown first to avoid partial overlap issues if PhaseConfig definition is stricter or different
       this.sharedManager.savePhaseConfig(
         this.phaseName,
-        validatedConfig as unknown as SharedPhaseConfig,
+        validatedConfig as unknown as SharedPhaseConfig
       );
 
       // Update local state (optimistic)
       const oldConfig = { ...this.config };
+      // eslint-disable-next-line functional/immutable-data
       this.config = { ...config };
 
-      this.emit("configChanged", {
-        section: "all",
+      this.emit('configChanged', {
+        section: 'all',
         oldValue: oldConfig,
         newValue: config,
         timestamp: Date.now(),
       } as ConfigChangeEvent);
     } catch (error) {
-      console.error("❌ Failed to save configuration:", error);
+      console.error('❌ Failed to save configuration:', error);
       throw error;
     }
   }
@@ -401,7 +403,8 @@ export class ConfigManager extends EventEmitter {
       },
       version: loadedConfig.version || DEFAULT_CONFIG.version,
       lastModified: loadedConfig.lastModified || Date.now(),
-      exchanges: { // Deep merge exchanges if needed, but strict replacement is often safer
+      exchanges: {
+        // Deep merge exchanges if needed, but strict replacement is often safer
         ...DEFAULT_CONFIG.exchanges,
         ...(loadedConfig.exchanges || {}),
       },
@@ -412,7 +415,7 @@ export class ConfigManager extends EventEmitter {
    * Reset configuration to defaults
    */
   resetToDefaults(): void {
-    console.log("🔄 Resetting configuration to defaults");
+    console.log('🔄 Resetting configuration to defaults');
     this.saveConfig({ ...DEFAULT_CONFIG });
   }
 
@@ -427,9 +430,9 @@ export class ConfigManager extends EventEmitter {
       `⚡ Risk: Leverage ${config.riskConfig.maxLeverage}x, Stop ${config.riskConfig.stopLossPercent}%, Target ${config.riskConfig.targetPercent}%`,
       `💼 Portfolio: Max ${config.portfolioConfig.maxConcurrentPositions} positions, Heat ${config.portfolioConfig.maxPortfolioHeat}%, Correlation ${config.portfolioConfig.correlationThreshold}`,
       `🧪 Forward Test: ${
-        config.forwardTestConfig.enabled ? "Enabled" : "Disabled"
+        config.forwardTestConfig.enabled ? 'Enabled' : 'Disabled'
       }, Duration ${config.forwardTestConfig.duration}h, Signals Only: ${config.forwardTestConfig.logSignalsOnly}`,
-    ].join("\n");
+    ].join('\n');
   }
 
   /**

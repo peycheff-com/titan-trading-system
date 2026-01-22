@@ -9,7 +9,7 @@ import type { OrderBook } from '../types/statistics.js';
  */
 export class VacuumMonitor extends EventEmitter {
   private signalGenerator: SignalGenerator;
-  private recentLiquidations: LiquidationEvent[] = [];
+  private recentLiquidations: ReadonlyArray<LiquidationEvent> = [];
   private readonly LIQUIDATION_WINDOW_MS = 10000; // 10 seconds to correlate
   private readonly MIN_LIQUIDATION_SIZE = 1000; // Min USD size to care about
 
@@ -28,12 +28,12 @@ export class VacuumMonitor extends EventEmitter {
     // Ignore events older than window
     if (now - event.timestamp > this.LIQUIDATION_WINDOW_MS) return;
 
-    // Prune old events
-    this.recentLiquidations = this.recentLiquidations.filter(
-      (e) => now - e.timestamp < this.LIQUIDATION_WINDOW_MS,
-    );
-
-    this.recentLiquidations.push(event);
+    // Prune old events and add new one
+    // eslint-disable-next-line functional/immutable-data
+    this.recentLiquidations = [
+      ...this.recentLiquidations.filter((e) => now - e.timestamp < this.LIQUIDATION_WINDOW_MS),
+      event,
+    ];
 
     // Check if this specific liquidation triggers immediate opportunity?
     // Usually we wait for price update to see basis dislocation.
@@ -42,7 +42,7 @@ export class VacuumMonitor extends EventEmitter {
   /**
    * Check liquidity health of order book to prevent entering thin markets
    */
-  private spreadHistory: number[] = [];
+  private spreadHistory: ReadonlyArray<number> = [];
   private readonly MAX_SPREAD_DEVIATION = 3.0; // 3x average
   private readonly MAX_DATA_LATENCY = 100; // 100ms tolerance (softened from 50ms for realistic ops)
 
@@ -69,8 +69,10 @@ export class VacuumMonitor extends EventEmitter {
     const currentSpread = (bestAsk - bestBid) / spotPrice;
 
     // Update history (Exponential Moving Average is better, but simple average for now)
-    this.spreadHistory.push(currentSpread);
-    if (this.spreadHistory.length > 100) this.spreadHistory.shift();
+    // Keep last 100
+    const newHistory = [...this.spreadHistory, currentSpread];
+    // eslint-disable-next-line functional/immutable-data
+    this.spreadHistory = newHistory.slice(Math.max(0, newHistory.length - 100));
 
     // Check Deviation
     if (this.spreadHistory.length > 20) {
@@ -86,34 +88,21 @@ export class VacuumMonitor extends EventEmitter {
     const thresholdBps = 0.001;
     const requiredDepth = 50000;
 
-    let bidDepth = 0;
-    let askDepth = 0;
+    const calculateDepth = (
+      orders: readonly [number, number][],
+      priceFunc: (p: number) => boolean,
+    ): number => {
+      return orders.reduce((acc, [price, size]) => {
+        if (priceFunc(price)) {
+          return acc + size * price;
+        }
+        return acc; // Should break optimization ideally, but reduce visits all.
+        // For immutability, this full scan is acceptable for OB depth 20-50.
+      }, 0);
+    };
 
-    // Sum Bids within threshold
-    for (const bid of orderBook.bids) {
-      // bid is [price, size]
-      const price = bid[0];
-      const size = bid[1];
-
-      if (price >= spotPrice * (1 - thresholdBps)) {
-        bidDepth += size * price;
-      } else {
-        break;
-      }
-    }
-
-    // Sum Asks within threshold
-    for (const ask of orderBook.asks) {
-      // ask is [price, size]
-      const price = ask[0];
-      const size = ask[1];
-
-      if (price <= spotPrice * (1 + thresholdBps)) {
-        askDepth += size * price;
-      } else {
-        break;
-      }
-    }
+    const bidDepth = calculateDepth(orderBook.bids, (p) => p >= spotPrice * (1 - thresholdBps));
+    const askDepth = calculateDepth(orderBook.asks, (p) => p <= spotPrice * (1 + thresholdBps));
 
     return bidDepth >= requiredDepth && askDepth >= requiredDepth;
   }
@@ -153,13 +142,8 @@ export class VacuumMonitor extends EventEmitter {
     // If Basis < -0.5% -> Implies Long Liquidation (Perp crashed). Direction: BUY Perp, SELL Spot (if possible) or just BUY Perp (Long Reversal).
     // If Basis > +0.5% -> Implies Short Liquidation (Perp spiked). Direction: SELL Perp.
 
-    let direction: 'LONG' | 'SHORT' | null = null;
-    if (basis < VACUUM_THRESHOLD) {
-      direction = 'LONG'; // Perp is cheap
-    } else if (basis > -VACUUM_THRESHOLD) {
-      // +0.5%
-      direction = 'SHORT'; // Perp is expensive
-    }
+    const direction: 'LONG' | 'SHORT' | null =
+      basis < VACUUM_THRESHOLD ? 'LONG' : basis > -VACUUM_THRESHOLD ? 'SHORT' : null;
 
     if (!direction) return null;
 

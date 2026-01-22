@@ -91,6 +91,7 @@ function TrapTable({ trapMap }: { trapMap: Map<string, Tripwire[]> }) {
 
   trapMap.forEach((trapList, symbol) => {
     trapList.forEach((trap) => {
+      // eslint-disable-next-line functional/immutable-data
       allTraps.push({ symbol, trap });
     });
   });
@@ -116,6 +117,7 @@ function TrapTable({ trapMap }: { trapMap: Map<string, Tripwire[]> }) {
           const absProximity = Math.abs(proximity);
 
           // Color code by proximity - Requirement 8.5
+          // eslint-disable-next-line functional/no-let
           let proximityColor: 'red' | 'yellow' | 'white' = 'white';
           if (absProximity < 0.5) {
             proximityColor = 'red'; // Very close!
@@ -237,6 +239,7 @@ function LiveFeed({ events }: { events: LiveEvent[] }) {
       {recentEvents.length > 0 ? (
         recentEvents.map((event, idx) => {
           // Color code by event type
+          // eslint-disable-next-line functional/no-let
           let eventColor: 'green' | 'red' | 'yellow' | 'white' = 'white';
           switch (event.type) {
             case 'TRAP_SPRUNG':

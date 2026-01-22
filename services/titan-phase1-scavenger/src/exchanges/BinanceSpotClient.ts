@@ -74,27 +74,35 @@ export class BinanceSpotClient {
    */
   async subscribeAggTrades(symbols: string[]): Promise<void> {
     // Store symbols for reconnection
+    // eslint-disable-next-line functional/immutable-data
     this.subscribedSymbols = symbols;
 
     // Close existing connection if any
     if (this.ws) {
       this.ws.close();
+      // eslint-disable-next-line functional/immutable-data
       this.ws = null;
     }
 
     // Reset reconnect attempts on new subscription
+    // eslint-disable-next-line functional/immutable-data
     this.reconnectAttempts = 0;
 
     // Connect to Binance Spot WebSocket
+    // eslint-disable-next-line functional/immutable-data
     this.ws = new WebSocket(this.WS_URL);
 
     this.ws.on('open', () => {
       console.log(`✅ Binance WebSocket connected`);
+      // eslint-disable-next-line functional/immutable-data
       this.reconnectAttempts = 0; // Reset on successful connection
+      // eslint-disable-next-line functional/immutable-data
       this.reconnectDelay = 1000; // Reset delay on successful connection
+      // eslint-disable-next-line functional/immutable-data
       this.isReconnecting = false;
 
       // Start ping/pong heartbeat to detect dead connections
+      // eslint-disable-next-line functional/immutable-data
       this.pingInterval = setInterval(() => {
         if (this.ws?.readyState === WebSocket.OPEN) {
           this.ws.ping();
@@ -152,12 +160,15 @@ export class BinanceSpotClient {
       // Clear ping interval
       if (this.pingInterval) {
         clearInterval(this.pingInterval);
+        // eslint-disable-next-line functional/immutable-data
         this.pingInterval = undefined;
       }
 
       // Attempt reconnection if not already reconnecting
       if (!this.isReconnecting && this.reconnectAttempts < this.maxReconnectAttempts) {
+        // eslint-disable-next-line functional/immutable-data
         this.isReconnecting = true;
+        // eslint-disable-next-line functional/immutable-data
         this.reconnectAttempts++;
 
         console.warn(
@@ -170,6 +181,7 @@ export class BinanceSpotClient {
         }, this.reconnectDelay);
 
         // Exponential backoff: increase delay for next attempt
+        // eslint-disable-next-line functional/immutable-data
         this.reconnectDelay = Math.min(
           this.reconnectDelay * this.reconnectDecay,
           this.maxReconnectDelay,
@@ -194,6 +206,7 @@ export class BinanceSpotClient {
    * - 3.3: Start volume accumulation counter for 100ms window
    */
   onTrade(symbol: string, callback: TradeCallback): void {
+    // eslint-disable-next-line functional/immutable-data
     this.callbacks.set(symbol, callback);
   }
 
@@ -203,6 +216,7 @@ export class BinanceSpotClient {
    * @param symbol - Symbol to stop listening for
    */
   offTrade(symbol: string): void {
+    // eslint-disable-next-line functional/immutable-data
     this.callbacks.delete(symbol);
   }
 
@@ -237,18 +251,25 @@ export class BinanceSpotClient {
   close(): void {
     if (this.pingInterval) {
       clearInterval(this.pingInterval);
+      // eslint-disable-next-line functional/immutable-data
       this.pingInterval = undefined;
     }
 
     if (this.ws) {
       this.ws.close();
+      // eslint-disable-next-line functional/immutable-data
       this.ws = null;
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.callbacks.clear();
+    // eslint-disable-next-line functional/immutable-data
     this.subscribedSymbols = [];
+    // eslint-disable-next-line functional/immutable-data
     this.reconnectAttempts = 0;
+    // eslint-disable-next-line functional/immutable-data
     this.reconnectDelay = 1000; // Reset delay
+    // eslint-disable-next-line functional/immutable-data
     this.isReconnecting = false;
   }
 

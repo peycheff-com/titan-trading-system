@@ -1,7 +1,7 @@
 /**
  * Allocation Repository
  * Handles persistence of allocation history
- * 
+ *
  * Requirements: 1.8, 9.1, 9.2, 9.3
  */
 
@@ -37,7 +37,7 @@ export class AllocationRepository extends BaseRepository<AllocationRow> {
       w3: record.w3,
       tier: record.tier,
     });
-    
+
     return this.mapRowToRecord(row);
   }
 
@@ -46,9 +46,9 @@ export class AllocationRepository extends BaseRepository<AllocationRow> {
    */
   async getLatest(): Promise<AllocationRecord | null> {
     const row = await this.db.queryOne<AllocationRow>(
-      `SELECT * FROM ${this.tableName} ORDER BY timestamp DESC LIMIT 1`
+      `SELECT * FROM ${this.tableName} ORDER BY timestamp DESC LIMIT 1`,
     );
-    
+
     return row ? this.mapRowToRecord(row) : null;
   }
 
@@ -60,10 +60,10 @@ export class AllocationRepository extends BaseRepository<AllocationRow> {
       `SELECT * FROM ${this.tableName} 
        WHERE timestamp >= $1 AND timestamp <= $2 
        ORDER BY timestamp DESC`,
-      [startTime, endTime]
+      [startTime, endTime],
     );
-    
-    return rows.map(row => this.mapRowToRecord(row));
+
+    return rows.map((row) => this.mapRowToRecord(row));
   }
 
   /**
@@ -75,10 +75,10 @@ export class AllocationRepository extends BaseRepository<AllocationRow> {
        WHERE tier = $1 
        ORDER BY timestamp DESC 
        LIMIT $2`,
-      [tier, limit]
+      [tier, limit],
     );
-    
-    return rows.map(row => this.mapRowToRecord(row));
+
+    return rows.map((row) => this.mapRowToRecord(row));
   }
 
   /**
@@ -87,7 +87,7 @@ export class AllocationRepository extends BaseRepository<AllocationRow> {
   async getLatestVector(): Promise<AllocationVector | null> {
     const record = await this.getLatest();
     if (!record) return null;
-    
+
     return {
       w1: record.w1,
       w2: record.w2,

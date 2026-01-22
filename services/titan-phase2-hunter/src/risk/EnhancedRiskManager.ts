@@ -242,6 +242,7 @@ export class EnhancedRiskManager extends EventEmitter {
   private initializeExchangeStatuses(): void {
     const exchanges = ['binance', 'coinbase', 'kraken'];
     for (const exchange of exchanges) {
+      // eslint-disable-next-line functional/immutable-data
       this.state.exchangeStatuses.set(exchange, {
         exchange,
         status: ConnectionStatus.DISCONNECTED,
@@ -421,6 +422,7 @@ export class EnhancedRiskManager extends EventEmitter {
       return null;
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.state.lastCVDDivergence = globalCVD.manipulation.divergenceScore;
 
     if (globalCVD.manipulation.divergenceScore >= this.config.cvdDivergenceThreshold) {
@@ -455,6 +457,7 @@ export class EnhancedRiskManager extends EventEmitter {
    * Record a signal for bot trap rate calculation
    */
   recordSignal(isBotTrap: boolean): void {
+    // eslint-disable-next-line functional/immutable-data
     this.recentSignals.push({
       timestamp: Date.now(),
       isBotTrap,
@@ -462,6 +465,7 @@ export class EnhancedRiskManager extends EventEmitter {
 
     // Keep only last N signals
     if (this.recentSignals.length > this.SIGNAL_WINDOW) {
+      // eslint-disable-next-line functional/immutable-data
       this.recentSignals = this.recentSignals.slice(-this.SIGNAL_WINDOW);
     }
 
@@ -478,6 +482,7 @@ export class EnhancedRiskManager extends EventEmitter {
     }
 
     const trapCount = this.recentSignals.filter(s => s.isBotTrap).length;
+    // eslint-disable-next-line functional/immutable-data
     this.state.botTrapRate = trapCount / this.recentSignals.length;
   }
 
@@ -539,6 +544,7 @@ export class EnhancedRiskManager extends EventEmitter {
         this.emit('exchange:online', exchange);
       }
 
+      // eslint-disable-next-line functional/immutable-data
       this.state.exchangeStatuses.set(exchange, current);
     }
 
@@ -609,6 +615,7 @@ export class EnhancedRiskManager extends EventEmitter {
    * Record Oracle connection failure
    */
   recordOracleFailure(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.state.oracleFailureCount++;
     this.evaluateOracleStability();
   }
@@ -617,6 +624,7 @@ export class EnhancedRiskManager extends EventEmitter {
    * Record Oracle connection success
    */
   recordOracleSuccess(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.state.oracleFailureCount = Math.max(0, this.state.oracleFailureCount - 1);
     this.evaluateOracleStability();
   }
@@ -663,9 +671,11 @@ export class EnhancedRiskManager extends EventEmitter {
 
     if (existingIndex >= 0) {
       // Update existing condition
+      // eslint-disable-next-line functional/immutable-data
       this.state.activeConditions[existingIndex] = condition;
     } else {
       // Add new condition
+      // eslint-disable-next-line functional/immutable-data
       this.state.activeConditions.push(condition);
       this.emit('condition:activated', condition);
       this.logRiskCondition(condition, 'ACTIVATED');
@@ -683,6 +693,7 @@ export class EnhancedRiskManager extends EventEmitter {
 
     if (index >= 0) {
       const condition = this.state.activeConditions[index];
+      // eslint-disable-next-line functional/immutable-data
       this.state.activeConditions.splice(index, 1);
       this.emit('condition:deactivated', condition);
       this.logRiskCondition(condition, 'DEACTIVATED');
@@ -714,32 +725,38 @@ export class EnhancedRiskManager extends EventEmitter {
 
     for (const condition of this.state.activeConditions) {
       // Use most restrictive position size multiplier
+      // eslint-disable-next-line functional/immutable-data
       adjustments.positionSizeMultiplier = Math.min(
         adjustments.positionSizeMultiplier,
         condition.adjustments.positionSizeMultiplier
       );
 
       // Use most restrictive stop loss adjustment (most negative)
+      // eslint-disable-next-line functional/immutable-data
       adjustments.stopLossAdjustment = Math.min(
         adjustments.stopLossAdjustment,
         condition.adjustments.stopLossAdjustment
       );
 
       // Use most restrictive leverage reduction
+      // eslint-disable-next-line functional/immutable-data
       adjustments.leverageReduction = Math.min(
         adjustments.leverageReduction,
         condition.adjustments.leverageReduction
       );
 
       // Halt if any condition requires it
+      // eslint-disable-next-line functional/immutable-data
       adjustments.haltNewEntries =
         adjustments.haltNewEntries || condition.adjustments.haltNewEntries;
 
       // Flatten if any condition requires it
+      // eslint-disable-next-line functional/immutable-data
       adjustments.flattenPositions =
         adjustments.flattenPositions || condition.adjustments.flattenPositions;
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.state.aggregatedAdjustments = adjustments;
     this.emit('adjustments:updated', adjustments);
   }
@@ -770,6 +787,7 @@ export class EnhancedRiskManager extends EventEmitter {
     this.evaluateExchangeFailures();
 
     // Update state timestamp
+    // eslint-disable-next-line functional/immutable-data
     this.state.lastUpdate = new Date();
 
     return this.getState();
@@ -833,6 +851,7 @@ export class EnhancedRiskManager extends EventEmitter {
       clearInterval(this.monitoringInterval);
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.monitoringInterval = setInterval(() => {
       this.cleanupExpiredConditions();
       this.emit('monitoring:update', this.getState());
@@ -849,6 +868,7 @@ export class EnhancedRiskManager extends EventEmitter {
   stopMonitoring(): void {
     if (this.monitoringInterval) {
       clearInterval(this.monitoringInterval);
+      // eslint-disable-next-line functional/immutable-data
       this.monitoringInterval = null;
     }
     console.log(`🛡️ Enhanced Risk Manager: Stopped monitoring`);
@@ -888,6 +908,7 @@ export class EnhancedRiskManager extends EventEmitter {
    * Update configuration
    */
   updateConfig(config: Partial<EnhancedRiskManagerConfig>): void {
+    // eslint-disable-next-line functional/immutable-data
     this.config = { ...this.config, ...config };
 
     // Restart monitoring if interval changed
@@ -925,6 +946,7 @@ export class EnhancedRiskManager extends EventEmitter {
   } {
     const conditionsByType: Record<string, number> = {};
     for (const condition of this.state.activeConditions) {
+      // eslint-disable-next-line functional/immutable-data
       conditionsByType[condition.type] = (conditionsByType[condition.type] || 0) + 1;
     }
 
@@ -952,6 +974,7 @@ export class EnhancedRiskManager extends EventEmitter {
    * Reset state
    */
   resetState(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.state = {
       activeConditions: [],
       exchangeStatuses: new Map(),
@@ -963,6 +986,7 @@ export class EnhancedRiskManager extends EventEmitter {
       emergencyState: null,
       lastUpdate: new Date(),
     };
+    // eslint-disable-next-line functional/immutable-data
     this.recentSignals = [];
     this.initializeExchangeStatuses();
     console.log(`🛡️ Enhanced Risk Manager: State reset`);

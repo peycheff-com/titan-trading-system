@@ -135,10 +135,12 @@ export class ConfigVersionHistory {
     };
 
     // Add to history
+    // eslint-disable-next-line functional/immutable-data
     history.push(version);
 
     // Enforce max versions limit
     if (history.length > this.maxVersions) {
+      // eslint-disable-next-line functional/immutable-data
       history.shift(); // Remove oldest version
     }
 
@@ -404,6 +406,7 @@ export class ConfigVersionHistory {
       const mergedHistory = [...existingHistory, ...importedVersions];
 
       // Sort by version number
+      // eslint-disable-next-line functional/immutable-data
       mergedHistory.sort((a, b) => a.version - b.version);
 
       // Remove duplicates based on hash
@@ -460,6 +463,7 @@ export class ConfigVersionHistory {
 
       if (!(key in oldData)) {
         // Key added
+        // eslint-disable-next-line functional/immutable-data
         changes.push({
           path: currentPath,
           oldValue: undefined,
@@ -473,9 +477,11 @@ export class ConfigVersionHistory {
         oldData[key] !== null
       ) {
         // Recursively check nested objects
+        // eslint-disable-next-line functional/immutable-data
         changes.push(...this.detectChanges(oldData[key], newData[key], currentPath));
       } else if (newData[key] !== oldData[key]) {
         // Value modified
+        // eslint-disable-next-line functional/immutable-data
         changes.push({
           path: currentPath,
           oldValue: oldData[key],
@@ -489,6 +495,7 @@ export class ConfigVersionHistory {
     for (const key in oldData) {
       if (!(key in newData)) {
         const currentPath = path ? `${path}.${key}` : key;
+        // eslint-disable-next-line functional/immutable-data
         changes.push({
           path: currentPath,
           oldValue: oldData[key],
@@ -563,6 +570,7 @@ export class ConfigVersionHistory {
 /**
  * Singleton instance for global use
  */
+// eslint-disable-next-line functional/no-let
 let configVersionHistoryInstance: ConfigVersionHistory | null = null;
 
 /**

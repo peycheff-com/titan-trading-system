@@ -64,12 +64,14 @@ export class RateLimiter {
     this.pruneOldTimestamps();
 
     if (this.requestTimestamps.length < this.maxRequests) {
+      // eslint-disable-next-line functional/immutable-data
       this.requestTimestamps.push(Date.now());
       return;
     }
 
     // Need to wait for a slot
     return new Promise((resolve, reject) => {
+      // eslint-disable-next-line functional/immutable-data
       this.waitingQueue.push({ resolve, reject });
       this.processQueue();
     });
@@ -81,6 +83,7 @@ export class RateLimiter {
   release(): void {
     // Remove the most recent timestamp to free up a slot
     if (this.requestTimestamps.length > 0) {
+      // eslint-disable-next-line functional/immutable-data
       this.requestTimestamps.pop();
     }
     this.processQueue();
@@ -106,8 +109,11 @@ export class RateLimiter {
    * Reset the rate limiter (for testing)
    */
   reset(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.requestTimestamps = [];
+    // eslint-disable-next-line functional/immutable-data
     this.waitingQueue = [];
+    // eslint-disable-next-line functional/immutable-data
     this.isProcessingQueue = false;
   }
 
@@ -116,6 +122,7 @@ export class RateLimiter {
    */
   private pruneOldTimestamps(): void {
     const cutoff = Date.now() - this.windowMs;
+    // eslint-disable-next-line functional/immutable-data
     this.requestTimestamps = this.requestTimestamps.filter((ts) => ts > cutoff);
   }
 
@@ -127,14 +134,17 @@ export class RateLimiter {
       return;
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.isProcessingQueue = true;
 
     while (this.waitingQueue.length > 0) {
       this.pruneOldTimestamps();
 
       if (this.requestTimestamps.length < this.maxRequests) {
+        // eslint-disable-next-line functional/immutable-data
         const next = this.waitingQueue.shift();
         if (next) {
+          // eslint-disable-next-line functional/immutable-data
           this.requestTimestamps.push(Date.now());
           next.resolve();
         }
@@ -147,6 +157,7 @@ export class RateLimiter {
       }
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.isProcessingQueue = false;
   }
 

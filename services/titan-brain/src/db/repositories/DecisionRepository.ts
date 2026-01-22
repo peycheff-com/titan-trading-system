@@ -1,7 +1,7 @@
 /**
  * Decision Repository
  * Handles persistence of brain decisions
- * 
+ *
  * Requirements: 2.7, 9.1, 9.2, 9.3, 9.6
  */
 
@@ -41,7 +41,7 @@ export class DecisionRepository extends BaseRepository<DecisionRow> {
       reason: record.reason,
       risk_metrics: record.riskMetrics ? JSON.stringify(record.riskMetrics) : null,
     });
-    
+
     return this.mapRowToRecord(row);
   }
 
@@ -51,9 +51,9 @@ export class DecisionRepository extends BaseRepository<DecisionRow> {
   async findBySignalId(signalId: string): Promise<DecisionRecord | null> {
     const row = await this.db.queryOne<DecisionRow>(
       `SELECT * FROM ${this.tableName} WHERE signal_id = $1`,
-      [signalId]
+      [signalId],
     );
-    
+
     return row ? this.mapRowToRecord(row) : null;
   }
 
@@ -63,9 +63,9 @@ export class DecisionRepository extends BaseRepository<DecisionRow> {
   async exists(signalId: string): Promise<boolean> {
     const result = await this.db.queryOne<{ exists: boolean }>(
       `SELECT EXISTS(SELECT 1 FROM ${this.tableName} WHERE signal_id = $1) as exists`,
-      [signalId]
+      [signalId],
     );
-    
+
     return result?.exists || false;
   }
 
@@ -77,10 +77,10 @@ export class DecisionRepository extends BaseRepository<DecisionRow> {
       `SELECT * FROM ${this.tableName} 
        ORDER BY timestamp DESC 
        LIMIT $1`,
-      [limit]
+      [limit],
     );
-    
-    return rows.map(row => this.mapRowToRecord(row));
+
+    return rows.map((row) => this.mapRowToRecord(row));
   }
 
   /**
@@ -92,10 +92,10 @@ export class DecisionRepository extends BaseRepository<DecisionRow> {
        WHERE phase_id = $1 
        ORDER BY timestamp DESC 
        LIMIT $2`,
-      [phaseId, limit]
+      [phaseId, limit],
     );
-    
-    return rows.map(row => this.mapRowToRecord(row));
+
+    return rows.map((row) => this.mapRowToRecord(row));
   }
 
   /**
@@ -109,12 +109,12 @@ export class DecisionRepository extends BaseRepository<DecisionRow> {
          COUNT(*) as total
        FROM ${this.tableName} 
        WHERE phase_id = $1 AND timestamp >= $2`,
-      [phaseId, cutoff]
+      [phaseId, cutoff],
     );
-    
+
     const approved = parseInt(result?.approved || '0', 10);
     const total = parseInt(result?.total || '0', 10);
-    
+
     return total > 0 ? approved / total : 1;
   }
 
@@ -126,10 +126,10 @@ export class DecisionRepository extends BaseRepository<DecisionRow> {
       `SELECT * FROM ${this.tableName} 
        WHERE timestamp >= $1 AND timestamp <= $2 
        ORDER BY timestamp DESC`,
-      [startTime, endTime]
+      [startTime, endTime],
     );
-    
-    return rows.map(row => this.mapRowToRecord(row));
+
+    return rows.map((row) => this.mapRowToRecord(row));
   }
 
   /**
@@ -143,14 +143,15 @@ export class DecisionRepository extends BaseRepository<DecisionRow> {
        WHERE approved = false AND timestamp >= $1 
        GROUP BY reason 
        ORDER BY count DESC`,
-      [cutoff]
+      [cutoff],
     );
-    
+
     const summary = new Map<string, number>();
     for (const row of rows) {
+      // eslint-disable-next-line functional/immutable-data
       summary.set(row.reason, parseInt(row.count, 10));
     }
-    
+
     return summary;
   }
 

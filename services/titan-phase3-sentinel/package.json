@@ -38,8 +38,8 @@
     "@titan/shared": "*",
     "ink": "^4.4.1",
     "react": "^18.2.0",
-    "undici": "^7.18.2",
-    "uuid": "^8.3.2"
+    "undici": "^7.18.2"
+
   },
   "devDependencies": {
     "@types/jest": "^29.5.11",

@@ -60,6 +60,7 @@ export interface ExchangeBalance {
  */
 export interface ExecutionEngineClient {
   forwardSignal(signal: IntentSignal, authorizedSize: number): Promise<void>;
+  publishRiskPolicy(policy: any): Promise<void>;
   closeAllPositions(): Promise<void>;
   getPositions(): Promise<Position[]>;
   onFillConfirmation(callback: (fill: FillConfirmation) => void): void;

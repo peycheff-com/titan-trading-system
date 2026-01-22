@@ -26,6 +26,7 @@ export class ArbEngine {
 
     // 1. Check for Sum of Prices < 1.0 (Risk-Free Arb)
     // Note: active book checking required for real execution, here we use last/mid prices
+    // eslint-disable-next-line functional/no-let
     let totalImpliedProb = 0;
     const prices: { id: string; price: number }[] = [];
 
@@ -33,12 +34,14 @@ export class ArbEngine {
       // Use last traded price as proxy if orderbook not deep
       const price = token.price || 0;
       totalImpliedProb += price;
+      // eslint-disable-next-line functional/immutable-data
       prices.push({ id: token.tokenId, price });
     }
 
     // Strategy 1: Naive Arb (Sum of Prices)
     // If probability sum is < 0.98, buying all outcomes yields theoretical profit
     if (totalImpliedProb > 0 && totalImpliedProb < 0.98) {
+      // eslint-disable-next-line functional/immutable-data
       signals.push({
         marketId: market.id,
         outcomeId: 'ALL',
@@ -56,6 +59,7 @@ export class ArbEngine {
     if (parseFloat(market.volume) > 50000) {
       for (const token of market.tokens) {
         if (token.price > 0.92 && token.price < 0.98) {
+          // eslint-disable-next-line functional/immutable-data
           signals.push({
             marketId: market.id,
             outcomeId: token.outcomeId,

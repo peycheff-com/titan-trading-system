@@ -22,13 +22,13 @@ const mockDraftConfig = {
     liquidationConfidence: 95,
     maxLeverage: 20,
     minTradesIn100ms: 50,
-    ghostMode: true
+    ghostMode: true,
   },
   after: {
     liquidationConfidence: 92, // Lower confidence threshold
-    maxLeverage: 25,           // Higher leverage
-    minTradesIn100ms: 45,      // More sensitive volume trigger
-    ghostMode: false           // Live mode
+    maxLeverage: 25, // Higher leverage
+    minTradesIn100ms: 45, // More sensitive volume trigger
+    ghostMode: false, // Live mode
   },
 };
 
@@ -41,8 +41,8 @@ export default function ScavengerPhase() {
   // Hook into Real-time Data
   const { isConnected, trapMap, sensorStatus } = useScavengerSocket();
 
-  const armedTripwires = trapMap.filter(t => t.proximity < 0.1); // Consider <10% as "Armed/Watching"
-  const criticalTripwires = trapMap.filter(t => t.proximity < 0.02); // <2% is Critical
+  const armedTripwires = trapMap.filter((t) => t.proximity < 0.1); // Consider <10% as "Armed/Watching"
+  const criticalTripwires = trapMap.filter((t) => t.proximity < 0.02); // <2% is Critical
 
   const getBaseUrl = () => getTitanExecutionUrl();
 
@@ -61,11 +61,11 @@ export default function ScavengerPhase() {
 
   const handleConfirmApply = async () => {
     setShowConfirm(false);
-    
+
     try {
       const baseUrl = getBaseUrl();
       const payload = {
-        scavenger: mockDraftConfig.after
+        scavenger: mockDraftConfig.after,
       };
 
       const response = await fetch(`${baseUrl}/api/config/update`, {
@@ -92,8 +92,8 @@ export default function ScavengerPhase() {
 
   const handleRollback = () => {
     if (safetyLocked) {
-        toast.error('Safety lock is enabled. Unlock to rollback.');
-        return;
+      toast.error('Safety lock is enabled. Unlock to rollback.');
+      return;
     }
     setShowRollbackConfirm(true);
   };
@@ -102,37 +102,36 @@ export default function ScavengerPhase() {
     setShowRollbackConfirm(false);
 
     try {
-        const baseUrl = getBaseUrl();
-        // 1. Fetch versions to find previous tag
-        const versionsRes = await fetch(`${baseUrl}/api/config/versions?limit=2`);
-        const versionsData = await versionsRes.json();
-        
-        if (!versionsData.versions || versionsData.versions.length < 2) {
-            throw new Error('No previous version available for rollback');
-        }
+      const baseUrl = getBaseUrl();
+      // 1. Fetch versions to find previous tag
+      const versionsRes = await fetch(`${baseUrl}/api/config/versions?limit=2`);
+      const versionsData = await versionsRes.json();
 
-        const previousVersion = versionsData.versions[1]; // Index 1 is the one before current (Index 0)
+      if (!versionsData.versions || versionsData.versions.length < 2) {
+        throw new Error('No previous version available for rollback');
+      }
 
-        // 2. Perform Rollback
-        const rollbackRes = await fetch(`${baseUrl}/api/config/rollback`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                targetVersionTag: previousVersion.tag,
-                confirm: true
-            })
-        });
+      const previousVersion = versionsData.versions[1]; // Index 1 is the one before current (Index 0)
 
-        const rollbackResult = await rollbackRes.json();
-        if (!rollbackRes.ok) {
-            throw new Error(rollbackResult.error || 'Rollback failed');
-        }
+      // 2. Perform Rollback
+      const rollbackRes = await fetch(`${baseUrl}/api/config/rollback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetVersionTag: previousVersion.tag,
+          confirm: true,
+        }),
+      });
 
-        toast.success(`Rolled back to ${previousVersion.tag}`);
+      const rollbackResult = await rollbackRes.json();
+      if (!rollbackRes.ok) {
+        throw new Error(rollbackResult.error || 'Rollback failed');
+      }
 
+      toast.success(`Rolled back to ${previousVersion.tag}`);
     } catch (error) {
-        console.error('Rollback failed:', error);
-        toast.error(error instanceof Error ? error.message : 'Rollback failed');
+      console.error('Rollback failed:', error);
+      toast.error(error instanceof Error ? error.message : 'Rollback failed');
     }
   };
 
@@ -142,9 +141,9 @@ export default function ScavengerPhase() {
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-phase-scavenger/10 relative overflow-hidden">
-             {/* Pulse effect if connected */}
+            {/* Pulse effect if connected */}
             {isConnected && (
-               <div className="absolute inset-0 bg-phase-scavenger/20 animate-pulse" />
+              <div className="absolute inset-0 bg-phase-scavenger/20 animate-pulse" />
             )}
             <Bug className="h-6 w-6 text-phase-scavenger relative z-10" />
           </div>
@@ -153,13 +152,13 @@ export default function ScavengerPhase() {
             <p className="text-sm text-muted-foreground flex items-center gap-2">
               Trap-based strategies using tripwire triggers
               {isConnected ? (
-                 <span className="flex items-center gap-1 text-green-500 text-xs px-2 py-0.5 bg-green-500/10 rounded-full">
-                    <Wifi className="h-3 w-3" /> Live
-                 </span>
+                <span className="flex items-center gap-1 text-green-500 text-xs px-2 py-0.5 bg-green-500/10 rounded-full">
+                  <Wifi className="h-3 w-3" /> Live
+                </span>
               ) : (
                 <span className="flex items-center gap-1 text-red-500 text-xs px-2 py-0.5 bg-red-500/10 rounded-full">
-                    <Wifi className="h-3 w-3" /> Disconnected
-                 </span>
+                  <Wifi className="h-3 w-3" /> Disconnected
+                </span>
               )}
             </p>
           </div>
@@ -171,25 +170,33 @@ export default function ScavengerPhase() {
       <div className="rounded-lg border border-border bg-card p-4">
         <h2 className="text-sm font-semibold text-foreground">Phase Intent</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Scavenger deploys passive "tripwire" orders at key price levels. When triggered, 
-          it executes rapid mean-reversion trades with <strong>Adaptive Volatility Scaling</strong>.
+          Scavenger deploys passive "tripwire" orders at key price levels. When triggered, it
+          executes rapid mean-reversion trades with <strong>Adaptive Volatility Scaling</strong>.
         </p>
         <div className="mt-4 flex items-center gap-4">
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Binance Feed:</span>
-            <span className={cn(
-              'text-xs font-medium',
-              sensorStatus.binanceHealth === 'OK' ? 'text-status-healthy' : 'text-status-critical'
-            )}>
+            <span
+              className={cn(
+                'text-xs font-medium',
+                sensorStatus.binanceHealth === 'OK'
+                  ? 'text-status-healthy'
+                  : 'text-status-critical',
+              )}
+            >
               {sensorStatus.binanceHealth} ({sensorStatus.binanceTickRate} tps)
             </span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Bybit Exec:</span>
-            <span className={cn(
-              'text-xs font-medium',
-              sensorStatus.bybitStatus === 'ARMED' ? 'text-status-healthy' : 'text-muted-foreground'
-            )}>
+            <span
+              className={cn(
+                'text-xs font-medium',
+                sensorStatus.bybitStatus === 'ARMED'
+                  ? 'text-status-healthy'
+                  : 'text-muted-foreground',
+              )}
+            >
               {sensorStatus.bybitStatus}
             </span>
           </div>
@@ -199,7 +206,7 @@ export default function ScavengerPhase() {
       {/* Canvas Visualization */}
       <div className="w-full">
         <h2 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
-            <Activity className="h-4 w-4" /> Live Trap Map
+          <Activity className="h-4 w-4" /> Live Trap Map
         </h2>
         <TrapMapCanvas traps={trapMap} height={200} />
       </div>
@@ -222,9 +229,7 @@ export default function ScavengerPhase() {
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-foreground">Tripwire Board</h2>
-            <span className="text-xxs text-muted-foreground">
-              {trapMap.length} managed traps
-            </span>
+            <span className="text-xxs text-muted-foreground">{trapMap.length} managed traps</span>
           </div>
 
           <DenseTable
@@ -234,7 +239,7 @@ export default function ScavengerPhase() {
               {
                 key: 'triggerPrice',
                 header: 'Trigger',
-                render: (tw) => <span className="font-mono">{tw.triggerPrice.toFixed(4)}</span>
+                render: (tw) => <span className="font-mono">{tw.triggerPrice.toFixed(4)}</span>,
               },
               {
                 key: 'proximity',
@@ -246,7 +251,7 @@ export default function ScavengerPhase() {
                       'font-mono',
                       tw.proximity < 0.01 && 'text-status-critical animate-pulse',
                       tw.proximity >= 0.01 && tw.proximity < 0.05 && 'text-warning',
-                      tw.proximity >= 0.05 && 'text-muted-foreground'
+                      tw.proximity >= 0.05 && 'text-muted-foreground',
                     )}
                   >
                     {(tw.proximity * 100).toFixed(2)}%
@@ -257,10 +262,8 @@ export default function ScavengerPhase() {
                 key: 'confidence',
                 header: 'Conf.',
                 align: 'right',
-                render: (tw) => (
-                    <span className="font-mono text-xs">{tw.confidence}%</span>
-                )
-              }
+                render: (tw) => <span className="font-mono text-xs">{tw.confidence}%</span>,
+              },
             ]}
             data={trapMap}
             keyExtractor={(tw) => tw.symbol + tw.trapType}
@@ -282,35 +285,33 @@ export default function ScavengerPhase() {
 
           <div className="rounded-lg border border-border bg-card p-4 space-y-4">
             {!hasDraft ? (
-               <div className="space-y-2">
-                  <button
-                    onClick={handleCreateDraft}
-                    disabled={safetyLocked}
-                    className={cn(
-                      'flex w-full items-center justify-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium transition-colors',
-                      safetyLocked
-                        ? 'cursor-not-allowed opacity-50'
-                        : 'hover:bg-muted'
-                    )}
-                  >
-                    <Edit3 className="h-4 w-4" />
-                    Create Draft
-                  </button>
+              <div className="space-y-2">
+                <button
+                  onClick={handleCreateDraft}
+                  disabled={safetyLocked}
+                  className={cn(
+                    'flex w-full items-center justify-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium transition-colors',
+                    safetyLocked ? 'cursor-not-allowed opacity-50' : 'hover:bg-muted',
+                  )}
+                >
+                  <Edit3 className="h-4 w-4" />
+                  Create Draft
+                </button>
 
-                  <button
-                    onClick={handleRollback}
-                    disabled={safetyLocked}
-                    className={cn(
-                      'flex w-full items-center justify-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium transition-colors text-muted-foreground',
-                       safetyLocked
-                        ? 'cursor-not-allowed opacity-50'
-                        : 'hover:bg-muted hover:text-foreground'
-                    )}
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                    Rollback
-                  </button>
-               </div>
+                <button
+                  onClick={handleRollback}
+                  disabled={safetyLocked}
+                  className={cn(
+                    'flex w-full items-center justify-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium transition-colors text-muted-foreground',
+                    safetyLocked
+                      ? 'cursor-not-allowed opacity-50'
+                      : 'hover:bg-muted hover:text-foreground',
+                  )}
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Rollback
+                </button>
+              </div>
             ) : (
               <>
                 <div className="flex items-center gap-2 rounded-md bg-primary/10 px-3 py-2">
@@ -318,10 +319,7 @@ export default function ScavengerPhase() {
                   <span className="text-xs font-medium text-primary">Draft Active</span>
                 </div>
 
-                <DiffViewer
-                  before={mockDraftConfig.before}
-                  after={mockDraftConfig.after}
-                />
+                <DiffViewer before={mockDraftConfig.before} after={mockDraftConfig.after} />
 
                 <div className="flex gap-2">
                   <button
@@ -355,7 +353,7 @@ export default function ScavengerPhase() {
         confirmLabel="Apply"
         onConfirm={handleConfirmApply}
       />
-      
+
       <ConfirmModal
         open={showRollbackConfirm}
         onOpenChange={setShowRollbackConfirm}

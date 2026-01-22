@@ -158,16 +158,22 @@ export class ForwardTestMode extends EventEmitter {
       throw new Error('Forward test is already running');
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.config = { ...this.config, ...config };
 
     if (!this.config.enabled) {
       throw new Error('Paper trading is disabled in configuration');
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.isRunning = true;
+    // eslint-disable-next-line functional/immutable-data
     this.startTime = Date.now();
+    // eslint-disable-next-line functional/immutable-data
     this.currentEquity = this.config.initialEquity;
+    // eslint-disable-next-line functional/immutable-data
     this.paperTrades.clear();
+    // eslint-disable-next-line functional/immutable-data
     this.signalsLogged = [];
 
     try {
@@ -198,6 +204,7 @@ export class ForwardTestMode extends EventEmitter {
       console.error('❌ Forward test failed:', error);
       throw error;
     } finally {
+      // eslint-disable-next-line functional/immutable-data
       this.isRunning = false;
       this.stopMonitoring();
     }
@@ -211,10 +218,12 @@ export class ForwardTestMode extends EventEmitter {
     try {
       // Add timestamp if not present
       if (!signal.timestamp) {
+        // eslint-disable-next-line functional/immutable-data
         signal.timestamp = Date.now();
       }
 
       // Log signal to array
+      // eslint-disable-next-line functional/immutable-data
       this.signalsLogged.push({ ...signal });
 
       // Log to file system
@@ -281,56 +290,69 @@ export class ForwardTestMode extends EventEmitter {
       // Validation logic
       const warnings: string[] = [];
       const recommendations: string[] = [];
+      // eslint-disable-next-line functional/no-let
       let confidence = 100;
 
       // Check win rate deviation (should be within ±10%)
       if (Math.abs(deviations.winRateDiff) > 0.1) {
+        // eslint-disable-next-line functional/immutable-data
         warnings.push(
           `Win rate deviation: ${(deviations.winRateDiff * 100).toFixed(1)}% (expected ±10%)`
         );
         confidence -= 20;
+        // eslint-disable-next-line functional/immutable-data
         recommendations.push('Review signal generation logic for consistency');
       }
 
       // Check profit factor deviation (should be within ±0.5)
       if (Math.abs(deviations.profitFactorDiff) > 0.5) {
+        // eslint-disable-next-line functional/immutable-data
         warnings.push(
           `Profit factor deviation: ${deviations.profitFactorDiff.toFixed(2)} (expected ±0.5)`
         );
         confidence -= 15;
+        // eslint-disable-next-line functional/immutable-data
         recommendations.push('Check execution simulation accuracy');
       }
 
       // Check Sharpe ratio deviation (should be within ±0.3)
       if (Math.abs(deviations.sharpeRatioDiff) > 0.3) {
+        // eslint-disable-next-line functional/immutable-data
         warnings.push(
           `Sharpe ratio deviation: ${deviations.sharpeRatioDiff.toFixed(2)} (expected ±0.3)`
         );
         confidence -= 10;
+        // eslint-disable-next-line functional/immutable-data
         recommendations.push('Analyze risk-adjusted return consistency');
       }
 
       // Check drawdown deviation (should be within ±5%)
       if (Math.abs(deviations.maxDrawdownDiff) > 0.05) {
+        // eslint-disable-next-line functional/immutable-data
         warnings.push(
           `Max drawdown deviation: ${(deviations.maxDrawdownDiff * 100).toFixed(1)}% (expected ±5%)`
         );
         confidence -= 15;
+        // eslint-disable-next-line functional/immutable-data
         recommendations.push('Review risk management parameters');
       }
 
       // Sample size validation
       if (forwardTestResults.paperTrades.length < 20) {
+        // eslint-disable-next-line functional/immutable-data
         warnings.push('Small sample size may affect validation accuracy');
         confidence -= 10;
+        // eslint-disable-next-line functional/immutable-data
         recommendations.push('Extend forward test duration for more trades');
       }
 
       // Time period validation
       const testDurationDays = forwardTestResults.duration / (24 * 60 * 60 * 1000);
       if (testDurationDays < 7) {
+        // eslint-disable-next-line functional/immutable-data
         warnings.push('Short test duration may not capture all market conditions');
         confidence -= 5;
+        // eslint-disable-next-line functional/immutable-data
         recommendations.push('Run forward test for at least 7 days');
       }
 
@@ -385,6 +407,7 @@ export class ForwardTestMode extends EventEmitter {
    */
   private async startMonitoring(): Promise<void> {
     // Start hologram scan cycle (every 5 minutes)
+    // eslint-disable-next-line functional/immutable-data
     this.scanInterval = setInterval(
       async () => {
         try {
@@ -397,6 +420,7 @@ export class ForwardTestMode extends EventEmitter {
     );
 
     // Start price update cycle (every 30 seconds)
+    // eslint-disable-next-line functional/immutable-data
     this.priceUpdateInterval = setInterval(async () => {
       try {
         await this.updatePaperTrades();
@@ -415,11 +439,13 @@ export class ForwardTestMode extends EventEmitter {
   private stopMonitoring(): void {
     if (this.scanInterval) {
       clearInterval(this.scanInterval);
+      // eslint-disable-next-line functional/immutable-data
       this.scanInterval = null;
     }
 
     if (this.priceUpdateInterval) {
       clearInterval(this.priceUpdateInterval);
+      // eslint-disable-next-line functional/immutable-data
       this.priceUpdateInterval = null;
     }
   }
@@ -552,6 +578,7 @@ export class ForwardTestMode extends EventEmitter {
       };
 
       // Add to open positions
+      // eslint-disable-next-line functional/immutable-data
       this.paperTrades.set(paperTrade.id, paperTrade);
 
       // Emit event
@@ -588,6 +615,7 @@ export class ForwardTestMode extends EventEmitter {
             ? (currentPrice - trade.entryPrice) / trade.entryPrice
             : (trade.entryPrice - currentPrice) / trade.entryPrice;
 
+        // eslint-disable-next-line functional/immutable-data
         trade.unrealizedPnL = trade.quantity * trade.entryPrice * pnlMultiplier * trade.leverage;
 
         // Check exit conditions
@@ -645,10 +673,15 @@ export class ForwardTestMode extends EventEmitter {
   ): Promise<void> {
     try {
       // Update trade
+      // eslint-disable-next-line functional/immutable-data
       trade.exitTime = Date.now();
+      // eslint-disable-next-line functional/immutable-data
       trade.exitPrice = exitPrice;
+      // eslint-disable-next-line functional/immutable-data
       trade.exitReason = reason;
+      // eslint-disable-next-line functional/immutable-data
       trade.holdTime = trade.exitTime - trade.entryTime;
+      // eslint-disable-next-line functional/immutable-data
       trade.status = 'CLOSED';
 
       // Calculate final PnL
@@ -657,11 +690,14 @@ export class ForwardTestMode extends EventEmitter {
           ? (exitPrice - trade.entryPrice) / trade.entryPrice
           : (trade.entryPrice - exitPrice) / trade.entryPrice;
 
+      // eslint-disable-next-line functional/immutable-data
       trade.realizedPnL = trade.quantity * trade.entryPrice * pnlMultiplier * trade.leverage;
+      // eslint-disable-next-line functional/immutable-data
       trade.rValue =
         trade.realizedPnL / (Math.abs(trade.entryPrice - trade.signal.stopLoss) * trade.quantity);
 
       // Update equity
+      // eslint-disable-next-line functional/immutable-data
       this.currentEquity += trade.realizedPnL - trade.fees - trade.slippage;
 
       // Emit event
@@ -695,6 +731,7 @@ export class ForwardTestMode extends EventEmitter {
     const metrics = this.calculateForwardTestMetrics(paperTrades, duration);
 
     // Generate backtest comparison if enabled
+    // eslint-disable-next-line functional/no-let
     let backtestComparison: BacktestComparison | null = null;
     if (this.config.compareToBacktest && this.config.backtestReference) {
       const forwardResults: ForwardTestResults = {
@@ -754,9 +791,13 @@ export class ForwardTestMode extends EventEmitter {
       losingTrades.length > 0 ? Math.min(...losingTrades.map(t => t.realizedPnL || 0)) : 0;
 
     // Calculate consecutive wins/losses
+    // eslint-disable-next-line functional/no-let
     let maxConsecutiveWins = 0;
+    // eslint-disable-next-line functional/no-let
     let maxConsecutiveLosses = 0;
+    // eslint-disable-next-line functional/no-let
     let currentWinStreak = 0;
+    // eslint-disable-next-line functional/no-let
     let currentLossStreak = 0;
 
     for (const trade of closedTrades) {
@@ -788,7 +829,9 @@ export class ForwardTestMode extends EventEmitter {
     };
 
     for (const signal of this.signalsLogged) {
+      // eslint-disable-next-line functional/immutable-data
       sessionDistribution[signal.sessionType]++;
+      // eslint-disable-next-line functional/immutable-data
       hologramStatusDistribution[signal.hologramStatus]++;
     }
 
@@ -813,8 +856,11 @@ export class ForwardTestMode extends EventEmitter {
     const sharpeRatio = returnStdDev > 0 ? (avgReturn / returnStdDev) * Math.sqrt(252) : 0;
 
     // Simple max drawdown calculation
+    // eslint-disable-next-line functional/no-let
     let runningEquity = this.config.initialEquity;
+    // eslint-disable-next-line functional/no-let
     let maxEquity = this.config.initialEquity;
+    // eslint-disable-next-line functional/no-let
     let maxDrawdown = 0;
 
     for (const trade of closedTrades) {
@@ -894,6 +940,7 @@ export class ForwardTestMode extends EventEmitter {
    * Configuration management
    */
   public updateConfig(newConfig: Partial<ForwardTestConfig>): void {
+    // eslint-disable-next-line functional/immutable-data
     this.config = { ...this.config, ...newConfig };
     console.log('📝 ForwardTestMode configuration updated');
   }

@@ -219,6 +219,7 @@ export class PerformanceReporter extends EventEmitter {
     // Oracle suggestions
     if (oracleMetrics.totalSignals >= 10) {
       if (oracleMetrics.vetoEffectiveness < 60) {
+        // eslint-disable-next-line functional/immutable-data
         suggestions.push({
           layer: 'oracle',
           priority: 'high',
@@ -229,6 +230,7 @@ export class PerformanceReporter extends EventEmitter {
       }
 
       if (oracleMetrics.winRateImprovement < 5) {
+        // eslint-disable-next-line functional/immutable-data
         suggestions.push({
           layer: 'oracle',
           priority: 'medium',
@@ -239,6 +241,7 @@ export class PerformanceReporter extends EventEmitter {
       }
 
       if (oracleMetrics.avgMultiplierOnLosses > oracleMetrics.avgMultiplierOnWins) {
+        // eslint-disable-next-line functional/immutable-data
         suggestions.push({
           layer: 'conviction',
           priority: 'high',
@@ -252,6 +255,7 @@ export class PerformanceReporter extends EventEmitter {
     // Global CVD suggestions
     if (globalCVDMetrics.totalSignals >= 10) {
       if (globalCVDMetrics.falseSignalReductionRate < 50) {
+        // eslint-disable-next-line functional/immutable-data
         suggestions.push({
           layer: 'globalCVD',
           priority: 'medium',
@@ -262,6 +266,7 @@ export class PerformanceReporter extends EventEmitter {
       }
 
       if (globalCVDMetrics.multiExchangeImprovement < 3) {
+        // eslint-disable-next-line functional/immutable-data
         suggestions.push({
           layer: 'globalCVD',
           priority: 'low',
@@ -275,6 +280,7 @@ export class PerformanceReporter extends EventEmitter {
     // Bot Trap suggestions
     if (botTrapMetrics.totalPatterns >= 10) {
       if (botTrapMetrics.falsePositiveRate > 30) {
+        // eslint-disable-next-line functional/immutable-data
         suggestions.push({
           layer: 'botTrap',
           priority: 'high',
@@ -285,6 +291,7 @@ export class PerformanceReporter extends EventEmitter {
       }
 
       if (botTrapMetrics.falseNegativeRate > 20) {
+        // eslint-disable-next-line functional/immutable-data
         suggestions.push({
           layer: 'botTrap',
           priority: 'medium',
@@ -295,6 +302,7 @@ export class PerformanceReporter extends EventEmitter {
       }
 
       if (botTrapMetrics.avoidedLosses > 0 && botTrapMetrics.avgAvoidedLossPercent > 2) {
+        // eslint-disable-next-line functional/immutable-data
         suggestions.push({
           layer: 'botTrap',
           priority: 'low',
@@ -308,6 +316,7 @@ export class PerformanceReporter extends EventEmitter {
     // Prediction accuracy suggestions
     if (predictionMetrics.totalPredictions >= 10) {
       if (predictionMetrics.sentimentAccuracy < 55) {
+        // eslint-disable-next-line functional/immutable-data
         suggestions.push({
           layer: 'oracle',
           priority: 'medium',
@@ -318,6 +327,7 @@ export class PerformanceReporter extends EventEmitter {
       }
 
       if (predictionMetrics.highConvictionWinRate < predictionMetrics.lowConvictionWinRate) {
+        // eslint-disable-next-line functional/immutable-data
         suggestions.push({
           layer: 'conviction',
           priority: 'high',
@@ -330,6 +340,7 @@ export class PerformanceReporter extends EventEmitter {
 
     // General suggestions based on overall performance
     if (currentWinRate < this.config.targetWinRate) {
+      // eslint-disable-next-line functional/immutable-data
       suggestions.push({
         layer: 'general',
         priority: 'high',
@@ -340,6 +351,7 @@ export class PerformanceReporter extends EventEmitter {
     }
 
     if (currentSharpe < this.config.targetSharpeRatio) {
+      // eslint-disable-next-line functional/immutable-data
       suggestions.push({
         layer: 'general',
         priority: 'medium',
@@ -350,6 +362,7 @@ export class PerformanceReporter extends EventEmitter {
     }
 
     // Sort by priority and expected improvement
+    // eslint-disable-next-line functional/immutable-data
     return suggestions.sort((a, b) => {
       const priorityOrder = { high: 0, medium: 1, low: 2 };
       if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
@@ -501,8 +514,11 @@ export class PerformanceReporter extends EventEmitter {
   private calculateMaxDrawdown(trades: EnhancedTradeRecord[]): number {
     if (trades.length === 0) return 0;
 
+    // eslint-disable-next-line functional/no-let
     let peak = 0;
+    // eslint-disable-next-line functional/no-let
     let maxDrawdown = 0;
+    // eslint-disable-next-line functional/no-let
     let cumulative = 0;
 
     for (const trade of trades) {
@@ -638,22 +654,30 @@ export class PerformanceReporter extends EventEmitter {
     ];
 
     if (report.suggestions.length > 0) {
+      // eslint-disable-next-line functional/immutable-data
       lines.push('💡 OPTIMIZATION SUGGESTIONS');
+      // eslint-disable-next-line functional/immutable-data
       lines.push('───────────────────────────────────────────────────────────────');
 
       for (const suggestion of report.suggestions) {
         const priorityIcon =
           suggestion.priority === 'high' ? '🔴' : suggestion.priority === 'medium' ? '🟡' : '🟢';
+        // eslint-disable-next-line functional/immutable-data
         lines.push(
           `   ${priorityIcon} [${suggestion.layer.toUpperCase()}] ${suggestion.suggestion}`
         );
+        // eslint-disable-next-line functional/immutable-data
         lines.push(`      Expected improvement: ${suggestion.expectedImprovement}%`);
+        // eslint-disable-next-line functional/immutable-data
         lines.push(`      Reasoning: ${suggestion.reasoning}`);
+        // eslint-disable-next-line functional/immutable-data
         lines.push('');
       }
     }
 
+    // eslint-disable-next-line functional/immutable-data
     lines.push('═══════════════════════════════════════════════════════════════');
+    // eslint-disable-next-line functional/immutable-data
     lines.push(`Generated: ${report.timestamp.toISOString()}`);
 
     return lines.join('\n');

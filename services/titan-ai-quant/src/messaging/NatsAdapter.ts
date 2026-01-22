@@ -59,6 +59,7 @@ export class NatsAdapter {
   private subscribeToOptimizationRequests(): void {
     this.nats.subscribe(TitanSubject.CMD_AI_OPTIMIZE, async (data: any, subject: string) => {
       // Dual Read Strategy
+      // eslint-disable-next-line functional/no-let
       let payload = data;
       if (data && typeof data === 'object' && 'payload' in data && 'type' in data) {
         payload = data.payload;

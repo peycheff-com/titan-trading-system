@@ -30,8 +30,11 @@ export class SessionProfiler extends EventEmitter {
     const utcMinute = now.getUTCMinutes();
     const currentTime = utcHour + utcMinute / 60;
 
+    // eslint-disable-next-line functional/no-let
     let sessionType: SessionType;
+    // eslint-disable-next-line functional/no-let
     let startTime: number;
+    // eslint-disable-next-line functional/no-let
     let endTime: number;
 
     // Asian session: 00:00 - 06:00 UTC (Accumulation phase)
@@ -60,6 +63,7 @@ export class SessionProfiler extends EventEmitter {
     }
 
     // Calculate time remaining in current session
+    // eslint-disable-next-line functional/no-let
     let timeRemaining: number;
     if (sessionType === 'DEAD_ZONE') {
       // Handle overnight session
@@ -87,6 +91,7 @@ export class SessionProfiler extends EventEmitter {
       }
     }
 
+    // eslint-disable-next-line functional/immutable-data
     this.currentSession = sessionState;
     return sessionState;
   }
@@ -112,8 +117,11 @@ export class SessionProfiler extends EventEmitter {
     }
 
     // Find high and low during Asian session (00:00-06:00 UTC)
+    // eslint-disable-next-line functional/no-let
     let high = -Infinity;
+    // eslint-disable-next-line functional/no-let
     let low = Infinity;
+    // eslint-disable-next-line functional/no-let
     let timestamp = 0;
 
     for (const candle of ohlcvData) {
@@ -133,6 +141,7 @@ export class SessionProfiler extends EventEmitter {
     }
 
     if (high !== -Infinity && low !== Infinity) {
+      // eslint-disable-next-line functional/immutable-data
       this.asianRange = {
         high,
         low,
@@ -222,8 +231,11 @@ export class SessionProfiler extends EventEmitter {
     }
 
     // Find high and low during London session (07:00-10:00 UTC)
+    // eslint-disable-next-line functional/no-let
     let high = -Infinity;
+    // eslint-disable-next-line functional/no-let
     let low = Infinity;
+    // eslint-disable-next-line functional/no-let
     let timestamp = 0;
 
     for (const candle of ohlcvData) {
@@ -243,6 +255,7 @@ export class SessionProfiler extends EventEmitter {
     }
 
     if (high !== -Infinity && low !== Infinity) {
+      // eslint-disable-next-line functional/immutable-data
       this.londonRange = {
         high,
         low,
