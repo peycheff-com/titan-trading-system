@@ -1,3 +1,5 @@
+process.env.TITAN_GENERATING_SCHEMAS = "true";
+
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { EnvelopeSchema } from "../src/schemas/envelope";
 import {
