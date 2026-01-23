@@ -3,29 +3,34 @@
  * Configures global test environment and suppresses expected console output
  */
 
+import { afterEach, jest } from "@jest/globals";
+
 // Suppress expected console.error messages in tests
 const originalConsoleError = console.error;
 console.error = (...args: any[]) => {
   const message = args[0];
-  
+
   // Suppress expected error messages from tests
   const suppressedMessages = [
-    'Redis set error:',
-    'Redis delete error:',
-    'Redis clear error:',
-    'Redis disconnect error:',
-    'Failed to close positions during circuit breaker trigger:',
-    'Failed to send emergency notification:',
-    'Failed to persist breaker event:',
-    'Error fetching balances from',
-    'Telegram test failed:'
+    "Redis set error:",
+    "Redis delete error:",
+    "Redis clear error:",
+    "Redis disconnect error:",
+    "Failed to close positions during circuit breaker trigger:",
+    "Failed to send emergency notification:",
+    "Failed to persist breaker event:",
+    "Error fetching balances from",
+    "Telegram test failed:",
   ];
-  
+
   // Only suppress if it's an expected test error
-  if (typeof message === 'string' && suppressedMessages.some(msg => message.includes(msg))) {
+  if (
+    typeof message === "string" &&
+    suppressedMessages.some((msg) => message.includes(msg))
+  ) {
     return; // Suppress this error
   }
-  
+
   // Otherwise, log normally
   originalConsoleError.apply(console, args);
 };
