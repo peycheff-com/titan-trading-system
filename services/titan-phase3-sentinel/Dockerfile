@@ -5,6 +5,7 @@ WORKDIR /app
 
 # Copy root package files for workspace resolution
 COPY package.json package-lock.json ./
+COPY tsconfig.json ./
 COPY services/titan-phase3-sentinel/package.json services/titan-phase3-sentinel/
 COPY services/shared services/shared/
 
