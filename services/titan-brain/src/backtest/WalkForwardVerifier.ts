@@ -13,8 +13,8 @@ export interface WalkForwardConfig {
 }
 
 export class WalkForwardVerifier {
-  private logger: Logger;
-  private engine: BacktestEngine;
+  private readonly logger: Logger;
+  private readonly engine: BacktestEngine;
 
   constructor(logger: Logger, engine: BacktestEngine) {
     this.logger = logger;
@@ -26,7 +26,7 @@ export class WalkForwardVerifier {
       config,
     });
 
-    // eslint-disable-next-line functional/no-let
+     
     let windowStart = new Date(config.startDate);
 
     while (windowStart < config.endDate) {

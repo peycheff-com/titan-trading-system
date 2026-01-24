@@ -23,7 +23,7 @@ const NavLink = forwardRef<HTMLAnchorElement, NavLinkCompatProps>(
   },
 );
 
-// eslint-disable-next-line functional/immutable-data
+ 
 NavLink.displayName = 'NavLink';
 
 export { NavLink };

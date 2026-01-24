@@ -11,7 +11,7 @@
  */
 
 import * as fs from 'fs';
-import * as path from 'path';
+
 import { StrategicMemory } from './StrategicMemory.js';
 import type { Config, OptimizationProposal } from '../types/index.js';
 import { safeValidateConfig } from '../config/ConfigSchema.js';
@@ -222,11 +222,17 @@ export class ApprovalWorkflow {
       setNestedValue(newConfig, proposal.targetKey, proposal.suggestedValue);
 
       // Validate the new config against schema
-      const validationResult = safeValidateConfig(newConfig);
+      const validationResult = safeValidateConfig(newConfig) as {
+        success: boolean;
+        error?: { message: string };
+        data?: unknown;
+      };
       if (!validationResult.success) {
         const error = new TitanError(
           ErrorCode.CONFIG_VALIDATION_ERROR,
-          `Config validation failed: ${(validationResult as any).error.message}`,
+          `Config validation failed: ${
+            (validationResult as { error: { message: string } }).error.message
+          }`,
           {
             targetKey: proposal.targetKey,
             suggestedValue: proposal.suggestedValue,
@@ -235,7 +241,10 @@ export class ApprovalWorkflow {
         this.handleError(error);
         return {
           success: false,
-          error: getUserFriendlyMessage(error.code, (validationResult as any).error.message),
+          error: getUserFriendlyMessage(
+            error.code,
+            (validationResult as { error: { message: string } }).error.message,
+          ),
         };
       }
 
@@ -415,11 +424,17 @@ export class ApprovalWorkflow {
 
       // Parse and validate the stored config
       const config = JSON.parse(configVersion.configJson);
-      const validationResult = safeValidateConfig(config);
+      const validationResult = safeValidateConfig(config) as {
+        success: boolean;
+        error?: { message: string };
+        data?: unknown;
+      };
       if (!validationResult.success) {
         return {
           success: false,
-          error: `Stored config validation failed: ${(validationResult as any).error.message}`,
+          error: `Stored config validation failed: ${
+            (validationResult as { error: { message: string } }).error.message
+          }`,
         };
       }
 

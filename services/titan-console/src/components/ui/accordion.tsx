@@ -12,7 +12,7 @@ const AccordionItem = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AccordionPrimitive.Item ref={ref} className={cn('border-b', className)} {...props} />
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 AccordionItem.displayName = 'AccordionItem';
 
 const AccordionTrigger = React.forwardRef<
@@ -33,7 +33,7 @@ const AccordionTrigger = React.forwardRef<
     </AccordionPrimitive.Trigger>
   </AccordionPrimitive.Header>
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 AccordionTrigger.displayName = AccordionPrimitive.Trigger.displayName;
 
 const AccordionContent = React.forwardRef<
@@ -49,7 +49,7 @@ const AccordionContent = React.forwardRef<
   </AccordionPrimitive.Content>
 ));
 
-// eslint-disable-next-line functional/immutable-data
+ 
 AccordionContent.displayName = AccordionPrimitive.Content.displayName;
 
 export { Accordion, AccordionItem, AccordionTrigger, AccordionContent };

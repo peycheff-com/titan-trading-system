@@ -7,11 +7,7 @@
 import { HologramScanner, ScanResult } from "../../src/engine/HologramScanner";
 import { HologramEngine } from "../../src/engine/HologramEngine";
 import { BybitPerpsClient } from "../../src/exchanges/BybitPerpsClient";
-import {
-  EnhancedHolographicState,
-  HologramState,
-  HologramStatus,
-} from "../../src/types";
+import { HologramState, HologramStatus } from "../../src/types";
 
 // Mock dependencies
 jest.mock("../../src/engine/HologramEngine");
@@ -55,73 +51,66 @@ describe("HologramScanner", () => {
   // Helper function to create mock enhanced hologram state
   const createMockHologram = (
     symbol: string,
-    alignment: string,
-    enhancedScore: number,
+    status: HologramStatus,
+    alignmentScore: number,
     rsScore: number = 0,
-  ): any => ({
+  ): HologramState => ({
     symbol,
     timestamp: Date.now(),
-    classicState: {
-      symbol,
-      timestamp: Date.now(),
-      daily: {
-        timeframe: "1D",
-        trend: "BULL",
-        dealingRange: {
-          high: 120,
-          low: 80,
-          midpoint: 100,
-          premiumThreshold: 100,
-          discountThreshold: 100,
-          range: 40,
-        },
-        currentPrice: 110,
-        location: "PREMIUM",
-        fractals: [],
-        bos: [],
-        mss: null,
+    daily: {
+      timeframe: "1D",
+      trend: "BULL",
+      dealingRange: {
+        high: 120,
+        low: 80,
+        midpoint: 100,
+        premiumThreshold: 100,
+        discountThreshold: 100,
+        range: 40,
       },
-      h4: {
-        timeframe: "4H",
-        trend: "BULL",
-        dealingRange: {
-          high: 115,
-          low: 85,
-          midpoint: 100,
-          premiumThreshold: 100,
-          discountThreshold: 100,
-          range: 30,
-        },
-        currentPrice: 110,
-        location: "DISCOUNT",
-        fractals: [],
-        bos: [],
-        mss: null,
-      },
-      m15: {
-        timeframe: "15m",
-        trend: "BULL",
-        dealingRange: {
-          high: 112,
-          low: 88,
-          midpoint: 100,
-          premiumThreshold: 100,
-          discountThreshold: 100,
-          range: 24,
-        },
-        currentPrice: 110,
-        location: "PREMIUM",
-        fractals: [],
-        bos: [],
-        mss: null,
-      },
-      alignmentScore: enhancedScore,
-      status: alignment as any,
-      veto: { vetoed: false, reason: null, direction: null },
-      rsScore,
+      currentPrice: 110,
+      location: "PREMIUM",
+      fractals: [],
+      bos: [],
+      mss: null,
     },
-    alignment: alignment as any,
-    enhancedScore,
+    h4: {
+      timeframe: "4H",
+      trend: "BULL",
+      dealingRange: {
+        high: 115,
+        low: 85,
+        midpoint: 100,
+        premiumThreshold: 100,
+        discountThreshold: 100,
+        range: 30,
+      },
+      currentPrice: 110,
+      location: "DISCOUNT",
+      fractals: [],
+      bos: [],
+      mss: null,
+    },
+    m15: {
+      timeframe: "15m",
+      trend: "BULL",
+      dealingRange: {
+        high: 112,
+        low: 88,
+        midpoint: 100,
+        premiumThreshold: 100,
+        discountThreshold: 100,
+        range: 24,
+      },
+      currentPrice: 110,
+      location: "PREMIUM",
+      fractals: [],
+      bos: [],
+      mss: null,
+    },
+    alignmentScore,
+    status,
+    veto: { vetoed: false, reason: null, direction: null },
     rsScore,
     oracleScore: {
       sentiment: 50,
@@ -133,18 +122,13 @@ describe("HologramScanner", () => {
       timestamp: new Date(),
     },
     globalCVD: null,
-    botTrap: null,
-    flowValidation: null,
-    marketRegime: {
-      type: "TRENDING",
-      volatility: "MEDIUM",
-      volume: "HIGH",
-    },
+    enhancedScore: alignmentScore, // Backward compat for tests if needed
+    direction: "LONG",
   });
 
   describe("rankByAlignment", () => {
     it("should rank symbols by status priority then alignment score", () => {
-      const holograms: any[] = [
+      const holograms: HologramState[] = [
         createMockHologram("SYMBOL1", "VETO", 30),
         createMockHologram("SYMBOL2", "A+", 85),
         createMockHologram("SYMBOL3", "B", 70),
@@ -165,7 +149,7 @@ describe("HologramScanner", () => {
     });
 
     it("should use RS score as tiebreaker for same status and alignment score", () => {
-      const holograms: any[] = [
+      const holograms: HologramState[] = [
         createMockHologram("SYMBOL1", "A+", 85, 0.02),
         createMockHologram("SYMBOL2", "A+", 85, 0.05),
         createMockHologram("SYMBOL3", "A+", 85, -0.03),
@@ -187,7 +171,7 @@ describe("HologramScanner", () => {
 
   describe("selectTop20", () => {
     it("should select top 20 tradeable symbols (A+ and B)", () => {
-      const holograms: any[] = [];
+      const holograms: HologramState[] = [];
 
       // Create 15 A+ symbols
       for (let i = 1; i <= 15; i++) {
@@ -209,30 +193,30 @@ describe("HologramScanner", () => {
       expect(top20).toHaveLength(20);
 
       // Should contain all 15 A+ symbols and top 5 B symbols
-      const aSymbols = top20.filter((h) => h.alignment === "A+");
-      const bSymbols = top20.filter((h) => h.alignment === "B");
+      const aSymbols = top20.filter((h) => h.status === "A+");
+      const bSymbols = top20.filter((h) => h.status === "B");
 
       expect(aSymbols).toHaveLength(15);
       expect(bSymbols).toHaveLength(5);
-      expect(top20.every((h) => h.alignment === "A+" || h.alignment === "B"))
+      expect(top20.every((h) => h.status === "A+" || h.status === "B"))
         .toBe(true);
     });
 
     it("should fall back to best available if less than 20 tradeable symbols", () => {
-      const holograms: any[] = [
+      const holograms: HologramState[] = [
         createMockHologram("A_SYMBOL1", "A+", 90),
         createMockHologram("B_SYMBOL1", "B", 70),
-        createMockHologram("C_SYMBOL1", "VETO", 30),
         createMockHologram("N_SYMBOL1", "C", 95),
+        createMockHologram("C_SYMBOL1", "VETO", 30),
       ];
 
       const top20 = scanner.selectTop20(holograms);
 
       expect(top20).toHaveLength(4); // All available symbols
-      expect(top20[0].alignment).toBe("A+");
-      expect(top20[1].alignment).toBe("B");
-      expect(top20[2].alignment).toBe("C");
-      expect(top20[3].alignment).toBe("VETO");
+      expect(top20[0].status).toBe("A+");
+      expect(top20[1].status).toBe("B");
+      expect(top20[2].status).toBe("C");
+      expect(top20[3].status).toBe("VETO");
     });
 
     it("should handle empty array", () => {

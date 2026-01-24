@@ -18,7 +18,7 @@ import {
   Trade,
   ValidationReport,
 } from '../types/index.js';
-import { ErrorCode, getUserFriendlyMessage, logError, TitanError } from '../utils/ErrorHandler.js';
+import { ErrorCode, logError, TitanError } from '../utils/ErrorHandler.js';
 
 export interface ComparisonResult {
   baseResult: BacktestResult;
@@ -401,10 +401,13 @@ export class Backtester {
     const winRateDelta = proposedResult.winRate - baselineResult.winRate;
 
     // Apply rejection rules
+
     // eslint-disable-next-line functional/no-let
     let passed = true;
+
     // eslint-disable-next-line functional/no-let
     let rejectionReason: string | undefined;
+
     // eslint-disable-next-line functional/no-let
     let recommendation: 'approve' | 'reject' | 'review' = 'approve';
 
@@ -485,6 +488,7 @@ export class Backtester {
     } = options;
 
     const warnings: BacktestWarning[] = [];
+
     // eslint-disable-next-line functional/no-let
     let skippedTrades = 0;
 
@@ -493,6 +497,7 @@ export class Backtester {
     }
 
     // Filter trades by time range if specified
+
     // eslint-disable-next-line functional/no-let
     let filteredTrades = trades;
     if (options.startTime !== undefined) {
@@ -552,6 +557,7 @@ export class Backtester {
 
     // Simulate each trade with config parameters
     const simulatedResults: SimulatedTrade[] = [];
+
     // eslint-disable-next-line functional/no-let
     let equity = initialCapital;
     // eslint-disable-next-line functional/no-let
@@ -574,6 +580,7 @@ export class Backtester {
       const liquidityState = regime?.liquidityState ?? 1;
 
       // Apply latency penalty to entry price (handle missing OHLCV data)
+
       // eslint-disable-next-line functional/no-let
       let adjustedEntry: number;
       try {
@@ -596,6 +603,7 @@ export class Backtester {
       const atr = this.estimateATR(ohlcvData, trade.timestamp);
 
       // Calculate position size based on config (handle division by zero)
+
       // eslint-disable-next-line functional/no-let
       let positionSize: number;
       try {
@@ -643,6 +651,7 @@ export class Backtester {
       );
 
       // Calculate PnL (handle division by zero)
+
       // eslint-disable-next-line functional/no-let
       let pnl: number;
       try {
@@ -766,8 +775,10 @@ export class Backtester {
     const drawdownDelta = proposedResult.maxDrawdown - baseResult.maxDrawdown;
 
     // Apply rejection rules
+
     // eslint-disable-next-line functional/no-let
     let recommendation: 'approve' | 'reject' = 'approve';
+
     // eslint-disable-next-line functional/no-let
     let reason = 'Proposal improves performance metrics';
 
@@ -991,7 +1002,7 @@ export class Backtester {
     equity: number,
     riskPerTrade: number,
     maxLeverage: number,
-    entryPrice: number,
+    _entryPrice: number,
   ): number {
     // Risk amount in dollars
     const riskAmount = equity * riskPerTrade;
@@ -1081,7 +1092,7 @@ export class Backtester {
     entry: number,
     exit: number,
     positionSize: number,
-    leverage: number,
+    _leverage: number,
   ): number {
     const priceChange = side === 'long' ? (exit - entry) / entry : (entry - exit) / entry;
 

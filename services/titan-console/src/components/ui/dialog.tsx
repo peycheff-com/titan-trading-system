@@ -25,7 +25,7 @@ const DialogOverlay = React.forwardRef<
     {...props}
   />
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 const DialogContent = React.forwardRef<
@@ -50,13 +50,13 @@ const DialogContent = React.forwardRef<
     </DialogPrimitive.Content>
   </DialogPortal>
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={cn('flex flex-col space-y-1.5 text-center sm:text-left', className)} {...props} />
 );
-// eslint-disable-next-line functional/immutable-data
+ 
 DialogHeader.displayName = 'DialogHeader';
 
 const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
@@ -65,7 +65,7 @@ const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivEleme
     {...props}
   />
 );
-// eslint-disable-next-line functional/immutable-data
+ 
 DialogFooter.displayName = 'DialogFooter';
 
 const DialogTitle = React.forwardRef<
@@ -78,7 +78,7 @@ const DialogTitle = React.forwardRef<
     {...props}
   />
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 DialogTitle.displayName = DialogPrimitive.Title.displayName;
 
 const DialogDescription = React.forwardRef<
@@ -91,7 +91,7 @@ const DialogDescription = React.forwardRef<
     {...props}
   />
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 DialogDescription.displayName = DialogPrimitive.Description.displayName;
 
 export {

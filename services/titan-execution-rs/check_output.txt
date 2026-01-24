@@ -1,0 +1,152 @@
+    Checking titan-execution-rs v0.1.0 (/Users/ivan/Code/trading/titan/services/titan-execution-rs)
+warning: unused import: `RiskRejectionReason`
+ --> src/api.rs:4:36
+  |
+4 | use crate::risk_guard::{RiskGuard, RiskRejectionReason};
+  |                                    ^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `tracing::warn`
+ --> src/drift_detector.rs:4:5
+  |
+4 | use tracing::warn;
+  |     ^^^^^^^^^^^^^
+
+warning: unused imports: `Intent` and `Side`
+  --> src/nats_engine.rs:12:20
+   |
+12 | use crate::model::{Intent, IntentType, Side};
+   |                    ^^^^^^              ^^^^
+
+warning: unused import: `PipelineResult`
+  --> src/nats_engine.rs:20:42
+   |
+20 | use crate::pipeline::{ExecutionPipeline, PipelineResult};
+   |                                          ^^^^^^^^^^^^^^
+
+warning: unused import: `tracing::warn`
+ --> src/persistence/redb_store.rs:2:5
+  |
+2 | use tracing::warn;
+  |     ^^^^^^^^^^^^^
+
+warning: unused import: `PipelineResult`
+ --> src/replay_engine.rs:6:42
+  |
+6 | use crate::pipeline::{ExecutionPipeline, PipelineResult};
+  |                                          ^^^^^^^^^^^^^^
+
+warning: unused import: `crate::risk_guard::RiskRejectionReason`
+ --> src/risk_state_manager.rs:1:5
+  |
+1 | use crate::risk_guard::RiskRejectionReason;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Deserialize` and `Serialize`
+ --> src/risk_state_manager.rs:3:13
+  |
+3 | use serde::{Deserialize, Serialize};
+  |             ^^^^^^^^^^^  ^^^^^^^^^
+
+error[E0061]: this function takes 0 arguments but 1 argument was supplied
+  --> src/nats_engine.rs:48:27
+   |
+48 |     let router = Arc::new(ExecutionRouter::new(ctx.clone())); // Should inject? Using default for now.
+   |                           ^^^^^^^^^^^^^^^^^^^^ ----------- unexpected argument of type `Arc<ExecutionContext>`
+   |
+note: associated function defined here
+  --> src/exchange/router.rs:26:12
+   |
+26 |     pub fn new() -> Self {
+   |            ^^^
+help: remove the extra argument
+   |
+48 -     let router = Arc::new(ExecutionRouter::new(ctx.clone())); // Should inject? Using default for now.
+48 +     let router = Arc::new(ExecutionRouter::new()); // Should inject? Using default for now.
+   |
+
+error[E0061]: this function takes 8 arguments but 7 arguments were supplied
+   --> src/nats_engine.rs:438:29
+    |
+438 |       let pipeline = Arc::new(ExecutionPipeline::new(
+    |  _____________________________^^^^^^^^^^^^^^^^^^^^^^-
+439 | |         shadow_state.clone(),
+440 | |         order_manager, // OrderManager doesn't seem to be Arc? It is cloned in new(), but here it's moved.
+...   |
+446 | |         freshness_threshold,
+447 | |     ));
+    | |_____- argument #8 of type `Arc<DriftDetector>` is missing
+    |
+note: associated function defined here
+   --> src/pipeline.rs:44:12
+    |
+44  |     pub fn new(
+    |            ^^^
+...
+52  |         drift_detector: Arc<DriftDetector>,
+    |         ----------------------------------
+help: provide the argument
+    |
+438 -     let pipeline = Arc::new(ExecutionPipeline::new(
+439 -         shadow_state.clone(),
+440 -         order_manager, // OrderManager doesn't seem to be Arc? It is cloned in new(), but here it's moved.
+441 -                        // Wait, OrderManager is struct. new() consumed it.
+442 -         router.clone(),
+443 -         simulation_engine.clone(),
+444 -         risk_guard.clone(),
+445 -         ctx.clone(),
+446 -         freshness_threshold,
+447 -     ));
+438 +     let pipeline = Arc::new(ExecutionPipeline::new(shadow_state.clone(), order_manager, router.clone(), simulation_engine.clone(), risk_guard.clone(), ctx.clone(), freshness_threshold, /* Arc<DriftDetector> */));
+    |
+
+error[E0382]: borrow of moved value: `response.fee_asset`
+   --> src/pipeline.rs:272:36
+    |
+208 |                             response.fee_asset.unwrap_or("USDT".to_string()),
+    |                             ------------------ value moved here
+...
+272 |                         fee_asset: response.fee_asset.clone().unwrap_or_default(),
+    |                                    ^^^^^^^^^^^^^^^^^^ value borrowed here after move
+    |
+    = note: move occurs because `response.fee_asset` has type `std::option::Option<std::string::String>`, which does not implement the `Copy` trait
+
+warning: use of deprecated method `prometheus::proto_ext::<impl prometheus::proto::MetricFamily>::get_name`: Please use `.name()` instead
+  --> src/sre.rs:15:19
+   |
+15 |             if mf.get_name() == "titan_execution_bulgaria_adverse_selection_bps" {
+   |                   ^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+
+warning: use of deprecated method `prometheus::proto_ext::<impl prometheus::proto::Bucket>::get_upper_bound`: Please use `.upper_bound()` instead
+  --> src/sre.rs:29:31
+   |
+29 |                         if (b.get_upper_bound() - 20.0).abs() < 0.001 {
+   |                               ^^^^^^^^^^^^^^^
+
+warning: use of deprecated method `prometheus::proto_ext::<impl prometheus::proto::Bucket>::get_cumulative_count`: Please use `.cumulative_count()` instead
+  --> src/sre.rs:30:45
+   |
+30 | ...                   count_le_20 = b.get_cumulative_count();
+   |                                       ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `ttl_ms`
+  --> src/persistence/redb_store.rs:50:48
+   |
+50 |     pub fn check_idempotency(&self, key: &str, ttl_ms: i64) -> Result<bool, StoreError> {
+   |                                                ^^^^^^ help: if this is intentional, prefix it with an underscore: `_ttl_ms`
+   |
+   = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `expected_sig`
+  --> src/security.rs:94:13
+   |
+94 |         let expected_sig = hex::encode(expected_bytes);
+   |             ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_expected_sig`
+
+Some errors have detailed explanations: E0061, E0382.
+For more information about an error, try `rustc --explain E0061`.
+warning: `titan-execution-rs` (lib) generated 13 warnings
+error: could not compile `titan-execution-rs` (lib) due to 3 previous errors; 13 warnings emitted

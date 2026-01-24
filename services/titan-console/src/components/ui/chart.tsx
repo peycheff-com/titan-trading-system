@@ -59,7 +59,7 @@ const ChartContainer = React.forwardRef<
     </ChartContext.Provider>
   );
 });
-// eslint-disable-next-line functional/immutable-data
+ 
 ChartContainer.displayName = 'Chart';
 
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
@@ -235,7 +235,7 @@ const ChartTooltipContent = React.forwardRef<
     );
   },
 );
-// eslint-disable-next-line functional/immutable-data
+ 
 ChartTooltipContent.displayName = 'ChartTooltip';
 
 const ChartLegend = RechartsPrimitive.Legend;
@@ -291,7 +291,7 @@ const ChartLegendContent = React.forwardRef<
     </div>
   );
 });
-// eslint-disable-next-line functional/immutable-data
+ 
 ChartLegendContent.displayName = 'ChartLegend';
 
 // Helper to extract item config from a payload.
@@ -305,7 +305,7 @@ function getPayloadConfigFromPayload(config: ChartConfig, payload: unknown, key:
       ? payload.payload
       : undefined;
 
-  // eslint-disable-next-line functional/no-let
+   
   let configLabelKey: string = key;
 
   if (key in payload && typeof payload[key as keyof typeof payload] === 'string') {

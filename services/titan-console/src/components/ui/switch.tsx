@@ -22,7 +22,7 @@ const Switch = React.forwardRef<
     />
   </SwitchPrimitives.Root>
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 Switch.displayName = SwitchPrimitives.Root.displayName;
 
 export { Switch };

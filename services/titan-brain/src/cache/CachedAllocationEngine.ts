@@ -5,9 +5,13 @@
  * Requirements: 1.1
  */
 
-import { AllocationEngine } from '../engine/AllocationEngine.js';
-import { AllocationEngineConfig, AllocationVector, EquityTier } from '../types/index.js';
-import { CacheManager, CacheNamespace } from './CacheManager.js';
+import { AllocationEngine } from "../features/Allocation/AllocationEngine.js";
+import {
+  AllocationEngineConfig,
+  AllocationVector,
+  EquityTier,
+} from "../types/index.js";
+import { CacheManager, CacheNamespace } from "./CacheManager.js";
 
 /**
  * Rounds equity to nearest bucket for cache key generation
@@ -49,7 +53,10 @@ export class CachedAllocationEngine {
     const cacheKey = `weights:${bucket}`;
 
     // Try to get from cache
-    const cached = await this.cache.get<AllocationVector>(CacheNamespace.ALLOCATION, cacheKey);
+    const cached = await this.cache.get<AllocationVector>(
+      CacheNamespace.ALLOCATION,
+      cacheKey,
+    );
     if (cached.success && cached.value) {
       // Update timestamp to current time
       return { ...cached.value, timestamp: Date.now() };

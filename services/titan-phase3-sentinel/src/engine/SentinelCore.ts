@@ -9,7 +9,7 @@ import { PriceMonitor } from '../router/PriceMonitor.js';
 import type { Signal } from '../types/signals.js';
 import type { IExchangeGateway } from '../exchanges/interfaces.js';
 import { DEFAULT_SIGNAL_THRESHOLDS } from '../types/signals.js';
-import type { HealthReport, PerformanceMetrics, RiskStatus } from '../types/portfolio.js';
+import type { HealthReport, PerformanceMetrics } from '../types/portfolio.js';
 import { getNatsClient, type IntentSignal, SignalClient, TitanSubject } from '@titan/shared';
 
 export interface SentinelConfig {

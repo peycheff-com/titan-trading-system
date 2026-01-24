@@ -32,7 +32,7 @@ export interface DataLoaderConfig {
  */
 export class DataLoader {
   private config: Required<DataLoaderConfig>;
-  private cache: Map<string, { data: any; timestamp: number }> = new Map();
+  private cache: Map<string, { data: any; timestamp: number }> = new Map(); // eslint-disable-line @typescript-eslint/no-explicit-any
 
   constructor(config: DataLoaderConfig = {}) {
     this.config = {
@@ -67,6 +67,7 @@ export class DataLoader {
     try {
       // Try JSON format first
       const jsonPath = path.join(this.config.dataDir, 'ohlcv', `${symbol}.json`);
+
       // eslint-disable-next-line functional/no-let
       let data: OHLCV[] = [];
 
@@ -142,6 +143,7 @@ export class DataLoader {
 
     try {
       const filePath = path.join(this.config.dataDir, 'regime', `${symbol}.json`);
+
       // eslint-disable-next-line functional/no-let
       let data: RegimeSnapshot[] = [];
 
@@ -209,6 +211,7 @@ export class DataLoader {
 
     try {
       const filePath = path.join(this.config.dataDir, 'trades.json');
+
       // eslint-disable-next-line functional/no-let
       let data: Trade[] = [];
 
@@ -278,6 +281,7 @@ export class DataLoader {
       throw new Error('OHLCV data must be an array');
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return data.map((item: any) => ({
       timestamp: item.timestamp || item.time || item.t,
       open: item.open || item.o,
@@ -314,6 +318,7 @@ export class DataLoader {
     const interval = 5 * 60 * 1000; // 5 minutes
 
     const data: OHLCV[] = [];
+
     // eslint-disable-next-line functional/no-let
     let price = 50000; // Starting price
 
@@ -445,6 +450,7 @@ export class DataLoader {
   /**
    * Get cached data if valid
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private getCachedData(key: string): any | null {
     const cached = this.cache.get(key);
     if (!cached) return null;
@@ -462,6 +468,7 @@ export class DataLoader {
   /**
    * Set cached data
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private setCachedData(key: string, data: any): void {
     // eslint-disable-next-line functional/immutable-data
     this.cache.set(key, {

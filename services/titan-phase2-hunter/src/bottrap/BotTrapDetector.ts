@@ -9,14 +9,8 @@
  */
 
 import { EventEmitter } from 'events';
-import {
-  BotTrapAnalysis,
-  TrapRecommendation,
-  PatternPrecision,
-  FlowValidation,
-  TradeOutcome,
-} from '../types';
-import { FVG, OrderBlock, LiquidityPool, POI, OHLCV } from '../types';
+import { BotTrapAnalysis, FlowValidation, TradeOutcome } from '../types';
+import { FVG, LiquidityPool, OrderBlock, POI } from '../types';
 import {
   PatternPrecisionAnalyzer,
   PatternPrecisionConfig,
@@ -24,14 +18,14 @@ import {
   TechnicalPattern,
 } from './PatternPrecisionAnalyzer';
 import {
-  SuspectPatternRiskAdjuster,
+  EntryValidationResult,
   RiskAdjustmentConfig,
   RiskAdjustmentResult,
-  EntryValidationResult,
+  SuspectPatternRiskAdjuster,
 } from './SuspectPatternRiskAdjuster';
 import {
-  AdaptiveLearningEngine,
   AdaptiveLearningConfig,
+  AdaptiveLearningEngine,
   LearningStatistics,
   ParameterAdjustment,
 } from './AdaptiveLearningEngine';

@@ -14,7 +14,7 @@ const Label = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <LabelPrimitive.Root ref={ref} className={cn(labelVariants(), className)} {...props} />
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 Label.displayName = LabelPrimitive.Root.displayName;
 
 export { Label };

@@ -8,22 +8,10 @@
  */
 
 import { EventEmitter } from 'eventemitter3';
-import {
-  existsSync,
-  readFileSync,
-  Stats,
-  statSync,
-  unwatchFile,
-  watchFile,
-  writeFileSync,
-} from 'fs';
+import { existsSync, Stats, statSync, unwatchFile, watchFile, writeFileSync } from 'fs';
 import { join } from 'path';
 import { ConfigEncryption, getConfigEncryption } from './ConfigEncryption';
-import {
-  ConfigHierarchyOptions,
-  ConfigLoadResult,
-  HierarchicalConfigLoader,
-} from './HierarchicalConfigLoader';
+import { ConfigHierarchyOptions, HierarchicalConfigLoader } from './HierarchicalConfigLoader';
 import {
   BrainConfig,
   ConfigValidator,
@@ -39,8 +27,8 @@ export interface HotReloadEvent {
   type: 'config-changed' | 'config-error' | 'encryption-changed';
   configType: 'brain' | 'phase' | 'service';
   configKey: string;
-  oldValue?: any;
-  newValue?: any;
+  oldValue?: unknown;
+  newValue?: unknown;
   error?: string;
   timestamp: number;
   encrypted?: boolean;
@@ -79,7 +67,7 @@ interface ConfigBackup {
   timestamp: number;
   configType: 'brain' | 'phase' | 'service';
   configKey: string;
-  data: any;
+  data: unknown;
   encrypted: boolean;
 }
 
@@ -92,7 +80,7 @@ export class HotReloadConfigManager extends EventEmitter {
   private options: HotReloadOptions;
   private watchedFiles = new Map<string, { mtime: Date; size: number }>();
   private configBackups = new Map<string, ConfigBackup[]>();
-  private currentConfigs = new Map<string, any>();
+  private currentConfigs = new Map<string, unknown>();
   private reloadInProgress = new Set<string>();
 
   constructor(options: Partial<HotReloadOptions> = {}) {
@@ -202,7 +190,7 @@ export class HotReloadConfigManager extends EventEmitter {
   /**
    * Load and watch service configuration
    */
-  async loadAndWatchServiceConfig(service: string): Promise<any> {
+  async loadAndWatchServiceConfig(service: string): Promise<unknown> {
     const result = await this.hierarchicalLoader.loadServiceConfig(service);
     // eslint-disable-next-line functional/no-let
     let config = result.config;
@@ -250,7 +238,12 @@ export class HotReloadConfigManager extends EventEmitter {
       }
 
       // Validate configuration change
-      const changeValidation = this.validateConfigChange('brain', 'brain', oldConfig, newConfig);
+      const changeValidation = this.validateConfigChange(
+        'brain',
+        'brain',
+        oldConfig as Record<string, unknown>,
+        newConfig as Record<string, unknown>,
+      );
 
       if (!changeValidation.valid) {
         if (this.options.rollbackOnError) {
@@ -323,7 +316,12 @@ export class HotReloadConfigManager extends EventEmitter {
       }
 
       // Validate configuration change
-      const changeValidation = this.validateConfigChange('phase', phase, oldConfig, newConfig);
+      const changeValidation = this.validateConfigChange(
+        'phase',
+        phase,
+        oldConfig as Record<string, unknown>,
+        newConfig as Record<string, unknown>,
+      );
 
       if (!changeValidation.valid) {
         if (this.options.rollbackOnError) {
@@ -396,7 +394,12 @@ export class HotReloadConfigManager extends EventEmitter {
       }
 
       // Validate configuration change
-      const changeValidation = this.validateConfigChange('service', service, oldConfig, newConfig);
+      const changeValidation = this.validateConfigChange(
+        'service',
+        service,
+        oldConfig as Record<string, unknown>,
+        newConfig as Record<string, unknown>,
+      );
 
       if (!changeValidation.valid) {
         if (this.options.rollbackOnError) {
@@ -457,7 +460,7 @@ export class HotReloadConfigManager extends EventEmitter {
   async saveConfigWithEncryption(
     configType: 'brain' | 'phase' | 'service',
     configKey: string,
-    config: any,
+    config: Record<string, unknown>,
   ): Promise<void> {
     // eslint-disable-next-line functional/no-let
     let configToSave = { ...config };
@@ -519,7 +522,7 @@ export class HotReloadConfigManager extends EventEmitter {
   /**
    * Get current configuration
    */
-  getCurrentConfig(configKey: string): any {
+  getCurrentConfig(configKey: string): unknown {
     return this.currentConfigs.get(configKey);
   }
 
@@ -568,8 +571,8 @@ export class HotReloadConfigManager extends EventEmitter {
   private validateConfigChange(
     configType: 'brain' | 'phase' | 'service',
     configKey: string,
-    oldConfig: any,
-    newConfig: any,
+    oldConfig: Record<string, unknown> | undefined,
+    newConfig: Record<string, unknown>,
   ): ChangeValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -625,7 +628,7 @@ export class HotReloadConfigManager extends EventEmitter {
   private createBackup(
     configType: 'brain' | 'phase' | 'service',
     configKey: string,
-    data: any,
+    data: unknown,
     encrypted: boolean,
   ): void {
     const backupKey = `${configType}:${configKey}`;

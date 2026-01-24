@@ -1,0 +1,113 @@
+{
+  "enabled": true,
+  "maxLeverage": 5,
+  "maxDrawdown": 0.2,
+  "maxPositionSize": 1,
+  "riskPerTrade": 0.015,
+  "exchanges": {},
+  "alignmentWeights": {
+    "daily": 45,
+    "h4": 35,
+    "m15": 20
+  },
+  "rsConfig": {
+    "threshold": 2,
+    "lookbackPeriod": 4
+  },
+  "riskConfig": {
+    "maxLeverage": 5,
+    "stopLossPercent": 1.5,
+    "targetPercent": 4.5
+  },
+  "portfolioConfig": {
+    "maxConcurrentPositions": 5,
+    "maxPortfolioHeat": 15,
+    "correlationThreshold": 0.7
+  },
+  "forwardTestConfig": {
+    "enabled": false,
+    "duration": 24,
+    "logSignalsOnly": false,
+    "compareToBacktest": false
+  },
+  "oracle": {
+    "enabled": true,
+    "polymarketApiKey": "",
+    "vetoThreshold": 40,
+    "convictionMultiplierMax": 1.5,
+    "eventCategories": [
+      "crypto_price",
+      "fed_policy",
+      "regulatory"
+    ],
+    "updateInterval": 60,
+    "btcCrashVetoThreshold": 40,
+    "btcAthBoostThreshold": 60,
+    "conflictThreshold": 40,
+    "probabilityChangeThreshold": 10,
+    "monitoringInterval": 60
+  },
+  "flowValidator": {
+    "enabled": true,
+    "sweepThreshold": 5,
+    "icebergDensityThreshold": 70,
+    "footprintAnalysisDepth": 20,
+    "institutionalThreshold": 60,
+    "passiveAbsorptionMinRatio": 0.6
+  },
+  "botTrapDetector": {
+    "enabled": true,
+    "precisionThreshold": 0.5,
+    "suspicionThreshold": 70,
+    "learningEnabled": true,
+    "adaptiveAdjustments": true,
+    "positionSizeReduction": 0.5,
+    "stopLossTightening": 1,
+    "confirmationThresholdIncrease": 50
+  },
+  "globalAggregator": {
+    "enabled": true,
+    "exchanges": [
+      "binance",
+      "coinbase",
+      "kraken"
+    ],
+    "exchangeWeights": {
+      "binance": 40,
+      "coinbase": 35,
+      "kraken": 25
+    },
+    "weightingMethod": "volume",
+    "consensusThreshold": 0.67,
+    "manipulationSensitivity": 70,
+    "reconnectInterval": 5000
+  },
+  "conviction": {
+    "enabled": true,
+    "minMultiplier": 1,
+    "maxMultiplier": 2,
+    "oracleAlignmentBonus": 1.5,
+    "globalCVDBonus": 1.2,
+    "trapReduction": 0.5
+  },
+  "enhancedRisk": {
+    "highImpactEventThreshold": 70,
+    "highImpactPositionReduction": 50,
+    "extremeUncertaintyStopLoss": 1,
+    "globalCVDMonitoringInterval": 5000,
+    "botTrapFrequencyThreshold": 80,
+    "multiExchangeFailureHalt": true,
+    "oracleUnstableConservativeMode": true,
+    "eventProximityThreshold": 60
+  },
+  "emergency": {
+    "predictionEmergencyThreshold": 90,
+    "liquidityEmergencyExchangeCount": 2,
+    "flowEmergencyDivergenceThreshold": 80,
+    "trapSaturationThreshold": 80,
+    "autoFlattenOnEmergency": true,
+    "notifyOnEmergency": true
+  },
+  "version": 2,
+  "lastModified": 1769162311169
+}

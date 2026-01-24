@@ -18,7 +18,7 @@ const InputOTP = React.forwardRef<
     {...props}
   />
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 InputOTP.displayName = 'InputOTP';
 
 const InputOTPGroup = React.forwardRef<
@@ -27,7 +27,7 @@ const InputOTPGroup = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div ref={ref} className={cn('flex items-center', className)} {...props} />
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 InputOTPGroup.displayName = 'InputOTPGroup';
 
 const InputOTPSlot = React.forwardRef<
@@ -56,7 +56,7 @@ const InputOTPSlot = React.forwardRef<
     </div>
   );
 });
-// eslint-disable-next-line functional/immutable-data
+ 
 InputOTPSlot.displayName = 'InputOTPSlot';
 
 const InputOTPSeparator = React.forwardRef<
@@ -67,7 +67,7 @@ const InputOTPSeparator = React.forwardRef<
     <Dot />
   </div>
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 InputOTPSeparator.displayName = 'InputOTPSeparator';
 
 export { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator };

@@ -21,41 +21,41 @@ export function TrapMapCanvas({ traps, height = 300 }: TrapMapCanvasProps) {
     // Handle resizing
     const resizeObserver = new ResizeObserver(() => {
       if (container) {
-        // eslint-disable-next-line functional/immutable-data
+         
         canvas.width = container.clientWidth;
-        // eslint-disable-next-line functional/immutable-data
+         
         canvas.height = height;
       }
     });
     resizeObserver.observe(container);
 
     // Initial size
-    // eslint-disable-next-line functional/immutable-data
+     
     canvas.width = container.clientWidth;
-    // eslint-disable-next-line functional/immutable-data
+     
     canvas.height = height;
 
-    // eslint-disable-next-line functional/no-let
+     
     let animationFrameId: number;
-    // eslint-disable-next-line functional/no-let
+     
     let time = 0;
 
     const render = () => {
       time += 0.05; // Time delta for animations
 
       // Clear canvas
-      // eslint-disable-next-line functional/immutable-data
+       
       ctx.fillStyle = '#09090b'; // bg-zinc-950
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // Draw Grid Lines (abstract "depth")
-      // eslint-disable-next-line functional/immutable-data
+       
       ctx.strokeStyle = '#27272a'; // bg-zinc-800
-      // eslint-disable-next-line functional/immutable-data
+       
       ctx.lineWidth = 1;
 
       // Vertical lines
-      // eslint-disable-next-line functional/no-let
+       
       for (let x = 0; x < canvas.width; x += 50) {
         ctx.beginPath();
         ctx.moveTo(x, 0);
@@ -67,9 +67,9 @@ export function TrapMapCanvas({ traps, height = 300 }: TrapMapCanvasProps) {
       // Center line (0% proximity - HIT)
       const centerY = canvas.height / 2;
 
-      // eslint-disable-next-line functional/immutable-data
+       
       ctx.strokeStyle = '#ef4444'; // Red center line
-      // eslint-disable-next-line functional/immutable-data
+       
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(0, centerY);
@@ -95,7 +95,7 @@ export function TrapMapCanvas({ traps, height = 300 }: TrapMapCanvasProps) {
         const y = centerY + yOffset;
 
         // Color based on proximity
-        // eslint-disable-next-line functional/no-let
+         
         let color = '#22c55e'; // Green (Safe)
         if (trap.proximity < 0.01)
           color = '#ef4444'; // Red (Critical)
@@ -105,7 +105,7 @@ export function TrapMapCanvas({ traps, height = 300 }: TrapMapCanvasProps) {
         ctx.beginPath();
         const radius = trap.proximity < 0.01 ? 6 : 4;
         ctx.arc(x, y, radius, 0, Math.PI * 2);
-        // eslint-disable-next-line functional/immutable-data
+         
         ctx.fillStyle = color;
         ctx.fill();
 
@@ -114,9 +114,9 @@ export function TrapMapCanvas({ traps, height = 300 }: TrapMapCanvasProps) {
           const pulseSize = radius + Math.sin(time * 5) * 3;
           ctx.beginPath();
           ctx.arc(x, y, Math.max(pulseSize, radius), 0, Math.PI * 2);
-          // eslint-disable-next-line functional/immutable-data
+           
           ctx.strokeStyle = color;
-          // eslint-disable-next-line functional/immutable-data
+           
           ctx.lineWidth = 1;
           ctx.stroke();
         }
@@ -125,25 +125,25 @@ export function TrapMapCanvas({ traps, height = 300 }: TrapMapCanvasProps) {
         ctx.beginPath();
         ctx.moveTo(x, y);
         ctx.lineTo(x, centerY);
-        // eslint-disable-next-line functional/immutable-data
+         
         ctx.strokeStyle = color;
-        // eslint-disable-next-line functional/immutable-data
+         
         ctx.globalAlpha = 0.2;
         ctx.stroke();
-        // eslint-disable-next-line functional/immutable-data
+         
         ctx.globalAlpha = 1.0;
 
         // Label (Symbol)
-        // eslint-disable-next-line functional/immutable-data
+         
         ctx.fillStyle = '#a1a1aa'; // zinc-400
-        // eslint-disable-next-line functional/immutable-data
+         
         ctx.font = '10px monospace';
-        // eslint-disable-next-line functional/immutable-data
+         
         ctx.textAlign = 'center';
         ctx.fillText(trap.symbol, x, y + (trap.direction === 'LONG' ? 15 : -10));
 
         // Label (Price)
-        // eslint-disable-next-line functional/immutable-data
+         
         ctx.fillStyle = '#52525b'; // zinc-600
         ctx.fillText(trap.triggerPrice.toFixed(2), x, y + (trap.direction === 'LONG' ? 25 : -20));
       });
@@ -158,7 +158,7 @@ export function TrapMapCanvas({ traps, height = 300 }: TrapMapCanvasProps) {
       gradient.addColorStop(0, 'rgba(45, 212, 191, 0.5)'); // Teal highlight
       gradient.addColorStop(1, 'rgba(45, 212, 191, 0)');
 
-      // eslint-disable-next-line functional/immutable-data
+       
       ctx.fillStyle = gradient;
       ctx.fillRect(sweepX - 50, 0, 50, canvas.height);
 

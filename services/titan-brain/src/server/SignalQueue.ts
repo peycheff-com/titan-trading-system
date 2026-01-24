@@ -75,7 +75,7 @@ export class SignalQueue {
   async connect(): Promise<void> {
     if (this.connected) return;
 
-    // eslint-disable-next-line functional/immutable-data
+     
     this.client = createClient({
       url: this.config.url,
     });
@@ -89,7 +89,7 @@ export class SignalQueue {
     });
 
     await this.client.connect();
-    // eslint-disable-next-line functional/immutable-data
+     
     this.connected = true;
     console.log('✅ Signal queue connected to Redis');
   }
@@ -100,9 +100,9 @@ export class SignalQueue {
   async disconnect(): Promise<void> {
     if (this.client && this.connected) {
       await this.client.quit();
-      // eslint-disable-next-line functional/immutable-data
+       
       this.connected = false;
-      // eslint-disable-next-line functional/immutable-data
+       
       this.client = null;
       console.log('🛑 Signal queue disconnected from Redis');
     }
@@ -358,7 +358,7 @@ export class SignalQueue {
     const processedCount = await this.client.hLen(this.processedKey);
 
     // Get oldest signal age
-    // eslint-disable-next-line functional/no-let
+     
     let oldestSignalAge: number | null = null;
     const oldest = await this.client.zRange(this.queueKey, 0, 0);
     if (oldest && oldest.length > 0) {
@@ -390,11 +390,11 @@ export class SignalQueue {
 
     const signals: IntentSignal[] = [];
 
-    // eslint-disable-next-line functional/no-let
+     
     for (let i = 0; i < limit; i++) {
       const signal = await this.dequeue();
       if (!signal) break;
-      // eslint-disable-next-line functional/immutable-data
+       
       signals.push(signal);
     }
 

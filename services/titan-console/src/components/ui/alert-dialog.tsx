@@ -23,7 +23,7 @@ const AlertDialogOverlay = React.forwardRef<
     ref={ref}
   />
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 AlertDialogOverlay.displayName = AlertDialogPrimitive.Overlay.displayName;
 
 const AlertDialogContent = React.forwardRef<
@@ -42,13 +42,13 @@ const AlertDialogContent = React.forwardRef<
     />
   </AlertDialogPortal>
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 AlertDialogContent.displayName = AlertDialogPrimitive.Content.displayName;
 
 const AlertDialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={cn('flex flex-col space-y-2 text-center sm:text-left', className)} {...props} />
 );
-// eslint-disable-next-line functional/immutable-data
+ 
 AlertDialogHeader.displayName = 'AlertDialogHeader';
 
 const AlertDialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
@@ -57,7 +57,7 @@ const AlertDialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDiv
     {...props}
   />
 );
-// eslint-disable-next-line functional/immutable-data
+ 
 AlertDialogFooter.displayName = 'AlertDialogFooter';
 
 const AlertDialogTitle = React.forwardRef<
@@ -70,7 +70,7 @@ const AlertDialogTitle = React.forwardRef<
     {...props}
   />
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 AlertDialogTitle.displayName = AlertDialogPrimitive.Title.displayName;
 
 const AlertDialogDescription = React.forwardRef<
@@ -83,7 +83,7 @@ const AlertDialogDescription = React.forwardRef<
     {...props}
   />
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 AlertDialogDescription.displayName = AlertDialogPrimitive.Description.displayName;
 
 const AlertDialogAction = React.forwardRef<
@@ -92,7 +92,7 @@ const AlertDialogAction = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Action ref={ref} className={cn(buttonVariants(), className)} {...props} />
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 AlertDialogAction.displayName = AlertDialogPrimitive.Action.displayName;
 
 const AlertDialogCancel = React.forwardRef<
@@ -105,7 +105,7 @@ const AlertDialogCancel = React.forwardRef<
     {...props}
   />
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 AlertDialogCancel.displayName = AlertDialogPrimitive.Cancel.displayName;
 
 export {

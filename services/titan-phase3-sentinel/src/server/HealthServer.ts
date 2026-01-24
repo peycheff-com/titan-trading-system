@@ -155,7 +155,7 @@ export class HealthServer {
       const status = this.config.getDetailedStatus();
       res.writeHead(200);
       res.end(JSON.stringify(status, null, 2));
-    } catch (error) {
+    } catch {
       res.writeHead(500);
       res.end(JSON.stringify({ error: 'Internal Error' }));
     }

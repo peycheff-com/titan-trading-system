@@ -130,7 +130,7 @@ const Carousel = React.forwardRef<
     </CarouselContext.Provider>
   );
 });
-// eslint-disable-next-line functional/immutable-data
+ 
 Carousel.displayName = 'Carousel';
 
 const CarouselContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
@@ -152,7 +152,7 @@ const CarouselContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HT
     );
   },
 );
-// eslint-disable-next-line functional/immutable-data
+ 
 CarouselContent.displayName = 'CarouselContent';
 
 const CarouselItem = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
@@ -174,7 +174,7 @@ const CarouselItem = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLD
     );
   },
 );
-// eslint-disable-next-line functional/immutable-data
+ 
 CarouselItem.displayName = 'CarouselItem';
 
 const CarouselPrevious = React.forwardRef<HTMLButtonElement, React.ComponentProps<typeof Button>>(
@@ -203,7 +203,7 @@ const CarouselPrevious = React.forwardRef<HTMLButtonElement, React.ComponentProp
     );
   },
 );
-// eslint-disable-next-line functional/immutable-data
+ 
 CarouselPrevious.displayName = 'CarouselPrevious';
 
 const CarouselNext = React.forwardRef<HTMLButtonElement, React.ComponentProps<typeof Button>>(
@@ -232,7 +232,7 @@ const CarouselNext = React.forwardRef<HTMLButtonElement, React.ComponentProps<ty
     );
   },
 );
-// eslint-disable-next-line functional/immutable-data
+ 
 CarouselNext.displayName = 'CarouselNext';
 
 export {

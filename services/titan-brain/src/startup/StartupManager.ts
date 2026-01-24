@@ -107,7 +107,7 @@ export class StartupManager extends EventEmitter {
       throw new Error('Cannot register steps after startup has begun');
     }
 
-    // eslint-disable-next-line functional/immutable-data
+     
     this.steps.set(step.name, step);
     this.emit('step:registered', { name: step.name });
 
@@ -123,7 +123,7 @@ export class StartupManager extends EventEmitter {
    * Register a shutdown handler
    */
   registerShutdownHandler(handler: () => Promise<void>): void {
-    // eslint-disable-next-line functional/immutable-data
+     
     this.shutdownHandlers.push(handler);
   }
 
@@ -135,9 +135,9 @@ export class StartupManager extends EventEmitter {
       throw new Error('Startup manager has already been started');
     }
 
-    // eslint-disable-next-line functional/immutable-data
+     
     this.isStarted = true;
-    // eslint-disable-next-line functional/immutable-data
+     
     this.startTime = Date.now();
 
     this.logger.info('Starting service initialization', undefined, {
@@ -214,7 +214,7 @@ export class StartupManager extends EventEmitter {
     // Check required variables
     for (const variable of requiredVariables) {
       if (!process.env[variable]) {
-        // eslint-disable-next-line functional/immutable-data
+         
         errors.push(`Required environment variable ${variable} is not set`);
       }
     }
@@ -222,7 +222,7 @@ export class StartupManager extends EventEmitter {
     // Check optional variables and warn if missing
     for (const variable of optionalVariables) {
       if (!process.env[variable]) {
-        // eslint-disable-next-line functional/immutable-data
+         
         warnings.push(`Optional environment variable ${variable} is not set`);
       }
     }
@@ -232,7 +232,7 @@ export class StartupManager extends EventEmitter {
       process.env.NODE_ENV &&
       !['development', 'production', 'test'].includes(process.env.NODE_ENV)
     ) {
-      // eslint-disable-next-line functional/immutable-data
+       
       errors.push(
         `NODE_ENV must be one of: development, production, test. Got: ${process.env.NODE_ENV}`,
       );
@@ -241,7 +241,7 @@ export class StartupManager extends EventEmitter {
     if (process.env.PORT) {
       const port = parseInt(process.env.PORT, 10);
       if (isNaN(port) || port < 1 || port > 65535) {
-        // eslint-disable-next-line functional/immutable-data
+         
         errors.push(`PORT must be a valid port number (1-65535). Got: ${process.env.PORT}`);
       }
     }
@@ -250,7 +250,7 @@ export class StartupManager extends EventEmitter {
       process.env.LOG_LEVEL &&
       !['fatal', 'error', 'warn', 'info', 'debug', 'trace'].includes(process.env.LOG_LEVEL)
     ) {
-      // eslint-disable-next-line functional/immutable-data
+       
       warnings.push(
         `LOG_LEVEL should be one of: fatal, error, warn, info, debug, trace. Got: ${process.env.LOG_LEVEL}`,
       );
@@ -341,7 +341,7 @@ export class StartupManager extends EventEmitter {
         return;
       }
 
-      // eslint-disable-next-line functional/immutable-data
+       
       visiting.add(stepName);
 
       const step = this.steps.get(stepName);
@@ -357,11 +357,11 @@ export class StartupManager extends EventEmitter {
         visit(dependency);
       }
 
-      // eslint-disable-next-line functional/immutable-data
+       
       visiting.delete(stepName);
-      // eslint-disable-next-line functional/immutable-data
+       
       visited.add(stepName);
-      // eslint-disable-next-line functional/immutable-data
+       
       order.push(stepName);
     };
 
@@ -387,9 +387,9 @@ export class StartupManager extends EventEmitter {
 
     this.emit('step:started', { name: step.name });
 
-    // eslint-disable-next-line functional/no-let
+     
     let lastError: Error | undefined;
-    // eslint-disable-next-line functional/no-let
+     
     let attempt = 0;
 
     while (attempt < this.config.maxRetries) {
@@ -412,7 +412,7 @@ export class StartupManager extends EventEmitter {
           timestamp: Date.now(),
         };
 
-        // eslint-disable-next-line functional/immutable-data
+         
         this.results.set(step.name, result);
 
         this.logger.info(`Startup step completed: ${step.name}`, undefined, {
@@ -451,7 +451,7 @@ export class StartupManager extends EventEmitter {
       timestamp: Date.now(),
     };
 
-    // eslint-disable-next-line functional/immutable-data
+     
     this.results.set(step.name, result);
 
     this.logger.error(`Startup step failed permanently: ${step.name}`, lastError!, undefined, {
@@ -479,7 +479,7 @@ export class StartupManager extends EventEmitter {
     const signals = ['SIGTERM', 'SIGINT', 'SIGUSR2'] as const;
 
     // Store handlers for cleanup
-    // eslint-disable-next-line functional/immutable-data
+     
     this.signalHandlers = new Map();
 
     for (const signal of signals) {
@@ -489,7 +489,7 @@ export class StartupManager extends EventEmitter {
         process.exit(0);
       };
 
-      // eslint-disable-next-line functional/immutable-data
+       
       this.signalHandlers.set(signal, handler);
       process.on(signal, handler);
     }
@@ -499,7 +499,7 @@ export class StartupManager extends EventEmitter {
       this.logger.error('Uncaught exception, shutting down', error);
       this.shutdown().finally(() => process.exit(1));
     };
-    // eslint-disable-next-line functional/immutable-data
+     
     this.signalHandlers.set('uncaughtException', uncaughtHandler);
     process.on('uncaughtException', uncaughtHandler);
 
@@ -515,7 +515,7 @@ export class StartupManager extends EventEmitter {
       );
       this.shutdown().finally(() => process.exit(1));
     };
-    // eslint-disable-next-line functional/immutable-data
+     
     this.signalHandlers.set('unhandledRejection', rejectionHandler);
     process.on('unhandledRejection', rejectionHandler);
   }
@@ -529,7 +529,7 @@ export class StartupManager extends EventEmitter {
       return;
     }
 
-    // eslint-disable-next-line functional/immutable-data
+     
     this.isShuttingDown = true;
     const shutdownStart = Date.now();
 
@@ -587,7 +587,7 @@ export class StartupManager extends EventEmitter {
         // Ignore cleanup errors
       }
     }
-    // eslint-disable-next-line functional/immutable-data
+     
     this.signalHandlers.clear();
   }
 

@@ -243,7 +243,7 @@ export class WebhookServer {
    * Start the webhook server
    */
   async start(): Promise<void> {
-    // eslint-disable-next-line functional/immutable-data
+     
     this.server = Fastify({
       logger: {
         level: this.config.logLevel,
@@ -326,7 +326,7 @@ export class WebhookServer {
       }
 
       if (!this.hmacValidator) {
-        // eslint-disable-next-line functional/immutable-data
+         
         this.hmacValidator = this.buildHmacValidator();
       }
 
@@ -361,7 +361,7 @@ export class WebhookServer {
       }
 
       // Add validation result to request for logging
-      // eslint-disable-next-line functional/immutable-data
+       
       (request as any).hmacValidation = result;
 
       this.logger.debug('HMAC validation successful', correlationId, {
@@ -426,7 +426,7 @@ export class WebhookServer {
 
     if (this.server) {
       await this.server.close();
-      // eslint-disable-next-line functional/immutable-data
+       
       this.server = null;
       this.logger.info('Webhook server stopped');
       this.canaryMonitor.stopMonitoring();
@@ -465,7 +465,7 @@ export class WebhookServer {
    */
   private async handleMetrics(_request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
-      // eslint-disable-next-line functional/no-let
+       
       let metricsText = '';
 
       if (this.metricsCollector) {
@@ -496,14 +496,14 @@ export class WebhookServer {
    * Enable HMAC verification
    */
   enableHmac(secret: string, options?: Partial<HmacOptions>): void {
-    // eslint-disable-next-line functional/immutable-data
+     
     this.hmacOptions = {
       ...this.hmacOptions,
       ...options,
       enabled: true,
       secret,
     };
-    // eslint-disable-next-line functional/immutable-data
+     
     this.hmacValidator = this.buildHmacValidator();
   }
 
@@ -511,9 +511,9 @@ export class WebhookServer {
    * Disable HMAC verification
    */
   disableHmac(): void {
-    // eslint-disable-next-line functional/immutable-data
+     
     this.hmacOptions.enabled = false;
-    // eslint-disable-next-line functional/immutable-data
+     
     this.hmacValidator = null;
   }
 }

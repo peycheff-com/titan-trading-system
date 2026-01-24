@@ -136,7 +136,7 @@ export class FastPathOrderExecutor implements IOrderExecutor {
           timestamp: Date.now(),
         };
       }
-    } catch (error) {
+    } catch {
       // ABORT on error
       try {
         await this.client.sendAbort(signalId);

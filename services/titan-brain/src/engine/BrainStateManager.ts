@@ -1,19 +1,26 @@
-import { BrainDecision, DashboardData, PhaseId, Position } from '../types/index.js';
+import {
+  BrainDecision,
+  DashboardData,
+  PhaseId,
+  Position,
+} from "../types/index.js";
 
 export class BrainStateManager {
   private currentEquity: number = 0;
   private currentPositions: Position[] = [];
   private dailyStartEquity: number = 0;
-  private recentDecisions: BrainDecision[] = [];
-  private recentTrades: Array<{ pnl: number; timestamp: number }> = [];
+  private readonly recentDecisions: BrainDecision[] = [];
+  private readonly recentTrades: Array<{ pnl: number; timestamp: number }> = [];
 
   // Dashboard cache
   private dashboardCache: DashboardData | null = null;
   private dashboardCacheTime: number = 0;
 
   // Signal stats
-  // Signal stats
-  private signalStats: Record<PhaseId | 'manual', { approved: number; total: number }> = {
+  private readonly signalStats: Record<
+    PhaseId | "manual",
+    { approved: number; total: number }
+  > = {
     phase1: { approved: 0, total: 0 },
     phase2: { approved: 0, total: 0 },
     phase3: { approved: 0, total: 0 },
@@ -37,8 +44,9 @@ export class BrainStateManager {
   /**
    * Set current allocation
    */
-  setAllocation(allocation: { w1: number; w2: number; w3: number; timestamp: number }): void {
-    // eslint-disable-next-line functional/immutable-data
+  setAllocation(
+    allocation: { w1: number; w2: number; w3: number; timestamp: number },
+  ): void {
     this.currentAllocation = allocation;
     this.invalidateDashboardCache();
   }
@@ -54,7 +62,6 @@ export class BrainStateManager {
    * Set current equity
    */
   setEquity(equity: number): void {
-    // eslint-disable-next-line functional/immutable-data
     this.currentEquity = equity;
     this.invalidateDashboardCache();
   }
@@ -63,12 +70,12 @@ export class BrainStateManager {
    * Update a single position in the state
    */
   updatePosition(position: Position): void {
-    const index = this.currentPositions.findIndex((p) => p.symbol === position.symbol);
+    const index = this.currentPositions.findIndex((p) =>
+      p.symbol === position.symbol
+    );
     if (index >= 0) {
-      // eslint-disable-next-line functional/immutable-data
       this.currentPositions[index] = position;
     } else {
-      // eslint-disable-next-line functional/immutable-data
       this.currentPositions.push(position);
     }
     this.invalidateDashboardCache();
@@ -85,7 +92,6 @@ export class BrainStateManager {
    * Set daily start equity
    */
   setDailyStartEquity(equity: number): void {
-    // eslint-disable-next-line functional/immutable-data
     this.dailyStartEquity = equity;
   }
 
@@ -93,15 +99,14 @@ export class BrainStateManager {
    * Get current positions
    */
   getPositions(): Position[] {
-    return this.currentPositions;
+    return [...this.currentPositions];
   }
 
   /**
    * Set current positions
    */
   setPositions(positions: Position[]): void {
-    // eslint-disable-next-line functional/immutable-data
-    this.currentPositions = positions;
+    this.currentPositions = [...positions];
     this.invalidateDashboardCache();
   }
 
@@ -109,12 +114,10 @@ export class BrainStateManager {
    * Add a decision to history
    */
   addDecision(decision: BrainDecision): void {
-    // eslint-disable-next-line functional/immutable-data
     this.recentDecisions.unshift(decision);
     // Keep last 1000 decisions
     if (this.recentDecisions.length > 1000) {
-      // eslint-disable-next-line functional/immutable-data
-      this.recentDecisions = this.recentDecisions.slice(0, 1000);
+      this.recentDecisions.splice(1000);
     }
 
     // Update stats logic is handled separately via updateSignalStats
@@ -123,16 +126,15 @@ export class BrainStateManager {
   /**
    * Update signal stats
    */
-  updateSignalStats(phaseId: PhaseId | 'manual', approved: boolean): void {
+  updateSignalStats(phaseId: PhaseId | "manual", approved: boolean): void {
     if (!this.signalStats[phaseId]) {
       // Fallback or init if missing
-      // eslint-disable-next-line functional/immutable-data
+
       this.signalStats[phaseId as PhaseId] = { approved: 0, total: 0 };
     }
-    // eslint-disable-next-line functional/immutable-data
+
     this.signalStats[phaseId].total++;
     if (approved) {
-      // eslint-disable-next-line functional/immutable-data
       this.signalStats[phaseId].approved++;
     }
     this.invalidateDashboardCache();
@@ -149,11 +151,9 @@ export class BrainStateManager {
    * Add a trade result
    */
   addTrade(pnl: number, timestamp: number): void {
-    // eslint-disable-next-line functional/immutable-data
     this.recentTrades.push({ pnl, timestamp });
     // Keep last 100
     if (this.recentTrades.length > 100) {
-      // eslint-disable-next-line functional/immutable-data
       this.recentTrades.shift(); // Remove oldest
     }
   }
@@ -168,7 +168,10 @@ export class BrainStateManager {
   /**
    * Get signal stats
    */
-  getSignalStats(): Record<PhaseId | 'manual', { approved: number; total: number }> {
+  getSignalStats(): Record<
+    PhaseId | "manual",
+    { approved: number; total: number }
+  > {
     return this.signalStats;
   }
 
@@ -177,21 +180,21 @@ export class BrainStateManager {
    */
   getDashboardCache(): DashboardData | null {
     const CACHE_TTL = 1000; // 1 second
-    if (this.dashboardCache && Date.now() - this.dashboardCacheTime < CACHE_TTL) {
+    if (
+      this.dashboardCache && Date.now() - this.dashboardCacheTime < CACHE_TTL
+    ) {
       return this.dashboardCache;
     }
     return null;
   }
 
   setDashboardCache(data: DashboardData): void {
-    // eslint-disable-next-line functional/immutable-data
     this.dashboardCache = data;
-    // eslint-disable-next-line functional/immutable-data
+
     this.dashboardCacheTime = Date.now();
   }
 
   invalidateDashboardCache(): void {
-    // eslint-disable-next-line functional/immutable-data
     this.dashboardCache = null;
   }
 }

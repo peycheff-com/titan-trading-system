@@ -36,7 +36,7 @@ const Toggle = React.forwardRef<
   />
 ));
 
-// eslint-disable-next-line functional/immutable-data
+ 
 Toggle.displayName = TogglePrimitive.Root.displayName;
 
 export { Toggle, toggleVariants };

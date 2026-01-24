@@ -1,0 +1,213 @@
+
+> titan-phase2-hunter@1.0.0 lint:check
+> eslint src/**/*.ts src/**/*.tsx
+
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/analytics/PerformanceAnalytics.ts
+   19:3   warning  'TradeOutcome' is defined but never used  @typescript-eslint/no-unused-vars
+  298:76  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/analytics/PerformanceReporter.ts
+  554:5  warning  'trades' is defined but never used. Allowed unused args must match /^_/u   @typescript-eslint/no-unused-vars
+  569:5  warning  'metrics' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  570:5  warning  'trades' is defined but never used. Allowed unused args must match /^_/u   @typescript-eslint/no-unused-vars
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/backtest/BacktestEngine.ts
+    11:3   warning  'HologramState' is defined but never used                                         @typescript-eslint/no-unused-vars
+    14:3   warning  'OrderParams' is defined but never used                                           @typescript-eslint/no-unused-vars
+    15:3   warning  'OrderResult' is defined but never used                                           @typescript-eslint/no-unused-vars
+    16:3   warning  'OrderStatus' is defined but never used                                           @typescript-eslint/no-unused-vars
+    17:3   warning  'Position' is defined but never used                                              @typescript-eslint/no-unused-vars
+    20:3   warning  'TimeRange' is defined but never used                                             @typescript-eslint/no-unused-vars
+   496:39  warning  't' is defined but never used. Allowed unused args must match /^_/u               @typescript-eslint/no-unused-vars
+   835:29  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+   838:38  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  1053:5   warning  'startTime' is defined but never used. Allowed unused args must match /^_/u       @typescript-eslint/no-unused-vars
+  1054:5   warning  'endTime' is defined but never used. Allowed unused args must match /^_/u         @typescript-eslint/no-unused-vars
+  1055:5   warning  'historicalData' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  1090:5   warning  'trades' is defined but never used. Allowed unused args must match /^_/u          @typescript-eslint/no-unused-vars
+  1091:5   warning  'historicalData' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/bottrap/AdaptiveLearningEngine.ts
+  11:24  warning  'PatternPrecision' is defined but never used  @typescript-eslint/no-unused-vars
+  12:35  warning  'TechnicalPattern' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/bottrap/BotTrapDetector.ts
+   14:3   warning  'TrapRecommendation' is defined but never used                         @typescript-eslint/no-unused-vars
+   15:3   warning  'PatternPrecision' is defined but never used                           @typescript-eslint/no-unused-vars
+   19:47  warning  'OHLCV' is defined but never used                                      @typescript-eslint/no-unused-vars
+  392:30  warning  'poi' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/bottrap/PatternPrecisionAnalyzer.ts
+   11:42  warning  'OHLCV' is defined but never used                                                  @typescript-eslint/no-unused-vars
+  452:5   warning  'characteristics' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/config/ConfigManager.ts
+   86:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   96:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  113:13  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  114:13  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  175:69  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/config/CredentialManager.ts
+  235:14  warning  'error' is defined but never used         @typescript-eslint/no-unused-vars
+  347:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  359:16  warning  'error' is defined but never used         @typescript-eslint/no-unused-vars
+  374:14  warning  'error' is defined but never used         @typescript-eslint/no-unused-vars
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/config/Enhanced2026Config.ts
+  116:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  118:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/console/ConfigPanel.test.tsx
+  49:9  warning  'mockOnSave' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  50:9  warning  'mockOnCancel' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/console/ConfigPanel.tsx
+   17:3  warning  'AlignmentWeights' is defined but never used                                    @typescript-eslint/no-unused-vars
+   18:3  warning  'RSConfig' is defined but never used                                            @typescript-eslint/no-unused-vars
+   19:3  warning  'RiskConfig' is defined but never used                                          @typescript-eslint/no-unused-vars
+   20:3  warning  'PortfolioConfig' is defined but never used                                     @typescript-eslint/no-unused-vars
+  484:3  warning  'onAutoAdjust' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  734:3  warning  'param' is defined but never used. Allowed unused args must match /^_/u         @typescript-eslint/no-unused-vars
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/emergency/EmergencyProtocolManager.ts
+  655:11  warning  'healthyCount' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/engine/HologramEngine.ts
+   17:3   warning  'BOS' is defined but never used                                           @typescript-eslint/no-unused-vars
+   18:3   warning  'DealingRange' is defined but never used                                  @typescript-eslint/no-unused-vars
+   19:3   warning  'Fractal' is defined but never used                                       @typescript-eslint/no-unused-vars
+   25:3   warning  'TrendState' is defined but never used                                    @typescript-eslint/no-unused-vars
+  235:18  warning  Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+  446:40  warning  'symbol' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/engine/HologramScanner.ts
+  18:36  warning  'HologramState' is defined but never used   @typescript-eslint/no-unused-vars
+  18:51  warning  'HologramStatus' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/engine/InefficiencyMapper.ts
+   31:13  warning  'candle2' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  105:19  warning  'candleSize' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  135:19  warning  'candleSize' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  231:17  warning  Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+  238:17  warning  Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+  249:17  warning  Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+  256:17  warning  Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+  267:16  warning  Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+  274:16  warning  Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+  283:14  warning  Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+  295:18  warning  Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+  301:18  warning  Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+  310:16  warning  Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/events/EventEmitter.ts
+   98:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  300:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/exchanges/BinanceSpotClient.ts
+  395:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/exchanges/BybitPerpsClient.ts
+  135:46  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  167:18  warning  'error' is defined but never used         @typescript-eslint/no-unused-vars
+  360:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  665:13  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  667:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  675:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/execution/SignalGenerator.ts
+   16:3   warning  'HologramStatus' is defined but never used                                         @typescript-eslint/no-unused-vars
+   22:3   warning  'SessionType' is defined but never used                                            @typescript-eslint/no-unused-vars
+   25:3   warning  'TrendState' is defined but never used                                             @typescript-eslint/no-unused-vars
+  133:16  warning  'session' is defined but never used. Allowed unused args must match /^_/u          @typescript-eslint/no-unused-vars
+  606:31  warning  'symbol' is defined but never used. Allowed unused args must match /^_/u           @typescript-eslint/no-unused-vars
+  606:47  warning  'currentPrice' is defined but never used. Allowed unused args must match /^_/u     @typescript-eslint/no-unused-vars
+  616:34  warning  'symbol' is defined but never used. Allowed unused args must match /^_/u           @typescript-eslint/no-unused-vars
+  629:5   warning  'period' is assigned a value but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  644:5   warning  'atr' is defined but never used. Allowed unused args must match /^_/u              @typescript-eslint/no-unused-vars
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/flow/AdvancedFlowValidator.ts
+   17:26  warning  'FootprintData' is defined but never used              @typescript-eslint/no-unused-vars
+   17:58  warning  'SweepPattern' is defined but never used               @typescript-eslint/no-unused-vars
+   28:10  warning  'CandleFootprint' is defined but never used            @typescript-eslint/no-unused-vars
+   30:27  warning  'OrderBlockLiquidityResult' is defined but never used  @typescript-eslint/no-unused-vars
+  171:53  warning  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/flow/FootprintAnalyzer.ts
+   16:25  warning  'TradeFootprint' is defined but never used          @typescript-eslint/no-unused-vars
+  183:5   warning  'passiveVolume' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/flow/IcebergDetector.ts
+  153:9  warning  'consumedVolume' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/flow/InstitutionalFlowClassifier.ts
+   16:43  warning  'TradeFootprint' is defined but never used                 @typescript-eslint/no-unused-vars
+   19:10  warning  'CandleFootprint' is defined but never used                @typescript-eslint/no-unused-vars
+   19:27  warning  'FootprintAnalysisResult' is defined but never used        @typescript-eslint/no-unused-vars
+  136:9   warning  'aggressiveSellVolume' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/global-liquidity/ConsensusValidator.ts
+  187:13  warning  'symbol' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/global-liquidity/ExchangeWebSocketClient.ts
+   12:28  warning  'ExchangeFlow' is defined but never used  @typescript-eslint/no-unused-vars
+  336:14  warning  'error' is defined but never used         @typescript-eslint/no-unused-vars
+  344:38  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  360:38  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  377:39  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  394:37  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/global-liquidity/ManipulationDetector.ts
+  11:24  warning  'ManipulationAnalysis' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/global-liquidity/MultiExchangeManager.ts
+  16:28  warning  'ExchangeFlow' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/ipc/index.ts
+  22:39  warning  'config' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/logging/Logger.ts
+   16:10  warning  'ExecutionData' is defined but never used  @typescript-eslint/no-unused-vars
+   96:12  warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  104:10  warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  261:36  warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  299:36  warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  341:36  warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  364:14  warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  381:14  warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  396:36  warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  480:36  warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  521:36  warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  546:39  warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  553:40  warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  649:13  warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/oracle/EventMonitor.ts
+  142:11  warning  'maxVolatility' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/oracle/Oracle.ts
+  23:23  warning  'SymbolMappingResult' is defined but never used  @typescript-eslint/no-unused-vars
+  24:31  warning  'SentimentResult' is defined but never used      @typescript-eslint/no-unused-vars
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/oracle/SentimentCalculator.ts
+  11:38  warning  'OracleScore' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/risk/EnhancedRiskManager.ts
+  17:3  warning  'PredictionMarketEvent' is defined but never used  @typescript-eslint/no-unused-vars
+  21:3  warning  'EmergencyType' is defined but never used          @typescript-eslint/no-unused-vars
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/risk/PortfolioManager.ts
+  16:47  warning  'PhaseConfig' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/risk/PositionManager.ts
+  17:3  warning  'OrderResult' is defined but never used          @typescript-eslint/no-unused-vars
+  18:3  warning  'PartialProfitConfig' is defined but never used  @typescript-eslint/no-unused-vars
+  21:3  warning  'TrailingStopConfig' is defined but never used   @typescript-eslint/no-unused-vars
+
+/Users/ivan/Code/trading/titan/services/titan-phase2-hunter/src/scripts/verify-enhanced-backtest.ts
+  43:58  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  58:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 134 problems (0 errors, 134 warnings)
+

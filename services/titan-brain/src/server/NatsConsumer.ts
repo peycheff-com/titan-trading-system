@@ -17,7 +17,7 @@ export class NatsConsumer {
   }
 
   setWebSocketService(wsService: WebSocketService) {
-    // eslint-disable-next-line functional/immutable-data
+     
     this.webSocketService = wsService;
   }
 
@@ -136,7 +136,7 @@ export class NatsConsumer {
 
   private async handleExecutionReport(data: any): Promise<void> {
     // Dual Read Strategy: unwraps Envelope if present
-    // eslint-disable-next-line functional/no-let
+     
     let payload = data;
     if (data && typeof data === 'object' && 'payload' in data && 'type' in data) {
       payload = data.payload;

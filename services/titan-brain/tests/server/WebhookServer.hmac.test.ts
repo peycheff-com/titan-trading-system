@@ -3,6 +3,14 @@ import { WebhookServer } from "../../src/server/WebhookServer";
 import { HMACValidator } from "../../src/security/HMACValidator";
 import { TitanBrain } from "../../src/engine/TitanBrain";
 
+// Mock dependencies
+jest.mock("../../src/services/canary/CanaryMonitor", () => ({
+  CanaryMonitor: jest.fn().mockImplementation(() => ({
+    startMonitoring: jest.fn(),
+    stopMonitoring: jest.fn(),
+  })),
+}));
+
 describe("WebhookServer HMAC validation", () => {
   let server: WebhookServer;
   let app: FastifyInstance;
@@ -23,7 +31,10 @@ describe("WebhookServer HMAC validation", () => {
       }),
       getEquity: jest.fn().mockReturnValue(0),
       getCircuitBreakerStatus: jest.fn().mockReturnValue({ active: false }),
-      processSignal: jest.fn().mockResolvedValue({ approved: true, reason: "ok" }),
+      processSignal: jest.fn().mockResolvedValue({
+        approved: true,
+        reason: "ok",
+      }),
     } as unknown as TitanBrain;
 
     server = new WebhookServer(
@@ -73,7 +84,7 @@ describe("WebhookServer HMAC validation", () => {
 
     const res = await app.inject({
       method: "POST",
-      url: "/webhook/phase1",
+      url: "/webhook/phase3",
       payload,
       headers: {
         ...headers,
@@ -111,7 +122,7 @@ describe("WebhookServer HMAC validation", () => {
 
     const res = await app.inject({
       method: "POST",
-      url: "/webhook/phase1",
+      url: "/webhook/phase3",
       payload: tamperedPayload,
       headers: {
         ...headers,

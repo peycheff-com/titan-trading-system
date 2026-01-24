@@ -12,7 +12,7 @@ const Pagination = ({ className, ...props }: React.ComponentProps<'nav'>) => (
     {...props}
   />
 );
-// eslint-disable-next-line functional/immutable-data
+ 
 Pagination.displayName = 'Pagination';
 
 const PaginationContent = React.forwardRef<HTMLUListElement, React.ComponentProps<'ul'>>(
@@ -20,13 +20,13 @@ const PaginationContent = React.forwardRef<HTMLUListElement, React.ComponentProp
     <ul ref={ref} className={cn('flex flex-row items-center gap-1', className)} {...props} />
   ),
 );
-// eslint-disable-next-line functional/immutable-data
+ 
 PaginationContent.displayName = 'PaginationContent';
 
 const PaginationItem = React.forwardRef<HTMLLIElement, React.ComponentProps<'li'>>(
   ({ className, ...props }, ref) => <li ref={ref} className={cn('', className)} {...props} />,
 );
-// eslint-disable-next-line functional/immutable-data
+ 
 PaginationItem.displayName = 'PaginationItem';
 
 type PaginationLinkProps = {
@@ -47,7 +47,7 @@ const PaginationLink = ({ className, isActive, size = 'icon', ...props }: Pagina
     {...props}
   />
 );
-// eslint-disable-next-line functional/immutable-data
+ 
 PaginationLink.displayName = 'PaginationLink';
 
 const PaginationPrevious = ({
@@ -64,7 +64,7 @@ const PaginationPrevious = ({
     <span>Previous</span>
   </PaginationLink>
 );
-// eslint-disable-next-line functional/immutable-data
+ 
 PaginationPrevious.displayName = 'PaginationPrevious';
 
 const PaginationNext = ({ className, ...props }: React.ComponentProps<typeof PaginationLink>) => (
@@ -78,7 +78,7 @@ const PaginationNext = ({ className, ...props }: React.ComponentProps<typeof Pag
     <ChevronRight className="h-4 w-4" />
   </PaginationLink>
 );
-// eslint-disable-next-line functional/immutable-data
+ 
 PaginationNext.displayName = 'PaginationNext';
 
 const PaginationEllipsis = ({ className, ...props }: React.ComponentProps<'span'>) => (
@@ -91,7 +91,7 @@ const PaginationEllipsis = ({ className, ...props }: React.ComponentProps<'span'
     <span className="sr-only">More pages</span>
   </span>
 );
-// eslint-disable-next-line functional/immutable-data
+ 
 PaginationEllipsis.displayName = 'PaginationEllipsis';
 
 export {

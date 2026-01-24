@@ -37,11 +37,11 @@ export interface InMemoryCacheStats {
  * High-performance in-memory cache with TTL and LRU eviction
  */
 export class InMemoryCache extends EventEmitter {
-  private cache: Map<string, CacheEntry> = new Map();
-  private maxSize: number;
-  private defaultTtlMs: number;
+  private readonly cache: Map<string, CacheEntry> = new Map();
+  private readonly maxSize: number;
+  private readonly defaultTtlMs: number;
   private cleanupInterval: NodeJS.Timeout | null = null;
-  private stats: {
+  private readonly stats: {
     hits: number;
     misses: number;
     evictions: number;
@@ -65,7 +65,10 @@ export class InMemoryCache extends EventEmitter {
   initialize(): void {
     // Start cleanup interval to remove expired entries
     this.startCleanupInterval();
-    this.emit('initialized', { maxSize: this.maxSize, defaultTtlMs: this.defaultTtlMs });
+    this.emit('initialized', {
+      maxSize: this.maxSize,
+      defaultTtlMs: this.defaultTtlMs,
+    });
   }
 
   /**
@@ -77,7 +80,7 @@ export class InMemoryCache extends EventEmitter {
     }
 
     // Run cleanup every 30 seconds
-    // eslint-disable-next-line functional/immutable-data
+     
     this.cleanupInterval = setInterval(() => {
       this.cleanupExpired();
     }, 30000);
@@ -92,20 +95,23 @@ export class InMemoryCache extends EventEmitter {
 
     for (const [key, entry] of this.cache.entries()) {
       if (entry.expiresAt <= now) {
-        // eslint-disable-next-line functional/immutable-data
+         
         expiredKeys.push(key);
       }
     }
 
     for (const key of expiredKeys) {
-      // eslint-disable-next-line functional/immutable-data
+       
       this.cache.delete(key);
-      // eslint-disable-next-line functional/immutable-data
+       
       this.stats.expired++;
     }
 
     if (expiredKeys.length > 0) {
-      this.emit('cleanup', { expiredCount: expiredKeys.length, remainingSize: this.cache.size });
+      this.emit('cleanup', {
+        expiredCount: expiredKeys.length,
+        remainingSize: this.cache.size,
+      });
     }
   }
 
@@ -122,16 +128,19 @@ export class InMemoryCache extends EventEmitter {
 
     // Remove the oldest entries
     const actualEvictCount = Math.min(count, entries.length);
-    // eslint-disable-next-line functional/no-let
+     
     for (let i = 0; i < actualEvictCount; i++) {
       const [key] = entries[i];
-      // eslint-disable-next-line functional/immutable-data
+       
       this.cache.delete(key);
-      // eslint-disable-next-line functional/immutable-data
+       
       this.stats.evictions++;
     }
 
-    this.emit('eviction', { evictedCount: actualEvictCount, remainingSize: this.cache.size });
+    this.emit('eviction', {
+      evictedCount: actualEvictCount,
+      remainingSize: this.cache.size,
+    });
   }
 
   /**
@@ -141,7 +150,7 @@ export class InMemoryCache extends EventEmitter {
     const entry = this.cache.get(key);
 
     if (!entry) {
-      // eslint-disable-next-line functional/immutable-data
+       
       this.stats.misses++;
       this.emit('miss', { key });
       return undefined;
@@ -149,22 +158,22 @@ export class InMemoryCache extends EventEmitter {
 
     // Check if entry has expired
     if (entry.expiresAt <= Date.now()) {
-      // eslint-disable-next-line functional/immutable-data
+       
       this.cache.delete(key);
-      // eslint-disable-next-line functional/immutable-data
+       
       this.stats.expired++;
-      // eslint-disable-next-line functional/immutable-data
+       
       this.stats.misses++;
       this.emit('expired', { key });
       return undefined;
     }
 
     // Update access statistics
-    // eslint-disable-next-line functional/immutable-data
+     
     entry.accessCount++;
-    // eslint-disable-next-line functional/immutable-data
+     
     entry.lastAccessed = Date.now();
-    // eslint-disable-next-line functional/immutable-data
+     
     this.stats.hits++;
 
     this.emit('hit', { key, accessCount: entry.accessCount });
@@ -187,7 +196,7 @@ export class InMemoryCache extends EventEmitter {
     }
 
     // Set the entry
-    // eslint-disable-next-line functional/immutable-data
+     
     this.cache.set(key, {
       value,
       expiresAt,
@@ -207,7 +216,7 @@ export class InMemoryCache extends EventEmitter {
    * Delete a value from cache
    */
   delete(key: string): boolean {
-    // eslint-disable-next-line functional/immutable-data
+     
     const existed = this.cache.delete(key);
 
     if (existed) {
@@ -229,9 +238,9 @@ export class InMemoryCache extends EventEmitter {
 
     // Check if entry has expired
     if (entry.expiresAt <= Date.now()) {
-      // eslint-disable-next-line functional/immutable-data
+       
       this.cache.delete(key);
-      // eslint-disable-next-line functional/immutable-data
+       
       this.stats.expired++;
       return false;
     }
@@ -248,7 +257,7 @@ export class InMemoryCache extends EventEmitter {
     for (const key of keys) {
       const value = this.get<T>(key);
       if (value !== undefined) {
-        // eslint-disable-next-line functional/immutable-data
+         
         result.set(key, value);
       }
     }
@@ -269,7 +278,7 @@ export class InMemoryCache extends EventEmitter {
    * Delete multiple values from cache
    */
   deleteMultiple(keys: string[]): number {
-    // eslint-disable-next-line functional/no-let
+     
     let deletedCount = 0;
 
     for (const key of keys) {
@@ -286,17 +295,18 @@ export class InMemoryCache extends EventEmitter {
    */
   clear(): void {
     const previousSize = this.cache.size;
-    // eslint-disable-next-line functional/immutable-data
+     
     this.cache.clear();
 
     // Reset stats
-    // eslint-disable-next-line functional/immutable-data
-    this.stats = {
-      hits: 0,
-      misses: 0,
-      evictions: 0,
-      expired: 0,
-    };
+     
+    this.stats.hits = 0;
+     
+    this.stats.misses = 0;
+     
+    this.stats.evictions = 0;
+     
+    this.stats.expired = 0;
 
     this.emit('clear', { previousSize });
   }
@@ -310,7 +320,7 @@ export class InMemoryCache extends EventEmitter {
 
     for (const [key, entry] of this.cache.entries()) {
       if (entry.expiresAt > now) {
-        // eslint-disable-next-line functional/immutable-data
+         
         validKeys.push(key);
       }
     }
@@ -326,7 +336,7 @@ export class InMemoryCache extends EventEmitter {
     const hitRate = totalRequests > 0 ? (this.stats.hits / totalRequests) * 100 : 0;
 
     // Estimate memory usage (rough calculation)
-    // eslint-disable-next-line functional/no-let
+     
     let estimatedMemoryUsage = 0;
     for (const [key, entry] of this.cache.entries()) {
       // Rough estimation: key size + JSON serialized value size + overhead
@@ -359,7 +369,7 @@ export class InMemoryCache extends EventEmitter {
 
     for (const [key, entry] of this.cache.entries()) {
       if (entry.expiresAt <= threshold && entry.expiresAt > now) {
-        // eslint-disable-next-line functional/immutable-data
+         
         expiringEntries.push({
           key,
           expiresAt: entry.expiresAt,
@@ -368,7 +378,7 @@ export class InMemoryCache extends EventEmitter {
       }
     }
 
-    // eslint-disable-next-line functional/immutable-data
+     
     return expiringEntries.sort((a, b) => a.timeLeft - b.timeLeft);
   }
 
@@ -402,15 +412,15 @@ export class InMemoryCache extends EventEmitter {
 
     // Check if entry has expired
     if (entry.expiresAt <= Date.now()) {
-      // eslint-disable-next-line functional/immutable-data
+       
       this.cache.delete(key);
-      // eslint-disable-next-line functional/immutable-data
+       
       this.stats.expired++;
       return false;
     }
 
     // Update expiration time
-    // eslint-disable-next-line functional/immutable-data
+     
     entry.expiresAt = Date.now() + ttlMs;
 
     this.emit('ttl_updated', {
@@ -436,9 +446,9 @@ export class InMemoryCache extends EventEmitter {
 
     // Check if entry has expired
     if (entry.expiresAt <= now) {
-      // eslint-disable-next-line functional/immutable-data
+       
       this.cache.delete(key);
-      // eslint-disable-next-line functional/immutable-data
+       
       this.stats.expired++;
       return null;
     }
@@ -452,7 +462,7 @@ export class InMemoryCache extends EventEmitter {
   shutdown(): void {
     if (this.cleanupInterval) {
       clearInterval(this.cleanupInterval);
-      // eslint-disable-next-line functional/immutable-data
+       
       this.cleanupInterval = null;
     }
 

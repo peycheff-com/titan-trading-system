@@ -13,6 +13,13 @@ export interface OHLCV {
   timeframe: string;
 }
 
+export interface SimulationConfig {
+  symbol: string;
+  initialCapital: number;
+  startDate: number;
+  endDate: number;
+}
+
 export interface RegimeSnapshot {
   timestamp: number;
   symbol: string;
@@ -25,35 +32,37 @@ export interface Trade {
   id: string;
   timestamp: number;
   symbol: string;
-  side: 'long' | 'short';
+  side: "long" | "short" | "LONG" | "SHORT";
   entryPrice: number;
   exitPrice: number;
   quantity: number;
-  leverage: number;
+  leverage?: number;
   pnl: number;
-  pnlPercent: number;
-  duration: number;
-  slippage: number;
-  fees: number;
-  exitReason: string;
+  pnlPercent?: number;
+  duration?: number;
+  slippage?: number;
+  fees?: number;
+  exitReason?: string;
+  size?: number; // unified with quantity
 }
 
 export interface BacktestResult {
-  totalTrades: number;
-  winRate: number;
-  totalPnL: number;
-  maxDrawdown: number;
-  maxDrawdownPercent: number;
-  sharpeRatio: number;
-  sortinoRatio: number;
-  calmarRatio: number;
-  profitFactor: number;
+  metrics: {
+    totalReturn: number;
+    maxDrawdown: number;
+    sharpeRatio: number;
+    winRate: number;
+    tradesCount: number;
+  };
+  trades: Trade[];
+  equityCurve: { timestamp: number; equity: number }[];
+  logs: string[];
 }
 
 export interface Signal {
   symbol: string;
-  action: 'BUY' | 'SELL' | 'HOLD';
-  type: 'MARKET' | 'LIMIT';
+  action: "BUY" | "SELL" | "HOLD";
+  type: "MARKET" | "LIMIT";
   price?: number;
   stopLoss?: number;
   takeProfit?: number;

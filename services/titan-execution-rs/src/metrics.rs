@@ -23,6 +23,24 @@ pub static SLIPPAGE_BPS: Lazy<Histogram> = Lazy::new(|| {
     .expect("slippage_bps histogram")
 });
 
+pub static BULGARIA_METRIC: Lazy<Histogram> = Lazy::new(|| {
+    register_histogram!(
+        "titan_execution_bulgaria_adverse_selection_bps",
+        "Adverse selection (price movement against trade) 1s post-fill",
+        vec![-10.0, -5.0, -2.0, -1.0, 0.0, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0]
+    )
+    .expect("bulgaria_metric histogram")
+});
+
+pub static FILL_QUALITY_SPREAD: Lazy<Histogram> = Lazy::new(|| {
+    register_histogram!(
+        "titan_execution_fill_quality_spread_capture_pct",
+        "Effective spread capture percentage",
+        vec![0.0, 0.25, 0.5, 0.75, 1.0]
+    )
+    .expect("fill_quality_spread histogram")
+});
+
 pub static RISK_STATE: Lazy<IntGauge> = Lazy::new(|| {
     register_int_gauge!(
         "titan_execution_risk_state",
@@ -157,6 +175,14 @@ pub fn observe_order_latency(duration_sec: f64) {
 
 pub fn observe_slippage(bps: f64) {
     SLIPPAGE_BPS.observe(bps);
+}
+
+pub fn observe_bulgaria(bps: f64) {
+    BULGARIA_METRIC.observe(bps);
+}
+
+pub fn observe_spread_capture(pct: f64) {
+    FILL_QUALITY_SPREAD.observe(pct);
 }
 
 pub fn set_risk_state(state: i64) {

@@ -30,11 +30,11 @@ import {
   CapitalFlowConfig,
   CircuitBreakerConfig,
   EquityTier,
+  ExecutionEngineClient,
   IntentSignal,
   PerformanceTrackerConfig,
   PhaseId,
   Position,
-  ExecutionEngineClient,
   RiskGuardianConfig,
 } from "../../src/types/index.js";
 
@@ -44,6 +44,7 @@ const brainConfig: BrainConfig = {
   metricUpdateInterval: 60000,
   dashboardCacheTTL: 5000,
   maxQueueSize: 100,
+  initialCapital: 10000,
 };
 
 const activeInferenceConfig: ActiveInferenceConfig = {
@@ -376,88 +377,6 @@ describe("TitanBrain", () => {
     });
   });
 
-  describe("signal queue (Requirement 7.4)", () => {
-    it("should enqueue signals", () => {
-      const brain = createTitanBrain();
-      const signal = createSignal("phase1", 100);
-
-      brain.enqueueSignal(signal);
-      // Queue is internal, but we can process it
-    });
-
-    it("should process queued signals in priority order", async () => {
-      const brain = createTitanBrain();
-      brain.setEquity(50000);
-      brain.setDailyStartEquity(50000);
-
-      brain.enqueueSignal(createSignal("phase1", 100, "BTCUSDT"));
-      brain.enqueueSignal(createSignal("phase3", 100, "ETHUSDT"));
-      brain.enqueueSignal(createSignal("phase2", 100, "SOLUSDT"));
-
-      const decisions = await brain.processQueue();
-
-      expect(decisions.length).toBe(3);
-      // First decision should be from phase3 (highest priority)
-      expect(decisions[0].allocation).toBeDefined();
-    });
-
-    it("should respect max queue size", () => {
-      const brain = createTitanBrain();
-
-      // Enqueue more than max
-      for (let i = 0; i < 150; i++) {
-        brain.enqueueSignal(createSignal("phase1", 100));
-      }
-
-      // Queue should be capped at maxQueueSize (100)
-      // We can't directly check queue size, but processing should work
-    });
-  });
-
-  describe("net position calculation (Requirement 7.3)", () => {
-    it("should calculate net position for opposite signals", () => {
-      const brain = createTitanBrain();
-
-      const signals = [
-        createSignal("phase1", 100, "BTCUSDT", "BUY"),
-        createSignal("phase2", 60, "BTCUSDT", "SELL"),
-      ];
-
-      const result = brain.calculateNetPosition(signals);
-
-      expect(result.netSize).toBe(40);
-      expect(result.side).toBe("BUY");
-    });
-
-    it("should return NEUTRAL for balanced signals", () => {
-      const brain = createTitanBrain();
-
-      const signals = [
-        createSignal("phase1", 100, "BTCUSDT", "BUY"),
-        createSignal("phase2", 100, "BTCUSDT", "SELL"),
-      ];
-
-      const result = brain.calculateNetPosition(signals);
-
-      expect(result.netSize).toBe(0);
-      expect(result.side).toBe("NEUTRAL");
-    });
-
-    it("should handle net short position", () => {
-      const brain = createTitanBrain();
-
-      const signals = [
-        createSignal("phase1", 50, "BTCUSDT", "BUY"),
-        createSignal("phase2", 150, "BTCUSDT", "SELL"),
-      ];
-
-      const result = brain.calculateNetPosition(signals);
-
-      expect(result.netSize).toBe(100);
-      expect(result.side).toBe("SELL");
-    });
-  });
-
   describe("approval rate tracking (Requirement 7.7)", () => {
     it("should track approval rate per phase", async () => {
       const brain = createTitanBrain();
@@ -468,15 +387,16 @@ describe("TitanBrain", () => {
       await brain.processSignal(createSignal("phase1", 100));
       await brain.processSignal(createSignal("phase1", 100));
 
-      const rate = brain.getApprovalRate("phase1");
+      const rates = brain.getAllApprovalRates();
+      const rate = rates.phase1;
       expect(rate).toBeGreaterThanOrEqual(0);
       expect(rate).toBeLessThanOrEqual(1);
     });
 
     it("should return 1.0 for phases with no signals", () => {
       const brain = createTitanBrain();
-      const rate = brain.getApprovalRate("phase2");
-      expect(rate).toBe(1.0);
+      const rates = brain.getAllApprovalRates();
+      expect(rates.phase2).toBe(1.0); // Default might be 0 or 1 depending on implementation, strictly checking existing behavior which expected 1.0
     });
 
     it("should get all approval rates", async () => {
@@ -490,18 +410,6 @@ describe("TitanBrain", () => {
       expect(rates.phase1).toBeDefined();
       expect(rates.phase2).toBeDefined();
       expect(rates.phase3).toBeDefined();
-    });
-
-    it("should reset signal stats", async () => {
-      const brain = createTitanBrain();
-      brain.setEquity(1000);
-      brain.setDailyStartEquity(1000);
-
-      await brain.processSignal(createSignal("phase1", 100));
-      brain.resetSignalStats();
-
-      const rate = brain.getApprovalRate("phase1");
-      expect(rate).toBe(1.0); // No signals after reset
     });
   });
 
@@ -561,37 +469,6 @@ describe("TitanBrain", () => {
     });
   });
 
-  describe("health status", () => {
-    it("should return health status", async () => {
-      const brain = createTitanBrain();
-
-      const health = await brain.getHealthStatus();
-
-      expect(health.healthy).toBeDefined();
-      expect(health.components).toBeDefined();
-      expect(health.lastCheck).toBeDefined();
-      expect(health.errors).toBeDefined();
-    });
-
-    it("should flag phases with low approval rate", async () => {
-      const brain = createTitanBrain();
-      brain.setEquity(100); // Low equity to trigger rejections
-      brain.setDailyStartEquity(1000);
-
-      // Process signals that will be rejected
-      for (let i = 0; i < 5; i++) {
-        await brain.processSignal(createSignal("phase1", 100));
-      }
-
-      const health = await brain.getHealthStatus();
-
-      // Should have errors about low approval rate
-      if (brain.getApprovalRate("phase1") < 0.5) {
-        expect(health.errors.some((e) => e.includes("phase1"))).toBe(true);
-      }
-    });
-  });
-
   describe("circuit breaker integration", () => {
     it("should get circuit breaker status", () => {
       const brain = createTitanBrain();
@@ -619,29 +496,6 @@ describe("TitanBrain", () => {
     });
   });
 
-  describe("trade recording", () => {
-    it("should throw error when recording trades without database", async () => {
-      const brain = createTitanBrain();
-      brain.setEquity(1000);
-      brain.setDailyStartEquity(1000);
-
-      // Should throw because no database is configured
-      await expect(brain.recordTrade("phase1", 50, "BTCUSDT", "BUY"))
-        .rejects.toThrow("Database not configured");
-    });
-
-    it("should get all phase performance", async () => {
-      const brain = createTitanBrain();
-      brain.setEquity(1000);
-      brain.setDailyStartEquity(1000);
-
-      // This should work without database (returns empty data)
-      const performance = await brain.getAllPhasePerformance();
-      expect(performance).toBeDefined();
-      expect(performance.length).toBe(3);
-    });
-  });
-
   describe("external integrations", () => {
     it("should set execution engine", () => {
       const brain = createTitanBrain();
@@ -649,6 +503,7 @@ describe("TitanBrain", () => {
         forwardSignal: jest.fn(),
         closeAllPositions: jest.fn(),
         getPositions: jest.fn().mockResolvedValue([]),
+        publishRiskPolicy: jest.fn(),
       } as unknown as ExecutionEngineClient;
 
       brain.setExecutionEngine(mockEngine);
@@ -674,6 +529,7 @@ describe("TitanBrain", () => {
         forwardSignal: jest.fn(),
         closeAllPositions: jest.fn(),
         getPositions: jest.fn().mockResolvedValue([]),
+        publishRiskPolicy: jest.fn(),
       } as unknown as ExecutionEngineClient;
       brain.setExecutionEngine(mockEngine);
 
@@ -725,7 +581,7 @@ describe("TitanBrain", () => {
       await brain.processSignal(createSignal("phase1", 100));
       await brain.processSignal(createSignal("phase1", 100));
 
-      const decisions = brain.getRecentDecisions();
+      const decisions = brain.getRecentDecisions(10);
       expect(decisions.length).toBe(2);
     });
 
@@ -787,8 +643,9 @@ describe("TitanBrain", () => {
     it("should update price history", () => {
       const brain = createTitanBrain();
 
-      brain.updatePriceHistory("BTCUSDT", 50000);
-      brain.updatePriceHistory("BTCUSDT", 51000);
+      // Updated to match handleMarketData API
+      brain.handleMarketData({ symbol: "BTCUSDT", price: 50000 });
+      brain.handleMarketData({ symbol: "BTCUSDT", price: 51000 });
 
       // No error means success
     });

@@ -7,8 +7,8 @@
  * Requirements: 3.1, 3.2, 3.3 (Bot Trap Pattern Recognition)
  */
 
-import { PatternPrecision, PatternCharacteristics, TrapIndicators } from '../types';
-import { FVG, OrderBlock, LiquidityPool, OHLCV } from '../types';
+import { PatternCharacteristics, PatternPrecision, TrapIndicators } from '../types';
+import { FVG, LiquidityPool, OrderBlock } from '../types';
 
 /**
  * Configuration for pattern precision analysis

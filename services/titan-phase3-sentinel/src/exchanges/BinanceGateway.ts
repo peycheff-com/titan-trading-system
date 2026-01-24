@@ -33,12 +33,12 @@ export class BinanceGateway implements IExchangeGateway {
     };
   }
 
-  async getPrice(symbol: string): Promise<number> {
+  async getPrice(_symbol: string): Promise<number> {
     // Implement price fetch
     return 50000; // Stub
   }
 
-  async getTicker(symbol: string): Promise<{ price: number; bid: number; ask: number }> {
+  async getTicker(_symbol: string): Promise<{ price: number; bid: number; ask: number }> {
     return {
       price: 50000,
       bid: 49995,
@@ -46,7 +46,7 @@ export class BinanceGateway implements IExchangeGateway {
     };
   }
 
-  async getBalance(asset: string): Promise<number> {
+  async getBalance(_asset: string): Promise<number> {
     // Implement balance fetch
     return 10000; // Stub
   }

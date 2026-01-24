@@ -20,7 +20,7 @@ const Progress = React.forwardRef<
     />
   </ProgressPrimitive.Root>
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 Progress.displayName = ProgressPrimitive.Root.displayName;
 
 export { Progress };

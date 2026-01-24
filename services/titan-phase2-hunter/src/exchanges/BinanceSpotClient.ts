@@ -7,11 +7,11 @@
  * Requirements: 4.1 (CVD Monitoring)
  */
 
-import WebSocket = require('ws');
+import WebSocket from 'ws';
 import { Trade } from '../types';
 
 // Use require for node-fetch to avoid ES modules issues in Jest
-const fetch = require('node-fetch');
+import fetch from 'node-fetch';
 
 export interface BinanceAggTrade {
   e: string; // Event type
@@ -191,7 +191,9 @@ export class BinanceSpotClient {
       const data = (await response.json()) as BinanceSpotPrice;
       return parseFloat(data.price);
     } catch (error) {
-      const errorMsg = `Failed to get spot price for ${symbol}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      const errorMsg = `Failed to get spot price for ${symbol}: ${
+        error instanceof Error ? error.message : 'Unknown error'
+      }`;
       this.emitError(new Error(errorMsg));
       throw new Error(errorMsg);
     }
@@ -318,7 +320,9 @@ export class BinanceSpotClient {
         } catch (error) {
           this.emitError(
             new Error(
-              `Failed to parse WebSocket message: ${error instanceof Error ? error.message : 'Unknown error'}`
+              `Failed to parse WebSocket message: ${
+                error instanceof Error ? error.message : 'Unknown error'
+              }`
             )
           );
         }
@@ -347,7 +351,9 @@ export class BinanceSpotClient {
     } catch (error) {
       this.emitError(
         new Error(
-          `Failed to connect to Binance WebSocket: ${error instanceof Error ? error.message : 'Unknown error'}`
+          `Failed to connect to Binance WebSocket: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`
         )
       );
     }

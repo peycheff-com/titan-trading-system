@@ -39,7 +39,7 @@ export class SignalRouter {
     const decisions: BrainDecision[] = [];
     for (const signal of sortedSignals) {
       // Process sequentially to ensure state consistency
-      // eslint-disable-next-line functional/immutable-data
+       
       decisions.push(await this.processSignal(signal));
     }
 

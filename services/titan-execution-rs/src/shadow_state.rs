@@ -3,6 +3,7 @@ use crate::exposure::{ExposureCalculator, ExposureMetrics};
 use crate::metrics;
 use crate::model::{Intent, IntentStatus, IntentType, Position, Side, TradeRecord};
 use crate::persistence::store::PersistenceStore;
+use chrono::Utc;
 
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
@@ -128,10 +129,105 @@ impl ShadowState {
     }
 
     pub fn process_intent(&mut self, mut intent: Intent) -> Intent {
-        // Idempotency Check
         if let Some(existing) = self.pending_intents.get(&intent.signal_id) {
             warn!(signal_id = %intent.signal_id, "Duplicate intent received - returning existing state");
             return existing.clone();
+        }
+
+        if !intent.status.is_active() {
+            return intent;
+        }
+
+        // --- Phase 2: Shadow Reconciliation (ForceSync) ---
+        if let IntentType::ForceSync = intent.intent_type {
+            info!(signal_id = %intent.signal_id, "FORCE SYNC: Overwriting state for {}", intent.symbol);
+
+            let side = if intent.direction >= 0 {
+                Side::Long
+            } else {
+                Side::Short
+            };
+            // Use intent size as target position size.
+            // If size is 0, we close/remove position.
+
+            if intent.size.is_zero() {
+                self.positions.remove(&intent.symbol);
+                if let Err(e) = self.persistence.delete_position(&intent.symbol) {
+                    warn!("Failed to delete forced position: {}", e);
+                }
+                info!("ForceSync: Position cleared for {}", intent.symbol);
+            } else {
+                let entry_price = intent.entry_zone.first().cloned().unwrap_or(Decimal::ZERO);
+
+                let position = Position {
+                    symbol: intent.symbol.clone(),
+                    side,
+                    size: intent.size,
+                    entry_price,
+                    stop_loss: intent.stop_loss,
+                    take_profits: intent.take_profits.clone(),
+                    signal_id: intent.signal_id.clone(),
+                    opened_at: Utc::now(),
+                    regime_state: intent.regime_state,
+                    phase: intent.phase,
+                    metadata: intent.metadata.clone(),
+                    exchange: intent.exchange.clone(),
+                    position_mode: intent.position_mode.clone(),
+
+                    realized_pnl: Decimal::ZERO,
+                    unrealized_pnl: Decimal::ZERO,
+                    fees_paid: Decimal::ZERO,
+                    funding_paid: Decimal::ZERO,
+                    last_mark_price: None,
+                    last_update_ts: Utc::now().timestamp_millis(),
+                };
+
+                self.positions
+                    .insert(intent.symbol.clone(), position.clone());
+                if let Err(e) = self.persistence.save_position(&position) {
+                    warn!("Failed to save forced position: {}", e);
+                }
+                info!(
+                    "ForceSync: Position set for {} to {:?}",
+                    intent.symbol, position
+                );
+            }
+
+            intent.status = IntentStatus::Executed;
+            return intent;
+        }
+
+        // 1. Idempotency Check (Explicit)
+        if let Some(causation_id) = &intent.causation_id {
+            match self
+                .persistence
+                .check_idempotency(causation_id, intent.ttl_ms.unwrap_or(5000))
+            {
+                Ok(false) => {
+                    warn!(signal_id = %intent.signal_id, causation_id = %causation_id, "Duplicate causation_id detected - rejecting");
+                    intent.status = IntentStatus::Rejected;
+                    intent.rejection_reason = Some("Duplicate causation_id".to_string());
+                    return intent;
+                }
+                Err(e) => {
+                    error!("Idempotency check failed: {}", e);
+                    intent.status = IntentStatus::Rejected;
+                    intent.rejection_reason = Some("Idempotency check failed".to_string());
+                    return intent;
+                }
+                Ok(true) => {
+                    // Mark as seen (At Most Once)
+                    if let Err(e) = self
+                        .persistence
+                        .set_idempotency(causation_id, intent.ttl_ms.unwrap_or(5000))
+                    {
+                        error!("Failed to set idempotency key: {}", e);
+                        intent.status = IntentStatus::Rejected;
+                        intent.rejection_reason = Some("Storage failure".to_string());
+                        return intent;
+                    }
+                }
+            }
         }
 
         if intent.t_ingress.is_none() {

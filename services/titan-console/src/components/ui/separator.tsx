@@ -19,7 +19,7 @@ const Separator = React.forwardRef<
     {...props}
   />
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 Separator.displayName = SeparatorPrimitive.Root.displayName;
 
 export { Separator };

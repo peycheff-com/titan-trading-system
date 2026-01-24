@@ -1,12 +1,12 @@
-import { EventEmitter } from 'events';
+import { EventEmitter } from "events";
 import {
   CompositeEventScore,
   EventAlert,
   ImpactLevel,
   PredictionAnomaly,
   PredictionMarketEvent,
-} from '../types';
-import { Enhanced2026ConfigManager } from '../config/Enhanced2026Config';
+} from "../types";
+import { ConfigManager } from "../config/ConfigManager";
 
 /**
  * Event Monitor
@@ -17,12 +17,12 @@ import { Enhanced2026ConfigManager } from '../config/Enhanced2026Config';
  * Requirement 11.1: Implement prediction market event monitoring
  */
 export class EventMonitor extends EventEmitter {
-  private configManager: Enhanced2026ConfigManager;
+  private configManager: ConfigManager;
   private previousEvents: Map<string, PredictionMarketEvent> = new Map();
   // Critical probability thresholds to watch for crossings
   private readonly CRITICAL_THRESHOLDS = [20, 50, 80];
 
-  constructor(configManager: Enhanced2026ConfigManager) {
+  constructor(configManager: ConfigManager) {
     super();
     this.configManager = configManager;
   }
@@ -38,9 +38,11 @@ export class EventMonitor extends EventEmitter {
    * Detect significant changes in events
    * Compares current events against previously stored state.
    */
-  public detectSignificantChanges(currentEvents: PredictionMarketEvent[]): EventAlert[] {
+  public detectSignificantChanges(
+    currentEvents: PredictionMarketEvent[],
+  ): EventAlert[] {
     const alerts: EventAlert[] = [];
-    const config = this.configManager.getOracleConfig();
+    const config = this.configManager.getConfig().oracle;
     const threshold = config.probabilityChangeThreshold || 10;
 
     for (const currentEvent of currentEvents) {
@@ -58,12 +60,14 @@ export class EventMonitor extends EventEmitter {
       if (Math.abs(probChange) >= threshold) {
         // eslint-disable-next-line functional/immutable-data
         alerts.push({
-          type: 'probability_change',
-          severity: Math.abs(probChange) >= 20 ? 'warning' : 'info',
+          type: "probability_change",
+          severity: Math.abs(probChange) >= 20 ? "warning" : "info",
           event: currentEvent,
-          details: `Probability changed by ${probChange.toFixed(
-            1
-          )}% (from ${prevEvent.probability}% to ${currentEvent.probability}%)`,
+          details: `Probability changed by ${
+            probChange.toFixed(
+              1,
+            )
+          }% (from ${prevEvent.probability}% to ${currentEvent.probability}%)`,
           timestamp: new Date(),
           previousProbability: prevEvent.probability,
           newProbability: currentEvent.probability,
@@ -73,11 +77,14 @@ export class EventMonitor extends EventEmitter {
       // 2. Check for Critical Threshold Crossing
       for (const criticalLevel of this.CRITICAL_THRESHOLDS) {
         // Check if we crossed the level from below
-        if (prevEvent.probability < criticalLevel && currentEvent.probability >= criticalLevel) {
+        if (
+          prevEvent.probability < criticalLevel &&
+          currentEvent.probability >= criticalLevel
+        ) {
           // eslint-disable-next-line functional/immutable-data
           alerts.push({
-            type: 'threshold_crossing',
-            severity: 'warning',
+            type: "threshold_crossing",
+            severity: "warning",
             event: currentEvent,
             details: `Probability crossed above ${criticalLevel}% threshold`,
             timestamp: new Date(),
@@ -86,11 +93,14 @@ export class EventMonitor extends EventEmitter {
           });
         }
         // Check if we crossed the level from above
-        if (prevEvent.probability > criticalLevel && currentEvent.probability <= criticalLevel) {
+        if (
+          prevEvent.probability > criticalLevel &&
+          currentEvent.probability <= criticalLevel
+        ) {
           // eslint-disable-next-line functional/immutable-data
           alerts.push({
-            type: 'threshold_crossing',
-            severity: 'warning',
+            type: "threshold_crossing",
+            severity: "warning",
             event: currentEvent,
             details: `Probability crossed below ${criticalLevel}% threshold`,
             timestamp: new Date(),
@@ -105,7 +115,7 @@ export class EventMonitor extends EventEmitter {
     this.updateState(currentEvents);
 
     // Emit alerts
-    alerts.forEach(alert => this.emit('alert', alert));
+    alerts.forEach((alert) => this.emit("alert", alert));
 
     return alerts;
   }
@@ -114,19 +124,22 @@ export class EventMonitor extends EventEmitter {
    * Get upcoming high impact events closing within the specified window
    * Requirement 11.3: Time-based risk adjustment
    */
-  public getUpcomingHighImpactEvents(windowMinutes?: number): PredictionMarketEvent[] {
+  public getUpcomingHighImpactEvents(
+    windowMinutes?: number,
+  ): PredictionMarketEvent[] {
     const riskConfig = this.configManager.getConfig().enhancedRisk;
     const minutes = windowMinutes || riskConfig.eventProximityThreshold || 60;
     const cutoffTime = Date.now() + minutes * 60 * 1000;
 
-    return Array.from(this.previousEvents.values()).filter(event => {
+    return Array.from(this.previousEvents.values()).filter((event) => {
       // Must be High or Extreme impact
-      const isHighImpact =
-        event.impact === ImpactLevel.HIGH || event.impact === ImpactLevel.EXTREME;
+      const isHighImpact = event.impact === ImpactLevel.HIGH ||
+        event.impact === ImpactLevel.EXTREME;
       if (!isHighImpact) return false;
 
       // Must be resolving soon
-      return event.resolution.getTime() <= cutoffTime && event.resolution.getTime() > Date.now();
+      return event.resolution.getTime() <= cutoffTime &&
+        event.resolution.getTime() > Date.now();
     });
   }
 
@@ -135,7 +148,9 @@ export class EventMonitor extends EventEmitter {
    * Requirement 11.1: Composite event score calculation
    * Aggregates risk from probability volatility and event proximity
    */
-  public calculateCompositeRiskScore(windowMinutes: number = 60): CompositeEventScore {
+  public calculateCompositeRiskScore(
+    windowMinutes: number = 60,
+  ): CompositeEventScore {
     const upcomingEvents = this.getUpcomingHighImpactEvents(windowMinutes);
     // eslint-disable-next-line functional/no-let
     let totalImpactScore = 0;
@@ -147,7 +162,10 @@ export class EventMonitor extends EventEmitter {
 
       // Proximity multiplier (closer = higher score)
       const timeToResolution = event.resolution.getTime() - Date.now();
-      const proximityFactor = Math.max(0, 1 - timeToResolution / (windowMinutes * 60 * 1000));
+      const proximityFactor = Math.max(
+        0,
+        1 - timeToResolution / (windowMinutes * 60 * 1000),
+      );
 
       totalImpactScore += impactWeight * (1 + proximityFactor);
     }
@@ -157,15 +175,14 @@ export class EventMonitor extends EventEmitter {
 
     return {
       score: normalizedScore,
-      riskLevel:
-        normalizedScore > 75
-          ? 'critical'
-          : normalizedScore > 40
-            ? 'high'
-            : normalizedScore > 20
-              ? 'medium'
-              : 'low',
-      contributingEvents: upcomingEvents.map(e => e.id),
+      riskLevel: normalizedScore > 75
+        ? "critical"
+        : normalizedScore > 40
+        ? "high"
+        : normalizedScore > 20
+        ? "medium"
+        : "low",
+      contributingEvents: upcomingEvents.map((e) => e.id),
       timestamp: new Date(),
     };
   }
@@ -174,7 +191,9 @@ export class EventMonitor extends EventEmitter {
    * Detect Anomalies ("Flash Crash" patterns)
    * Requirement 11.4: Anomaly detection
    */
-  public detectAnomalies(currentEvents: PredictionMarketEvent[]): PredictionAnomaly[] {
+  public detectAnomalies(
+    currentEvents: PredictionMarketEvent[],
+  ): PredictionAnomaly[] {
     const anomalies: PredictionAnomaly[] = [];
 
     for (const currentEvent of currentEvents) {
@@ -189,9 +208,11 @@ export class EventMonitor extends EventEmitter {
         // eslint-disable-next-line functional/immutable-data
         anomalies.push({
           eventId: currentEvent.id,
-          type: 'flash_volatility',
-          severity: 'high',
-          description: `Extreme instant probability shift of ${probChange.toFixed(1)}%`,
+          type: "flash_volatility",
+          severity: "high",
+          description: `Extreme instant probability shift of ${
+            probChange.toFixed(1)
+          }%`,
           timestamp: new Date(),
         });
       }

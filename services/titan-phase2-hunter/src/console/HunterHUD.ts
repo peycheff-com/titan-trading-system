@@ -11,12 +11,11 @@
  */
 
 /* eslint-disable functional/immutable-data */
-/* eslint-disable functional/no-let */
 
-import { ActiveTradeComponent } from "./ActiveTrade";
-import { HUDState, HunterHUDProps } from "./HunterHUD.types";
-import { MarketSimulation } from "./MarketSimulation";
-import { POIEntry, POIMapComponent } from "./POIMap";
+import { ActiveTradeComponent } from './ActiveTrade';
+import { HUDState, HunterHUDProps } from './HunterHUD.types';
+import { MarketSimulation } from './MarketSimulation';
+import { POIEntry, POIMapComponent } from './POIMap';
 
 export class HunterHUD {
   private hudState: HUDState;
@@ -39,20 +38,20 @@ export class HunterHUD {
       equity: 25000,
       pnl: 1250,
       pnlPercent: 5.26,
-      phase: "Phase 2 - Hunter",
+      phase: 'Phase 2 - Hunter',
       holographicMap: this.marketSimulation.generateRealisticHolographicMap(),
       activeTrade: this.marketSimulation.generateRealisticActiveTrade(),
       poiMap: this.marketSimulation.generateRealisticPOIMap(),
       sessionState: this.marketSimulation.generateRealisticSessionState(),
       positions: [],
-      viewMode: "MICRO",
+      viewMode: 'MICRO',
       isPaused: false,
       portfolioHeat: 12.5,
       maxDrawdown: -2.1,
       lastUpdate: Date.now(),
       marketConditions: {
-        volatility: "MEDIUM",
-        trend: "BULL_MARKET",
+        volatility: 'MEDIUM',
+        trend: 'BULL_MARKET',
         btcDominance: 52.3,
         fearGreedIndex: 67,
       },
@@ -85,23 +84,21 @@ export class HunterHUD {
   private setupKeyboardHandling(): void {
     process.stdin.setRawMode(true);
     process.stdin.resume();
-    process.stdin.setEncoding("utf8");
+    process.stdin.setEncoding('utf8');
 
-    process.stdin.on("data", (key: string) => {
-      if (key === "\u0003" || key === "q") {
+    process.stdin.on('data', (key: string) => {
+      if (key === '\u0003' || key === 'q') {
         // Ctrl+C or 'q'
         this.onExit?.();
         process.exit(0);
-      } else if (key === "\u001b[11~") {
+      } else if (key === '\u001b[11~') {
         // F1
         this.onConfig?.();
-      } else if (key === "\u001b[12~") {
+      } else if (key === '\u001b[12~') {
         // F2
-        this.hudState.viewMode = this.hudState.viewMode === "MICRO"
-          ? "FULL"
-          : "MICRO";
+        this.hudState.viewMode = this.hudState.viewMode === 'MICRO' ? 'FULL' : 'MICRO';
         this.render();
-      } else if (key === " ") {
+      } else if (key === ' ') {
         // Space
         this.hudState.isPaused = !this.hudState.isPaused;
         this.render();
@@ -155,7 +152,7 @@ export class HunterHUD {
   // Update components with latest data
   private updateComponents(): void {
     // Update POI Map component - convert POIMapEntry to POIEntry
-    const poiEntries: POIEntry[] = this.hudState.poiMap.map((poi) => ({
+    const poiEntries: POIEntry[] = this.hudState.poiMap.map(poi => ({
       id: poi.id,
       type: poi.type,
       direction: poi.direction,
@@ -190,8 +187,7 @@ export class HunterHUD {
 
   // Update session state
   private updateSessionState(): void {
-    this.hudState.sessionState = this.marketSimulation
-      .generateRealisticSessionState();
+    this.hudState.sessionState = this.marketSimulation.generateRealisticSessionState();
   }
 
   // Update active trade if exists
@@ -207,7 +203,7 @@ export class HunterHUD {
       this.hudState.activeTrade.currentPrice = currentPrice;
 
       // Recalculate P&L
-      const rawPnL = (currentPrice - entryPrice) * (side === "LONG" ? 1 : -1);
+      const rawPnL = (currentPrice - entryPrice) * (side === 'LONG' ? 1 : -1);
       const quantity = this.hudState.activeTrade.quantity;
       const leverage = this.hudState.activeTrade.leverage;
 
@@ -215,18 +211,14 @@ export class HunterHUD {
 
       // Check for stop loss or take profit
       if (
-        (side === "LONG" &&
-          currentPrice <= this.hudState.activeTrade.targets.stopLoss) ||
-        (side === "SHORT" &&
-          currentPrice >= this.hudState.activeTrade.targets.stopLoss)
+        (side === 'LONG' && currentPrice <= this.hudState.activeTrade.targets.stopLoss) ||
+        (side === 'SHORT' && currentPrice >= this.hudState.activeTrade.targets.stopLoss)
       ) {
         // Stopped out
         this.hudState.activeTrade = null;
       } else if (
-        (side === "LONG" &&
-          currentPrice >= this.hudState.activeTrade.targets.takeProfit) ||
-        (side === "SHORT" &&
-          currentPrice <= this.hudState.activeTrade.targets.takeProfit)
+        (side === 'LONG' && currentPrice >= this.hudState.activeTrade.targets.takeProfit) ||
+        (side === 'SHORT' && currentPrice <= this.hudState.activeTrade.targets.takeProfit)
       ) {
         // Take profit hit
         this.hudState.activeTrade = null;
@@ -235,16 +227,14 @@ export class HunterHUD {
       // Try to enter a new trade
       if (Math.random() < 0.05) {
         // 5% chance per second
-        this.hudState.activeTrade = this.marketSimulation
-          .generateRealisticActiveTrade();
+        this.hudState.activeTrade = this.marketSimulation.generateRealisticActiveTrade();
       }
     }
   }
 
   // Update holographic map
   private updateHolographicMap(): void {
-    this.hudState.holographicMap = this.marketSimulation
-      .generateRealisticHolographicMap();
+    this.hudState.holographicMap = this.marketSimulation.generateRealisticHolographicMap();
   }
 
   // Update POI map
@@ -256,15 +246,15 @@ export class HunterHUD {
   private updateSystemHealth(): void {
     // Randomly toggle connections briefly
     if (Math.random() < 0.01) {
-      this.hudState.systemHealth.wsConnections.binance = !this.hudState
-        .systemHealth.wsConnections.binance;
+      this.hudState.systemHealth.wsConnections.binance =
+        !this.hudState.systemHealth.wsConnections.binance;
     } else {
       this.hudState.systemHealth.wsConnections.binance = true;
     }
 
     if (Math.random() < 0.01) {
-      this.hudState.systemHealth.wsConnections.bybit = !this.hudState
-        .systemHealth.wsConnections.bybit;
+      this.hudState.systemHealth.wsConnections.bybit =
+        !this.hudState.systemHealth.wsConnections.bybit;
     } else {
       this.hudState.systemHealth.wsConnections.bybit = true;
     }
@@ -288,12 +278,10 @@ export class HunterHUD {
     this.hudState.marketConditions.btcDominance += (Math.random() - 0.5) * 0.1;
 
     // Update Fear & Greed
-    this.hudState.marketConditions.fearGreedIndex += Math.floor(
-      (Math.random() - 0.5) * 3,
-    );
+    this.hudState.marketConditions.fearGreedIndex += Math.floor((Math.random() - 0.5) * 3);
     this.hudState.marketConditions.fearGreedIndex = Math.max(
       10,
-      Math.min(90, this.hudState.marketConditions.fearGreedIndex),
+      Math.min(90, this.hudState.marketConditions.fearGreedIndex)
     );
   }
 

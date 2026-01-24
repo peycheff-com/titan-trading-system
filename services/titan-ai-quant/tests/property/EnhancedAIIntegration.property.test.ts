@@ -14,8 +14,9 @@ import {
   jest,
 } from "@jest/globals";
 import * as fc from "fast-check";
-import { EnhancedAIIntegration } from "../../src/ai/EnhancedAIIntegration";
+import { AIIntegration as EnhancedAIIntegration } from "../../src/ai/AIIntegration";
 import { TitanAnalyst } from "../../src/ai/TitanAnalyst";
+import { RiskAdjustment } from "../../src/ai/PredictiveAnalytics";
 import { Config, OHLCV, RegimeSnapshot, Trade } from "../../src/types";
 
 // Mock dependencies
@@ -314,9 +315,9 @@ describe("Enhanced AI Integration Property Tests", () => {
             if (adjustments.length > 0) {
               // Higher correlation should lead to more urgent adjustments
               if (portfolioCorrelation > 0.8) {
-                const correlationAdjustment = adjustments.find((adj) =>
-                  adj.trigger === "correlation_increase"
-                );
+                const correlationAdjustment = adjustments.find((
+                  adj: RiskAdjustment,
+                ) => adj.trigger === "correlation_increase");
                 if (correlationAdjustment) {
                   expect(["medium", "high", "critical"]).toContain(
                     correlationAdjustment.urgency,
@@ -326,7 +327,7 @@ describe("Enhanced AI Integration Property Tests", () => {
 
               // Volatility spikes should lead to risk reduction
               if (predictedVol > currentVol * 1.5) {
-                const volAdjustment = adjustments.find((adj) =>
+                const volAdjustment = adjustments.find((adj: RiskAdjustment) =>
                   adj.trigger === "volatility_spike"
                 );
                 if (volAdjustment) {
@@ -553,8 +554,10 @@ describe("Enhanced AI Integration Property Tests", () => {
           fc.integer({ min: 10, max: 100 }), // Number of operations
           fc.integer({ min: 1, max: 10 }), // Number of symbols
           (numOperations, numSymbols) => {
-            const symbols = Array.from({ length: numSymbols }, (_, i) =>
-              `SYM${i}USDT`);
+            const symbols = Array.from(
+              { length: numSymbols },
+              (_, i) => `SYM${i}USDT`,
+            );
 
             aiIntegration.start();
 
@@ -603,9 +606,7 @@ describe("Enhanced AI Integration Property Tests", () => {
             expect(status.performanceScore).toBeLessThanOrEqual(100);
 
             // Should not crash on shutdown
-            expect(() =>
-              aiIntegration.shutdown()
-            ).not.toThrow();
+            expect(() => aiIntegration.shutdown()).not.toThrow();
 
             // Should be properly stopped after shutdown
             const finalStatus = aiIntegration.getStatus();

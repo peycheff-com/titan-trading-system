@@ -1,6 +1,10 @@
 use crate::model::Intent;
 use crate::risk_policy::RiskPolicy;
+use crate::risk_policy::RiskState;
+
+use crate::risk_state_manager::RiskStateManager;
 use crate::shadow_state::ShadowState;
+use crate::staleness::StalenessMonitor;
 use parking_lot::RwLock;
 use rust_decimal::Decimal;
 use std::sync::Arc;
@@ -29,7 +33,9 @@ pub enum RiskRejectionReason {
         limit: Decimal,
     },
     InvalidSize,
+
     PolicyMissing,
+    MarketDataStale(String),
 }
 
 impl std::fmt::Display for RiskRejectionReason {
@@ -37,6 +43,9 @@ impl std::fmt::Display for RiskRejectionReason {
         match self {
             RiskRejectionReason::SymbolNotWhitelisted(s) => {
                 write!(f, "Symbol '{}' not in whitelist", s)
+            }
+            RiskRejectionReason::MarketDataStale(details) => {
+                write!(f, "Market Data Stale: {}", details)
             }
             RiskRejectionReason::MaxPositionNotionalExceeded {
                 symbol,
@@ -80,19 +89,29 @@ impl std::fmt::Display for RiskRejectionReason {
 use std::sync::atomic::{AtomicI64, Ordering};
 
 pub struct RiskGuard {
-    policy: Arc<RwLock<RiskPolicy>>,
+    policy: RwLock<RiskPolicy>,
     shadow_state: Arc<RwLock<ShadowState>>,
-    last_heartbeat: Arc<AtomicI64>,
+    current_state: AtomicI64, // Keep for backward compat or remove? Let's keep for now but sync.
+    last_heartbeat: AtomicI64,
+    state_manager: RwLock<RiskStateManager>,
+    staleness_monitor: RwLock<StalenessMonitor>,
 }
 
 impl RiskGuard {
     pub fn new(policy: RiskPolicy, shadow_state: Arc<RwLock<ShadowState>>) -> Self {
         info!("🛡️ RiskGuard Initialized with policy: {:?}", policy);
         Self {
-            policy: Arc::new(RwLock::new(policy)),
+            policy: RwLock::new(policy),
             shadow_state,
-            last_heartbeat: Arc::new(AtomicI64::new(chrono::Utc::now().timestamp_millis())),
+            current_state: AtomicI64::new(0), // 0=Normal
+            last_heartbeat: AtomicI64::new(chrono::Utc::now().timestamp_millis()),
+            state_manager: RwLock::new(RiskStateManager::new()),
+            staleness_monitor: RwLock::new(StalenessMonitor::new()),
         }
+    }
+
+    pub fn record_market_data_update(&self, exchange: &str, symbol: &str) {
+        self.staleness_monitor.write().update(exchange, symbol);
     }
 
     pub fn update_policy(&self, new_policy: RiskPolicy) {
@@ -170,7 +189,30 @@ impl RiskGuard {
     /// Validates an Intent BEFORE it enters the Order Manager.
     /// Returns Ok(()) if safe, Err(RiskRejectionReason) if unsafe.
     pub fn check_pre_trade(&self, intent: &Intent) -> Result<(), RiskRejectionReason> {
-        // 0. Fail Closed Check (Heartbeat)
+        let policy = self.policy.read();
+
+        // 0. CHECK DEFCON STATE
+        {
+            let manager = self.state_manager.read();
+            let state = manager.get_state();
+
+            // Allow ForceSync always
+            if let crate::model::IntentType::ForceSync = intent.intent_type {
+                return Ok(());
+            }
+
+            // In Emergency, reject all new opens. Reduce-only might be allowed.
+            if *state == RiskState::Emergency {
+                // If reduce only, maybe allow?
+                if !RiskGuard::is_reduce_only(intent) {
+                    warn!(signal_id = %intent.signal_id, "Rejected due to EMERGENCY state");
+                    return Err(RiskRejectionReason::PolicyMissing); // Use existing or add new?
+                                                                    // Ideally add RiskRejectionReason::SystemEmergency
+                }
+            }
+        }
+
+        // 1. Check Circuit Breakers (Staleness)
         // If we haven't heard from Brain in 5 seconds, assume Brain is dead -> DEFENSIVE
         let now = chrono::Utc::now().timestamp_millis();
         let last = self.last_heartbeat.load(Ordering::Relaxed);
@@ -189,10 +231,23 @@ impl RiskGuard {
             is_stale = true;
         }
 
-        let policy = self.policy.read();
+        // Check Market Data Staleness
+        if let Some(exchange) = &intent.exchange {
+            let monitor = self.staleness_monitor.read();
+            let max_staleness = policy.max_staleness_ms;
+            if max_staleness > 0 && monitor.is_stale(exchange, &intent.symbol, max_staleness) {
+                warn!(signal_id = %intent.signal_id, exchange, symbol = %intent.symbol, "Rejected due to STALE market data");
+                return Err(RiskRejectionReason::MarketDataStale(format!(
+                    "{} on {}",
+                    intent.symbol, exchange
+                )));
+            }
+        }
+
         let state = self.shadow_state.read(); // Read-only access to state
 
         // Determine Effective State
+
         let effective_state = if is_stale {
             crate::risk_policy::RiskState::Defensive
         } else {
@@ -360,10 +415,13 @@ impl RiskGuard {
         Ok(())
     }
 
-    fn is_reduce_only(intent: &Intent) -> bool {
+    pub fn is_reduce_only(intent: &Intent) -> bool {
         use crate::model::IntentType;
         match intent.intent_type {
-            IntentType::Close | IntentType::CloseLong | IntentType::CloseShort => true,
+            IntentType::Close
+            | IntentType::CloseLong
+            | IntentType::CloseShort
+            | IntentType::ForceSync => true,
             _ => false,
         }
     }
@@ -410,6 +468,12 @@ mod tests {
             t_signal: Utc::now().timestamp_millis(),
             t_analysis: None,
             t_decision: None,
+            // Envelope
+            ttl_ms: None,
+            partition_key: None,
+            causation_id: None,
+            env: None,
+            subject: None,
             t_ingress: None,
             t_exchange: None,
             max_slippage_bps: None,

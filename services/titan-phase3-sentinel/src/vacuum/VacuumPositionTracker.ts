@@ -1,4 +1,4 @@
-import type { VacuumOpportunity, VacuumPosition } from '../types/signals.js';
+import type { VacuumPosition } from '../types/signals.js';
 
 /**
  * Tracks lifecycle of Vacuum Arbitrage positions

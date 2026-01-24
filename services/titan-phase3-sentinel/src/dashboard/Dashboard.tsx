@@ -72,7 +72,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ core }) => {
       setLogs((prev) => [msg, ...prev].slice(0, 10)); // Keep last 10 logs
     };
 
-    const onError = (err: any) => {
+    const onError = (err: unknown) => {
       setLogs((prev) => [`ERROR: ${err}`, ...prev].slice(0, 10));
     };
 

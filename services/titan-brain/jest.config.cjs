@@ -48,7 +48,7 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^(.*/monitoring/index)(\\.js)?$': '<rootDir>/tests/mocks/monitoring.ts',
-    '^(.*/db/DatabaseManager)(\\.js)?$': '<rootDir>/tests/mocks/DatabaseManager.ts',
+    // '^(.*/db/DatabaseManager)(\\.js)?$': '<rootDir>/tests/mocks/DatabaseManager.ts',
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   

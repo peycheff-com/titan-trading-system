@@ -13,6 +13,9 @@ use crate::exchange::router::ExecutionRouter;
 use crate::simulation_engine::SimulationEngine;
 use crate::risk_guard::RiskGuard;
 use crate::metrics;
+use crate::drift_detector::DriftDetector;
+use crate::model::TradeRecord;
+use chrono::Utc;
 
 /// usage:
 /// let pipeline = ExecutionPipeline::new(...deps...);
@@ -25,6 +28,7 @@ pub struct ExecutionPipeline {
     risk_guard: Arc<RiskGuard>,
     ctx: Arc<ExecutionContext>,
     freshness_threshold: u64,
+    drift_detector: Arc<DriftDetector>,
 }
 
 use crate::exposure::ExposureMetrics;
@@ -45,6 +49,7 @@ impl ExecutionPipeline {
         risk_guard: Arc<RiskGuard>,
         ctx: Arc<ExecutionContext>,
         freshness_threshold: u64,
+        drift_detector: Arc<DriftDetector>,
     ) -> Self {
         Self {
             shadow_state,
@@ -54,6 +59,7 @@ impl ExecutionPipeline {
             risk_guard,
             ctx,
             freshness_threshold,
+            drift_detector,
         }
     }
 
@@ -199,7 +205,7 @@ impl ExecutionPipeline {
                             response.executed_qty, 
                             true,
                             response.fee.unwrap_or(Decimal::ZERO),
-                            response.fee_asset.unwrap_or("USDT".to_string()),
+                            response.fee_asset.clone().unwrap_or("USDT".to_string()),
                             &exchange_name // Pass exchange name
                         );
                         let exposure = state.calculate_exposure();
@@ -250,6 +256,32 @@ impl ExecutionPipeline {
 
                     // 3. Filled Orders
                     metrics::inc_filled_orders();
+
+                    // 4. Drift Analysis
+                    // Construct a proxy TradeRecord for analysis (since we just opened/traded)
+                    let trade_record = TradeRecord {
+                        signal_id: processed_intent.signal_id.clone(),
+                        symbol: processed_intent.symbol.clone(),
+                        side: crate::model::Side::Buy, // Dummy, ignored by detector
+                        entry_price: fill_price,
+                        exit_price: Decimal::ZERO,
+                        size: response.executed_qty,
+                        pnl: Decimal::ZERO,
+                        pnl_pct: Decimal::ZERO,
+                        fee: response.fee.unwrap_or(Decimal::ZERO),
+                        fee_asset: response.fee_asset.clone().unwrap_or_default(),
+                        opened_at: Utc::now(), // Approx execution time
+                        closed_at: Utc::now(),
+                        close_reason: "Open".to_string(),
+                        metadata: None,
+                    };
+                    
+                    let drifts = self.drift_detector.analyze(&processed_intent, &trade_record);
+                    for drift in drifts {
+                        warn!("🚨 DRIFT DETECTED: {:?}", drift);
+                        // Potential: Publish to Drift Topic
+                    }
+
                 },
                 Err(e) => {
                     error!("❌ [{}] Execution Failed: {}", exchange_name, e);
@@ -267,7 +299,14 @@ impl ExecutionPipeline {
             IntentType::CloseLong => Side::Sell,
             IntentType::CloseShort => Side::Buy,
             IntentType::Close => {
-                if intent.direction < 0 {
+                if intent.direction > 0 {
+                    Side::Buy
+                } else {
+                    Side::Sell
+                }
+            }
+            IntentType::ForceSync => {
+                if intent.direction > 0 {
                     Side::Buy
                 } else {
                     Side::Sell

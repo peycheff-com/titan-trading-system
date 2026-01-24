@@ -5,10 +5,9 @@ import {
     ConvictionSizingEngine,
 } from "../../src/engine/enhanced/ConvictionSizingEngine";
 import {
-    EventImpact,
+    ImpactLevel,
     OracleScore,
     PredictionMarketEvent,
-    PredictionStatus,
 } from "../../src/types/index";
 
 describe("ConvictionSizingEngine Properties", () => {
@@ -33,7 +32,7 @@ describe("ConvictionSizingEngine Properties", () => {
             "medium",
             "high",
             "extreme",
-        ) as fc.Arbitrary<EventImpact>,
+        ) as fc.Arbitrary<ImpactLevel>,
         probability: fc.float({ min: 0, max: 100 }),
         volume: fc.float({ min: 0 }),
         liquidity: fc.float({ min: 0 }),
@@ -41,7 +40,8 @@ describe("ConvictionSizingEngine Properties", () => {
             min: new Date(),
             max: new Date(Date.now() + 24 * 60 * 60 * 1000),
         }), // Within 24h
-        status: fc.constant("active") as fc.Arbitrary<PredictionStatus>,
+        // status: removed
+
         provider: fc.constant("polymarket"),
         url: fc.webUrl(),
     });

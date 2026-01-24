@@ -304,6 +304,12 @@ export class TrapExecutor {
         confidence: payload.confidence as number,
         leverage: payload.leverage as number,
         timestamp: payload.timestamp as number,
+        // Envelope Standards (Phase 1 Hardening)
+        env: process.env.NODE_ENV || "development",
+        subject: `market.${trap.symbol.toLowerCase().replace("/", "")}.signal`,
+        ttl_ms: 5000, // 5s validity
+        causation_id: payload.signal_id, // Self-caused for now, or trigger event ID
+        partition_key: trap.symbol,
       };
 
       await this.signalClient.sendPrepare(intent);

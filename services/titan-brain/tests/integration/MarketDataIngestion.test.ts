@@ -124,22 +124,27 @@ describe("Market Data Ingestion Integration", () => {
         const handleMarketData = TitanBrain.prototype.handleMarketData;
 
         const mockRiskGuardian = {
-            updatePriceHistory: jest.fn(),
+            handlePriceUpdate: jest.fn(),
+        };
+
+        const mockActiveInferenceEngine = {
+            processUpdate: jest.fn(),
         };
 
         const context = {
             riskGuardian: mockRiskGuardian,
+            activeInferenceEngine: mockActiveInferenceEngine,
         };
 
         const tick = { symbol: "ETHUSDT", price: 3000, timestamp: 11111 };
 
         // Call unbound method with context
-        handleMarketData.call(context, tick);
+        handleMarketData.call(context as any, tick);
 
-        expect(mockRiskGuardian.updatePriceHistory).toHaveBeenCalledWith(
-            "ETHUSDT",
-            3000,
-            11111,
-        );
+        expect(mockRiskGuardian.handlePriceUpdate).toHaveBeenCalledWith({
+            symbol: "ETHUSDT",
+            price: 3000,
+            timestamp: 11111,
+        });
     });
 });

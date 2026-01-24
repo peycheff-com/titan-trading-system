@@ -1,6 +1,5 @@
 import {
   connect,
-  ConsumerOpts,
   consumerOpts,
   JetStreamClient,
   JetStreamManager,
@@ -10,7 +9,7 @@ import {
   Subscription,
 } from 'nats';
 import { EventEmitter } from 'eventemitter3';
-import { createEnvelope, Envelope } from '../schemas/envelope';
+import { createEnvelope } from '../schemas/envelope';
 import { createHmac, randomBytes } from 'crypto';
 
 export enum TitanSubject {
@@ -179,15 +178,16 @@ export class NatsClient extends EventEmitter {
       try {
         await this.jsm.streams.add(stream as any);
         console.log(`Verified JetStream stream: ${stream.name}`);
-      } catch (err: any) {
+      } catch (err: unknown) {
         // If stream explicitly exists but with different config, we might want to update it
         // For now, logging error if it's not just "already exists" (which 'add' handles by updating/idempotency usually, but NATS can be strict)
-        if (!err.message.includes('already in use')) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (!msg.includes('already in use')) {
           try {
             // Try update if add failed
             await this.jsm.streams.update(stream.name, stream as any);
           } catch (updateErr) {
-            console.warn(`Failed to create/update stream ${stream.name}:`, err);
+            console.warn(`Failed to create/update stream ${stream.name}:`, updateErr);
           }
         }
       }
@@ -255,18 +255,18 @@ export class NatsClient extends EventEmitter {
       const keyId = process.env.HMAC_KEY_ID || 'default';
 
       // Canonicalize JSON (Sort keys recursively)
-      const canonicalize = (obj: any): any => {
+      const canonicalize = (obj: unknown): unknown => {
         if (typeof obj !== 'object' || obj === null) {
           return obj;
         }
         if (Array.isArray(obj)) {
           return obj.map(canonicalize);
         }
-        return Object.keys(obj)
+        return Object.keys(obj as object)
           .sort()
-          .reduce((sorted: any, key) => {
+          .reduce((sorted: Record<string, unknown>, key) => {
             // eslint-disable-next-line functional/immutable-data
-            sorted[key] = canonicalize(obj[key]);
+            sorted[key] = canonicalize((obj as Record<string, unknown>)[key]);
             return sorted;
           }, {});
       };
@@ -363,7 +363,7 @@ export class NatsClient extends EventEmitter {
         getPending: () => 0,
         getID: () => 0,
         getMax: () => 0,
-      } as any;
+      } as unknown as Subscription;
     }
 
     const sub = this.nc.subscribe(subject);
@@ -403,7 +403,7 @@ export class NatsClient extends EventEmitter {
 
   public async request<T>(
     subject: string,
-    data: any = {},
+    data: unknown = {},
     options: { timeout?: number } = {},
   ): Promise<T> {
     if (!this.nc) {

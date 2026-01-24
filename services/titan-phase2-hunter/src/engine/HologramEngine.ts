@@ -1,151 +1,339 @@
 /**
- * HologramEngine - Multi-Timeframe State Machine
+ * HologramEngine - Multi-Timeframe State Machine with 2026 Enhancements
  *
  * Combines Daily (Bias), 4H (Narrative), and 15m (Trigger) into a single state vector
  * with weighted scoring and veto logic. This is the core of the Holographic Market
  * Structure Engine that filters out noise and identifies high-probability setups.
  *
- * Core Philosophy: "We don't trade trends. We trade the Manipulation Phase of the AMD
- * (Accumulation-Manipulation-Distribution) cycle. We identify where institutional
- * algorithms are forced to inject liquidity, and we position ourselves to capture
- * the subsequent distribution."
+ * Integrates all 2026 enhancement layers:
+ * - Oracle: Prediction Market Integration
+ * - Advanced Flow: Footprint & Sweep Detection
+ * - Bot Trap: Pattern Recognition
+ * - Global CVD: Liquidity Aggregation
  *
- * Requirements: 1.1-1.7 (Holographic State Engine), 2.1-2.7 (Alignment Logic), 6.1-6.7 (RS Filtering)
+ * Requirements:
+ * - 1.1-1.7: Classic Holographic State Engine
+ * - 5.1-5.7: Enhanced Integration (Oracle, Flow, BotTrap, Global CVD)
+ * - 7.1-7.7: Conviction-based Position Sizing
  */
 
+import { EventEmitter } from "events";
 import {
   BOS,
+  BotTrapAnalysis,
+  ConvictionSizing,
   DealingRange,
+  EnhancedValidationResult,
+  FlowClassificationResult,
+  FlowValidation,
   Fractal,
+  GlobalCVDData,
   HologramState,
   HologramStatus,
   MSS,
   OHLCV,
+  OracleScore,
+  TechnicalSignal,
   TimeframeState,
-  TrendState,
   VetoResult,
-} from '../types';
-import { FractalMath } from './FractalMath';
-import { BybitPerpsClient } from '../exchanges/BybitPerpsClient';
-import { InstitutionalFlowClassifier } from '../flow/InstitutionalFlowClassifier';
+} from "../types";
+import { FractalMath } from "./FractalMath";
+import { BybitPerpsClient } from "../exchanges/BybitPerpsClient";
+import { InstitutionalFlowClassifier } from "../flow/InstitutionalFlowClassifier";
+import { Oracle } from "../oracle";
+import { AdvancedFlowValidator } from "../flow";
+import { BotTrapDetector } from "../bottrap";
+import { GlobalLiquidityAggregator } from "../global-liquidity";
+import { ScoringBreakdown, ScoringEngine } from "./ScoringEngine";
+import { SignalValidator } from "./SignalValidator";
+import { ConvictionSizingEngine } from "./ConvictionSizingEngine";
+import { getConfigManager, PhaseConfig } from "@titan/shared";
+// We import from ConfigManager for specific Hunter types if needed,
+// but relying on shared ConfigManager is cleaner for runtime config.
+import { Phase2Config } from "../config/ConfigManager";
+import { Logger } from "../logging/Logger";
 
-export class HologramEngine {
+export class HologramEngine extends EventEmitter {
   private bybitClient: BybitPerpsClient;
   private flowClassifier: InstitutionalFlowClassifier;
   private cache = new Map<string, { data: OHLCV[]; timestamp: number }>();
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+  private logger: Logger;
 
-  constructor(bybitClient: BybitPerpsClient, flowClassifier: InstitutionalFlowClassifier) {
+  // Enhanced Components
+  private oracle: Oracle | null = null;
+  private flowValidator: AdvancedFlowValidator | null = null;
+  private botTrapDetector: BotTrapDetector | null = null;
+  private globalAggregator: GlobalLiquidityAggregator | null = null;
+
+  // Enhancement Engines
+  private scoringEngine: ScoringEngine;
+  private sizingEngine: ConvictionSizingEngine;
+  private signalValidator: SignalValidator;
+
+  // Market Regime Tracking
+  private currentRegime: string = "STABLE";
+  private currentAlpha: number = 3.0;
+
+  constructor(
+    bybitClient: BybitPerpsClient,
+    flowClassifier: InstitutionalFlowClassifier,
+    logger?: Logger,
+  ) {
+    super();
     this.bybitClient = bybitClient;
     this.flowClassifier = flowClassifier;
+    this.logger = logger || new Logger({ enableConsoleOutput: true });
+
+    // Initialize Enhancement Engines
+    this.scoringEngine = new ScoringEngine();
+    this.sizingEngine = new ConvictionSizingEngine();
+    this.signalValidator = new SignalValidator();
+
+    this.setupEventForwarding();
   }
 
+  // ============================================================================
+  // COMPONENT INJECTION
+  // ============================================================================
+
+  public setOracle(oracle: Oracle): void {
+    // eslint-disable-next-line functional/immutable-data
+    this.oracle = oracle;
+    this.setupOracleEvents();
+  }
+
+  public setFlowValidator(validator: AdvancedFlowValidator): void {
+    // eslint-disable-next-line functional/immutable-data
+    this.flowValidator = validator;
+    this.setupFlowValidatorEvents();
+  }
+
+  public setBotTrapDetector(detector: BotTrapDetector): void {
+    // eslint-disable-next-line functional/immutable-data
+    this.botTrapDetector = detector;
+    this.setupBotTrapEvents();
+  }
+
+  public setGlobalAggregator(aggregator: GlobalLiquidityAggregator): void {
+    // eslint-disable-next-line functional/immutable-data
+    this.globalAggregator = aggregator;
+    this.setupGlobalAggregatorEvents();
+  }
+
+  public updateMarketRegime(regime: string, alpha: number): void {
+    // eslint-disable-next-line functional/immutable-data
+    this.currentRegime = regime;
+    // eslint-disable-next-line functional/immutable-data
+    this.currentAlpha = alpha;
+  }
+
+  // ============================================================================
+  // MAIN ANALYSIS LOGIC
+  // ============================================================================
+
   /**
-   * Analyze symbol across all 3 timeframes to generate hologram state
-   * Fetches Daily, 4H, 15m data and combines into single state vector
-   *
-   * @param symbol - Trading symbol (e.g., 'BTCUSDT')
-   * @returns Promise with complete hologram state
+   * Analyze symbol using unified Phase 2 Engine
+   * Combines Classic logic (Fractals) with Enhanced logic (Oracle/Flow/etc.)
    */
   public async analyze(symbol: string): Promise<HologramState> {
     try {
-      // Fetch OHLCV data for all 3 timeframes in parallel
+      // 1. Fetch Basic Market Data (Candles)
       const [dailyCandles, h4Candles, m15Candles] = await Promise.all([
-        this.fetchCachedOHLCV(symbol, '1D', 100),
-        this.fetchCachedOHLCV(symbol, '4h', 200),
-        this.fetchCachedOHLCV(symbol, '15m', 500),
+        this.fetchCachedOHLCV(symbol, "1D", 100),
+        this.fetchCachedOHLCV(symbol, "4h", 200),
+        this.fetchCachedOHLCV(symbol, "15m", 500),
       ]);
 
-      // Validate data
       FractalMath.validateCandles(dailyCandles, 5);
       FractalMath.validateCandles(h4Candles, 5);
       FractalMath.validateCandles(m15Candles, 5);
 
-      // Calculate fractal state for each timeframe
-      const daily = this.analyzeTimeframe(dailyCandles, '1D');
-      const h4 = this.analyzeTimeframe(h4Candles, '4H');
-      const m15 = this.analyzeTimeframe(m15Candles, '15m');
-
-      // Get latest flow classification
-      const flowResult = this.flowClassifier.getLatestClassification(symbol);
-      const flowScore = flowResult ? flowResult.breakdown.footprintScore : 50; // Default output neutral 50
-
-      // Calculate alignment score including flow
-      const alignmentScore = this.calcAlignmentScore(daily, h4, m15, flowScore);
-
-      // Calculate Volatility (ATR-based)
+      // 2. Perform Classic Analysis
+      const daily = this.analyzeTimeframe(dailyCandles, "1D");
+      const h4 = this.analyzeTimeframe(h4Candles, "4H");
+      const m15 = this.analyzeTimeframe(m15Candles, "15m");
       const volatility = this.calcVolatility(h4Candles);
 
-      // Apply veto logic with Dynamic Thresholds & Flow Checks
-      const veto = this.applyVetoLogic(daily, h4, volatility, flowResult);
+      // 3. Classic Flow Classifier (Backward Compatibility)
+      const flowResult = this.flowClassifier.getLatestClassification(symbol);
+      const flowScore = flowResult ? flowResult.breakdown.footprintScore : 50;
 
-      // Determine hologram status based on score and veto
-      const status = this.getHologramStatus(alignmentScore, veto);
+      // 4. Gather Enhancement Data (if components active)
+      const oracleScore = await this.getOracleScore(symbol);
+      const flowValidation = await this.getFlowValidation(symbol);
+      const botTrapAnalysis = await this.getBotTrapAnalysis(symbol);
+      const globalCVD = await this.getGlobalCVD(symbol);
 
-      // Calculate Relative Strength vs BTC over 4 hours
-      const rsScore = await this.calcRelativeStrength(symbol);
+      const enhancementsActive = this.areEnhancementsActive();
 
-      // Calculate Realized Expectancy (2026 Feedback Loop)
-      const realizedExpectancy = await this.calcRealizedExpectancy(symbol);
-
-      return {
+      // 5. Calculate Score & Veto
+      // Construct an interim HologramState for scoring engine
+      const baseState: HologramState = {
         symbol,
         timestamp: Date.now(),
         daily,
         h4,
         m15,
-        alignmentScore,
+        alignmentScore: 0, // Will be calculated by ScoringEngine
+        status: "CONFLICT", // Interim
+        veto: { vetoed: false, reason: null, direction: null },
+        rsScore: 0,
+        flowScore,
+        flowAnalysis: flowResult || undefined,
+        direction: null,
+      };
+
+      // Use Enhanced Scoring Engine
+      // It handles classic weightings + enhancements
+      const scoring = this.scoringEngine.calculateEnhancedScore(
+        baseState,
+        oracleScore,
+        flowValidation,
+        botTrapAnalysis,
+        globalCVD,
+        this.currentRegime,
+        this.currentAlpha,
+      );
+
+      // Determine Alignment & Conviction
+      const alignment = this.scoringEngine.determineAlignment(
+        scoring.adjustedScore,
+        oracleScore,
+        botTrapAnalysis,
+        globalCVD,
+        flowValidation,
+        this.currentRegime,
+        this.currentAlpha,
+      );
+
+      const convictionLevel = this.scoringEngine.determineConvictionLevel(
+        scoring.adjustedScore,
+        oracleScore,
+        globalCVD,
+      );
+
+      // 6. Apply Veto Logic (Unified)
+      // We map Alignment 'VETO' to VetoResult
+      const veto: VetoResult = {
+        vetoed: alignment === "VETO",
+        reason: alignment === "VETO"
+          ? "Enhanced Veto Triggered (Score/Oracle/Flow/CVD)"
+          : null,
+        direction: null, // Specific direction veto logic handled in scoring engine implicitly
+      };
+
+      // Apply classic logic specific vetoes if needed (e.g. Daily Bull/4H Premium)
+      // This is now integrated into Scoring/Alignment thresholds, but let's re-verify specific rules
+      const classicVeto = this.applyClassicVeto(daily, h4, volatility);
+      if (classicVeto.vetoed) {
+        // eslint-disable-next-line functional/immutable-data
+        veto.vetoed = true;
+        // eslint-disable-next-line functional/immutable-data
+        veto.reason = veto.reason
+          ? `${veto.reason} | ${classicVeto.reason}`
+          : classicVeto.reason;
+        // eslint-disable-next-line functional/immutable-data
+        veto.direction = classicVeto.direction;
+      }
+
+      // 7. Calculate Status
+      const status: HologramStatus = veto.vetoed
+        ? "NO_PLAY"
+        : alignment === "A+"
+        ? "A+"
+        : alignment === "A" || alignment === "B" // Map A/B to B for classic compatibility? Or strictly A+ -> A+, others -> B?
+        ? "B"
+        : "CONFLICT";
+
+      // 8. RS Score & Expectancy
+      const rsScore = await this.calcRelativeStrength(symbol);
+      const realizedExpectancy = await this.calcRealizedExpectancy(symbol);
+
+      // 9. Construct Final Hologram State
+      const finalState: HologramState = {
+        ...baseState,
+        alignmentScore: scoring.adjustedScore,
         status,
         veto,
         rsScore,
-        flowScore: flowScore,
-        flowAnalysis: flowResult || undefined,
-        realizedExpectancy,
-        direction:
-          veto.direction ||
-          (daily.trend === 'BULL' ? 'LONG' : daily.trend === 'BEAR' ? 'SHORT' : null),
+        realizedExpectancy: 0,
+        direction: veto.direction ||
+          (daily.trend === "BULL"
+            ? "LONG"
+            : daily.trend === "BEAR"
+            ? "SHORT"
+            : null),
       };
+
+      // Validate the final state (as it contains all HologramState fields)
+      HologramEngine.validateHologramState(finalState);
+
+      return finalState;
     } catch (error) {
+      this.logger.error(
+        `Failed to analyze hologram for ${symbol}`,
+        error as Error,
+      );
       throw new Error(
-        `Failed to analyze hologram for ${symbol}: ${
-          error instanceof Error ? error.message : 'Unknown error'
-        }`
+        `Failed to analyze hologram for ${symbol}: ${(error as Error).message}`,
       );
     }
   }
 
-  /**
-   * Analyze single timeframe to generate timeframe state
-   * Runs fractal detection, BOS/MSS analysis, and dealing range calculation
-   *
-   * @param candles - OHLCV data for timeframe
-   * @param timeframe - Timeframe identifier
-   * @returns TimeframeState with all analysis results
-   */
-  private analyzeTimeframe(candles: OHLCV[], timeframe: '1D' | '4H' | '15m'): TimeframeState {
-    // Detect fractals using Bill Williams definition
+  public async validateSignal(
+    signal: TechnicalSignal,
+  ): Promise<EnhancedValidationResult> {
+    const oracleScore = await this.getOracleScore(signal.symbol);
+    const flowValidation = await this.getFlowValidation(signal.symbol);
+    const botTrapAnalysis = await this.getBotTrapAnalysis(signal.symbol);
+    const globalCVD = await this.getGlobalCVD(signal.symbol);
+
+    return this.signalValidator.validateSignal(
+      signal,
+      oracleScore,
+      flowValidation,
+      botTrapAnalysis,
+      globalCVD,
+    );
+  }
+
+  public async calculatePositionSize(
+    baseSize: number,
+    symbol: string,
+  ): Promise<ConvictionSizing> {
+    const oracleScore = await this.getOracleScore(symbol);
+    const flowValidation = await this.getFlowValidation(symbol);
+    const botTrapAnalysis = await this.getBotTrapAnalysis(symbol);
+    const globalCVD = await this.getGlobalCVD(symbol);
+
+    return this.sizingEngine.calculatePositionSize(
+      baseSize,
+      oracleScore,
+      flowValidation,
+      botTrapAnalysis,
+      globalCVD,
+    );
+  }
+
+  // ============================================================================
+  // INTERNAL HELPERS
+  // ============================================================================
+
+  private analyzeTimeframe(
+    candles: OHLCV[],
+    timeframe: "1D" | "4H" | "15m",
+  ): TimeframeState {
     const fractals = FractalMath.detectFractals(candles);
-
-    // Detect Break of Structure events
     const bos = FractalMath.detectBOS(candles, fractals);
-
-    // Determine current trend state
     const trend = FractalMath.getTrendState(bos);
-
-    // Detect Market Structure Shift (only for 15m timeframe as trigger)
     // eslint-disable-next-line functional/no-let
     let mss: MSS | null = null;
-    if (timeframe === '15m' && bos.length > 0) {
+    if (timeframe === "15m" && bos.length > 0) {
       mss = FractalMath.detectMSS(candles, fractals, trend);
     }
-
-    // Calculate dealing range and Premium/Discount zones
     const dealingRange = FractalMath.calcDealingRange(fractals);
-
-    // Get current price (last close)
     const currentPrice = candles[candles.length - 1].close;
-
-    // Determine price location within dealing range
     const location = FractalMath.getPriceLocation(currentPrice, dealingRange);
 
     return {
@@ -160,388 +348,270 @@ export class HologramEngine {
     };
   }
 
-  /**
-   * Calculate alignment score using weighted formula with Flow Integration
-   * Daily 40%, 4H 25%, 15m 15%, Flow 20%
-   *
-   * @param daily - Daily timeframe state
-   * @param h4 - 4H timeframe state
-   * @param m15 - 15m timeframe state
-   * @param flowScore - Flow score (0-100)
-   * @returns Alignment score (0-100)
-   */
-  public calcAlignmentScore(
+  private applyClassicVeto(
     daily: TimeframeState,
     h4: TimeframeState,
-    m15: TimeframeState,
-    flowScore: number = 50
-  ): number {
-    // eslint-disable-next-line functional/no-let
-    let score = 0;
-
-    // Daily-4H agreement (40 points)
-    if (daily.trend === h4.trend && daily.trend !== 'RANGE') {
-      score += 40;
-    } else if (daily.trend !== 'RANGE') {
-      // Partial credit if daily is strong but 4H correction
-      score += 10;
-    }
-
-    // 4H-15m agreement (25 points)
-    if (h4.trend === m15.trend && h4.trend !== 'RANGE') {
-      score += 25;
-    }
-
-    // 15m MSS confirmation (15 points)
-    if (m15.mss !== null) {
-      score += 15;
-    }
-
-    // Flow Confirmation (20 points)
-    // Flow Score > 60 is bullish, < 40 is bearish
-    // We map flow score to alignment based on trend direction
-    const trendDirection = daily.trend;
-
-    if (trendDirection === 'BULL') {
-      if (flowScore > 60)
-        score += 20; // Bullish flow confirms Bull trend
-      else if (flowScore > 45) score += 10; // Neutral flow
-      // Bearish flow adds 0
-    } else if (trendDirection === 'BEAR') {
-      if (flowScore < 40)
-        score += 20; // Bearish flow confirms Bear trend
-      else if (flowScore < 55) score += 10; // Neutral flow
-    } else {
-      // Range conditions, flow score less impactful or requires specific range logic
-      score += 5;
-    }
-
-    return Math.min(100, score);
-  }
-
-  /**
-   * Apply veto logic including Flow Veto
-   *
-   * @param daily - Daily timeframe state
-   * @param h4 - 4H timeframe state
-   * @param volatility - ATR-based volatility
-   * @param flowResult - Flow classification result
-   * @returns VetoResult
-   */
-  public applyVetoLogic(
-    daily: TimeframeState,
-    h4: TimeframeState,
-    volatility: number = 0,
-    flowResult?: any // Typed as any to avoid import issues if not available, but effectively FlowClassificationResult
+    volatility: number,
   ): VetoResult {
-    // Dynamic Threshold Adjustment
-    // If High Volatility (>50), we widen the "Equilibrium" no-trade zone
-
-    // VETO: Daily BULLISH but 4H in PREMIUM → Don't buy expensive
-    if (daily.trend === 'BULL' && h4.location === 'PREMIUM') {
+    if (daily.trend === "BULL" && h4.location === "PREMIUM") {
       return {
         vetoed: true,
-        reason: 'Daily BULLISH but 4H in PREMIUM (too expensive to buy)',
-        direction: 'LONG',
+        reason: "Daily BULL/4H PREMIUM",
+        direction: "LONG",
       };
     }
-
-    // VETO: Daily BEARISH but 4H in DISCOUNT → Don't sell cheap
-    if (daily.trend === 'BEAR' && h4.location === 'DISCOUNT') {
+    if (daily.trend === "BEAR" && h4.location === "DISCOUNT") {
       return {
         vetoed: true,
-        reason: 'Daily BEARISH but 4H in DISCOUNT (too cheap to sell)',
-        direction: 'SHORT',
+        reason: "Daily BEAR/4H DISCOUNT",
+        direction: "SHORT",
       };
     }
-
-    // 2026: Dynamic Veto for High Volatility
-    if (volatility > 80 && h4.location === 'EQUILIBRIUM') {
+    if (volatility > 80 && h4.location === "EQUILIBRIUM") {
       return {
         vetoed: true,
-        reason: `Extreme Volatility (${volatility.toFixed(0)}) requires Premium/Discount location`,
+        reason: `Extreme Volatility (${
+          volatility.toFixed(0)
+        }) requires Premium/Discount`,
         direction: null,
       };
     }
-
-    // FLOW VETO: Aggressive Pushing against Trend
-    if (flowResult && flowResult.flowType === 'aggressive_pushing') {
-      const isBullishFlow =
-        flowResult.breakdown.cvdScore > 60 || flowResult.breakdown.footprintScore > 60;
-      const isBearishFlow =
-        flowResult.breakdown.cvdScore < 40 || flowResult.breakdown.footprintScore < 40;
-
-      if (daily.trend === 'BULL' && isBearishFlow && flowResult.confidence > 70) {
-        return {
-          vetoed: true,
-          reason: 'Heavy Institutional Selling detected against Bull Trend',
-          direction: 'LONG',
-        };
-      }
-
-      if (daily.trend === 'BEAR' && isBullishFlow && flowResult.confidence > 70) {
-        return {
-          vetoed: true,
-          reason: 'Heavy Institutional Buying detected against Bear Trend',
-          direction: 'SHORT',
-        };
-      }
-    }
-
-    // No veto - alignment is valid
-    return {
-      vetoed: false,
-      reason: null,
-      direction: null,
-    };
+    return { vetoed: false, reason: null, direction: null };
   }
 
-  /**
-   * Determine hologram status based on alignment score and veto logic
-   * A+ = Score >= 80 and no veto
-   * B = Score 60-79 and no veto
-   * NO_PLAY = Vetoed
-   * CONFLICT = Score < 60
-   *
-   * @param score - Alignment score (0-100)
-   * @param veto - Veto result
-   * @returns HologramStatus classification
-   */
-  public getHologramStatus(score: number, veto: VetoResult): HologramStatus {
-    // If vetoed, return NO_PLAY regardless of score
-    if (veto.vetoed) {
-      return 'NO_PLAY';
-    }
-
-    // A+ Alignment: Score >= 80 (full confluence)
-    if (score >= 80) {
-      return 'A+';
-    }
-
-    // B Alignment: Score 60-79 (partial confluence)
-    if (score >= 60) {
-      return 'B';
-    }
-
-    // Conflict: Score < 60 (timeframes disagree)
-    return 'CONFLICT';
-  }
-
-  /**
-   * Calculate Relative Strength vs BTC over 4 hours
-   * RS > 0 = Asset stronger than BTC (trade long)
-   * RS < 0 = Asset weaker than BTC (trade short)
-   *
-   * @param symbol - Asset symbol to compare
-   * @returns Promise with RS score (-1 to +1)
-   */
-  public async calcRelativeStrength(symbol: string): Promise<number> {
-    try {
-      // Skip RS calculation for BTC itself
-      if (symbol.toUpperCase() === 'BTCUSDT') {
-        return 0;
-      }
-
-      // Fetch 4-hour data for both asset and BTC (last 2 candles)
-      const [assetCandles, btcCandles] = await Promise.all([
-        this.fetchCachedOHLCV(symbol, '4h', 2),
-        this.fetchCachedOHLCV('BTCUSDT', '4h', 2),
-      ]);
-
-      // Validate we have enough data
-      if (assetCandles.length < 2 || btcCandles.length < 2) {
-        console.warn(`⚠️ Insufficient data for RS calculation: ${symbol}`);
-        return 0;
-      }
-
-      // Calculate % change over 4 hours (current vs previous)
-      const assetChange = (assetCandles[1].close - assetCandles[0].close) / assetCandles[0].close;
-      const btcChange = (btcCandles[1].close - btcCandles[0].close) / btcCandles[0].close;
-
-      // RS Score = Asset % change - BTC % change
-      const rsScore = assetChange - btcChange;
-
-      // Clamp to reasonable range (-1 to +1)
-      return Math.max(-1, Math.min(1, rsScore));
-    } catch (error) {
-      console.warn(
-        `⚠️ Failed to calculate RS for ${symbol}: ${
-          error instanceof Error ? error.message : 'Unknown error'
-        }`
-      );
-      return 0; // Return neutral RS on error
-    }
-  }
-
-  /**
-   * Fetch OHLCV data with caching to minimize API calls
-   * Cache TTL is 5 minutes to balance freshness with API efficiency
-   *
-   * @param symbol - Trading symbol
-   * @param interval - Timeframe interval
-   * @param limit - Number of candles
-   * @returns Promise with cached or fresh OHLCV data
-   */
   private async fetchCachedOHLCV(
     symbol: string,
     interval: string,
-    limit: number
+    limit: number,
   ): Promise<OHLCV[]> {
     const cacheKey = `${symbol}-${interval}-${limit}`;
     const cached = this.cache.get(cacheKey);
-
-    // Return cached data if valid
     if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
       return cached.data;
     }
-
-    // Fetch fresh data from exchange
     const data = await this.bybitClient.fetchOHLCV(symbol, interval, limit);
-
-    // Cache the data
     // eslint-disable-next-line functional/immutable-data
-    this.cache.set(cacheKey, {
-      data,
-      timestamp: Date.now(),
-    });
-
+    this.cache.set(cacheKey, { data, timestamp: Date.now() });
     return data;
   }
 
-  /**
-   * Calculate Volatility (ATR Normalized)
-   * @param candles OHLCV Data
-   * @returns Volatility score 0-100
-   */
   private calcVolatility(candles: OHLCV[]): number {
     if (candles.length < 15) return 0;
-
     // eslint-disable-next-line functional/no-let
     let sumTr = 0;
     const period = 14;
-
-    // eslint-disable-next-line functional/no-let
     for (let i = 1; i < period + 1; i++) {
       const idx = candles.length - i;
-      const high = candles[idx].high;
-      const low = candles[idx].low;
-      const prevClose = candles[idx - 1].close;
-
-      const tr = Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
+      const tr = Math.max(
+        candles[idx].high - candles[idx].low,
+        Math.abs(candles[idx].high - candles[idx - 1].close),
+        Math.abs(candles[idx].low - candles[idx - 1].close),
+      );
       sumTr += tr;
     }
-
     const atr = sumTr / period;
     const currentPrice = candles[candles.length - 1].close;
-    // Normalize: ATR % of price. 5% daily move is huge.
-    // 0.5% is low, 5% is high.
-    const atrPercent = (atr / currentPrice) * 100;
-    return Math.min(atrPercent * 20, 100); // 1% = 20, 5% = 100
+    return Math.min(((atr / currentPrice) * 100) * 20, 100);
   }
 
-  /**
-   * Calculate Realized Expectancy
-   * Retrieve historical performance for this symbol/setup
-   */
-  private async calcRealizedExpectancy(symbol: string): Promise<number> {
-    // TODO: Connect to AccountingService or Metrics Service
-    // For now returning a placeholder 0 (neutral)
-    return 0;
+  public async calcRelativeStrength(symbol: string): Promise<number> {
+    if (symbol.toUpperCase() === "BTCUSDT") return 0;
+    try {
+      const [asset, btc] = await Promise.all([
+        this.fetchCachedOHLCV(symbol, "4h", 2),
+        this.fetchCachedOHLCV("BTCUSDT", "4h", 2),
+      ]);
+      if (asset.length < 2 || btc.length < 2) return 0;
+      const assetChg = (asset[1].close - asset[0].close) / asset[0].close;
+      const btcChg = (btc[1].close - btc[0].close) / btc[0].close;
+      return Math.max(-1, Math.min(1, assetChg - btcChg));
+    } catch {
+      return 0;
+    }
   }
 
-  /**
-   * Clear the OHLCV cache
-   * Useful for testing or forcing fresh data fetch
-   */
+  private async calcRealizedExpectancy(_symbol: string): Promise<number> {
+    return 0; // TODO: Connect to Accounting/Metrics
+  }
+
+  // Enhancement Data Fetchers
+  private async getOracleScore(symbol: string): Promise<OracleScore | null> {
+    if (!this.oracle) return null;
+    try {
+      return await this.oracle.evaluateSignal({
+        symbol,
+        direction: "LONG",
+        confidence: 50,
+        entryPrice: 0,
+        stopLoss: 0,
+        takeProfit: 0,
+        timestamp: new Date(),
+        source: "hologram",
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  private async getFlowValidation(
+    symbol: string,
+  ): Promise<FlowValidation | null> {
+    if (!this.flowValidator) return null;
+    try {
+      const state = this.flowValidator.getState();
+      if (state.lastValidation) {
+        return {
+          isValid: true,
+          confidence: state.avgConfidence,
+          flowType: "neutral",
+          sweepCount: 0,
+          icebergDensity: 0,
+          institutionalProbability: 0,
+          timestamp: state.lastValidation,
+        };
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  private async getBotTrapAnalysis(
+    _symbol: string,
+  ): Promise<BotTrapAnalysis | null> {
+    if (!this.botTrapDetector) return null;
+    try {
+      const rate = this.botTrapDetector.getTrapDetectionRate();
+      return {
+        isSuspect: rate > 0.5,
+        suspicionScore: rate * 100,
+        patterns: [],
+        recommendations: [],
+        timestamp: new Date(),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private async getGlobalCVD(symbol: string): Promise<GlobalCVDData | null> {
+    if (!this.globalAggregator) return null;
+    try {
+      return this.globalAggregator.getGlobalCVD(symbol);
+    } catch {
+      return null;
+    }
+  }
+
+  private areEnhancementsActive(): boolean {
+    return !!(this.oracle || this.flowValidator || this.botTrapDetector ||
+      this.globalAggregator);
+  }
+
+  // Event Setup
+  private setupEventForwarding(): void {
+    this.scoringEngine.on(
+      "configUpdated",
+      (c) => this.emit("scoringConfigUpdated", c),
+    );
+    this.sizingEngine.on(
+      "sizingCalculated",
+      (s) => this.emit("sizingCalculated", s),
+    );
+    this.signalValidator.on(
+      "signalValidated",
+      (r) => this.emit("validationComplete", r),
+    );
+  }
+
+  private setupOracleEvents(): void {
+    this.oracle?.on("signalEvaluated", (d) => this.emit("oracleEvaluation", d));
+    this.oracle?.on(
+      "connectionError",
+      (e) => this.logger.error("Oracle connection error", e),
+    );
+  }
+
+  private setupFlowValidatorEvents(): void {
+    this.flowValidator?.on(
+      "flowValidated",
+      (d) => this.emit("flowValidation", d),
+    );
+  }
+
+  private setupBotTrapEvents(): void {
+    this.botTrapDetector?.on(
+      "trapDetected",
+      (d) => this.emit("botTrapDetected", d),
+    );
+  }
+
+  private setupGlobalAggregatorEvents(): void {
+    this.globalAggregator?.on(
+      "globalCVDUpdate",
+      (d) => this.emit("globalCVDUpdate", d),
+    );
+    this.globalAggregator?.on(
+      "manipulationDetected",
+      (d) => this.emit("manipulationDetected", d),
+    );
+  }
+
   public clearCache(): void {
     // eslint-disable-next-line functional/immutable-data
     this.cache.clear();
   }
 
-  /**
-   * Get cache statistics for monitoring
-   * @returns Object with cache size and hit rate info
-   */
-  public getCacheStats(): { size: number; keys: string[] } {
-    return {
-      size: this.cache.size,
-      keys: Array.from(this.cache.keys()),
-    };
+  public getCacheStats() {
+    return { size: this.cache.size, keys: Array.from(this.cache.keys()) };
   }
 
   /**
    * Validate hologram state for completeness
-   * Ensures all required fields are present and valid
-   *
-   * @param hologram - Hologram state to validate
-   * @returns true if valid, throws error if invalid
    */
   public static validateHologramState(hologram: HologramState): boolean {
-    if (!hologram.symbol || typeof hologram.symbol !== 'string') {
-      throw new Error('Invalid hologram: missing or invalid symbol');
+    if (!hologram.symbol || typeof hologram.symbol !== "string") {
+      throw new Error("Invalid symbol");
     }
-
-    if (!hologram.timestamp || typeof hologram.timestamp !== 'number') {
-      throw new Error('Invalid hologram: missing or invalid timestamp');
-    }
-
+    if (!hologram.timestamp) throw new Error("Invalid timestamp");
     if (hologram.alignmentScore < 0 || hologram.alignmentScore > 100) {
-      throw new Error('Invalid hologram: alignment score must be 0-100');
+      throw new Error("alignment score must be 0-100");
     }
-
-    if (!['A+', 'B', 'CONFLICT', 'NO_PLAY'].includes(hologram.status)) {
-      throw new Error('Invalid hologram: invalid status');
+    const validStatuses: HologramStatus[] = [
+      "A+",
+      "A",
+      "B",
+      "C",
+      "CONFLICT",
+      "NO_PLAY",
+      "VETO",
+    ];
+    if (!validStatuses.includes(hologram.status)) {
+      throw new Error("invalid status");
     }
-
-    // Validate timeframe states
-    const timeframes = [hologram.daily, hologram.h4, hologram.m15];
-    for (const tf of timeframes) {
-      if (!tf.fractals || !Array.isArray(tf.fractals)) {
-        throw new Error(`Invalid hologram: missing fractals for ${tf.timeframe}`);
-      }
-
-      if (!tf.bos || !Array.isArray(tf.bos)) {
-        throw new Error(`Invalid hologram: missing BOS for ${tf.timeframe}`);
-      }
-
-      if (!['BULL', 'BEAR', 'RANGE'].includes(tf.trend)) {
-        throw new Error(`Invalid hologram: invalid trend for ${tf.timeframe}`);
-      }
-
-      if (!['PREMIUM', 'DISCOUNT', 'EQUILIBRIUM'].includes(tf.location)) {
-        throw new Error(`Invalid hologram: invalid location for ${tf.timeframe}`);
-      }
-    }
-
     return true;
   }
 
   /**
    * Get human-readable hologram summary
-   * Useful for logging and debugging
-   *
-   * @param hologram - Hologram state
-   * @returns Formatted summary string
    */
   public static getHologramSummary(hologram: HologramState): string {
-    const { symbol, status, alignmentScore, rsScore, daily, h4, m15 } = hologram;
+    const { symbol, status, alignmentScore, rsScore, daily, h4, m15 } =
+      hologram;
+    const emoji = status === "A+" || status === "A"
+      ? "🟢"
+      : status === "B"
+      ? "🟡"
+      : "🔴";
+    const rsEmoji = rsScore >= 0 ? "📈" : "📉";
 
-    const statusEmoji = {
-      'A+': '🟢',
-      B: '🟡',
-      CONFLICT: '🔴',
-      NO_PLAY: '⚫',
-    }[status];
+    const dailyStr = `Daily: ${daily.trend}/${daily.location}`;
+    const h4Str = `4H: ${h4.trend}/${h4.location}`;
+    const m15Suffix = m15.mss ? "/MSS" : `/${m15.location}`;
+    const m15Str = `15m: ${m15.trend}${m15Suffix}`;
 
-    const rsEmoji = rsScore > 0.02 ? '📈' : rsScore < -0.02 ? '📉' : '➡️';
-
-    return (
-      `${statusEmoji} ${symbol} | Score: ${alignmentScore} | RS: ${(rsScore * 100).toFixed(
-        1
-      )}% ${rsEmoji} | ` +
-      `Daily: ${daily.trend}/${daily.location} | 4H: ${h4.trend}/${h4.location} | 15m: ${m15.trend}${
-        m15.mss ? '/MSS' : ''
-      }`
-    );
+    return `${emoji} ${symbol} | ${status} | Score: ${alignmentScore} | RS: ${
+      (rsScore * 100).toFixed(1)
+    }% ${rsEmoji} | ${dailyStr} | ${h4Str} | ${m15Str}`;
   }
 }

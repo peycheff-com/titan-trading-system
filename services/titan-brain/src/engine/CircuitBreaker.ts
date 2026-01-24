@@ -77,7 +77,7 @@ export class CircuitBreaker {
    * Set the position closure handler
    */
   setPositionHandler(handler: PositionClosureHandler): void {
-    // eslint-disable-next-line functional/immutable-data
+     
     this.positionHandler = handler;
   }
 
@@ -85,7 +85,7 @@ export class CircuitBreaker {
    * Set the notification handler
    */
   setNotificationHandler(handler: NotificationHandler): void {
-    // eslint-disable-next-line functional/immutable-data
+     
     this.notificationHandler = handler;
   }
 
@@ -93,7 +93,7 @@ export class CircuitBreaker {
    * Set the event persistence handler
    */
   setEventPersistence(persistence: BreakerEventPersistence): void {
-    // eslint-disable-next-line functional/immutable-data
+     
     this.eventPersistence = persistence;
   }
 
@@ -104,7 +104,7 @@ export class CircuitBreaker {
     save(key: string, value: string): Promise<void>;
     load(key: string): Promise<string | null>;
   }): void {
-    // eslint-disable-next-line functional/immutable-data
+     
     this.stateStore = store;
   }
 
@@ -142,21 +142,21 @@ export class CircuitBreaker {
       const data = await this.stateStore.load(this.STATE_KEY);
       if (data) {
         const state = JSON.parse(data);
-        // eslint-disable-next-line functional/immutable-data
+         
         this.active = state.active;
-        // eslint-disable-next-line functional/immutable-data
+         
         this.breakerType = state.breakerType;
-        // eslint-disable-next-line functional/immutable-data
+         
         this.triggerReason = state.triggerReason;
-        // eslint-disable-next-line functional/immutable-data
+         
         this.triggeredAt = state.triggeredAt;
-        // eslint-disable-next-line functional/immutable-data
+         
         this.cooldownEndsAt = state.cooldownEndsAt;
-        // eslint-disable-next-line functional/immutable-data
+         
         this.dailyStartEquity = state.dailyStartEquity;
-        // eslint-disable-next-line functional/immutable-data
+         
         this.tripCount = state.tripCount;
-        // eslint-disable-next-line functional/immutable-data
+         
         this.lastTripTime = state.lastTripTime;
         console.log('✅ Circuit Breaker state restored from persistence');
       }
@@ -170,7 +170,7 @@ export class CircuitBreaker {
    * Should be called at the start of each trading day
    */
   setDailyStartEquity(equity: number): void {
-    // eslint-disable-next-line functional/immutable-data
+     
     this.dailyStartEquity = Math.max(0, equity);
   }
 
@@ -192,7 +192,7 @@ export class CircuitBreaker {
 
     // Update daily start equity if provided
     if (dailyStartEquity > 0) {
-      // eslint-disable-next-line functional/immutable-data
+       
       this.dailyStartEquity = dailyStartEquity;
     }
 
@@ -266,19 +266,19 @@ export class CircuitBreaker {
 
     const timestamp = Date.now();
 
-    // eslint-disable-next-line functional/immutable-data
+     
     this.active = true;
-    // eslint-disable-next-line functional/immutable-data
+     
     this.breakerType = BreakerType.HARD;
-    // eslint-disable-next-line functional/immutable-data
+     
     this.triggerReason = reason;
-    // eslint-disable-next-line functional/immutable-data
+     
     this.triggeredAt = timestamp;
-    // eslint-disable-next-line functional/immutable-data
+     
     this.cooldownEndsAt = undefined;
-    // eslint-disable-next-line functional/immutable-data
+     
     this.tripCount++;
-    // eslint-disable-next-line functional/immutable-data
+     
     this.lastTripTime = timestamp;
 
     await this.persistState();
@@ -342,19 +342,19 @@ export class CircuitBreaker {
 
     const timestamp = Date.now();
 
-    // eslint-disable-next-line functional/immutable-data
+     
     this.active = true;
-    // eslint-disable-next-line functional/immutable-data
+     
     this.breakerType = BreakerType.SOFT;
-    // eslint-disable-next-line functional/immutable-data
+     
     this.triggerReason = reason;
-    // eslint-disable-next-line functional/immutable-data
+     
     this.triggeredAt = timestamp;
-    // eslint-disable-next-line functional/immutable-data
+     
     this.cooldownEndsAt = timestamp + this.config.cooldownMinutes * 60 * 1000;
-    // eslint-disable-next-line functional/immutable-data
+     
     this.tripCount++;
-    // eslint-disable-next-line functional/immutable-data
+     
     this.lastTripTime = timestamp;
 
     await this.persistState();
@@ -401,15 +401,15 @@ export class CircuitBreaker {
     const previousType = this.breakerType;
 
     // Reset state
-    // eslint-disable-next-line functional/immutable-data
+     
     this.active = false;
-    // eslint-disable-next-line functional/immutable-data
+     
     this.breakerType = undefined;
-    // eslint-disable-next-line functional/immutable-data
+     
     this.triggerReason = undefined;
-    // eslint-disable-next-line functional/immutable-data
+     
     this.triggeredAt = undefined;
-    // eslint-disable-next-line functional/immutable-data
+     
     this.cooldownEndsAt = undefined;
 
     await this.persistState();
@@ -478,17 +478,17 @@ export class CircuitBreaker {
     const tradeTime = timestamp ?? Date.now();
 
     // Add to recent losses tracking
-    // eslint-disable-next-line functional/immutable-data
+     
     this.recentLosses.push({ pnl, timestamp: tradeTime });
 
     // Clean up old trades outside the window
     const windowStart = tradeTime - this.config.consecutiveLossWindow;
-    // eslint-disable-next-line functional/immutable-data
+     
     this.recentLosses = this.recentLosses.filter((t) => t.timestamp >= windowStart);
 
     // If profitable trade, reset consecutive loss counter
     if (pnl >= 0) {
-      // eslint-disable-next-line functional/immutable-data
+       
       this.recentLosses = this.recentLosses.filter(
         (t) => t.pnl < 0 && t.timestamp > tradeTime - this.config.consecutiveLossWindow,
       );
@@ -533,7 +533,7 @@ export class CircuitBreaker {
       .sort((a, b) => b.timestamp - a.timestamp);
 
     // Count consecutive losses from most recent
-    // eslint-disable-next-line functional/no-let
+     
     let consecutiveLosses = 0;
     for (const trade of tradesInWindow) {
       if (trade.pnl < 0) {
@@ -557,17 +557,17 @@ export class CircuitBreaker {
       Date.now() >= this.cooldownEndsAt
     ) {
       // Auto-reset soft breaker after cooldown
-      // eslint-disable-next-line functional/immutable-data
+       
       this.active = false;
-      // eslint-disable-next-line functional/immutable-data
+       
       this.breakerType = undefined;
-      // eslint-disable-next-line functional/immutable-data
+       
       this.triggerReason = undefined;
-      // eslint-disable-next-line functional/immutable-data
+       
       this.triggeredAt = undefined;
-      // eslint-disable-next-line functional/immutable-data
+       
       this.triggeredAt = undefined;
-      // eslint-disable-next-line functional/immutable-data
+       
       this.cooldownEndsAt = undefined;
       this.persistState().catch((err) => console.error('Failed to persist state check', err));
     }

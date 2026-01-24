@@ -2,19 +2,19 @@
  * Unit tests for Logger
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-import * as zlib from 'zlib';
-import { SignalData, HologramState, OrderResult } from '../../src/types';
+import * as fs from "fs";
+import * as path from "path";
+import * as zlib from "zlib";
+import { HologramState, OrderResult, SignalData } from "../../src/types";
 
 // Mock fs module
-jest.mock('fs');
-jest.mock('zlib');
+jest.mock("fs");
+jest.mock("zlib");
 
 const mockFs = fs as jest.Mocked<typeof fs>;
 const mockZlib = zlib as jest.Mocked<typeof zlib>;
 
-describe('Logger', () => {
+describe("Logger", () => {
   let Logger: any;
   let logger: any;
   let testLogDir: string;
@@ -23,14 +23,14 @@ describe('Logger', () => {
   beforeEach(async () => {
     // Reset all mocks
     jest.clearAllMocks();
-    
-    testLogDir = path.join(__dirname, 'test-logs');
-    
+
+    testLogDir = path.join(__dirname, "test-logs");
+
     // Mock write stream
     mockWriteStream = {
       write: jest.fn(),
       end: jest.fn((callback) => callback && callback()),
-      on: jest.fn()
+      on: jest.fn(),
     };
 
     // Mock fs methods
@@ -40,18 +40,18 @@ describe('Logger', () => {
     mockFs.appendFileSync.mockReturnValue(undefined);
     mockFs.renameSync.mockReturnValue(undefined);
     mockFs.unlinkSync.mockReturnValue(undefined);
-    mockFs.readFileSync.mockReturnValue(Buffer.from('test log content'));
+    mockFs.readFileSync.mockReturnValue(Buffer.from("test log content"));
 
     // Import Logger class after mocks are set up
-    const LoggerModule = await import('../../src/logging/Logger');
+    const LoggerModule = await import("../../src/logging/Logger");
     Logger = LoggerModule.Logger;
 
     logger = new Logger({
       logDir: testLogDir,
-      logFileName: 'test-trades.jsonl',
+      logFileName: "test-trades.jsonl",
       maxFileSizeBytes: 1024, // 1KB for testing
       compressionAgeMs: 1000, // 1 second for testing
-      enableConsoleOutput: false
+      enableConsoleOutput: false,
     });
   });
 
@@ -59,33 +59,35 @@ describe('Logger', () => {
     jest.restoreAllMocks();
   });
 
-  describe('constructor', () => {
-    it('should create log directory if it does not exist', () => {
+  describe("constructor", () => {
+    it("should create log directory if it does not exist", () => {
       mockFs.existsSync.mockReturnValue(false);
-      
+
       new Logger({ logDir: testLogDir });
-      
-      expect(mockFs.mkdirSync).toHaveBeenCalledWith(testLogDir, { recursive: true });
+
+      expect(mockFs.mkdirSync).toHaveBeenCalledWith(testLogDir, {
+        recursive: true,
+      });
     });
 
-    it('should initialize write stream', () => {
+    it("should initialize write stream", () => {
       expect(mockFs.createWriteStream).toHaveBeenCalledWith(
-        path.join(testLogDir, 'test-trades.jsonl'),
-        { flags: 'a' }
+        path.join(testLogDir, "test-trades.jsonl"),
+        { flags: "a" },
       );
     });
   });
 
-  describe('logSignal', () => {
-    it('should log signal with comprehensive data', () => {
+  describe("logSignal", () => {
+    it("should log signal with comprehensive data", () => {
       const signal: SignalData = {
-        symbol: 'BTCUSDT',
-        direction: 'LONG',
-        hologramStatus: 'A+',
+        symbol: "BTCUSDT",
+        direction: "LONG",
+        hologramStatus: "A+",
         alignmentScore: 85,
         rsScore: 0.05,
-        sessionType: 'LONDON',
-        poiType: 'ORDER_BLOCK',
+        sessionType: "LONDON",
+        poiType: "ORDER_BLOCK",
         cvdConfirmation: true,
         confidence: 90,
         entryPrice: 50000,
@@ -93,187 +95,215 @@ describe('Logger', () => {
         takeProfit: 52500,
         positionSize: 0.1,
         leverage: 5,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       const hologramState: HologramState = {
-        symbol: 'BTCUSDT',
+        symbol: "BTCUSDT",
         timestamp: Date.now(),
         daily: {
-          timeframe: '1D',
-          trend: 'BULL',
-          dealingRange: { high: 51000, low: 49000, midpoint: 50000, premiumThreshold: 50000, discountThreshold: 50000, range: 2000 },
+          timeframe: "1D",
+          trend: "BULL",
+          dealingRange: {
+            high: 51000,
+            low: 49000,
+            midpoint: 50000,
+            premiumThreshold: 50000,
+            discountThreshold: 50000,
+            range: 2000,
+          },
           currentPrice: 50000,
-          location: 'DISCOUNT',
+          location: "DISCOUNT",
           fractals: [],
           bos: [],
-          mss: null
+          mss: null,
         },
         h4: {
-          timeframe: '4H',
-          trend: 'BULL',
-          dealingRange: { high: 50500, low: 49500, midpoint: 50000, premiumThreshold: 50000, discountThreshold: 50000, range: 1000 },
+          timeframe: "4H",
+          trend: "BULL",
+          dealingRange: {
+            high: 50500,
+            low: 49500,
+            midpoint: 50000,
+            premiumThreshold: 50000,
+            discountThreshold: 50000,
+            range: 1000,
+          },
           currentPrice: 50000,
-          location: 'DISCOUNT',
+          location: "DISCOUNT",
           fractals: [],
           bos: [],
-          mss: null
+          mss: null,
         },
         m15: {
-          timeframe: '15m',
-          trend: 'BULL',
-          dealingRange: { high: 50200, low: 49800, midpoint: 50000, premiumThreshold: 50000, discountThreshold: 50000, range: 400 },
+          timeframe: "15m",
+          trend: "BULL",
+          dealingRange: {
+            high: 50200,
+            low: 49800,
+            midpoint: 50000,
+            premiumThreshold: 50000,
+            discountThreshold: 50000,
+            range: 400,
+          },
           currentPrice: 50000,
-          location: 'EQUILIBRIUM',
+          location: "EQUILIBRIUM",
           fractals: [],
           bos: [],
-          mss: { direction: 'BULLISH', price: 50000, barIndex: 10, timestamp: Date.now(), significance: 80 }
+          mss: {
+            direction: "BULLISH",
+            price: 50000,
+            barIndex: 10,
+            timestamp: Date.now(),
+            significance: 80,
+          },
         },
         alignmentScore: 85,
-        status: 'A+',
+        status: "A+",
         veto: { vetoed: false, reason: null, direction: null },
-        rsScore: 0.05
+        rsScore: 0.05,
+        direction: null,
       };
 
-      logger.logSignal(signal, hologramState, 'LONDON', 'ORDER_BLOCK', true);
+      logger.logSignal(signal, hologramState, "LONDON", "ORDER_BLOCK", true);
 
       expect(mockWriteStream.write).toHaveBeenCalledWith(
-        expect.stringContaining('"type":"signal"')
+        expect.stringContaining('"type":"signal"'),
       );
       expect(mockWriteStream.write).toHaveBeenCalledWith(
-        expect.stringContaining('"symbol":"BTCUSDT"')
+        expect.stringContaining('"symbol":"BTCUSDT"'),
       );
       expect(mockWriteStream.write).toHaveBeenCalledWith(
-        expect.stringContaining('"strategyType":"holographic"')
+        expect.stringContaining('"strategyType":"holographic"'),
       );
       expect(mockWriteStream.write).toHaveBeenCalledWith(
-        expect.stringContaining('"confidence":90')
+        expect.stringContaining('"confidence":90'),
       );
       expect(mockWriteStream.write).toHaveBeenCalledWith(
-        expect.stringContaining('"sessionType":"LONDON"')
+        expect.stringContaining('"sessionType":"LONDON"'),
       );
       expect(mockWriteStream.write).toHaveBeenCalledWith(
-        expect.stringContaining('"poiType":"ORDER_BLOCK"')
+        expect.stringContaining('"poiType":"ORDER_BLOCK"'),
       );
       expect(mockWriteStream.write).toHaveBeenCalledWith(
-        expect.stringContaining('"cvdStatus":true')
+        expect.stringContaining('"cvdStatus":true'),
       );
     });
   });
 
-  describe('logExecution', () => {
-    it('should log execution with fill details', () => {
+  describe("logExecution", () => {
+    it("should log execution with fill details", () => {
       const orderResult: OrderResult = {
-        orderId: 'order123',
-        symbol: 'BTCUSDT',
-        side: 'Buy',
+        orderId: "order123",
+        symbol: "BTCUSDT",
+        side: "Buy",
         qty: 0.1,
         price: 50050,
-        status: 'FILLED',
-        timestamp: Date.now()
+        status: "FILLED",
+        timestamp: Date.now(),
       };
 
-      logger.logExecution(orderResult, 0.001, 'signal123', 2.5);
+      logger.logExecution(orderResult, 0.001, "signal123", 2.5);
 
       expect(mockWriteStream.write).toHaveBeenCalledWith(
-        expect.stringContaining('"type":"execution"')
+        expect.stringContaining('"type":"execution"'),
       );
       expect(mockWriteStream.write).toHaveBeenCalledWith(
-        expect.stringContaining('"orderId":"order123"')
+        expect.stringContaining('"orderId":"order123"'),
       );
       expect(mockWriteStream.write).toHaveBeenCalledWith(
-        expect.stringContaining('"fillPrice":50050')
+        expect.stringContaining('"fillPrice":50050'),
       );
       expect(mockWriteStream.write).toHaveBeenCalledWith(
-        expect.stringContaining('"slippage":0.001')
+        expect.stringContaining('"slippage":0.001'),
       );
       expect(mockWriteStream.write).toHaveBeenCalledWith(
-        expect.stringContaining('"signalId":"signal123"')
+        expect.stringContaining('"signalId":"signal123"'),
       );
       expect(mockWriteStream.write).toHaveBeenCalledWith(
-        expect.stringContaining('"fees":2.5')
+        expect.stringContaining('"fees":2.5'),
       );
     });
   });
 
-  describe('logPositionClose', () => {
-    it('should log position close with P&L details', () => {
+  describe("logPositionClose", () => {
+    it("should log position close with P&L details", () => {
       logger.logPositionClose(
-        'pos123',
-        'BTCUSDT',
-        'LONG',
+        "pos123",
+        "BTCUSDT",
+        "LONG",
         50000,
         52500,
         5.0,
-        'TAKE_PROFIT',
+        "TAKE_PROFIT",
         3600000, // 1 hour
-        2.5
+        2.5,
       );
 
       expect(mockWriteStream.write).toHaveBeenCalledWith(
-        expect.stringContaining('"type":"close"')
+        expect.stringContaining('"type":"close"'),
       );
       expect(mockWriteStream.write).toHaveBeenCalledWith(
-        expect.stringContaining('"positionId":"pos123"')
+        expect.stringContaining('"positionId":"pos123"'),
       );
       expect(mockWriteStream.write).toHaveBeenCalledWith(
-        expect.stringContaining('"exitPrice":52500')
+        expect.stringContaining('"exitPrice":52500'),
       );
       expect(mockWriteStream.write).toHaveBeenCalledWith(
-        expect.stringContaining('"profitPercentage":5')
+        expect.stringContaining('"profitPercentage":5'),
       );
       expect(mockWriteStream.write).toHaveBeenCalledWith(
-        expect.stringContaining('"closeReason":"TAKE_PROFIT"')
+        expect.stringContaining('"closeReason":"TAKE_PROFIT"'),
       );
       expect(mockWriteStream.write).toHaveBeenCalledWith(
-        expect.stringContaining('"holdTime":3600000')
+        expect.stringContaining('"holdTime":3600000'),
       );
       expect(mockWriteStream.write).toHaveBeenCalledWith(
-        expect.stringContaining('"rValue":2.5')
+        expect.stringContaining('"rValue":2.5'),
       );
     });
   });
 
-  describe('logError', () => {
-    it('should log error with context', () => {
-      logger.logError('ERROR', 'Test error message', {
-        symbol: 'BTCUSDT',
-        component: 'HologramEngine',
-        function: 'analyze',
-        data: { test: 'data' }
+  describe("logError", () => {
+    it("should log error with context", () => {
+      logger.logError("ERROR", "Test error message", {
+        symbol: "BTCUSDT",
+        component: "HologramEngine",
+        function: "analyze",
+        data: { test: "data" },
       });
 
       expect(mockWriteStream.write).toHaveBeenCalledWith(
-        expect.stringContaining('"type":"error"')
+        expect.stringContaining('"type":"error"'),
       );
       expect(mockWriteStream.write).toHaveBeenCalledWith(
-        expect.stringContaining('"level":"ERROR"')
+        expect.stringContaining('"level":"ERROR"'),
       );
       expect(mockWriteStream.write).toHaveBeenCalledWith(
-        expect.stringContaining('"message":"Test error message"')
+        expect.stringContaining('"message":"Test error message"'),
       );
       expect(mockWriteStream.write).toHaveBeenCalledWith(
-        expect.stringContaining('"phase":"phase2"')
+        expect.stringContaining('"phase":"phase2"'),
       );
       expect(mockWriteStream.write).toHaveBeenCalledWith(
-        expect.stringContaining('"symbol":"BTCUSDT"')
+        expect.stringContaining('"symbol":"BTCUSDT"'),
       );
       expect(mockWriteStream.write).toHaveBeenCalledWith(
-        expect.stringContaining('"component":"HologramEngine"')
+        expect.stringContaining('"component":"HologramEngine"'),
       );
     });
   });
 
-  describe('JSONL format', () => {
-    it('should write each log entry as a single JSON line', () => {
+  describe("JSONL format", () => {
+    it("should write each log entry as a single JSON line", () => {
       const signal: SignalData = {
-        symbol: 'BTCUSDT',
-        direction: 'LONG',
-        hologramStatus: 'A+',
+        symbol: "BTCUSDT",
+        direction: "LONG",
+        hologramStatus: "A+",
         alignmentScore: 85,
         rsScore: 0.05,
-        sessionType: 'LONDON',
-        poiType: 'ORDER_BLOCK',
+        sessionType: "LONDON",
+        poiType: "ORDER_BLOCK",
         cvdConfirmation: true,
         confidence: 90,
         entryPrice: 50000,
@@ -281,79 +311,103 @@ describe('Logger', () => {
         takeProfit: 52500,
         positionSize: 0.1,
         leverage: 5,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       const hologramState: HologramState = {
-        symbol: 'BTCUSDT',
+        symbol: "BTCUSDT",
         timestamp: Date.now(),
         daily: {
-          timeframe: '1D',
-          trend: 'BULL',
-          dealingRange: { high: 51000, low: 49000, midpoint: 50000, premiumThreshold: 50000, discountThreshold: 50000, range: 2000 },
+          timeframe: "1D",
+          trend: "BULL",
+          dealingRange: {
+            high: 51000,
+            low: 49000,
+            midpoint: 50000,
+            premiumThreshold: 50000,
+            discountThreshold: 50000,
+            range: 2000,
+          },
           currentPrice: 50000,
-          location: 'DISCOUNT',
+          location: "DISCOUNT",
           fractals: [],
           bos: [],
-          mss: null
+          mss: null,
         },
         h4: {
-          timeframe: '4H',
-          trend: 'BULL',
-          dealingRange: { high: 50500, low: 49500, midpoint: 50000, premiumThreshold: 50000, discountThreshold: 50000, range: 1000 },
+          timeframe: "4H",
+          trend: "BULL",
+          dealingRange: {
+            high: 50500,
+            low: 49500,
+            midpoint: 50000,
+            premiumThreshold: 50000,
+            discountThreshold: 50000,
+            range: 1000,
+          },
           currentPrice: 50000,
-          location: 'DISCOUNT',
+          location: "DISCOUNT",
           fractals: [],
           bos: [],
-          mss: null
+          mss: null,
         },
         m15: {
-          timeframe: '15m',
-          trend: 'BULL',
-          dealingRange: { high: 50200, low: 49800, midpoint: 50000, premiumThreshold: 50000, discountThreshold: 50000, range: 400 },
+          timeframe: "15m",
+          trend: "BULL",
+          dealingRange: {
+            high: 50200,
+            low: 49800,
+            midpoint: 50000,
+            premiumThreshold: 50000,
+            discountThreshold: 50000,
+            range: 400,
+          },
           currentPrice: 50000,
-          location: 'EQUILIBRIUM',
+          location: "EQUILIBRIUM",
           fractals: [],
           bos: [],
-          mss: null
+          mss: null,
         },
         alignmentScore: 85,
-        status: 'A+',
+        status: "A+",
         veto: { vetoed: false, reason: null, direction: null },
-        rsScore: 0.05
+        rsScore: 0.05,
+        direction: null,
       };
 
-      logger.logSignal(signal, hologramState, 'LONDON', 'ORDER_BLOCK', true);
+      logger.logSignal(signal, hologramState, "LONDON", "ORDER_BLOCK", true);
 
       const writtenData = mockWriteStream.write.mock.calls[0][0];
-      
+
       // Should be valid JSON
-      expect(() => JSON.parse(writtenData.replace('\n', ''))).not.toThrow();
-      
+      expect(() => JSON.parse(writtenData.replace("\n", ""))).not.toThrow();
+
       // Should end with newline
       expect(writtenData).toMatch(/\n$/);
     });
   });
 
-  describe('updateConfig', () => {
-    it('should update configuration', () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-      
+  describe("updateConfig", () => {
+    it("should update configuration", () => {
+      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
+
       logger.updateConfig({
         maxFileSizeBytes: 2048,
-        enableConsoleOutput: true
+        enableConsoleOutput: true,
       });
 
-      expect(consoleSpy).toHaveBeenCalledWith('📊 Logger: Configuration updated');
-      
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "📊 Logger: Configuration updated",
+      );
+
       consoleSpy.mockRestore();
     });
   });
 
-  describe('close', () => {
-    it('should close write stream', async () => {
+  describe("close", () => {
+    it("should close write stream", async () => {
       await logger.close();
-      
+
       expect(mockWriteStream.end).toHaveBeenCalled();
     });
   });

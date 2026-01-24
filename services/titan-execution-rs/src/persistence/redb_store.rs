@@ -1,4 +1,8 @@
-use redb::Database;
+use redb::{Database, ReadableTable, TableDefinition}; // Ensure TableDefinition and ReadableTable are imported
+use tracing::warn;
+
+const IDEMPOTENCY_TABLE: TableDefinition<&str, i64> = TableDefinition::new("idempotency_keys");
+
 use std::path::Path;
 use std::sync::Arc;
 use thiserror::Error;
@@ -41,5 +45,39 @@ impl RedbStore {
 
     pub fn begin_read(&self) -> Result<redb::ReadTransaction<'_>, StoreError> {
         Ok(self.db.begin_read()?)
+    }
+
+    pub fn check_idempotency(&self, key: &str, ttl_ms: i64) -> Result<bool, StoreError> {
+        let read_txn = self.db.begin_read()?;
+        let table = read_txn.open_table(IDEMPOTENCY_TABLE)?;
+
+        let now = chrono::Utc::now().timestamp_millis();
+
+        if let Some(expiry) = table.get(key)? {
+            let expiry_ts = expiry.value();
+            if expiry_ts > now {
+                // Key exists and is valid -> Duplicate
+                return Ok(false);
+            }
+        }
+
+        // Key doesn't exist or is expired -> New
+        // Need write txn to set it.
+        // Note: This function only CHECKS. Setting happens in a separated write txn usually,
+        // or we upgrade here. But Redb doesn't support upgrade easily.
+        // We will return true if it's safe to process. Caller must write.
+        Ok(true)
+    }
+
+    pub fn set_idempotency(&self, key: &str, ttl_ms: i64) -> Result<(), StoreError> {
+        let write_txn = self.db.begin_write()?;
+        {
+            let mut table = write_txn.open_table(IDEMPOTENCY_TABLE)?;
+            let now = chrono::Utc::now().timestamp_millis();
+            let expiry = now + ttl_ms;
+            table.insert(key, expiry)?;
+        }
+        write_txn.commit()?;
+        Ok(())
     }
 }

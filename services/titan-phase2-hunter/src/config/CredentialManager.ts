@@ -7,10 +7,22 @@
  * Requirements: Encrypted credential storage
  */
 
-import { createCipheriv, createDecipheriv, randomBytes, pbkdf2Sync } from 'crypto';
-import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs';
-import { join } from 'path';
-import { homedir } from 'os';
+import {
+  createCipheriv,
+  createDecipheriv,
+  pbkdf2Sync,
+  randomBytes,
+} from "crypto";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from "fs";
+import { join } from "path";
+import { homedir } from "os";
 
 /**
  * Exchange credentials interface
@@ -52,12 +64,12 @@ export interface CredentialValidation {
 export class CredentialManager {
   private readonly credentialsDir: string;
   private readonly credentialsPath: string;
-  private readonly algorithm = 'aes-256-cbc';
+  private readonly algorithm = "aes-256-cbc";
   private masterPassword: string | null = null;
 
   constructor() {
-    this.credentialsDir = join(homedir(), '.titan-scanner');
-    this.credentialsPath = join(this.credentialsDir, 'secrets.enc');
+    this.credentialsDir = join(homedir(), ".titan-scanner");
+    this.credentialsPath = join(this.credentialsDir, "secrets.enc");
 
     // Ensure credentials directory exists
     if (!existsSync(this.credentialsDir)) {
@@ -79,7 +91,7 @@ export class CredentialManager {
 
       if (!this.masterPassword) {
         throw new Error(
-          'Master password not provided. Set TITAN_MASTER_PASSWORD environment variable or pass password directly.'
+          "Master password not provided. Set TITAN_MASTER_PASSWORD environment variable or pass password directly.",
         );
       }
     }
@@ -91,14 +103,16 @@ export class CredentialManager {
    */
   saveCredentials(credentials: ExchangeCredentials): void {
     if (!this.masterPassword) {
-      throw new Error('Master password not set. Call setMasterPassword() first.');
+      throw new Error(
+        "Master password not set. Call setMasterPassword() first.",
+      );
     }
 
     try {
       // Validate credentials before saving
       const validation = this.validateCredentials(credentials);
       if (!validation.isValid) {
-        throw new Error(`Invalid credentials: ${validation.errors.join(', ')}`);
+        throw new Error(`Invalid credentials: ${validation.errors.join(", ")}`);
       }
 
       // Generate salt and IV
@@ -114,27 +128,31 @@ export class CredentialManager {
       // Encrypt credentials
       const credentialsJson = JSON.stringify(credentials);
       // eslint-disable-next-line functional/no-let
-      let encrypted = cipher.update(credentialsJson, 'utf8', 'hex');
-      encrypted += cipher.final('hex');
+      let encrypted = cipher.update(credentialsJson, "utf8", "hex");
+      encrypted += cipher.final("hex");
 
       // Create encrypted data structure
       const encryptedData: EncryptedCredentials = {
         data: encrypted,
-        iv: iv.toString('hex'),
-        salt: salt.toString('hex'),
+        iv: iv.toString("hex"),
+        salt: salt.toString("hex"),
         version: 1,
         timestamp: Date.now(),
       };
 
       // Write to file with restricted permissions
-      writeFileSync(this.credentialsPath, JSON.stringify(encryptedData, null, 2), {
-        encoding: 'utf8',
-        mode: 0o600, // Read/write for owner only
-      });
+      writeFileSync(
+        this.credentialsPath,
+        JSON.stringify(encryptedData, null, 2),
+        {
+          encoding: "utf8",
+          mode: 0o600, // Read/write for owner only
+        },
+      );
 
-      console.log('🔐 Credentials saved successfully');
+      console.log("🔐 Credentials saved successfully");
     } catch (error) {
-      console.error('❌ Failed to save credentials:', error);
+      console.error("❌ Failed to save credentials:", error);
       throw error;
     }
   }
@@ -145,22 +163,26 @@ export class CredentialManager {
    */
   loadCredentials(): ExchangeCredentials {
     if (!this.masterPassword) {
-      throw new Error('Master password not set. Call setMasterPassword() first.');
+      throw new Error(
+        "Master password not set. Call setMasterPassword() first.",
+      );
     }
 
     if (!existsSync(this.credentialsPath)) {
-      throw new Error('No credentials file found. Save credentials first using saveCredentials().');
+      throw new Error(
+        "No credentials file found. Save credentials first using saveCredentials().",
+      );
     }
 
     try {
       // Read encrypted file
-      const fileContent = readFileSync(this.credentialsPath, 'utf8');
+      const fileContent = readFileSync(this.credentialsPath, "utf8");
       const encryptedData: EncryptedCredentials = JSON.parse(fileContent);
 
       // Extract components
       const encryptedText = encryptedData.data;
-      const iv = Buffer.from(encryptedData.iv, 'hex');
-      const salt = Buffer.from(encryptedData.salt, 'hex');
+      const iv = Buffer.from(encryptedData.iv, "hex");
+      const salt = Buffer.from(encryptedData.salt, "hex");
 
       // Derive key from master password
       const key = this.deriveKey(this.masterPassword, salt);
@@ -170,22 +192,27 @@ export class CredentialManager {
 
       // Decrypt credentials
       // eslint-disable-next-line functional/no-let
-      let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
-      decrypted += decipher.final('utf8');
+      let decrypted = decipher.update(encryptedText, "hex", "utf8");
+      decrypted += decipher.final("utf8");
 
       // Parse and validate decrypted credentials
       const credentials: ExchangeCredentials = JSON.parse(decrypted);
 
       const validation = this.validateCredentials(credentials);
       if (!validation.isValid) {
-        throw new Error(`Corrupted credentials: ${validation.errors.join(', ')}`);
+        throw new Error(
+          `Corrupted credentials: ${validation.errors.join(", ")}`,
+        );
       }
 
-      console.log('🔓 Credentials loaded successfully');
+      console.log("🔓 Credentials loaded successfully");
       return credentials;
-    } catch (error) {
-      console.error('❌ Failed to load credentials:', error);
-      throw new Error('Failed to decrypt credentials. Check master password and file integrity.');
+    } catch (error: any) {
+      console.error("❌ Failed to load credentials:", error);
+      throw new Error(
+        `Failed to decrypt credentials at ${this.credentialsPath}. MasterPW set? ${!!this
+          .masterPassword}. Inner: ${error.message}`,
+      );
     }
   }
 
@@ -208,11 +235,11 @@ export class CredentialManager {
         writeFileSync(this.credentialsPath, randomData);
 
         // Delete file
-        require('fs').unlinkSync(this.credentialsPath);
+        unlinkSync(this.credentialsPath);
 
-        console.log('🗑️ Credentials deleted successfully');
+        console.log("🗑️ Credentials deleted successfully");
       } catch (error) {
-        console.error('❌ Failed to delete credentials:', error);
+        console.error("❌ Failed to delete credentials:", error);
         throw error;
       }
     }
@@ -222,9 +249,9 @@ export class CredentialManager {
    * Update specific exchange credentials
    */
   updateExchangeCredentials(
-    exchange: 'binance' | 'bybit',
+    exchange: "binance" | "bybit",
     apiKey: string,
-    apiSecret: string
+    apiSecret: string,
   ): void {
     // eslint-disable-next-line functional/no-let
     let credentials: ExchangeCredentials;
@@ -236,12 +263,13 @@ export class CredentialManager {
       // If no credentials exist, create new structure with valid placeholder values
       credentials = {
         binance: {
-          apiKey: 'placeholder_binance_api_key_32_chars',
-          apiSecret: 'placeholder_binance_api_secret_64_characters_long_for_testing_purposes',
+          apiKey: "placeholder_binance_api_key_32_chars",
+          apiSecret:
+            "placeholder_binance_api_secret_64_characters_long_for_testing_purposes",
         },
         bybit: {
-          apiKey: 'placeholder_bybit_api_key_24',
-          apiSecret: 'placeholder_bybit_api_secret_48_characters_long',
+          apiKey: "placeholder_bybit_api_key_24",
+          apiSecret: "placeholder_bybit_api_secret_48_characters_long",
         },
       };
     }
@@ -257,7 +285,9 @@ export class CredentialManager {
   /**
    * Get credentials for specific exchange
    */
-  getExchangeCredentials(exchange: 'binance' | 'bybit'): { apiKey: string; apiSecret: string } {
+  getExchangeCredentials(
+    exchange: "binance" | "bybit",
+  ): { apiKey: string; apiSecret: string } {
     const credentials = this.loadCredentials();
     return credentials[exchange];
   }
@@ -265,58 +295,68 @@ export class CredentialManager {
   /**
    * Validate credentials structure and content
    */
-  private validateCredentials(credentials: ExchangeCredentials): CredentialValidation {
+  private validateCredentials(
+    credentials: ExchangeCredentials,
+  ): CredentialValidation {
     const errors: string[] = [];
     const warnings: string[] = [];
 
     // Check structure
     if (!credentials) {
       // eslint-disable-next-line functional/immutable-data
-      errors.push('Credentials object is null or undefined');
+      errors.push("Credentials object is null or undefined");
       return { isValid: false, errors, warnings };
     }
 
     // Validate Binance credentials
     if (!credentials.binance) {
       // eslint-disable-next-line functional/immutable-data
-      errors.push('Missing Binance credentials');
+      errors.push("Missing Binance credentials");
     } else {
-      if (!credentials.binance.apiKey || credentials.binance.apiKey.trim() === '') {
+      if (
+        !credentials.binance.apiKey || credentials.binance.apiKey.trim() === ""
+      ) {
         // eslint-disable-next-line functional/immutable-data
-        errors.push('Binance API key is empty');
+        errors.push("Binance API key is empty");
       } else if (credentials.binance.apiKey.length < 32) {
         // eslint-disable-next-line functional/immutable-data
-        warnings.push('Binance API key seems too short');
+        warnings.push("Binance API key seems too short");
       }
 
-      if (!credentials.binance.apiSecret || credentials.binance.apiSecret.trim() === '') {
+      if (
+        !credentials.binance.apiSecret ||
+        credentials.binance.apiSecret.trim() === ""
+      ) {
         // eslint-disable-next-line functional/immutable-data
-        errors.push('Binance API secret is empty');
+        errors.push("Binance API secret is empty");
       } else if (credentials.binance.apiSecret.length < 32) {
         // eslint-disable-next-line functional/immutable-data
-        warnings.push('Binance API secret seems too short');
+        warnings.push("Binance API secret seems too short");
       }
     }
 
     // Validate Bybit credentials
     if (!credentials.bybit) {
       // eslint-disable-next-line functional/immutable-data
-      errors.push('Missing Bybit credentials');
+      errors.push("Missing Bybit credentials");
     } else {
-      if (!credentials.bybit.apiKey || credentials.bybit.apiKey.trim() === '') {
+      if (!credentials.bybit.apiKey || credentials.bybit.apiKey.trim() === "") {
         // eslint-disable-next-line functional/immutable-data
-        errors.push('Bybit API key is empty');
+        errors.push("Bybit API key is empty");
       } else if (credentials.bybit.apiKey.length < 16) {
         // eslint-disable-next-line functional/immutable-data
-        warnings.push('Bybit API key seems too short');
+        warnings.push("Bybit API key seems too short");
       }
 
-      if (!credentials.bybit.apiSecret || credentials.bybit.apiSecret.trim() === '') {
+      if (
+        !credentials.bybit.apiSecret ||
+        credentials.bybit.apiSecret.trim() === ""
+      ) {
         // eslint-disable-next-line functional/immutable-data
-        errors.push('Bybit API secret is empty');
+        errors.push("Bybit API secret is empty");
       } else if (credentials.bybit.apiSecret.length < 16) {
         // eslint-disable-next-line functional/immutable-data
-        warnings.push('Bybit API secret seems too short');
+        warnings.push("Bybit API secret seems too short");
       }
     }
 
@@ -331,13 +371,18 @@ export class CredentialManager {
    * Derive encryption key from master password using PBKDF2
    */
   private deriveKey(password: string, salt: Buffer): Buffer {
-    return pbkdf2Sync(password, salt, 100000, 32, 'sha256');
+    return pbkdf2Sync(password, salt, 100000, 32, "sha256");
   }
 
   /**
    * Get credentials file info
    */
-  getCredentialsInfo(): { exists: boolean; path: string; size?: number; modified?: Date } {
+  getCredentialsInfo(): {
+    exists: boolean;
+    path: string;
+    size?: number;
+    modified?: Date;
+  } {
     const exists = this.hasCredentials();
     const info: any = {
       exists,
@@ -346,7 +391,7 @@ export class CredentialManager {
 
     if (exists) {
       try {
-        const stats = require('fs').statSync(this.credentialsPath);
+        const stats = statSync(this.credentialsPath);
         // eslint-disable-next-line functional/immutable-data
         info.size = stats.size;
         // eslint-disable-next-line functional/immutable-data
@@ -376,7 +421,7 @@ export class CredentialManager {
    */
   changeMasterPassword(newPassword: string): void {
     if (!this.masterPassword) {
-      throw new Error('Current master password not set');
+      throw new Error("Current master password not set");
     }
 
     // Load credentials with current password
@@ -390,7 +435,7 @@ export class CredentialManager {
     try {
       // Save with new password
       this.saveCredentials(credentials);
-      console.log('🔐 Master password changed successfully');
+      console.log("🔐 Master password changed successfully");
     } catch (error) {
       // Restore old password on failure
       // eslint-disable-next-line functional/immutable-data

@@ -21,7 +21,7 @@ describe("PatternPrecisionAnalyzer Property Tests", () => {
         }),
         timestamp: fc.date(),
         barIndex: fc.integer({ min: 0 }),
-        volume: fc.option(fc.double({ min: 0 })),
+        volume: fc.option(fc.double({ min: 0 }), { nil: undefined }),
     });
 
     // Helper to round numbers to varying degrees

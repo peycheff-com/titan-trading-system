@@ -12,13 +12,7 @@
  */
 
 import { EventEmitter } from 'events';
-import {
-  OracleScore,
-  GlobalCVDData,
-  BotTrapAnalysis,
-  TradeOutcome,
-  TechnicalSignal,
-} from '../types';
+import { BotTrapAnalysis, GlobalCVDData, OracleScore, TechnicalSignal } from '../types';
 
 // ============================================================================
 // INTERFACES
@@ -320,7 +314,9 @@ export class PerformanceAnalytics extends EventEmitter {
 
     if (this.config.enableDetailedLogging) {
       console.log(
-        `📊 Trade recorded: ${trade.symbol} ${trade.direction} - PnL: ${trade.pnlPercent.toFixed(2)}%`
+        `📊 Trade recorded: ${trade.symbol} ${trade.direction} - PnL: ${trade.pnlPercent.toFixed(
+          2
+        )}%`
       );
     }
   }
@@ -866,7 +862,10 @@ export class PerformanceAnalytics extends EventEmitter {
   /**
    * Export data for persistence
    */
-  exportData(): { trades: EnhancedTradeRecord[]; vetoed: VetoedSignalRecord[] } {
+  exportData(): {
+    trades: EnhancedTradeRecord[];
+    vetoed: VetoedSignalRecord[];
+  } {
     return {
       trades: [...this.tradeRecords],
       vetoed: [...this.vetoedSignals],

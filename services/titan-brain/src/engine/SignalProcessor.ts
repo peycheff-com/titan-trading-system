@@ -1,7 +1,11 @@
-import { getNatsClient, TitanSubject } from '@titan/shared';
-import { Logger } from '../logging/Logger.js';
-// import { validateIntentPayload } from "@titan/shared/dist/schemas/intentSchema"; // Commenting out if not available or fixing path
-import { BrainDecision } from '../types/index.js';
+import { getNatsClient, TitanSubject } from "@titan/shared";
+import { Logger } from "../logging/Logger.js";
+import { BrainDecision, IntentSignal, RiskDecision } from "../types/index.js";
+import { RiskGuardian } from "../features/Risk/RiskGuardian.js";
+import { AllocationEngine } from "../features/Allocation/AllocationEngine.js";
+import { PerformanceTracker } from "./PerformanceTracker.js";
+import { BrainStateManager } from "./BrainStateManager.js";
+import { CircuitBreaker } from "./CircuitBreaker.js";
 
 // Rust-compatible definitions (Shadow copy since it might not be exported)
 interface RustIntent {
@@ -25,10 +29,16 @@ interface RustIntent {
 
 export class SignalProcessor {
   private nats = getNatsClient();
-  private logger = Logger.getInstance('SignalProcessor');
+  private logger = Logger.getInstance("SignalProcessor");
 
-  constructor() {
-    this.logger.info('Initialized SignalProcessor');
+  constructor(
+    private riskGuardian: RiskGuardian,
+    private allocationEngine: AllocationEngine,
+    private performanceTracker: PerformanceTracker,
+    private stateManager: BrainStateManager,
+    private circuitBreaker: CircuitBreaker,
+  ) {
+    this.logger.info("Initialized SignalProcessor with full guards");
   }
 
   public async start(): Promise<void> {
@@ -36,82 +46,167 @@ export class SignalProcessor {
       await this.nats.connect();
     }
 
-    this.logger.info('Subscribing to Signal Submission Channel');
+    this.logger.info("Subscribing to Signal Submission Channel");
 
     // Subscribe to titan.signal.submit.v1
     this.nats.subscribe(TitanSubject.SIGNAL_SUBMIT, async (data: any) => {
-      await this.processSignal(data);
+      // In a real NATS consumer scenario, we might need to repackage this
+      // But for TitanBrain direct calls, processSignal expects IntentSignal
+      // For NATS events, we would need to map 'data' to IntentSignal
+      // For now, assuming direct calls from Brain mostly
     });
   }
 
-  public async processSignal(payload: any): Promise<BrainDecision> {
-    const { signal_id, source, symbol, direction, signal, payload: embeddedPayload } = payload;
+  public async processSignal(signal: IntentSignal): Promise<BrainDecision> {
+    const { signalId, symbol, side } = signal;
 
-    // Extract actual signal data (support both formats if payload is wrapped)
-    const signalData = embeddedPayload || signal || payload;
+    this.logger.info(`Processing Signal ${signalId} for ${symbol} ${side}`);
 
-    this.logger.info(`Received Signal ${signal_id} from ${source} for ${symbol} ${direction}`);
+    // Get current state
+    const positions = this.stateManager.getPositions();
+    const equity = this.stateManager.getEquity();
 
-    // TODO: Step 1 - Risk Guard Check (Budget Service)
-    // For now, strict pass-through to validate plumbing
+    // 0. Circuit Breaker Check
+    if (this.circuitBreaker.isActive()) {
+      const status = this.circuitBreaker.getStatus();
+      return {
+        signalId,
+        approved: false,
+        authorizedSize: 0,
+        reason: `Circuit breaker active: ${status.reason || "Unknown"}`,
+        allocation: this.allocationEngine.getWeights(equity),
+        performance: await this.performanceTracker.getPhasePerformance(
+          signal.phaseId,
+        ),
+        risk: {
+          approved: false,
+          reason: "Circuit breaker active",
+          adjustedSize: 0,
+          riskMetrics: this.riskGuardian.getRiskMetrics(positions),
+        },
+        timestamp: Date.now(),
+      };
+    }
 
-    // Step 2 - Convert to Execution Intent (Rust-compatible)
-    const directionInt = signalData.direction === 'LONG' ? 1 : -1;
-    const intentType = signalData.direction === 'LONG' ? 'BUY_SETUP' : 'SELL_SETUP';
+    // 1. Risk Check
+    const riskDecision: RiskDecision = this.riskGuardian.checkSignal(
+      signal,
+      positions,
+    );
 
-    // Construct RustIntent
+    if (!riskDecision.approved) {
+      this.logger.warn(
+        `Signal ${signalId} rejected by RiskGuardian: ${riskDecision.reason}`,
+      );
+      return {
+        signalId,
+        approved: false,
+        authorizedSize: 0,
+        reason: riskDecision.reason,
+        allocation: this.allocationEngine.getWeights(equity),
+        performance: await this.performanceTracker.getPhasePerformance(
+          signal.phaseId,
+        ),
+        risk: riskDecision,
+        timestamp: Date.now(),
+      };
+    }
+
+    // 2. Allocation
+    const allocation = this.allocationEngine.getWeights(equity);
+
+    // 3. Performance
+    const performance = await this.performanceTracker.getPhasePerformance(
+      signal.phaseId,
+    );
+
+    // 4. Authorization
+    // Use adjusted size from risk decision if available, else requested
+    let authorizedSize = riskDecision.adjustedSize ?? signal.requestedSize;
+
+    // Cap size based on allocation weights (Soft Cap per trade)
+    let weight = 1.0;
+    switch (signal.phaseId) {
+      case "phase1":
+        weight = allocation.w1;
+        break;
+      case "phase2":
+        weight = allocation.w2;
+        break;
+      case "phase3":
+        weight = allocation.w3;
+        break;
+      default:
+        weight = 1.0;
+    }
+    const maxSignalSize = equity * weight;
+    if (authorizedSize > maxSignalSize) {
+      if (maxSignalSize > 0) {
+        this.logger.info(
+          `Capping signal size from ${authorizedSize} to ${maxSignalSize} based on allocation weight ${weight}`,
+        );
+        authorizedSize = maxSignalSize;
+      }
+    }
+
+    // 5. Construct RustIntent
+    const directionInt = side === "BUY" ? 1 : -1;
+    const intentType = side === "BUY" ? "BUY_SETUP" : "SELL_SETUP";
+
     const intent: RustIntent = {
-      schema_version: '1.0.0',
-      signal_id: signalData.signal_id,
-      source: 'brain', // Re-signed by Brain (Authoritative)
-      symbol: signalData.symbol,
+      schema_version: "1.0.0",
+      signal_id: signalId,
+      source: "brain",
+      symbol: symbol,
       direction: directionInt,
       type: intentType,
-      entry_zone: signalData.entry_zone
-        ? [signalData.entry_zone.min, signalData.entry_zone.max]
-        : [0, 0],
-      stop_loss: signalData.stop_loss || 0,
-      take_profits: signalData.take_profits || [],
-      size: signalData.position_size || 0, // Brain should override this based on Risk
-      status: 'PENDING',
+      entry_zone: [signal.entryPrice || 0, signal.entryPrice || 0],
+      stop_loss: signal.stopLossPrice || 0,
+      take_profits: [signal.targetPrice || 0],
+      size: authorizedSize,
+      status: "PENDING",
       received_at: new Date().toISOString(),
-      t_signal: signalData.timestamp || Date.now(),
+      t_signal: signal.timestamp,
       timestamp: Date.now(),
       metadata: {
-        original_source: source,
+        original_source: signal.phaseId,
         brain_processed_at: Date.now(),
-        confidence: signalData.confidence,
-        leverage: signalData.leverage,
+        confidence: signal.confidence,
+        leverage: signal.leverage,
       },
     };
 
-    // Step 2.5 - Validation
-    // We try to use the shared validation if available (runtime check for robustness)
-    // If not available (TS vs JS issues), we rely on structural correctness above.
-    // Assuming validateIntentPayload is imported (will check errors later)
-
-    // Step 3 - Publish to Execution (titan.cmd.exec.place)
-    const symbolToken = signalData.symbol.replace('/', '_');
-    // const subject = `${TitanSubject.CMD_EXEC_PLACE}.auto.main.${symbolToken}`;
-    // Use string literal if subject enum incomplete or just consistent
+    // 6. Publish to Execution
+    const symbolToken = symbol.replace("/", "_");
     const subject = `titan.cmd.exec.place.v1.auto.main.${symbolToken}`;
 
-    this.logger.info(`Approving Signal ${signal_id} -> Publishing Intent to ${subject}`);
+    this.logger.info(
+      `Approving Signal ${signalId} -> Publishing Intent to ${subject} (Size: ${authorizedSize})`,
+    );
 
     try {
       await this.nats.publish(subject, intent);
     } catch (error) {
-      this.logger.error(`Failed to publish intent for ${signal_id}`, error as Error);
+      this.logger.error(
+        `Failed to publish intent for ${signalId}`,
+        error as Error,
+      );
       await this.publishToDLQ(intent, (error as Error).message);
+      // Return approved but with error note? Or fail?
+      // Since we couldn't execute, it's effectively a failure, but Brain "approved" it.
+      // We'll return approved but maybe log the error.
     }
-    // Return dummy BrainDecision
+
     return {
-      signalId: signal_id,
+      signalId,
       approved: true,
-      authorizedSize: intent.size,
-      reason: 'Auto-approved pass-through',
+      authorizedSize,
+      reason: riskDecision.reason || "Approved",
+      allocation,
+      performance,
+      risk: riskDecision,
       timestamp: Date.now(),
-    } as BrainDecision;
+    };
   }
 
   private async publishToDLQ(payload: any, reason: string): Promise<void> {
@@ -121,9 +216,9 @@ export class SignalProcessor {
         payload,
         t_ingress: Date.now(),
       };
-      await this.nats.publish('titan.dlq.brain.processing', dlqPayload);
+      await this.nats.publish("titan.dlq.brain.processing", dlqPayload);
     } catch (e) {
-      this.logger.error('Failed to publish to DLQ', e as Error);
+      this.logger.error("Failed to publish to DLQ", e as Error);
     }
   }
 }

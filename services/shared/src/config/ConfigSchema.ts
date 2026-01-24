@@ -237,6 +237,7 @@ export const InfrastructureConfigSchema = z.object({
     systemLimits: z.any().optional(),
     directories: z.any().optional(),
     monitoring: z.any().optional(),
+    environments: z.record(z.string(), z.any()).optional(),
   }),
   deployment: z.any().optional(),
   validation: z.any().optional(),
@@ -289,6 +290,7 @@ export const DeploymentConfigSchema = z.object({
       algorithm: z.enum(['AES-256-GCM', 'AES-256-CBC']),
     }),
   }),
+  environments: z.record(z.string(), z.any()).optional(),
 });
 
 /**

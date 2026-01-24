@@ -60,6 +60,12 @@ fn test_golden_replay_compliance() {
                 t_decision: None,
                 t_ingress: None,
                 t_exchange: None,
+                // Envelope
+                ttl_ms: None,
+                partition_key: None,
+                causation_id: None,
+                env: None,
+                subject: None,
                 max_slippage_bps: None,
                 rejection_reason: None,
                 regime_state: None,

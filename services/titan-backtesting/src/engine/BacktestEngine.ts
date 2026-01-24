@@ -1,221 +1,170 @@
-import { Logger } from '@titan/shared';
-import { HistoricalDataService } from '../data/HistoricalDataService.js';
-import { ShippingGate } from '../gate/ShippingGate.js';
-import { BacktestResult, OHLCV, Strategy, Trade, ValidationReport } from '../types/index.js';
-import { LatencyModel } from './LatencyModel.js';
+import {
+  BacktestResult,
+  OHLCV,
+  SimulationConfig,
+  Trade,
+} from "../types/index.js";
+import { EventEmitter } from "events";
+// Import Strategy Engine from Phase 1 (Core Logic)
+// @ts-ignore - Dynamic import to avoid build strictness for now
+import { TitanTrap } from "titan-phase1-scavenger/src/engine/TitanTrap.js";
+// @ts-ignore
+import { TripwireCalculators } from "titan-phase1-scavenger/src/calculators/TripwireCalculators.js";
+// @ts-ignore
+import { VelocityCalculator } from "titan-phase1-scavenger/src/calculators/VelocityCalculator.js";
 
-export interface BacktestConfig {
-  symbol: string;
-  timeframe: string;
-  start: number;
-  end: number;
-  initialCapital: number;
-}
+import { MockBinanceSpotClient } from "../mocks/MockBinanceSpotClient.js";
+import { MockBybitPerpsClient } from "../mocks/MockBybitPerpsClient.js";
+import { MockConfigManager } from "../mocks/MockConfigManager.js";
+import { MockSignalClient } from "../mocks/MockSignalClient.js";
 
-export class BacktestEngine {
-  private dataService: HistoricalDataService;
-  private gate: ShippingGate;
-  private logger: Logger;
+// Simple Logger Mock
+const mockLogger = {
+  info: (msg: string, ...args: any[]) => console.log(`[INFO] ${msg}`, ...args),
+  warn: (msg: string, ...args: any[]) => console.warn(`[WARN] ${msg}`, ...args),
+  error: (msg: string, ...args: any[]) =>
+    console.error(`[ERROR] ${msg}`, ...args),
+  debug: (msg: string, ...args: any[]) => {}, // Silence debug
+};
 
-  constructor(dataService: HistoricalDataService, gate: ShippingGate, logger: Logger) {
-    this.dataService = dataService;
-    this.gate = gate;
-    this.logger = logger;
+export class BacktestEngine extends EventEmitter {
+  private config: SimulationConfig;
+  private binanceMock: MockBinanceSpotClient;
+  private bybitMock: MockBybitPerpsClient;
+  private configMock: MockConfigManager;
+  private signalMock: MockSignalClient;
+  private engine: any; // TitanTrap instance
+
+  constructor(config: SimulationConfig) {
+    super();
+    this.config = config;
+
+    // 1. Initialize Mocks
+    this.binanceMock = new MockBinanceSpotClient();
+    this.bybitMock = new MockBybitPerpsClient(config.initialCapital);
+    this.configMock = new MockConfigManager();
+    this.signalMock = new MockSignalClient();
+
+    // 2. Configure Mock Config
+    this.configMock.setConfig({
+      exchanges: {
+        binance: {
+          enabled: true,
+          executeOn: false,
+          testnet: false,
+          rateLimit: 1000,
+          timeout: 5000,
+        },
+        bybit: {
+          enabled: true,
+          executeOn: true,
+          testnet: false,
+          rateLimit: 1000,
+          timeout: 5000,
+        },
+        mexc: {
+          enabled: false,
+          executeOn: false,
+          testnet: false,
+          rateLimit: 50,
+          timeout: 5000,
+        },
+      },
+      enabled: true,
+      ghostMode: false, // We capture orders via mock, so engine should think it's live
+    });
+
+    // 3. Instantiate TitanTrap (The Real Engine)
+    console.log("[BacktestEngine] Instantiating TitanTrap with Mocks...");
+    this.engine = new TitanTrap({
+      binanceClient: this.binanceMock as any,
+      bybitClient: this.bybitMock as any,
+      logger: mockLogger as any,
+      config: this.configMock as any,
+      tripwireCalculators: TripwireCalculators,
+      velocityCalculator: new VelocityCalculator(),
+      positionSizeCalculator: { calculate: () => 0.01 },
+      signalClient: this.signalMock as any,
+      eventEmitter: new EventEmitter() as any,
+    });
   }
 
   /**
-   * Orchestrates a Walk-Forward Analysis
+   * Run the simulation
    */
-  async runWalkForward(
-    strategy: any, // Typed as 'Strategy' in real impl
-    config: BacktestConfig,
-    folds: number = 5,
-  ): Promise<ValidationReport> {
-    this.logger.info(`Starting Walk-Forward Analysis: ${folds} folds`);
-
-    const totalDuration = config.end - config.start;
-    const foldDuration = Math.floor(totalDuration / folds);
-
-    // eslint-disable-next-line functional/no-let
-    let aggregatePnL = 0;
-    // eslint-disable-next-line functional/no-let
-    let maxDD = 0;
-
-    // eslint-disable-next-line functional/no-let
-    for (let i = 0; i < folds; i++) {
-      const foldStart = config.start + i * foldDuration;
-      const foldEnd = foldStart + foldDuration;
-      const trainEnd = foldStart + Math.floor(foldDuration * 0.7); // 70% Train
-
-      // 1. Train (In-Sample) - Optimize parameters
-      // In a real implementation, we would pass a 'train()' method here
-      // await strategy.optimize(foldStart, trainEnd);
-
-      // 2. Test (Out-Sample) - Verify
-      const result = await this.runSimulation(strategy, {
-        ...config,
-        start: trainEnd,
-        end: foldEnd,
-      });
-
-      aggregatePnL += result.totalPnL;
-      maxDD = Math.max(maxDD, result.maxDrawdownPercent);
-
-      this.logger.info(
-        `Fold ${i + 1}/${folds} Result: PnL=${result.totalPnL.toFixed(
-          2,
-        )}, DD=${result.maxDrawdownPercent.toFixed(2)}`,
-      );
-    }
-
-    // Construct Aggregate Result
-    const finalResult: BacktestResult = {
-      totalPnL: aggregatePnL,
-      maxDrawdownPercent: maxDD,
-      // ... calculate standard aggregation for other metrics
-      totalTrades: 0,
-      winRate: 0,
-      maxDrawdown: 0,
-      profitFactor: 0,
-      calmarRatio: 0,
-      sharpeRatio: 0,
-      sortinoRatio: 0,
-    };
-
-    // Evaluate against baseline (Placeholder: Baseline is 0 for new strategy)
-    const baseline: BacktestResult = {
-      ...finalResult,
-      totalPnL: 0,
-      maxDrawdownPercent: 1.0,
-    }; // Dummy baseline
-
-    return this.gate.evaluate(baseline, finalResult);
-  }
-
-  private async runSimulation(strategy: Strategy, config: BacktestConfig): Promise<BacktestResult> {
-    const candles = await this.dataService.getCandles(
-      config.symbol,
-      config.timeframe,
-      config.start,
-      config.end,
+  async runSimulation(
+    data: { candles: OHLCV[]; trades?: Trade[] },
+  ): Promise<BacktestResult> {
+    console.log(
+      `[BacktestEngine] Starting simulation with ${data.candles.length} candles...`,
     );
 
-    // eslint-disable-next-line functional/no-let
-    let equity = config.initialCapital;
-    const trades: Trade[] = [];
-    // eslint-disable-next-line functional/no-let
-    let openTrade: Trade | null = null;
-    // eslint-disable-next-line functional/no-let
-    let peakEquity = equity;
-    // eslint-disable-next-line functional/no-let
-    let maxDD = 0;
+    // Start Engine
+    await this.engine.start();
 
-    const latencyModel = new LatencyModel();
+    const startTime = Date.now();
+    let processedCandles = 0;
 
-    // eslint-disable-next-line functional/no-let
-    for (let i = 0; i < candles.length; i++) {
-      const candle = candles[i];
+    // 4. Feeder Loop
+    // We simulate time by feeding candles/trades sequentially
+    for (const candle of data.candles) {
+      // Update Mock Prices (so execution gets correct price)
+      this.bybitMock.setPrice(this.config.symbol, candle.close);
 
-      // 1. Check Exit
-      if (openTrade) {
-        // Simplified SL/TP
-        const sl = openTrade.entryPrice * 0.95;
-        const tp = openTrade.entryPrice * 1.1;
-        // eslint-disable-next-line functional/no-let
-        let exitPrice: number | null = null;
-        // eslint-disable-next-line functional/no-let
-        let exitReason = '';
+      // Feed Trade Data to Trigger Engine
+      // We convert Candle to a simulated Trade for the simple detector
+      // In high-fidelity, we would have real trade ticks.
+      const simulatedTrade = {
+        symbol: this.config.symbol,
+        price: candle.close,
+        qty: candle.volume / 60, // approximate
+        time: candle.timestamp,
+        isBuyerMaker: false,
+      };
 
-        if (candle.low <= sl) {
-          exitPrice = sl;
-          exitReason = 'STOP_LOSS';
-        } else if (candle.high >= tp) {
-          exitPrice = tp;
-          exitReason = 'TAKE_PROFIT';
-        }
+      // Push to Binance Mock (Trigger Source)
+      this.binanceMock.pushTrade(this.config.symbol, simulatedTrade as any);
 
-        if (exitPrice) {
-          const pnlPercent = (exitPrice - openTrade.entryPrice) / openTrade.entryPrice;
-          const pnl = openTrade.quantity * openTrade.entryPrice * pnlPercent;
+      // In a real backtest, we would tick the clock forward here.
+      // For now, we assume synchronous processing of the pushed trade.
 
-          // eslint-disable-next-line functional/immutable-data
-          openTrade.exitPrice = exitPrice;
-          // eslint-disable-next-line functional/immutable-data
-          openTrade.exitReason = exitReason;
-          // eslint-disable-next-line functional/immutable-data
-          openTrade.pnl = pnl;
-          // eslint-disable-next-line functional/immutable-data
-          openTrade.pnlPercent = pnlPercent;
-          // eslint-disable-next-line functional/immutable-data
-          openTrade.duration = candle.timestamp - openTrade.timestamp;
-
-          equity += pnl;
-          // eslint-disable-next-line functional/immutable-data
-          trades.push(openTrade);
-          openTrade = null;
-        }
-      }
-
-      // 2. Entry
-      if (!openTrade) {
-        const signal = await strategy.onCandle(candle);
-        if (signal && signal.action !== 'HOLD') {
-          const idealPrice = candle.close;
-          const executionPrice = latencyModel.applyLatencyPenalty(
-            idealPrice,
-            candles,
-            candle.timestamp,
-          );
-          const atr = candle.high - candle.low;
-          const slippage = latencyModel.calculateSlippage(10000, atr, 1);
-
-          const finalPrice =
-            signal.action === 'BUY' ? executionPrice + slippage : executionPrice - slippage;
-          const fee = finalPrice * 0.0005; // 0.05%
-
-          const quantity = (equity * 0.1) / finalPrice;
-
-          openTrade = {
-            id: `trade-${i}`,
-            timestamp: candle.timestamp,
-            symbol: config.symbol,
-            side: signal.action === 'BUY' ? 'long' : 'short',
-            entryPrice: finalPrice,
-            exitPrice: 0,
-            quantity,
-            leverage: 1,
-            pnl: 0,
-            pnlPercent: 0,
-            duration: 0,
-            slippage,
-            fees: fee,
-            exitReason: '',
-          };
-          equity -= fee;
-        }
-      }
-
-      peakEquity = Math.max(peakEquity, equity);
-      maxDD = Math.max(maxDD, (peakEquity - equity) / peakEquity);
+      processedCandles++;
     }
 
-    const winningTrades = trades.filter((t) => t.pnl > 0);
-    const losingTrades = trades.filter((t) => t.pnl <= 0);
+    // Stop Engine
+    this.engine.stop();
+    const duration = Date.now() - startTime;
+
+    // 5. Calculate Results
+    const orders = this.bybitMock.getFilledOrders();
+    const equity = await this.bybitMock.getEquity(); // This would need PnL tracking logic update in MockBybit
+
+    console.log(
+      `[BacktestEngine] Simulation Complete. Orders: ${orders.length}`,
+    );
 
     return {
-      totalPnL: equity - config.initialCapital,
-      maxDrawdownPercent: maxDD,
-      totalTrades: trades.length,
-      winRate: trades.length > 0 ? winningTrades.length / trades.length : 0,
-      maxDrawdown: peakEquity * maxDD,
-      profitFactor:
-        losingTrades.length > 0
-          ? trades.filter((t) => t.pnl > 0).reduce((s, t) => s + t.pnl, 0) /
-            Math.abs(trades.filter((t) => t.pnl < 0).reduce((s, t) => s + t.pnl, 0))
-          : 999,
-      calmarRatio: 0,
-      sharpeRatio: 0,
-      sortinoRatio: 0,
+      metrics: {
+        totalReturn: (equity - this.config.initialCapital) /
+          this.config.initialCapital,
+        maxDrawdown: 0, // Todo: calculate
+        sharpeRatio: 0,
+        winRate: 0,
+        tradesCount: orders.length,
+      },
+      trades: orders.map((o) => ({
+        id: o.orderId,
+        timestamp: o.timestamp,
+        symbol: o.symbol,
+        entryPrice: o.price,
+        exitPrice: 0, // Todo
+        pnl: 0,
+        side: o.side === "Buy" ? "long" : "short",
+        quantity: o.qty,
+        size: o.qty,
+      })),
+      equityCurve: [],
+      logs: [], // Captured from logger
     };
   }
 }

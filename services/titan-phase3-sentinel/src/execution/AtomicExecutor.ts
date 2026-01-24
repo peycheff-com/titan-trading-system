@@ -1,4 +1,4 @@
-import type { ExecutionResult, Order, OrderResult } from '../types/orders.js';
+import type { ExecutionResult, Order } from '../types/orders.js';
 import type { IOrderExecutor } from './interfaces.js';
 
 /**
@@ -100,11 +100,11 @@ export class AtomicExecutor {
       if (result.spotResult) result.totalCost += result.spotResult.fees;
       // eslint-disable-next-line functional/immutable-data
       if (result.perpResult) result.totalCost += result.perpResult.fees;
-    } catch (error: any) {
+    } catch (error: unknown) {
       // eslint-disable-next-line functional/immutable-data
       result.success = false;
       // eslint-disable-next-line functional/immutable-data
-      result.reason = error.message;
+      result.reason = error instanceof Error ? error.message : String(error);
     }
 
     return result;
@@ -125,7 +125,7 @@ export class AtomicExecutor {
         // Mark as reverted in result (not strictly in interface but helpful)
         // eslint-disable-next-line functional/immutable-data
         result.reason += ' (Leg 1 Reverted)';
-      } catch (e) {
+      } catch {
         // eslint-disable-next-line functional/immutable-data
         result.reason += ' (Revert Failed)';
       }
@@ -143,7 +143,7 @@ export class AtomicExecutor {
         await this.executor.executeOrder(revertOrder);
         // eslint-disable-next-line functional/immutable-data
         result.reason += ' (Leg 2 Reverted)';
-      } catch (e) {
+      } catch {
         // eslint-disable-next-line functional/immutable-data
         result.reason += ' (Revert Failed)';
       }

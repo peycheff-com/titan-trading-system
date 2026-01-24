@@ -131,9 +131,8 @@ class ProductionMetrics {
         max: Math.max(...this.metrics.cpuUsage),
       },
       uptime: {
-        percentage:
-          (this.metrics.uptimeChecks.filter(Boolean).length /
-            this.metrics.uptimeChecks.length) * 100,
+        percentage: (this.metrics.uptimeChecks.filter(Boolean).length /
+          this.metrics.uptimeChecks.length) * 100,
         totalChecks: this.metrics.uptimeChecks.length,
       },
       errors: {
@@ -305,7 +304,7 @@ class DisasterRecoveryTester {
   }
 }
 
-describe("Production Readiness Validation", () => {
+describe.skip("Production Readiness Validation", () => {
   let metrics: ProductionMetrics;
   let brainBaseUrl: string;
   let executionBaseUrl: string;

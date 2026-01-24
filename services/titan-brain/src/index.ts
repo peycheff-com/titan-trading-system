@@ -1,5 +1,5 @@
 // Initialize OpenTelemetry Tracing (Must be first)
-import './tracing.js';
+import "./tracing.js";
 
 /**
  * Titan Brain - Phase 5 Orchestrator (Enhanced)
@@ -11,23 +11,23 @@ import './tracing.js';
  */
 
 // Load environment variables from .env file
-import 'dotenv/config';
+import "dotenv/config";
 // import { loadSecretsFromFiles } from "@titan/shared";
 // loadSecretsFromFiles();
 
-import { getNatsClient, Logger } from '@titan/shared';
-import { StartupManager } from './startup/StartupManager.js';
-import { FeatureManager } from './config/FeatureManager.js';
-import { BrainConfig } from './config/BrainConfig.js';
-import { SharedConfigAdapter as ConfigManager } from './config/SharedConfigAdapter.js';
-import Redis from 'ioredis';
+import { getNatsClient, Logger } from "@titan/shared";
+import { StartupManager } from "./startup/StartupManager.js";
+import { FeatureManager } from "./config/FeatureManager.js";
+import { BrainConfig } from "./config/BrainConfig.js";
+import { SharedConfigAdapter as ConfigManager } from "./config/SharedConfigAdapter.js";
+import Redis from "ioredis";
 
 // Local implementation of standard init steps since it's not exported
 function createStandardInitSteps(): any[] {
   return [
     {
-      name: 'validate-env',
-      description: 'Validate environment variables',
+      name: "validate-env",
+      description: "Validate environment variables",
       timeout: 5000,
       required: true,
       dependencies: [],
@@ -36,69 +36,69 @@ function createStandardInitSteps(): any[] {
       },
     },
     {
-      name: 'load-config',
-      description: 'Load application configuration',
+      name: "load-config",
+      description: "Load application configuration",
       timeout: 10000,
       required: true,
-      dependencies: ['validate-env'],
+      dependencies: ["validate-env"],
       execute: async () => {
         /* Overridden in main */
       },
     },
     {
-      name: 'init-db',
-      description: 'Initialize database connection',
+      name: "init-db",
+      description: "Initialize database connection",
       timeout: 30000,
       required: true,
-      dependencies: ['load-config'],
+      dependencies: ["load-config"],
       execute: async () => {
         /* Overridden in main */
       },
     },
     {
-      name: 'init-redis',
-      description: 'Initialize Redis connection',
+      name: "init-redis",
+      description: "Initialize Redis connection",
       timeout: 15000,
       required: true,
-      dependencies: ['load-config'],
+      dependencies: ["load-config"],
       execute: async () => {
         /* Overridden in main */
       },
     },
     {
-      name: 'init-nats',
-      description: 'Initialize NATS connection',
+      name: "init-nats",
+      description: "Initialize NATS connection",
       timeout: 15000,
       required: true,
-      dependencies: ['load-config'],
+      dependencies: ["load-config"],
       execute: async () => {
         /* Overridden in main */
       },
     },
     {
-      name: 'init-engine',
-      description: 'Initialize core engine',
+      name: "init-engine",
+      description: "Initialize core engine",
       timeout: 60000,
       required: true,
-      dependencies: ['init-db', 'init-redis'],
+      dependencies: ["init-db", "init-redis"],
       execute: async () => {
         /* Overridden in main */
       },
     },
     {
-      name: 'start-server',
-      description: 'Start HTTP and WebSocket servers',
+      name: "start-server",
+      description: "Start HTTP and WebSocket servers",
       timeout: 30000,
       required: true,
-      dependencies: ['init-engine'],
+      dependencies: ["init-engine"],
       execute: async () => {
         /* Overridden in main */
       },
     },
   ];
 }
-import { loadConfig } from './config/index.js';
-import { DatabaseManager, runMigrations } from './db/index.js';
+import { loadConfig } from "./config/index.js";
+import { DatabaseManager, runMigrations } from "./db/index.js";
 import {
   ActiveInferenceEngine,
   AllocationEngine,
@@ -110,7 +110,7 @@ import {
   RiskGuardian,
   TitanBrain,
   TradeGate,
-} from './engine/index.js';
+} from "./engine/index.js";
 import {
   DashboardService,
   ExecutionEngineClient,
@@ -120,17 +120,17 @@ import {
   TitanNotificationHandler,
   WebhookServer,
   WebSocketService,
-} from './server/index.js';
-import { InMemorySignalQueue } from './server/InMemorySignalQueue.js';
-import { ISignalQueue } from './server/ISignalQueue.js';
-import { getLogger, getMetrics } from './monitoring/index.js';
-import { StateRecoveryService } from './engine/StateRecoveryService.js';
-import { ManualOverrideService } from './engine/ManualOverrideService.js';
-import { NatsConsumer } from './server/NatsConsumer.js';
-import { IngestionQueue } from './queue/IngestionQueue.js';
-import { IngestionWorker } from './workers/IngestionWorker.js';
-import { SignalProcessor } from './engine/SignalProcessor.js';
-import { AccountingService } from './services/accounting/AccountingService.js';
+} from "./server/index.js";
+import { InMemorySignalQueue } from "./server/InMemorySignalQueue.js";
+import { ISignalQueue } from "./server/ISignalQueue.js";
+import { getLogger, getMetrics } from "./monitoring/index.js";
+import { StateRecoveryService } from "./engine/StateRecoveryService.js";
+import { ManualOverrideService } from "./engine/ManualOverrideService.js";
+import { NatsConsumer } from "./server/NatsConsumer.js";
+import { IngestionQueue } from "./queue/IngestionQueue.js";
+import { IngestionWorker } from "./workers/IngestionWorker.js";
+import { SignalProcessor } from "./engine/SignalProcessor.js";
+import { AccountingService } from "./services/accounting/AccountingService.js";
 
 // Global instances for cleanup
 
@@ -167,22 +167,32 @@ async function main(): Promise<void> {
 
   // CLI Task Handling
   const args = process.argv.slice(2);
-  if (args.includes('task:rebuild')) {
+  if (args.includes("task:rebuild")) {
     await runRebuildTask(logger as any);
     return;
   }
-  if (args.includes('task:reconcile')) {
+  if (args.includes("task:reconcile")) {
     await runReconciliationTask(logger as any);
     return;
   }
 
-  logger.info('');
-  logger.info('╔═══════════════════════════════════════════════════════════════╗');
-  logger.info('║                    TITAN BRAIN - Phase 5                       ║');
-  logger.info('║                   Master Orchestrator v1.0                     ║');
-  logger.info('║                  Production Deployment                         ║');
-  logger.info('╚═══════════════════════════════════════════════════════════════╝');
-  logger.info('');
+  logger.info("");
+  logger.info(
+    "╔═══════════════════════════════════════════════════════════════╗",
+  );
+  logger.info(
+    "║                    TITAN BRAIN - Phase 5                       ║",
+  );
+  logger.info(
+    "║                   Master Orchestrator v1.0                     ║",
+  );
+  logger.info(
+    "║                  Production Deployment                         ║",
+  );
+  logger.info(
+    "╚═══════════════════════════════════════════════════════════════╝",
+  );
+  logger.info("");
 
   try {
     // Initialize startup manager
@@ -207,36 +217,42 @@ async function main(): Promise<void> {
     initSteps[0].execute = async () => {
       // Environment variable validation
       const requiredVars = [
-        'NODE_ENV',
-        'SERVER_PORT',
-        'DB_HOST',
-        'DB_NAME',
-        'DB_USER',
-        'DB_PASSWORD',
+        "NODE_ENV",
+        "SERVER_PORT",
+        "DB_HOST",
+        "DB_NAME",
+        "DB_USER",
+        "DB_PASSWORD",
       ];
 
-      const missingVars = requiredVars.filter((varName) => !process.env[varName]);
+      const missingVars = requiredVars.filter((varName) =>
+        !process.env[varName]
+      );
 
       if (missingVars.length > 0) {
-        throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
+        throw new Error(
+          `Missing required environment variables: ${missingVars.join(", ")}`,
+        );
       }
 
       logger.info(`Environment: ${process.env.NODE_ENV}`);
-      logger.info(`Server Port: ${process.env.SERVER_PORT || process.env.PORT}`);
+      logger.info(
+        `Server Port: ${process.env.SERVER_PORT || process.env.PORT}`,
+      );
       logger.info(`Database Host: ${process.env.DB_HOST}`);
-      logger.info(`Log Level: ${process.env.LOG_LEVEL || 'info'}`);
+      logger.info(`Log Level: ${process.env.LOG_LEVEL || "info"}`);
     };
 
     // eslint-disable-next-line functional/immutable-data
     initSteps[1].execute = async () => {
       // Load configuration using new ConfigManager
-      logger.info('📋 Loading configuration with ConfigManager...');
+      logger.info("📋 Loading configuration with ConfigManager...");
       const brainConfig = await configManager!.loadConfig();
 
       // Initialize FeatureManager
       const featureManager = FeatureManager.getInstance(
         logger as unknown as Logger,
-        brainConfig.redisUrl || 'redis://localhost:6379',
+        brainConfig.redisUrl || "redis://localhost:6379",
       );
       await featureManager.start();
       // eslint-disable-next-line functional/immutable-data
@@ -249,28 +265,28 @@ async function main(): Promise<void> {
       });
 
       if (validation.warnings.length > 0) {
-        logger.warn('Configuration warnings:', {
+        logger.warn("Configuration warnings:", {
           warnings: validation.warnings,
         });
         validation.warnings.forEach((w) => logger.warn(`   - ${w}`));
       }
 
       // Initialize database
-      logger.info('🗄️  Initializing database...');
+      logger.info("🗄️  Initializing database...");
       databaseManager = new DatabaseManager(configManager!.getDatabaseConfig());
       await databaseManager.connect();
 
       // Run migrations
-      logger.info('📦 Running database migrations...');
+      logger.info("📦 Running database migrations...");
       await runMigrations(databaseManager);
     };
 
     // eslint-disable-next-line functional/immutable-data
     initSteps[2].execute = async () => {
       // Redis connection (optional)
-      logger.info('📬 Initializing signal queue...');
-      if (process.env.REDIS_DISABLED === 'true') {
-        logger.warn('Redis disabled, using in-memory queue');
+      logger.info("📬 Initializing signal queue...");
+      if (process.env.REDIS_DISABLED === "true") {
+        logger.warn("Redis disabled, using in-memory queue");
         signalQueue = new InMemorySignalQueue({
           idempotencyTTL: 3600000, // 1 hour
           maxQueueSize: 10000,
@@ -283,14 +299,14 @@ async function main(): Promise<void> {
             url: brainConfig.redisUrl!,
             maxRetries: 3,
             retryDelay: 1000,
-            keyPrefix: 'titan:brain:signals',
+            keyPrefix: "titan:brain:signals",
             idempotencyTTL: 3600,
             maxQueueSize: 10000,
           });
           await signalQueue.connect();
-          logger.info('   ✅ Redis signal queue connected');
+          logger.info("   ✅ Redis signal queue connected");
         } catch (error) {
-          logger.warn('Redis not available, using in-memory queue', { error });
+          logger.warn("Redis not available, using in-memory queue", { error });
           signalQueue = new InMemorySignalQueue({
             idempotencyTTL: 3600000,
           });
@@ -302,13 +318,16 @@ async function main(): Promise<void> {
     // eslint-disable-next-line functional/immutable-data
     initSteps[3].execute = async () => {
       // NATS connection (required for system event replay)
-      logger.info('📨 Initializing NATS connection...');
+      logger.info("📨 Initializing NATS connection...");
       const brainConfig = configManager!.getConfig();
       const nats = getNatsClient();
       await nats.connect({
-        servers: [brainConfig.natsUrl || process.env.NATS_URL || 'nats://localhost:4222'],
+        servers: [
+          brainConfig.natsUrl || process.env.NATS_URL ||
+          "nats://localhost:4222",
+        ],
       });
-      logger.info('   ✅ NATS connection established');
+      logger.info("   ✅ NATS connection established");
     };
 
     // eslint-disable-next-line functional/immutable-data
@@ -317,19 +336,19 @@ async function main(): Promise<void> {
       const brainConfig = configManager!.getConfig();
       const { config } = loadConfig({ validate: true, throwOnError: true });
 
-      logger.info('⚙️  Initializing core engines...');
+      logger.info("⚙️  Initializing core engines...");
 
       const allocationEngine = new AllocationEngine(config.allocationEngine);
-      logger.info('   ✅ AllocationEngine initialized');
+      logger.info("   ✅ AllocationEngine initialized");
 
       const performanceTracker = new PerformanceTracker(
         config.performanceTracker,
         databaseManager!,
       );
-      logger.info('   ✅ PerformanceTracker initialized');
+      logger.info("   ✅ PerformanceTracker initialized");
 
       const governanceEngine = new GovernanceEngine();
-      logger.info('   ✅ GovernanceEngine initialized');
+      logger.info("   ✅ GovernanceEngine initialized");
 
       const riskGuardian = new RiskGuardian(
         config.riskGuardian,
@@ -341,19 +360,19 @@ async function main(): Promise<void> {
       // Wire up Hot Risk Configuration
       if (brainConfig.featureManager) {
         riskGuardian.setFeatureManager(brainConfig.featureManager);
-        logger.info('   ✅ Hot Risk Configuration enabled');
+        logger.info("   ✅ Hot Risk Configuration enabled");
       }
 
-      logger.info('   ✅ RiskGuardian initialized');
+      logger.info("   ✅ RiskGuardian initialized");
 
       const capitalFlowManager = new CapitalFlowManager(config.capitalFlow);
-      logger.info('   ✅ CapitalFlowManager initialized');
+      logger.info("   ✅ CapitalFlowManager initialized");
 
       const circuitBreaker = new CircuitBreaker(config.circuitBreaker);
 
       // Wire up persistence for Circuit Breaker
-      if (process.env.REDIS_DISABLED !== 'true' && brainConfig.redisUrl) {
-        logger.info('   🔌 Wiring Circuit Breaker persistence to Redis...');
+      if (process.env.REDIS_DISABLED !== "true" && brainConfig.redisUrl) {
+        logger.info("   🔌 Wiring Circuit Breaker persistence to Redis...");
         try {
           const persistenceRedis = new (Redis as any)(brainConfig.redisUrl);
           circuitBreaker.setStateStore({
@@ -365,63 +384,84 @@ async function main(): Promise<void> {
             },
           });
         } catch (error) {
-          logger.error('   ❌ Failed to wire Circuit Breaker persistence', error as Error);
+          logger.error(
+            "   ❌ Failed to wire Circuit Breaker persistence",
+            error as Error,
+          );
         }
       }
 
-      logger.info('   ✅ CircuitBreaker initialized');
+      logger.info("   ✅ CircuitBreaker initialized");
 
-      const activeInferenceEngine = new ActiveInferenceEngine(config.activeInference);
-      logger.info('   ✅ ActiveInferenceEngine initialized');
+      const activeInferenceEngine = new ActiveInferenceEngine(
+        config.activeInference,
+      );
+      logger.info("   ✅ ActiveInferenceEngine initialized");
 
       const tradeGate = new TradeGate(); // Use defaults
-      logger.info('   ✅ TradeGate initialized');
+      logger.info("   ✅ TradeGate initialized");
 
       const positionManager = new PositionManager();
-      logger.info('   ✅ PositionManager initialized');
+      logger.info("   ✅ PositionManager initialized");
 
       // Initialize state recovery service
       const stateRecoveryService = new StateRecoveryService(
         databaseManager!,
         {
           performanceWindowDays: config.performanceTracker.windowDays,
-          defaultAllocation: { w1: 1.0, w2: 0.0, w3: 0.0, timestamp: Date.now() },
+          defaultAllocation: {
+            w1: 1.0,
+            w2: 0.0,
+            w3: 0.0,
+            timestamp: Date.now(),
+          },
           defaultHighWatermark: 0,
         },
         getNatsClient(),
       );
-      logger.info('   ✅ StateRecoveryService initialized');
+      logger.info("   ✅ StateRecoveryService initialized");
 
-      const manualOverrideService = new ManualOverrideService(databaseManager!, {
-        maxOverrideDurationHours: 24,
-        requiredPermissions: ['override'],
-        warningBannerTimeout: 300000, // 5 minutes
-      });
-      logger.info('   ✅ ManualOverrideService initialized');
+      const manualOverrideService = new ManualOverrideService(
+        databaseManager!,
+        {
+          maxOverrideDurationHours: 24,
+          requiredPermissions: ["override"],
+          warningBannerTimeout: 300000, // 5 minutes
+        },
+      );
+      logger.info("   ✅ ManualOverrideService initialized");
 
       // Initialize notification service
       const notificationService = new NotificationService(config.notifications);
-      logger.info('   ✅ NotificationService initialized');
+      logger.info("   ✅ NotificationService initialized");
 
       // Initialize FillsRepository (Audit Trail)
-      const { FillsRepository } = await import('./db/repositories/FillsRepository.js');
+      const { FillsRepository } = await import(
+        "./db/repositories/FillsRepository.js"
+      );
       const fillsRepository = new FillsRepository(databaseManager!);
-      logger.info('   ✅ FillsRepository initialized');
+      logger.info("   ✅ FillsRepository initialized");
 
       // Initialize PowerLawRepository
-      const { PowerLawRepository } = await import('./db/repositories/PowerLawRepository.js');
+      const { PowerLawRepository } = await import(
+        "./db/repositories/PowerLawRepository.js"
+      );
       const powerLawRepository = new PowerLawRepository(databaseManager!);
-      logger.info('   ✅ PowerLawRepository initialized');
+      logger.info("   ✅ PowerLawRepository initialized");
 
       // Initialize PositionRepository (Snapshotting)
-      const { PositionRepository } = await import('./db/repositories/PositionRepository.js');
+      const { PositionRepository } = await import(
+        "./db/repositories/PositionRepository.js"
+      );
       const positionRepository = new PositionRepository(databaseManager!);
-      logger.info('   ✅ PositionRepository initialized');
+      logger.info("   ✅ PositionRepository initialized");
 
       // Initialize TruthRepository (Truth Layer)
-      const { TruthRepository } = await import('./db/repositories/TruthRepository.js');
+      const { TruthRepository } = await import(
+        "./db/repositories/TruthRepository.js"
+      );
       const truthRepository = new TruthRepository(databaseManager!);
-      logger.info('   ✅ TruthRepository initialized');
+      logger.info("   ✅ TruthRepository initialized");
 
       // Initialize Ingestion Worker
       const ingestionWorker = new IngestionWorker(
@@ -430,7 +470,7 @@ async function main(): Promise<void> {
         fillsRepository,
       );
       ingestionWorker.start();
-      logger.info('   ✅ IngestionWorker initialized and started');
+      logger.info("   ✅ IngestionWorker initialized and started");
 
       // Register shutdown for worker
       startupManager!.registerShutdownHandler(async () => {
@@ -439,7 +479,7 @@ async function main(): Promise<void> {
 
       // Create TitanBrain orchestrator
 
-      logger.info('🧠 Creating TitanBrain orchestrator...');
+      logger.info("🧠 Creating TitanBrain orchestrator...");
       brain = new TitanBrain(
         config.brain,
         allocationEngine,
@@ -464,9 +504,17 @@ async function main(): Promise<void> {
       );
 
       // Initialize Signal Processor (New 2026 Flow)
-      const signalProcessor = new SignalProcessor();
+      const signalProcessor = new SignalProcessor(
+        riskGuardian,
+        allocationEngine,
+        performanceTracker,
+        brain.getStateManager(),
+        circuitBreaker,
+      );
       await signalProcessor.start();
-      logger.info('   ✅ SignalProcessor started (Listening on titan.signal.submit)');
+      logger.info(
+        "   ✅ SignalProcessor started (Listening on titan.signal.submit)",
+      );
 
       // Set initial equity from environment or default
       const initialEquity = (config as any).trading?.initialEquity || 100000;
@@ -475,14 +523,16 @@ async function main(): Promise<void> {
 
       // Initialize brain (loads state from database)
       await brain.initialize();
-      logger.info('   ✅ TitanBrain initialized');
+      logger.info("   ✅ TitanBrain initialized");
 
       // Wire up notification handler
-      const notificationHandler = new TitanNotificationHandler(notificationService);
+      const notificationHandler = new TitanNotificationHandler(
+        notificationService,
+      );
       circuitBreaker.setNotificationHandler(notificationHandler);
       riskGuardian.setCorrelationNotifier(notificationHandler);
       capitalFlowManager.setSweepNotifier(notificationHandler);
-      logger.info('   ✅ Notification handlers wired');
+      logger.info("   ✅ Notification handlers wired");
     };
 
     // eslint-disable-next-line functional/immutable-data
@@ -490,13 +540,13 @@ async function main(): Promise<void> {
       // HTTP server startup
       const brainConfig = configManager!.getConfig();
 
-      logger.info('🔗 Initializing integration services...');
+      logger.info("🔗 Initializing integration services...");
 
       // ExecutionEngineClient
       // Initialize unconditionally to support NATS communication
       const { config } = loadConfig({ validate: false });
       executionEngineClient = new ExecutionEngineClient({
-        baseUrl: (config as any).services?.execution || 'http://localhost:3002', // Default/Fallback
+        baseUrl: (config as any).services?.execution || "http://localhost:3002", // Default/Fallback
         hmacSecret: brainConfig.hmacSecret,
         timeout: 5000,
         maxRetries: 3,
@@ -505,7 +555,7 @@ async function main(): Promise<void> {
 
       // Wire up fill confirmation handling
       executionEngineClient.onFillConfirmation((fill) => {
-        logger.info('Fill confirmation received', {
+        logger.info("Fill confirmation received", {
           signalId: fill.signalId,
           symbol: fill.symbol,
           fillPrice: fill.fillPrice,
@@ -515,7 +565,7 @@ async function main(): Promise<void> {
 
       // Set execution engine client on brain
       brain!.setExecutionEngine(executionEngineClient);
-      logger.info('   ✅ ExecutionEngineClient initialized (NATS)');
+      logger.info("   ✅ ExecutionEngineClient initialized (NATS)");
 
       // Phase Integration Service (optional)
       if (
@@ -535,7 +585,7 @@ async function main(): Promise<void> {
 
         // Set phase notifier on brain
         brain!.setPhaseNotifier(phaseIntegrationService);
-        logger.info('   ✅ PhaseIntegrationService initialized');
+        logger.info("   ✅ PhaseIntegrationService initialized");
         if (brainConfig.phase1ServiceUrl) {
           logger.info(`      Phase 1: ${brainConfig.phase1ServiceUrl}`);
         }
@@ -546,18 +596,20 @@ async function main(): Promise<void> {
           logger.info(`      Phase 3: ${brainConfig.phase3ServiceUrl}`);
         }
       } else {
-        logger.info('No phase webhook URLs configured, phase notifications disabled');
+        logger.info(
+          "No phase webhook URLs configured, phase notifications disabled",
+        );
       }
 
       // Create dashboard service
       const dashboardService = new DashboardService(brain!);
 
       // Start Dashboard Service publishing
-      logger.info('📊 Starting Dashboard Service publishing...');
+      logger.info("📊 Starting Dashboard Service publishing...");
       dashboardService.startPublishing(1000);
 
       // Create and start webhook server
-      logger.info('🚀 Starting webhook server...');
+      logger.info("🚀 Starting webhook server...");
       webhookServer = new WebhookServer(
         {
           host: brainConfig.host,
@@ -565,9 +617,9 @@ async function main(): Promise<void> {
           corsOrigins: brainConfig.corsOrigins,
           hmac: {
             enabled: !!brainConfig.hmacSecret,
-            secret: brainConfig.hmacSecret || '',
-            headerName: 'x-signature',
-            algorithm: 'sha256',
+            secret: brainConfig.hmacSecret || "",
+            headerName: "x-signature",
+            algorithm: "sha256",
           },
           logLevel: brainConfig.logLevel,
         },
@@ -579,8 +631,8 @@ async function main(): Promise<void> {
       await webhookServer.start();
 
       // Initialize WebSocket service first (but don't listen yet if needed?)
-      logger.info('📡 Initializing WebSocket service...');
-      const wsPort = parseInt(process.env.WS_PORT || '3101', 10);
+      logger.info("📡 Initializing WebSocket service...");
+      const wsPort = parseInt(process.env.WS_PORT || "3101", 10);
       webSocketService = new WebSocketService(brain!, {
         pingInterval: 30000,
         pingTimeout: 10000,
@@ -591,33 +643,42 @@ async function main(): Promise<void> {
 
       // Initialize NATS Consumer
       // Note: NATS connection is already established in init-nats step
-      logger.info('📨 Starting NATS Consumer...');
+      logger.info("📨 Starting NATS Consumer...");
       natsConsumer = new NatsConsumer(brain!, webSocketService);
       // We can skip calling start() if it just connects, but NatsConsumer.start also subscribes.
       // We should check if NatsConsumer reuses the singleton connection correctly or if we need to adjust it.
       // Assuming NatsConsumer uses getNatsClient() internally and handles existing connection gracefully.
       await natsConsumer.start(brainConfig.natsUrl);
-      logger.info('   ✅ NATS Consumer started');
+      logger.info("   ✅ NATS Consumer started");
 
       // Initialize NATS Publisher for AI optimization triggers
-      logger.info('📤 Starting NATS Publisher...');
-      const { getNatsPublisher } = await import('./server/NatsPublisher.js');
+      logger.info("📤 Starting NATS Publisher...");
+      const { getNatsPublisher } = await import("./server/NatsPublisher.js");
       const natsPublisher = getNatsPublisher();
       await natsPublisher.connect(brainConfig.natsUrl);
-      logger.info('   ✅ NATS Publisher started');
+      logger.info("   ✅ NATS Publisher started");
 
       // Initialize Accounting Service (Phase 4) - Requires NATS
-      const { FillsRepository } = await import('./db/repositories/FillsRepository.js');
+      const { FillsRepository } = await import(
+        "./db/repositories/FillsRepository.js"
+      );
       // Re-instantiate FillsRepository for AccountingService (or could lift to outer scope)
       const accountingFillsRepo = new FillsRepository(databaseManager!);
 
-      const { LedgerRepository } = await import('./db/repositories/LedgerRepository.js');
+      const { LedgerRepository } = await import(
+        "./db/repositories/LedgerRepository.js"
+      );
       const accountingLedgerRepo = new LedgerRepository(databaseManager!);
 
-      const { AccountingService } = await import('./services/accounting/AccountingService.js');
-      accountingService = new AccountingService(accountingFillsRepo, accountingLedgerRepo);
+      const { AccountingService } = await import(
+        "./services/accounting/AccountingService.js"
+      );
+      accountingService = new AccountingService(
+        accountingFillsRepo,
+        accountingLedgerRepo,
+      );
       await accountingService.start();
-      logger.info('   ✅ AccountingService (Phase 4) initialized');
+      logger.info("   ✅ AccountingService (Phase 4) initialized");
 
       // Inject FillsRepository into TitanBrain if already created (it was created above, so we might need to recreate or setter?)
       // Actually TitanBrain is created BEFORE this block in step 3. I need to move FillsRepository creation earlier or pass it later.
@@ -630,7 +691,7 @@ async function main(): Promise<void> {
 
     // Add all steps to startup manager
     if (!startupManager) {
-      throw new Error('StartupManager not initialized');
+      throw new Error("StartupManager not initialized");
     }
 
     const sm = startupManager; // Create a non-null reference
@@ -678,13 +739,13 @@ async function main(): Promise<void> {
 
     // Display startup summary
     if (!configManager) {
-      throw new Error('ConfigManager not initialized');
+      throw new Error("ConfigManager not initialized");
     }
     const finalConfig = configManager.getConfig();
     displayStartupSummary(finalConfig);
   } catch (error) {
     const logger = getLogger();
-    logger.error('❌ Failed to start Titan Brain', error);
+    logger.error("❌ Failed to start Titan Brain", error);
     process.exit(1);
   }
 }
@@ -694,39 +755,47 @@ async function main(): Promise<void> {
  */
 function displayStartupSummary(config: BrainConfig): void {
   const logger = getLogger();
-  logger.info('');
-  logger.info('═══════════════════════════════════════════════════════════════');
-  logger.info('                    TITAN BRAIN ONLINE                          ');
-  logger.info('═══════════════════════════════════════════════════════════════');
-  logger.info('');
+  logger.info("");
+  logger.info(
+    "═══════════════════════════════════════════════════════════════",
+  );
+  logger.info(
+    "                    TITAN BRAIN ONLINE                          ",
+  );
+  logger.info(
+    "═══════════════════════════════════════════════════════════════",
+  );
+  logger.info("");
 
   const allocation = brain!.getAllocation();
-  logger.info('📊 Current Allocation:', { allocation });
+  logger.info("📊 Current Allocation:", { allocation });
   logger.info(`   Phase 1 (Scavenger): ${(allocation.w1 * 100).toFixed(1)}%`);
   logger.info(`   Phase 2 (Hunter):    ${(allocation.w2 * 100).toFixed(1)}%`);
   logger.info(`   Phase 3 (Sentinel):  ${(allocation.w3 * 100).toFixed(1)}%`);
 
-  logger.info('🌐 API Endpoints:', {
+  logger.info("🌐 API Endpoints:", {
     health: `http://${config.host}:${config.port}/health`,
     dashboard: `http://${config.host}:${config.port}/dashboard`,
     signal: `http://${config.host}:${config.port}/signal`,
     allocation: `http://${config.host}:${config.port}/allocation`,
-    websocket: `ws://${config.host}:${parseInt(process.env.WS_PORT || '3101')}/ws/console`,
+    websocket: `ws://${config.host}:${
+      parseInt(process.env.WS_PORT || "3101")
+    }/ws/console`,
   });
 
-  logger.info('📡 Phase Webhooks (if enabled):', {
-    phase1: config.phase1ServiceUrl || 'disabled',
-    phase2: config.phase2ServiceUrl || 'disabled',
-    phase3: config.phase3ServiceUrl || 'disabled',
+  logger.info("📡 Phase Webhooks (if enabled):", {
+    phase1: config.phase1ServiceUrl || "disabled",
+    phase2: config.phase2ServiceUrl || "disabled",
+    phase3: config.phase3ServiceUrl || "disabled",
   });
 
-  logger.info('🔗 Integration Status:', {
-    executionEngine: executionEngineClient ? 'Connected' : 'Not configured',
-    phaseNotifier: phaseIntegrationService ? 'Configured' : 'Not configured',
-    signalQueue: signalQueue ? 'Redis' : 'In-memory',
+  logger.info("🔗 Integration Status:", {
+    executionEngine: executionEngineClient ? "Connected" : "Not configured",
+    phaseNotifier: phaseIntegrationService ? "Configured" : "Not configured",
+    signalQueue: signalQueue ? "Redis" : "In-memory",
   });
 
-  logger.info('✅ Titan Brain is ready to receive signals');
+  logger.info("✅ Titan Brain is ready to receive signals");
 }
 
 /**
@@ -734,7 +803,7 @@ function displayStartupSummary(config: BrainConfig): void {
  */
 async function shutdown(signal: string): Promise<void> {
   const logger = getLogger();
-  logger.info('');
+  logger.info("");
   logger.info(`🛑 Received ${signal}, shutting down gracefully...`);
 
   if (startupManager) {
@@ -751,57 +820,57 @@ async function shutdown(signal: string): Promise<void> {
       if (signalQueue) await signalQueue.disconnect();
       if (databaseManager) await databaseManager.disconnect();
 
-      logger.info('✅ Titan Brain shutdown complete');
+      logger.info("✅ Titan Brain shutdown complete");
       process.exit(0);
     } catch (error) {
-      logger.error('❌ Error during shutdown', error);
+      logger.error("❌ Error during shutdown", error);
       process.exit(1);
     }
   }
 }
 
 // Register shutdown handlers
-process.on('SIGINT', () => shutdown('SIGINT'));
-process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
 
 // Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
+process.on("uncaughtException", (error) => {
   const logger = getLogger();
-  logger.error('❌ Uncaught exception', error);
-  shutdown('uncaughtException');
+  logger.error("❌ Uncaught exception", error);
+  shutdown("uncaughtException");
 });
 
 // Handle unhandled promise rejections
-process.on('unhandledRejection', (reason, promise) => {
+process.on("unhandledRejection", (reason, promise) => {
   const logger = getLogger();
-  logger.error('❌ Unhandled rejection', undefined, { reason, promise });
+  logger.error("❌ Unhandled rejection", undefined, { reason, promise });
 });
 
 // Helper Tasks
 
 async function runRebuildTask(logger: Logger) {
-  logger.info('🔧 Running Task: Rebuild Read Models');
+  logger.info("🔧 Running Task: Rebuild Read Models");
   // Initialize minimal dependencies
   const configManager = new ConfigManager();
   await configManager.loadConfig(); // Must load config first
   const dbManager = new DatabaseManager(configManager.getDatabaseConfig());
   await dbManager.connect();
 
-  const { EventReplayService } = await import('./engine/EventReplayService.js');
+  const { EventReplayService } = await import("./engine/EventReplayService.js");
   const replay = new EventReplayService(dbManager, logger);
 
   try {
     await replay.replayAll(true); // Reset by default for full rebuild
-    logger.info('✅ Rebuild Successful');
+    logger.info("✅ Rebuild Successful");
     process.exit(0);
   } catch (err) {
-    logger.error('❌ Rebuild Failed', err as Error);
+    logger.error("❌ Rebuild Failed", err as Error);
     process.exit(1);
   }
 }
 
 async function runReconciliationTask(logger: Logger) {
-  logger.info('⚖️  Running Task: Reconciliation');
+  logger.info("⚖️  Running Task: Reconciliation");
 
   // Minimal setup
   const configManager = new ConfigManager();
@@ -810,26 +879,30 @@ async function runReconciliationTask(logger: Logger) {
   await dbManager.connect();
 
   const brainConfig = configManager.getConfig();
-  const { loadConfig } = await import('./config/index.js');
+  const { loadConfig } = await import("./config/index.js");
   const { config } = loadConfig({ validate: false });
 
   // Execution Client checks actual reality (NATS)
-  const { ExecutionEngineClient } = await import('./server/index.js');
+  const { ExecutionEngineClient } = await import("./server/index.js");
   const executionClient = new ExecutionEngineClient({
-    baseUrl: (config as any).services?.execution || 'http://localhost:3002',
+    baseUrl: (config as any).services?.execution || "http://localhost:3002",
     hmacSecret: brainConfig.hmacSecret,
     timeout: 5000,
   });
   await executionClient.initialize();
 
   // Position Manager checks internal model
-  const { PositionManager } = await import('./engine/index.js');
+  const { PositionManager } = await import("./engine/index.js");
   const positionManager = new PositionManager();
 
-  const { PositionRepository } = await import('./db/repositories/PositionRepository.js');
+  const { PositionRepository } = await import(
+    "./db/repositories/PositionRepository.js"
+  );
   const positionRepo = new PositionRepository(dbManager);
 
-  const { TruthRepository } = await import('./db/repositories/TruthRepository.js');
+  const { TruthRepository } = await import(
+    "./db/repositories/TruthRepository.js"
+  );
   const truthRepo = new TruthRepository(dbManager);
 
   // Hydrate PositionManager from persistent state (Snapshot)
@@ -837,7 +910,9 @@ async function runReconciliationTask(logger: Logger) {
   // For Reconciliation, we prioritize the Snapshot + recent events, but simpler is Snapshot.
   // ReplayService is better for exact state, but here we check snapshot vs exchange.
 
-  const { StateRecoveryService } = await import('./engine/StateRecoveryService.js');
+  const { StateRecoveryService } = await import(
+    "./engine/StateRecoveryService.js"
+  );
   const recovery = new StateRecoveryService(
     dbManager,
     {
@@ -848,20 +923,24 @@ async function runReconciliationTask(logger: Logger) {
     { publish: () => {} } as any,
   ); // Mock NATS for recovery
 
-  logger.info('... Recovering Brain State from DB ...');
+  logger.info("... Recovering Brain State from DB ...");
   const restoredState = await recovery.recoverState();
   if (restoredState.positions) {
     for (const pos of restoredState.positions) {
       positionManager.updatePosition(pos);
     }
-    logger.info(`✅ Hydrated ${restoredState.positions.length} positions from snapshot`);
+    logger.info(
+      `✅ Hydrated ${restoredState.positions.length} positions from snapshot`,
+    );
   }
 
-  const { ReconciliationService } = await import('./reconciliation/ReconciliationService.js');
+  const { ReconciliationService } = await import(
+    "./reconciliation/ReconciliationService.js"
+  );
   const recon = new ReconciliationService(
     {
       intervalMs: 60000,
-      exchanges: ['BYBIT', 'BINANCE'], // TODO: Load from config
+      exchanges: ["BYBIT", "BINANCE"], // TODO: Load from config
       autoResolve: false,
     },
     executionClient,
@@ -873,20 +952,22 @@ async function runReconciliationTask(logger: Logger) {
 
   try {
     const reports = await recon.reconcileAll();
-    const hasDrift = reports.some((r) => r.status === 'MISMATCH' || r.status === 'ERROR');
+    const hasDrift = reports.some((r) =>
+      r.status === "MISMATCH" || r.status === "ERROR"
+    );
 
     // Cleanup
     await dbManager.disconnect();
 
     if (hasDrift) {
-      logger.error('❌ Reconciliation found mismatches or errors');
+      logger.error("❌ Reconciliation found mismatches or errors");
       process.exit(1);
     } else {
-      logger.info('✅ Reconciliation Clean');
+      logger.info("✅ Reconciliation Clean");
       process.exit(0);
     }
   } catch (err) {
-    logger.error('❌ Reconciliation Failed', err as Error);
+    logger.error("❌ Reconciliation Failed", err as Error);
     await dbManager.disconnect();
     process.exit(1);
   }
@@ -895,7 +976,7 @@ async function runReconciliationTask(logger: Logger) {
 // Start the application
 main().catch((error) => {
   const logger = getLogger();
-  logger.error('❌ Fatal error', error);
+  logger.error("❌ Fatal error", error);
   process.exit(1);
 });
 

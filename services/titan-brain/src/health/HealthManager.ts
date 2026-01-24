@@ -211,9 +211,9 @@ export class MemoryHealthComponent implements HealthComponent {
       const usedMemory = memUsage.heapUsed;
       const memoryUsageRatio = usedMemory / totalMemory;
 
-      // eslint-disable-next-line functional/no-let
+       
       let status = HealthStatus.HEALTHY;
-      // eslint-disable-next-line functional/no-let
+       
       let message = 'Memory usage normal';
 
       if (memoryUsageRatio > this.CRITICAL_THRESHOLD) {
@@ -331,7 +331,7 @@ export class HealthManager extends EventEmitter {
    * Register a health component
    */
   registerComponent(component: HealthComponent): void {
-    // eslint-disable-next-line functional/immutable-data
+     
     this.components.set(component.name, component);
     this.emit('component:registered', { name: component.name });
   }
@@ -340,7 +340,7 @@ export class HealthManager extends EventEmitter {
    * Unregister a health component
    */
   unregisterComponent(name: string): void {
-    // eslint-disable-next-line functional/immutable-data
+     
     this.components.delete(name);
     this.emit('component:unregistered', { name });
   }
@@ -377,7 +377,7 @@ export class HealthManager extends EventEmitter {
       uptime: Date.now() - this.startTime,
     };
 
-    // eslint-disable-next-line functional/immutable-data
+     
     this.lastHealthCheck = systemHealth;
     this.emit('health:checked', systemHealth);
 
@@ -444,7 +444,7 @@ export class HealthManager extends EventEmitter {
       clearInterval(this.healthCheckInterval);
     }
 
-    // eslint-disable-next-line functional/immutable-data
+     
     this.healthCheckInterval = setInterval(async () => {
       try {
         await this.checkHealth();
@@ -462,7 +462,7 @@ export class HealthManager extends EventEmitter {
   stopPeriodicChecks(): void {
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval);
-      // eslint-disable-next-line functional/immutable-data
+       
       this.healthCheckInterval = null;
     }
 
@@ -495,9 +495,9 @@ export class HealthManager extends EventEmitter {
    */
   shutdown(): void {
     this.stopPeriodicChecks();
-    // eslint-disable-next-line functional/immutable-data
+     
     this.components.clear();
-    // eslint-disable-next-line functional/immutable-data
+     
     this.lastHealthCheck = null;
     this.emit('shutdown');
   }
