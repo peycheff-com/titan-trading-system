@@ -13,6 +13,7 @@ RUN apk add --no-cache python3 make g++
 
 # Copy root package files for resolution
 COPY package*.json ./
+COPY tsconfig.json ./
 
 # Copy all workspaces for npm workspaces resolution
 COPY services/ ./services/
