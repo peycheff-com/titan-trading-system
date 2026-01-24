@@ -1,11 +1,11 @@
-import client, { ApiKey, WeaviateClient } from "weaviate-ts-client";
+import weaviate, { ApiKey, WeaviateClient } from "weaviate-ts-client";
 
 export class VectorMemory {
   private client: WeaviateClient;
   private className = "TitanMemory";
 
   constructor() {
-    this.client = client({
+    this.client = weaviate.client({
       scheme: "http",
       host: process.env.WEAVIATE_HOST || "localhost:8080",
       apiKey: new ApiKey(process.env.WEAVIATE_API_KEY || ""),
