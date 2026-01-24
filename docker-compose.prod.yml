@@ -220,8 +220,8 @@ services:
   # =============================================================================
   titan-execution:
     build:
-      context: .
-      dockerfile: services/titan-execution-rs/Dockerfile
+      context: services/titan-execution-rs
+      dockerfile: Dockerfile
     container_name: titan-execution
     environment:
       - RUST_LOG=info
