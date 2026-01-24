@@ -7,7 +7,7 @@
 import {
   CredentialManager,
   ExchangeCredentials,
-} from "../../src/config/CredentialManager";
+} from "../../src/config/CredentialManager.js";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
@@ -45,9 +45,18 @@ describe("CredentialManager", () => {
     if (fs.existsSync(testCredentialsPath)) {
       fs.unlinkSync(testCredentialsPath);
     }
+
+    // Silence console warnings/errors
+    jest.spyOn(console, "error").mockImplementation(() => {});
+    jest.spyOn(console, "warn").mockImplementation(() => {});
+    jest.spyOn(console, "log").mockImplementation(() => {});
   });
 
   afterEach(() => {
+    // Restore console
+    jest.restoreAllMocks();
+
+    // Clean up test credentials file
     // Clean up test credentials file
     if (fs.existsSync(testCredentialsPath)) {
       fs.unlinkSync(testCredentialsPath);
@@ -306,7 +315,7 @@ describe("CredentialManager", () => {
       const errors = credentialManager.validateCredentials(invalidCredentials);
 
       expect(errors.length).toBeGreaterThan(0);
-      expect(errors.some((e) => e.includes("Binance"))).toBe(true);
+      expect(errors.some((e: string) => e.includes("Binance"))).toBe(true);
     });
 
     it("should detect missing Bybit credentials", () => {
@@ -321,7 +330,7 @@ describe("CredentialManager", () => {
       const errors = credentialManager.validateCredentials(invalidCredentials);
 
       expect(errors.length).toBeGreaterThan(0);
-      expect(errors.some((e) => e.includes("Bybit"))).toBe(true);
+      expect(errors.some((e: string) => e.includes("Bybit"))).toBe(true);
     });
 
     it("should detect incomplete MEXC credentials", () => {
@@ -336,7 +345,7 @@ describe("CredentialManager", () => {
       const errors = credentialManager.validateCredentials(invalidCredentials);
 
       expect(errors.length).toBeGreaterThan(0);
-      expect(errors.some((e) => e.includes("MEXC"))).toBe(true);
+      expect(errors.some((e: string) => e.includes("MEXC"))).toBe(true);
     });
   });
 

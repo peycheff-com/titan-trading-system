@@ -41,7 +41,15 @@ const mockDetector = {
 };
 
 async function run() {
+    const mockLogger = {
+        info: console.log,
+        error: console.error,
+        warn: console.warn,
+        debug: console.log,
+    };
+
     const protocol = new UltimateBulgariaProtocol(
+        mockLogger as any,
         mockBybit as any,
         mockBinance as any,
         mockDetector as any,

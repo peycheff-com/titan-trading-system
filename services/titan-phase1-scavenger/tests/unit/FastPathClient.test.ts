@@ -17,7 +17,6 @@ class MockSocket extends EventEmitter {
   write = jest.fn().mockReturnValue(true);
   end = jest.fn();
   destroy = jest.fn();
-  removeAllListeners = jest.fn();
 }
 
 describe("FastPathClient", () => {
@@ -27,6 +26,7 @@ describe("FastPathClient", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockSocket = new MockSocket();
+    jest.spyOn(mockSocket, "removeAllListeners");
     mockNet.connect.mockReturnValue(mockSocket as any);
 
     client = new FastPathClient({
@@ -60,9 +60,7 @@ describe("FastPathClient", () => {
       const connectPromise = client.connect();
 
       // Don't emit connect event to simulate timeout
-      // Wait for timeout to occur
-      await new Promise((resolve) => setTimeout(resolve, 1100));
-
+      // The promise will reject after connectionTimeout (1000ms default in test config)
       await expect(connectPromise).rejects.toThrow("IPC connection timeout");
       expect(client.getConnectionState()).toBe(ConnectionState.FAILED);
     }, 2000); // Increase test timeout to allow for connection timeout
@@ -100,22 +98,30 @@ describe("FastPathClient", () => {
       });
     });
 
-    it("should stop reconnecting after max attempts", (done) => {
+    it("should stop reconnecting after max attempts", () => {
+      jest.useFakeTimers();
       let maxReconnectReached = false;
 
       client.on("maxReconnectAttemptsReached", () => {
         maxReconnectReached = true;
-        expect(maxReconnectReached).toBe(true);
-        expect(client.getConnectionState()).toBe(ConnectionState.FAILED);
-        done();
       });
 
       // Simulate multiple failed connections
       for (let i = 0; i < 4; i++) {
-        setTimeout(() => {
-          mockSocket.emit("error", new Error("Connection failed"));
-        }, i * 50);
+        // Trigger error
+        mockSocket.emit("error", new Error("Connection failed"));
+
+        // Fast-forward time to bypass backoff delay and trigger next connection attempt
+        jest.runAllTimers();
+
+        // At this point, attemptConnection should have run (retrying connection)
+        // or we reached max attempts.
       }
+
+      expect(maxReconnectReached).toBe(true);
+      expect(client.getConnectionState()).toBe(ConnectionState.FAILED);
+
+      jest.useRealTimers();
     });
 
     it("should disconnect gracefully", async () => {
@@ -238,9 +244,7 @@ describe("FastPathClient", () => {
       });
 
       // Don't send response to simulate timeout
-      // Wait for message timeout to occur
-      await new Promise((resolve) => setTimeout(resolve, 600));
-
+      // The promise will reject after messageTimeout (500ms in test config)
       await expect(sendPromise).rejects.toThrow("IPC_TIMEOUT");
     }, 1000); // Increase test timeout
 

@@ -24,6 +24,10 @@ pub enum RiskRejectionReason {
         current_loss: Decimal,
         limit: Decimal,
     },
+    MaxAccountLeverageExceeded {
+        current: Decimal,
+        limit: Decimal,
+    },
     InvalidSize,
     PolicyMissing,
 }
@@ -61,6 +65,12 @@ impl std::fmt::Display for RiskRejectionReason {
                 "Daily loss limit hit: {:.2} <= {:.2}",
                 current_loss, limit
             ),
+            RiskRejectionReason::MaxAccountLeverageExceeded { current, limit } => write!(
+                f,
+                "Account Leverage Limit Exceeded: {:.2}x > {:.2}x",
+                current, limit
+            ),
+
             RiskRejectionReason::InvalidSize => write!(f, "Invalid size (<= 0)"),
             RiskRejectionReason::PolicyMissing => write!(f, "Risk Policy not loaded"),
         }
@@ -231,12 +241,23 @@ impl RiskGuard {
 
         // 3. Max Open Orders
         // Logic: active intents + live open orders
-        if let Some(_child_orders) = state.get_child_orders(&intent.signal_id) {
-            // This is a rough proxy since we don't track ALL open orders in ShadowState perfectly yet
-            // (we only track child orders of intents).
-            // Better check: How many PENDING intents for this symbol?
-            // For MVP, skip complex count.
+        let open_orders_count = state.count_open_intents_for_symbol(&intent.symbol);
+        if open_orders_count >= policy.max_open_orders_per_symbol {
+            // Check if reduce only (allow closing even if limit hit?)
+            if !Self::is_reduce_only(intent) {
+                warn!(
+                    "Risk Reject: Max Open Orders {} >= Limit {}",
+                    open_orders_count, policy.max_open_orders_per_symbol
+                );
+                return Err(RiskRejectionReason::MaxOpenOrdersExceeded {
+                    symbol: intent.symbol.clone(),
+                    current: open_orders_count,
+                    limit: policy.max_open_orders_per_symbol,
+                });
+            }
         }
+
+        // 4. Daily Loss Limit
 
         // 4. Daily Loss Limit
         // Sum PnL from trade history for today.
@@ -293,6 +314,45 @@ impl RiskGuard {
                     current: current_notional,
                     additional: new_notional,
                     limit: policy.max_position_notional,
+                });
+            }
+        }
+
+        // 6. Max Account Leverage (Global)
+        // Leverage = Total Notional / Equity
+        // Total Notional = Sum(|Position Notional|) + New Intent Notional
+        if !is_reduce {
+            let total_pos_notional: Decimal = state
+                .get_all_positions()
+                .values()
+                .map(|p| p.size * p.entry_price) // using entry price as approximation for now
+                .sum();
+
+            // New Intent Notional (using check_price calculated earlier)
+            let new_notional = intent.size * check_price;
+            let total_exposure = total_pos_notional + new_notional;
+
+            let equity = state.get_equity();
+
+            // Avoid division by zero or negative equity edge cases
+            if equity > Decimal::ZERO {
+                let current_leverage = total_exposure / equity;
+                if current_leverage > policy.max_account_leverage {
+                    warn!(
+                        "Risk Reject: Max Account Leverage {:.2}x > {:.2}x",
+                        current_leverage, policy.max_account_leverage
+                    );
+                    return Err(RiskRejectionReason::MaxAccountLeverageExceeded {
+                        current: current_leverage,
+                        limit: policy.max_account_leverage,
+                    });
+                }
+            } else if total_exposure > Decimal::ZERO {
+                // Positive exposure with <= 0 equity is infinite leverage - REJECT
+                warn!("Risk Reject: Positive exposure with <= 0 Equity");
+                return Err(RiskRejectionReason::MaxAccountLeverageExceeded {
+                    current: Decimal::from(999), // Infinite
+                    limit: policy.max_account_leverage,
                 });
             }
         }
@@ -506,6 +566,99 @@ mod tests {
         // 5. Send CLOSE intent -> Should Allow
         let close_attempt = simple_intent("BTC/USDT", dec!(0.1), dec!(50000), IntentType::Close);
         assert!(guard.check_pre_trade(&close_attempt).is_ok());
+
+        std::fs::remove_file(path).unwrap_or(());
+    }
+    #[test]
+    fn test_max_account_leverage_rejection() {
+        let (p, path) = create_test_persistence();
+        let ctx = Arc::new(ExecutionContext::new_system());
+        // Equity = 1000
+        let state = Arc::new(RwLock::new(ShadowState::new(p, ctx, Some(1000.0))));
+        let mut policy = RiskPolicy::default();
+        policy.max_account_leverage = dec!(5.0); // 5x Leverage Limit
+
+        let guard = RiskGuard::new(policy, state.clone());
+
+        // 1. Open Position: Notional $4000 (4x leverage). Should be OK.
+        // 4000 / 1000 = 4.0 <= 5.0
+        let intent1 = simple_intent("BTC/USDT", dec!(0.1), dec!(40000), IntentType::BuySetup);
+
+        {
+            let mut s = state.write();
+            s.process_intent(intent1.clone());
+            // Mock Fill to update position
+            s.confirm_execution(
+                &intent1.signal_id,
+                "fill-1",
+                dec!(40000),
+                dec!(0.1),
+                true,
+                dec!(0),
+                "USDT".to_string(),
+                "Binance",
+            );
+        }
+
+        // 2. New Intent: Notional $2000. Total = $6000. Leverage = 6.0 > 5.0 -> Reject
+        let intent2 = simple_intent("ETH/USDT", dec!(1.0), dec!(2000), IntentType::BuySetup);
+        let res = guard.check_pre_trade(&intent2);
+
+        assert!(matches!(
+            res,
+            Err(RiskRejectionReason::MaxAccountLeverageExceeded { current, limit })
+            if current == dec!(6.0) && limit == dec!(5.0)
+        ));
+
+        // 3. Reduce Only -> Allow even if leverage high (e.g. if equity dropped)
+        // Simulate equity drop to $500. Leverage becomes 4000/500 = 8x.
+        // Sending Close intent should be allowed.
+        /* Note: ShadowState equity update logic isn't fully mocked here easily without modifying balance.
+           But we can test simple 'reduce only' flag check.
+        */
+        let close_intent =
+            simple_intent("BTC/USDT", dec!(0.05), dec!(40000), IntentType::CloseLong);
+        assert!(guard.check_pre_trade(&close_intent).is_ok());
+
+        std::fs::remove_file(path).unwrap_or(());
+    }
+
+    #[test]
+    fn test_max_open_orders_rejection() {
+        let (p, path) = create_test_persistence();
+        let ctx = Arc::new(ExecutionContext::new_system());
+        let state = Arc::new(RwLock::new(ShadowState::new(p, ctx, Some(10000.0))));
+        let mut policy = RiskPolicy::default();
+        policy.max_open_orders_per_symbol = 2; // Strict limit
+
+        let guard = RiskGuard::new(policy, state.clone());
+
+        // 1. Send 2 Pending Orders
+        let i1 = simple_intent("BTC/USDT", dec!(0.1), dec!(50000), IntentType::BuySetup);
+        let i2 = simple_intent("BTC/USDT", dec!(0.1), dec!(49000), IntentType::BuySetup);
+
+        {
+            let mut s = state.write();
+            s.process_intent(i1);
+            s.process_intent(i2);
+        }
+
+        // 2. Send 3rd Order -> Reject
+        let i3 = simple_intent("BTC/USDT", dec!(0.1), dec!(48000), IntentType::BuySetup);
+        let res = guard.check_pre_trade(&i3);
+
+        assert!(matches!(
+            res,
+            Err(RiskRejectionReason::MaxOpenOrdersExceeded {
+                current: 2,
+                limit: 2,
+                ..
+            })
+        ));
+
+        // 3. Different Symbol -> OK
+        let i_eth = simple_intent("ETH/USDT", dec!(1.0), dec!(2000), IntentType::BuySetup);
+        assert!(guard.check_pre_trade(&i_eth).is_ok());
 
         std::fs::remove_file(path).unwrap_or(());
     }

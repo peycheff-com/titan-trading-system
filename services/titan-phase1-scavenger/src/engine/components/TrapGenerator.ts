@@ -1,13 +1,13 @@
-import { Logger } from '../../logging/Logger.js';
-import { ConfigManager } from '../../config/ConfigManager.js';
-import { EventEmitter } from '../../events/EventEmitter.js';
-import { BinanceSpotClient } from '../../exchanges/BinanceSpotClient.js';
-import { BybitPerpsClient } from '../../exchanges/BybitPerpsClient.js';
-import { TrapStateManager } from './TrapStateManager.js';
-import { OIWipeoutDetector } from '../../detectors/OIWipeoutDetector.js';
-import { FundingSqueezeDetector } from '../../detectors/FundingSqueezeDetector.js';
-import { BasisArbDetector } from '../../detectors/BasisArbDetector.js';
-import { OHLCV, Tripwire } from '../../types/index.js';
+import { Logger } from "../../logging/Logger.js";
+import { ConfigManager } from "../../config/ConfigManager.js";
+import { EventEmitter } from "../../events/EventEmitter.js";
+import { BinanceSpotClient } from "../../exchanges/BinanceSpotClient.js";
+import { BybitPerpsClient } from "../../exchanges/BybitPerpsClient.js";
+import { TrapStateManager } from "./TrapStateManager.js";
+import { OIWipeoutDetector } from "../../detectors/OIWipeoutDetector.js";
+import { FundingSqueezeDetector } from "../../detectors/FundingSqueezeDetector.js";
+import { BasisArbDetector } from "../../detectors/BasisArbDetector.js";
+import { OHLCV, Tripwire } from "../../types/index.js";
 
 interface TrapGeneratorDependencies {
   logger: Logger;
@@ -41,7 +41,11 @@ export class TrapGenerator {
   private basisDetector?: BasisArbDetector;
 
   // Callback for Ticker updates (wired to Detector)
-  private onTickerCallback?: (symbol: string, price: number, timestamp: number) => void;
+  private onTickerCallback?: (
+    symbol: string,
+    price: number,
+    timestamp: number,
+  ) => void;
 
   constructor(dependencies: TrapGeneratorDependencies) {
     this.logger = dependencies.logger;
@@ -55,7 +59,9 @@ export class TrapGenerator {
     this.basisDetector = dependencies.basisDetector;
   }
 
-  setOnTickerCallback(callback: (symbol: string, price: number, timestamp: number) => void): void {
+  setOnTickerCallback(
+    callback: (symbol: string, price: number, timestamp: number) => void,
+  ): void {
     this.onTickerCallback = callback;
   }
 
@@ -64,17 +70,21 @@ export class TrapGenerator {
    */
   async updateTrapMap(): Promise<void> {
     const startTime = Date.now();
-    this.logger.info('🔄 Pre-Computation Layer: Calculating tripwires...');
+    this.logger.info("🔄 Pre-Computation Layer: Calculating tripwires...");
 
     if (!this.bybitClient) {
-      this.logger.warn('⚠️ Bybit Client not available for Pre-Computation. Skipping.');
+      this.logger.warn(
+        "⚠️ Bybit Client not available for Pre-Computation. Skipping.",
+      );
       return;
     }
 
     try {
       // 1. Fetch Top Symbols by Volume
       const topSymbols = await this.bybitClient.fetchTopSymbols(20);
-      const symbolList = topSymbols.filter((s) => !this.stateManager.isBlacklisted(s));
+      const symbolList = topSymbols.filter((s) =>
+        !this.stateManager.isBlacklisted(s)
+      );
 
       // 2. Clear old traps
       this.stateManager.clearTraps();
@@ -84,14 +94,16 @@ export class TrapGenerator {
         symbolList.map(async (symbol) => {
           try {
             // Get OHLCV (using Bybit as it has the method)
-            const ohlcv = await this.bybitClient!.fetchOHLCV(symbol, '60', 50);
+            const ohlcv = await this.bybitClient!.fetchOHLCV(symbol, "60", 50);
 
             // Calculate Metrics (Structure, Volatility)
             const structure = this.analyzeStructure(ohlcv);
             const volatility = this.analyzeVolatility(ohlcv);
 
             // Detectors
-            const oiTrap = this.oiDetector ? await this.oiDetector.detectWipeout(symbol) : null;
+            const oiTrap = this.oiDetector
+              ? await this.oiDetector.detectWipeout(symbol)
+              : null;
             const fundingTrap = this.fundingDetector
               ? await this.fundingDetector.detectSqueeze(symbol)
               : null;
@@ -103,14 +115,14 @@ export class TrapGenerator {
             const tripwires: Tripwire[] = [];
 
             // Pattern: Range Breakout
-            if (structure.regime === 'RANGE') {
+            if (structure.regime === "RANGE") {
               tripwires.push({
                 id: `${symbol}-L-${Date.now()}`,
                 symbol,
-                direction: 'LONG',
+                direction: "LONG",
                 triggerPrice: structure.resistance,
                 created: Date.now(),
-                trapType: 'BREAKOUT',
+                trapType: "BREAKOUT",
                 confidence: 0.8,
                 leverage: 5,
                 volatilityMetrics: volatility,
@@ -120,10 +132,10 @@ export class TrapGenerator {
               tripwires.push({
                 id: `${symbol}-S-${Date.now()}`,
                 symbol,
-                direction: 'SHORT',
+                direction: "SHORT",
                 triggerPrice: structure.support,
                 created: Date.now(),
-                trapType: 'BREAKDOWN',
+                trapType: "BREAKDOWN",
                 confidence: 0.8,
                 leverage: 5,
                 volatilityMetrics: volatility,
@@ -133,28 +145,28 @@ export class TrapGenerator {
             }
 
             // Pattern: Trend Continuation (Pullback)
-            if (structure.regime === 'TREND_UP') {
+            if (structure.regime === "TREND_UP") {
               tripwires.push({
                 id: `${symbol}-L-PB-${Date.now()}`,
                 symbol,
-                direction: 'LONG',
+                direction: "LONG",
                 triggerPrice: structure.support, // Buy at support
                 created: Date.now(),
-                trapType: 'PULLBACK',
+                trapType: "PULLBACK",
                 confidence: 0.75,
                 leverage: 3,
                 volatilityMetrics: volatility,
                 estimatedCascadeSize: 0.015,
                 activated: false,
               });
-            } else if (structure.regime === 'TREND_DOWN') {
+            } else if (structure.regime === "TREND_DOWN") {
               tripwires.push({
                 id: `${symbol}-S-PB-${Date.now()}`,
                 symbol,
-                direction: 'SHORT',
+                direction: "SHORT",
                 triggerPrice: structure.resistance, // Sell at resistance
                 created: Date.now(),
-                trapType: 'PULLBACK',
+                trapType: "PULLBACK",
                 confidence: 0.75,
                 leverage: 3,
                 volatilityMetrics: volatility,
@@ -173,14 +185,17 @@ export class TrapGenerator {
               this.stateManager.setTraps(symbol, tripwires);
             }
           } catch (err) {
-            this.logger.error(`Error processing ${symbol} in generator`, err as Error);
+            this.logger.error(
+              `Error processing ${symbol} in generator`,
+              err as Error,
+            );
           }
         }),
       );
 
       // 4. Update Binance Subscriptions managed by TitanTrap
     } catch (error) {
-      this.logger.error('Trap generation failed', error as Error);
+      this.logger.error("Trap generation failed", error as Error);
     }
 
     // Subscribe to Bybit too (Lead/Lag)
@@ -188,7 +203,9 @@ export class TrapGenerator {
       const symbolList = this.stateManager.getAllSymbols();
       if (symbolList.length > 0) {
         this.bybitClient.subscribeTicker(symbolList, this.onTickerCallback);
-        this.logger.info(`   ✅ Subscribed to Bybit Tickers for Lead/Lag detection`);
+        this.logger.info(
+          `   ✅ Subscribed to Bybit Tickers for Lead/Lag detection`,
+        );
       }
     }
 
@@ -196,8 +213,8 @@ export class TrapGenerator {
     const count = this.stateManager.getAllSymbols().length;
     this.logger.info(`✅ Trap Map updated: ${count} symbols, ${duration}ms`);
 
-    this.eventEmitter.emit('TRAP_MAP_UPDATED', {
-      count,
+    this.eventEmitter.emit("TRAP_MAP_UPDATED", {
+      symbolCount: count,
       duration,
       timestamp: Date.now(),
     });
@@ -205,9 +222,11 @@ export class TrapGenerator {
 
   // --- Helpers ---
 
-  private analyzeStructure(ohlcv: OHLCV[]): any {
+  private analyzeStructure(
+    ohlcv: OHLCV[],
+  ): { regime: string; resistance: number; support: number } {
     if (!ohlcv || ohlcv.length === 0) {
-      return { regime: 'RANGE', resistance: 0, support: 0 };
+      return { regime: "RANGE", resistance: 0, support: 0 };
     }
 
     const closes = ohlcv.map((c) => c.close);
@@ -217,18 +236,28 @@ export class TrapGenerator {
 
     // Simple logic
     if (current > high * 0.99) {
-      return { regime: 'BREAKOUT', resistance: high, support: low };
+      return { regime: "BREAKOUT", resistance: high, support: low };
     }
     if (current < low * 1.01) {
-      return { regime: 'BREAKDOWN', resistance: high, support: low };
+      return { regime: "BREAKDOWN", resistance: high, support: low };
     }
 
-    return { regime: 'RANGE', resistance: high, support: low };
+    return { regime: "RANGE", resistance: high, support: low };
   }
 
-  private analyzeVolatility(ohlcv: OHLCV[]): any {
+  private analyzeVolatility(ohlcv: OHLCV[]): {
+    atr: number;
+    regime: string;
+    positionSizeMultiplier: number;
+    stopLossMultiplier: number;
+  } {
     if (!ohlcv || ohlcv.length < 2) {
-      return { atr: 0, regime: 'LOW_VOL', positionSizeMultiplier: 1 };
+      return {
+        atr: 0,
+        regime: "LOW_VOL",
+        positionSizeMultiplier: 1,
+        stopLossMultiplier: 1,
+      };
     }
 
     let trSum = 0;
@@ -236,15 +265,20 @@ export class TrapGenerator {
       const high = ohlcv[i].high;
       const low = ohlcv[i].low;
       const prevClose = ohlcv[i - 1].close;
-      const tr = Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
+      const tr = Math.max(
+        high - low,
+        Math.abs(high - prevClose),
+        Math.abs(low - prevClose),
+      );
       trSum += tr;
     }
     const atr = trSum / (ohlcv.length - 1);
 
     return {
       atr,
-      regime: atr > ohlcv[0].close * 0.01 ? 'HIGH_VOL' : 'LOW_VOL',
+      regime: atr > ohlcv[0].close * 0.01 ? "HIGH_VOL" : "LOW_VOL",
       positionSizeMultiplier: 1,
+      stopLossMultiplier: 1,
     };
   }
 }

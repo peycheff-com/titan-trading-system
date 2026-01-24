@@ -1,20 +1,19 @@
 /**
  * Jest Test Setup
- * 
+ *
  * Global test configuration and environment setup for Titan Phase 1 Scavenger tests.
  */
 
-// Make this file a module
-export {};
+import { expect, jest } from "@jest/globals";
 
 // Mock environment variables for tests
-process.env.TITAN_MASTER_PASSWORD = 'test-password-minimum-12-chars';
-process.env.BINANCE_API_KEY = 'test-binance-api-key';
-process.env.BINANCE_API_SECRET = 'test-binance-api-secret';
-process.env.BYBIT_API_KEY = 'test-bybit-api-key';
-process.env.BYBIT_API_SECRET = 'test-bybit-api-secret';
-process.env.MEXC_API_KEY = 'test-mexc-api-key';
-process.env.MEXC_API_SECRET = 'test-mexc-api-secret';
+process.env.TITAN_MASTER_PASSWORD = "test-password-minimum-12-chars";
+process.env.BINANCE_API_KEY = "test-binance-api-key";
+process.env.BINANCE_API_SECRET = "test-binance-api-secret";
+process.env.BYBIT_API_KEY = "test-bybit-api-key";
+process.env.BYBIT_API_SECRET = "test-bybit-api-secret";
+process.env.MEXC_API_KEY = "test-mexc-api-key";
+process.env.MEXC_API_SECRET = "test-mexc-api-secret";
 
 // Suppress console output during tests (unless DEBUG is set)
 if (!process.env.DEBUG) {
