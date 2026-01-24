@@ -1,5 +1,5 @@
-use rust_decimal::Decimal;
 use crate::model::{Position, Side};
+use rust_decimal::Decimal;
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
@@ -24,9 +24,9 @@ impl ExposureCalculator {
             // Use mark price for valuation if available, otherwise entry price (fallback)
             // Ideally we should always have mark price if ValuationEngine is running.
             let price = position.last_mark_price.unwrap_or(position.entry_price);
-            
+
             let notional = position.size * price;
-            
+
             match position.side {
                 Side::Buy | Side::Long => {
                     metrics.long_notional += notional;
@@ -36,10 +36,10 @@ impl ExposureCalculator {
                 }
             }
         }
-        
+
         metrics.gross_notional = metrics.long_notional + metrics.short_notional;
         metrics.net_exposure = metrics.long_notional - metrics.short_notional;
-        
+
         metrics
     }
 }

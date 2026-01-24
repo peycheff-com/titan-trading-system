@@ -150,10 +150,16 @@ class TitanScavengerApp {
    * Initialize all components
    */
   async initialize(): Promise<void> {
+    // 1. Initialize logger first
+    // eslint-disable-next-line functional/immutable-data
+    this.logger = new Logger();
     this.logger.info('🚀 Initializing Titan Phase 1 - Scavenger (Predestination Engine)...\n');
 
     try {
-      // 1. Initialize configuration
+      this.addLiveEvent('INFO', 'Initializing logger...');
+      this.logger.info('✅ Logger initialized');
+
+      // 2. Initialize configuration
       this.addLiveEvent('INFO', 'Loading configuration...');
       // eslint-disable-next-line functional/immutable-data
       this.configManager = new ConfigManager();
@@ -161,18 +167,12 @@ class TitanScavengerApp {
       // Config loaded but reference not needed directly here as ConfigManager retains it
       this.logger.info('✅ Configuration loaded');
 
-      // 2. Initialize credential manager
+      // 3. Initialize credential manager
       this.addLiveEvent('INFO', 'Loading credentials...');
       // eslint-disable-next-line functional/immutable-data
       this.credentialManager = new CredentialManager();
       const credentials = await this.credentialManager.loadCredentials();
       this.logger.info('✅ Credentials loaded');
-
-      // 3. Initialize logger
-      this.addLiveEvent('INFO', 'Initializing logger...');
-      // eslint-disable-next-line functional/immutable-data
-      this.logger = new Logger();
-      this.logger.info('✅ Logger initialized');
 
       // 4. Initialize event emitter
       // eslint-disable-next-line functional/immutable-data
@@ -203,6 +203,8 @@ class TitanScavengerApp {
       this.natsClient = new NatsClient({
         servers: process.env.NATS_URL || 'nats://localhost:4222',
         name: 'titan-scavenger-metrics',
+        user: process.env.NATS_USER,
+        pass: process.env.NATS_PASS,
       });
       await this.natsClient.connect();
       this.logger.info('✅ NATS Client connected');

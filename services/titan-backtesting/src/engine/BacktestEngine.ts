@@ -1,29 +1,23 @@
-import {
-  BacktestResult,
-  OHLCV,
-  SimulationConfig,
-  Trade,
-} from "../types/index.js";
-import { EventEmitter } from "events";
+import { BacktestResult, OHLCV, SimulationConfig, Trade } from '../types/index.js';
+import { EventEmitter } from 'events';
 // Import Strategy Engine from Phase 1 (Core Logic)
 // @ts-ignore - Dynamic import to avoid build strictness for now
-import { TitanTrap } from "titan-phase1-scavenger/src/engine/TitanTrap.js";
+import { TitanTrap } from 'titan-phase1-scavenger/src/engine/TitanTrap.js';
 // @ts-ignore
-import { TripwireCalculators } from "titan-phase1-scavenger/src/calculators/TripwireCalculators.js";
+import { TripwireCalculators } from 'titan-phase1-scavenger/src/calculators/TripwireCalculators.js';
 // @ts-ignore
-import { VelocityCalculator } from "titan-phase1-scavenger/src/calculators/VelocityCalculator.js";
+import { VelocityCalculator } from 'titan-phase1-scavenger/src/calculators/VelocityCalculator.js';
 
-import { MockBinanceSpotClient } from "../mocks/MockBinanceSpotClient.js";
-import { MockBybitPerpsClient } from "../mocks/MockBybitPerpsClient.js";
-import { MockConfigManager } from "../mocks/MockConfigManager.js";
-import { MockSignalClient } from "../mocks/MockSignalClient.js";
+import { MockBinanceSpotClient } from '../mocks/MockBinanceSpotClient.js';
+import { MockBybitPerpsClient } from '../mocks/MockBybitPerpsClient.js';
+import { MockConfigManager } from '../mocks/MockConfigManager.js';
+import { MockSignalClient } from '../mocks/MockSignalClient.js';
 
 // Simple Logger Mock
 const mockLogger = {
   info: (msg: string, ...args: any[]) => console.log(`[INFO] ${msg}`, ...args),
   warn: (msg: string, ...args: any[]) => console.warn(`[WARN] ${msg}`, ...args),
-  error: (msg: string, ...args: any[]) =>
-    console.error(`[ERROR] ${msg}`, ...args),
+  error: (msg: string, ...args: any[]) => console.error(`[ERROR] ${msg}`, ...args),
   debug: (msg: string, ...args: any[]) => {}, // Silence debug
 };
 
@@ -75,7 +69,7 @@ export class BacktestEngine extends EventEmitter {
     });
 
     // 3. Instantiate TitanTrap (The Real Engine)
-    console.log("[BacktestEngine] Instantiating TitanTrap with Mocks...");
+    console.log('[BacktestEngine] Instantiating TitanTrap with Mocks...');
     this.engine = new TitanTrap({
       binanceClient: this.binanceMock as any,
       bybitClient: this.bybitMock as any,
@@ -92,12 +86,8 @@ export class BacktestEngine extends EventEmitter {
   /**
    * Run the simulation
    */
-  async runSimulation(
-    data: { candles: OHLCV[]; trades?: Trade[] },
-  ): Promise<BacktestResult> {
-    console.log(
-      `[BacktestEngine] Starting simulation with ${data.candles.length} candles...`,
-    );
+  async runSimulation(data: { candles: OHLCV[]; trades?: Trade[] }): Promise<BacktestResult> {
+    console.log(`[BacktestEngine] Starting simulation with ${data.candles.length} candles...`);
 
     // Start Engine
     await this.engine.start();
@@ -139,14 +129,11 @@ export class BacktestEngine extends EventEmitter {
     const orders = this.bybitMock.getFilledOrders();
     const equity = await this.bybitMock.getEquity(); // This would need PnL tracking logic update in MockBybit
 
-    console.log(
-      `[BacktestEngine] Simulation Complete. Orders: ${orders.length}`,
-    );
+    console.log(`[BacktestEngine] Simulation Complete. Orders: ${orders.length}`);
 
     return {
       metrics: {
-        totalReturn: (equity - this.config.initialCapital) /
-          this.config.initialCapital,
+        totalReturn: (equity - this.config.initialCapital) / this.config.initialCapital,
         maxDrawdown: 0, // Todo: calculate
         sharpeRatio: 0,
         winRate: 0,
@@ -159,7 +146,7 @@ export class BacktestEngine extends EventEmitter {
         entryPrice: o.price,
         exitPrice: 0, // Todo
         pnl: 0,
-        side: o.side === "Buy" ? "long" : "short",
+        side: o.side === 'Buy' ? 'long' : 'short',
         quantity: o.qty,
         size: o.qty,
       })),

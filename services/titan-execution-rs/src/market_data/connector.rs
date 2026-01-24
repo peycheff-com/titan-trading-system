@@ -1,7 +1,7 @@
-use async_trait::async_trait;
-use tokio::sync::mpsc;
 use crate::market_data::model::MarketDataEvent;
+use async_trait::async_trait;
 use thiserror::Error;
+use tokio::sync::mpsc;
 
 #[derive(Error, Debug)]
 pub enum MarketDataError {
@@ -39,10 +39,10 @@ pub trait MarketDataConnector: Send + Sync {
 
     /// Get the event stream channel
     fn event_stream(&mut self) -> mpsc::Receiver<MarketDataEvent>;
-    
+
     /// Check health of the connection
     async fn health_check(&self) -> bool;
-    
+
     /// Get exchange name
     fn name(&self) -> &str;
 }

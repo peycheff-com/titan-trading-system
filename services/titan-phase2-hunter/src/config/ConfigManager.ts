@@ -342,6 +342,13 @@ export class ConfigManager extends EventEmitter {
   }
 
   /**
+   * Update full configuration
+   */
+  updateConfig(config: Partial<Phase2Config>): void {
+    this.updateLocalConfigSection(config);
+  }
+
+  /**
    * Update RS configuration
    */
   updateRSConfig(rsConfig: Partial<Phase2Config["rsConfig"]>): void {

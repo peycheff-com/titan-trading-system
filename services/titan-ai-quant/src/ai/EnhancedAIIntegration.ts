@@ -113,7 +113,7 @@ export interface EnhancedAIIntegrationConfig {
 /**
  * Enhanced AI Integration Orchestrator
  */
-export class AIIntegration extends EventEmitter {
+export class EnhancedAIIntegration extends EventEmitter {
   private realTimeOptimizer: RealTimeOptimizer;
   private predictiveAnalytics: PredictiveAnalytics;
   private analyst: TitanAnalyst;

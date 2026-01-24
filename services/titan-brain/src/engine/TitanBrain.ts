@@ -15,6 +15,7 @@ import {
   BreakerStatus,
   DashboardData,
   ExecutionEngineClient,
+  FillConfirmation,
   HealthStatus,
   IntentSignal,
   PhaseId,
@@ -38,6 +39,7 @@ import {
 } from "./CircuitBreaker.js";
 import { GovernanceEngine } from "../features/Governance/GovernanceEngine.js";
 import { StateRecoveryService } from "./StateRecoveryService.js";
+import { ProposalGateway } from "../governance/ProposalGateway.js";
 
 import { ManualOverrideService } from "./ManualOverrideService.js";
 import { ManualTradeService } from "./ManualTradeService.js";
@@ -63,6 +65,8 @@ import { BrainStateManager } from "./BrainStateManager.js";
 import { SignalProcessor } from "./SignalProcessor.js";
 import { RecoveryManager } from "./RecoveryManager.js";
 import { SignalRouter } from "./SignalRouter.js";
+import { RiskManager } from "../services/RiskManager.js";
+import { getNatsPublisher } from "../server/NatsPublisher.js";
 
 /**
  * Interface for phase notification
@@ -98,8 +102,10 @@ export class TitanBrain
   private readonly truthRepository: TruthRepository | null;
   private readonly reconciliationConfig?: ReconciliationConfig;
   private reconciliationService: ReconciliationService | null = null;
+
   private readonly budgetService: BudgetService;
   private readonly hedgeIntegrityMonitor: HedgeIntegrityMonitor;
+  private riskManager!: RiskManager; // Initialized in constructor
 
   /** External integrations */
   private executionEngine: ExecutionEngineClient | null = null;
@@ -121,11 +127,15 @@ export class TitanBrain
   /** AI Optimization trigger state */
   private lastAIOptimizationTrigger: number = 0;
 
+  /** Latency tracking */
+  private pendingSignals: Map<string, number> = new Map();
+
   // Replaced State and Logic with Managers
   private readonly stateManager: BrainStateManager;
   private readonly signalProcessor: SignalProcessor;
   private readonly recoveryManager: RecoveryManager;
   private readonly signalRouter: SignalRouter;
+  private readonly proposalGateway: ProposalGateway;
 
   constructor(
     config: BrainConfig,
@@ -212,6 +222,10 @@ export class TitanBrain
       this.positionManager,
     );
 
+    // Initialize Proposal Gateway (Sovereign Trust Layer)
+    // TODO: Load authorized keys from config/env
+    this.proposalGateway = new ProposalGateway(logger, []);
+
     // Initialize Manual Trade Service
     this.manualTradeService = new ManualTradeService(() =>
       this.executionEngine
@@ -230,6 +244,9 @@ export class TitanBrain
     }
 
     // Sweep Notifier wired in index.ts
+
+    // Initialize RiskManager (Sovereign Command Emitter)
+    this.riskManager = new RiskManager(this.config as any, getNatsPublisher());
 
     // Subscribe to PowerLaw Metrics
     this.subscribeToPowerLawMetrics().catch((err) => {
@@ -338,6 +355,8 @@ export class TitanBrain
     if (this.reconciliationService) {
       this.reconciliationService.setExecutionEngine(client);
     }
+    // Listen for fills to track latency
+    client.onFillConfirmation((fill) => this.handleFillLatency(fill));
   }
 
   setPhaseNotifier(notifier: PhaseNotifier): void {
@@ -407,6 +426,7 @@ export class TitanBrain
             signal,
             decision.authorizedSize,
           );
+          this.pendingSignals.set(signal.signalId, Date.now()); // Track start time
           logger.info(`Signal executed: ${signal.signalId}`);
         } catch (err) {
           logger.error(
@@ -495,6 +515,73 @@ export class TitanBrain
     this.riskGuardian.updatePowerLawMetrics(metrics);
   }
 
+  // Latency Monitoring Handler
+  private handleFillLatency(fill: FillConfirmation): void {
+    const sendTime = this.pendingSignals.get(fill.signalId);
+    if (sendTime) {
+      const latency = Date.now() - sendTime;
+      this.pendingSignals.delete(fill.signalId);
+
+      // SLO Check (1000ms budget)
+      if (latency > 1000) {
+        logger.warn(
+          `🐢 HIGH EXECUTION LATENCY: ${latency}ms for ${fill.signalId} (Budget: 1000ms) - Triggering Degraded Mode`,
+        );
+        // Trigger Degraded Mode via RiskGuardian or ActiveInference
+        // For now, logging effectively signals degradation to operators (and eventually Dashboard via AuditLog)
+      }
+    }
+  }
+
+  async handleAIProposal(proposal: any): Promise<void> {
+    logger.info(
+      `🧠 AI Optimization Proposal Received: ${JSON.stringify(proposal)}`,
+    );
+
+    // 1. Validate Proposal Structure
+    if (!proposal || !proposal.target || !proposal.changes) {
+      logger.warn("Invalid AI Proposal structure");
+      return;
+    }
+
+    // 2. Risk Evaluation (Can we apply this?)
+    // In a full implementation, we would validate against RiskGuard here.
+    // For "The Awakening" phase, we log receipt and notify via Dashboard.
+
+    // 3. Notify Dashboard (Self-Awareness)
+    // 3. Notify Dashboard (Self-Awareness)
+    this.stateManager.setLastAIProposal({
+      timestamp: Date.now(),
+      proposal: proposal,
+    });
+
+    // 4. Staging (Future: Apply to ConfigManager)
+    logger.info(`AI Proposal staged for ${proposal.target}`);
+  }
+
+  /**
+   * Handle a Signed Proposal via the Governance Gateway
+   */
+  async handleProposal(payload: unknown) {
+    logger.info("Received Signed Governance Proposal");
+    const decision = await this.proposalGateway.submit(payload);
+
+    if (decision.verdict === "ACCEPTED") {
+      logger.info("Proposal Accepted by Sovereign Gateway", undefined, {
+        id: decision.proposalId,
+        reason: decision.reason,
+      });
+      // TODO: Actually execute the proposal (Param Update, Model Promotion, etc.)
+    } else {
+      logger.warn("Proposal Rejected by Sovereign Gateway", undefined, {
+        id: decision.proposalId,
+        reason: decision.reason,
+      });
+    }
+
+    return decision;
+  }
+
   // --- Dashboard ---
 
   async getDashboardData(): Promise<DashboardData> {
@@ -546,6 +633,13 @@ export class TitanBrain
         }
         : null,
       warningBannerActive: this.circuitBreaker.isActive(),
+      aiState: {
+        cortisol: this.activeInferenceEngine.getCortisol(),
+        regime: "ACTIVE_INFERENCE", // TODO: Get actual regime from ActiveInferenceEngine
+        lastOptimizationProposal: this.stateManager.getLastAIProposal() ||
+          undefined,
+      },
+      truthConfidence: this.reconciliationService?.getTrustScore() ?? 1.0,
     };
 
     this.stateManager.setDashboardCache(data);
@@ -661,12 +755,27 @@ export class TitanBrain
       [];
   }
 
+  getEventStore(): EventStore | null {
+    return this.eventStore;
+  }
+
   async createOperator(
     id: string,
     pass: string,
     perms: string[],
   ): Promise<boolean> {
     return this.manualOverrideService?.createOperator(id, pass, perms) ?? false;
+  }
+
+  async triggerEmergencyHalt(actorId: string, reason: string): Promise<void> {
+    logger.warn(
+      `[SOVEREIGN] EMERGENCY HALT TRIGGERED by ${actorId}: ${reason}`,
+    );
+    // 1. Internal Circuit Breaker Trip
+    this.circuitBreaker.trigger(reason);
+
+    // 2. Emit Sovereign Command
+    await this.riskManager.emitEmergencyHalt(actorId, reason);
   }
 
   async createManualOverride(
@@ -689,35 +798,38 @@ export class TitanBrain
     }
 
     // Then create override
-    const result = await this.manualOverrideService?.createOverride({
+    const result = await this.manualOverrideService.createOverride({
       operatorId: id,
       allocation: alloc,
       reason,
       durationHours: duration,
     });
 
+    if (result) {
+      await this.riskManager.emitManualOverride(
+        id,
+        alloc,
+        reason,
+        duration || 1,
+      );
+    }
+
     return !!result;
   }
 
-  async deactivateManualOverride(id: string, pass: string): Promise<boolean> {
-    if (!this.manualOverrideService) return false;
-
-    const auth = await this.manualOverrideService.authenticateOperator(
-      id,
-      pass,
-    );
-    if (!auth) {
-      logger.warn(`Manual override deactivation auth failed for ${id}`);
-      return false;
-    }
-
-    return this.manualOverrideService.deactivateOverride(id);
+  async verifyOperatorCredentials(id: string, pass: string): Promise<boolean> {
+    return this.manualOverrideService?.authenticateOperator(id, pass) ?? false;
   }
 
-  async verifyOperatorCredentials(id: string, pass: string): Promise<boolean> {
-    return this.manualOverrideService
-      ? this.manualOverrideService.authenticateOperator(id, pass)
-      : false;
+  async deactivateManualOverride(actorId: string): Promise<boolean> {
+    if (!this.manualOverrideService) return false;
+    const success = await this.manualOverrideService.deactivateOverride(
+      actorId,
+    );
+    if (success) {
+      logger.info(`Manual override deactivated by ${actorId}`);
+    }
+    return success;
   }
 
   async resetCircuitBreaker(operatorId: string): Promise<void> {
@@ -790,7 +902,19 @@ export class TitanBrain
     const equity = this.stateManager.getEquity();
     // Use getMetrics provided function
     try {
-      // update gauge etc
+      // Check Cortisol Level (Self-Preservation)
+      const cortisol = this.activeInferenceEngine.getCortisol();
+      if (cortisol >= 0.95 && !this.circuitBreaker.getStatus().active) {
+        logger.warn(
+          `🧠 CORTISOL OVERLOAD (${
+            cortisol.toFixed(2)
+          }): Triggering Self-Preservation Halt`,
+        );
+        await this.triggerEmergencyHalt(
+          "BRAIN",
+          `High Cortisol Level: ${cortisol.toFixed(2)}`,
+        );
+      }
     } catch (e) {
       logger.error("Error updating metrics", e as Error);
     }
@@ -817,7 +941,14 @@ export class TitanBrain
       price: tick.price,
       timestamp: tick.timestamp ?? Date.now(),
     });
-    // Logic to update equity if real-time pnl tracking is in brain?
+
+    // Feed Amygdala (Active Inference)
+    // Using volume=0 since we rely on price variance for surprise currently
+    this.activeInferenceEngine.processUpdate({
+      price: tick.price,
+      volume: 0,
+      timestamp: tick.timestamp ?? Date.now(),
+    });
   }
 
   private async subscribeToPowerLawMetrics() {

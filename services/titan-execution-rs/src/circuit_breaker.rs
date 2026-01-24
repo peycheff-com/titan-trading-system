@@ -7,13 +7,21 @@ use tracing::{info, warn};
 #[derive(Clone, Debug)]
 pub struct GlobalHalt {
     is_halted: Arc<AtomicBool>,
+    file_path: std::path::PathBuf,
 }
 
 impl GlobalHalt {
     pub fn new() -> Self {
-        // Default to NOT halted (false)
+        let file_path = std::path::PathBuf::from("system.halt");
+        let exists = file_path.exists();
+
+        if exists {
+            warn!("⚠️ System initialized in HALTED state (system.halt file found)");
+        }
+
         Self {
-            is_halted: Arc::new(AtomicBool::new(false)),
+            is_halted: Arc::new(AtomicBool::new(exists)),
+            file_path,
         }
     }
 
@@ -25,6 +33,20 @@ impl GlobalHalt {
     /// Set the halt state.
     pub fn set_halt(&self, active: bool, reason: &str) {
         let prev = self.is_halted.swap(active, Ordering::SeqCst);
+
+        // Sync to disk
+        if active {
+            if let Err(e) = std::fs::write(&self.file_path, reason) {
+                warn!("Failed to persist halt lockfile: {}", e);
+            }
+        } else {
+            if self.file_path.exists() {
+                if let Err(e) = std::fs::remove_file(&self.file_path) {
+                    warn!("Failed to remove halt lockfile: {}", e);
+                }
+            }
+        }
+
         if prev != active {
             if active {
                 warn!("🚨 SYSTEM HALT ACTIVATED: {}", reason);

@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
 use crate::model::Intent;
 use crate::persistence::redb_store::{RedbStore, StoreError};
-use redb::{TableDefinition, ReadableTable};
+use redb::{ReadableTable, TableDefinition};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::debug;
 
@@ -20,14 +20,14 @@ pub enum WalEntry {
     },
     ExecutionReport {
         signal_id: String,
-        fill_id: String, 
+        fill_id: String,
         payload: serde_json::Value,
     },
     StateCorrection {
         signal_id: String,
         reason: String,
         payload: serde_json::Value,
-    }
+    },
 }
 
 pub struct WalManager {
@@ -55,13 +55,13 @@ impl WalManager {
             let mut table = txn.open_table(WAL_TABLE)?;
             let last_id = table.last()?.map(|(k, _)| k.value()).unwrap_or(0);
             let new_id = last_id + 1;
-            
+
             let data = serde_json::to_vec(entry)?;
             table.insert(new_id, data)?;
             new_id
         };
         txn.commit()?;
-        
+
         debug!("📝 WAL Append: Seq {}", sequence_id);
         Ok(sequence_id)
     }
@@ -69,7 +69,7 @@ impl WalManager {
     pub fn read_from(&self, start_seq: u64) -> Result<Vec<(u64, WalEntry)>, StoreError> {
         let txn = self.store.begin_read()?;
         let table = txn.open_table(WAL_TABLE)?;
-        
+
         let mut entries = Vec::new();
         for result in table.range(start_seq..)? {
             let (k, v) = result?;

@@ -1,5 +1,6 @@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { CheckCircle2, AlertOctagon, XCircle, RefreshCw } from 'lucide-react';
+import { CheckCircle2, AlertOctagon, XCircle, RefreshCw, Scale } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ServiceStatus {
   name: string;
@@ -10,6 +11,7 @@ interface SystemStatusProps {
   services?: ServiceStatus[];
   lastSyncTime?: number;
   exchangeConnected?: boolean;
+  truthConfidence?: number;
 }
 
 export function SystemStatusBanner({
@@ -20,9 +22,10 @@ export function SystemStatusBanner({
   ],
   lastSyncTime = Date.now(),
   exchangeConnected = true,
+  truthConfidence = 1.0,
 }: SystemStatusProps) {
   const allServicesHealthy = services.every((s) => s.healthy);
-  const isReady = allServicesHealthy && exchangeConnected;
+  const isReady = allServicesHealthy && exchangeConnected && truthConfidence >= 0.8;
 
   const timeSinceSync = Date.now() - lastSyncTime;
   const isStale = timeSinceSync > 10000; // 10s
@@ -35,6 +38,9 @@ export function SystemStatusBanner({
         <AlertDescription className="text-xs text-emerald-600/90 flex gap-4">
           <span>All services operational.</span>
           <span>Exchange Connected.</span>
+          <span className="flex items-center gap-1 font-semibold">
+             <Scale className="h-3 w-3" /> Truth: {Math.round(truthConfidence * 100)}%
+          </span>
         </AlertDescription>
       </Alert>
     );
@@ -64,6 +70,11 @@ export function SystemStatusBanner({
                 <XCircle className="h-3 w-3" /> {s.name} Down
               </span>
             ))}
+        {truthConfidence < 0.8 && (
+            <span className="flex items-center gap-1 text-amber-600 font-bold">
+                <Scale className="h-3 w-3" /> Trust Degraded ({Math.round(truthConfidence * 100)}%)
+            </span>
+        )}
       </AlertDescription>
     </Alert>
   );

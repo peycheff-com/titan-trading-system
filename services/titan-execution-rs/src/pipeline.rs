@@ -1,20 +1,20 @@
-use std::sync::Arc;
 use parking_lot::RwLock;
-use rust_decimal::Decimal;
 use rust_decimal::prelude::ToPrimitive;
-use tracing::{info, warn, error};
+use rust_decimal::Decimal;
+use std::sync::Arc;
+use tracing::{error, info, warn};
 
 use crate::context::ExecutionContext;
-use crate::shadow_state::{ShadowState, ExecutionEvent};
-use crate::order_manager::OrderManager;
-use crate::model::{Intent, FillReport, Side, IntentType};
+use crate::drift_detector::DriftDetector;
 use crate::exchange::adapter::OrderRequest;
 use crate::exchange::router::ExecutionRouter;
-use crate::simulation_engine::SimulationEngine;
-use crate::risk_guard::RiskGuard;
 use crate::metrics;
-use crate::drift_detector::DriftDetector;
 use crate::model::TradeRecord;
+use crate::model::{FillReport, Intent, IntentType, Side};
+use crate::order_manager::OrderManager;
+use crate::risk_guard::RiskGuard;
+use crate::shadow_state::{ExecutionEvent, ShadowState};
+use crate::simulation_engine::SimulationEngine;
 use chrono::Utc;
 
 /// usage:
@@ -64,8 +64,11 @@ impl ExecutionPipeline {
     }
 
     /// Process a single Intent through the full execution lifecycle.
-    pub async fn process_intent(&self, intent: Intent, correlation_id: String) -> Result<PipelineResult, String> {
-        
+    pub async fn process_intent(
+        &self,
+        intent: Intent,
+        correlation_id: String,
+    ) -> Result<PipelineResult, String> {
         let mut pipeline_result = PipelineResult {
             shadow_fill: None,
             events: Vec::new(),
@@ -90,7 +93,10 @@ impl ExecutionPipeline {
         // Enforce Timestamp Freshness
         let now = self.ctx.time.now_millis();
         if now - processed_intent.t_signal > self.freshness_threshold as i64 {
-            let msg = format!("Intent EXPIRED: {} ms latency", now - processed_intent.t_signal);
+            let msg = format!(
+                "Intent EXPIRED: {} ms latency",
+                now - processed_intent.t_signal
+            );
             error!("❌ {}. Dropping.", msg);
             metrics::inc_expired_intents();
             {
@@ -105,7 +111,7 @@ impl ExecutionPipeline {
 
         // --- SHADOW EXECUTION (Concurrent side-effect) ---
         pipeline_result.shadow_fill = self.simulation_engine.simulate_execution(&processed_intent);
-        
+
         let side = self.infer_side(&processed_intent);
 
         // Order Manager Decision
@@ -115,7 +121,13 @@ impl ExecutionPipeline {
                 symbol: processed_intent.symbol.clone(),
                 side: side.clone(),
                 size: processed_intent.size,
-                limit_price: Some(processed_intent.entry_zone.first().cloned().unwrap_or_default()),
+                limit_price: Some(
+                    processed_intent
+                        .entry_zone
+                        .first()
+                        .cloned()
+                        .unwrap_or_default(),
+                ),
                 stop_loss: Some(processed_intent.stop_loss),
                 take_profits: Some(processed_intent.take_profits.clone()),
                 signal_type: Some(format!("{:?}", processed_intent.intent_type)),
@@ -126,7 +138,7 @@ impl ExecutionPipeline {
         let t_decision = self.ctx.time.now_millis();
 
         let order_req = OrderRequest {
-            symbol: processed_intent.symbol.replace("/", ""), 
+            symbol: processed_intent.symbol.replace("/", ""),
             side: side.clone(),
             order_type: decision.order_type.clone(),
             quantity: processed_intent.size,
@@ -135,7 +147,7 @@ impl ExecutionPipeline {
             client_order_id: format!("{}-{}", processed_intent.signal_id, self.ctx.id.new_id()),
             reduce_only: decision.reduce_only,
         };
-        
+
         info!(
             correlation_id = %correlation_id,
             "🚀 Executing Real Order: {:?} {} @ {:?}",
@@ -144,8 +156,11 @@ impl ExecutionPipeline {
             order_req.price
         );
 
-        let results = self.router.execute(&processed_intent, order_req.clone()).await;
-        
+        let results = self
+            .router
+            .execute(&processed_intent, order_req.clone())
+            .await;
+
         for (exchange_name, request, result) in results {
             match result {
                 Ok(response) => {
@@ -167,16 +182,23 @@ impl ExecutionPipeline {
                             request.quantity, // We record Attempted Quantity (Child Size)
                         );
                     }
-                    
-                    let fill_price = response.avg_price.unwrap_or(decision.limit_price.unwrap_or_default());
+
+                    let fill_price = response
+                        .avg_price
+                        .unwrap_or(decision.limit_price.unwrap_or_default());
 
                     // --- SLIPPAGE CHECK ---
-                    let expected_price = decision.limit_price.or(processed_intent.entry_zone.first().cloned()).unwrap_or(Decimal::ZERO);
+                    let expected_price = decision
+                        .limit_price
+                        .or(processed_intent.entry_zone.first().cloned())
+                        .unwrap_or(Decimal::ZERO);
                     if expected_price > Decimal::ZERO && fill_price > Decimal::ZERO {
                         let diff = (fill_price - expected_price).abs();
                         let slippage_ratio = diff / expected_price;
-                        let slippage_bps = (slippage_ratio * rust_decimal::Decimal::from(10000)).to_u32().unwrap_or(0);
-                        
+                        let slippage_bps = (slippage_ratio * rust_decimal::Decimal::from(10000))
+                            .to_u32()
+                            .unwrap_or(0);
+
                         if slippage_bps > 0 {
                             self.risk_guard.record_slippage(slippage_bps);
                         }
@@ -195,18 +217,18 @@ impl ExecutionPipeline {
                         // For Phase 4, we stick to Fills-only for events, but State has it.
                         continue;
                     }
-                    
+
                     let (events_to_publish, exposure) = {
                         let mut state = self.shadow_state.write();
                         let events = state.confirm_execution(
                             &processed_intent.signal_id,
                             &response.order_id, // Idempotency Key
-                            fill_price, 
-                            response.executed_qty, 
+                            fill_price,
+                            response.executed_qty,
                             true,
                             response.fee.unwrap_or(Decimal::ZERO),
                             response.fee_asset.clone().unwrap_or("USDT".to_string()),
-                            &exchange_name // Pass exchange name
+                            &exchange_name, // Pass exchange name
                         );
                         let exposure = state.calculate_exposure();
                         (events, exposure)
@@ -214,7 +236,6 @@ impl ExecutionPipeline {
 
                     pipeline_result.events.extend(events_to_publish);
                     pipeline_result.exposure = Some(exposure);
-
 
                     let fill_report = FillReport {
                         fill_id: response.order_id.clone(),
@@ -226,16 +247,20 @@ impl ExecutionPipeline {
                         fee: Decimal::ZERO,
                         fee_currency: "USDT".to_string(),
                         t_signal: processed_intent.t_signal,
-                        t_ingress: processed_intent.t_ingress.unwrap_or(self.ctx.time.now_millis()),
+                        t_ingress: processed_intent
+                            .t_ingress
+                            .unwrap_or(self.ctx.time.now_millis()),
                         t_decision,
                         t_ack: response.t_ack,
                         t_exchange: response.t_exchange.unwrap_or(self.ctx.time.now_millis()),
                         client_order_id: request.client_order_id.clone(),
                         execution_id: response.order_id.clone(),
                     };
-                    
-                    pipeline_result.fill_reports.push((exchange_name, fill_report));
-                    
+
+                    pipeline_result
+                        .fill_reports
+                        .push((exchange_name, fill_report));
+
                     // --- METRICS RECORDING (Phase 3) ---
                     // 1. End-to-End Latency
                     let now = self.ctx.time.now_millis();
@@ -244,14 +269,18 @@ impl ExecutionPipeline {
                     metrics::observe_order_latency(latency_sec);
 
                     // 2. Slippage
-                    if let Some(target) = decision.limit_price.or(processed_intent.entry_zone.first().cloned()) {
-                         if target > Decimal::ZERO && fill_price > Decimal::ZERO {
+                    if let Some(target) = decision
+                        .limit_price
+                        .or(processed_intent.entry_zone.first().cloned())
+                    {
+                        if target > Decimal::ZERO && fill_price > Decimal::ZERO {
                             let diff = (fill_price - target).abs();
                             let slip_ratio = diff / target;
                             // Convert to BPS (f64)
-                            let slip_bps = (slip_ratio * Decimal::from(10000)).to_f64().unwrap_or(0.0);
+                            let slip_bps =
+                                (slip_ratio * Decimal::from(10000)).to_f64().unwrap_or(0.0);
                             metrics::observe_slippage(slip_bps);
-                         }
+                        }
                     }
 
                     // 3. Filled Orders
@@ -275,14 +304,15 @@ impl ExecutionPipeline {
                         close_reason: "Open".to_string(),
                         metadata: None,
                     };
-                    
-                    let drifts = self.drift_detector.analyze(&processed_intent, &trade_record);
+
+                    let drifts = self
+                        .drift_detector
+                        .analyze(&processed_intent, &trade_record);
                     for drift in drifts {
                         warn!("🚨 DRIFT DETECTED: {:?}", drift);
                         // Potential: Publish to Drift Topic
                     }
-
-                },
+                }
                 Err(e) => {
                     error!("❌ [{}] Execution Failed: {}", exchange_name, e);
                 }
@@ -291,7 +321,7 @@ impl ExecutionPipeline {
 
         Ok(pipeline_result)
     }
-    
+
     fn infer_side(&self, intent: &Intent) -> Side {
         match intent.intent_type {
             IntentType::BuySetup => Side::Buy,

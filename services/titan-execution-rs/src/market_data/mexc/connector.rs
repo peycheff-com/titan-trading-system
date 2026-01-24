@@ -1,14 +1,16 @@
-use async_trait::async_trait;
-use crate::market_data::connector::{MarketDataConnector, MarketDataError, Subscription, StreamType};
+use crate::market_data::connector::{
+    MarketDataConnector, MarketDataError, StreamType, Subscription,
+};
+use crate::market_data::mexc::message::{MexcDeal, MexcWsMessage};
 use crate::market_data::model::MarketDataEvent;
-use crate::market_data::mexc::message::{MexcWsMessage, MexcDeal};
+use async_trait::async_trait;
+use futures::{SinkExt, StreamExt};
+use serde_json::json;
+use std::collections::HashSet;
 use tokio::sync::mpsc;
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
-use futures::{StreamExt, SinkExt};
+use tracing::{error, info, warn};
 use url::Url;
-use tracing::{info, warn, error};
-use std::collections::HashSet;
-use serde_json::json;
 
 const MEXC_WS_URL: &str = "wss://contract.mexc.com/edge";
 
@@ -30,37 +32,44 @@ impl MexcConnector {
         }
     }
 
-    async fn handle_msg(text: &str, tx: &mpsc::Sender<MarketDataEvent>) -> Result<(), MarketDataError> {
-        let msg: MexcWsMessage = serde_json::from_str(text)
-            .map_err(|e| MarketDataError::Parse(e.to_string()))?;
+    async fn handle_msg(
+        text: &str,
+        tx: &mpsc::Sender<MarketDataEvent>,
+    ) -> Result<(), MarketDataError> {
+        let msg: MexcWsMessage =
+            serde_json::from_str(text).map_err(|e| MarketDataError::Parse(e.to_string()))?;
 
-        // Handle Ping/Pong if implicit? 
+        // Handle Ping/Pong if implicit?
         // MEXC usually requires {"method":"ping"} sent by us, responses might be specific.
-        
+
         if let Some(channel) = &msg.channel {
             if channel.starts_with("push.deal") {
-                 if let Some(data) = &msg.data {
-                     if let Some(deals) = data.as_array() {
-                         // Direct array format: {"data": [...], ...}
-                         for deal_val in deals {
-                             let deal: MexcDeal = serde_json::from_value(deal_val.clone())
+                if let Some(data) = &msg.data {
+                    if let Some(deals) = data.as_array() {
+                        // Direct array format: {"data": [...], ...}
+                        for deal_val in deals {
+                            let deal: MexcDeal = serde_json::from_value(deal_val.clone())
                                 .map_err(|e| MarketDataError::Parse(e.to_string()))?;
-                             
-                             let symbol = msg.symbol.clone().unwrap_or("UNKNOWN".to_string());
-                             let _ = tx.send(MarketDataEvent::Trade(deal.to_model(&symbol))).await;
-                         }
-                     } else if let Some(deal_json) = data.as_object() {
-                          // Try single check or "data" field inside data
-                          if let Some(inner_data) = deal_json.get("data").and_then(|d| d.as_array()) {
-                             for deal_val in inner_data {
-                                 let deal: MexcDeal = serde_json::from_value(deal_val.clone())
+
+                            let symbol = msg.symbol.clone().unwrap_or("UNKNOWN".to_string());
+                            let _ = tx
+                                .send(MarketDataEvent::Trade(deal.to_model(&symbol)))
+                                .await;
+                        }
+                    } else if let Some(deal_json) = data.as_object() {
+                        // Try single check or "data" field inside data
+                        if let Some(inner_data) = deal_json.get("data").and_then(|d| d.as_array()) {
+                            for deal_val in inner_data {
+                                let deal: MexcDeal = serde_json::from_value(deal_val.clone())
                                     .map_err(|e| MarketDataError::Parse(e.to_string()))?;
-                                 let symbol = msg.symbol.clone().unwrap_or("UNKNOWN".to_string());
-                                 let _ = tx.send(MarketDataEvent::Trade(deal.to_model(&symbol))).await;
-                             }
-                          }
-                     }
-                 }
+                                let symbol = msg.symbol.clone().unwrap_or("UNKNOWN".to_string());
+                                let _ = tx
+                                    .send(MarketDataEvent::Trade(deal.to_model(&symbol)))
+                                    .await;
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -71,8 +80,11 @@ impl MexcConnector {
 #[async_trait]
 impl MarketDataConnector for MexcConnector {
     async fn connect(&mut self) -> Result<(), MarketDataError> {
-        let url = Url::parse(MEXC_WS_URL).map_err(|e| MarketDataError::Connection(e.to_string()))?;
-        let (ws_stream, _) = connect_async(url).await.map_err(|e| MarketDataError::Connection(e.to_string()))?;
+        let url =
+            Url::parse(MEXC_WS_URL).map_err(|e| MarketDataError::Connection(e.to_string()))?;
+        let (ws_stream, _) = connect_async(url)
+            .await
+            .map_err(|e| MarketDataError::Connection(e.to_string()))?;
         info!("Connected to MEXC WebSocket");
 
         let (mut write, mut read) = ws_stream.split();
@@ -82,10 +94,10 @@ impl MarketDataConnector for MexcConnector {
         // Spawn writer loop
         tokio::spawn(async move {
             while let Some(msg) = write_rx.recv().await {
-                 if let Err(e) = write.send(msg).await {
-                     error!("Failed to send WS message: {}", e);
-                     break;
-                 }
+                if let Err(e) = write.send(msg).await {
+                    error!("Failed to send WS message: {}", e);
+                    break;
+                }
             }
         });
 
@@ -109,7 +121,7 @@ impl MarketDataConnector for MexcConnector {
                     Ok(Message::Text(text)) => {
                         // info!("MEXC Msg: {}", text); // Debug
                         if let Err(e) = Self::handle_msg(&text, &event_tx).await {
-                             warn!("Error handling message: {}", e);
+                            warn!("Error handling message: {}", e);
                         }
                     }
                     Ok(Message::Close(_)) => {
@@ -134,7 +146,7 @@ impl MarketDataConnector for MexcConnector {
         // Our input subscription.symbol is "BTCUSDT". We might need to insert underscore.
         // But for simplicity, let's assume input needs to be adapted or is "BTC_USDT".
         // Let's adapt it locally: BTCUSDT -> BTC_USDT
-        
+
         let raw_symbol = subscription.symbol.clone();
         let formatted_symbol = if !raw_symbol.contains('_') && raw_symbol.ends_with("USDT") {
             let (base, _) = raw_symbol.split_at(raw_symbol.len() - 4);
@@ -145,7 +157,11 @@ impl MarketDataConnector for MexcConnector {
 
         let method = match subscription.stream_type {
             StreamType::PublicTrade => "sub.deal",
-            _ => return Err(MarketDataError::Subscription("Unsupported stream type".to_string())),
+            _ => {
+                return Err(MarketDataError::Subscription(
+                    "Unsupported stream type".to_string(),
+                ))
+            }
         };
 
         let payload = json!({
@@ -156,7 +172,8 @@ impl MarketDataConnector for MexcConnector {
         });
 
         if let Some(tx) = &self.write_tx {
-            tx.send(Message::Text(payload.to_string())).await
+            tx.send(Message::Text(payload.to_string()))
+                .await
                 .map_err(|e| MarketDataError::Subscription(e.to_string()))?;
             self.subscriptions.insert(formatted_symbol);
             Ok(())

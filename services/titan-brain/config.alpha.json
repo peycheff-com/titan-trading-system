@@ -1,0 +1,70 @@
+{
+  "port": 3100,
+  "logLevel": "info",
+  "brain": {
+    "initialCapital": 1000,
+    "signalTimeout": 100,
+    "metricUpdateInterval": 60000,
+    "dashboardCacheTTL": 5000,
+    "maxQueueSize": 100
+  },
+  "riskGuardian": {
+    "maxCorrelation": 0.6,
+    "minStopDistanceMultiplier": 3.0,
+    "correlationPenalty": 0.5,
+    "betaUpdateInterval": 300000,
+    "correlationUpdateInterval": 300000,
+    "minConfidenceScore": 0.7,
+    "confidence": {
+      "decayRate": 0.1,
+      "recoveryRate": 0.01,
+      "threshold": 0.5
+    },
+    "fractal": {}
+  },
+  "circuitBreaker": {
+    "maxDailyDrawdown": 0.05,
+    "minEquity": 800,
+    "consecutiveLossLimit": 3,
+    "consecutiveLossWindow": 3600000,
+    "cooldownMinutes": 30
+  },
+  "allocationEngine": {
+    "leverageCaps": {
+        "micro": 2,
+        "small": 2,
+        "medium": 2,
+        "large": 1,
+        "institutional": 1
+    },
+    "transitionPoints": {
+      "startP2": 1500,
+      "fullP2": 5000,
+      "startP3": 25000
+    }
+  },
+  "notifications": {
+      "telegram": { "enabled": false },
+      "email": { "enabled": false }
+  },
+  "services": {
+      "executionUrl": null
+  },
+  "redis": {
+    "url": "redis://localhost:6379",
+    "keyPrefix": "titan-brain:",
+    "maxRetries": 3,
+    "retryDelay": 1000
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "name": "titan_brain",
+    "database": "titan_brain",
+    "user": "postgres",
+    "password": "postgres",
+    "ssl": false,
+    "maxConnections": 20,
+    "idleTimeout": 30000
+  }
+}

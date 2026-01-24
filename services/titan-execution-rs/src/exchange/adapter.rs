@@ -1,7 +1,7 @@
+use crate::model::{OrderType, Position, Side};
 use async_trait::async_trait;
 use rust_decimal::Decimal;
 use thiserror::Error;
-use crate::model::{Side, OrderType, Position};
 
 #[derive(Error, Debug)]
 pub enum ExchangeError {
@@ -50,7 +50,11 @@ pub trait ExchangeAdapter: Send + Sync {
     async fn place_order(&self, order: OrderRequest) -> Result<OrderResponse, ExchangeError>;
 
     /// Cancel a specific order
-    async fn cancel_order(&self, symbol: &str, order_id: &str) -> Result<OrderResponse, ExchangeError>;
+    async fn cancel_order(
+        &self,
+        symbol: &str,
+        order_id: &str,
+    ) -> Result<OrderResponse, ExchangeError>;
 
     /// Get current wallet balance for a specific asset
     async fn get_balance(&self, asset: &str) -> Result<Decimal, ExchangeError>;

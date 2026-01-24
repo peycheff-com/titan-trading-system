@@ -80,7 +80,8 @@ impl SimulatedTimeProvider {
     }
 
     pub fn advance(&self, duration_ms: i64) {
-        self.current_time_ms.fetch_add(duration_ms, Ordering::SeqCst);
+        self.current_time_ms
+            .fetch_add(duration_ms, Ordering::SeqCst);
     }
 }
 

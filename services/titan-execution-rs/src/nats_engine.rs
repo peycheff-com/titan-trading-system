@@ -1,24 +1,22 @@
-use tracing::{info, error, warn};
 use futures::StreamExt;
-use std::sync::Arc;
 use parking_lot::RwLock;
 use serde_json::Value;
+use std::sync::Arc;
+use tracing::{error, info, warn};
 
-
-
+use crate::circuit_breaker::GlobalHalt;
 use crate::context::ExecutionContext;
-use crate::shadow_state::{ShadowState, ExecutionEvent};
-use crate::order_manager::OrderManager;
-use crate::model::{Intent, IntentType, Side};
+use crate::drift_detector::DriftDetector;
 use crate::exchange::adapter::OrderRequest;
 use crate::exchange::router::ExecutionRouter;
-use crate::simulation_engine::SimulationEngine;
-use crate::circuit_breaker::GlobalHalt;
 use crate::intent_validation::validate_intent_payload;
 use crate::metrics;
+use crate::model::IntentType;
+use crate::order_manager::OrderManager;
+use crate::pipeline::ExecutionPipeline;
 use crate::risk_guard::RiskGuard;
-use crate::pipeline::{ExecutionPipeline, PipelineResult};
-use crate::drift_detector::DriftDetector;
+use crate::shadow_state::{ExecutionEvent, ShadowState};
+use crate::simulation_engine::SimulationEngine;
 
 /// Start the NATS Engine (Consumer Loop and Halt Listener)
 /// Returns a handle to the consumer task
@@ -34,7 +32,6 @@ pub async fn start_nats_engine(
     freshness_threshold: u64,
     drift_detector: Arc<DriftDetector>,
 ) -> Result<tokio::task::JoinHandle<()>, Box<dyn std::error::Error + Send + Sync>> {
-    
     // --- System Halt Listener (Core NATS) ---
     // ... (unchanged)
 
@@ -58,10 +55,13 @@ pub async fn start_nats_engine(
     ));
 
     // --- Market Data Listener (Staleness) ---
-    let mut ticker_sub = client.subscribe("titan.market.ticker.>").await.map_err(|e| {
-         error!("❌ Failed to subscribe to tickers: {}", e);
-         e
-    })?;
+    let mut ticker_sub = client
+        .subscribe("titan.market.ticker.>")
+        .await
+        .map_err(|e| {
+            error!("❌ Failed to subscribe to tickers: {}", e);
+            e
+        })?;
     let risk_guard_for_md = risk_guard.clone();
     tokio::spawn(async move {
         while let Some(msg) = ticker_sub.next().await {
@@ -81,17 +81,20 @@ pub async fn start_nats_engine(
 
     // Listen for urgent kill signals. Payload: { "active": true, "reason": "Manually triggered" }
     let mut halt_sub = client.subscribe("system.halt").await.map_err(|e| {
-         error!("❌ Failed to subscribe to system.halt: {}", e);
-         e
+        error!("❌ Failed to subscribe to system.halt: {}", e);
+        e
     })?;
     let halt_state_clone = global_halt.clone();
-    
+
     tokio::spawn(async move {
         info!("👂 Listening for system.halt signals...");
         while let Some(msg) = halt_sub.next().await {
             if let Ok(v) = serde_json::from_slice::<Value>(&msg.payload) {
                 let active = v.get("active").and_then(|b| b.as_bool()).unwrap_or(false);
-                let reason = v.get("reason").and_then(|s| s.as_str()).unwrap_or("Unknown");
+                let reason = v
+                    .get("reason")
+                    .and_then(|s| s.as_str())
+                    .unwrap_or("Unknown");
                 halt_state_clone.set_halt(active, reason);
             } else {
                 warn!("Received malformed system.halt payload");
@@ -100,10 +103,13 @@ pub async fn start_nats_engine(
     });
 
     // --- Get Positions Request-Reply Handler ---
-    let mut positions_sub = client.subscribe("titan.execution.get_positions.>").await.map_err(|e| {
-         error!("❌ Failed to subscribe to get_positions: {}", e);
-         e
-    })?;
+    let mut positions_sub = client
+        .subscribe("titan.execution.get_positions.>")
+        .await
+        .map_err(|e| {
+            error!("❌ Failed to subscribe to get_positions: {}", e);
+            e
+        })?;
     let router_for_query = router.clone();
     // Removed state_for_query (shadow_state) as we now go live
     let client_for_query = client.clone();
@@ -118,18 +124,18 @@ pub async fn start_nats_engine(
                 let exchange = parts.last().unwrap_or(&"unknown");
 
                 info!("🔍 Fetching LIVE positions for '{}'...", exchange);
-                
+
                 let positions_result = router_for_query.fetch_positions(exchange).await;
-                
+
                 let response = match positions_result {
                     Ok(positions) => {
-                         serde_json::json!({
+                        serde_json::json!({
                             "positions": positions
                         })
-                    },
+                    }
                     Err(e) => {
                         error!("❌ Failed to fetch positions from {}: {}", exchange, e);
-                         serde_json::json!({
+                        serde_json::json!({
                             "positions": [],
                             "error": e.to_string()
                         })
@@ -137,69 +143,81 @@ pub async fn start_nats_engine(
                 };
 
                 if let Ok(payload) = serde_json::to_vec(&response) {
-                    client_for_query.publish(reply_to, payload.into()).await.ok();
+                    client_for_query
+                        .publish(reply_to, payload.into())
+                        .await
+                        .ok();
                 }
             }
         }
     });
 
     // --- Get Balances Stub ---
-    let mut balances_sub = client.subscribe("titan.execution.get_balances.>").await.map_err(|e| {
-         error!("❌ Failed to subscribe to get_balances: {}", e);
-         e
-    })?;
+    let mut balances_sub = client
+        .subscribe("titan.execution.get_balances.>")
+        .await
+        .map_err(|e| {
+            error!("❌ Failed to subscribe to get_balances: {}", e);
+            e
+        })?;
     let client_for_balances = client.clone();
     let state_for_balances = shadow_state.clone();
-    
+
     tokio::spawn(async move {
         while let Some(msg) = balances_sub.next().await {
             if let Some(reply_to) = msg.reply {
-                 let (equity, cash) = {
-                     let state = state_for_balances.read();
-                     (state.get_equity(), state.get_cash_balance())
-                 };
+                let (equity, cash) = {
+                    let state = state_for_balances.read();
+                    (state.get_equity(), state.get_cash_balance())
+                };
 
-                 let response = serde_json::json!({
-                    "balances": [
-                        {
-                            "currency": "USDT",
-                            "available": cash,
-                            "locked": equity - cash,
-                            "total": equity,
-                            "updateTime": chrono::Utc::now().timestamp_millis()
-                        }
-                    ]
-                 });
-                 if let Ok(payload) = serde_json::to_vec(&response) {
-                    client_for_balances.publish(reply_to, payload.into()).await.ok();
+                let response = serde_json::json!({
+                   "balances": [
+                       {
+                           "currency": "USDT",
+                           "available": cash,
+                           "locked": equity - cash,
+                           "total": equity,
+                           "updateTime": chrono::Utc::now().timestamp_millis()
+                       }
+                   ]
+                });
+                if let Ok(payload) = serde_json::to_vec(&response) {
+                    client_for_balances
+                        .publish(reply_to, payload.into())
+                        .await
+                        .ok();
                 }
             }
         }
     });
 
     // --- Flatten Command Listener ---
-    let mut flatten_sub = client.subscribe("titan.cmd.risk.flatten").await.map_err(|e| {
-         error!("❌ Failed to subscribe to flatten: {}", e);
-         e
-    })?;
+    let mut flatten_sub = client
+        .subscribe("titan.cmd.risk.flatten")
+        .await
+        .map_err(|e| {
+            error!("❌ Failed to subscribe to flatten: {}", e);
+            e
+        })?;
     let state_for_flatten = shadow_state.clone();
     let router_flatten = router.clone();
     let ctx_flatten = ctx.clone();
-    
+
     tokio::spawn(async move {
         info!("👂 Listening for risk flatten commands...");
         while let Some(_msg) = flatten_sub.next().await {
             warn!("🚨 RECEIVED FLATTEN COMMAND - CLOSING ALL POSITIONS");
             let positions = state_for_flatten.read().get_all_positions();
-            
+
             for (symbol, pos) in positions {
                 let side_to_close = match pos.side {
                     crate::model::Side::Buy | crate::model::Side::Long => crate::model::Side::Sell,
                     crate::model::Side::Sell | crate::model::Side::Short => crate::model::Side::Buy,
                 };
-                
+
                 info!("🚨 Flattening {} ({:?} {})", symbol, pos.side, pos.size);
-                
+
                 // Create strict Market Order
                 let order_req = OrderRequest {
                     symbol: symbol.replace("/", ""),
@@ -211,8 +229,8 @@ pub async fn start_nats_engine(
                     client_order_id: format!("flatten-{}", ctx_flatten.id.new_id()),
                     reduce_only: true, // Important: Reduce Only to avoid flipping if async race
                 };
-                
-                // We mock an intent for the router (Router requires intent for logging/metadata usually? 
+
+                // We mock an intent for the router (Router requires intent for logging/metadata usually?
                 // Wait, router.execute takes &Intent and OrderRequest.
                 // We need a dummy intent.
                 let dummy_intent = crate::model::Intent {
@@ -267,12 +285,14 @@ pub async fn start_nats_engine(
     })?;
     let state_for_valuation = shadow_state.clone();
     let client_for_valuation = client.clone();
-    
+
     tokio::spawn(async move {
         while let Some(msg) = price_sub.next().await {
             // Subject: market.price.<symbol>
             // Payload: BookTicker (json)
-            if let Ok(ticker) = serde_json::from_slice::<crate::market_data::types::BookTicker>(&msg.payload) {
+            if let Ok(ticker) =
+                serde_json::from_slice::<crate::market_data::types::BookTicker>(&msg.payload)
+            {
                 let exposure = {
                     let mut state = state_for_valuation.write();
                     state.update_valuation(&ticker);
@@ -280,7 +300,10 @@ pub async fn start_nats_engine(
                 };
 
                 if let Ok(payload) = serde_json::to_vec(&exposure) {
-                    if let Err(e) = client_for_valuation.publish("exposure.update", payload.into()).await {
+                    if let Err(e) = client_for_valuation
+                        .publish("exposure.update", payload.into())
+                        .await
+                    {
                         error!("Failed to publish exposure update: {}", e);
                     }
                 }
@@ -289,12 +312,15 @@ pub async fn start_nats_engine(
     });
 
     // --- Risk Policy Update Listener ---
-    let mut policy_sub = client.subscribe("titan.cmd.risk.policy").await.map_err(|e| {
-         error!("❌ Failed to subscribe to risk policy updates: {}", e);
-         e
-    })?;
+    let mut policy_sub = client
+        .subscribe("titan.cmd.risk.policy")
+        .await
+        .map_err(|e| {
+            error!("❌ Failed to subscribe to risk policy updates: {}", e);
+            e
+        })?;
     let guard_for_policy = risk_guard.clone();
-    
+
     tokio::spawn(async move {
         info!("👂 Listening for risk policy updates...");
         while let Some(msg) = policy_sub.next().await {
@@ -302,7 +328,7 @@ pub async fn start_nats_engine(
                 Ok(new_policy) => {
                     info!("🛡️ RECV: New Risk Policy. Updating...");
                     guard_for_policy.update_policy(new_policy);
-                },
+                }
                 Err(e) => {
                     error!("❌ Failed to parse risk policy update: {}", e);
                 }
@@ -311,10 +337,13 @@ pub async fn start_nats_engine(
     });
 
     // --- System Heartbeat Listener ---
-    let mut limit_sub = client.subscribe("titan.evt.system.heartbeat").await.map_err(|e| {
-         error!("❌ Failed to subscribe to system.heartbeat: {}", e);
-         e
-    })?;
+    let mut limit_sub = client
+        .subscribe("titan.evt.system.heartbeat")
+        .await
+        .map_err(|e| {
+            error!("❌ Failed to subscribe to system.heartbeat: {}", e);
+            e
+        })?;
     let guard_for_heartbeat = risk_guard.clone();
 
     tokio::spawn(async move {
@@ -330,10 +359,13 @@ pub async fn start_nats_engine(
     });
 
     // --- Risk State Listener ---
-    let mut state_sub = client.subscribe("titan.evt.risk.state").await.map_err(|e| {
-         error!("❌ Failed to subscribe to risk state: {}", e);
-         e
-    })?;
+    let mut state_sub = client
+        .subscribe("titan.evt.risk.state")
+        .await
+        .map_err(|e| {
+            error!("❌ Failed to subscribe to risk state: {}", e);
+            e
+        })?;
     let guard_for_state = risk_guard.clone();
 
     tokio::spawn(async move {
@@ -342,7 +374,7 @@ pub async fn start_nats_engine(
             match serde_json::from_slice::<crate::risk_policy::RiskState>(&msg.payload) {
                 Ok(new_state) => {
                     guard_for_state.update_risk_state(new_state);
-                },
+                }
                 Err(e) => {
                     error!("❌ Failed to parse risk state update: {}", e);
                 }
@@ -350,32 +382,33 @@ pub async fn start_nats_engine(
         }
     });
 
-
-
     // --- JetStream Setup (Manifest 2.0) ---
     let jetstream = async_nats::jetstream::new(client.clone());
-    
+
     // 1. Ensure TITAN_CMD Stream (WorkQueue for Commands)
     let cmd_stream_name = "TITAN_CMD";
     let cmd_subjects = vec!["titan.cmd.>".to_string()];
-    
+
     let _cmd_stream = match jetstream.get_stream(cmd_stream_name).await {
         Ok(s) => s,
         Err(_) => {
             info!("Creating JetStream Stream: {} (WorkQueue)", cmd_stream_name);
-            match jetstream.create_stream(async_nats::jetstream::stream::Config {
-                name: cmd_stream_name.to_string(),
-                subjects: cmd_subjects,
-                storage: async_nats::jetstream::stream::StorageType::File,
-                retention: async_nats::jetstream::stream::RetentionPolicy::WorkQueue,
-                max_age: std::time::Duration::from_secs(7 * 24 * 60 * 60), // 7 Days
-                duplicate_window: std::time::Duration::from_secs(60),
-                ..Default::default()
-            }).await {
+            match jetstream
+                .create_stream(async_nats::jetstream::stream::Config {
+                    name: cmd_stream_name.to_string(),
+                    subjects: cmd_subjects,
+                    storage: async_nats::jetstream::stream::StorageType::File,
+                    retention: async_nats::jetstream::stream::RetentionPolicy::WorkQueue,
+                    max_age: std::time::Duration::from_secs(7 * 24 * 60 * 60), // 7 Days
+                    duplicate_window: std::time::Duration::from_secs(60),
+                    ..Default::default()
+                })
+                .await
+            {
                 Ok(s) => s,
                 Err(e) => {
                     error!("❌ Failed to create TITAN_CMD stream: {}", e);
-                    return Err(Box::new(e)); 
+                    return Err(Box::new(e));
                 }
             }
         }
@@ -384,24 +417,27 @@ pub async fn start_nats_engine(
     // 2. Ensure TITAN_EVT Stream (Interest for Events)
     let evt_stream_name = "TITAN_EVT";
     let evt_subjects = vec!["titan.evt.>".to_string()];
-    
+
     let _evt_stream = match jetstream.get_stream(evt_stream_name).await {
         Ok(s) => s,
         Err(_) => {
             info!("Creating JetStream Stream: {} (Interest)", evt_stream_name);
-            match jetstream.create_stream(async_nats::jetstream::stream::Config {
-                name: evt_stream_name.to_string(),
-                subjects: evt_subjects,
-                storage: async_nats::jetstream::stream::StorageType::File,
-                retention: async_nats::jetstream::stream::RetentionPolicy::Limits, // Interest-like behavior via Limits + Ack
-                max_age: std::time::Duration::from_secs(30 * 24 * 60 * 60), // 30 Days
-                max_bytes: 10 * 1024 * 1024 * 1024, // 10 GB
-                ..Default::default()
-            }).await {
+            match jetstream
+                .create_stream(async_nats::jetstream::stream::Config {
+                    name: evt_stream_name.to_string(),
+                    subjects: evt_subjects,
+                    storage: async_nats::jetstream::stream::StorageType::File,
+                    retention: async_nats::jetstream::stream::RetentionPolicy::Limits, // Interest-like behavior via Limits + Ack
+                    max_age: std::time::Duration::from_secs(30 * 24 * 60 * 60),        // 30 Days
+                    max_bytes: 10 * 1024 * 1024 * 1024,                                // 10 GB
+                    ..Default::default()
+                })
+                .await
+            {
                 Ok(s) => s,
                 Err(e) => {
                     error!("❌ Failed to create TITAN_EVT stream: {}", e);
-                    return Err(Box::new(e)); 
+                    return Err(Box::new(e));
                 }
             }
         }
@@ -416,32 +452,44 @@ pub async fn start_nats_engine(
     // Create Durable Consumer on TITAN_CMD
     let consumer_name = "EXECUTION_CORE";
     let intent_subject = "titan.cmd.exec.>";
-    
-    // We bind to the stream that captures the subject. 
-    // Since TITAN_CMD captures titan.cmd.>, we use that stream.
-    let consumer = _cmd_stream.create_consumer(async_nats::jetstream::consumer::pull::Config {
-        durable_name: Some(consumer_name.to_string()),
-        filter_subject: intent_subject.to_string(),
-        ack_policy: async_nats::jetstream::consumer::AckPolicy::Explicit,
-        ack_wait: std::time::Duration::from_secs(30),
-        max_deliver: 5,
-        ..Default::default()
-    }).await.map_err(|e| {
-        error!("❌ Failed to create JetStream consumer '{}': {}", consumer_name, e);
-        e
-    })?;
-    
-    info!("🚀 JetStream Consumer '{}' listening on '{}'", consumer_name, intent_subject);
 
+    // We bind to the stream that captures the subject.
+    // Since TITAN_CMD captures titan.cmd.>, we use that stream.
+    let consumer = _cmd_stream
+        .create_consumer(async_nats::jetstream::consumer::pull::Config {
+            durable_name: Some(consumer_name.to_string()),
+            filter_subject: intent_subject.to_string(),
+            ack_policy: async_nats::jetstream::consumer::AckPolicy::Explicit,
+            ack_wait: std::time::Duration::from_secs(30),
+            max_deliver: 5,
+            ..Default::default()
+        })
+        .await
+        .map_err(|e| {
+            error!(
+                "❌ Failed to create JetStream consumer '{}': {}",
+                consumer_name, e
+            );
+            e
+        })?;
+
+    info!(
+        "🚀 JetStream Consumer '{}' listening on '{}'",
+        consumer_name, intent_subject
+    );
 
     // Initialize HmacValidator once (reusable and thread-safe logic)
     let hmac_validator = crate::security::HmacValidator::new();
 
     // Pull messages
     let mut messages = consumer.messages().await.map_err(|e| {
-         error!("❌ Failed to get messages stream: {}", e);
-         e
+        error!("❌ Failed to get messages stream: {}", e);
+        e
     })?;
+
+    // Pre-clone for Risk Consumer (to avoid move into nats_handle)
+    let global_halt_risk = global_halt.clone();
+    let hmac_validator_risk = hmac_validator.clone();
 
     let nats_handle = tokio::spawn(async move {
         loop {
@@ -459,22 +507,22 @@ pub async fn start_nats_engine(
                             }
 
                              // --- PROCESS MESSAGE ---
-                             
+
                             // DUAL READ STRATEGY: Try Generic Value first to detect Envelope
                             let msg_payload_value: Option<serde_json::Value> = serde_json::from_slice(&msg.payload).ok();
 
                             // Instantiate validator ONCE per consumer is inefficient if inside loop, but here strictly it IS inside loop.
                             // Better: Move validator instantiation outside the loop (done in step 1 of plan, doing it now in code).
                             // Wait, I cannot move it outside the loop easily in this tool call because the start of loop is far above.
-                            // Actually, I can just create it here. The overhead of `HmacValidator::new()` is small (env var read). 
+                            // Actually, I can just create it here. The overhead of `HmacValidator::new()` is small (env var read).
                             // BUT env var read IS a syscall. I should ideally move it.
-                            // However, the `replace_file_content` range is limited. 
+                            // However, the `replace_file_content` range is limited.
                             // Let's first Replace this block to enforce strictness, AND use a lazy_static or just accept the env var read for now?
-                            // No, I can replace the whole loop structure if I match enough lines. 
+                            // No, I can replace the whole loop structure if I match enough lines.
                             // Or I can accept that I'm fixing the SECURITY hole first.
-                            
+
                             // Let's stick to fixing the logic first.
-                            
+
                             // 1. Attempt Deserialize Envelope
                             let (intent_result, envelope_correlation_id) = if let Some(value) = msg_payload_value {
                                 // Check if Envelope (has payload + sig/type)
@@ -489,12 +537,12 @@ pub async fn start_nats_engine(
                                             if let Err(e) = msg.ack().await { error!("Failed to ACK rejected intent: {}", e); }
                                             continue;
                                         }
-                                        
+
                                         // 3. Valid Envelope -> Extract Payload
                                         let payload_result = serde_json::to_vec(&envelope.payload)
                                             .map_err(|e| e.to_string())
                                             .and_then(|b| validate_intent_payload(&b));
-                                        
+
                                         (payload_result, envelope.correlation_id)
                                     } else {
                                         warn!("Received malformed/incompatible envelope");
@@ -544,7 +592,7 @@ pub async fn start_nats_engine(
                                         opentelemetry::Context::new()
                                     };
 
-                                    let span = tracing::info_span!("execute_intent", 
+                                    let span = tracing::info_span!("execute_intent",
                                         correlation_id = %correlation_id,
                                         signal_id = %intent.signal_id,
                                         symbol = %intent.symbol
@@ -558,7 +606,7 @@ pub async fn start_nats_engine(
                                         symbol = %intent.symbol,
                                         "Intent received"
                                     );
-                                    
+
                                     // ACK at end...
 
                                     // --- EXECUTION PIPELINE ---
@@ -640,7 +688,7 @@ pub async fn start_nats_engine(
 
                                                 }
                                             }
-        
+
                                             // 4. Fill Reports
                                             for (exchange_name, fill_report) in pipeline_result.fill_reports {
                                                 let subject = format!(
@@ -648,7 +696,7 @@ pub async fn start_nats_engine(
                                                     exchange_name,
                                                     fill_report.symbol.replace("/", "_")
                                                 );
-                                                
+
                                                 let envelope = serde_json::json!({
                                                     "id": ctx_nats.id.new_id(),
                                                     "type": "titan.event.execution.fill.v1",
@@ -673,16 +721,16 @@ pub async fn start_nats_engine(
                                         }
                                         Err(reason) => {
                                             error!(
-                                                correlation_id = %correlation_id, 
-                                                signal_id = %intent.signal_id, 
-                                                "Pipeline Failure: {}", 
+                                                correlation_id = %correlation_id,
+                                                signal_id = %intent.signal_id,
+                                                "Pipeline Failure: {}",
                                                 reason
                                             );
                                             // We publish DLQ inside pipeline? No, inside here.
                                             // But risk rejection was inside pipeline which returned Err.
                                             // And Latency checks too.
                                             publish_dlq(&client_clone, &msg.payload, &reason, &ctx_nats).await;
-                                            
+
                                             // Must ACK to prevent redelivery loop if it's a permanent failure
                                             // Logic assumption: If pipeline returned Err, it's rejected/dropped suitable for DLQ.
                                             if let Err(e) = msg.ack().await {
@@ -696,7 +744,7 @@ pub async fn start_nats_engine(
                                     error!("Failed to validate intent: {}", e);
                                     metrics::inc_invalid_intents();
                                     publish_dlq(&client_clone, &msg.payload, &format!("Invalid intent: {}", e), &ctx_nats).await;
-                                    msg.ack().await.ok(); 
+                                    msg.ack().await.ok();
                                 }
                             }
                         },
@@ -713,15 +761,90 @@ pub async fn start_nats_engine(
         }
     });
 
+    // --- Risk Command Consumer (JetStream) ---
+    // Separate consumer for Risk Commands (Halt, Override)
+    let risk_consumer_name = "RISK_ENFORCER";
+    let risk_subject = "titan.cmd.risk.>";
+
+    let risk_consumer = _cmd_stream
+        .create_consumer(async_nats::jetstream::consumer::pull::Config {
+            durable_name: Some(risk_consumer_name.to_string()),
+            filter_subject: risk_subject.to_string(),
+            ack_policy: async_nats::jetstream::consumer::AckPolicy::Explicit,
+            ack_wait: std::time::Duration::from_secs(30),
+            max_deliver: 5,
+            ..Default::default()
+        })
+        .await
+        .map_err(|e| {
+            error!(
+                "❌ Failed to create JetStream consumer '{}': {}",
+                risk_consumer_name, e
+            );
+            e
+        })?;
+    
+    let global_halt_for_risk = global_halt_risk; // Move into this task
+    let hmac_validator_risk_consumer = hmac_validator_risk;
+
+    let mut risk_messages = risk_consumer.messages().await.map_err(|e| e)?;
+    
+    tokio::spawn(async move {
+        info!("👮 Risk Enforcer listening on '{}'", risk_subject);
+        while let Some(msg_result) = risk_messages.next().await {
+            if let Ok(msg) = msg_result {
+                // Parse Payload directly
+                 if let Ok(value) = serde_json::from_slice::<serde_json::Value>(&msg.payload) {
+                    
+                    // 1. Validate Signature
+                    if let Err(e) = hmac_validator_risk_consumer.validate_risk_command(&value) {
+                         error!("⛔ REJECTED Risk Command (Signature Verify Failed): {}", e);
+                         // ACK to drain bad commands
+                         msg.ack().await.ok();
+                         continue;
+                    }
+
+                    // 2. Action Dispatch
+                    let action = value.get("action").and_then(|s| s.as_str()).unwrap_or("UNKNOWN");
+                    let actor_id = value.get("actor_id").and_then(|s| s.as_str()).unwrap_or("sys");
+                    let reason = value.get("reason").and_then(|s| s.as_str()).unwrap_or("No reason");
+
+                    match action {
+                        "HALT" => {
+                            warn!("🚨 SOVEREIGN HALT RECEIVED from {} Reason: {}", actor_id, reason);
+                            global_halt_for_risk.set_halt(true, reason);
+                        },
+                        "OVERRIDE_ALLOCATION" => {
+                            info!("⚠️ Manual Override Received (TODO: Implement Logic)");
+                            // TODO: inject into RiskGuard or ShadowState
+                        },
+                        _ => {
+                            warn!("Unknown Risk Action: {}", action);
+                        }
+                    }
+
+                    // 3. ACK
+                     msg.ack().await.ok();
+
+                 } else {
+                     error!("Malformed Risk Command JSON");
+                     msg.ack().await.ok();
+                 }
+            }
+        }
+    });
+
     Ok(nats_handle)
 }
 
-
-
-async fn publish_dlq(client: &async_nats::Client, payload: &[u8], reason: &str, ctx: &ExecutionContext) {
-    let parsed_payload = serde_json::from_slice::<Value>(payload).unwrap_or_else(|_| {
-        Value::String(String::from_utf8_lossy(payload).to_string())
-    });
+async fn publish_dlq(
+    client: &async_nats::Client,
+    payload: &[u8],
+    reason: &str,
+    ctx: &ExecutionContext,
+) {
+    let parsed_payload = serde_json::from_slice::<Value>(payload)
+        .unwrap_or_else(|_| Value::String(String::from_utf8_lossy(payload).to_string()));
 
     let dlq_payload = serde_json::json!({
         "reason": reason,
@@ -730,11 +853,10 @@ async fn publish_dlq(client: &async_nats::Client, payload: &[u8], reason: &str, 
     });
 
     if let Ok(bytes) = serde_json::to_vec(&dlq_payload) {
-        let _ = client.publish("titan.dlq.execution.core", bytes.clone().into()).await;
+        let _ = client
+            .publish("titan.dlq.execution.core", bytes.clone().into())
+            .await;
         let _ = client.publish("titan.execution.dlq", bytes.into()).await;
         metrics::inc_dlq_published();
     }
 }
-
-
-

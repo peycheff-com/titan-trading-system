@@ -206,9 +206,13 @@ src/
 ├── engine/              # Core logic engines
 │   ├── FractalMath.ts      # Pure fractal calculations
 │   ├── HologramEngine.ts   # Multi-timeframe state machine
+│   ├── HologramScanner.ts  # Symbol scanning logic
 │   ├── SessionProfiler.ts  # Time-based logic
 │   ├── InefficiencyMapper.ts # POI detection
-│   └── CVDValidator.ts     # Order flow confirmation
+│   ├── CVDValidator.ts     # Order flow confirmation
+│   ├── ScoringEngine.ts    # Confluence scoring
+│   ├── SignalValidator.ts  # Signal quality gates
+│   └── ConvictionSizingEngine.ts # Position sizing logic
 ├── exchanges/           # Exchange clients
 │   ├── BinanceSpotClient.ts # CVD data source
 │   └── BybitPerpsClient.ts  # Execution target

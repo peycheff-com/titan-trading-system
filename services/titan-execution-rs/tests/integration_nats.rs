@@ -1,30 +1,31 @@
-use titan_execution_rs::nats_engine;
-use titan_execution_rs::context::ExecutionContext;
-use titan_execution_rs::shadow_state::ShadowState;
-use titan_execution_rs::order_manager::OrderManager;
-use titan_execution_rs::market_data::engine::MarketDataEngine;
-use titan_execution_rs::circuit_breaker::GlobalHalt;
-use titan_execution_rs::exchange::router::ExecutionRouter;
-use titan_execution_rs::exchange::adapter::{ExchangeAdapter, ExchangeError, OrderRequest, OrderResponse};
-use titan_execution_rs::model::Position;
 use async_trait::async_trait;
-use titan_execution_rs::simulation_engine::SimulationEngine;
-use std::sync::Arc;
-use parking_lot::RwLock;
 use chrono::Utc;
-use std::time::Duration;
 use futures::StreamExt;
+use hex;
+use hmac::{Hmac, Mac};
+use parking_lot::RwLock;
 use serde_json::Value;
+use sha2::Sha256;
+use std::sync::Arc;
+use std::time::Duration;
+use titan_execution_rs::circuit_breaker::GlobalHalt;
+use titan_execution_rs::context::ExecutionContext;
+use titan_execution_rs::drift_detector::DriftDetector;
+use titan_execution_rs::exchange::adapter::{
+    ExchangeAdapter, ExchangeError, OrderRequest, OrderResponse,
+};
+use titan_execution_rs::exchange::router::ExecutionRouter;
+use titan_execution_rs::market_data::engine::MarketDataEngine;
+use titan_execution_rs::model::Position;
+use titan_execution_rs::nats_engine;
+use titan_execution_rs::order_manager::OrderManager;
+use titan_execution_rs::persistence::redb_store::RedbStore;
+use titan_execution_rs::persistence::store::PersistenceStore;
+use titan_execution_rs::persistence::wal::WalManager;
 use titan_execution_rs::risk_guard::RiskGuard;
 use titan_execution_rs::risk_policy::RiskPolicy;
-use titan_execution_rs::persistence::store::PersistenceStore;
-use titan_execution_rs::persistence::redb_store::RedbStore;
-use titan_execution_rs::persistence::wal::WalManager;
-use titan_execution_rs::drift_detector::DriftDetector;
-use hmac::{Hmac, Mac};
-use sha2::Sha256;
-use hex;
-
+use titan_execution_rs::shadow_state::ShadowState;
+use titan_execution_rs::simulation_engine::SimulationEngine;
 
 fn create_test_persistence() -> (Arc<PersistenceStore>, String) {
     let path = format!("/tmp/test_nats_db_{}.redb", uuid::Uuid::new_v4());
@@ -48,7 +49,11 @@ async fn test_full_execution_flow() {
     let halt = Arc::new(GlobalHalt::new());
     let (persistence, _db_path) = create_test_persistence();
     let ctx = Arc::new(ExecutionContext::new_system());
-    let shadow_state = Arc::new(RwLock::new(ShadowState::new(persistence, ctx.clone(), Some(10000.0))));
+    let shadow_state = Arc::new(RwLock::new(ShadowState::new(
+        persistence,
+        ctx.clone(),
+        Some(10000.0),
+    )));
     // Risk Guard
     let risk_policy = RiskPolicy::default(); // Assumes Default impl or I need to construct one
     let risk_guard = Arc::new(RiskGuard::new(risk_policy, shadow_state.clone()));
@@ -77,7 +82,11 @@ async fn test_full_execution_flow() {
             })
         }
 
-        async fn cancel_order(&self, _symbol: &str, _order_id: &str) -> Result<OrderResponse, ExchangeError> {
+        async fn cancel_order(
+            &self,
+            _symbol: &str,
+            _order_id: &str,
+        ) -> Result<OrderResponse, ExchangeError> {
             Err(ExchangeError::Api("not implemented".to_string()))
         }
 
@@ -96,14 +105,17 @@ async fn test_full_execution_flow() {
 
     router.register("binance", Arc::new(MockAdapter));
     let sim_engine = Arc::new(SimulationEngine::new(market_data.clone(), ctx.clone()));
-    
+
     // Config: Chase orders for 5s
     let order_manager = OrderManager::new(None, market_data.clone(), halt.clone());
 
     // 2. NATS Connection (Assumes running NATS on localhost)
-    let nats_url = std::env::var("NATS_URL").unwrap_or_else(|_| "nats://localhost:4222".to_string());
-    let client = async_nats::connect(&nats_url).await.expect("Failed to connect to NATS");
-    
+    let nats_url =
+        std::env::var("NATS_URL").unwrap_or_else(|_| "nats://localhost:4222".to_string());
+    let client = async_nats::connect(&nats_url)
+        .await
+        .expect("Failed to connect to NATS");
+
     // 3. Start Engine
     let drift_detector = Arc::new(DriftDetector::new(50.0, 1000, 100.0));
 
@@ -118,7 +130,9 @@ async fn test_full_execution_flow() {
         ctx.clone(),
         5000, // freshness threshold
         drift_detector,
-    ).await.expect("Failed to start engine");
+    )
+    .await
+    .expect("Failed to start engine");
 
     // 4. Test Subscription (Listen for Fills + DLQ)
     let mut fills_sub = client
@@ -147,12 +161,12 @@ async fn test_full_execution_flow() {
         "exchange": "binance",
         "position_mode": "one_way"
     });
-    
+
     let ts = Utc::now().timestamp_millis();
     let nonce = uuid::Uuid::new_v4().to_string();
     let payload_str = serde_json::to_string(&intent_payload).unwrap();
     let canonical = format!("{}.{}.{}", ts, nonce, payload_str);
-    
+
     type HmacSha256 = Hmac<Sha256>;
     let mut mac = HmacSha256::new_from_slice(b"test-secret-123").unwrap();
     mac.update(canonical.as_bytes());
@@ -168,20 +182,20 @@ async fn test_full_execution_flow() {
         "payload": intent_payload,
         "correlation_id": format!("corr-{}", uuid::Uuid::new_v4())
     });
-    
+
     let payload = serde_json::to_vec(&envelope).unwrap();
-    let intent_subject = format!(
-        "titan.cmd.exec.place.v1.binance.main.{}",
-        symbol_token
-    );
-    client.publish(intent_subject, payload.into()).await.unwrap();
-    
+    let intent_subject = format!("titan.cmd.exec.place.v1.binance.main.{}", symbol_token);
+    client
+        .publish(intent_subject, payload.into())
+        .await
+        .unwrap();
+
     // 6. Assert Fill Received (Timeout 5s)
     let timeout = tokio::time::sleep(Duration::from_secs(5));
     tokio::pin!(timeout);
 
     let mut fill_received = false;
-    
+
     loop {
         tokio::select! {
             Some(msg) = fills_sub.next() => {
@@ -191,7 +205,7 @@ async fn test_full_execution_flow() {
                 let signal_check = data.get("payload")
                     .and_then(|p| p.get("signal_id"))
                     .or_else(|| data.get("signal_id"));
-                
+
                 if let Some(id_val) = signal_check {
                     if id_val == &signal_id {
                         println!("✅ Verified Fill: {:?}", data);

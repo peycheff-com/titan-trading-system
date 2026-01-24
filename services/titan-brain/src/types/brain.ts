@@ -3,11 +3,11 @@
  * Defines types for the main orchestrator
  */
 
-import { AllocationVector } from './allocation.js';
-import { PhaseId, PhasePerformance } from './performance.js';
-import { IntentSignal, RiskDecision, RiskMetrics } from './risk.js';
-import { TreasuryStatus } from './capital.js';
-import { BreakerStatus } from './breaker.js';
+import { AllocationVector } from "./allocation.js";
+import { PhaseId, PhasePerformance } from "./performance.js";
+import { IntentSignal, RiskDecision, RiskMetrics } from "./risk.js";
+import { TreasuryStatus } from "./capital.js";
+import { BreakerStatus } from "./breaker.js";
 
 /**
  * Brain decision result
@@ -85,6 +85,17 @@ export interface DashboardData {
   } | null;
   /** Warning banner active flag */
   warningBannerActive?: boolean;
+  /** AI / Self-Awareness State */
+  aiState?: {
+    cortisol: number; // 0.0 - 1.0 (Surprise/Stress)
+    regime: string; // Current active inference regime
+    lastOptimizationProposal?: {
+      timestamp: number;
+      proposal: any;
+    };
+  };
+  /** Single Source of Truth Confidence Score (0.0 - 1.0) */
+  truthConfidence?: number;
 }
 
 /**

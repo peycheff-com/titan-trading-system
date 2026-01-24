@@ -7,22 +7,27 @@
 /**
  * Position type classification
  */
-export type PositionType = 'CORE' | 'SATELLITE' | 'VACUUM';
+export type PositionType = "CORE" | "SATELLITE" | "VACUUM";
 
 /**
  * Risk status levels
  */
-export type RiskStatusLevel = 'HEALTHY' | 'WARNING' | 'CRITICAL';
+export type RiskStatusLevel = "HEALTHY" | "WARNING" | "CRITICAL";
 
 /**
  * Trade type classification
  */
-export type TradeType = 'BASIS_SCALP' | 'VACUUM_ARB' | 'REBALANCE';
+export type TradeType = "BASIS_SCALP" | "VACUUM_ARB" | "REBALANCE";
 
 /**
  * Rebalance action type
  */
-export type RebalanceAction = 'TIER1' | 'TIER2' | 'COMPOUND' | 'NONE';
+export type RebalanceAction =
+  | "TIER1"
+  | "TIER2"
+  | "COMPOUND"
+  | "HARD_COMPOUND"
+  | "NONE";
 
 /**
  * Portfolio position

@@ -4,10 +4,10 @@ use actix_web::{
 };
 use futures::future::{ok, Ready};
 use futures::Future;
+use std::env;
 use std::pin::Pin;
 use std::rc::Rc;
 use std::task::{Context, Poll};
-use std::env;
 
 pub struct AuthMiddleware;
 
@@ -53,27 +53,32 @@ where
 
         Box::pin(async move {
             // SCENARIO 1: Skip auth for OPTIONS (CORS preflight) and /metrics
-            if req.method() == actix_web::http::Method::OPTIONS || req.path() == "/metrics" || req.path() == "/health" {
+            if req.method() == actix_web::http::Method::OPTIONS
+                || req.path() == "/metrics"
+                || req.path() == "/health"
+            {
                 return srv.call(req).await;
             }
 
             // SCENARIO 2: Check API Key
             let api_key_env = env::var("TITAN_EXECUTION_API_KEY").unwrap_or_default();
-            
+
             // If explicit "OPEN_ACCESS" is set (dev mode only), or if key provided matches
             // Ideally we fail-closed if key is not set in env.
-            
+
             // Allow if env var is empty? NO. Should be secure by default.
             if api_key_env.is_empty() {
-                 // Log warning?
-                 // For safety, if no key configured, reject everything except health/metrics
-                 return Err(actix_web::error::ErrorUnauthorized("API Key not configured on server"));
+                // Log warning?
+                // For safety, if no key configured, reject everything except health/metrics
+                return Err(actix_web::error::ErrorUnauthorized(
+                    "API Key not configured on server",
+                ));
             }
 
             if let Some(header) = req.headers().get("x-api-key") {
                 if let Ok(key_str) = header.to_str() {
                     if key_str == api_key_env {
-                         return srv.call(req).await;
+                        return srv.call(req).await;
                     }
                 }
             }

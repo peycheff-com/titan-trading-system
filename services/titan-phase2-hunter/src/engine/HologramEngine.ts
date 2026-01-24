@@ -264,6 +264,9 @@ export class HologramEngine extends EventEmitter {
             : daily.trend === "BEAR"
             ? "SHORT"
             : null),
+        enhancedScore: scoring.adjustedScore,
+        convictionLevel,
+        enhancementsActive,
       };
 
       // Validate the final state (as it contains all HologramState fields)

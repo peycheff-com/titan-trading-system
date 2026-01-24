@@ -29,7 +29,7 @@ import { BybitPerpsClient } from "./exchanges/BybitPerpsClient";
 import { BinanceSpotClient } from "./exchanges/BinanceSpotClient";
 import { startHunterApp } from "./console/HunterApp";
 import { hunterEvents } from "./events";
-import { POI, SessionState, SignalData } from "./types";
+import { HologramState, POI, SessionState, SignalData } from "./types";
 import { getLogger, logError } from "./logging/Logger";
 import {
   getNatsClient,
@@ -354,7 +354,7 @@ class HunterApplication {
           // Dynamic Sizing: Set base position size to 10% of allocated equity
           // This ensures we scale with the budget provided by the Brain
           const newBaseSize = payload.allocatedEquity * 0.1;
-          this.configManager.updateConfig({ basePositionSize: newBaseSize });
+          this.configManager.updateConfig({ maxPositionSize: newBaseSize });
         }
       });
 
@@ -411,11 +411,9 @@ class HunterApplication {
 
       // Count alignment types
       // Mapping: A+ -> A+, A -> A (new), B -> B, C -> C (new), VETO -> VETO (was CONFLICT/NO_PLAY)
-      const aPlus = result.top20.filter((h) => h.alignment === "A+").length;
-      const b = result.top20.filter((h) => h.alignment === "B").length;
-      const conflicts = result.top20.filter((h) =>
-        h.alignment === "VETO"
-      ).length;
+      const aPlus = result.top20.filter((h) => h.status === "A+").length;
+      const b = result.top20.filter((h) => h.status === "B").length;
+      const conflicts = result.top20.filter((h) => h.status === "VETO").length;
 
       // Emit scan complete event
       hunterEvents.emitScanComplete(
@@ -508,13 +506,6 @@ class HunterApplication {
 
       for (const hologram of topSymbols) {
         try {
-          if (!hologram.classicState) {
-            this.logEvent(
-              "WARN",
-              `Skipping POI detection for ${hologram.symbol} - no classic state`,
-            );
-            continue;
-          }
           // Fetch recent candles for POI detection
           const candles = await this.bybitClient.fetchOHLCV(
             hologram.symbol,
@@ -529,14 +520,14 @@ class HunterApplication {
           // Detect Order Blocks
           const orderBlocks = this.inefficiencyMapper.detectOrderBlock(
             candles,
-            hologram.classicState.m15.bos,
+            hologram.m15.bos,
           );
           newPOIs.push(...orderBlocks);
 
           // Detect Liquidity Pools
           const liquidityPools = this.inefficiencyMapper.detectLiquidityPools(
             candles,
-            hologram.classicState.m15.fractals,
+            hologram.m15.fractals,
           );
           newPOIs.push(...liquidityPools);
         } catch (error) {

@@ -1,33 +1,33 @@
-use tracing::{info, error, Level};
+use tracing::{error, info, Level};
 mod auth_middleware;
+use actix_web::{web, App, HttpServer};
+use actix_web_prom::PrometheusMetricsBuilder;
 use auth_middleware::AuthMiddleware;
-use tracing_subscriber::FmtSubscriber;
+use parking_lot::RwLock;
 use std::env;
 use std::fs;
 use std::sync::Arc;
-use parking_lot::RwLock;
-use actix_web::{web, App, HttpServer};
-use titan_execution_rs::shadow_state::ShadowState;
-use titan_execution_rs::persistence::store::PersistenceStore;
-use titan_execution_rs::persistence::redb_store::RedbStore;
-use titan_execution_rs::persistence::wal::WalManager;
 use titan_execution_rs::api;
-use titan_execution_rs::order_manager::OrderManager;
+use titan_execution_rs::circuit_breaker::GlobalHalt;
+use titan_execution_rs::context::ExecutionContext;
+use titan_execution_rs::drift_detector::DriftDetector;
 use titan_execution_rs::exchange::adapter::ExchangeAdapter;
 use titan_execution_rs::exchange::binance::BinanceAdapter;
 use titan_execution_rs::exchange::bybit::BybitAdapter;
 use titan_execution_rs::exchange::mexc::MexcAdapter;
 use titan_execution_rs::exchange::router::ExecutionRouter;
 use titan_execution_rs::market_data::engine::MarketDataEngine;
-use titan_execution_rs::simulation_engine::SimulationEngine;
-use titan_execution_rs::circuit_breaker::GlobalHalt;
 use titan_execution_rs::nats_engine;
-use titan_execution_rs::risk_policy::RiskPolicy;
+use titan_execution_rs::order_manager::OrderManager;
+use titan_execution_rs::persistence::redb_store::RedbStore;
+use titan_execution_rs::persistence::store::PersistenceStore;
+use titan_execution_rs::persistence::wal::WalManager;
 use titan_execution_rs::risk_guard::RiskGuard;
-use titan_execution_rs::context::ExecutionContext;
-use actix_web_prom::PrometheusMetricsBuilder;
-use titan_execution_rs::drift_detector::DriftDetector;
+use titan_execution_rs::risk_policy::RiskPolicy;
+use titan_execution_rs::shadow_state::ShadowState;
+use titan_execution_rs::simulation_engine::SimulationEngine;
 use titan_execution_rs::sre::SreMonitor;
+use tracing_subscriber::FmtSubscriber;
 
 fn load_secrets_from_files() {
     const FILE_SUFFIX: &str = "_FILE";
@@ -64,8 +64,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // --- Observability Setup (Phase 4) ---
     // Initialize OpenTelemetry
     use opentelemetry::{global, KeyValue};
-    use opentelemetry_sdk::{trace as sdktrace, Resource};
     use opentelemetry_otlp::WithExportConfig;
+    use opentelemetry_sdk::{trace as sdktrace, Resource};
     use tracing_subscriber::layer::SubscriberExt;
     use tracing_subscriber::Registry;
 
@@ -76,12 +76,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .tonic()
                 .with_endpoint("http://tempo:4317"), // Assuming tempo is resolvable
         )
-        .with_trace_config(
-            sdktrace::config().with_resource(Resource::new(vec![
-                KeyValue::new("service.name", "titan-execution-rs"),
-                KeyValue::new("service.version", "0.1.0"),
-            ])),
-        )
+        .with_trace_config(sdktrace::config().with_resource(Resource::new(vec![
+            KeyValue::new("service.name", "titan-execution-rs"),
+            KeyValue::new("service.version", "0.1.0"),
+        ])))
         .install_batch(opentelemetry_sdk::runtime::Tokio)
         .expect("OTel pipeline install failed");
 
@@ -89,9 +87,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
 
     // Stdout JSON Layer
-    let fmt_layer = tracing_subscriber::fmt::layer()
-        .json()
-        .with_target(false);
+    let fmt_layer = tracing_subscriber::fmt::layer().json().with_target(false);
 
     // Registry combines both layers
     let subscriber = Registry::default()
@@ -99,8 +95,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .with(fmt_layer)
         .with(telemetry);
 
-    tracing::subscriber::set_global_default(subscriber)
-        .expect("setting default subscriber failed");
+    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
     info!("╔═══════════════════════════════════════════════════════════════╗");
     info!("║               TITAN EXECUTION RS - Phase 2                    ║");
@@ -126,37 +121,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         Ok(c) => {
             info!("✅ Connected to NATS");
             c
-        },
+        }
         Err(e) => {
             error!("❌ Failed to connect to NATS: {}", e);
             std::process::exit(1);
         }
     };
 
-
-
     // Initialize Execution Context (System/Live)
     let ctx = Arc::new(ExecutionContext::new_system());
 
     // Initialize JetStream
     let jetstream = async_nats::jetstream::new(nats_client.clone());
-    
+
     // Ensure Stream Exists
     let stream_name = "TITAN_EXECUTION";
     let subjects = vec!["titan.execution.>".to_string()];
-    
+
     let _stream = match jetstream.get_stream(stream_name).await {
         Ok(s) => s,
         Err(_) => {
             info!("Creating JetStream Stream: {}", stream_name);
-            match jetstream.create_stream(async_nats::jetstream::stream::Config {
-                name: stream_name.to_string(),
-                subjects,
-                storage: async_nats::jetstream::stream::StorageType::File,
-                max_age: std::time::Duration::from_secs(86400), // 24 hours
-                max_bytes: 1024 * 1024 * 1024, // 1GB
-                ..Default::default()
-            }).await {
+            match jetstream
+                .create_stream(async_nats::jetstream::stream::Config {
+                    name: stream_name.to_string(),
+                    subjects,
+                    storage: async_nats::jetstream::stream::StorageType::File,
+                    max_age: std::time::Duration::from_secs(86400), // 24 hours
+                    max_bytes: 1024 * 1024 * 1024,                  // 1GB
+                    ..Default::default()
+                })
+                .await
+            {
                 Ok(s) => s,
                 Err(e) => {
                     error!("❌ Failed to create JetStream stream: {}", e);
@@ -173,7 +169,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     // Initialize Core Components
     // Initialize Persistence (Redb)
-    let persistence_path = env::var("PERSISTENCE_PATH").unwrap_or_else(|_| "titan_execution.redb".to_string());
+    let persistence_path =
+        env::var("PERSISTENCE_PATH").unwrap_or_else(|_| "titan_execution.redb".to_string());
     let redb = Arc::new(RedbStore::new(&persistence_path).expect("Failed to create RedbStore"));
     let wal = Arc::new(WalManager::new(redb.clone()));
     let persistence = Arc::new(PersistenceStore::new(redb, wal));
@@ -182,8 +179,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Pass persistence to ShadowState
     let execution_config = settings.execution.clone().unwrap_or_default();
     let initial_balance = execution_config.initial_balance;
-    
-    let shadow_state = Arc::new(RwLock::new(ShadowState::new(persistence, ctx.clone(), initial_balance)));
+
+    let shadow_state = Arc::new(RwLock::new(ShadowState::new(
+        persistence,
+        ctx.clone(),
+        initial_balance,
+    )));
 
     // Initialize Market Data Engine (Truth Layer) - Moved up for dependency injection
     let market_data_engine = Arc::new(MarketDataEngine::new(Some(nats_client.clone())));
@@ -221,12 +222,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     info!("✅ Core components initialized");
 
-
-
     // Initialize Simulation Engine (Shadow Layer)
-    let simulation_engine = Arc::new(SimulationEngine::new(market_data_engine.clone(), ctx.clone()));
-
-
+    let simulation_engine = Arc::new(SimulationEngine::new(
+        market_data_engine.clone(),
+        ctx.clone(),
+    ));
 
     // Initialize Execution Router (with routing config if present)
     let routing = settings
@@ -235,7 +235,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .and_then(|e| e.routing.clone())
         .unwrap_or_default();
     let router = Arc::new(ExecutionRouter::with_routing(routing));
-    
+
     // 1. Binance
     let binance_config = exchanges.and_then(|e| e.binance.as_ref());
     if binance_config.map(|c| c.enabled).unwrap_or(false) {
@@ -302,7 +302,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         ctx.clone(),
         execution_config.freshness_threshold_ms.unwrap_or(5000),
         drift_detector.clone(),
-    ).await?;
+    )
+    .await?;
 
     // --- API Server Task ---
     let api_port = env::var("PORT").unwrap_or_else(|_| "3002".to_string());
@@ -310,7 +311,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     info!("🚀 Starting API Server on {}", bind_address);
 
     let state_for_api = shadow_state.clone();
-    
+
     HttpServer::new(move || {
         let cors = actix_cors::Cors::default()
             .allow_any_origin()

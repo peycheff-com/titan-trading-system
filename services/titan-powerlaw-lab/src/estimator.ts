@@ -40,14 +40,14 @@ export class PowerLawEstimator {
     try {
       await this.loadState();
 
-      // eslint-disable-next-line functional/immutable-data
+       
       this.nats = await connect({ servers: this.natsUrl });
-      // eslint-disable-next-line functional/immutable-data
+       
       this.js = this.nats.jetstream();
       console.log(`Connected to NATS at ${this.natsUrl}`);
 
       // Start periodic persistence (every 60s)
-      // eslint-disable-next-line functional/immutable-data
+       
       this.saveInterval = setInterval(() => this.saveState(), 60000);
 
       // Handle process termination to save state
@@ -66,7 +66,7 @@ export class PowerLawEstimator {
   async stop() {
     if (this.saveInterval) {
       clearInterval(this.saveInterval);
-      // eslint-disable-next-line functional/immutable-data
+       
       this.saveInterval = null;
     }
     await this.saveState();
@@ -88,9 +88,9 @@ export class PowerLawEstimator {
 
     // Calculate returns: r_t = ln(p_t / p_{t-1})
     const returns: number[] = [];
-    // eslint-disable-next-line functional/no-let
+     
     for (let i = 1; i < history.length; i++) {
-      // eslint-disable-next-line functional/immutable-data
+       
       returns.push(Math.log(history[i] / history[i - 1]));
     }
 
@@ -120,14 +120,14 @@ export class PowerLawEstimator {
 
   private updateHistory(symbol: string, price: number) {
     if (!this.histories.has(symbol)) {
-      // eslint-disable-next-line functional/immutable-data
+       
       this.histories.set(symbol, []);
     }
     const arr = this.histories.get(symbol)!;
-    // eslint-disable-next-line functional/immutable-data
+     
     arr.push(price);
     if (arr.length > 1000) {
-      // eslint-disable-next-line functional/immutable-data
+       
       arr.shift(); // Keep last 1000 points
     }
   }
@@ -151,7 +151,7 @@ export class PowerLawEstimator {
     try {
       const data: Record<string, number[]> = {};
       for (const [symbol, history] of this.histories.entries()) {
-        // eslint-disable-next-line functional/immutable-data
+         
         data[symbol] = history;
       }
       const filePath = path.join(this.DATA_DIR, this.STATE_FILE);
@@ -180,11 +180,11 @@ export class PowerLawEstimator {
       const content = await fs.readFile(filePath, 'utf-8');
       const data = JSON.parse(content) as Record<string, number[]>;
 
-      // eslint-disable-next-line functional/no-let
+       
       let loadedSymbols = 0;
       for (const [symbol, history] of Object.entries(data)) {
         if (Array.isArray(history)) {
-          // eslint-disable-next-line functional/immutable-data
+           
           this.histories.set(symbol, history);
           loadedSymbols++;
         }

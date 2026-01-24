@@ -1,0 +1,16 @@
+{
+  "port": 3100,
+  "logLevel": "info",
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "name": "titan_brain",
+    "user": "postgres",
+    "password": "postgres",
+    "ssl": false
+  },
+  "redis": {
+    "url": "redis://localhost:6379",
+    "keyPrefix": "titan-brain:"
+  }
+}

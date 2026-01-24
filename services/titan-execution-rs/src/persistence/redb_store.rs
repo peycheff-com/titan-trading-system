@@ -1,5 +1,4 @@
 use redb::{Database, ReadableTable, TableDefinition}; // Ensure TableDefinition and ReadableTable are imported
-use tracing::warn;
 
 const IDEMPOTENCY_TABLE: TableDefinition<&str, i64> = TableDefinition::new("idempotency_keys");
 

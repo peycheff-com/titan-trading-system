@@ -1,22 +1,24 @@
-use async_trait::async_trait;
-use crate::market_data::connector::{MarketDataConnector, MarketDataError, Subscription, StreamType};
+use crate::market_data::bybit::message::{BybitOrderBook, BybitTrade, BybitWsMessage};
+use crate::market_data::connector::{
+    MarketDataConnector, MarketDataError, StreamType, Subscription,
+};
 use crate::market_data::model::MarketDataEvent;
-use crate::market_data::bybit::message::{BybitWsMessage, BybitTrade, BybitOrderBook};
+use async_trait::async_trait;
+use chrono::Utc;
+use futures::{SinkExt, StreamExt};
+use serde_json::json;
+use std::collections::HashSet;
 use tokio::sync::mpsc;
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
-use futures::{StreamExt, SinkExt};
+use tracing::{error, info, warn};
 use url::Url;
-use tracing::{info, warn, error};
-use std::collections::HashSet;
-use serde_json::json;
-use chrono::Utc;
 
 const BYBIT_WS_URL: &str = "wss://stream.bybit.com/v5/public/linear";
 
 pub struct BybitConnector {
     event_tx: mpsc::Sender<MarketDataEvent>,
     event_rx: Option<mpsc::Receiver<MarketDataEvent>>, // Taken on start
-    write_tx: Option<mpsc::Sender<Message>>, // For sending commands
+    write_tx: Option<mpsc::Sender<Message>>,           // For sending commands
     subscriptions: HashSet<String>,
 }
 
@@ -31,9 +33,12 @@ impl BybitConnector {
         }
     }
 
-    async fn handle_msg(text: &str, tx: &mpsc::Sender<MarketDataEvent>) -> Result<(), MarketDataError> {
-        let msg: BybitWsMessage = serde_json::from_str(text)
-            .map_err(|e| MarketDataError::Parse(e.to_string()))?;
+    async fn handle_msg(
+        text: &str,
+        tx: &mpsc::Sender<MarketDataEvent>,
+    ) -> Result<(), MarketDataError> {
+        let msg: BybitWsMessage =
+            serde_json::from_str(text).map_err(|e| MarketDataError::Parse(e.to_string()))?;
 
         if let Some(op) = msg.op {
             if op == "pong" {
@@ -45,33 +50,33 @@ impl BybitConnector {
         if let Some(topic) = msg.topic {
             // info!("Bybit Topic: {}", topic);
             if topic.starts_with("publicTrade.") {
-                 // "publicTrade.BTCUSDT"
-                 if let Some(data) = msg.data {
-                     let trades: Vec<BybitTrade> = serde_json::from_value(data)
+                // "publicTrade.BTCUSDT"
+                if let Some(data) = msg.data {
+                    let trades: Vec<BybitTrade> = serde_json::from_value(data)
                         .map_err(|e| MarketDataError::Parse(e.to_string()))?;
-                     
-                     for trade in trades {
-                         let model = trade.to_model();
-                         let _ = tx.send(MarketDataEvent::Trade(model)).await;
-                     }
-                 }
+
+                    for trade in trades {
+                        let model = trade.to_model();
+                        let _ = tx.send(MarketDataEvent::Trade(model)).await;
+                    }
+                }
             } else if topic.starts_with("orderbook.") {
-                 info!("Processing Orderbook: {}", topic);
-                 if let Some(data) = msg.data {
-                      // info!("OB Data: {:?}", data);
-                      match serde_json::from_value::<BybitOrderBook>(data) {
-                          Ok(ob) => {
-                              let ts = msg.ts.unwrap_or(Utc::now().timestamp_millis());
-                              let is_snapshot = msg.msg_type.as_deref() == Some("snapshot");
-                              if let Some(model) = ob.to_model(ts, is_snapshot) {
-                                  let _ = tx.send(MarketDataEvent::OrderBook(model)).await;
-                              } else {
-                                  warn!("Failed to convert OB to model");
-                              }
-                          }
-                          Err(e) => warn!("Failed to parse BybitOrderBook: {}", e),
-                      }
-                 }
+                info!("Processing Orderbook: {}", topic);
+                if let Some(data) = msg.data {
+                    // info!("OB Data: {:?}", data);
+                    match serde_json::from_value::<BybitOrderBook>(data) {
+                        Ok(ob) => {
+                            let ts = msg.ts.unwrap_or(Utc::now().timestamp_millis());
+                            let is_snapshot = msg.msg_type.as_deref() == Some("snapshot");
+                            if let Some(model) = ob.to_model(ts, is_snapshot) {
+                                let _ = tx.send(MarketDataEvent::OrderBook(model)).await;
+                            } else {
+                                warn!("Failed to convert OB to model");
+                            }
+                        }
+                        Err(e) => warn!("Failed to parse BybitOrderBook: {}", e),
+                    }
+                }
             }
         }
 
@@ -82,8 +87,11 @@ impl BybitConnector {
 #[async_trait]
 impl MarketDataConnector for BybitConnector {
     async fn connect(&mut self) -> Result<(), MarketDataError> {
-        let url = Url::parse(BYBIT_WS_URL).map_err(|e| MarketDataError::Connection(e.to_string()))?;
-        let (ws_stream, _) = connect_async(url).await.map_err(|e| MarketDataError::Connection(e.to_string()))?;
+        let url =
+            Url::parse(BYBIT_WS_URL).map_err(|e| MarketDataError::Connection(e.to_string()))?;
+        let (ws_stream, _) = connect_async(url)
+            .await
+            .map_err(|e| MarketDataError::Connection(e.to_string()))?;
         info!("Connected to Bybit WebSocket");
 
         let (mut write, mut read) = ws_stream.split();
@@ -93,10 +101,10 @@ impl MarketDataConnector for BybitConnector {
         // Spawn writer loop
         tokio::spawn(async move {
             while let Some(msg) = write_rx.recv().await {
-                 if let Err(e) = write.send(msg).await {
-                     error!("Failed to send WS message: {}", e);
-                     break;
-                 }
+                if let Err(e) = write.send(msg).await {
+                    error!("Failed to send WS message: {}", e);
+                    break;
+                }
             }
         });
 
@@ -119,11 +127,11 @@ impl MarketDataConnector for BybitConnector {
                 match msg {
                     Ok(Message::Text(text)) => {
                         if let Err(e) = Self::handle_msg(&text, &event_tx).await {
-                             warn!("Error handling message: {}", e);
+                            warn!("Error handling message: {}", e);
                         }
                     }
-                    Ok(Message::Ping(_)) => {},
-                    Ok(Message::Pong(_)) => {},
+                    Ok(Message::Ping(_)) => {}
+                    Ok(Message::Pong(_)) => {}
                     Ok(Message::Close(_)) => {
                         error!("Bybit stream closed");
                         break;
@@ -144,7 +152,11 @@ impl MarketDataConnector for BybitConnector {
         let topic = match subscription.stream_type {
             StreamType::PublicTrade => format!("publicTrade.{}", subscription.symbol),
             StreamType::OrderBookL2 => format!("orderbook.50.{}", subscription.symbol),
-            _ => return Err(MarketDataError::Subscription("Unsupported stream type".to_string())),
+            _ => {
+                return Err(MarketDataError::Subscription(
+                    "Unsupported stream type".to_string(),
+                ))
+            }
         };
 
         if self.subscriptions.contains(&topic) {
@@ -157,7 +169,8 @@ impl MarketDataConnector for BybitConnector {
         });
 
         if let Some(tx) = &self.write_tx {
-            tx.send(Message::Text(payload.to_string())).await
+            tx.send(Message::Text(payload.to_string()))
+                .await
                 .map_err(|e| MarketDataError::Subscription(e.to_string()))?;
             self.subscriptions.insert(topic);
             Ok(())

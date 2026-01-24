@@ -32,7 +32,7 @@ export interface Trade {
   id: string;
   timestamp: number;
   symbol: string;
-  side: "long" | "short" | "LONG" | "SHORT";
+  side: 'long' | 'short' | 'LONG' | 'SHORT';
   entryPrice: number;
   exitPrice: number;
   quantity: number;
@@ -61,8 +61,8 @@ export interface BacktestResult {
 
 export interface Signal {
   symbol: string;
-  action: "BUY" | "SELL" | "HOLD";
-  type: "MARKET" | "LIMIT";
+  action: 'BUY' | 'SELL' | 'HOLD';
+  type: 'MARKET' | 'LIMIT';
   price?: number;
   stopLoss?: number;
   takeProfit?: number;

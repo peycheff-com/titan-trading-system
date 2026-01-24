@@ -188,7 +188,7 @@ export const DEFAULT_ENHANCED_RISK_CONFIG: EnhancedRiskManagerConfig = {
  * Monitors prediction markets, exchange connectivity, and bot trap patterns
  * to dynamically adjust risk parameters.
  */
-export class RiskManager extends EventEmitter {
+export class EnhancedRiskManager extends EventEmitter {
   private config: EnhancedRiskManagerConfig;
   private state: EnhancedRiskState;
   private monitoringInterval: NodeJS.Timeout | null = null;

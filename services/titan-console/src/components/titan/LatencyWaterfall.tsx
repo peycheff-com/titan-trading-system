@@ -9,6 +9,7 @@ interface LatencyStep {
 interface LatencyWaterfallProps {
   steps: LatencyStep[];
   className?: string;
+  budget?: number;
 }
 
 const defaultColors = [
@@ -19,7 +20,7 @@ const defaultColors = [
   'bg-status-healthy',
 ];
 
-export function LatencyWaterfall({ steps, className }: LatencyWaterfallProps) {
+export function LatencyWaterfall({ steps, className, budget }: LatencyWaterfallProps) {
   const totalDuration = steps.reduce((sum, step) => sum + step.duration, 0);
    
   let accumulated = 0;
@@ -48,6 +49,13 @@ export function LatencyWaterfall({ steps, className }: LatencyWaterfallProps) {
             />
           );
         })}
+        {budget && (
+             <div 
+                className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10 opacity-70 border-l border-dashed border-red-200"
+                style={{ left: `${Math.min((budget / totalDuration) * 100, 100)}%` }}
+                title={`SLO Budget: ${budget}ms`}
+             />
+        )}
       </div>
 
       {/* Legend */}

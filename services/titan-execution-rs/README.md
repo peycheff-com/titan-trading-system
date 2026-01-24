@@ -9,6 +9,9 @@ High-performance order execution microservice for the Titan Trading System.
 - **FastPath IPC** — Unix Domain Socket communication with HMAC signing
 - **Multi-Venue Routing** — Weighted splitting across multiple exchanges with aggregated state tracking
 - **Shadow State** — Real-time position tracking with exchange reconciliation
+- **Risk Guard** — Pre-trade validation (Leverage, Notional, Open Orders)
+- **Drift Detection** — Post-trade reconciliation (Execution vs Intent)
+- **Staleness Guard** — Market data freshness enforcement (<200ms)
 
 ## Architecture
 
