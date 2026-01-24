@@ -9,7 +9,7 @@ const Drawer = ({
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
   <DrawerPrimitive.Root shouldScaleBackground={shouldScaleBackground} {...props} />
 );
-// eslint-disable-next-line functional/immutable-data
+ 
 Drawer.displayName = 'Drawer';
 
 const DrawerTrigger = DrawerPrimitive.Trigger;
@@ -28,7 +28,7 @@ const DrawerOverlay = React.forwardRef<
     {...props}
   />
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName;
 
 const DrawerContent = React.forwardRef<
@@ -50,19 +50,19 @@ const DrawerContent = React.forwardRef<
     </DrawerPrimitive.Content>
   </DrawerPortal>
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 DrawerContent.displayName = 'DrawerContent';
 
 const DrawerHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={cn('grid gap-1.5 p-4 text-center sm:text-left', className)} {...props} />
 );
-// eslint-disable-next-line functional/immutable-data
+ 
 DrawerHeader.displayName = 'DrawerHeader';
 
 const DrawerFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={cn('mt-auto flex flex-col gap-2 p-4', className)} {...props} />
 );
-// eslint-disable-next-line functional/immutable-data
+ 
 DrawerFooter.displayName = 'DrawerFooter';
 
 const DrawerTitle = React.forwardRef<
@@ -75,7 +75,7 @@ const DrawerTitle = React.forwardRef<
     {...props}
   />
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 DrawerTitle.displayName = DrawerPrimitive.Title.displayName;
 
 const DrawerDescription = React.forwardRef<
@@ -88,7 +88,7 @@ const DrawerDescription = React.forwardRef<
     {...props}
   />
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 DrawerDescription.displayName = DrawerPrimitive.Description.displayName;
 
 export {

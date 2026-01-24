@@ -19,7 +19,7 @@ const actionTypes = {
   REMOVE_TOAST: 'REMOVE_TOAST',
 } as const;
 
-// eslint-disable-next-line functional/no-let
+ 
 let count = 0;
 
 function genId() {
@@ -59,7 +59,7 @@ const addToRemoveQueue = (toastId: string) => {
   }
 
   const timeout = setTimeout(() => {
-    // eslint-disable-next-line functional/immutable-data
+     
     toastTimeouts.delete(toastId);
     dispatch({
       type: 'REMOVE_TOAST',
@@ -67,7 +67,7 @@ const addToRemoveQueue = (toastId: string) => {
     });
   }, TOAST_REMOVE_DELAY);
 
-  // eslint-disable-next-line functional/immutable-data
+   
   toastTimeouts.set(toastId, timeout);
 };
 
@@ -126,7 +126,7 @@ export const reducer = (state: State, action: Action): State => {
 
 const listeners: Array<(state: State) => void> = [];
 
-// eslint-disable-next-line functional/no-let
+ 
 let memoryState: State = { toasts: [] };
 
 function dispatch(action: Action) {
@@ -171,12 +171,12 @@ function useToast() {
   const [state, setState] = React.useState<State>(memoryState);
 
   React.useEffect(() => {
-    // eslint-disable-next-line functional/immutable-data
+     
     listeners.push(setState);
     return () => {
       const index = listeners.indexOf(setState);
       if (index > -1) {
-        // eslint-disable-next-line functional/immutable-data
+         
         listeners.splice(index, 1);
       }
     };

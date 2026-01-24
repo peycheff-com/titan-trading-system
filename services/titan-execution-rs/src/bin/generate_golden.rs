@@ -112,6 +112,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 metadata: None,
                 exchange: None,
                 position_mode: None,
+                // Envelope
+                ttl_ms: Some(5000),
+                partition_key: None,
+                causation_id: None,
+                env: None,
+                subject: None,
                 child_fills: vec![],
                 filled_size: dec!(0),
             };

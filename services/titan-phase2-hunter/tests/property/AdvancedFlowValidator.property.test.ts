@@ -3,7 +3,7 @@ import { SweepDetector } from "../../src/flow/SweepDetector";
 import { IcebergDetector } from "../../src/flow/IcebergDetector";
 import { InstitutionalFlowClassifier } from "../../src/flow/InstitutionalFlowClassifier";
 import { CVDTrade } from "../../src/types";
-import { IcebergAnalysis, SweepPattern } from "../../src/types/enhanced-2026";
+import { IcebergAnalysis, SweepPattern } from "../../src/types";
 
 describe("AdvancedFlowValidator Property Tests", () => {
     // Arbitrary for CVDTrade
@@ -13,7 +13,7 @@ describe("AdvancedFlowValidator Property Tests", () => {
         qty: fc.double({ min: 0.1, max: 10, noNaN: true }),
         isBuyerMaker: fc.boolean(),
         time: fc.date().map((d) => d.getTime()),
-        id: fc.uuid(),
+        // id: removed
     });
 
     describe("SweepDetector", () => {
@@ -43,7 +43,7 @@ describe("AdvancedFlowValidator Property Tests", () => {
                                 qty: 1.0,
                                 isBuyerMaker: false, // Aggressive buy
                                 time: Date.now() + i * 50, // Fast
-                                id: `sweep-${i}`,
+                                // id removed
                             });
                         }
 
@@ -107,7 +107,7 @@ describe("AdvancedFlowValidator Property Tests", () => {
                     qty: 1,
                     isBuyerMaker: true,
                     time: now - 5000,
-                    id: "1",
+                    // id: "1"
                 },
                 {
                     symbol: "BTC-USD",
@@ -115,7 +115,7 @@ describe("AdvancedFlowValidator Property Tests", () => {
                     qty: 1,
                     isBuyerMaker: false,
                     time: now - 4000,
-                    id: "2",
+                    // id: "2"
                 }, // Consumption
                 {
                     symbol: "BTC-USD",
@@ -123,7 +123,7 @@ describe("AdvancedFlowValidator Property Tests", () => {
                     qty: 1,
                     isBuyerMaker: true,
                     time: now - 3900,
-                    id: "3",
+                    // id: "3"
                 }, // Refill 1 (100ms)
                 {
                     symbol: "BTC-USD",
@@ -131,7 +131,7 @@ describe("AdvancedFlowValidator Property Tests", () => {
                     qty: 1,
                     isBuyerMaker: false,
                     time: now - 3800,
-                    id: "4",
+                    // id: "4"
                 }, // Consumption
                 {
                     symbol: "BTC-USD",
@@ -139,7 +139,7 @@ describe("AdvancedFlowValidator Property Tests", () => {
                     qty: 1,
                     isBuyerMaker: true,
                     time: now - 3700,
-                    id: "5",
+                    // id: "5"
                 }, // Refill 2 (100ms)
             ];
 
@@ -151,7 +151,7 @@ describe("AdvancedFlowValidator Property Tests", () => {
                     qty: 1,
                     isBuyerMaker: true,
                     time: now - 5000,
-                    id: "1",
+                    // id: "1"
                 },
                 {
                     symbol: "BTC-USD",
@@ -159,7 +159,7 @@ describe("AdvancedFlowValidator Property Tests", () => {
                     qty: 1,
                     isBuyerMaker: false,
                     time: now - 4000,
-                    id: "2",
+                    // id: "2"
                 }, // Consumption
                 {
                     symbol: "BTC-USD",
@@ -167,7 +167,7 @@ describe("AdvancedFlowValidator Property Tests", () => {
                     qty: 1,
                     isBuyerMaker: true,
                     time: now - 1000,
-                    id: "3",
+                    // id: "3"
                 }, // Refill 1 (3000ms)
                 {
                     symbol: "BTC-USD",
@@ -175,7 +175,7 @@ describe("AdvancedFlowValidator Property Tests", () => {
                     qty: 1,
                     isBuyerMaker: false,
                     time: now - 900,
-                    id: "4",
+                    // id: "4"
                 }, // Consumption
                 {
                     symbol: "BTC-USD",
@@ -183,7 +183,7 @@ describe("AdvancedFlowValidator Property Tests", () => {
                     qty: 1,
                     isBuyerMaker: true,
                     time: now - 100,
-                    id: "5",
+                    // id: "5"
                 }, // Refill 2 (800ms)
             ];
 

@@ -25,6 +25,7 @@ use titan_execution_rs::exchange::router::ExecutionRouter;
 use titan_execution_rs::market_data::engine::MarketDataEngine;
 use titan_execution_rs::model::Position;
 use titan_execution_rs::circuit_breaker::GlobalHalt;
+use titan_execution_rs::drift_detector::DriftDetector;
 
 // --- Mock Adapter ---
 struct MockAdapter;
@@ -114,6 +115,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     router.register("mexc", Arc::new(MockAdapter));
     router.register("okx", Arc::new(MockAdapter));
 
+    let drift_detector = Arc::new(DriftDetector::new(50.0, 1000, 100.0));
+
     // 5. Pipeline
     let pipeline = Arc::new(ExecutionPipeline::new(
         shadow_state.clone(),
@@ -123,6 +126,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         risk_guard.clone(),
         ctx.clone(),
         5000,
+        drift_detector,
     ));
 
     // 6. Replay Engine

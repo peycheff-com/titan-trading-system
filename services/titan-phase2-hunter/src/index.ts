@@ -19,7 +19,7 @@
 import { config } from "dotenv";
 import { ConfigManager } from "./config/ConfigManager";
 import { HologramEngine } from "./engine/HologramEngine";
-import { EnhancedHolographicEngine } from "./engine/enhanced/EnhancedHolographicEngine";
+
 import { HologramScanner } from "./engine/HologramScanner";
 import { SessionProfiler } from "./engine/SessionProfiler";
 import { InefficiencyMapper } from "./engine/InefficiencyMapper";
@@ -29,21 +29,15 @@ import { BybitPerpsClient } from "./exchanges/BybitPerpsClient";
 import { BinanceSpotClient } from "./exchanges/BinanceSpotClient";
 import { startHunterApp } from "./console/HunterApp";
 import { hunterEvents } from "./events";
-import {
-  EnhancedHolographicState,
-  HologramState,
-  POI,
-  SessionState,
-  SignalData,
-} from "./types";
+import { POI, SessionState, SignalData } from "./types";
 import { getLogger, logError } from "./logging/Logger";
 import {
-  SignalClient,
   getNatsClient,
   type IntentSignal,
   loadSecretsFromFiles,
   type PhaseDiagnostics,
   type PhasePosture,
+  SignalClient,
   TitanSubject,
 } from "@titan/shared";
 
@@ -61,7 +55,7 @@ class HunterApplication {
   private binanceClient: BinanceSpotClient;
 
   private hologramEngine: HologramEngine;
-  private enhancedEngine: EnhancedHolographicEngine;
+
   private hologramScanner: HologramScanner;
   private sessionProfiler: SessionProfiler;
   private inefficiencyMapper: InefficiencyMapper;
@@ -73,7 +67,7 @@ class HunterApplication {
   // Application state
   private isRunning = false;
   private isPaused = false;
-  private currentHolograms: EnhancedHolographicState[] = [];
+  private currentHolograms: HologramState[] = [];
   private currentSession: SessionState | null = null;
   private activePOIs: POI[] = [];
 
@@ -109,8 +103,7 @@ class HunterApplication {
       this.bybitClient,
       this.institutionalFlowClassifier,
     );
-    this.enhancedEngine = new EnhancedHolographicEngine();
-    this.enhancedEngine.setHologramEngine(this.hologramEngine);
+
     this.hologramScanner = new HologramScanner(this.bybitClient);
     this.sessionProfiler = new SessionProfiler();
     this.inefficiencyMapper = new InefficiencyMapper();
@@ -226,12 +219,14 @@ class HunterApplication {
     });
 
     hunterEvents.onEvent("ERROR", (payload) => {
-      const severityIcon = {
-        "LOW": "⚠️",
-        "MEDIUM": "🟡",
-        "HIGH": "🟠",
-        "CRITICAL": "🔴",
-      }[payload.severity] || "🔴";
+      const severityIcon: Record<string, string> = {
+        LOW: "⚠️",
+        MEDIUM: "🟡",
+        HIGH: "🟠",
+        CRITICAL: "🔴",
+      };
+
+      const icon = severityIcon[payload.severity] || "🔴";
 
       this.logEvent(
         "ERROR",
@@ -306,7 +301,6 @@ class HunterApplication {
       this.logEvent("INFO", "📡 Initializing exchange clients...");
       await this.bybitClient.initialize();
       await this.binanceClient.initialize();
-      await this.enhancedEngine.initialize();
 
       // Initialize IPC connection to execution engine
       this.logEvent("INFO", "🔗 Connecting to execution engine via NATS...");
@@ -341,7 +335,7 @@ class HunterApplication {
           "INFO",
           `🧠 Market Regime Update: ${payload.regime} (α=${payload.alpha})`,
         );
-        this.enhancedEngine.updateMarketRegime(payload.regime, payload.alpha);
+        this.hologramEngine.updateMarketRegime(payload.regime, payload.alpha);
       });
 
       // Initialize NATS subscription for Budget updates
@@ -360,7 +354,7 @@ class HunterApplication {
           // Dynamic Sizing: Set base position size to 10% of allocated equity
           // This ensures we scale with the budget provided by the Brain
           const newBaseSize = payload.allocatedEquity * 0.1;
-          this.enhancedEngine.updateConfig({ basePositionSize: newBaseSize });
+          this.configManager.updateConfig({ basePositionSize: newBaseSize });
         }
       });
 
@@ -724,7 +718,6 @@ class HunterApplication {
       this.startHologramScanCycle();
       this.startSessionMonitoring();
       this.startPOIDetectionCycle();
-      this.startPOIDetectionCycle();
       this.startCVDMonitoring();
       this.startStateBroadcast();
 
@@ -765,14 +758,19 @@ class HunterApplication {
   private async forwardSignalToExecution(signal: SignalData): Promise<void> {
     // Use SignalClient (NATS) instead of Webhook for lower latency and Brain mediation
     try {
-      const signalId = `hunter-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      const signalId = `hunter-${Date.now()}-${
+        Math.random().toString(36).substring(7)
+      }`;
 
       const intentSignal: IntentSignal = {
         signal_id: signalId,
         source: "hunter",
         symbol: signal.symbol,
         direction: signal.direction as "LONG" | "SHORT",
-        entry_zone: { min: signal.entryPrice * 0.999, max: signal.entryPrice * 1.001 }, // Expand slightly for zone
+        entry_zone: {
+          min: signal.entryPrice * 0.999,
+          max: signal.entryPrice * 1.001,
+        }, // Expand slightly for zone
         stop_loss: signal.stopLoss,
         take_profits: [signal.takeProfit],
         confidence: signal.confidence || 0.7,
@@ -780,45 +778,34 @@ class HunterApplication {
         timestamp: Date.now(),
       };
 
-      this.logEvent("INFO", `📤 Sending Signal to Brain via NATS: ${signal.symbol}`, {
-        signalId,
-      });
+      this.logEvent(
+        "INFO",
+        `📤 Sending Signal to Brain via NATS: ${signal.symbol}`,
+        {
+          signalId,
+        },
+      );
 
       // Fire and Forget (Optimistic) or Wait for Brain Confirmation?
       // Brain will publish to EXEC subject, preventing double-execution requires Brain idemp check.
       // We start with Prepare -> Confirm sequence for local tracking if needed.
-      
+
       await this.signalClient.sendPrepare(intentSignal);
       const confirmResponse = await this.signalClient.sendConfirm(signalId);
 
       if (confirmResponse.executed) {
-         this.logEvent("INFO", `✅ Signal submitted to Brain: ${signalId}`);
+        this.logEvent("INFO", `✅ Signal submitted to Brain: ${signalId}`);
       } else {
-         this.logEvent("ERROR", `❌ Signal submission failed: ${confirmResponse.reason}`);
+        this.logEvent(
+          "ERROR",
+          `❌ Signal submission failed: ${confirmResponse.reason}`,
+        );
       }
     } catch (error) {
-        this.logEvent("ERROR", `❌ Signal submission error: ${(error as Error).message}`);
-    }
-  }
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        this.logEvent("ERROR", `❌ Brain Rejected Signal: ${response.status}`, {
-          error: errorText,
-        });
-        return;
-      }
-
-      const responseData = await response.json();
-      this.logEvent("INFO", `✅ Brain Accepted Signal: ${signalId}`, {
-        decision: responseData,
-      });
-    } catch (error) {
-      this.logEvent("ERROR", "❌ Failed to send signal to Brain", {
-        error: (error as Error).message,
-      });
+      this.logEvent(
+        "ERROR",
+        `❌ Signal submission error: ${(error as Error).message}`,
+      );
     }
   }
 

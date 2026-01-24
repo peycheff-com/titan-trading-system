@@ -1,5 +1,3 @@
-import type { IExchangeGateway } from '../exchanges/interfaces.js';
-
 export interface CostEstimate {
   exchange: string;
   price: number;

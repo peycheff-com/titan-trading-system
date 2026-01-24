@@ -16,7 +16,6 @@ import {
   Insight,
   MorningBriefing,
   OptimizationProposal,
-  RegimeSnapshot,
   Trade,
   ValidationReport,
 } from '../types/index.js';

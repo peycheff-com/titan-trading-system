@@ -12,11 +12,11 @@
  */
 
 import { EnhancedHolographicEngine } from "../../src/engine/enhanced/EnhancedHolographicEngine";
-import { EnhancedScoringEngine } from "../../src/engine/enhanced/EnhancedScoringEngine";
+import { ScoringEngine } from "../../src/engine/ScoringEngine";
 import { ConvictionSizingEngine } from "../../src/engine/enhanced/ConvictionSizingEngine";
-import { EnhancedSignalValidator } from "../../src/engine/enhanced/EnhancedSignalValidator";
+import { SignalValidator } from "../../src/engine/SignalValidator";
 import { EmergencyProtocolManager } from "../../src/emergency/EmergencyProtocolManager";
-import { EnhancedRiskManager } from "../../src/risk/EnhancedRiskManager";
+import { RiskManager } from "../../src/risk/RiskManager";
 import { BotTrapDetector } from "../../src/bottrap/BotTrapDetector";
 import { AdvancedFlowValidator } from "../../src/flow/AdvancedFlowValidator";
 import {
@@ -27,10 +27,11 @@ import {
   FlowValidation,
   GlobalCVDData,
   ImpactLevel,
+  LayerValidation,
   OracleScore,
   PredictionMarketEvent,
   TechnicalSignal,
-} from "../../src/types/enhanced-2026";
+} from "../../src/types";
 import { HologramState, TimeframeState } from "../../src/types";
 
 // ============================================================================
@@ -45,13 +46,26 @@ function createMockTimeframeState(
   return {
     timeframe,
     trend,
-    dealingRange: { high: 50000, low: 45000, equilibrium: 47500 },
+    dealingRange: {
+      high: 50000,
+      low: 45000,
+      midpoint: 47500,
+      premiumThreshold: 47500,
+      discountThreshold: 47500,
+      range: 5000,
+    },
     currentPrice: 48000,
     location,
     fractals: [],
     bos: [],
     mss: timeframe === "15m"
-      ? { type: "bullish", price: 48000, timestamp: Date.now() }
+      ? {
+        direction: "BULLISH",
+        price: 48000,
+        timestamp: Date.now(),
+        barIndex: 0,
+        significance: 80,
+      }
       : null,
   };
 }
@@ -71,6 +85,13 @@ function createMockHologramState(
     status: "A+",
     veto: { vetoed: false, reason: null, direction: null },
     rsScore: 0.02,
+    direction: dailyTrend === "BULL"
+      ? "LONG"
+      : dailyTrend === "BEAR"
+      ? "SHORT"
+      : null,
+    flowAnalysis: undefined,
+    flowScore: undefined,
   };
 }
 
@@ -229,15 +250,15 @@ describe("Checkpoint 9: Core Enhancement Integration Complete", () => {
   // ============================================================================
 
   describe("1. Enhancement Layer Integration with Existing Phase 2", () => {
-    let scoringEngine: EnhancedScoringEngine;
+    let scoringEngine: ScoringEngine;
     let sizingEngine: ConvictionSizingEngine;
-    let signalValidator: EnhancedSignalValidator;
+    let signalValidator: SignalValidator;
     let enhancedEngine: EnhancedHolographicEngine;
 
     beforeEach(() => {
-      scoringEngine = new EnhancedScoringEngine();
+      scoringEngine = new ScoringEngine();
       sizingEngine = new ConvictionSizingEngine();
-      signalValidator = new EnhancedSignalValidator();
+      signalValidator = new SignalValidator();
       enhancedEngine = new EnhancedHolographicEngine({
         enabled: true,
         enableOracle: false,
@@ -284,7 +305,9 @@ describe("Checkpoint 9: Core Enhancement Integration Complete", () => {
       );
 
       expect(result.layerValidations.length).toBeGreaterThan(0);
-      const flowLayer = result.layerValidations.find((l) => l.layer === "flow");
+      const flowLayer = result.layerValidations.find((l: LayerValidation) =>
+        l.layer === "flow"
+      );
       expect(flowLayer).toBeDefined();
       expect(flowLayer?.recommendation).toBe("proceed");
     });
@@ -325,7 +348,7 @@ describe("Checkpoint 9: Core Enhancement Integration Complete", () => {
         globalCVD,
       );
 
-      const cvdLayer = result.layerValidations.find((l) =>
+      const cvdLayer = result.layerValidations.find((l: LayerValidation) =>
         l.layer === "globalCVD"
       );
       expect(cvdLayer).toBeDefined();
@@ -380,15 +403,15 @@ describe("Checkpoint 9: Core Enhancement Integration Complete", () => {
   // ============================================================================
 
   describe("2. Fallback Mechanisms Work Correctly", () => {
-    let scoringEngine: EnhancedScoringEngine;
+    let scoringEngine: ScoringEngine;
     let sizingEngine: ConvictionSizingEngine;
-    let signalValidator: EnhancedSignalValidator;
+    let signalValidator: SignalValidator;
     let enhancedEngine: EnhancedHolographicEngine;
 
     beforeEach(() => {
-      scoringEngine = new EnhancedScoringEngine();
+      scoringEngine = new ScoringEngine();
       sizingEngine = new ConvictionSizingEngine();
-      signalValidator = new EnhancedSignalValidator();
+      signalValidator = new SignalValidator();
       enhancedEngine = new EnhancedHolographicEngine({
         enabled: true,
         enableOracle: false,
@@ -508,14 +531,14 @@ describe("Checkpoint 9: Core Enhancement Integration Complete", () => {
 
   describe("3. Emergency Protocols and Graceful Degradation", () => {
     let emergencyManager: EmergencyProtocolManager;
-    let riskManager: EnhancedRiskManager;
+    let riskManager: RiskManager;
 
     beforeEach(() => {
       emergencyManager = new EmergencyProtocolManager({
         enableGracefulDegradation: false, // Disable periodic checks for tests
         enableNotifications: false,
       });
-      riskManager = new EnhancedRiskManager({
+      riskManager = new RiskManager({
         monitoringEnabled: false,
       });
     });
@@ -842,21 +865,21 @@ describe("Checkpoint 9: Core Enhancement Integration Complete", () => {
   // ============================================================================
 
   describe("4. End-to-End Enhancement Integration Flow", () => {
-    let scoringEngine: EnhancedScoringEngine;
+    let scoringEngine: ScoringEngine;
     let sizingEngine: ConvictionSizingEngine;
-    let signalValidator: EnhancedSignalValidator;
+    let signalValidator: SignalValidator;
     let emergencyManager: EmergencyProtocolManager;
-    let riskManager: EnhancedRiskManager;
+    let riskManager: RiskManager;
 
     beforeEach(() => {
-      scoringEngine = new EnhancedScoringEngine();
+      scoringEngine = new ScoringEngine();
       sizingEngine = new ConvictionSizingEngine();
-      signalValidator = new EnhancedSignalValidator();
+      signalValidator = new SignalValidator();
       emergencyManager = new EmergencyProtocolManager({
         enableGracefulDegradation: false,
         enableNotifications: false,
       });
-      riskManager = new EnhancedRiskManager({
+      riskManager = new RiskManager({
         monitoringEnabled: false,
       });
     });
@@ -1074,14 +1097,14 @@ describe("Checkpoint 9: Core Enhancement Integration Complete", () => {
 
   describe("5. Component Health and Statistics", () => {
     let emergencyManager: EmergencyProtocolManager;
-    let riskManager: EnhancedRiskManager;
+    let riskManager: RiskManager;
 
     beforeEach(() => {
       emergencyManager = new EmergencyProtocolManager({
         enableGracefulDegradation: false,
         enableNotifications: false,
       });
-      riskManager = new EnhancedRiskManager({
+      riskManager = new RiskManager({
         monitoringEnabled: false,
       });
     });

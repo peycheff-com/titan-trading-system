@@ -43,6 +43,8 @@ pub enum IntentType {
     CloseShort,
     #[serde(rename = "CLOSE")]
     Close,
+    #[serde(rename = "FORCE_SYNC")]
+    ForceSync,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -100,6 +102,18 @@ pub struct Intent {
     pub filled_size: Decimal,
     #[serde(default)]
     pub child_fills: Vec<String>, // List of idempotent execution_ids processed
+
+    // Envelope Standards
+    #[serde(default)]
+    pub ttl_ms: Option<i64>,
+    #[serde(default)]
+    pub partition_key: Option<String>,
+    #[serde(default)]
+    pub causation_id: Option<String>,
+    #[serde(default)]
+    pub env: Option<String>, // e.g., "prod", "staging"
+    #[serde(default)]
+    pub subject: Option<String>, // e.g., "market.btc.signal"
 
     // Time enforcement
     #[serde(alias = "timestamp")]
@@ -230,4 +244,27 @@ pub struct OrderDecision {
     pub limit_price: Option<Decimal>,
     pub reason: String,
     pub fee_analysis: Option<FeeAnalysis>,
+}
+
+// --- Phase 2: Drift & Regimes ---
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum DriftClass {
+    /// Class A: Spread Capture Failure (Execution Price vs Arrival Mid > Threshold)
+    ClassASpread,
+    /// Class B: Latency Decay (t_exchange - t_decision > Budget)
+    ClassBLatency,
+    /// Class C: Correlation Breakdown (Leader vs Laggard Divergence > Threshold)
+    ClassCCorrelation,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DriftReport {
+    pub signal_id: String,
+    pub symbol: String,
+    pub drift_class: DriftClass,
+    pub expected: f64,
+    pub actual: f64,
+    pub deviation_bps: f64,
+    pub timestamp: i64,
 }

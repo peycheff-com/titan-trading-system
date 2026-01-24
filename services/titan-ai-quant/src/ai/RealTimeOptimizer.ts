@@ -108,9 +108,9 @@ export class RealTimeOptimizer extends EventEmitter {
   private performanceHistory: PerformanceFeedback[] = [];
   private optimizationCount = 0;
   private lastOptimizationTime = 0;
-  private natsAdapter: any = null; // To avoid circular type dependency for now, or import properly if possible
+  private natsAdapter: unknown = null;
 
-  public setNatsAdapter(adapter: any): void {
+  public setNatsAdapter(adapter: unknown): void {
     // eslint-disable-next-line functional/immutable-data
     this.natsAdapter = adapter;
   }
@@ -213,7 +213,7 @@ export class RealTimeOptimizer extends EventEmitter {
   /**
    * Handle signal events from trading phases
    */
-  private handleSignalEvent(event: any): void {
+  private handleSignalEvent(event: Record<string, unknown>): void {
     // Convert signal event to trade data structure
     // This would be enhanced based on actual signal structure
     // eslint-disable-next-line functional/immutable-data
@@ -224,8 +224,17 @@ export class RealTimeOptimizer extends EventEmitter {
   /**
    * Handle execution events
    */
-  private handleExecutionEvent(event: any): void {
-    const { phase, execution } = event;
+  private handleExecutionEvent(event: {
+    execution: {
+      status: string;
+      orderId: string;
+      symbol: string;
+      side: string;
+      price?: number;
+      qty: number;
+    };
+  }): void {
+    const { execution } = event;
 
     // Convert execution to trade if it's a completed trade
     if (execution.status === 'filled') {
@@ -482,7 +491,7 @@ export class RealTimeOptimizer extends EventEmitter {
    */
   private async startABTest(
     proposal: OptimizationProposal,
-    validation: ValidationReport,
+    _validation: ValidationReport,
   ): Promise<void> {
     const testId = `ab_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
 
@@ -587,7 +596,7 @@ export class RealTimeOptimizer extends EventEmitter {
    * Check if optimization can run (rate limiting)
    */
   private canRunOptimization(): boolean {
-    const hourAgo = Date.now() - 3600000;
+    // const hourAgo = Date.now() - 3600000;
     const recentOptimizations = this.optimizationCount; // Simplified - would track per hour
 
     if (recentOptimizations >= this.config.maxOptimizationsPerHour) {
@@ -652,7 +661,7 @@ export class RealTimeOptimizer extends EventEmitter {
   /**
    * Apply configuration
    */
-  private async applyConfig(config: Config): Promise<void> {
+  private async applyConfig(_config: Config): Promise<void> {
     // This would apply to the actual config system
     this.telemetry.info('RealTimeOptimizer', 'Configuration applied');
   }
@@ -660,7 +669,7 @@ export class RealTimeOptimizer extends EventEmitter {
   /**
    * Calculate trend state from market data
    */
-  private calculateTrendState(data: any): -1 | 0 | 1 {
+  private calculateTrendState(_data: unknown): -1 | 0 | 1 {
     // Simplified trend calculation
     return Math.random() > 0.5 ? 1 : -1;
   }
@@ -668,7 +677,7 @@ export class RealTimeOptimizer extends EventEmitter {
   /**
    * Calculate volatility state from market data
    */
-  private calculateVolatilityState(data: any): 0 | 1 | 2 {
+  private calculateVolatilityState(_data: unknown): 0 | 1 | 2 {
     // Simplified volatility calculation
     return Math.floor(Math.random() * 3) as 0 | 1 | 2;
   }
@@ -676,7 +685,7 @@ export class RealTimeOptimizer extends EventEmitter {
   /**
    * Calculate liquidity state from market data
    */
-  private calculateLiquidityState(data: any): 0 | 1 | 2 {
+  private calculateLiquidityState(_data: unknown): 0 | 1 | 2 {
     // Simplified liquidity calculation
     return Math.floor(Math.random() * 3) as 0 | 1 | 2;
   }

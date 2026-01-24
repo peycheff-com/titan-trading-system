@@ -43,7 +43,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     );
   },
 );
-// eslint-disable-next-line functional/immutable-data
+ 
 Button.displayName = 'Button';
 
 export { Button, buttonVariants };

@@ -311,7 +311,7 @@ export class ConfigManager extends EventEmitter {
       }
 
       // eslint-disable-next-line functional/immutable-data
-      this.serviceConfigs.set(service, result.config);
+      this.serviceConfigs.set(service, result.config as ServiceConfig);
 
       // Save version to history
       this.versionHistory.saveVersion(
@@ -340,7 +340,7 @@ export class ConfigManager extends EventEmitter {
         ),
       );
 
-      return result.config;
+      return result.config as ServiceConfig;
     } catch (error) {
       console.error(
         colors.red(`❌ Failed to load ${service} service configuration:`),

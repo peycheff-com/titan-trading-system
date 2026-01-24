@@ -4,9 +4,9 @@ import { BacktestClock } from '../utils/Clock.js';
 import { BrainConfig } from '../config/BrainConfig.js';
 
 export class BacktestEngine {
-  private clock: BacktestClock;
-  private logger: Logger;
-  private dataService: HistoricalDataService;
+  private readonly clock: BacktestClock;
+  private readonly logger: Logger;
+  private readonly dataService: HistoricalDataService;
 
   constructor(
     config: BrainConfig,

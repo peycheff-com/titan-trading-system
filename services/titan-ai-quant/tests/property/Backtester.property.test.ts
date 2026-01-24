@@ -211,8 +211,8 @@ describe("Backtester Property Tests", () => {
           ),
           { minLength: 1, maxLength: 5 },
         ),
-        fc.integer({ min: 1000, max: 2000 }),
-        fc.integer({ min: 2000, max: 3000 }),
+        fc.integer({ min: 1000, max: 1500 }), // startTime
+        fc.integer({ min: 1700, max: 3000 }), // endTime (ensure > startTime + 200)
         async (symbols, startTime, endTime) => {
           // Setup test data for each valid symbol (filter out invalid symbols)
           const validSymbols = symbols.filter((s) => s.trim().length >= 3);

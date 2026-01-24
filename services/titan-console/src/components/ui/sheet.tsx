@@ -26,7 +26,7 @@ const SheetOverlay = React.forwardRef<
     ref={ref}
   />
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName;
 
 const sheetVariants = cva(
@@ -68,13 +68,13 @@ const SheetContent = React.forwardRef<
     </SheetPrimitive.Content>
   </SheetPortal>
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 SheetContent.displayName = SheetPrimitive.Content.displayName;
 
 const SheetHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={cn('flex flex-col space-y-2 text-center sm:text-left', className)} {...props} />
 );
-// eslint-disable-next-line functional/immutable-data
+ 
 SheetHeader.displayName = 'SheetHeader';
 
 const SheetFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
@@ -83,7 +83,7 @@ const SheetFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElemen
     {...props}
   />
 );
-// eslint-disable-next-line functional/immutable-data
+ 
 SheetFooter.displayName = 'SheetFooter';
 
 const SheetTitle = React.forwardRef<
@@ -96,7 +96,7 @@ const SheetTitle = React.forwardRef<
     {...props}
   />
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 SheetTitle.displayName = SheetPrimitive.Title.displayName;
 
 const SheetDescription = React.forwardRef<
@@ -109,7 +109,7 @@ const SheetDescription = React.forwardRef<
     {...props}
   />
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 SheetDescription.displayName = SheetPrimitive.Description.displayName;
 
 export {

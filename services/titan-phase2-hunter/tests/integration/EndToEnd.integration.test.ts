@@ -16,7 +16,7 @@ import { SessionProfiler } from "../../src/engine/SessionProfiler";
 import { InefficiencyMapper } from "../../src/engine/InefficiencyMapper";
 import { CVDValidator } from "../../src/engine/CVDValidator";
 import { SignalGenerator } from "../../src/execution/SignalGenerator";
-import { LimitOrderExecutor } from "../../src/execution/LimitOrderExecutor";
+
 import { BybitPerpsClient } from "../../src/exchanges/BybitPerpsClient";
 import { BinanceSpotClient } from "../../src/exchanges/BinanceSpotClient";
 import { MockOracle } from "../../src/backtest/mocks/MockOracle";
@@ -540,7 +540,6 @@ describe("End-to-End Integration Tests", () => {
   let signalGenerator: SignalGenerator;
   let mockOracle: MockOracle;
   let mockGlobalLiquidity: MockGlobalLiquidity;
-  let limitOrderExecutor: LimitOrderExecutor;
 
   beforeEach(async () => {
     // Initialize mock clients
@@ -550,8 +549,33 @@ describe("End-to-End Integration Tests", () => {
     await mockBybitClient.initialize();
     await mockBinanceClient.initialize();
 
+    // Mock Flow Classifier
+    const mockFlowClassifier = {
+      getLatestClassification: () => ({
+        regime: "TRENDING",
+        confidence: 80,
+        flowImbalance: 1000,
+        absorption: false,
+        breakdown: {
+          footprintScore: 50,
+        },
+      }),
+    } as any;
+
     // Initialize core engines
-    hologramEngine = new HologramEngine(mockBybitClient);
+    // Mock Logger
+    const mockLogger = {
+      info: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+      debug: jest.fn(),
+    } as any;
+
+    hologramEngine = new HologramEngine(
+      mockBybitClient,
+      mockFlowClassifier,
+      mockLogger,
+    );
     hologramScanner = new HologramScanner(mockBybitClient);
     sessionProfiler = new SessionProfiler();
     inefficiencyMapper = new InefficiencyMapper();
@@ -568,14 +592,13 @@ describe("End-to-End Integration Tests", () => {
       mockOracle,
       mockGlobalLiquidity,
     );
-    limitOrderExecutor = new LimitOrderExecutor(mockBybitClient);
   });
 
   afterEach(async () => {
     // Cleanup
     await mockBybitClient.disconnect();
     await mockBinanceClient.disconnect();
-    limitOrderExecutor.destroy();
+
     hologramScanner.cleanup();
   });
 
@@ -604,9 +627,9 @@ describe("End-to-End Integration Tests", () => {
           JSON.stringify(bestHologram, null, 2),
         );
         expect(bestHologram).toBeDefined();
-        // EnhancedHolographicState uses 'alignment' instead of 'status'
+        // HologramState uses 'status'
         expect(["A+", "B", "CONFLICT", "NO_PLAY", "A", "C", "VETO"]).toContain(
-          bestHologram.alignment,
+          bestHologram.status,
         );
 
         // Step 2: Session Check
@@ -636,14 +659,14 @@ describe("End-to-End Integration Tests", () => {
         // Detect Order Blocks
         const orderBlocks = inefficiencyMapper.detectOrderBlock(
           candles,
-          bestHologram.classicState!.m15.bos,
+          bestHologram.m15.bos,
         );
         expect(Array.isArray(orderBlocks)).toBe(true);
 
         // Detect Liquidity Pools
         const liquidityPools = inefficiencyMapper.detectLiquidityPools(
           candles,
-          bestHologram.classicState!.m15.fractals,
+          bestHologram.m15.fractals,
         );
         expect(Array.isArray(liquidityPools)).toBe(true);
 
@@ -680,9 +703,8 @@ describe("End-to-End Integration Tests", () => {
         console.log("🎯 Step 5: Generating Trading Signal...");
 
         // Only generate signal if conditions are favorable
-        if (bestHologram.alignment === "A+" || bestHologram.alignment === "B") {
-          // Use dailyBias from EnhancedHolographicState
-          const direction = bestHologram.dailyBias === "BULL"
+        if (bestHologram.status === "A+" || bestHologram.status === "B") {
+          const direction = bestHologram.daily.trend === "BULL"
             ? "LONG"
             : "SHORT";
           const equity = 10000; // $10,000 test equity
@@ -710,41 +732,15 @@ describe("End-to-End Integration Tests", () => {
               `✅ Signal generated: ${mockSignal.direction} ${mockSignal.symbol} @ ${mockSignal.entryPrice}`,
             );
 
-            // Step 6: Order Execution
-            console.log("⚡ Step 6: Executing Order...");
+            // Step 6: Order Execution - Delegated to external service
+            console.log("⚡ Step 6: Signal Ready for Execution");
+            console.log(
+              `✅ Signal generated: ${mockSignal.direction} ${mockSignal.symbol} @ ${mockSignal.entryPrice}`,
+            );
 
-            if (orderBlocks.length > 0) {
-              const orderBlock = orderBlocks[0] as OrderBlock;
-              const executionResult = await limitOrderExecutor
-                .placePostOnlyOrder(
-                  mockSignal,
-                  orderBlock,
-                  equity,
-                );
-
-              expect(executionResult).toBeDefined();
-              expect(executionResult.success).toBe(true);
-              expect(executionResult.orderId).toBeDefined();
-
-              console.log(`✅ Order executed: ${executionResult.orderId}`);
-
-              // Verify order is being monitored
-              const activeOrders = limitOrderExecutor.getActiveOrders();
-              expect(activeOrders.length).toBe(1);
-              expect(activeOrders[0].orderId).toBe(executionResult.orderId);
-
-              // Simulate order fill
-              mockBybitClient.simulateOrderFill(executionResult.orderId!);
-
-              // Wait for monitoring to detect fill
-              await new Promise((resolve) => setTimeout(resolve, 1100)); // Wait for monitoring cycle
-
-              console.log("✅ End-to-end flow completed successfully");
-            } else {
-              console.log(
-                "⚠️ Signal generated but no Order Blocks found for execution",
-              );
-            }
+            // Verify signal properties
+            expect(mockSignal).toBeDefined();
+            expect(mockSignal.symbol).toBe(bestHologram.symbol);
           } else {
             console.log(
               "⚠️ No signal generated (likely invalid conditions, veto, or no POI)",
@@ -752,7 +748,7 @@ describe("End-to-End Integration Tests", () => {
           }
         } else {
           console.log(
-            `⚠️ Hologram status ${bestHologram.status} not suitable for signal generation`,
+            `⚠️ Hologram status ${bestHologram.alignmentScore} not suitable for signal generation`,
           );
         }
       },
@@ -908,74 +904,6 @@ describe("End-to-End Integration Tests", () => {
       console.log(`✅ CVD validation complete: CVD=${cvd.toFixed(2)}`);
     });
 
-    it("should handle order execution and monitoring", async () => {
-      console.log("⚡ Testing order execution and monitoring...");
-
-      // Create mock signal
-      const mockSignal: SignalData = {
-        symbol: "BTCUSDT",
-        direction: "LONG",
-        hologramStatus: "A+",
-        alignmentScore: 85,
-        rsScore: 0.03,
-        sessionType: "LONDON",
-        poiType: "ORDER_BLOCK",
-        cvdConfirmation: true,
-        confidence: 90,
-        entryPrice: 50000,
-        stopLoss: 49250,
-        takeProfit: 52250,
-        positionSize: 0.1,
-        leverage: 3,
-        timestamp: Date.now(),
-      };
-
-      // Create mock Order Block
-      const mockOrderBlock: OrderBlock = {
-        type: "BULLISH",
-        high: 50100,
-        low: 49900,
-        barIndex: 5,
-        timestamp: Date.now(),
-        mitigated: false,
-        confidence: 90,
-      };
-
-      const equity = 10000;
-
-      // Test order placement
-      const executionResult = await limitOrderExecutor.placePostOnlyOrder(
-        mockSignal,
-        mockOrderBlock,
-        equity,
-      );
-
-      expect(executionResult.success).toBe(true);
-      expect(executionResult.orderId).toBeDefined();
-      expect(executionResult.positionSize).toBeGreaterThan(0);
-
-      // Verify order is being monitored
-      const activeOrders = limitOrderExecutor.getActiveOrders();
-      expect(activeOrders.length).toBe(1);
-
-      const monitoredOrder = activeOrders[0];
-      expect(monitoredOrder.orderId).toBe(executionResult.orderId);
-      expect(monitoredOrder.symbol).toBe(mockSignal.symbol);
-      expect(monitoredOrder.cancelled).toBe(false);
-      expect(monitoredOrder.filled).toBe(false);
-
-      // Test order cancellation
-      const cancelResult = await limitOrderExecutor.cancelIfPriceMoves(
-        executionResult.orderId!,
-        51000, // Price moved 2% away
-      );
-      expect(cancelResult).toBe(true);
-
-      console.log(
-        `✅ Order execution test complete: Order ${executionResult.orderId} placed and cancelled`,
-      );
-    });
-
     it("should handle error conditions gracefully", async () => {
       console.log("❌ Testing error handling...");
 
@@ -996,50 +924,6 @@ describe("End-to-End Integration Tests", () => {
       // Test CVD with no trades
       const emptyCVD = cvdValidator.calcCVD([], 60000);
       expect(emptyCVD).toBe(0);
-
-      // Test order execution with invalid parameters
-      const invalidSignal: SignalData = {
-        symbol: "",
-        direction: "LONG",
-        hologramStatus: "A+",
-        alignmentScore: 85,
-        rsScore: 0.03,
-        sessionType: "LONDON",
-        poiType: "ORDER_BLOCK",
-        cvdConfirmation: true,
-        confidence: 90,
-        entryPrice: 0, // Invalid price
-        stopLoss: 0,
-        takeProfit: 0,
-        positionSize: 0,
-        leverage: 3,
-        timestamp: Date.now(),
-      };
-
-      const invalidOrderBlock: OrderBlock = {
-        type: "BULLISH",
-        high: 0,
-        low: 0,
-        barIndex: 0,
-        timestamp: 0,
-        mitigated: false,
-        confidence: 0,
-      };
-
-      try {
-        const invalidExecution = await limitOrderExecutor.placePostOnlyOrder(
-          invalidSignal,
-          invalidOrderBlock,
-          10000,
-        );
-
-        // The execution should fail
-        expect(invalidExecution.success).toBe(false);
-        expect(invalidExecution.error).toBeDefined();
-      } catch (error) {
-        // If it throws an error, that's also acceptable for invalid input
-        expect(error).toBeDefined();
-      }
 
       console.log("✅ Error handling test complete");
     });

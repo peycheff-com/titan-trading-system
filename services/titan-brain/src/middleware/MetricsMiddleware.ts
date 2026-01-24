@@ -103,7 +103,7 @@ export class MetricsMiddleware {
         correlationId: request.headers['x-correlation-id'] as string,
       };
 
-      // eslint-disable-next-line functional/immutable-data
+       
       this.requestTimings.set(requestId, timing);
 
       if (this.config.enableRequestMetrics) {
@@ -140,7 +140,7 @@ export class MetricsMiddleware {
         this.metricsCollector.recordHttpRequestEnd();
 
         // Clean up timing data
-        // eslint-disable-next-line functional/immutable-data
+         
         this.requestTimings.delete(requestId);
 
         this.logger.debug('HTTP request metrics recorded', timing.correlationId, {
@@ -187,7 +187,7 @@ export class MetricsMiddleware {
         this.metricsCollector.recordHttpRequest(method, route, statusCode, duration, responseSize);
 
         this.metricsCollector.recordHttpRequestEnd();
-        // eslint-disable-next-line functional/immutable-data
+         
         this.requestTimings.delete(requestId);
       }
 
@@ -224,7 +224,7 @@ export class MetricsMiddleware {
       return url.split('?')[0]; // Just remove query parameters
     }
 
-    // eslint-disable-next-line functional/no-let
+     
     let route = url.split('?')[0]; // Remove query parameters
 
     // Replace common ID patterns with placeholders
@@ -296,12 +296,12 @@ export class MetricsMiddleware {
   cleanupOldTimings(maxAgeMs: number = 300000): void {
     // 5 minutes default
     const cutoff = Date.now() - maxAgeMs;
-    // eslint-disable-next-line functional/no-let
+     
     let cleaned = 0;
 
     for (const [requestId, timing] of this.requestTimings.entries()) {
       if (timing.startTime < cutoff) {
-        // eslint-disable-next-line functional/immutable-data
+         
         this.requestTimings.delete(requestId);
         cleaned++;
       }

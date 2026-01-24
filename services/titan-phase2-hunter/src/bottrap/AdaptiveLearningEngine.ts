@@ -8,7 +8,7 @@
  * Requirements: 13.1-13.7 (Adaptive Learning from Bot Trap Patterns)
  */
 
-import { TradeOutcome, PatternPrecision } from '../types';
+import { TradeOutcome } from '../types';
 import { PrecisionAnalysisResult, TechnicalPattern } from './PatternPrecisionAnalyzer';
 
 /**
@@ -248,20 +248,23 @@ export class AdaptiveLearningEngine {
     if (stats.falsePositives > stats.truePositives * 0.3) {
       // Requirement 13.4: Reduce false positives
       adjustment = this.config.learningRate * 2; // Increase threshold
-      reason = `High false positive rate (${((stats.falsePositives / (stats.truePositives + stats.falsePositives)) * 100).toFixed(1)}%)`;
-    }
-    // High false negative rate - need to decrease threshold (catch more traps)
+      reason = `High false positive rate (${(
+        (stats.falsePositives / (stats.truePositives + stats.falsePositives)) *
+        100
+      ).toFixed(1)}%)`;
+    } // High false negative rate - need to decrease threshold (catch more traps)
     else if (stats.falseNegatives > stats.trueNegatives * 0.2) {
       adjustment = -this.config.learningRate; // Decrease threshold
-      reason = `High false negative rate (${((stats.falseNegatives / (stats.trueNegatives + stats.falseNegatives)) * 100).toFixed(1)}%)`;
-    }
-    // Good performance - reinforce current parameters
+      reason = `High false negative rate (${(
+        (stats.falseNegatives / (stats.trueNegatives + stats.falseNegatives)) *
+        100
+      ).toFixed(1)}%)`;
+    } // Good performance - reinforce current parameters
     else if (stats.f1Score > 0.7) {
       // Requirement 13.3: Reinforce current parameters
       adjustment = 0;
       reason = 'Good performance - parameters reinforced';
-    }
-    // Successful SUSPECT_TRAP patterns - can be slightly more aggressive
+    } // Successful SUSPECT_TRAP patterns - can be slightly more aggressive
     else if (stats.truePositives > stats.falsePositives * 2) {
       // Requirement 13.2: Reduce threshold for successful patterns
       adjustment = -this.config.learningRate * 0.5;
@@ -459,11 +462,17 @@ export class AdaptiveLearningEngine {
     // eslint-disable-next-line functional/no-let
     let recommendation: string;
     if (projectedF1 > currentStats.f1Score) {
-      recommendation = `Proposed threshold improves F1 score from ${(currentStats.f1Score * 100).toFixed(1)}% to ${(projectedF1 * 100).toFixed(1)}%`;
+      recommendation = `Proposed threshold improves F1 score from ${(
+        currentStats.f1Score * 100
+      ).toFixed(1)}% to ${(projectedF1 * 100).toFixed(1)}%`;
     } else if (valid) {
-      recommendation = `Proposed threshold maintains acceptable performance (F1: ${(projectedF1 * 100).toFixed(1)}%)`;
+      recommendation = `Proposed threshold maintains acceptable performance (F1: ${(
+        projectedF1 * 100
+      ).toFixed(1)}%)`;
     } else {
-      recommendation = `Proposed threshold degrades performance significantly (F1: ${(projectedF1 * 100).toFixed(1)}% vs current ${(currentStats.f1Score * 100).toFixed(1)}%)`;
+      recommendation = `Proposed threshold degrades performance significantly (F1: ${(
+        projectedF1 * 100
+      ).toFixed(1)}% vs current ${(currentStats.f1Score * 100).toFixed(1)}%)`;
     }
 
     return { valid, projectedStats, recommendation };

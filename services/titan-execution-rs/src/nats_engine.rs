@@ -18,6 +18,7 @@ use crate::intent_validation::validate_intent_payload;
 use crate::metrics;
 use crate::risk_guard::RiskGuard;
 use crate::pipeline::{ExecutionPipeline, PipelineResult};
+use crate::drift_detector::DriftDetector;
 
 /// Start the NATS Engine (Consumer Loop and Halt Listener)
 /// Returns a handle to the consumer task
@@ -31,6 +32,7 @@ pub async fn start_nats_engine(
     risk_guard: Arc<RiskGuard>,
     ctx: Arc<ExecutionContext>,
     freshness_threshold: u64,
+    drift_detector: Arc<DriftDetector>,
 ) -> Result<tokio::task::JoinHandle<()>, Box<dyn std::error::Error + Send + Sync>> {
     
     // --- System Halt Listener (Core NATS) ---
@@ -42,6 +44,40 @@ pub async fn start_nats_engine(
     // Chunk 2: Pipeline Init
     // Chunk 3: Loop optimization
     // Wait, the Instruction says "Update signature". I should use multi_replace.
+
+    // --- PIPELINE CONSTRUCTION ---
+    let pipeline = Arc::new(ExecutionPipeline::new(
+        shadow_state.clone(),
+        order_manager.clone(),
+        router.clone(),
+        simulation_engine.clone(),
+        risk_guard.clone(),
+        ctx.clone(),
+        freshness_threshold,
+        drift_detector.clone(),
+    ));
+
+    // --- Market Data Listener (Staleness) ---
+    let mut ticker_sub = client.subscribe("titan.market.ticker.>").await.map_err(|e| {
+         error!("❌ Failed to subscribe to tickers: {}", e);
+         e
+    })?;
+    let risk_guard_for_md = risk_guard.clone();
+    tokio::spawn(async move {
+        while let Some(msg) = ticker_sub.next().await {
+            // Topic: titan.market.ticker.<exchange>.<symbol>
+            // For now, parse JSON payload for "exchange" and "symbol" or use subject?
+            // Subject is easier.
+            let subject = msg.subject.to_string();
+            let parts: Vec<&str> = subject.split('.').collect();
+            if parts.len() >= 4 {
+                let exchange = parts[3];
+                let symbol = if parts.len() > 4 { parts[4] } else { "UNKNOWN" };
+                // Update Staleness Monitor
+                risk_guard_for_md.record_market_data_update(exchange, symbol);
+            }
+        }
+    });
 
     // Listen for urgent kill signals. Payload: { "active": true, "reason": "Manually triggered" }
     let mut halt_sub = client.subscribe("system.halt").await.map_err(|e| {
@@ -201,6 +237,12 @@ pub async fn start_nats_engine(
                     phase: None,
                     metadata: None,
                     exchange: None,
+                    // Envelope Standards
+                    ttl_ms: Some(5000),
+                    partition_key: None,
+                    causation_id: None,
+                    env: None,
+                    subject: None,
                     position_mode: None,
                     child_fills: vec![],
                     filled_size: rust_decimal::Decimal::ZERO,
@@ -391,16 +433,6 @@ pub async fn start_nats_engine(
     
     info!("🚀 JetStream Consumer '{}' listening on '{}'", consumer_name, intent_subject);
 
-    let pipeline = Arc::new(ExecutionPipeline::new(
-        shadow_state.clone(),
-        order_manager, // OrderManager doesn't seem to be Arc? It is cloned in new(), but here it's moved.
-                       // Wait, OrderManager is struct. new() consumed it.
-        router.clone(),
-        simulation_engine.clone(),
-        risk_guard.clone(),
-        ctx.clone(),
-        freshness_threshold,
-    ));
 
     // Initialize HmacValidator once (reusable and thread-safe logic)
     let hmac_validator = crate::security::HmacValidator::new();

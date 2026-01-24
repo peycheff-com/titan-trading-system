@@ -22,7 +22,7 @@ const HoverCardContent = React.forwardRef<
     {...props}
   />
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 HoverCardContent.displayName = HoverCardPrimitive.Content.displayName;
 
 export { HoverCard, HoverCardTrigger, HoverCardContent };

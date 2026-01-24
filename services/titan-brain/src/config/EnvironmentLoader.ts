@@ -1,34 +1,20 @@
 import { EquityTier, TitanBrainConfig } from '../types/index.js';
 
 export function loadConfigFromEnvironment(): Partial<TitanBrainConfig> {
-  const config: Partial<TitanBrainConfig> = {};
-
-  // eslint-disable-next-line functional/immutable-data
-  Object.assign(config, loadBrainConfig());
-  // eslint-disable-next-line functional/immutable-data
-  Object.assign(config, loadAllocationConfig());
-  // eslint-disable-next-line functional/immutable-data
-  Object.assign(config, loadPerformanceConfig());
-  // eslint-disable-next-line functional/immutable-data
-  Object.assign(config, loadRiskConfig());
-  // eslint-disable-next-line functional/immutable-data
-  Object.assign(config, loadCapitalConfig());
-  // eslint-disable-next-line functional/immutable-data
-  Object.assign(config, loadBreakerConfig());
-  // eslint-disable-next-line functional/immutable-data
-  Object.assign(config, loadDatabaseConfig());
-  // eslint-disable-next-line functional/immutable-data
-  Object.assign(config, loadRedisConfig());
-  // eslint-disable-next-line functional/immutable-data
-  Object.assign(config, loadServerConfig());
-  // eslint-disable-next-line functional/immutable-data
-  Object.assign(config, loadNotificationConfig());
-  // eslint-disable-next-line functional/immutable-data
-  Object.assign(config, loadServicesConfig());
-  // eslint-disable-next-line functional/immutable-data
-  Object.assign(config, loadReconciliationConfig());
-
-  return config;
+  return {
+    ...loadBrainConfig(),
+    ...loadAllocationConfig(),
+    ...loadPerformanceConfig(),
+    ...loadRiskConfig(),
+    ...loadCapitalConfig(),
+    ...loadBreakerConfig(),
+    ...loadDatabaseConfig(),
+    ...loadRedisConfig(),
+    ...loadServerConfig(),
+    ...loadNotificationConfig(),
+    ...loadServicesConfig(),
+    ...loadReconciliationConfig(),
+  };
 }
 
 function loadBrainConfig(): Partial<TitanBrainConfig> {

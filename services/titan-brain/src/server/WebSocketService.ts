@@ -123,8 +123,8 @@ const DEFAULT_CONFIG: WebSocketServiceConfig = {
  */
 export class WebSocketService {
   private wss: WebSocketServer | null = null;
-  private clients: Map<WebSocket, ClientInfo> = new Map();
-  private brain: TitanBrain;
+  private readonly clients: Map<WebSocket, ClientInfo> = new Map();
+  private readonly brain: TitanBrain;
   private config: WebSocketServiceConfig;
   private pingIntervalId: NodeJS.Timeout | null = null;
   private stateUpdateIntervalId: NodeJS.Timeout | null = null;
@@ -144,7 +144,7 @@ export class WebSocketService {
    */
   attachToServer(server: { server: unknown }): void {
     // Create WebSocket server attached to the HTTP server
-    // eslint-disable-next-line functional/immutable-data
+     
     this.wss = new WebSocketServer({
       server: server.server as import('http').Server,
       path: '/ws/console',
@@ -162,7 +162,7 @@ export class WebSocketService {
    * Create standalone WebSocket server on a specific port
    */
   listen(port: number, host: string = '0.0.0.0'): void {
-    // eslint-disable-next-line functional/immutable-data
+     
     this.wss = new WebSocketServer({
       port,
       host,
@@ -226,7 +226,7 @@ export class WebSocketService {
         endpoint,
       };
 
-      // eslint-disable-next-line functional/immutable-data
+       
       this.clients.set(ws, clientInfo);
       this.logger.info(`WebSocket client connected: ${clientId} on ${endpoint}`);
 
@@ -244,7 +244,7 @@ export class WebSocketService {
         if (info) {
           this.logger.info(`WebSocket client disconnected: ${info.id}`);
         }
-        // eslint-disable-next-line functional/immutable-data
+         
         this.clients.delete(ws);
       });
 
@@ -299,14 +299,14 @@ export class WebSocketService {
         case 'ping':
           this.sendToClient(ws, { type: 'pong', timestamp: Date.now() });
           if (clientInfo) {
-            // eslint-disable-next-line functional/immutable-data
+             
             clientInfo.lastPing = Date.now();
           }
           break;
 
         case 'pong':
           if (clientInfo) {
-            // eslint-disable-next-line functional/immutable-data
+             
             clientInfo.lastPing = Date.now();
           }
           break;
@@ -433,7 +433,7 @@ export class WebSocketService {
    * Update master arm state
    */
   setMasterArm(enabled: boolean): void {
-    // eslint-disable-next-line functional/immutable-data
+     
     this.masterArm = enabled;
     this.broadcastStateUpdate();
   }
@@ -442,7 +442,7 @@ export class WebSocketService {
    * Update positions
    */
   setPositions(positions: Position[]): void {
-    // eslint-disable-next-line functional/immutable-data
+     
     this.positions = positions;
     this.broadcastStateUpdate();
   }
@@ -478,7 +478,7 @@ export class WebSocketService {
    * Start ping interval to keep connections alive
    */
   private startPingInterval(): void {
-    // eslint-disable-next-line functional/immutable-data
+     
     this.pingIntervalId = setInterval(() => {
       const now = Date.now();
 
@@ -487,7 +487,7 @@ export class WebSocketService {
         if (now - info.lastPing > this.config.pingTimeout + this.config.pingInterval) {
           this.logger.warn(`Client ${info.id} timed out, closing connection`);
           ws.terminate();
-          // eslint-disable-next-line functional/immutable-data
+           
           this.clients.delete(ws);
           return;
         }
@@ -509,7 +509,7 @@ export class WebSocketService {
       return;
     }
 
-    // eslint-disable-next-line functional/immutable-data
+     
     this.stateUpdateIntervalId = setInterval(() => {
       if (this.clients.size > 0) {
         this.broadcastStateUpdate();
@@ -538,13 +538,13 @@ export class WebSocketService {
     // Stop intervals
     if (this.pingIntervalId) {
       clearInterval(this.pingIntervalId);
-      // eslint-disable-next-line functional/immutable-data
+       
       this.pingIntervalId = null;
     }
 
     if (this.stateUpdateIntervalId) {
       clearInterval(this.stateUpdateIntervalId);
-      // eslint-disable-next-line functional/immutable-data
+       
       this.stateUpdateIntervalId = null;
     }
 
@@ -552,7 +552,7 @@ export class WebSocketService {
     this.clients.forEach((info, ws) => {
       ws.close(1000, 'Server shutting down');
     });
-    // eslint-disable-next-line functional/immutable-data
+     
     this.clients.clear();
 
     // Close WebSocket server
@@ -560,7 +560,7 @@ export class WebSocketService {
       await new Promise<void>((resolve) => {
         this.wss!.close(() => resolve());
       });
-      // eslint-disable-next-line functional/immutable-data
+       
       this.wss = null;
     }
 

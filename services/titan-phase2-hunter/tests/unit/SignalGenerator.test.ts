@@ -91,6 +91,7 @@ class MockHologramEngine {
       status: "A+",
       veto: { vetoed: false, reason: null, direction: null },
       rsScore: 0.03,
+      direction: "LONG",
     };
   }
 }
@@ -157,6 +158,7 @@ describe("SignalGenerator", () => {
         status: "A+",
         veto: { vetoed: false, reason: null, direction: null },
         rsScore: 0.03,
+        direction: "LONG",
       };
 
       const result = signalGenerator.checkHologramStatus(hologram);
@@ -174,6 +176,7 @@ describe("SignalGenerator", () => {
         status: "B",
         veto: { vetoed: false, reason: null, direction: null },
         rsScore: 0.03,
+        direction: "LONG",
       };
 
       const result = signalGenerator.checkHologramStatus(hologram);
@@ -191,6 +194,7 @@ describe("SignalGenerator", () => {
         status: "B",
         veto: { vetoed: false, reason: null, direction: null },
         rsScore: 0.03,
+        direction: "LONG",
       };
 
       const result = signalGenerator.checkHologramStatus(hologram);
@@ -208,6 +212,7 @@ describe("SignalGenerator", () => {
         status: "CONFLICT",
         veto: { vetoed: false, reason: null, direction: null },
         rsScore: 0.03,
+        direction: "LONG",
       };
 
       const result = signalGenerator.checkHologramStatus(hologram);
@@ -225,6 +230,7 @@ describe("SignalGenerator", () => {
         status: "A+",
         veto: { vetoed: true, reason: "Premium veto", direction: "LONG" },
         rsScore: 0.03,
+        direction: "LONG",
       };
 
       const result = signalGenerator.checkHologramStatus(hologram);
@@ -499,6 +505,7 @@ describe("SignalGenerator", () => {
           status: "A+",
           veto: { vetoed: false, reason: null, direction: null },
           rsScore: 0.03,
+          direction: "LONG",
         },
         session: {
           type: "LONDON",
@@ -551,6 +558,7 @@ describe("SignalGenerator", () => {
           status: "CONFLICT",
           veto: { vetoed: false, reason: null, direction: null },
           rsScore: 0.03,
+          direction: "LONG",
         },
         session: {
           type: "LONDON",

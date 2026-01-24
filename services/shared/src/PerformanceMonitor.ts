@@ -9,7 +9,9 @@
 
 import { EventEmitter } from "eventemitter3";
 import { getWebSocketManager } from "./WebSocketManager";
-import { getExecutionService } from "./ExecutionService";
+// Execution Service removal
+// import { getExecutionService } from "./ExecutionService";
+
 import { getTelemetryService } from "./TelemetryService";
 import {
   type CPUStats,
@@ -252,24 +254,7 @@ export class PerformanceMonitor extends EventEmitter {
       );
     });
 
-    // Listen for execution service events
-    const executionService = getExecutionService();
-    executionService.on("orderPlaced", (order) => {
-      // Track order latency if available
-      if (order.timestamp) {
-        const latency = Date.now() - order.timestamp;
-        if (latency > this.config.alertThresholds.latencyWarning) {
-          this.createAlert(
-            "execution",
-            "order_latency",
-            "warning",
-            latency,
-            this.config.alertThresholds.latencyWarning,
-            `High order execution latency: ${latency}ms`,
-          );
-        }
-      }
-    });
+    // Execution Service listeners removed (Service deprecated)
 
     // Listen for telemetry events
     const telemetry = getTelemetryService();
@@ -287,7 +272,6 @@ export class PerformanceMonitor extends EventEmitter {
     try {
       const resourceOptimizer = getResourceOptimizer();
       const wsManager = getWebSocketManager();
-      const executionService = getExecutionService();
       const telemetry = getTelemetryService();
 
       // Get resource metrics
@@ -298,23 +282,19 @@ export class PerformanceMonitor extends EventEmitter {
       const wsStats = wsManager.getGlobalStats();
       const wsPerformance = wsManager.getAllPerformanceMetrics();
       const avgLatency = Object.values(wsPerformance).reduce(
-            (sum, metrics) => sum + (metrics.averageLatency || 0),
+            (sum: number, metrics: any) => sum + (metrics.averageLatency || 0),
             0,
           ) / Object.keys(wsPerformance).length || 0;
       const avgCompression = Object.values(wsPerformance).reduce(
-            (sum, metrics) => sum + (metrics.compressionRatio || 0),
+            (sum: number, metrics: any) =>
+              sum + (metrics.compressionRatio || 0),
             0,
           ) / Object.keys(wsPerformance).length || 0;
 
-      // Get execution metrics
-      const trackedOrders = executionService.getTrackedOrders();
-      const successfulOrders = trackedOrders.filter(
-        (order) =>
-          order.status === "FILLED" || order.status === "PARTIALLY_FILLED",
-      ).length;
-      const successRate = trackedOrders.length > 0
-        ? (successfulOrders / trackedOrders.length) * 100
-        : 100;
+      // Get execution metrics (Stubbed - Service Removed)
+      const trackedOrders: any[] = [];
+      const successfulOrders = 0;
+      const successRate = 100;
 
       // Get telemetry metrics
       const telemetryStats = telemetry.getStats();
@@ -334,10 +314,10 @@ export class PerformanceMonitor extends EventEmitter {
           compressionRatio: avgCompression,
         },
         execution: {
-          totalOrders: trackedOrders.length,
-          successRate,
-          averageLatency: 0, // Would need to track this separately
-          activeExchanges: executionService.getAvailableExchanges().length,
+          totalOrders: 0,
+          successRate: 100,
+          averageLatency: 0,
+          activeExchanges: 0,
         },
         telemetry: {
           logsPerSecond: 0, // Would need to track this separately

@@ -16,11 +16,10 @@ import {
   RiskMetrics,
   TreasuryStatus,
 } from '../types/index.js';
-import { getNatsClient, TitanSubject } from '@titan/shared';
+import { getNatsClient, RegimeState, TitanSubject } from '@titan/shared';
 import { TitanBrain } from '../engine/TitanBrain.js';
 import { DatabaseManager } from '../db/DatabaseManager.js';
 import { PowerLawMetrics } from '../types/index.js';
-import { RegimeState } from '@titan/shared/dist/ipc/index.js';
 
 /**
  * Extended dashboard data with additional metrics
@@ -119,7 +118,7 @@ export class DashboardService {
   private navCacheTime: number = 0;
 
   /** External wallet balance providers */
-  private walletProviders: Map<string, () => Promise<WalletBalance[]>> = new Map();
+  private readonly walletProviders: Map<string, () => Promise<WalletBalance[]>> = new Map();
 
   constructor(brain: TitanBrain, db?: DatabaseManager, config?: Partial<DashboardServiceConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -157,7 +156,7 @@ export class DashboardService {
    * @param provider - Function that returns wallet balances
    */
   registerWalletProvider(exchange: string, provider: () => Promise<WalletBalance[]>): void {
-    // eslint-disable-next-line functional/immutable-data
+     
     this.walletProviders.set(exchange, provider);
   }
 
@@ -173,49 +172,36 @@ export class DashboardService {
       return this.navCache;
     }
 
-    const walletBreakdown: WalletBalance[] = [];
-    // eslint-disable-next-line functional/no-let
-    let totalNAV = 0;
-    // eslint-disable-next-line functional/no-let
-    let unrealizedPnL = 0;
-
     // Collect balances from all registered providers
-    for (const [exchange, provider] of this.walletProviders) {
-      try {
-        const balances = await provider();
-        // eslint-disable-next-line functional/immutable-data
-        walletBreakdown.push(...balances);
+    const providerPromises = Array.from(this.walletProviders.values()).map((p) =>
+      p().catch((err) => {
+        console.error('Error fetching balances:', err);
+        return [] as WalletBalance[];
+      }),
+    );
 
-        // Sum USD values
-        for (const balance of balances) {
-          totalNAV += balance.usdValue;
-        }
-      } catch (error) {
-        console.error(`Error fetching balances from ${exchange}:`, error);
-      }
-    }
+    const allBalances = (await Promise.all(providerPromises)).flat();
+
+    const walletBreakdown: WalletBalance[] = allBalances;
+    const totalNAV = allBalances.reduce((sum, b) => sum + b.usdValue, 0);
 
     // Add unrealized PnL from current positions
     const positions = this.brain.getPositions();
-    for (const position of positions) {
-      if (position.unrealizedPnL) {
-        unrealizedPnL += position.unrealizedPnL;
-      }
-    }
+    const unrealizedPnL = positions.reduce((sum, p) => sum + (p.unrealizedPnL || 0), 0);
 
-    totalNAV += unrealizedPnL;
+    const finalNAV = totalNAV + unrealizedPnL;
 
     const result: NAVCalculation = {
-      totalNAV,
+      totalNAV: finalNAV,
       walletBreakdown,
       unrealizedPnL,
       lastUpdated: Date.now(),
     };
 
     // Cache the result
-    // eslint-disable-next-line functional/immutable-data
+     
     this.navCache = result;
-    // eslint-disable-next-line functional/immutable-data
+     
     this.navCacheTime = Date.now();
 
     return result;
@@ -301,24 +287,24 @@ export class DashboardService {
 
     // Calculate correlation matrix for all positions
     const correlations: Record<string, Record<string, number>> = {};
-    // eslint-disable-next-line functional/no-let
+     
     for (let i = 0; i < positions.length; i++) {
-      // eslint-disable-next-line functional/no-let
+       
       for (let j = i + 1; j < positions.length; j++) {
         const symbolA = positions[i].symbol;
         const symbolB = positions[j].symbol;
 
-        // eslint-disable-next-line functional/immutable-data
+         
         if (!correlations[symbolA]) correlations[symbolA] = {};
-        // eslint-disable-next-line functional/immutable-data
+         
         if (!correlations[symbolB]) correlations[symbolB] = {};
 
         // For now, use a placeholder correlation calculation
         // In a real implementation, this would access the risk guardian's correlation data
         const correlation = 0.5;
-        // eslint-disable-next-line functional/immutable-data
+         
         correlations[symbolA][symbolB] = correlation;
-        // eslint-disable-next-line functional/immutable-data
+         
         correlations[symbolB][symbolA] = correlation;
       }
     }
@@ -374,7 +360,7 @@ export class DashboardService {
    * @returns Recent decisions with metadata
    */
   async getRecentDecisions(limit: number = this.config.maxRecentDecisions, phaseFilter?: PhaseId) {
-    // eslint-disable-next-line functional/no-let
+     
     let decisions = this.brain.getRecentDecisions(limit);
 
     // Apply phase filter if specified
@@ -457,13 +443,13 @@ export class DashboardService {
       treasury: enhancedTreasury,
       recentDecisions: enhancedDecisions.decisions,
       powerLawMetrics: this.brain.getPowerLawMetricsSnapshot(),
-      regimeState: this.brain.getRegimeState() as any,
+      regimeState: this.brain.getRegimeState(),
     };
 
     // Cache the result
-    // eslint-disable-next-line functional/immutable-data
+     
     this.dashboardCache = extendedData;
-    // eslint-disable-next-line functional/immutable-data
+     
     this.dashboardCacheTime = Date.now();
 
     return extendedData;
@@ -494,13 +480,13 @@ export class DashboardService {
    * Clear all caches
    */
   clearCache(): void {
-    // eslint-disable-next-line functional/immutable-data
+     
     this.dashboardCache = null;
-    // eslint-disable-next-line functional/immutable-data
+     
     this.dashboardCacheTime = 0;
-    // eslint-disable-next-line functional/immutable-data
+     
     this.navCache = null;
-    // eslint-disable-next-line functional/immutable-data
+     
     this.navCacheTime = 0;
   }
 
@@ -533,26 +519,20 @@ export class DashboardService {
     totalNotional: number,
   ): number {
     // Simple risk scoring algorithm (0-100)
-    // eslint-disable-next-line functional/no-let
-    let score = 0;
-
     // Leverage component (0-40 points)
-    score += Math.min(metrics.currentLeverage * 2, 40);
+    const leverageScore = Math.min(metrics.currentLeverage * 2, 40);
 
     // Correlation component (0-30 points)
-    score += metrics.correlation * 30;
+    const correlationScore = metrics.correlation * 30;
 
     // Position count component (0-20 points)
-    score += Math.min(positionCount * 2, 20);
+    const countScore = Math.min(positionCount * 2, 20);
 
     // Notional size component (0-10 points)
     const equity = this.brain.getEquity();
-    if (equity > 0) {
-      const notionalRatio = totalNotional / equity;
-      score += Math.min(notionalRatio * 5, 10);
-    }
+    const notionalScore = equity > 0 ? Math.min((totalNotional / equity) * 5, 10) : 0;
 
-    return Math.min(score, 100);
+    return Math.min(leverageScore + correlationScore + countScore + notionalScore, 100);
   }
 
   /**
@@ -569,7 +549,7 @@ export class DashboardService {
    */
   private estimateProcessingTime(decision: BrainDecision): number {
     // Simple estimation based on decision complexity
-    // eslint-disable-next-line functional/no-let
+     
     let baseTime = 10; // Base 10ms
 
     if (decision.risk.riskMetrics) {

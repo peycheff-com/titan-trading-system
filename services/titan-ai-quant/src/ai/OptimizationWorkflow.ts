@@ -11,7 +11,6 @@ import { TitanAnalyst } from './TitanAnalyst.js';
 import { Backtester, InMemoryDataCache } from '../simulation/Backtester.js';
 import { DataLoader } from '../simulation/DataLoader.js';
 import {
-  Config,
   Insight,
   OHLCV,
   OptimizationProposal,
@@ -38,8 +37,8 @@ export interface WorkflowResult {
     error?: string;
   }>;
   performanceComparison?: {
-    beforeMetrics: any;
-    afterMetrics: any;
+    beforeMetrics: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+    afterMetrics: any; // eslint-disable-line @typescript-eslint/no-explicit-any
     improvement: boolean;
   };
   error?: string;
@@ -341,8 +340,8 @@ export class OptimizationWorkflow {
     ohlcvData: OHLCV[];
     regimeSnapshots: RegimeSnapshot[];
   }): Promise<{
-    beforeMetrics: any;
-    afterMetrics: any;
+    beforeMetrics: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+    afterMetrics: any; // eslint-disable-line @typescript-eslint/no-explicit-any
     improvement: boolean;
   }> {
     try {

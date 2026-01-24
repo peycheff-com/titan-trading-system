@@ -148,7 +148,7 @@ export class ManualOverrideService {
 
       // Persist to database
       const savedOverride = await this.saveOverride(override);
-      // eslint-disable-next-line functional/immutable-data
+       
       this.currentOverride = savedOverride;
 
       // Activate warning banner
@@ -187,9 +187,9 @@ export class ManualOverrideService {
       );
 
       // Clear current override
-      // eslint-disable-next-line functional/immutable-data
+       
       this.currentOverride.active = false;
-      // eslint-disable-next-line functional/immutable-data
+       
       this.currentOverride = null;
 
       // Deactivate warning banner
@@ -258,18 +258,18 @@ export class ManualOverrideService {
    */
   async getOverrideHistory(operatorId?: string, limit: number = 50): Promise<ManualOverride[]> {
     try {
-      // eslint-disable-next-line functional/no-let
+       
       let query = `SELECT * FROM manual_overrides`;
       const params: any[] = [];
 
       if (operatorId) {
         query += ` WHERE operator_id = $1`;
-        // eslint-disable-next-line functional/immutable-data
+         
         params.push(operatorId);
       }
 
       query += ` ORDER BY timestamp DESC LIMIT $${params.length + 1}`;
-      // eslint-disable-next-line functional/immutable-data
+       
       params.push(limit);
 
       const rows = await this.db.queryAll<any>(query, params);
@@ -384,7 +384,7 @@ export class ManualOverrideService {
       );
 
       if (row) {
-        // eslint-disable-next-line functional/immutable-data
+         
         this.currentOverride = this.mapRowToOverride(row);
 
         // Check if override has expired
@@ -531,7 +531,7 @@ export class ManualOverrideService {
       );
     }
 
-    // eslint-disable-next-line functional/immutable-data
+     
     this.currentOverride = null;
     this.deactivateWarningBanner();
     console.log('Manual override expired');
@@ -541,7 +541,7 @@ export class ManualOverrideService {
    * Activate warning banner
    */
   private activateWarningBanner(): void {
-    // eslint-disable-next-line functional/immutable-data
+     
     this.warningBannerActive = true;
 
     // Auto-deactivate after timeout
@@ -556,7 +556,7 @@ export class ManualOverrideService {
    * Deactivate warning banner
    */
   private deactivateWarningBanner(): void {
-    // eslint-disable-next-line functional/immutable-data
+     
     this.warningBannerActive = false;
   }
 

@@ -26,6 +26,8 @@ use titan_execution_rs::risk_policy::RiskPolicy;
 use titan_execution_rs::risk_guard::RiskGuard;
 use titan_execution_rs::context::ExecutionContext;
 use actix_web_prom::PrometheusMetricsBuilder;
+use titan_execution_rs::drift_detector::DriftDetector;
+use titan_execution_rs::sre::SreMonitor;
 
 fn load_secrets_from_files() {
     const FILE_SUFFIX: &str = "_FILE";
@@ -198,6 +200,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let risk_guard = Arc::new(RiskGuard::new(risk_policy, shadow_state.clone()));
     info!("✅ Risk Guard initialized with default policy");
 
+    // Initialize Drift Detector
+    let drift_detector = Arc::new(DriftDetector::new(
+        20.0, // spread 20bps
+        2000, // latency 2s
+        80.0, // correlation 80bps
+    ));
+
+    // Initialize SRE Monitor and spawn loop
+    let sre_monitor = Arc::new(SreMonitor::new());
+    let rg_for_sre = risk_guard.clone();
+    let sre_for_loop = sre_monitor.clone();
+    tokio::spawn(async move {
+        loop {
+            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+            sre_for_loop.check_slos(&rg_for_sre);
+        }
+    });
+    info!("✅ SRE Monitor active");
+
     info!("✅ Core components initialized");
 
 
@@ -280,6 +301,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         risk_guard.clone(),
         ctx.clone(),
         execution_config.freshness_threshold_ms.unwrap_or(5000),
+        drift_detector.clone(),
     ).await?;
 
     // --- API Server Task ---

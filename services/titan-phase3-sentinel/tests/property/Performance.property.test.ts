@@ -28,17 +28,33 @@ describe("Performance Tracker Property Tests", () => {
                             id: `t-${i}`,
                             symbol: "BTC",
                             type: "BASIS_SCALP",
-                            entryTime: 0,
-                            exitTime: Date.now(),
+                            entryTime: 100,
+                            exitTime: 0, // Open initially
                             entryPrice: 50000,
                             entryBasis: 0,
                             exitBasis: 0,
                             size: 1,
-                            realizedPnL: t.realizedPnL,
+                            realizedPnL: 0, // Initially 0
                             fees: t.fees,
                         };
 
                         tracker.recordTrade(trade);
+
+                        // Close trade to realize PnL
+                        // Formula: (entryBasis - exitBasis) * size = PnL
+                        // (0 - exitBasis) * 1 = PnL => exitBasis = -PnL
+                        tracker.closeTrade(
+                            trade.id,
+                            0, // exitPrice 0 to minimize fee impact/complexity
+                            Date.now(),
+                            -(t.realizedPnL), // This ensures grossPnL equals t.realizedPnL
+                        );
+
+                        // Manually correct fees if needed, but closeTrade adds exit fees (0 here since price 0)
+                        // And recordTrade deducted trade.fees (t.fees).
+                        // So net result: Equity -= t.fees; Equity += t.realizedPnL - 0.
+                        // expectedYield = t.realizedPnL - t.fees. match.
+
                         expectedYield += t.realizedPnL - t.fees;
                         if ((t.realizedPnL - t.fees) > 0) wins++;
                     });
@@ -82,10 +98,16 @@ describe("Performance Tracker Property Tests", () => {
                             entryBasis: 0,
                             exitBasis: 0,
                             size: 1,
-                            realizedPnL: pnl,
+                            realizedPnL: 0,
                             fees: 0,
                         };
                         tracker.recordTrade(trade);
+                        tracker.closeTrade(
+                            trade.id,
+                            0,
+                            100,
+                            -pnl,
+                        );
 
                         equity += pnl;
                         if (equity > hwm) hwm = equity;

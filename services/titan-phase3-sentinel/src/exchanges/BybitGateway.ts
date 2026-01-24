@@ -31,11 +31,11 @@ export class BybitGateway implements IExchangeGateway {
     };
   }
 
-  async getPrice(symbol: string): Promise<number> {
+  async getPrice(_symbol: string): Promise<number> {
     return 50000; // Stub
   }
 
-  async getTicker(symbol: string): Promise<{ price: number; bid: number; ask: number }> {
+  async getTicker(_symbol: string): Promise<{ price: number; bid: number; ask: number }> {
     return {
       price: 50000,
       bid: 49995,
@@ -43,7 +43,7 @@ export class BybitGateway implements IExchangeGateway {
     };
   }
 
-  async getBalance(asset: string): Promise<number> {
+  async getBalance(_asset: string): Promise<number> {
     return 10000; // Stub
   }
 }

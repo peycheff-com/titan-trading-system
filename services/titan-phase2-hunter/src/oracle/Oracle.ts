@@ -17,14 +17,19 @@
  * - 1.7: Increase position size when BTC ATH > 60%
  */
 
-import { EventEmitter } from 'events';
-import { EventCategory, OracleScore, PredictionMarketEvent, TechnicalSignal } from '../types';
-import { PolymarketClient, PolymarketClientConfig } from './PolymarketClient';
-import { EventMapper, SymbolMappingResult } from './EventMapper';
-import { SentimentCalculator, SentimentResult } from './SentimentCalculator';
+import { EventEmitter } from "events";
+import {
+  EventCategory,
+  OracleScore,
+  PredictionMarketEvent,
+  TechnicalSignal,
+} from "../types";
+import { PolymarketClient, PolymarketClientConfig } from "./PolymarketClient";
+import { EventMapper, SymbolMappingResult } from "./EventMapper";
+import { SentimentCalculator, SentimentResult } from "./SentimentCalculator";
 
-import { Enhanced2026ConfigManager, OracleConfig } from '../config/Enhanced2026Config';
-import { EventMonitor } from './EventMonitor';
+import { ConfigManager, OracleConfig } from "../config/ConfigManager";
+import { EventMonitor } from "./EventMonitor";
 
 // ============================================================================
 // INTERFACES
@@ -33,7 +38,7 @@ import { EventMonitor } from './EventMonitor';
 /**
  * Oracle configuration (extended from Enhanced2026Config)
  */
-export type { OracleConfig } from '../config/Enhanced2026Config';
+export type { OracleConfig } from "../config/ConfigManager";
 
 /**
  * Veto result with detailed reasoning
@@ -41,7 +46,7 @@ export type { OracleConfig } from '../config/Enhanced2026Config';
 export interface VetoResult {
   shouldVeto: boolean;
   reason: string | null;
-  vetoType: 'conflict' | 'btc_crash' | 'extreme_event' | null;
+  vetoType: "conflict" | "btc_crash" | "extreme_event" | null;
   conflictScore: number;
 }
 
@@ -86,12 +91,13 @@ export class Oracle extends EventEmitter {
   private eventMapper: EventMapper;
   private sentimentCalculator: SentimentCalculator;
   private eventMonitor: EventMonitor;
-  private configManager: Enhanced2026ConfigManager;
+  private configManager: ConfigManager;
   private config: OracleConfig;
 
   // Cached data
   private eventCache: Map<string, PredictionMarketEvent[]> = new Map();
-  private scoreCache: Map<string, { score: OracleScore; timestamp: number }> = new Map();
+  private scoreCache: Map<string, { score: OracleScore; timestamp: number }> =
+    new Map();
   private cacheTTL: number;
 
   // State tracking
@@ -100,12 +106,12 @@ export class Oracle extends EventEmitter {
   private updateInterval: NodeJS.Timeout | null = null;
 
   constructor(
-    configManager: Enhanced2026ConfigManager,
-    polymarketConfig?: Partial<PolymarketClientConfig>
+    configManager: ConfigManager,
+    polymarketConfig?: Partial<PolymarketClientConfig>,
   ) {
     super();
     this.configManager = configManager;
-    this.config = configManager.getOracleConfig();
+    this.config = configManager.getConfig().oracle;
     this.cacheTTL = this.config.updateInterval * 1000;
 
     // Initialize components
@@ -120,9 +126,15 @@ export class Oracle extends EventEmitter {
     this.sentimentCalculator = new SentimentCalculator();
 
     // Forward events from sub-components
-    this.polymarketClient.on('rateLimited', data => this.emit('rateLimited', data));
-    this.polymarketClient.on('connectionError', error => this.emit('connectionError', error));
-    this.eventMonitor.on('alert', alert => this.emit('eventAlert', alert));
+    this.polymarketClient.on(
+      "rateLimited",
+      (data) => this.emit("rateLimited", data),
+    );
+    this.polymarketClient.on(
+      "connectionError",
+      (error) => this.emit("connectionError", error),
+    );
+    this.eventMonitor.on("alert", (alert) => this.emit("eventAlert", alert));
   }
 
   // ============================================================================
@@ -134,7 +146,7 @@ export class Oracle extends EventEmitter {
    */
   async initialize(): Promise<boolean> {
     if (!this.config.enabled) {
-      this.emit('disabled');
+      this.emit("disabled");
       return false;
     }
 
@@ -142,7 +154,7 @@ export class Oracle extends EventEmitter {
       // Test connection
       const connected = await this.polymarketClient.connect();
       if (!connected) {
-        this.emit('initializationFailed', { reason: 'Connection failed' });
+        this.emit("initializationFailed", { reason: "Connection failed" });
         return false;
       }
 
@@ -154,10 +166,10 @@ export class Oracle extends EventEmitter {
 
       // eslint-disable-next-line functional/immutable-data
       this.isInitialized = true;
-      this.emit('initialized');
+      this.emit("initialized");
       return true;
     } catch (error) {
-      this.emit('initializationFailed', { reason: (error as Error).message });
+      this.emit("initializationFailed", { reason: (error as Error).message });
       return false;
     }
   }
@@ -173,7 +185,7 @@ export class Oracle extends EventEmitter {
     // eslint-disable-next-line functional/immutable-data
     this.updateInterval = setInterval(
       () => this.refreshEvents(),
-      this.config.updateInterval * 1000
+      this.config.updateInterval * 1000,
     );
   }
 
@@ -202,7 +214,9 @@ export class Oracle extends EventEmitter {
       // Convert to PredictionMarketEvent format
       const allEvents: PredictionMarketEvent[] = [];
 
-      for (const market of [...cryptoEvents, ...macroEvents, ...regulatoryEvents]) {
+      for (
+        const market of [...cryptoEvents, ...macroEvents, ...regulatoryEvents]
+      ) {
         const event = this.polymarketClient.convertToPredictionEvent(market);
         // eslint-disable-next-line functional/immutable-data
         allEvents.push(event);
@@ -217,20 +231,22 @@ export class Oracle extends EventEmitter {
 
       // Update cache
       // eslint-disable-next-line functional/immutable-data
-      this.eventCache.set('all', Array.from(uniqueEvents.values()));
+      this.eventCache.set("all", Array.from(uniqueEvents.values()));
       // eslint-disable-next-line functional/immutable-data
       this.lastUpdate = new Date();
 
       // Detect changes
-      this.eventMonitor.detectSignificantChanges(Array.from(uniqueEvents.values()));
+      this.eventMonitor.detectSignificantChanges(
+        Array.from(uniqueEvents.values()),
+      );
 
       // Clear score cache (events changed)
       // eslint-disable-next-line functional/immutable-data
       this.scoreCache.clear();
 
-      this.emit('eventsRefreshed', { count: uniqueEvents.size });
+      this.emit("eventsRefreshed", { count: uniqueEvents.size });
     } catch (error) {
-      this.emit('refreshError', { error: (error as Error).message });
+      this.emit("refreshError", { error: (error as Error).message });
     }
   }
 
@@ -242,7 +258,10 @@ export class Oracle extends EventEmitter {
    * Calculate Oracle Score for a symbol and direction
    * Requirement 1.2: Compute weighted sentiment score between -100 and +100
    */
-  async calculateOracleScore(symbol: string, direction: 'LONG' | 'SHORT'): Promise<OracleScore> {
+  async calculateOracleScore(
+    symbol: string,
+    direction: "LONG" | "SHORT",
+  ): Promise<OracleScore> {
     // Check cache first
     const cacheKey = `${symbol}-${direction}`;
     const cached = this.scoreCache.get(cacheKey);
@@ -251,7 +270,7 @@ export class Oracle extends EventEmitter {
     }
 
     // Get all events
-    const allEvents = this.eventCache.get('all') || [];
+    const allEvents = this.eventCache.get("all") || [];
     if (allEvents.length === 0) {
       return this.createDefaultScore();
     }
@@ -260,17 +279,17 @@ export class Oracle extends EventEmitter {
     const mappingResult = this.eventMapper.mapEventsToSymbol(symbol, allEvents);
 
     // Calculate sentiment
-    const sentimentDirection = direction === 'LONG' ? 'long' : 'short';
+    const sentimentDirection = direction === "LONG" ? "long" : "short";
     const sentiment = this.sentimentCalculator.calculateSentimentFromRelevance(
       mappingResult.events,
-      sentimentDirection
+      sentimentDirection,
     );
 
     // Create Oracle Score
     const score: OracleScore = {
       sentiment: sentiment.sentiment,
       confidence: sentiment.confidence,
-      events: mappingResult.events.map(r => r.event),
+      events: mappingResult.events.map((r) => r.event),
       veto: false,
       vetoReason: null,
       convictionMultiplier: 1.0,
@@ -292,20 +311,26 @@ export class Oracle extends EventEmitter {
    * Determine if a signal should be vetoed
    * Requirements 1.5, 1.6: Veto logic for conflicts and BTC crash
    */
-  async shouldVetoSignal(signal: TechnicalSignal, oracleScore?: OracleScore): Promise<VetoResult> {
+  async shouldVetoSignal(
+    signal: TechnicalSignal,
+    oracleScore?: OracleScore,
+  ): Promise<VetoResult> {
     // Get Oracle score if not provided
-    const score = oracleScore || (await this.calculateOracleScore(signal.symbol, signal.direction));
+    const score = oracleScore ||
+      (await this.calculateOracleScore(signal.symbol, signal.direction));
 
     // Check for BTC Crash veto (Requirement 1.6)
-    if (signal.direction === 'LONG') {
+    if (signal.direction === "LONG") {
       const btcCrashProb = this.getBTCCrashProbability();
       if (btcCrashProb > this.config.btcCrashVetoThreshold) {
         return {
           shouldVeto: true,
-          reason: `BTC Crash probability (${btcCrashProb.toFixed(
-            1
-          )}%) exceeds threshold (${this.config.btcCrashVetoThreshold}%)`,
-          vetoType: 'btc_crash',
+          reason: `BTC Crash probability (${
+            btcCrashProb.toFixed(
+              1,
+            )
+          }%) exceeds threshold (${this.config.btcCrashVetoThreshold}%)`,
+          vetoType: "btc_crash",
           conflictScore: btcCrashProb,
         };
       }
@@ -316,10 +341,12 @@ export class Oracle extends EventEmitter {
     if (conflictScore > this.config.conflictThreshold) {
       return {
         shouldVeto: true,
-        reason: `Oracle conflicts with technical signal by ${conflictScore.toFixed(
-          1
-        )} points (threshold: ${this.config.conflictThreshold})`,
-        vetoType: 'conflict',
+        reason: `Oracle conflicts with technical signal by ${
+          conflictScore.toFixed(
+            1,
+          )
+        } points (threshold: ${this.config.conflictThreshold})`,
+        vetoType: "conflict",
         conflictScore,
       };
     }
@@ -336,10 +363,13 @@ export class Oracle extends EventEmitter {
    * Calculate conflict score between Oracle and technical signal
    * Requirement 1.5: Conflict > 40 points triggers veto
    */
-  private calculateConflictScore(signal: TechnicalSignal, oracleScore: OracleScore): number {
+  private calculateConflictScore(
+    signal: TechnicalSignal,
+    oracleScore: OracleScore,
+  ): number {
     // For LONG signals, negative Oracle sentiment = conflict
     // For SHORT signals, positive Oracle sentiment = conflict
-    if (signal.direction === 'LONG') {
+    if (signal.direction === "LONG") {
       // Conflict if Oracle is bearish (negative sentiment)
       return oracleScore.sentiment < 0 ? Math.abs(oracleScore.sentiment) : 0;
     } else {
@@ -358,9 +388,10 @@ export class Oracle extends EventEmitter {
    */
   async getConvictionMultiplier(
     signal: TechnicalSignal,
-    oracleScore?: OracleScore
+    oracleScore?: OracleScore,
   ): Promise<ConvictionResult> {
-    const score = oracleScore || (await this.calculateOracleScore(signal.symbol, signal.direction));
+    const score = oracleScore ||
+      (await this.calculateOracleScore(signal.symbol, signal.direction));
 
     // eslint-disable-next-line functional/no-let
     let multiplier = 1.0;
@@ -384,14 +415,14 @@ export class Oracle extends EventEmitter {
       // Moderate alignment: Apply partial multiplier
       const alignmentStrength = Math.abs(score.sentiment) / 100;
       // eslint-disable-next-line functional/immutable-data
-      factors.oracleAlignment =
-        1.0 + (this.config.convictionMultiplierMax - 1.0) * alignmentStrength;
+      factors.oracleAlignment = 1.0 +
+        (this.config.convictionMultiplierMax - 1.0) * alignmentStrength;
       // eslint-disable-next-line functional/immutable-data
       reasons.push(`Oracle moderately aligned (sentiment: ${score.sentiment})`);
     }
 
     // Check for BTC ATH boost (Requirement 1.7)
-    if (signal.direction === 'LONG' && signal.symbol.includes('BTC')) {
+    if (signal.direction === "LONG" && signal.symbol.includes("BTC")) {
       const btcAthProb = this.getBTCATHProbability();
       if (btcAthProb > this.config.btcAthBoostThreshold) {
         // eslint-disable-next-line functional/immutable-data
@@ -408,11 +439,14 @@ export class Oracle extends EventEmitter {
       // eslint-disable-next-line functional/immutable-data
       factors.conflictPenalty = 1.0 - (conflictScore / 100) * 0.3;
       // eslint-disable-next-line functional/immutable-data
-      reasons.push(`Partial Oracle conflict (${conflictScore.toFixed(1)} points)`);
+      reasons.push(
+        `Partial Oracle conflict (${conflictScore.toFixed(1)} points)`,
+      );
     }
 
     // Calculate final multiplier
-    multiplier = factors.oracleAlignment * factors.btcAthBoost * factors.conflictPenalty;
+    multiplier = factors.oracleAlignment * factors.btcAthBoost *
+      factors.conflictPenalty;
 
     // Cap at maximum
     multiplier = Math.min(multiplier, this.config.convictionMultiplierMax);
@@ -422,7 +456,7 @@ export class Oracle extends EventEmitter {
 
     return {
       multiplier: Math.round(multiplier * 100) / 100,
-      reason: reasons.length > 0 ? reasons.join('; ') : 'No adjustment',
+      reason: reasons.length > 0 ? reasons.join("; ") : "No adjustment",
       factors,
     };
   }
@@ -430,8 +464,11 @@ export class Oracle extends EventEmitter {
   /**
    * Check if Oracle sentiment aligns with signal direction
    */
-  private isOracleAligned(signal: TechnicalSignal, score: OracleScore): boolean {
-    if (signal.direction === 'LONG') {
+  private isOracleAligned(
+    signal: TechnicalSignal,
+    score: OracleScore,
+  ): boolean {
+    if (signal.direction === "LONG") {
       return score.sentiment > 0;
     } else {
       return score.sentiment < 0;
@@ -447,7 +484,7 @@ export class Oracle extends EventEmitter {
    * Requirement 1.6: BTC Crash probability detection
    */
   getBTCCrashProbability(): number {
-    const allEvents = this.eventCache.get('all') || [];
+    const allEvents = this.eventCache.get("all") || [];
     return this.eventMapper.getHighestBTCCrashProbability(allEvents);
   }
 
@@ -456,7 +493,7 @@ export class Oracle extends EventEmitter {
    * Requirement 1.7: BTC ATH probability detection
    */
   getBTCATHProbability(): number {
-    const allEvents = this.eventCache.get('all') || [];
+    const allEvents = this.eventCache.get("all") || [];
     return this.eventMapper.getHighestBTCATHProbability(allEvents);
   }
 
@@ -478,7 +515,10 @@ export class Oracle extends EventEmitter {
    */
   async evaluateSignal(signal: TechnicalSignal): Promise<OracleScore> {
     // Calculate base Oracle score
-    const score = await this.calculateOracleScore(signal.symbol, signal.direction);
+    const score = await this.calculateOracleScore(
+      signal.symbol,
+      signal.direction,
+    );
 
     // Check for veto
     const vetoResult = await this.shouldVetoSignal(signal, score);
@@ -489,7 +529,10 @@ export class Oracle extends EventEmitter {
 
     // Calculate conviction multiplier (only if not vetoed)
     if (!score.veto) {
-      const convictionResult = await this.getConvictionMultiplier(signal, score);
+      const convictionResult = await this.getConvictionMultiplier(
+        signal,
+        score,
+      );
       // eslint-disable-next-line functional/immutable-data
       score.convictionMultiplier = convictionResult.multiplier;
     } else {
@@ -498,7 +541,7 @@ export class Oracle extends EventEmitter {
     }
 
     // Emit evaluation event
-    this.emit('signalEvaluated', {
+    this.emit("signalEvaluated", {
       symbol: signal.symbol,
       direction: signal.direction,
       sentiment: score.sentiment,
@@ -517,7 +560,7 @@ export class Oracle extends EventEmitter {
    * Get current Oracle state
    */
   getState(): OracleState {
-    const allEvents = this.eventCache.get('all') || [];
+    const allEvents = this.eventCache.get("all") || [];
     const connectionStatus = this.polymarketClient.getConnectionStatus();
 
     return {
@@ -554,7 +597,7 @@ export class Oracle extends EventEmitter {
    * Get events for a specific category
    */
   getEventsByCategory(category: EventCategory): PredictionMarketEvent[] {
-    const allEvents = this.eventCache.get('all') || [];
+    const allEvents = this.eventCache.get("all") || [];
     return this.eventMapper.filterEventsByCategory(allEvents, [category]);
   }
 
@@ -569,7 +612,7 @@ export class Oracle extends EventEmitter {
     // Update config manager
     this.configManager.updateOracleConfig(config);
     // eslint-disable-next-line functional/immutable-data
-    this.config = this.configManager.getOracleConfig();
+    this.config = this.configManager.getConfig().oracle;
     // eslint-disable-next-line functional/immutable-data
     this.cacheTTL = this.config.updateInterval * 1000;
 
@@ -583,7 +626,7 @@ export class Oracle extends EventEmitter {
     // eslint-disable-next-line functional/immutable-data
     this.scoreCache.clear();
 
-    this.emit('configUpdated', this.config);
+    this.emit("configUpdated", this.config);
   }
 
   /**

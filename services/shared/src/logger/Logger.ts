@@ -644,7 +644,7 @@ export class Logger {
       this.compressOldLogs().catch((err) => {
         console.error('Failed to compress old logs:', err);
       });
-    } catch (error) {
+    } catch {
       // ignore
     }
   }
@@ -702,7 +702,7 @@ export class Logger {
       const entries: TradeLogEntry[] = lines.map((line) => JSON.parse(line));
       if (filter) return entries.filter(filter);
       return entries;
-    } catch (error) {
+    } catch {
       return [];
     }
   }

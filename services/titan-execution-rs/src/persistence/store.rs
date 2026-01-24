@@ -187,4 +187,12 @@ impl PersistenceStore {
 
         Ok(result_json)
     }
+
+    pub fn check_idempotency(&self, key: &str, ttl_ms: i64) -> Result<bool, StoreError> {
+        self.store.check_idempotency(key, ttl_ms)
+    }
+
+    pub fn set_idempotency(&self, key: &str, ttl_ms: i64) -> Result<(), StoreError> {
+        self.store.set_idempotency(key, ttl_ms)
+    }
 }

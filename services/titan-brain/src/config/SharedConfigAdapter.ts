@@ -2,6 +2,7 @@ import { EventEmitter } from "events";
 import {
   ConfigManager as SharedConfigManager,
   getConfigManager,
+  Logger,
 } from "@titan/shared";
 import { BrainConfig, ConfigDefaults } from "./BrainConfig.js";
 
@@ -10,22 +11,23 @@ import { BrainConfig, ConfigDefaults } from "./BrainConfig.js";
  * Implements the same interface as the old local ConfigManager.
  */
 export class SharedConfigAdapter extends EventEmitter {
-  private sharedManager: SharedConfigManager;
+  private readonly sharedManager: SharedConfigManager;
   private config: BrainConfig | null = null;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private logger: any; // Using any to avoid circular dependency issues, will be compatible with Logger
+  private readonly logger: Logger;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   constructor(logger?: any) {
     super();
     this.sharedManager = getConfigManager();
     // Logger is optional in constructor, will use shared logger if needed or console
-    this.logger = logger || {
-      info: console.log,
-      warn: console.warn,
-      error: console.error,
-    };
+    this.logger = logger ||
+      ({
+        info: console.log,
+        warn: console.warn,
+        error: console.error,
+        debug: console.debug,
+      } as Logger);
   }
 
   /**
@@ -44,6 +46,7 @@ export class SharedConfigAdapter extends EventEmitter {
 
     // 3. Merge and Map to BrainConfig interface
 
+     
     this.config = this.mapToBrainConfig(sharedBrainConfig, serviceConfig);
 
     this.logger.info("Configuration loaded successfully");
@@ -76,27 +79,11 @@ export class SharedConfigAdapter extends EventEmitter {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private mapDatabaseConfig(serviceConfig: any): any {
-    // Priority: Env Vars -> Service Config
-    let databaseUrl = process.env.DATABASE_URL;
+    const envUrl = process.env.DATABASE_URL;
+    const constructedUrl = this.getConstructedUrl();
+    const serviceUrl = this.getServiceUrl(serviceConfig);
 
-    // Priority to TITAN_DB_* variables for self-hosted setup
-    if (process.env.TITAN_DB_HOST) {
-      const host = process.env.TITAN_DB_HOST;
-      const port = process.env.TITAN_DB_PORT || "5432";
-      const user = process.env.TITAN_DB_USER || "postgres";
-      const pass = process.env.TITAN_DB_PASSWORD || "postgres";
-      const name = process.env.TITAN_DB_NAME || "titan_brain";
-      databaseUrl = `postgres://${user}:${pass}@${host}:${port}/${name}`;
-    }
-
-    if (!databaseUrl && serviceConfig.database) {
-      const db = serviceConfig.database;
-      databaseUrl =
-        `postgres://${db.user}:${db.password}@${db.host}:${db.port}/${db.name}`;
-      if (db.ssl) {
-        databaseUrl += "?sslmode=require";
-      }
-    }
+    const databaseUrl = envUrl || constructedUrl || serviceUrl;
 
     if (!databaseUrl) {
       throw new Error("Database URL not found in config or env");
@@ -117,7 +104,25 @@ export class SharedConfigAdapter extends EventEmitter {
     };
   }
 
+  private getConstructedUrl(): string | undefined {
+    if (!process.env.TITAN_DB_HOST) return undefined;
+    const host = process.env.TITAN_DB_HOST;
+    const port = process.env.TITAN_DB_PORT || "5432";
+    const user = process.env.TITAN_DB_USER || "postgres";
+    const pass = process.env.TITAN_DB_PASSWORD || "postgres";
+    const name = process.env.TITAN_DB_NAME || "titan_brain";
+    return `postgres://${user}:${pass}@${host}:${port}/${name}`;
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private getServiceUrl(serviceConfig: any): string | undefined {
+    if (!serviceConfig.database) return undefined;
+    const db = serviceConfig.database;
+    const base =
+      `postgres://${db.user}:${db.password}@${db.host}:${db.port}/${db.name}`;
+    return db.ssl ? `${base}?sslmode=require` : base;
+  }
+
   private mapCoreConfig(
     serviceConfig: any,
     defaults: any,

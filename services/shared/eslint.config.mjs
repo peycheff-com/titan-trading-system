@@ -1,4 +1,5 @@
 import js from "@eslint/js";
+import functional from "eslint-plugin-functional";
 import tseslint from "typescript-eslint";
 import { createRequire } from "module";
 import { fileURLToPath } from "url";
@@ -25,7 +26,7 @@ export default tseslint.config(
   {
     languageOptions: {
       parserOptions: {
-        project: "./tsconfig.json",
+        project: ["./tsconfig.json", "./tests/tsconfig.json"],
         tsconfigRootDir: __dirname,
       },
     },
@@ -35,9 +36,12 @@ export default tseslint.config(
   {
     plugins: {
       prettier: prettierPlugin,
+      functional,
     },
     rules: {
       "prettier/prettier": "warn",
+      "functional/no-let": "error",
+      "functional/immutable-data": ["error", { ignoreAccessorPattern: ["**.current", "**.value"] }],
       "@typescript-eslint/explicit-function-return-type": "off",
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],

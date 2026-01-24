@@ -1,0 +1,99 @@
+  console.log
+    [34m🚀 Config Manager initialized for environment: test[0m
+
+      at new ConfigManager (../shared/src/ConfigManager.ts:152:13)
+
+  console.warn
+    Deep think failed, proceeding without it: TitanError: Gemini API error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-3.0-flash:generateContent: [400 Bad Request] API key not valid. Please pass a valid API key. [{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"API_KEY_INVALID","domain":"googleapis.com","metadata":{"service":"generativelanguage.googleapis.com"}},{"@type":"type.googleapis.com/google.rpc.LocalizedMessage","locale":"en-US","message":"API key not valid. Please pass a valid API key."}]
+        at GeminiClient.classifyGeminiError (/Users/ivan/Code/trading/titan/services/titan-ai-quant/src/ai/GeminiClient.ts:218:14)
+        at GeminiClient.generateWithRetry (/Users/ivan/Code/trading/titan/services/titan-ai-quant/src/ai/GeminiClient.ts:139:31)
+        at processTicksAndRejections (node:internal/process/task_queues:105:5)
+        at RateLimiter.execute (/Users/ivan/Code/trading/titan/services/titan-ai-quant/src/ai/RateLimiter.ts:98:14)
+        at TitanAnalyst.deepThink (/Users/ivan/Code/trading/titan/services/titan-ai-quant/src/ai/TitanAnalyst.ts:568:14)
+        at TitanAnalyst.proposeOptimization (/Users/ivan/Code/trading/titan/services/titan-ai-quant/src/ai/TitanAnalyst.ts:208:23)
+        at Object.<anonymous> (/Users/ivan/Code/trading/titan/services/titan-ai-quant/tests/unit/TitanAnalyst.test.ts:130:26) {
+      code: 'INVALID_RESPONSE',
+      context: { attempt: 1 },
+      timestamp: 1769255687286,
+      isRetryable: false
+    }
+
+      571 |       });
+      572 |     } catch (error) {
+    > 573 |       console.warn("Deep think failed, proceeding without it:", error);
+          |               ^
+      574 |       return "Analysis skipped due to error.";
+      575 |     }
+      576 |   }
+
+      at TitanAnalyst.deepThink (src/ai/TitanAnalyst.ts:573:15)
+      at TitanAnalyst.proposeOptimization (src/ai/TitanAnalyst.ts:208:23)
+      at Object.<anonymous> (tests/unit/TitanAnalyst.test.ts:130:26)
+
+  console.warn
+    Deep think failed, proceeding without it: TitanError: Gemini API error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-3.0-flash:generateContent: [400 Bad Request] API key not valid. Please pass a valid API key. [{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"API_KEY_INVALID","domain":"googleapis.com","metadata":{"service":"generativelanguage.googleapis.com"}},{"@type":"type.googleapis.com/google.rpc.LocalizedMessage","locale":"en-US","message":"API key not valid. Please pass a valid API key."}]
+        at GeminiClient.classifyGeminiError (/Users/ivan/Code/trading/titan/services/titan-ai-quant/src/ai/GeminiClient.ts:218:14)
+        at GeminiClient.generateWithRetry (/Users/ivan/Code/trading/titan/services/titan-ai-quant/src/ai/GeminiClient.ts:139:31)
+        at processTicksAndRejections (node:internal/process/task_queues:105:5)
+        at RateLimiter.execute (/Users/ivan/Code/trading/titan/services/titan-ai-quant/src/ai/RateLimiter.ts:98:14)
+        at TitanAnalyst.deepThink (/Users/ivan/Code/trading/titan/services/titan-ai-quant/src/ai/TitanAnalyst.ts:568:14)
+        at TitanAnalyst.proposeOptimization (/Users/ivan/Code/trading/titan/services/titan-ai-quant/src/ai/TitanAnalyst.ts:208:23)
+        at Object.<anonymous> (/Users/ivan/Code/trading/titan/services/titan-ai-quant/tests/unit/TitanAnalyst.test.ts:175:26) {
+      code: 'INVALID_RESPONSE',
+      context: { attempt: 1 },
+      timestamp: 1769255687728,
+      isRetryable: false
+    }
+
+      571 |       });
+      572 |     } catch (error) {
+    > 573 |       console.warn("Deep think failed, proceeding without it:", error);
+          |               ^
+      574 |       return "Analysis skipped due to error.";
+      575 |     }
+      576 |   }
+
+      at TitanAnalyst.deepThink (src/ai/TitanAnalyst.ts:573:15)
+      at TitanAnalyst.proposeOptimization (src/ai/TitanAnalyst.ts:208:23)
+      at Object.<anonymous> (tests/unit/TitanAnalyst.test.ts:175:26)
+
+FAIL tests/unit/TitanAnalyst.test.ts
+  TitanAnalyst
+    ✕ should use Deep Think before optimizing (382 ms)
+    ✕ should handle Deep Think failure gracefully (380 ms)
+
+  ● TitanAnalyst › should use Deep Think before optimizing
+
+    Failed to generate optimization proposal: Gemini API error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-3.0-flash:generateContent: [400 Bad Request] API key not valid. Please pass a valid API key. [{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"API_KEY_INVALID","domain":"googleapis.com","metadata":{"service":"generativelanguage.googleapis.com"}},{"@type":"type.googleapis.com/google.rpc.LocalizedMessage","locale":"en-US","message":"API key not valid. Please pass a valid API key."}]
+
+      249 |     } catch (error) {
+      250 |       // Re-throw with context
+    > 251 |       throw new Error(
+          |             ^
+      252 |         `Failed to generate optimization proposal: ${
+      253 |           error instanceof Error ? error.message : "Unknown error"
+      254 |         }`,
+
+      at TitanAnalyst.proposeOptimization (src/ai/TitanAnalyst.ts:251:13)
+      at Object.<anonymous> (tests/unit/TitanAnalyst.test.ts:130:26)
+
+  ● TitanAnalyst › should handle Deep Think failure gracefully
+
+    Failed to generate optimization proposal: Gemini API error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-3.0-flash:generateContent: [400 Bad Request] API key not valid. Please pass a valid API key. [{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"API_KEY_INVALID","domain":"googleapis.com","metadata":{"service":"generativelanguage.googleapis.com"}},{"@type":"type.googleapis.com/google.rpc.LocalizedMessage","locale":"en-US","message":"API key not valid. Please pass a valid API key."}]
+
+      249 |     } catch (error) {
+      250 |       // Re-throw with context
+    > 251 |       throw new Error(
+          |             ^
+      252 |         `Failed to generate optimization proposal: ${
+      253 |           error instanceof Error ? error.message : "Unknown error"
+      254 |         }`,
+
+      at TitanAnalyst.proposeOptimization (src/ai/TitanAnalyst.ts:251:13)
+      at Object.<anonymous> (tests/unit/TitanAnalyst.test.ts:175:26)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 2 total
+Snapshots:   0 total
+Time:        1.567 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/TitanAnalyst.test.ts/i.

@@ -1,0 +1,179 @@
+
+> @titan/shared@1.0.0 lint
+> eslint src/**/*.ts
+
+
+/Users/ivan/Code/trading/titan/services/shared/src/config/ConfigEncryption.ts
+   59:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   95:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  209:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  209:58  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  231:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  231:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  251:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  268:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  338:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  338:51  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  347:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  347:57  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  367:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  367:48  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  386:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  387:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/ivan/Code/trading/titan/services/shared/src/config/ConfigSchema.ts
+  299:63  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  326:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/ivan/Code/trading/titan/services/shared/src/config/ConfigVersionHistory.ts
+   22:9   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   50:15  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   51:15  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   68:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  101:11  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  435:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  444:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  445:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  449:15  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  450:15  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  455:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  456:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/ivan/Code/trading/titan/services/shared/src/config/HierarchicalConfigLoader.ts
+  141:63  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  158:63  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  170:65  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  229:63  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  246:63  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  258:65  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  312:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  317:63  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  334:63  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  345:65  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  386:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  391:63  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  408:63  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  419:65  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  460:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  465:63  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  482:63  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  493:65  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  651:7   error    Modifying an array is not allowed         functional/immutable-data
+
+/Users/ivan/Code/trading/titan/services/shared/src/ipc/FastPathClient.ts
+  181:24  warning  Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+  182:25  warning  Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+  391:18  warning  'error' is defined but never used                   @typescript-eslint/no-unused-vars
+  424:34  warning  Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+  465:17  warning  'correlationId' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  575:31  warning  Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+  575:63  warning  Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+  624:37  warning  Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+  634:24  warning  Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+  648:36  warning  Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+  648:42  warning  Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+  657:23  warning  Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+
+/Users/ivan/Code/trading/titan/services/shared/src/logger/Logger.ts
+   46:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   85:13  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   86:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  113:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  186:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  186:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  203:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  225:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  225:46  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  235:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  310:76  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  317:75  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  324:75  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  335:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  355:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  372:83  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  390:65  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  424:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  447:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  468:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  487:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  543:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/ivan/Code/trading/titan/services/shared/src/messaging/ExecutionClient.ts
+   30:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  167:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  193:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  202:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/ivan/Code/trading/titan/services/shared/src/messaging/NatsClient.ts
+   10:8   warning  Replace `"nats"` with `'nats'`                                                                                                                                                       prettier/prettier
+   11:30  warning  Replace `"eventemitter3"` with `'eventemitter3'`                                                                                                                                     prettier/prettier
+   12:32  warning  Replace `"../schemas/envelope"` with `'../schemas/envelope'`                                                                                                                         prettier/prettier
+   13:41  warning  Replace `"crypto"` with `'crypto'`                                                                                                                                                   prettier/prettier
+   19:20  warning  Replace `"titan.cmd.exec.place.v1"` with `'titan.cmd.exec.place.v1'`                                                                                                                 prettier/prettier
+   21:18  warning  Replace `"titan.cmd.sys.halt.v1"` with `'titan.cmd.sys.halt.v1'`                                                                                                                     prettier/prettier
+   23:21  warning  Replace `"titan.cmd.ai.optimize.v1"` with `'titan.cmd.ai.optimize.v1'`                                                                                                               prettier/prettier
+   25:21  warning  Replace `"titan.cmd.risk.policy"` with `'titan.cmd.risk.policy'`                                                                                                                     prettier/prettier
+   29:19  warning  Replace `"titan.evt.exec.fill.v1"` with `'titan.evt.exec.fill.v1'`                                                                                                                   prettier/prettier
+   31:22  warning  Replace `"titan.evt.brain.signal.v1"` with `'titan.evt.brain.signal.v1'`                                                                                                             prettier/prettier
+   33:23  warning  Replace `"titan.evt.brain.regime.v1"` with `'titan.evt.brain.regime.v1'`                                                                                                             prettier/prettier
+   35:25  warning  Replace `"titan.evt.analytics.powerlaw.v1"` with `'titan.evt.analytics.powerlaw.v1'`                                                                                                 prettier/prettier
+   37:23  warning  Replace `"titan.evt.budget.update"` with `'titan.evt.budget.update'`                                                                                                                 prettier/prettier
+   43:22  warning  Replace `"titan.evt.phase.intent.v1"` with `'titan.evt.phase.intent.v1'`                                                                                                             prettier/prettier
+   45:23  warning  Replace `"titan.evt.phase.posture.v1"` with `'titan.evt.phase.posture.v1'`                                                                                                           prettier/prettier
+   47:27  warning  Replace `"titan.evt.phase.diagnostics.v1"` with `'titan.evt.phase.diagnostics.v1'`                                                                                                   prettier/prettier
+   51:24  warning  Replace `"titan.data.market.ticker"` with `'titan.data.market.ticker'`                                                                                                               prettier/prettier
+   53:27  warning  Replace `"titan.data.dashboard.update.v1"` with `'titan.data.dashboard.update.v1'`                                                                                                   prettier/prettier
+   56:13  warning  Replace `"titan.evt.brain.signal.v1"` with `'titan.evt.brain.signal.v1'`                                                                                                             prettier/prettier
+   57:20  warning  Replace `"titan.evt.exec.fill.v1"` with `'titan.evt.exec.fill.v1'`                                                                                                                   prettier/prettier
+   58:23  warning  Replace `"titan.evt.exec.report.v1"` with `'titan.evt.exec.report.v1'`                                                                                                               prettier/prettier
+   59:17  warning  Replace `"titan.data.market.ticker"` with `'titan.data.market.ticker'`                                                                                                               prettier/prettier
+   60:30  warning  Replace `"titan.cmd.ai.optimize.v1"` with `'titan.cmd.ai.optimize.v1'`                                                                                                               prettier/prettier
+   61:19  warning  Replace `"titan.evt.brain.regime.v1"` with `'titan.evt.brain.regime.v1'`                                                                                                             prettier/prettier
+   62:23  warning  Replace `"titan.data.dashboard.update.v1"` with `'titan.data.dashboard.update.v1'`                                                                                                   prettier/prettier
+   63:22  warning  Replace `"titan.cmd.exec.place.v1"` with `'titan.cmd.exec.place.v1'`                                                                                                                 prettier/prettier
+   67:19  warning  Replace `"titan.signal.submit.v1"` with `'titan.signal.submit.v1'`                                                                                                                   prettier/prettier
+   88:39  warning  Replace `⏎····"titan.cmd.",⏎····"titan.evt.",⏎····"titan.data.",⏎··` with `'titan.cmd.',·'titan.evt.',·'titan.data.'`                                                                prettier/prettier
+  106:24  warning  Replace `⏎····config:·NatsConfig·=·{·servers:·["nats://localhost:4222"]·},⏎··` with `config:·NatsConfig·=·{·servers:·['nats://localhost:4222']·}`                                    prettier/prettier
+  136:21  warning  Replace `"error"` with `'error'`                                                                                                                                                     prettier/prettier
+  138:23  warning  Replace `"NATS·connection·closed"` with `'NATS·connection·closed'`                                                                                                                   prettier/prettier
+  139:21  warning  Replace `"closed"` with `'closed'`                                                                                                                                                   prettier/prettier
+  159:15  warning  Replace `"TITAN_CMD"` with `'TITAN_CMD'`                                                                                                                                             prettier/prettier
+  160:20  warning  Replace `"titan.cmd.>"` with `'titan.cmd.>'`                                                                                                                                         prettier/prettier
+  161:18  warning  Replace `"file"` with `'file'`                                                                                                                                                       prettier/prettier
+  162:20  warning  Replace `"workqueue"` with `'workqueue'`                                                                                                                                             prettier/prettier
+  167:15  warning  Replace `"TITAN_EVT"` with `'TITAN_EVT'`                                                                                                                                             prettier/prettier
+  168:20  warning  Replace `"titan.evt.>"` with `'titan.evt.>'`                                                                                                                                         prettier/prettier
+  169:18  warning  Replace `"file"` with `'file'`                                                                                                                                                       prettier/prettier
+  170:20  warning  Replace `"limits"` with `'limits'`                                                                                                                                                   prettier/prettier
+  175:15  warning  Replace `"TITAN_DATA"` with `'TITAN_DATA'`                                                                                                                                           prettier/prettier
+  176:20  warning  Replace `"titan.data.>"` with `'titan.data.>'`                                                                                                                                       prettier/prettier
+  177:18  warning  Replace `"memory"` with `'memory'`                                                                                                                                                   prettier/prettier
+  178:20  warning  Replace `"limits"` with `'limits'`                                                                                                                                                   prettier/prettier
+  185:46  warning  Unexpected any. Specify a different type                                                                                                                                             @typescript-eslint/no-explicit-any
+  191:27  warning  Replace `"already·in·use"` with `'already·in·use'`                                                                                                                                   prettier/prettier
+  194:66  warning  Unexpected any. Specify a different type                                                                                                                                             @typescript-eslint/no-explicit-any
+  196:26  warning  Replace `⏎··············`Failed·to·create/update·stream·${stream.name}:`,⏎··············updateErr,⏎············` with ``Failed·to·create/update·stream·${stream.name}:`,·updateErr`  prettier/prettier
+  206:27  warning  Replace `⏎····subject:·TitanSubject·|·string,⏎····data:·T,⏎··` with `subject:·TitanSubject·|·string,·data:·T`                                                                        prettier/prettier
+  211:23  warning  Replace `"NATS·client·not·connected"` with `'NATS·client·not·connected'`                                                                                                             prettier/prettier
+  214:37  warning  Replace `"string"⏎······?·this.sc.encode(data)⏎·····` with `'string'·?·this.sc.encode(data)`                                                                                         prettier/prettier
+  222:30  warning  Replace `"string"` with `'string'`                                                                                                                                                   prettier/prettier
+  268:46  warning  Replace `"hex"` with `'hex'`                                                                                                                                                         prettier/prettier
+  269:48  warning  Replace `"default"` with `'default'`                                                                                                                                                 prettier/prettier
+  273:28  warning  Replace `"object"` with `'object'`                                                                                                                                                   prettier/prettier
+  291:30  warning  Replace `"sha256",·secret).update(canonical).digest("hex"` with `'sha256',·secret).update(canonical).digest('hex'`                                                                   prettier/prettier
+  310:23  warning  Replace `"NATS·client·not·connected"` with `'NATS·client·not·connected'`                                                                                                             prettier/prettier
+  326:39  warning  Replace `"string"` with `'string'`                                                                                                                                                   prettier/prettier
+  358:29  warning  Replace `⏎················`Failed·to·process·durable·message·on·${subject}:`,⏎················err,⏎··············` with ``Failed·to·process·durable·message·on·${subject}:`,·err`    prettier/prettier
+  373:24  warning  Replace `⏎············"Unsubscribing·from·durable·JS·subscription·not·fully·supported",⏎··········` with `'Unsubscribing·from·durable·JS·subscription·not·fully·supported'`          prettier/prettier
+  429:23  warning  Replace `"NATS·client·not·connected"` with `'NATS·client·not·connected'`                                                                                                             prettier/prettier
+
+✖ 148 problems (1 error, 147 warnings)
+  0 errors and 59 warnings potentially fixable with the `--fix` option.
+
+npm error Lifecycle script `lint` failed with error:
+npm error code 1
+npm error path /Users/ivan/Code/trading/titan/services/shared
+npm error workspace @titan/shared@1.0.0
+npm error location /Users/ivan/Code/trading/titan/services/shared
+npm error command failed
+npm error command sh -c eslint src/**/*.ts

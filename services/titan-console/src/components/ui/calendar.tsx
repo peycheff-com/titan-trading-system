@@ -52,7 +52,7 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
     />
   );
 }
-// eslint-disable-next-line functional/immutable-data
+ 
 Calendar.displayName = 'Calendar';
 
 export { Calendar };

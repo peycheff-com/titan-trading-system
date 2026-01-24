@@ -13,13 +13,13 @@
 
 import { EventEmitter } from 'events';
 import {
+  BotTrapEffectivenessMetrics,
+  EnhancedTradeRecord,
+  GlobalCVDEffectivenessMetrics,
+  OptimizationSuggestion,
+  OracleEffectivenessMetrics,
   PerformanceAnalytics,
   PerformanceReport,
-  OptimizationSuggestion,
-  EnhancedTradeRecord,
-  OracleEffectivenessMetrics,
-  GlobalCVDEffectivenessMetrics,
-  BotTrapEffectivenessMetrics,
   PredictionAccuracyMetrics,
 } from './PerformanceAnalytics';
 
@@ -225,7 +225,9 @@ export class PerformanceReporter extends EventEmitter {
           priority: 'high',
           suggestion: 'Adjust Oracle veto threshold - current veto effectiveness is low',
           expectedImprovement: 5,
-          reasoning: `Veto effectiveness is ${oracleMetrics.vetoEffectiveness.toFixed(1)}%, consider lowering the conflict threshold to catch more losing trades`,
+          reasoning: `Veto effectiveness is ${oracleMetrics.vetoEffectiveness.toFixed(
+            1
+          )}%, consider lowering the conflict threshold to catch more losing trades`,
         });
       }
 
@@ -236,7 +238,9 @@ export class PerformanceReporter extends EventEmitter {
           priority: 'medium',
           suggestion: 'Review Oracle alignment criteria - win rate improvement is minimal',
           expectedImprovement: 3,
-          reasoning: `Aligned trades only show ${oracleMetrics.winRateImprovement.toFixed(1)}% better win rate than conflicting trades`,
+          reasoning: `Aligned trades only show ${oracleMetrics.winRateImprovement.toFixed(
+            1
+          )}% better win rate than conflicting trades`,
         });
       }
 
@@ -247,7 +251,9 @@ export class PerformanceReporter extends EventEmitter {
           priority: 'high',
           suggestion: 'Conviction multiplier is hurting performance - higher multipliers on losses',
           expectedImprovement: 8,
-          reasoning: `Average multiplier on losses (${oracleMetrics.avgMultiplierOnLosses.toFixed(2)}x) exceeds wins (${oracleMetrics.avgMultiplierOnWins.toFixed(2)}x)`,
+          reasoning: `Average multiplier on losses (${oracleMetrics.avgMultiplierOnLosses.toFixed(
+            2
+          )}x) exceeds wins (${oracleMetrics.avgMultiplierOnWins.toFixed(2)}x)`,
         });
       }
     }
@@ -261,7 +267,9 @@ export class PerformanceReporter extends EventEmitter {
           priority: 'medium',
           suggestion: 'Increase Global CVD consensus threshold for better false signal filtering',
           expectedImprovement: 4,
-          reasoning: `Only ${globalCVDMetrics.falseSignalReductionRate.toFixed(1)}% of rejected signals would have been losses`,
+          reasoning: `Only ${globalCVDMetrics.falseSignalReductionRate.toFixed(
+            1
+          )}% of rejected signals would have been losses`,
         });
       }
 
@@ -272,7 +280,9 @@ export class PerformanceReporter extends EventEmitter {
           priority: 'low',
           suggestion: 'Multi-exchange confirmation providing minimal benefit',
           expectedImprovement: 2,
-          reasoning: `Multi-exchange win rate only ${globalCVDMetrics.multiExchangeImprovement.toFixed(1)}% better than single exchange`,
+          reasoning: `Multi-exchange win rate only ${globalCVDMetrics.multiExchangeImprovement.toFixed(
+            1
+          )}% better than single exchange`,
         });
       }
     }
@@ -286,7 +296,9 @@ export class PerformanceReporter extends EventEmitter {
           priority: 'high',
           suggestion: 'Reduce Bot Trap precision threshold - too many false positives',
           expectedImprovement: 6,
-          reasoning: `False positive rate is ${botTrapMetrics.falsePositiveRate.toFixed(1)}%, missing profitable patterns`,
+          reasoning: `False positive rate is ${botTrapMetrics.falsePositiveRate.toFixed(
+            1
+          )}%, missing profitable patterns`,
         });
       }
 
@@ -297,7 +309,9 @@ export class PerformanceReporter extends EventEmitter {
           priority: 'medium',
           suggestion: 'Increase Bot Trap sensitivity - missing trap patterns',
           expectedImprovement: 4,
-          reasoning: `False negative rate is ${botTrapMetrics.falseNegativeRate.toFixed(1)}%, some traps are not being detected`,
+          reasoning: `False negative rate is ${botTrapMetrics.falseNegativeRate.toFixed(
+            1
+          )}%, some traps are not being detected`,
         });
       }
 
@@ -308,7 +322,9 @@ export class PerformanceReporter extends EventEmitter {
           priority: 'low',
           suggestion: 'Bot Trap detection is working well - consider maintaining current settings',
           expectedImprovement: 0,
-          reasoning: `Avoided ${botTrapMetrics.avoidedLosses} losses averaging ${botTrapMetrics.avgAvoidedLossPercent.toFixed(1)}% each`,
+          reasoning: `Avoided ${botTrapMetrics.avoidedLosses} losses averaging ${botTrapMetrics.avgAvoidedLossPercent.toFixed(
+            1
+          )}% each`,
         });
       }
     }
@@ -322,7 +338,9 @@ export class PerformanceReporter extends EventEmitter {
           priority: 'medium',
           suggestion: 'Oracle sentiment predictions underperforming - review event mapping',
           expectedImprovement: 3,
-          reasoning: `Sentiment accuracy is only ${predictionMetrics.sentimentAccuracy.toFixed(1)}%`,
+          reasoning: `Sentiment accuracy is only ${predictionMetrics.sentimentAccuracy.toFixed(
+            1
+          )}%`,
         });
       }
 
@@ -333,7 +351,9 @@ export class PerformanceReporter extends EventEmitter {
           priority: 'high',
           suggestion: 'High conviction trades performing worse than low conviction',
           expectedImprovement: 7,
-          reasoning: `High conviction win rate (${predictionMetrics.highConvictionWinRate.toFixed(1)}%) < low conviction (${predictionMetrics.lowConvictionWinRate.toFixed(1)}%)`,
+          reasoning: `High conviction win rate (${predictionMetrics.highConvictionWinRate.toFixed(
+            1
+          )}%) < low conviction (${predictionMetrics.lowConvictionWinRate.toFixed(1)}%)`,
         });
       }
     }
@@ -346,7 +366,9 @@ export class PerformanceReporter extends EventEmitter {
         priority: 'high',
         suggestion: `Win rate below target (${this.config.targetWinRate}%) - review signal quality`,
         expectedImprovement: 5,
-        reasoning: `Current win rate is ${currentWinRate.toFixed(1)}%, ${(this.config.targetWinRate - currentWinRate).toFixed(1)}% below target`,
+        reasoning: `Current win rate is ${currentWinRate.toFixed(1)}%, ${(
+          this.config.targetWinRate - currentWinRate
+        ).toFixed(1)}% below target`,
       });
     }
 
@@ -357,7 +379,9 @@ export class PerformanceReporter extends EventEmitter {
         priority: 'medium',
         suggestion: `Sharpe ratio below target (${this.config.targetSharpeRatio}) - consider risk adjustment`,
         expectedImprovement: 3,
-        reasoning: `Current Sharpe is ${currentSharpe.toFixed(2)}, ${(this.config.targetSharpeRatio - currentSharpe).toFixed(2)} below target`,
+        reasoning: `Current Sharpe is ${currentSharpe.toFixed(2)}, ${(
+          this.config.targetSharpeRatio - currentSharpe
+        ).toFixed(2)} below target`,
       });
     }
 
@@ -551,7 +575,7 @@ export class PerformanceReporter extends EventEmitter {
    */
   private calculateOracleContribution(
     metrics: OracleEffectivenessMetrics,
-    trades: EnhancedTradeRecord[]
+    _trades: EnhancedTradeRecord[]
   ): number {
     // Contribution = multiplier profit + avoided losses from vetoes
     const vetoedSignals = this.analytics.getVetoedSignals().filter(v => v.vetoSource === 'oracle');
@@ -567,7 +591,7 @@ export class PerformanceReporter extends EventEmitter {
    */
   private calculateGlobalCVDContribution(
     metrics: GlobalCVDEffectivenessMetrics,
-    trades: EnhancedTradeRecord[]
+    _trades: EnhancedTradeRecord[]
   ): number {
     // Contribution = avoided false signals
     const vetoedSignals = this.analytics
@@ -618,9 +642,15 @@ export class PerformanceReporter extends EventEmitter {
       '📊 OVERALL PERFORMANCE',
       '───────────────────────────────────────────────────────────────',
       `   Total Trades: ${report.totalTrades} (Enhanced: ${report.enhancedTrades}, Classic: ${report.classicTrades})`,
-      `   Win Rate: ${report.overallWinRate.toFixed(1)}% (Enhanced: ${report.enhancedWinRate.toFixed(1)}%, Classic: ${report.classicWinRate.toFixed(1)}%)`,
-      `   Total Return: ${report.totalReturn.toFixed(2)}% (Enhanced: ${report.enhancedReturn.toFixed(2)}%, Classic: ${report.classicReturn.toFixed(2)}%)`,
-      `   Sharpe Ratio: ${report.sharpeRatio.toFixed(2)} (Enhanced: ${report.enhancedSharpeRatio.toFixed(2)}, Classic: ${report.classicSharpeRatio.toFixed(2)})`,
+      `   Win Rate: ${report.overallWinRate.toFixed(1)}% (Enhanced: ${report.enhancedWinRate.toFixed(
+        1
+      )}%, Classic: ${report.classicWinRate.toFixed(1)}%)`,
+      `   Total Return: ${report.totalReturn.toFixed(2)}% (Enhanced: ${report.enhancedReturn.toFixed(
+        2
+      )}%, Classic: ${report.classicReturn.toFixed(2)}%)`,
+      `   Sharpe Ratio: ${report.sharpeRatio.toFixed(2)} (Enhanced: ${report.enhancedSharpeRatio.toFixed(
+        2
+      )}, Classic: ${report.classicSharpeRatio.toFixed(2)})`,
       '',
       '🔮 ORACLE EFFECTIVENESS',
       '───────────────────────────────────────────────────────────────',
@@ -634,14 +664,18 @@ export class PerformanceReporter extends EventEmitter {
       '───────────────────────────────────────────────────────────────',
       `   Confirmed Win Rate: ${report.globalCVDMetrics.confirmedWinRate.toFixed(1)}%`,
       `   False Signal Reduction: ${report.globalCVDMetrics.falseSignalReductionRate.toFixed(1)}%`,
-      `   Multi-Exchange Improvement: ${report.globalCVDMetrics.multiExchangeImprovement.toFixed(1)}%`,
+      `   Multi-Exchange Improvement: ${report.globalCVDMetrics.multiExchangeImprovement.toFixed(
+        1
+      )}%`,
       `   Contribution: ${report.globalCVDContribution.toFixed(2)}%`,
       '',
       '🤖 BOT TRAP EFFECTIVENESS',
       '───────────────────────────────────────────────────────────────',
       `   Detection Accuracy: ${report.botTrapMetrics.detectionAccuracy.toFixed(1)}%`,
       `   False Positive Rate: ${report.botTrapMetrics.falsePositiveRate.toFixed(1)}%`,
-      `   Avoided Losses: ${report.botTrapMetrics.avoidedLosses} trades (${report.botTrapMetrics.avoidedLossAmount.toFixed(2)}%)`,
+      `   Avoided Losses: ${report.botTrapMetrics.avoidedLosses} trades (${report.botTrapMetrics.avoidedLossAmount.toFixed(
+        2
+      )}%)`,
       `   Contribution: ${report.botTrapContribution.toFixed(2)}%`,
       '',
       '🎯 PREDICTION ACCURACY',

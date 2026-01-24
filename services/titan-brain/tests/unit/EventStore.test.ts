@@ -38,7 +38,10 @@ jest.mock("../../src/db/DatabaseManager.js", () => {
 describe("EventStore", () => {
     let eventStore: EventStore;
     let mockDb: { query: jest.Mock<(...args: any[]) => Promise<any>> };
-    let mockNats: { publish: jest.Mock<(...args: any[]) => Promise<void>> };
+    let mockNats: {
+        publish: jest.Mock<(...args: any[]) => Promise<void>>;
+        publishEnvelope: jest.Mock<(...args: any[]) => Promise<void>>;
+    };
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -55,6 +58,8 @@ describe("EventStore", () => {
         // Setup Mock NATS
         mockNats = {
             publish: jest.fn<(...args: any[]) => Promise<void>>()
+                .mockResolvedValue(undefined),
+            publishEnvelope: jest.fn<(...args: any[]) => Promise<void>>()
                 .mockResolvedValue(undefined),
         };
         (getNatsClient as jest.Mock).mockReturnValue(mockNats);
@@ -96,9 +101,14 @@ describe("EventStore", () => {
             );
 
             // Verify NATS publish
-            expect(mockNats.publish).toHaveBeenCalledWith(
+            // Verify NATS publish
+            expect(mockNats.publishEnvelope).toHaveBeenCalledWith(
                 "titan.events.intent_created",
-                event,
+                event.payload,
+                expect.objectContaining({
+                    type: "titan.event.intent_created.v1",
+                    id: event.id,
+                }),
             );
         });
 

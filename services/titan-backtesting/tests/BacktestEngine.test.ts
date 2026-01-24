@@ -1,61 +1,94 @@
 import { BacktestEngine } from "../src/engine/BacktestEngine";
-import { HistoricalDataService } from "../src/data/HistoricalDataService";
-import { ShippingGate } from "../src/gate/ShippingGate";
-import { Logger } from "@titan/shared";
-import { OHLCV } from "../src/types";
+import { SimulationConfig } from "../src/types";
 
 // Mock dependencies
-const mockLogger = {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-} as unknown as Logger;
+// Mock dependencies
+jest.mock("titan-phase1-scavenger/src/engine/TitanTrap.js", () => {
+    return {
+        TitanTrap: jest.fn().mockImplementation(() => ({
+            start: jest.fn(),
+            stop: jest.fn(),
+        })),
+    };
+}, { virtual: true });
 
-const mockDataService = {
-    getCandles: jest.fn().mockResolvedValue([]),
-    getRegimeSnapshots: jest.fn().mockResolvedValue([]),
-} as unknown as HistoricalDataService;
+jest.mock(
+    "titan-phase1-scavenger/src/calculators/TripwireCalculators.js",
+    () => ({
+        TripwireCalculators: {},
+    }),
+    { virtual: true },
+);
 
-const mockGate = new ShippingGate({
-    maxDrawdown: 0.2, // 20%
-    minSharpe: 1.0,
-    minSortino: 1.0,
-    minCalmar: 0.5,
-});
+jest.mock(
+    "titan-phase1-scavenger/src/calculators/VelocityCalculator.js",
+    () => ({
+        VelocityCalculator: jest.fn(),
+    }),
+    { virtual: true },
+);
+
+// Mock the internal mocks used by BacktestEngine
+jest.mock("../src/mocks/MockBinanceSpotClient.js", () => ({
+    MockBinanceSpotClient: jest.fn().mockImplementation(() => ({
+        pushTrade: jest.fn(),
+    })),
+}));
+
+jest.mock("../src/mocks/MockBybitPerpsClient.js", () => ({
+    MockBybitPerpsClient: jest.fn().mockImplementation(() => ({
+        setPrice: jest.fn(),
+        getFilledOrders: jest.fn().mockReturnValue([]),
+        getEquity: jest.fn().mockResolvedValue(10000),
+    })),
+}));
 
 describe("BacktestEngine", () => {
     let engine: BacktestEngine;
+    const mockConfig: SimulationConfig = {
+        symbol: "BTCUSDT",
+        initialCapital: 10000,
+        startDate: 1600000000000,
+        endDate: 1600100000000,
+    };
 
     beforeEach(() => {
-        engine = new BacktestEngine(mockDataService, mockGate, mockLogger);
+        jest.clearAllMocks();
+        engine = new BacktestEngine(mockConfig);
     });
 
     it("should initialize correctly", () => {
         expect(engine).toBeTruthy();
     });
 
-    it("should run walk-forward analysis and return a validation report", async () => {
-        // Mock strategy
-        const mockStrategy = {};
+    it("should run simulation", async () => {
+        const candles = [
+            {
+                timestamp: 1600000000000,
+                open: 10000,
+                high: 10100,
+                low: 9900,
+                close: 10050,
+                volume: 100,
+                symbol: "BTCUSDT",
+                timeframe: "1h",
+            },
+            {
+                timestamp: 1600000060000,
+                open: 10050,
+                high: 10200,
+                low: 10000,
+                close: 10150,
+                volume: 150,
+                symbol: "BTCUSDT",
+                timeframe: "1h",
+            },
+        ];
 
-        // Mock Config
-        const config = {
-            symbol: "BTCUSDT",
-            timeframe: "1h",
-            start: 1600000000000,
-            end: 1600100000000,
-            initialCapital: 10000,
-        };
+        const result = await engine.runSimulation({ candles });
 
-        // Run Walk-Forward
-        const report = await engine.runWalkForward(mockStrategy, config, 2);
-
-        expect(report).toBeDefined();
-        // Since we returned a dummy result in the stub, it should fail the gate due to DD=1.0 (100%)
-        expect(report.passed).toBe(false);
-        expect(mockLogger.info).toHaveBeenCalledWith(
-            expect.stringContaining("Starting Walk-Forward Analysis"),
-        );
+        expect(result).toBeDefined();
+        expect(result.metrics.tradesCount).toBe(0);
+        expect(result.metrics.totalReturn).toBe(0);
     });
 });

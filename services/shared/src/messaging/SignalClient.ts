@@ -96,8 +96,11 @@ export class SignalClient extends EventEmitter {
         executed: true,
         fill_price: (signal.entry_zone.min + signal.entry_zone.max) / 2, // Optimistic / Unknown
       };
-    } catch (e: any) {
-      return { executed: false, reason: e.message };
+    } catch (e: unknown) {
+      return {
+        executed: false,
+        reason: e instanceof Error ? e.message : String(e),
+      };
     }
   }
 
@@ -108,7 +111,7 @@ export class SignalClient extends EventEmitter {
   }
 
   // Compatibility methods
-  getMetrics(): any {
+  getMetrics(): Record<string, number> {
     return {
       messagesSent: 0,
       messagesReceived: 0,
@@ -116,7 +119,7 @@ export class SignalClient extends EventEmitter {
     };
   }
 
-  getStatus(): any {
+  getStatus(): Record<string, unknown> {
     return {
       connectionState: this.getConnectionState(),
       socketPath: 'nats://' + (this.nats.isConnected() ? 'connected' : 'disconnected'),

@@ -10,7 +10,7 @@ const RadioGroup = React.forwardRef<
 >(({ className, ...props }, ref) => {
   return <RadioGroupPrimitive.Root className={cn('grid gap-2', className)} {...props} ref={ref} />;
 });
-// eslint-disable-next-line functional/immutable-data
+ 
 RadioGroup.displayName = RadioGroupPrimitive.Root.displayName;
 
 const RadioGroupItem = React.forwardRef<
@@ -32,7 +32,7 @@ const RadioGroupItem = React.forwardRef<
     </RadioGroupPrimitive.Item>
   );
 });
-// eslint-disable-next-line functional/immutable-data
+ 
 RadioGroupItem.displayName = RadioGroupPrimitive.Item.displayName;
 
 export { RadioGroup, RadioGroupItem };

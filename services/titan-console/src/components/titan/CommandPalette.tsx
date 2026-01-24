@@ -61,9 +61,9 @@ export function CommandPalette() {
 
   const groups = routes.reduce(
     (acc, route) => {
-      // eslint-disable-next-line functional/immutable-data
+       
       if (!acc[route.group]) acc[route.group] = [];
-      // eslint-disable-next-line functional/immutable-data
+       
       acc[route.group].push(route);
       return acc;
     },

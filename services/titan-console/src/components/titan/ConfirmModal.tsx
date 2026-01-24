@@ -112,7 +112,7 @@ export function HoldToConfirm({
     setIsHolding(true);
     const interval = 50;
     const steps = holdDuration / interval;
-    // eslint-disable-next-line functional/no-let
+     
     let current = 0;
 
     const timer = setInterval(() => {

@@ -21,7 +21,7 @@ const Checkbox = React.forwardRef<
     </CheckboxPrimitive.Indicator>
   </CheckboxPrimitive.Root>
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 Checkbox.displayName = CheckboxPrimitive.Root.displayName;
 
 export { Checkbox };

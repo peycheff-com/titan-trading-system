@@ -1,5 +1,6 @@
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
+
 import { createRequire } from "module";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
@@ -9,6 +10,8 @@ const __dirname = dirname(__filename);
 const require = createRequire(import.meta.url);
 const prettierPlugin = require("eslint-plugin-prettier");
 const prettierConfig = require("eslint-config-prettier");
+const functionalPluginRaw = require("eslint-plugin-functional");
+const functionalPlugin = functionalPluginRaw.default || functionalPluginRaw;
 
 export default tseslint.config(
   {
@@ -28,12 +31,20 @@ export default tseslint.config(
   {
     plugins: {
       prettier: prettierPlugin,
+      functional: functionalPlugin,
+
     },
     rules: {
       "prettier/prettier": "warn",
       "@typescript-eslint/explicit-function-return-type": "off",
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-unsafe-declaration-merging": "off",
+      
+      // Functional Immutability Rules
+      "functional/no-let": "error",
+      "functional/immutable-data": ["error", { ignoreAccessorPattern: ["**.current", "**.value"] }],
+      
       ...prettierConfig.rules,
     },
   },

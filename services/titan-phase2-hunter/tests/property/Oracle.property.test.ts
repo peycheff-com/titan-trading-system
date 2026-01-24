@@ -35,7 +35,10 @@ describe("Oracle Property Tests", () => {
                 fc.property(fc.array(eventArbitrary), (events) => {
                     const calculator = new SentimentCalculator();
                     const result = calculator.calculateSentiment(
-                        events as PredictionMarketEvent[],
+                        events.map((e) => ({
+                            ...e,
+                            lastUpdate: new Date(),
+                        })) as PredictionMarketEvent[],
                         "long",
                     );
 
@@ -50,7 +53,10 @@ describe("Oracle Property Tests", () => {
                 fc.property(fc.array(eventArbitrary), (events) => {
                     const calculator = new SentimentCalculator();
                     const result = calculator.calculateSentiment(
-                        events as PredictionMarketEvent[],
+                        events.map((e) => ({
+                            ...e,
+                            lastUpdate: new Date(),
+                        })) as PredictionMarketEvent[],
                         "long",
                     );
 

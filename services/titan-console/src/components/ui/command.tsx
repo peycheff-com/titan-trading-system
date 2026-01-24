@@ -19,7 +19,7 @@ const Command = React.forwardRef<
     {...props}
   />
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 Command.displayName = CommandPrimitive.displayName;
 
 type CommandDialogProps = DialogProps;
@@ -53,7 +53,7 @@ const CommandInput = React.forwardRef<
   </div>
 ));
 
-// eslint-disable-next-line functional/immutable-data
+ 
 CommandInput.displayName = CommandPrimitive.Input.displayName;
 
 const CommandList = React.forwardRef<
@@ -67,7 +67,7 @@ const CommandList = React.forwardRef<
   />
 ));
 
-// eslint-disable-next-line functional/immutable-data
+ 
 CommandList.displayName = CommandPrimitive.List.displayName;
 
 const CommandEmpty = React.forwardRef<
@@ -77,7 +77,7 @@ const CommandEmpty = React.forwardRef<
   <CommandPrimitive.Empty ref={ref} className="py-6 text-center text-sm" {...props} />
 ));
 
-// eslint-disable-next-line functional/immutable-data
+ 
 CommandEmpty.displayName = CommandPrimitive.Empty.displayName;
 
 const CommandGroup = React.forwardRef<
@@ -94,7 +94,7 @@ const CommandGroup = React.forwardRef<
   />
 ));
 
-// eslint-disable-next-line functional/immutable-data
+ 
 CommandGroup.displayName = CommandPrimitive.Group.displayName;
 
 const CommandSeparator = React.forwardRef<
@@ -107,7 +107,7 @@ const CommandSeparator = React.forwardRef<
     {...props}
   />
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 CommandSeparator.displayName = CommandPrimitive.Separator.displayName;
 
 const CommandItem = React.forwardRef<
@@ -124,7 +124,7 @@ const CommandItem = React.forwardRef<
   />
 ));
 
-// eslint-disable-next-line functional/immutable-data
+ 
 CommandItem.displayName = CommandPrimitive.Item.displayName;
 
 const CommandShortcut = ({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>) => {
@@ -135,7 +135,7 @@ const CommandShortcut = ({ className, ...props }: React.HTMLAttributes<HTMLSpanE
     />
   );
 };
-// eslint-disable-next-line functional/immutable-data
+ 
 CommandShortcut.displayName = 'CommandShortcut';
 
 export {

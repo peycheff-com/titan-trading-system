@@ -1,0 +1,66 @@
+name: 'Autophagy: Metabolic Pruning'
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Run daily at midnight
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  metabolic-scan:
+    name: 🧟‍♂️ Dead Code Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Knip (Metabolic Scan)
+        id: knip
+        # Returns 0 even if issues found (no-exit-code) so we can process the report
+        run: npx knip --no-progress --no-exit-code --reporter json > knip_report.json
+
+      - name: Process Report & Generate Summary
+        id: summary
+        run: |
+          # Count issues using jq (assuming jq is available, usually is on ubuntu-latest)
+          ISSUES_COUNT=$(jq '(.files | length) + (.issues | length)' knip_report.json)
+          echo "found_issues=$ISSUES_COUNT" >> $GITHUB_OUTPUT
+
+          if [ "$ISSUES_COUNT" -gt "0" ]; then
+            echo "::warning::🧟‍♂️ Metabolic scan found $ISSUES_COUNT potential dead code items."
+            
+            # Create a summary markdown file
+            echo "# 🧟‍♂️ Autophagy Report ($(date +'%Y-%m-%d'))" > summary.md
+            echo "" >> summary.md
+            echo "The metabolic scan detected **$ISSUES_COUNT** items of dead code." >> summary.md
+            echo "" >> summary.md
+            echo "## Unused Files" >> summary.md
+            jq -r '.files[]' knip_report.json | sed 's/^/- /' >> summary.md
+            echo "" >> summary.md
+            echo "## Unused Exports/Types" >> summary.md
+            # Simplified jq to list files with issues
+            jq -r 'keys[] as $k | "\($k): \(.[$k] | length) issues"' knip_report.json >> summary.md
+          else
+            echo "✅ Codebase is metabolically healthy."
+          fi
+
+      - name: Upload Metabolic Report
+        if: steps.summary.outputs.found_issues > 0
+        uses: actions/upload-artifact@v4
+        with:
+          name: knip-report
+          path: knip_report.json
+
+      # In the future, this step will auto-create a Tombstone PR
+      # For now, it just logs to the job summary

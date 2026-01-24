@@ -18,7 +18,7 @@ const NavigationMenu = React.forwardRef<
     <NavigationMenuViewport />
   </NavigationMenuPrimitive.Root>
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 NavigationMenu.displayName = NavigationMenuPrimitive.Root.displayName;
 
 const NavigationMenuList = React.forwardRef<
@@ -31,7 +31,7 @@ const NavigationMenuList = React.forwardRef<
     {...props}
   />
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 NavigationMenuList.displayName = NavigationMenuPrimitive.List.displayName;
 
 const NavigationMenuItem = NavigationMenuPrimitive.Item;
@@ -56,7 +56,7 @@ const NavigationMenuTrigger = React.forwardRef<
     />
   </NavigationMenuPrimitive.Trigger>
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 NavigationMenuTrigger.displayName = NavigationMenuPrimitive.Trigger.displayName;
 
 const NavigationMenuContent = React.forwardRef<
@@ -72,7 +72,7 @@ const NavigationMenuContent = React.forwardRef<
     {...props}
   />
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 NavigationMenuContent.displayName = NavigationMenuPrimitive.Content.displayName;
 
 const NavigationMenuLink = NavigationMenuPrimitive.Link;
@@ -92,7 +92,7 @@ const NavigationMenuViewport = React.forwardRef<
     />
   </div>
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 NavigationMenuViewport.displayName = NavigationMenuPrimitive.Viewport.displayName;
 
 const NavigationMenuIndicator = React.forwardRef<
@@ -110,7 +110,7 @@ const NavigationMenuIndicator = React.forwardRef<
     <div className="relative top-[60%] h-2 w-2 rotate-45 rounded-tl-sm bg-border shadow-md" />
   </NavigationMenuPrimitive.Indicator>
 ));
-// eslint-disable-next-line functional/immutable-data
+ 
 NavigationMenuIndicator.displayName = NavigationMenuPrimitive.Indicator.displayName;
 
 export {

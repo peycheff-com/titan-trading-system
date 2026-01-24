@@ -1,4 +1,4 @@
-import type { MarginThresholds, RebalanceResult, RiskStatusLevel } from '../types/portfolio.js';
+import type { MarginThresholds, RebalanceResult } from '../types/portfolio.js';
 
 /**
  * Calculates rebalancing actions based on margin health.
@@ -16,8 +16,8 @@ export class Rebalancer {
   evaluate(
     symbol: string,
     marginUtilization: number,
-    unrealizedPnL: number,
-    totalCollateral: number,
+    _unrealizedPnL: number,
+    _totalCollateral: number,
   ): RebalanceResult | null {
     // Logic:
     // 1. If Utilization > Critical -> Alert/Close

@@ -1,5 +1,4 @@
 import type { PerformanceMetrics, Trade } from '../types/portfolio.js';
-import { RollingStatistics } from '../engine/StatEngine.js'; // Re-use for Sharpe? Or simple calc.
 
 /**
  * Tracks trading performance and calculates metrics.

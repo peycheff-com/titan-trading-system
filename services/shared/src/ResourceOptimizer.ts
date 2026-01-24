@@ -85,6 +85,15 @@ interface GCStats {
 }
 
 /**
+ * Extended PerformanceEntry for GC events
+ */
+interface GCPerformanceEntry extends PerformanceEntry {
+  detail?: {
+    kind?: string;
+  };
+}
+
+/**
  * Resource Optimizer
  */
 export class ResourceOptimizer extends EventEmitter {
@@ -276,7 +285,7 @@ export class ResourceOptimizer extends EventEmitter {
    * Track garbage collection event
    */
   private trackGCEvent(entry: PerformanceEntry): void {
-    const gcType = (entry as any).detail?.kind || "unknown";
+    const gcType = (entry as GCPerformanceEntry).detail?.kind || "unknown";
     const duration = entry.duration;
 
     if (!this.gcStats.has(gcType)) {
@@ -413,7 +422,7 @@ export class ResourceOptimizer extends EventEmitter {
    */
   async benchmark(
     name: string,
-    fn: () => Promise<any> | any,
+    fn: () => Promise<unknown> | unknown,
   ): Promise<BenchmarkResult> {
     const memoryBefore = this.getMemoryStats();
     const startTime = performance.now();

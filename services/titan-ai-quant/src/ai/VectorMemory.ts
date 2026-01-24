@@ -15,7 +15,7 @@ export class VectorMemory {
   async init() {
     // Check if schema exists, if not create
     try {
-      const exists = await this.client.schema
+      await this.client.schema
         .classCreator()
         .withClass({
           class: this.className,
@@ -28,7 +28,7 @@ export class VectorMemory {
         })
         .do();
       console.log('Weaviate Schema Initialized');
-    } catch (e) {
+    } catch {
       // likely already exists
     }
   }
@@ -54,6 +54,6 @@ export class VectorMemory {
       .withLimit(limit)
       .do();
 
-    return res.data.Get[this.className].map((item: any) => item.content);
+    return res.data.Get[this.className].map((item: any) => item.content); // eslint-disable-line @typescript-eslint/no-explicit-any
   }
 }

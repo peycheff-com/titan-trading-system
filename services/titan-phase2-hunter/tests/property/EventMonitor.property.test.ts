@@ -1,7 +1,7 @@
 import { describe, expect, it, jest } from "@jest/globals";
 import fc from "fast-check";
 import { EventMonitor } from "../../src/oracle/EventMonitor";
-import { Enhanced2026ConfigManager } from "../../src/config/Enhanced2026Config";
+import { ConfigManager } from "../../src/config/ConfigManager";
 import {
     EventCategory,
     ImpactLevel,
@@ -11,10 +11,12 @@ import {
 describe("EventMonitor Property Tests", () => {
     // Mock Config
     const mockConfigManager = {
-        getOracleConfig: () => ({ probabilityChangeThreshold: 10 }),
-        getConfig: () => ({ enhancedRisk: { eventProximityThreshold: 60 } }),
-        getOracleConfigV2: () => ({ probabilityChangeThreshold: 10 }), // In case I used this name? No.
-    } as unknown as Enhanced2026ConfigManager;
+        getConfig: () => ({
+            oracle: { probabilityChangeThreshold: 10 },
+            enhancedRisk: { eventProximityThreshold: 60 },
+        }),
+        getOracleConfig: () => ({ probabilityChangeThreshold: 10 }), // Keep until fully refactored if needed, but EventMonitor uses getConfig().oracle now
+    } as unknown as ConfigManager;
 
     // Arbitrary for Event
     const eventArbitrary = fc.record({

@@ -33,7 +33,7 @@ export function useWebSocket<T = unknown>({
       const ws = new WebSocket(fullUrl);
       wsRef.current = ws;
 
-      // eslint-disable-next-line functional/immutable-data
+       
       ws.onopen = () => {
         console.log('WebSocket Connected');
         setStatus('CONNECTED');
@@ -42,7 +42,7 @@ export function useWebSocket<T = unknown>({
         toast.success('Connected to Titan Core');
       };
 
-      // eslint-disable-next-line functional/immutable-data
+       
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
@@ -53,7 +53,7 @@ export function useWebSocket<T = unknown>({
         }
       };
 
-      // eslint-disable-next-line functional/immutable-data
+       
       ws.onclose = (event) => {
         console.log('WebSocket Disconnected:', event.code, event.reason);
         setStatus('DISCONNECTED');
@@ -71,7 +71,7 @@ export function useWebSocket<T = unknown>({
         }
       };
 
-      // eslint-disable-next-line functional/immutable-data
+       
       ws.onerror = (event) => {
         console.error('WebSocket Error:', event);
         setError(new Error('WebSocket connection error'));

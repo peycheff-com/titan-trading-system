@@ -152,7 +152,7 @@ export class PredictiveAnalytics extends EventEmitter {
   private regimeHistory = new Map<string, RegimeSnapshot[]>();
   private tradeHistory: Trade[] = [];
   private currentRegimes = new Map<string, MarketRegime>();
-  private volatilityModels = new Map<string, any>();
+  private volatilityModels = new Map<string, any>(); // eslint-disable-line @typescript-eslint/no-explicit-any
   private correlationMatrix = new Map<string, Map<string, number>>();
   private updateTimer: NodeJS.Timeout | null = null;
   private modelUpdateTimer: NodeJS.Timeout | null = null;
@@ -671,7 +671,7 @@ export class PredictiveAnalytics extends EventEmitter {
   /**
    * Update current regime for symbol
    */
-  private updateCurrentRegime(symbol: string, snapshot: RegimeSnapshot): void {
+  private updateCurrentRegime(symbol: string, _snapshot: RegimeSnapshot): void {
     const regime = this.detectMarketRegime(symbol);
     if (regime) {
       // eslint-disable-next-line functional/immutable-data

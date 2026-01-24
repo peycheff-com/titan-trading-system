@@ -130,7 +130,7 @@ export class TradeGate {
    * Update configuration dynamically
    */
   public updateConfig(newConfig: Partial<TradeGateConfig>): void {
-    // eslint-disable-next-line functional/immutable-data
+     
     this.config = { ...this.config, ...newConfig };
     logger.info('TradeGate config updated');
   }

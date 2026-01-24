@@ -24,7 +24,7 @@ const ToggleGroup = React.forwardRef<
   </ToggleGroupPrimitive.Root>
 ));
 
-// eslint-disable-next-line functional/immutable-data
+ 
 ToggleGroup.displayName = ToggleGroupPrimitive.Root.displayName;
 
 const ToggleGroupItem = React.forwardRef<
@@ -51,7 +51,7 @@ const ToggleGroupItem = React.forwardRef<
   );
 });
 
-// eslint-disable-next-line functional/immutable-data
+ 
 ToggleGroupItem.displayName = ToggleGroupPrimitive.Item.displayName;
 
 export { ToggleGroup, ToggleGroupItem };

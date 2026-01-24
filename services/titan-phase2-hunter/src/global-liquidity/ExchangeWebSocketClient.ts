@@ -8,7 +8,7 @@
  */
 
 import { EventEmitter } from 'events';
-import WebSocket = require('ws');
+import WebSocket from 'ws';
 import { ConnectionStatus, ExchangeFlow } from '../types';
 
 /**
@@ -94,7 +94,9 @@ export class ExchangeWebSocketClient extends EventEmitter {
   private isClosing: boolean = false;
 
   constructor(
-    config: Partial<ExchangeWebSocketConfig> & { exchange: 'binance' | 'coinbase' | 'kraken' }
+    config: Partial<ExchangeWebSocketConfig> & {
+      exchange: 'binance' | 'coinbase' | 'kraken';
+    }
   ) {
     super();
     this.config = {
@@ -256,10 +258,11 @@ export class ExchangeWebSocketClient extends EventEmitter {
     const baseUrl = EXCHANGE_WS_URLS[this.config.exchange];
 
     switch (this.config.exchange) {
-      case 'binance':
+      case 'binance': {
         // Binance uses stream names in URL
         const streams = this.config.symbols.map(s => `${s.toLowerCase()}@aggTrade`).join('/');
         return `${baseUrl}/${streams}`;
+      }
 
       case 'coinbase':
       case 'kraken':

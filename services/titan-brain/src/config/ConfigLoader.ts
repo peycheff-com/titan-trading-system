@@ -4,7 +4,7 @@
  */
 
 import { existsSync, readFileSync } from 'fs';
-import { EquityTier, TitanBrainConfig } from '../types/index.js';
+import { TitanBrainConfig } from '../types/index.js';
 import { defaultConfig } from './defaults.js';
 import { TitanBrainConfigSchema } from './schema.js';
 
@@ -81,10 +81,10 @@ function mergeConfigSection<T>(target: T, source: Partial<T> | undefined): T {
       targetValue !== null &&
       !Array.isArray(targetValue)
     ) {
-      // eslint-disable-next-line functional/immutable-data
+       
       result[key] = { ...targetValue, ...sourceValue } as T[keyof T];
     } else if (sourceValue !== undefined) {
-      // eslint-disable-next-line functional/immutable-data
+       
       result[key] = sourceValue as T[keyof T];
     }
   }
@@ -113,56 +113,48 @@ function deepMerge(target: TitanBrainConfig, source: Partial<TitanBrainConfig>):
 }
 
 /**
+ * Helper to safely load file config
+ */
+function getFileConfig(configFile: string): {
+  config: Partial<TitanBrainConfig>;
+  source: string | null;
+} {
+  try {
+    const fileConfig = loadConfigFromFile(configFile);
+    return { config: fileConfig, source: `file:${configFile}` };
+  } catch (error) {
+    console.warn(`Warning: Could not load config file: ${(error as Error).message}`);
+    return { config: {}, source: null };
+  }
+}
+
+/**
  * Load and merge configuration from all sources
  * Priority: Environment variables > Config file > Defaults
  */
 export function loadConfig(options: ConfigLoaderOptions = {}): ConfigLoaderResult {
   const { configFile, validate = true, throwOnError = false } = options;
 
-  const sources: string[] = ['defaults'];
-  // eslint-disable-next-line functional/no-let
-  let mergedConfig: TitanBrainConfig = { ...defaultConfig };
-
   // Load from config file if provided
-  if (configFile) {
-    try {
-      const fileConfig = loadConfigFromFile(configFile);
-      mergedConfig = deepMerge(mergedConfig, fileConfig);
-      // eslint-disable-next-line functional/immutable-data
-      sources.push(`file:${configFile}`);
-    } catch (error) {
-      console.warn(`Warning: Could not load config file: ${(error as Error).message}`);
-    }
-  }
+  const fileRef = configFile ? getFileConfig(configFile) : { config: {}, source: null };
 
   // Load from environment variables (highest priority)
   const envConfig = loadConfigFromEnvironment();
-  if (Object.keys(envConfig).length > 0) {
-    mergedConfig = deepMerge(mergedConfig, envConfig);
-    // eslint-disable-next-line functional/immutable-data
-    sources.push('environment');
-  }
+  const envSource = Object.keys(envConfig).length > 0 ? 'environment' : null;
+
+  const mergedConfig = deepMerge(deepMerge({ ...defaultConfig }, fileRef.config), envConfig);
+
+  const sources: string[] = ['defaults', fileRef.source, envSource].filter(
+    (s): s is string => s !== null,
+  );
 
   // Validate configuration
-  // eslint-disable-next-line functional/no-let
-  let validation: ValidationResult = { valid: true, errors: [], warnings: [] };
-  if (validate) {
-    const result = TitanBrainConfigSchema.safeParse(mergedConfig);
+  const validation = validate
+    ? validateMergedConfig(mergedConfig)
+    : { valid: true, errors: [], warnings: [] };
 
-    if (result.success) {
-      mergedConfig = result.data as TitanBrainConfig;
-      validation = { valid: true, errors: [], warnings: [] };
-    } else {
-      validation = {
-        valid: false,
-        errors: result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`),
-        warnings: [],
-      };
-
-      if (throwOnError) {
-        throw new Error(`Configuration validation failed:\n${validation.errors.join('\n')}`);
-      }
-    }
+  if (validate && !validation.valid && throwOnError) {
+    throw new Error(`Configuration validation failed:\n${validation.errors.join('\n')}`);
   }
 
   return {
@@ -177,7 +169,7 @@ export function loadConfig(options: ConfigLoaderOptions = {}): ConfigLoaderResul
  */
 export class ConfigLoader {
   private config: TitanBrainConfig | null = null;
-  private options: ConfigLoaderOptions;
+  private readonly options: ConfigLoaderOptions;
 
   constructor(options: ConfigLoaderOptions = {}) {
     this.options = options;
@@ -198,7 +190,7 @@ export class ConfigLoader {
    * Force reload configuration
    */
   async reload(): Promise<TitanBrainConfig> {
-    // eslint-disable-next-line functional/immutable-data
+     
     this.config = null;
     return this.load();
   }
@@ -208,7 +200,7 @@ export class ConfigLoader {
     if (!result.validation.valid && this.options.throwOnError) {
       throw new Error(`Configuration validation failed:\n${result.validation.errors.join('\\n')}`);
     }
-    // eslint-disable-next-line functional/immutable-data
+     
     this.config = result.config;
     return this.config;
   }
@@ -247,12 +239,26 @@ export class ConfigLoader {
  * Configuration validation error
  */
 export class ConfigValidationError extends Error {
-  public errors: string[];
+  public readonly errors: string[];
 
   constructor(message: string, errors: string[]) {
     super(message);
     this.name = 'ConfigValidationError';
     this.errors = errors;
+  }
+}
+
+function validateMergedConfig(config: TitanBrainConfig): ValidationResult {
+  const result = TitanBrainConfigSchema.safeParse(config);
+
+  if (result.success) {
+    return { valid: true, errors: [], warnings: [] };
+  } else {
+    return {
+      valid: false,
+      errors: result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`),
+      warnings: [],
+    };
   }
 }
 
@@ -272,7 +278,7 @@ export function validateConfig(config: unknown): ValidationResult {
 }
 
 // Export singleton instance for convenience
-// eslint-disable-next-line functional/no-let
+ 
 let defaultLoader: ConfigLoader | null = null;
 
 /**

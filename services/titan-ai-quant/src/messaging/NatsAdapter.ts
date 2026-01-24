@@ -16,6 +16,7 @@ export class NatsAdapter {
   /**
    * Publish regime update
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async publishRegimeUpdate(snapshot: any): Promise<void> {
     try {
       if (this.nats.isConnected()) {
@@ -57,27 +58,32 @@ export class NatsAdapter {
    * Subscribe to AI optimization requests
    */
   private subscribeToOptimizationRequests(): void {
-    this.nats.subscribe(TitanSubject.CMD_AI_OPTIMIZE, async (data: any, subject: string) => {
-      // Dual Read Strategy
-      // eslint-disable-next-line functional/no-let
-      let payload = data;
-      if (data && typeof data === 'object' && 'payload' in data && 'type' in data) {
-        payload = data.payload;
-      }
+    this.nats.subscribe(
+      TitanSubject.CMD_AI_OPTIMIZE,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      async (data: any, subject: string) => {
+        // Dual Read Strategy
 
-      logger.log(`Received optimization request on ${subject}`, payload);
+        // eslint-disable-next-line functional/no-let
+        let payload = data;
+        if (data && typeof data === 'object' && 'payload' in data && 'type' in data) {
+          payload = data.payload;
+        }
 
-      try {
-        // Trigger optimization
-        // In a real scenario, we might use data to filter scope,
-        // but for now we run the standard nightly cycle
-        await this.optimizer.runNow();
+        logger.log(`Received optimization request on ${subject}`, payload);
 
-        logger.log('✅ Automated optimization completed via NATS trigger');
-      } catch (error) {
-        logger.error('❌ Validated optimization failed:', error);
-      }
-    });
+        try {
+          // Trigger optimization
+          // In a real scenario, we might use data to filter scope,
+          // but for now we run the standard nightly cycle
+          await this.optimizer.runNow();
+
+          logger.log('✅ Automated optimization completed via NATS trigger');
+        } catch (error) {
+          logger.error('❌ Validated optimization failed:', error);
+        }
+      },
+    );
   }
 
   /**

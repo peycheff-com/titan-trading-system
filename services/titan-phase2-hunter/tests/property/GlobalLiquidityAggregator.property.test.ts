@@ -72,6 +72,7 @@ describe("Global Liquidity Aggregator Property Tests", () => {
                                     price: 1,
                                     quantity: buyVol,
                                     side: "buy",
+                                    tradeId: "test-buy",
                                     timestamp: Date.now(),
                                 });
                             }
@@ -82,6 +83,7 @@ describe("Global Liquidity Aggregator Property Tests", () => {
                                     price: 1,
                                     quantity: sellVol,
                                     side: "sell",
+                                    tradeId: "test-sell",
                                     timestamp: Date.now(),
                                 });
                             }
@@ -133,6 +135,7 @@ describe("Global Liquidity Aggregator Property Tests", () => {
                 price: 100,
                 quantity: 10,
                 side: "buy",
+                tradeId: "t1",
                 timestamp: Date.now(),
             }); // +1000
             aggregator.processTrade({
@@ -141,6 +144,7 @@ describe("Global Liquidity Aggregator Property Tests", () => {
                 price: 100,
                 quantity: 10,
                 side: "buy",
+                tradeId: "t2",
                 timestamp: Date.now(),
             }); // +1000
             aggregator.processTrade({
@@ -149,6 +153,7 @@ describe("Global Liquidity Aggregator Property Tests", () => {
                 price: 100,
                 quantity: 50,
                 side: "sell",
+                tradeId: "t3",
                 timestamp: Date.now(),
             }); // -5000 (Outlier)
 

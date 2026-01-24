@@ -62,5 +62,5 @@ export const HazardButton = React.forwardRef<HTMLButtonElement, HazardButtonProp
   },
 );
 
-// eslint-disable-next-line functional/immutable-data
+ 
 HazardButton.displayName = 'HazardButton';

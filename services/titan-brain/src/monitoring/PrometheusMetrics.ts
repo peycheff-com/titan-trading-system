@@ -168,7 +168,7 @@ export class PrometheusMetrics {
       labelNames,
       registers: [this.registry],
     });
-    // eslint-disable-next-line functional/immutable-data
+     
     this.counters.set(name, counter);
   }
 
@@ -182,7 +182,7 @@ export class PrometheusMetrics {
       labelNames,
       registers: [this.registry],
     });
-    // eslint-disable-next-line functional/immutable-data
+     
     this.gauges.set(name, gauge);
   }
 
@@ -202,7 +202,7 @@ export class PrometheusMetrics {
       buckets: buckets || [0.1, 5, 15, 50, 100, 500],
       registers: [this.registry],
     });
-    // eslint-disable-next-line functional/immutable-data
+     
     this.histograms.set(name, histogram);
   }
 
@@ -266,19 +266,19 @@ export class PrometheusMetrics {
 
     // Update internal stats
     const latStats = this.latencyStats.get(phaseId) || { sum: 0, count: 0 };
-    // eslint-disable-next-line functional/immutable-data
+     
     latStats.sum += latencyMs;
-    // eslint-disable-next-line functional/immutable-data
+     
     latStats.count++;
-    // eslint-disable-next-line functional/immutable-data
+     
     this.latencyStats.set(phaseId, latStats);
 
     const decStats = this.decisionStats.get(phaseId) || { approved: 0, total: 0 };
-    // eslint-disable-next-line functional/immutable-data
+     
     decStats.total++;
-    // eslint-disable-next-line functional/immutable-data
+     
     if (approved) decStats.approved++;
-    // eslint-disable-next-line functional/immutable-data
+     
     this.decisionStats.set(phaseId, decStats);
   }
 
@@ -305,11 +305,11 @@ export class PrometheusMetrics {
 
     // Update internal stats
     const cStats = this.cacheStats.get(cacheName) || { hits: 0, total: 0 };
-    // eslint-disable-next-line functional/immutable-data
+     
     cStats.total++;
-    // eslint-disable-next-line functional/immutable-data
+     
     if (hit) cStats.hits++;
-    // eslint-disable-next-line functional/immutable-data
+     
     this.cacheStats.set(cacheName, cStats);
   }
 
@@ -430,11 +430,11 @@ export class PrometheusMetrics {
       prefix: this.prefix,
     });
     this.initializeMetrics();
-    // eslint-disable-next-line functional/immutable-data
+     
     this.latencyStats.clear();
-    // eslint-disable-next-line functional/immutable-data
+     
     this.decisionStats.clear();
-    // eslint-disable-next-line functional/immutable-data
+     
     this.cacheStats.clear();
   }
 
@@ -471,7 +471,7 @@ export class PrometheusMetrics {
 /**
  * Singleton instance for global metrics collection
  */
-// eslint-disable-next-line functional/no-let
+ 
 let metricsInstance: PrometheusMetrics | null = null;
 
 /**

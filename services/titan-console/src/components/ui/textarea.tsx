@@ -18,7 +18,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     );
   },
 );
-// eslint-disable-next-line functional/immutable-data
+ 
 Textarea.displayName = 'Textarea';
 
 export { Textarea };

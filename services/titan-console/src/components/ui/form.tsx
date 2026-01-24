@@ -77,7 +77,7 @@ const FormItem = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEl
     );
   },
 );
-// eslint-disable-next-line functional/immutable-data
+ 
 FormItem.displayName = 'FormItem';
 
 const FormLabel = React.forwardRef<
@@ -95,7 +95,7 @@ const FormLabel = React.forwardRef<
     />
   );
 });
-// eslint-disable-next-line functional/immutable-data
+ 
 FormLabel.displayName = 'FormLabel';
 
 const FormControl = React.forwardRef<
@@ -114,7 +114,7 @@ const FormControl = React.forwardRef<
     />
   );
 });
-// eslint-disable-next-line functional/immutable-data
+ 
 FormControl.displayName = 'FormControl';
 
 const FormDescription = React.forwardRef<
@@ -132,7 +132,7 @@ const FormDescription = React.forwardRef<
     />
   );
 });
-// eslint-disable-next-line functional/immutable-data
+ 
 FormDescription.displayName = 'FormDescription';
 
 const FormMessage = React.forwardRef<
@@ -157,7 +157,7 @@ const FormMessage = React.forwardRef<
     </p>
   );
 });
-// eslint-disable-next-line functional/immutable-data
+ 
 FormMessage.displayName = 'FormMessage';
 
 export {

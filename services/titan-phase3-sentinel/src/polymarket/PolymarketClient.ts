@@ -54,6 +54,7 @@ export class PolymarketClient {
       if (!response.ok) {
         throw new Error(`Polymarket API error: ${response.statusText}`);
       }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const data = (await response.json()) as any[];
 
       // Map to our Interface
@@ -98,6 +99,7 @@ export class PolymarketClient {
         }
         throw new Error(`CLOB API error: ${response.statusText}`);
       }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const data = (await response.json()) as any;
       return {
         market: tokenId,

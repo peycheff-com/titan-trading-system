@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import type { ClipResult, Order, OrderResult, TwapConfig, TwapResult } from '../types/orders.js';
+import type { ClipResult, Order, TwapConfig, TwapResult } from '../types/orders.js';
 import type { IOrderExecutor, TwapRequest } from './interfaces.js';
 
 /**
@@ -70,11 +70,11 @@ export class TwapExecutor extends EventEmitter {
           await this.wait(delay, this.abortController.signal);
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // eslint-disable-next-line functional/immutable-data
       result.aborted = true;
       // eslint-disable-next-line functional/immutable-data
-      result.reason = error.message;
+      result.reason = error instanceof Error ? error.message : String(error);
     } finally {
       // eslint-disable-next-line functional/immutable-data
       this.isRunning = false;

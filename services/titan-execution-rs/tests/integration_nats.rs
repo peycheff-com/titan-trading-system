@@ -20,6 +20,7 @@ use titan_execution_rs::risk_policy::RiskPolicy;
 use titan_execution_rs::persistence::store::PersistenceStore;
 use titan_execution_rs::persistence::redb_store::RedbStore;
 use titan_execution_rs::persistence::wal::WalManager;
+use titan_execution_rs::drift_detector::DriftDetector;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 use hex;
@@ -104,6 +105,8 @@ async fn test_full_execution_flow() {
     let client = async_nats::connect(&nats_url).await.expect("Failed to connect to NATS");
     
     // 3. Start Engine
+    let drift_detector = Arc::new(DriftDetector::new(50.0, 1000, 100.0));
+
     let _handle = nats_engine::start_nats_engine(
         client.clone(),
         shadow_state.clone(),
@@ -113,7 +116,8 @@ async fn test_full_execution_flow() {
         halt.clone(),
         risk_guard.clone(),
         ctx.clone(),
-        5000 // freshness threshold
+        5000, // freshness threshold
+        drift_detector,
     ).await.expect("Failed to start engine");
 
     // 4. Test Subscription (Listen for Fills + DLQ)

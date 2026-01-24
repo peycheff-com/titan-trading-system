@@ -505,7 +505,6 @@ function AlignmentWeightsSection({
 
       <SliderRow
         label="Daily Bias"
-        param="daily"
         value={weights.daily}
         config={sliderConfigs.daily}
         selected={selectedParam === 'daily'}
@@ -513,7 +512,6 @@ function AlignmentWeightsSection({
 
       <SliderRow
         label="4H Structure"
-        param="h4"
         value={weights.h4}
         config={sliderConfigs.h4}
         selected={selectedParam === 'h4'}
@@ -521,7 +519,6 @@ function AlignmentWeightsSection({
 
       <SliderRow
         label="15m Trigger"
-        param="m15"
         value={weights.m15}
         config={sliderConfigs.m15}
         selected={selectedParam === 'm15'}
@@ -568,7 +565,6 @@ function RSConfigSection({
 
       <SliderRow
         label="RS Threshold"
-        param="rsThreshold"
         value={rsConfig.threshold}
         config={sliderConfigs.rsThreshold}
         selected={selectedParam === 'rsThreshold'}
@@ -576,7 +572,6 @@ function RSConfigSection({
 
       <SliderRow
         label="Lookback Period"
-        param="rsLookback"
         value={rsConfig.lookbackPeriod}
         config={sliderConfigs.rsLookback}
         selected={selectedParam === 'rsLookback'}
@@ -627,7 +622,6 @@ function RiskConfigSection({
 
       <SliderRow
         label="Max Leverage"
-        param="maxLeverage"
         value={riskConfig.maxLeverage}
         config={sliderConfigs.maxLeverage}
         selected={selectedParam === 'maxLeverage'}
@@ -635,7 +629,6 @@ function RiskConfigSection({
 
       <SliderRow
         label="Stop Loss"
-        param="stopLoss"
         value={riskConfig.stopLossPercent}
         config={sliderConfigs.stopLoss}
         selected={selectedParam === 'stopLoss'}
@@ -643,7 +636,6 @@ function RiskConfigSection({
 
       <SliderRow
         label="Take Profit"
-        param="target"
         value={riskConfig.targetPercent}
         config={sliderConfigs.target}
         selected={selectedParam === 'target'}
@@ -691,7 +683,6 @@ function PortfolioConfigSection({
 
       <SliderRow
         label="Max Positions"
-        param="maxPositions"
         value={portfolioConfig.maxConcurrentPositions}
         config={sliderConfigs.maxPositions}
         selected={selectedParam === 'maxPositions'}
@@ -699,7 +690,6 @@ function PortfolioConfigSection({
 
       <SliderRow
         label="Max Portfolio Heat"
-        param="maxHeat"
         value={portfolioConfig.maxPortfolioHeat}
         config={sliderConfigs.maxHeat}
         selected={selectedParam === 'maxHeat'}
@@ -707,7 +697,6 @@ function PortfolioConfigSection({
 
       <SliderRow
         label="Correlation Limit"
-        param="correlation"
         value={portfolioConfig.correlationThreshold}
         config={sliderConfigs.correlation}
         selected={selectedParam === 'correlation'}
@@ -731,13 +720,11 @@ function PortfolioConfigSection({
  */
 function SliderRow({
   label,
-  param,
   value,
   config,
   selected,
 }: {
   label: string;
-  param: string;
   value: number;
   config: SliderConfig;
   selected: boolean;

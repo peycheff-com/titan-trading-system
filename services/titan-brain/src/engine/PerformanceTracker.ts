@@ -60,7 +60,7 @@ export class PerformanceTracker {
     );
 
     // Update daily PnL (simple in-memory tracking)
-    // eslint-disable-next-line functional/immutable-data
+     
     this.dailyPnL += pnl;
   }
 
