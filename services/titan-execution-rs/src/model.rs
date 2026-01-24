@@ -67,6 +67,15 @@ pub enum IntentStatus {
     Expired,
 }
 
+impl IntentStatus {
+    pub fn is_active(&self) -> bool {
+        matches!(
+            self,
+            IntentStatus::Pending | IntentStatus::Validated | IntentStatus::PartiallyFilled
+        )
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Intent {
     pub signal_id: String,

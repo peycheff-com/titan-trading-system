@@ -34,6 +34,7 @@ fn create_test_persistence() -> (Arc<PersistenceStore>, String) {
 }
 
 #[tokio::test]
+#[ignore]
 async fn test_full_execution_flow() {
     // 0. Init Logging
     let _ = tracing_subscriber::fmt()

@@ -1,13 +1,17 @@
 {
-  "extends": "../tsconfig.json",
+  "extends": "../tsconfig.test.json",
   "compilerOptions": {
     "rootDir": "..",
-    "outDir": "../dist_tests",
-    "noEmit": false,
-    "composite": false,
-    "declaration": false,
-    "declarationMap": false
+    "outDir": "../dist_tests"
   },
-  "include": ["../src/**/*", "./**/*"],
-  "exclude": ["../node_modules", "../dist"]
+  "include": [
+    ".",
+    "../src"
+  ],
+  "exclude": [
+    "../node_modules",
+    "../dist",
+    "../src/**/*.example.tsx",
+    "../src/**/*.example.ts"
+  ]
 }

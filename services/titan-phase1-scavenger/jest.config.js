@@ -33,10 +33,7 @@ export default {
   // TypeScript configuration
   transform: {
     '^.+\\.ts$': ['ts-jest', {
-      tsconfig: {
-        esModuleInterop: true,
-        allowSyntheticDefaultImports: true,
-      }
+      tsconfig: '<rootDir>/tsconfig.test.json'
     }],
   },
   
@@ -44,6 +41,7 @@ export default {
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
     '^@/(.*)$': '<rootDir>/src/$1',  // Path alias for cleaner imports
+    '^@titan/shared$': '<rootDir>/../shared/src/index.ts',
   },
   
   // Test setup

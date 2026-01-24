@@ -25,6 +25,10 @@ describe("Logger", () => {
     // Initialize logger with test directory
     logger = new Logger(testLogDir);
     testLogPath = path.join(testLogDir, "trades.jsonl");
+
+    // Silence console output during tests
+    jest.spyOn(console, "error").mockImplementation(() => {});
+    jest.spyOn(console, "log").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -36,6 +40,7 @@ describe("Logger", () => {
       }
       fs.rmdirSync(testLogDir);
     }
+    jest.restoreAllMocks();
   });
 
   describe("Initialization", () => {

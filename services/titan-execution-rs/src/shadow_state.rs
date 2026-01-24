@@ -795,4 +795,11 @@ impl ShadowState {
     pub fn calculate_exposure(&self) -> ExposureMetrics {
         ExposureCalculator::calculate(&self.positions)
     }
+
+    pub fn count_open_intents_for_symbol(&self, symbol: &str) -> usize {
+        self.pending_intents
+            .values()
+            .filter(|i| i.symbol == symbol && i.status.is_active())
+            .count()
+    }
 }

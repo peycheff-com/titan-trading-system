@@ -14,34 +14,69 @@
  * Requirement 1.7: Emit RESOURCE_WARNING event
  */
 
-export type EventType =
-  | 'TRAP_MAP_UPDATED'
-  | 'TRAP_SPRUNG'
-  | 'EXECUTION_COMPLETE'
-  | 'RESOURCE_WARNING'
-  | 'ERROR'
-  | 'IPC_CONNECTED'
-  | 'IPC_DISCONNECTED'
-  | 'IPC_RECONNECTING'
-  | 'IPC_ERROR'
-  | 'IPC_MAX_RECONNECT_ATTEMPTS'
-  | 'IPC_CONNECTION_FAILED'
-  | 'TRAP_ABORTED'
-  | 'IPC_EXECUTION_FAILED'
-  | 'IPC_FORCE_RECONNECT_SUCCESS'
-  | 'IPC_FORCE_RECONNECT_FAILED'
-  | 'CONFIG_UPDATED_IPC'
-  | 'SYMBOL_BLACKLISTED';
+export interface EventPayloads {
+  TRAP_MAP_UPDATED: {
+    symbolCount: number;
+    duration: number;
+    timestamp: number;
+  };
+  TRAP_SPRUNG: {
+    symbol: string;
+    price: number;
+    trapType: string;
+    direction: "LONG" | "SHORT";
+    tradeCount: number;
+    microCVD: number;
+    elapsed: number;
+  };
+  EXECUTION_COMPLETE: {
+    signal_id: string;
+    symbol: string;
+    trapType: string;
+    fillPrice: number;
+    routedTo: string;
+  };
+  RESOURCE_WARNING: {
+    memoryUsageMB: number;
+    heapTotalMB: number;
+    rssMB: number;
+    threshold: number;
+    timestamp: number;
+  };
+  ERROR: { message: string; error?: Error; context?: string };
+  IPC_CONNECTED: void;
+  IPC_DISCONNECTED: void;
+  IPC_RECONNECTING: void;
+  IPC_ERROR: { error: Error };
+  IPC_MAX_RECONNECT_ATTEMPTS: void;
+  IPC_CONNECTION_FAILED: { error: Error };
+  TRAP_ABORTED: {
+    signal_id?: string;
+    symbol: string;
+    reason: string;
+    timestamp?: number;
+  };
+  IPC_EXECUTION_FAILED: { error: Error; signalId?: string };
+  IPC_FORCE_RECONNECT_SUCCESS: void;
+  IPC_FORCE_RECONNECT_FAILED: { error: Error };
+  CONFIG_UPDATED_IPC: { config: Record<string, unknown> };
+  SYMBOL_BLACKLISTED: { symbol: string; reason: string; durationMs: number };
+}
 
-export type EventHandler = (data: any) => void;
+export type EventType = keyof EventPayloads;
+
+export type EventHandler<K extends EventType> = (
+  data: EventPayloads[K],
+) => void;
 
 export class EventEmitter {
-  private listeners: Map<EventType, EventHandler[]> = new Map();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private listeners: Map<EventType, EventHandler<any>[]> = new Map();
 
   /**
    * Register an event listener
    */
-  on(event: EventType, handler: EventHandler): void {
+  on<K extends EventType>(event: K, handler: EventHandler<K>): void {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, []);
     }
@@ -52,7 +87,7 @@ export class EventEmitter {
   /**
    * Unregister an event listener
    */
-  off(event: EventType, handler: EventHandler): void {
+  off<K extends EventType>(event: K, handler: EventHandler<K>): void {
     const handlers = this.listeners.get(event);
     if (!handlers) return;
 
@@ -65,7 +100,7 @@ export class EventEmitter {
   /**
    * Emit an event
    */
-  emit(event: EventType, data?: any): void {
+  emit<K extends EventType>(event: K, data: EventPayloads[K]): void {
     const handlers = this.listeners.get(event);
     if (!handlers) return;
 

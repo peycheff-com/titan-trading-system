@@ -40,8 +40,8 @@ export function ConfigPanel({ config, onSave, onCancel }: ConfigPanelProps) {
   /**
    * Update a config value
    */
-  const updateValue = (key: keyof TrapConfig, value: any) => {
-    setEditedConfig((prev: any) => ({
+  const updateValue = (key: keyof TrapConfig, value: TrapConfig[keyof TrapConfig]) => {
+    setEditedConfig((prev: TrapConfig) => ({
       ...prev,
       [key]: value,
     }));
@@ -55,7 +55,7 @@ export function ConfigPanel({ config, onSave, onCancel }: ConfigPanelProps) {
     key: 'enabled' | 'executeOn',
     value: boolean,
   ) => {
-    setEditedConfig((prev: any) => ({
+    setEditedConfig((prev: TrapConfig) => ({
       ...prev,
       exchanges: {
         ...prev.exchanges,
