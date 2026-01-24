@@ -10,8 +10,8 @@
  * Requirements: 3.1, 3.3 - Hierarchical configuration and environment-specific loading
  */
 
-import { existsSync, readFileSync } from "fs";
-import { join, resolve } from "path";
+import { existsSync, readFileSync } from 'fs';
+import { join, resolve } from 'path';
 import {
   BrainConfig,
   ConfigValidator,
@@ -20,12 +20,12 @@ import {
   InfrastructureConfig,
   PhaseConfig,
   ValidationResult,
-} from "./ConfigSchema";
+} from './ConfigSchema';
 
 /**
  * Configuration source types
  */
-export type ConfigSource = "environment" | "env-file" | "base-file" | "default";
+export type ConfigSource = 'environment' | 'env-file' | 'base-file' | 'default';
 
 /**
  * Configuration load result
@@ -95,18 +95,18 @@ const DEFAULT_CONFIGS = {
  */
 const ENV_VAR_MAPPINGS = {
   brain: {
-    TITAN_MAX_TOTAL_LEVERAGE: "maxTotalLeverage",
-    TITAN_MAX_GLOBAL_DRAWDOWN: "maxGlobalDrawdown",
-    TITAN_EMERGENCY_FLATTEN_THRESHOLD: "emergencyFlattenThreshold",
-    TITAN_PHASE1_TO_PHASE2_THRESHOLD: "phaseTransitionRules.phase1ToPhase2",
-    TITAN_PHASE2_TO_PHASE3_THRESHOLD: "phaseTransitionRules.phase2ToPhase3",
+    TITAN_MAX_TOTAL_LEVERAGE: 'maxTotalLeverage',
+    TITAN_MAX_GLOBAL_DRAWDOWN: 'maxGlobalDrawdown',
+    TITAN_EMERGENCY_FLATTEN_THRESHOLD: 'emergencyFlattenThreshold',
+    TITAN_PHASE1_TO_PHASE2_THRESHOLD: 'phaseTransitionRules.phase1ToPhase2',
+    TITAN_PHASE2_TO_PHASE3_THRESHOLD: 'phaseTransitionRules.phase2ToPhase3',
   },
 
   phase: {
-    TITAN_MAX_LEVERAGE: "maxLeverage",
-    TITAN_MAX_DRAWDOWN: "maxDrawdown",
-    TITAN_MAX_POSITION_SIZE: "maxPositionSize",
-    TITAN_RISK_PER_TRADE: "riskPerTrade",
+    TITAN_MAX_LEVERAGE: 'maxLeverage',
+    TITAN_MAX_DRAWDOWN: 'maxDrawdown',
+    TITAN_MAX_POSITION_SIZE: 'maxPositionSize',
+    TITAN_RISK_PER_TRADE: 'riskPerTrade',
   },
 };
 
@@ -118,8 +118,8 @@ export class HierarchicalConfigLoader {
 
   constructor(options: Partial<ConfigHierarchyOptions> = {}) {
     this.options = {
-      configDirectory: "./config",
-      environment: (process.env.NODE_ENV as Environment) || "development",
+      configDirectory: './config',
+      environment: (process.env.NODE_ENV as Environment) || 'development',
       enableEnvironmentVariables: true,
       enableEnvironmentFiles: true,
       validateSchema: true,
@@ -131,23 +131,18 @@ export class HierarchicalConfigLoader {
    * Load brain configuration with hierarchy
    */
   async loadBrainConfig(): Promise<ConfigLoadResult<BrainConfig>> {
-    const sources: Array<
-      { source: ConfigSource; path?: string; keys: string[] }
-    > = [];
+    const sources: Array<{ source: ConfigSource; path?: string; keys: string[] }> = [];
     // eslint-disable-next-line functional/no-let
     let config = { ...DEFAULT_CONFIGS.brain };
 
     // 1. Load base configuration file
-    const baseConfigPath = join(
-      this.options.configDirectory,
-      "brain.config.json",
-    );
+    const baseConfigPath = join(this.options.configDirectory, 'brain.config.json');
     if (existsSync(baseConfigPath)) {
       const baseConfig = this.loadJsonFile(baseConfigPath) as any;
       config = this.mergeConfigs(config, baseConfig);
       // eslint-disable-next-line functional/immutable-data
       sources.push({
-        source: "base-file",
+        source: 'base-file',
         path: baseConfigPath,
         keys: Object.keys(baseConfig),
       });
@@ -164,7 +159,7 @@ export class HierarchicalConfigLoader {
         config = this.mergeConfigs(config, envConfig);
         // eslint-disable-next-line functional/immutable-data
         sources.push({
-          source: "env-file",
+          source: 'env-file',
           path: envConfigPath,
           keys: Object.keys(envConfig),
         });
@@ -174,12 +169,11 @@ export class HierarchicalConfigLoader {
       if (existsSync(baseConfigPath)) {
         const baseConfig = this.loadJsonFile(baseConfigPath) as any;
         if (baseConfig.environments?.[this.options.environment]) {
-          const envOverrides =
-            baseConfig.environments[this.options.environment];
+          const envOverrides = baseConfig.environments[this.options.environment];
           config = this.mergeConfigs(config, envOverrides);
           // eslint-disable-next-line functional/immutable-data
           sources.push({
-            source: "env-file",
+            source: 'env-file',
             path: `${baseConfigPath}:environments.${this.options.environment}`,
             keys: Object.keys(envOverrides),
           });
@@ -189,14 +183,12 @@ export class HierarchicalConfigLoader {
 
     // 3. Apply environment variables
     if (this.options.enableEnvironmentVariables) {
-      const envVars = this.loadEnvironmentVariables("brain") as Partial<
-        BrainConfig
-      >;
+      const envVars = this.loadEnvironmentVariables('brain') as Partial<BrainConfig>;
       if (Object.keys(envVars).length > 0) {
         config = this.mergeConfigs(config, envVars);
         // eslint-disable-next-line functional/immutable-data
         sources.push({
-          source: "environment",
+          source: 'environment',
           keys: Object.keys(envVars),
         });
       }
@@ -212,9 +204,7 @@ export class HierarchicalConfigLoader {
     if (this.options.validateSchema) {
       validation = ConfigValidator.validateBrainConfig(config);
       if (!validation.valid) {
-        throw new Error(
-          `Invalid brain configuration: ${validation.errors.join(", ")}`,
-        );
+        throw new Error(`Invalid brain configuration: ${validation.errors.join(', ')}`);
       }
     }
 
@@ -229,23 +219,18 @@ export class HierarchicalConfigLoader {
    * Load phase configuration with hierarchy
    */
   async loadPhaseConfig(phase: string): Promise<ConfigLoadResult<PhaseConfig>> {
-    const sources: Array<
-      { source: ConfigSource; path?: string; keys: string[] }
-    > = [];
+    const sources: Array<{ source: ConfigSource; path?: string; keys: string[] }> = [];
     // eslint-disable-next-line functional/no-let
     let config = { ...DEFAULT_CONFIGS.phase };
 
     // 1. Load base configuration file
-    const baseConfigPath = join(
-      this.options.configDirectory,
-      `${phase}.config.json`,
-    );
+    const baseConfigPath = join(this.options.configDirectory, `${phase}.config.json`);
     if (existsSync(baseConfigPath)) {
       const baseConfig = this.loadJsonFile(baseConfigPath) as any;
       config = this.mergeConfigs(config, baseConfig);
       // eslint-disable-next-line functional/immutable-data
       sources.push({
-        source: "base-file",
+        source: 'base-file',
         path: baseConfigPath,
         keys: Object.keys(baseConfig),
       });
@@ -262,7 +247,7 @@ export class HierarchicalConfigLoader {
         config = this.mergeConfigs(config, envConfig);
         // eslint-disable-next-line functional/immutable-data
         sources.push({
-          source: "env-file",
+          source: 'env-file',
           path: envConfigPath,
           keys: Object.keys(envConfig),
         });
@@ -272,12 +257,11 @@ export class HierarchicalConfigLoader {
       if (existsSync(baseConfigPath)) {
         const baseConfig = this.loadJsonFile(baseConfigPath) as any;
         if (baseConfig.environments?.[this.options.environment]) {
-          const envOverrides =
-            baseConfig.environments[this.options.environment];
+          const envOverrides = baseConfig.environments[this.options.environment];
           config = this.mergeConfigs(config, envOverrides);
           // eslint-disable-next-line functional/immutable-data
           sources.push({
-            source: "env-file",
+            source: 'env-file',
             path: `${baseConfigPath}:environments.${this.options.environment}`,
             keys: Object.keys(envOverrides),
           });
@@ -287,14 +271,12 @@ export class HierarchicalConfigLoader {
 
     // 3. Apply environment variables
     if (this.options.enableEnvironmentVariables) {
-      const envVars = this.loadEnvironmentVariables("phase", phase) as Partial<
-        PhaseConfig
-      >;
+      const envVars = this.loadEnvironmentVariables('phase', phase) as Partial<PhaseConfig>;
       if (Object.keys(envVars).length > 0) {
         config = this.mergeConfigs(config, envVars);
         // eslint-disable-next-line functional/immutable-data
         sources.push({
-          source: "environment",
+          source: 'environment',
           keys: Object.keys(envVars),
         });
       }
@@ -310,9 +292,7 @@ export class HierarchicalConfigLoader {
     if (this.options.validateSchema) {
       validation = ConfigValidator.validatePhaseConfig(config);
       if (!validation.valid) {
-        throw new Error(
-          `Invalid ${phase} configuration: ${validation.errors.join(", ")}`,
-        );
+        throw new Error(`Invalid ${phase} configuration: ${validation.errors.join(', ')}`);
       }
     }
 
@@ -326,26 +306,19 @@ export class HierarchicalConfigLoader {
   /**
    * Load infrastructure configuration with hierarchy
    */
-  async loadInfrastructureConfig(): Promise<
-    ConfigLoadResult<InfrastructureConfig>
-  > {
-    const sources: Array<
-      { source: ConfigSource; path?: string; keys: string[] }
-    > = [];
+  async loadInfrastructureConfig(): Promise<ConfigLoadResult<InfrastructureConfig>> {
+    const sources: Array<{ source: ConfigSource; path?: string; keys: string[] }> = [];
     // eslint-disable-next-line functional/no-let
     let config: any = {};
 
     // 1. Load base configuration file
-    const baseConfigPath = join(
-      this.options.configDirectory,
-      "infrastructure.config.json",
-    );
+    const baseConfigPath = join(this.options.configDirectory, 'infrastructure.config.json');
     if (existsSync(baseConfigPath)) {
       const baseConfig = this.loadJsonFile(baseConfigPath) as any;
       config = this.mergeConfigs(config, baseConfig);
       // eslint-disable-next-line functional/immutable-data
       sources.push({
-        source: "base-file",
+        source: 'base-file',
         path: baseConfigPath,
         keys: Object.keys(baseConfig),
       });
@@ -362,7 +335,7 @@ export class HierarchicalConfigLoader {
         config = this.mergeConfigs(config, envConfig);
         // eslint-disable-next-line functional/immutable-data
         sources.push({
-          source: "env-file",
+          source: 'env-file',
           path: envConfigPath,
           keys: Object.keys(envConfig),
         });
@@ -371,12 +344,11 @@ export class HierarchicalConfigLoader {
       if (existsSync(baseConfigPath)) {
         const baseConfig = this.loadJsonFile(baseConfigPath) as any;
         if (baseConfig.environments?.[this.options.environment]) {
-          const envOverrides =
-            baseConfig.environments[this.options.environment];
+          const envOverrides = baseConfig.environments[this.options.environment];
           config = this.mergeConfigs(config, envOverrides);
           // eslint-disable-next-line functional/immutable-data
           sources.push({
-            source: "env-file",
+            source: 'env-file',
             path: `${baseConfigPath}:environments.${this.options.environment}`,
             keys: Object.keys(envOverrides),
           });
@@ -394,11 +366,7 @@ export class HierarchicalConfigLoader {
     if (this.options.validateSchema) {
       validation = ConfigValidator.validateInfrastructureConfig(config);
       if (!validation.valid) {
-        throw new Error(
-          `Invalid infrastructure configuration: ${
-            validation.errors.join(", ")
-          }`,
-        );
+        throw new Error(`Invalid infrastructure configuration: ${validation.errors.join(', ')}`);
       }
     }
 
@@ -413,23 +381,18 @@ export class HierarchicalConfigLoader {
    * Load deployment configuration with hierarchy
    */
   async loadDeploymentConfig(): Promise<ConfigLoadResult<DeploymentConfig>> {
-    const sources: Array<
-      { source: ConfigSource; path?: string; keys: string[] }
-    > = [];
+    const sources: Array<{ source: ConfigSource; path?: string; keys: string[] }> = [];
     // eslint-disable-next-line functional/no-let
     let config: any = {};
 
     // 1. Load base configuration file
-    const baseConfigPath = join(
-      this.options.configDirectory,
-      "deployment.config.json",
-    );
+    const baseConfigPath = join(this.options.configDirectory, 'deployment.config.json');
     if (existsSync(baseConfigPath)) {
       const baseConfig = this.loadJsonFile(baseConfigPath) as any;
       config = this.mergeConfigs(config, baseConfig);
       // eslint-disable-next-line functional/immutable-data
       sources.push({
-        source: "base-file",
+        source: 'base-file',
         path: baseConfigPath,
         keys: Object.keys(baseConfig),
       });
@@ -446,7 +409,7 @@ export class HierarchicalConfigLoader {
         config = this.mergeConfigs(config, envConfig);
         // eslint-disable-next-line functional/immutable-data
         sources.push({
-          source: "env-file",
+          source: 'env-file',
           path: envConfigPath,
           keys: Object.keys(envConfig),
         });
@@ -455,12 +418,11 @@ export class HierarchicalConfigLoader {
       if (existsSync(baseConfigPath)) {
         const baseConfig = this.loadJsonFile(baseConfigPath) as any;
         if (baseConfig.environments?.[this.options.environment]) {
-          const envOverrides =
-            baseConfig.environments[this.options.environment];
+          const envOverrides = baseConfig.environments[this.options.environment];
           config = this.mergeConfigs(config, envOverrides);
           // eslint-disable-next-line functional/immutable-data
           sources.push({
-            source: "env-file",
+            source: 'env-file',
             path: `${baseConfigPath}:environments.${this.options.environment}`,
             keys: Object.keys(envOverrides),
           });
@@ -478,9 +440,7 @@ export class HierarchicalConfigLoader {
     if (this.options.validateSchema) {
       validation = ConfigValidator.validateDeploymentConfig(config);
       if (!validation.valid) {
-        throw new Error(
-          `Invalid deployment configuration: ${validation.errors.join(", ")}`,
-        );
+        throw new Error(`Invalid deployment configuration: ${validation.errors.join(', ')}`);
       }
     }
 
@@ -495,23 +455,18 @@ export class HierarchicalConfigLoader {
    * Load service configuration with hierarchy
    */
   async loadServiceConfig(service: string): Promise<ConfigLoadResult<unknown>> {
-    const sources: Array<
-      { source: ConfigSource; path?: string; keys: string[] }
-    > = [];
+    const sources: Array<{ source: ConfigSource; path?: string; keys: string[] }> = [];
     // eslint-disable-next-line functional/no-let
     let config: any = {};
 
     // 1. Load base configuration file
-    const baseConfigPath = join(
-      this.options.configDirectory,
-      `${service}.config.json`,
-    );
+    const baseConfigPath = join(this.options.configDirectory, `${service}.config.json`);
     if (existsSync(baseConfigPath)) {
       const baseConfig = this.loadJsonFile(baseConfigPath) as any;
       config = this.mergeConfigs(config, baseConfig);
       // eslint-disable-next-line functional/immutable-data
       sources.push({
-        source: "base-file",
+        source: 'base-file',
         path: baseConfigPath,
         keys: Object.keys(baseConfig),
       });
@@ -528,7 +483,7 @@ export class HierarchicalConfigLoader {
         config = this.mergeConfigs(config, envConfig);
         // eslint-disable-next-line functional/immutable-data
         sources.push({
-          source: "env-file",
+          source: 'env-file',
           path: envConfigPath,
           keys: Object.keys(envConfig),
         });
@@ -537,12 +492,11 @@ export class HierarchicalConfigLoader {
       if (existsSync(baseConfigPath)) {
         const baseConfig = this.loadJsonFile(baseConfigPath) as any;
         if (baseConfig.environments?.[this.options.environment]) {
-          const envOverrides =
-            baseConfig.environments[this.options.environment];
+          const envOverrides = baseConfig.environments[this.options.environment];
           config = this.mergeConfigs(config, envOverrides);
           // eslint-disable-next-line functional/immutable-data
           sources.push({
-            source: "env-file",
+            source: 'env-file',
             path: `${baseConfigPath}:environments.${this.options.environment}`,
             keys: Object.keys(envOverrides),
           });
@@ -560,13 +514,8 @@ export class HierarchicalConfigLoader {
     if (this.options.validateSchema) {
       validation = ConfigValidator.validateServiceConfig(service, config);
       // Don't throw for unknown services, just warn
-      if (
-        !validation.valid &&
-        !validation.errors.some((e) => e.includes("No schema defined"))
-      ) {
-        throw new Error(
-          `Invalid ${service} configuration: ${validation.errors.join(", ")}`,
-        );
+      if (!validation.valid && !validation.errors.some((e) => e.includes('No schema defined'))) {
+        throw new Error(`Invalid ${service} configuration: ${validation.errors.join(', ')}`);
       }
     }
 
@@ -582,12 +531,12 @@ export class HierarchicalConfigLoader {
    */
   private loadJsonFile(filePath: string): unknown {
     try {
-      const content = readFileSync(filePath, "utf8");
+      const content = readFileSync(filePath, 'utf8');
       return JSON.parse(content);
     } catch (error) {
       throw new Error(
         `Failed to load configuration file ${filePath}: ${
-          error instanceof Error ? error.message : "Unknown error"
+          error instanceof Error ? error.message : 'Unknown error'
         }`,
       );
     }
@@ -597,7 +546,7 @@ export class HierarchicalConfigLoader {
    * Load environment variables for configuration type
    */
   private loadEnvironmentVariables(
-    configType: "brain" | "phase",
+    configType: 'brain' | 'phase',
     phase?: string,
   ): Record<string, unknown> {
     const envVars: Record<string, unknown> = {};
@@ -605,19 +554,16 @@ export class HierarchicalConfigLoader {
 
     for (const [envVar, configPath] of Object.entries(mappings)) {
       // For phase configs, allow phase-specific environment variables
-      const phaseSpecificVar = phase
-        ? `${envVar}_${phase.toUpperCase()}`
-        : null;
+      const phaseSpecificVar = phase ? `${envVar}_${phase.toUpperCase()}` : null;
 
-      const rawValue = process.env[phaseSpecificVar || ""] ||
-        process.env[envVar];
+      const rawValue = process.env[phaseSpecificVar || ''] || process.env[envVar];
 
       if (rawValue !== undefined) {
         // Convert string values to appropriate types
         // eslint-disable-next-line functional/no-let
         let value: unknown = rawValue;
-        if (rawValue === "true") value = true;
-        else if (rawValue === "false") value = false;
+        if (rawValue === 'true') value = true;
+        else if (rawValue === 'false') value = false;
         else if (!isNaN(Number(rawValue))) value = Number(rawValue);
 
         this.setNestedValue(envVars, configPath, value);
@@ -630,19 +576,15 @@ export class HierarchicalConfigLoader {
   /**
    * Set nested object value using dot notation
    */
-  private setNestedValue(
-    obj: Record<string, unknown>,
-    path: string,
-    value: unknown,
-  ): void {
-    const keys = path.split(".");
+  private setNestedValue(obj: Record<string, unknown>, path: string, value: unknown): void {
+    const keys = path.split('.');
     // eslint-disable-next-line functional/no-let
     let current = obj;
 
     // eslint-disable-next-line functional/no-let
     for (let i = 0; i < keys.length - 1; i++) {
       const key = keys[i];
-      if (!(key in current) || typeof current[key] !== "object") {
+      if (!(key in current) || typeof current[key] !== 'object') {
         current[key] = {};
       }
       current = current[key] as Record<string, unknown>;
@@ -660,9 +602,9 @@ export class HierarchicalConfigLoader {
     for (const [key, value] of Object.entries(override)) {
       if (value !== undefined && value !== null) {
         if (
-          typeof value === "object" &&
+          typeof value === 'object' &&
           !Array.isArray(value) &&
-          typeof (result as Record<string, unknown>)[key] === "object" &&
+          typeof (result as Record<string, unknown>)[key] === 'object' &&
           !Array.isArray((result as Record<string, unknown>)[key])
         ) {
           // Deep merge objects
@@ -692,22 +634,20 @@ export class HierarchicalConfigLoader {
     availableConfigs: string[];
   } {
     const configFiles = [
-      "brain",
-      "infrastructure",
-      "deployment",
-      "phase1",
-      "phase2",
-      "phase3",
+      'brain',
+      'infrastructure',
+      'deployment',
+      'phase1',
+      'phase2',
+      'phase3',
       ...ConfigValidator.getAvailableServiceSchemas(),
     ];
 
     const enabledSources: ConfigSource[] = [
-      "base-file",
-      "default",
-      ...(this.options.enableEnvironmentFiles ? ["env-file"] : ([] as any)),
-      ...(this.options.enableEnvironmentVariables
-        ? ["environment"]
-        : ([] as any)),
+      'base-file',
+      'default',
+      ...(this.options.enableEnvironmentFiles ? ['env-file'] : ([] as any)),
+      ...(this.options.enableEnvironmentVariables ? ['environment'] : ([] as any)),
     ] as ConfigSource[];
 
     return {

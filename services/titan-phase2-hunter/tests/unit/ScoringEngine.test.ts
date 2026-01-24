@@ -164,8 +164,12 @@ describe("ScoringEngine", () => {
             null,
         );
 
-        expect(suspectResult.rawScore).toBeLessThan(cleanResult.rawScore);
-        expect(suspectResult.reasoning).toContain("Bot trap penalty applied");
+        expect(suspectResult.adjustedScore).toBeLessThan(
+            cleanResult.adjustedScore,
+        );
+        expect(
+            suspectResult.reasoning.some((r) => r.includes("Bot trap penalty")),
+        ).toBe(true);
     });
 
     it("should handle null enhancement data gracefully", () => {

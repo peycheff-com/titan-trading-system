@@ -8,9 +8,9 @@
  * Requirements: 2.3, 2.4, 2.5, 2.6
  */
 
-import { z } from "zod";
-import { OptimizationProposal } from "../types/index.js";
-import { ConfigSchema } from "../config/ConfigSchema.js";
+import { z } from 'zod';
+import { OptimizationProposal } from '../types/index.js';
+import { ConfigSchema } from '../config/ConfigSchema.js';
 
 /**
  * Parameter bounds for safety validation
@@ -38,48 +38,48 @@ export const PARAMETER_BOUNDS: Record<string, { min: number; max: number }> = {
  */
 const VALID_CONFIG_KEYS = new Set([
   // Trap config keys (for each trap type)
-  "traps.oi_wipeout.enabled",
-  "traps.oi_wipeout.stop_loss",
-  "traps.oi_wipeout.take_profit",
-  "traps.oi_wipeout.trailing_stop",
-  "traps.oi_wipeout.risk_per_trade",
-  "traps.oi_wipeout.max_leverage",
-  "traps.oi_wipeout.min_confidence",
-  "traps.oi_wipeout.cooldown_period",
-  "traps.funding_spike.enabled",
-  "traps.funding_spike.stop_loss",
-  "traps.funding_spike.take_profit",
-  "traps.funding_spike.trailing_stop",
-  "traps.funding_spike.risk_per_trade",
-  "traps.funding_spike.max_leverage",
-  "traps.funding_spike.min_confidence",
-  "traps.funding_spike.cooldown_period",
-  "traps.liquidity_sweep.enabled",
-  "traps.liquidity_sweep.stop_loss",
-  "traps.liquidity_sweep.take_profit",
-  "traps.liquidity_sweep.trailing_stop",
-  "traps.liquidity_sweep.risk_per_trade",
-  "traps.liquidity_sweep.max_leverage",
-  "traps.liquidity_sweep.min_confidence",
-  "traps.liquidity_sweep.cooldown_period",
-  "traps.volatility_spike.enabled",
-  "traps.volatility_spike.stop_loss",
-  "traps.volatility_spike.take_profit",
-  "traps.volatility_spike.trailing_stop",
-  "traps.volatility_spike.risk_per_trade",
-  "traps.volatility_spike.max_leverage",
-  "traps.volatility_spike.min_confidence",
-  "traps.volatility_spike.cooldown_period",
+  'traps.oi_wipeout.enabled',
+  'traps.oi_wipeout.stop_loss',
+  'traps.oi_wipeout.take_profit',
+  'traps.oi_wipeout.trailing_stop',
+  'traps.oi_wipeout.risk_per_trade',
+  'traps.oi_wipeout.max_leverage',
+  'traps.oi_wipeout.min_confidence',
+  'traps.oi_wipeout.cooldown_period',
+  'traps.funding_spike.enabled',
+  'traps.funding_spike.stop_loss',
+  'traps.funding_spike.take_profit',
+  'traps.funding_spike.trailing_stop',
+  'traps.funding_spike.risk_per_trade',
+  'traps.funding_spike.max_leverage',
+  'traps.funding_spike.min_confidence',
+  'traps.funding_spike.cooldown_period',
+  'traps.liquidity_sweep.enabled',
+  'traps.liquidity_sweep.stop_loss',
+  'traps.liquidity_sweep.take_profit',
+  'traps.liquidity_sweep.trailing_stop',
+  'traps.liquidity_sweep.risk_per_trade',
+  'traps.liquidity_sweep.max_leverage',
+  'traps.liquidity_sweep.min_confidence',
+  'traps.liquidity_sweep.cooldown_period',
+  'traps.volatility_spike.enabled',
+  'traps.volatility_spike.stop_loss',
+  'traps.volatility_spike.take_profit',
+  'traps.volatility_spike.trailing_stop',
+  'traps.volatility_spike.risk_per_trade',
+  'traps.volatility_spike.max_leverage',
+  'traps.volatility_spike.min_confidence',
+  'traps.volatility_spike.cooldown_period',
   // Risk config keys
-  "risk.max_daily_loss",
-  "risk.max_position_size",
-  "risk.max_open_positions",
-  "risk.emergency_flatten_threshold",
+  'risk.max_daily_loss',
+  'risk.max_position_size',
+  'risk.max_open_positions',
+  'risk.emergency_flatten_threshold',
   // Execution config keys
-  "execution.latency_penalty",
-  "execution.slippage_model",
-  "execution.limit_chaser_enabled",
-  "execution.max_fill_time",
+  'execution.latency_penalty',
+  'execution.slippage_model',
+  'execution.limit_chaser_enabled',
+  'execution.max_fill_time',
 ]);
 
 export interface ValidationResult {
@@ -106,36 +106,36 @@ export class Guardrails {
   validateProposal(proposal: OptimizationProposal): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
-    console.log("DEBUG: Validating proposal:", JSON.stringify(proposal));
+    console.log('DEBUG: Validating proposal:', JSON.stringify(proposal));
 
     // Check required fields exist
     if (!proposal.targetKey) {
       // eslint-disable-next-line functional/immutable-data
-      errors.push("Missing required field: targetKey");
+      errors.push('Missing required field: targetKey');
     }
     if (proposal.suggestedValue === undefined) {
       // eslint-disable-next-line functional/immutable-data
-      errors.push("Missing required field: suggestedValue");
+      errors.push('Missing required field: suggestedValue');
     }
     if (!proposal.reasoning) {
       // eslint-disable-next-line functional/immutable-data
-      errors.push("Missing required field: reasoning");
+      errors.push('Missing required field: reasoning');
     }
     if (!proposal.expectedImpact) {
       // eslint-disable-next-line functional/immutable-data
-      errors.push("Missing required field: expectedImpact");
+      errors.push('Missing required field: expectedImpact');
     } else {
       if (proposal.expectedImpact.pnlImprovement === undefined) {
         // eslint-disable-next-line functional/immutable-data
-        errors.push("Missing required field: expectedImpact.pnlImprovement");
+        errors.push('Missing required field: expectedImpact.pnlImprovement');
       }
       if (proposal.expectedImpact.riskChange === undefined) {
         // eslint-disable-next-line functional/immutable-data
-        errors.push("Missing required field: expectedImpact.riskChange");
+        errors.push('Missing required field: expectedImpact.riskChange');
       }
       if (proposal.expectedImpact.confidenceScore === undefined) {
         // eslint-disable-next-line functional/immutable-data
-        errors.push("Missing required field: expectedImpact.confidenceScore");
+        errors.push('Missing required field: expectedImpact.confidenceScore');
       }
     }
 
@@ -147,9 +147,7 @@ export class Guardrails {
     // Validate schema (key exists in config)
     if (!this.validateSchema(proposal)) {
       // eslint-disable-next-line functional/immutable-data
-      errors.push(
-        `Invalid targetKey: "${proposal.targetKey}" does not exist in config schema`,
-      );
+      errors.push(`Invalid targetKey: "${proposal.targetKey}" does not exist in config schema`);
     }
 
     // Validate bounds
@@ -168,10 +166,7 @@ export class Guardrails {
     }
 
     // Validate value type matches expected type
-    const typeValidation = this.validateValueType(
-      proposal.targetKey,
-      proposal.suggestedValue,
-    );
+    const typeValidation = this.validateValueType(proposal.targetKey, proposal.suggestedValue);
     if (!typeValidation.valid) {
       // eslint-disable-next-line functional/immutable-data
       errors.push(typeValidation.error!);
@@ -181,15 +176,11 @@ export class Guardrails {
     if (proposal.expectedImpact) {
       if (proposal.expectedImpact.riskChange > 10) {
         // eslint-disable-next-line functional/immutable-data
-        warnings.push(
-          `High risk change: ${proposal.expectedImpact.riskChange}%`,
-        );
+        warnings.push(`High risk change: ${proposal.expectedImpact.riskChange}%`);
       }
       if (proposal.expectedImpact.confidenceScore < 0.5) {
         // eslint-disable-next-line functional/immutable-data
-        warnings.push(
-          `Low confidence score: ${proposal.expectedImpact.confidenceScore}`,
-        );
+        warnings.push(`Low confidence score: ${proposal.expectedImpact.confidenceScore}`);
       }
     }
 
@@ -212,22 +203,22 @@ export class Guardrails {
     // If no bounds defined for this parameter, check if it's a valid non-numeric type
     if (!bounds) {
       // Boolean and enum values don't have numeric bounds
-      if (typeof value === "boolean") {
+      if (typeof value === 'boolean') {
         return true;
       }
-      if (typeof value === "string") {
+      if (typeof value === 'string') {
         // Validate enum values
-        if (key.endsWith("slippage_model")) {
-          return ["conservative", "realistic", "optimistic"].includes(value);
+        if (key.endsWith('slippage_model')) {
+          return ['conservative', 'realistic', 'optimistic'].includes(value);
         }
         return false;
       }
       // Unknown parameter without bounds - reject for safety
-      return typeof value !== "number";
+      return typeof value !== 'number';
     }
 
     // Check numeric bounds
-    if (typeof value !== "number") {
+    if (typeof value !== 'number') {
       return false;
     }
 
@@ -254,7 +245,7 @@ export class Guardrails {
    * Extract parameter name from dot-notation key
    */
   private extractParameterName(key: string): string {
-    const parts = key.split(".");
+    const parts = key.split('.');
     return parts[parts.length - 1];
   }
 
@@ -262,7 +253,7 @@ export class Guardrails {
    * Check if a key path exists in the config schema
    */
   private keyExistsInSchema(key: string): boolean {
-    const parts = key.split(".");
+    const parts = key.split('.');
 
     // Build a test object with the key path
     const testObj = this.buildTestObject(parts);
@@ -277,9 +268,7 @@ export class Guardrails {
         const errors = result.error.errors;
         // If all errors are about invalid values (not missing keys), the key exists
         return errors.every(
-          (err) =>
-            err.code !== "unrecognized_keys" &&
-            !err.message.includes("unrecognized"),
+          (err) => err.code !== 'unrecognized_keys' && !err.message.includes('unrecognized'),
         );
       }
       return true;
@@ -311,15 +300,12 @@ export class Guardrails {
   /**
    * Validate that the value type matches the expected type for the key
    */
-  private validateValueType(
-    key: string,
-    value: unknown,
-  ): { valid: boolean; error?: string } {
+  private validateValueType(key: string, value: unknown): { valid: boolean; error?: string } {
     const paramName = this.extractParameterName(key);
 
     // Boolean parameters
-    if (paramName === "enabled" || paramName === "limit_chaser_enabled") {
-      if (typeof value !== "boolean") {
+    if (paramName === 'enabled' || paramName === 'limit_chaser_enabled') {
+      if (typeof value !== 'boolean') {
         return {
           valid: false,
           error: `Expected boolean for "${key}", got ${typeof value}`,
@@ -329,15 +315,14 @@ export class Guardrails {
     }
 
     // Enum parameters
-    if (paramName === "slippage_model") {
+    if (paramName === 'slippage_model') {
       if (
-        typeof value !== "string" ||
-        !["conservative", "realistic", "optimistic"].includes(value)
+        typeof value !== 'string' ||
+        !['conservative', 'realistic', 'optimistic'].includes(value)
       ) {
         return {
           valid: false,
-          error:
-            `Expected one of ['conservative', 'realistic', 'optimistic'] for "${key}", got ${value}`,
+          error: `Expected one of ['conservative', 'realistic', 'optimistic'] for "${key}", got ${value}`,
         };
       }
       return { valid: true };
@@ -345,10 +330,9 @@ export class Guardrails {
 
     // Integer parameters
     if (
-      ["max_leverage", "cooldown_period", "max_open_positions", "max_fill_time"]
-        .includes(paramName)
+      ['max_leverage', 'cooldown_period', 'max_open_positions', 'max_fill_time'].includes(paramName)
     ) {
-      if (typeof value !== "number" || !Number.isInteger(value)) {
+      if (typeof value !== 'number' || !Number.isInteger(value)) {
         return {
           valid: false,
           error: `Expected integer for "${key}", got ${value}`,
@@ -358,7 +342,7 @@ export class Guardrails {
     }
 
     // Numeric parameters (float)
-    if (typeof value !== "number") {
+    if (typeof value !== 'number') {
       return {
         valid: false,
         error: `Expected number for "${key}", got ${typeof value}`,

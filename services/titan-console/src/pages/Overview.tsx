@@ -21,6 +21,9 @@ import { PowerLawMetrics } from '@/components/titan/PowerLawMetrics';
 import { SystemStatusBanner } from '@/components/titan/SystemStatusBanner';
 import { cn } from '@/lib/utils';
 import { useTitanWebSocket } from '@/context/WebSocketContext';
+import { AIStateWidget } from '@/components/titan/AIStateWidget';
+
+import { ArmedGuard } from '@/components/titan/ArmedGuard';
 
 export default function Overview() {
   interface StateData {
@@ -29,6 +32,15 @@ export default function Overview() {
     daily_pnl_pct: number;
     drawdown: number;
     positions: any[]; // Position interface is defined elsewhere or mock for now
+    aiState?: {
+      cortisol: number;
+      regime: string;
+      lastOptimizationProposal?: {
+        timestamp: number;
+        proposal: any;
+      };
+    };
+    truthConfidence?: number;
   }
 
   const [data, setData] = useState<StateData | null>(null);
@@ -74,6 +86,7 @@ export default function Overview() {
         services={services}
         exchangeConnected={true} // TODO: Derive from sensorStatus if available
         lastSyncTime={lastMessage?.timestamp || Date.now()}
+        truthConfidence={data?.truthConfidence}
       />
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -83,7 +96,10 @@ export default function Overview() {
             Real-time health and performance monitoring
           </p>
         </div>
-        <StatusPill status={status === 'CONNECTED' ? 'healthy' : 'critical'} />
+        <div className="flex items-center gap-4">
+          <ArmedGuard />
+          <StatusPill status={status === 'CONNECTED' ? 'healthy' : 'critical'} />
+        </div>
       </div>
 
       {/* PowerLaw Metrics & KPI Grid */}
@@ -150,6 +166,11 @@ export default function Overview() {
               eventRate={0}
               compact
             />
+          </div>
+          
+          {/* AI Consciousness (New) */}
+          <div className="mt-4">
+             <AIStateWidget aiState={data?.aiState} />
           </div>
         </div>
       </div>

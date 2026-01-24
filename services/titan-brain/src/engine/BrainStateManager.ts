@@ -34,6 +34,12 @@ export class BrainStateManager {
     timestamp: number;
   } | null = null;
 
+  // AI State Persistence
+  private lastAIProposal: {
+    timestamp: number;
+    proposal: any;
+  } | null = null;
+
   /**
    * Get current allocation
    */
@@ -173,6 +179,21 @@ export class BrainStateManager {
     { approved: number; total: number }
   > {
     return this.signalStats;
+  }
+
+  /**
+   * Get last AI Proposal
+   */
+  getLastAIProposal() {
+    return this.lastAIProposal;
+  }
+
+  /**
+   * Set last AI Proposal
+   */
+  setLastAIProposal(proposal: { timestamp: number; proposal: any }) {
+    this.lastAIProposal = proposal;
+    this.invalidateDashboardCache();
   }
 
   /**

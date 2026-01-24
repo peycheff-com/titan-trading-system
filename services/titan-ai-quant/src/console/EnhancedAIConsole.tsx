@@ -8,15 +8,15 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Text, Newline, Spacer } from 'ink';
 import {
-  AIIntegration,
+  EnhancedAIIntegration,
   AIIntegrationStatus,
   StrategySelection,
   AdaptiveRiskConfig,
-} from '../ai/AIIntegration.js';
+} from '../ai/EnhancedAIIntegration.js';
 import { MarketRegime } from '../ai/PredictiveAnalytics.js';
 
-interface AIConsoleProps {
-  aiIntegration: AIIntegration;
+interface EnhancedAIConsoleProps {
+  aiIntegration: EnhancedAIIntegration;
 }
 
 interface ConsoleState {
@@ -31,7 +31,7 @@ interface ConsoleState {
 /**
  * Enhanced AI Integration Console Component
  */
-export const AIConsole: React.FC<AIConsoleProps> = ({ aiIntegration }) => {
+export const EnhancedAIConsole: React.FC<EnhancedAIConsoleProps> = ({ aiIntegration }) => {
   const [state, setState] = useState<ConsoleState>({
     status: null,
     strategySelections: new Map(),
@@ -347,4 +347,4 @@ export const AIConsole: React.FC<AIConsoleProps> = ({ aiIntegration }) => {
   );
 };
 
-export default AIConsole;
+export default EnhancedAIConsole;

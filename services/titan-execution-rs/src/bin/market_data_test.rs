@@ -1,9 +1,8 @@
-use titan_execution_rs::market_data::bybit::connector::BybitConnector;
-use titan_execution_rs::market_data::mexc::connector::MexcConnector;
 use titan_execution_rs::market_data::binance::connector::BinanceConnector;
+use titan_execution_rs::market_data::bybit::connector::BybitConnector;
+use titan_execution_rs::market_data::connector::{MarketDataConnector, StreamType, Subscription};
 use titan_execution_rs::market_data::hyperliquid::connector::HyperliquidConnector;
-use titan_execution_rs::market_data::connector::{MarketDataConnector, Subscription, StreamType};
-
+use titan_execution_rs::market_data::mexc::connector::MexcConnector;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -18,7 +17,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("[Bybit] Connection failed: {}", e);
             return;
         }
-        
+
         // Subscribe
         let sub = Subscription {
             symbol: "BTCUSDT".to_string(),
@@ -35,7 +34,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         while let Some(event) = stream.recv().await {
             println!("[Bybit] Event: {:?}", event);
             count += 1;
-            if count >= 3 { break; }
+            if count >= 3 {
+                break;
+            }
         }
         println!("[Bybit] Done.");
     });
@@ -48,7 +49,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("[MEXC] Connection failed: {}", e);
             return;
         }
-        
+
         // Subscribe
         let sub = Subscription {
             symbol: "BTCUSDT".to_string(), // Connector should adapt to BTC_USDT
@@ -65,7 +66,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         while let Some(event) = stream.recv().await {
             println!("[MEXC] Event: {:?}", event);
             count += 1;
-            if count >= 3 { break; }
+            if count >= 3 {
+                break;
+            }
         }
         println!("[MEXC] Done.");
     });
@@ -95,7 +98,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         while let Some(event) = stream.recv().await {
             println!("[Binance] Event: {:?}", event);
             count += 1;
-            if count >= 3 { break; }
+            if count >= 3 {
+                break;
+            }
         }
         println!("[Binance] Done.");
     });
@@ -124,7 +129,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         while let Some(event) = stream.recv().await {
             println!("[HL] Event: {:?}", event);
             count += 1;
-            if count >= 3 { break; }
+            if count >= 3 {
+                break;
+            }
         }
         println!("[HL] Done.");
     });

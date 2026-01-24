@@ -5,6 +5,7 @@
   "workspaces": [
     "services/*"
   ],
+  "packageManager": "npm@11.6.2",
   "scripts": {
     "start": "echo 'Use npm run start:<service> to start a specific service'",
     "start:brain": "npm start -w services/titan-brain",

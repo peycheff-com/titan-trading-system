@@ -381,7 +381,7 @@ export default function ExecutionPage() {
 
             {/* Latency Breakdown */}
             <DetailSection title="Latency Breakdown">
-              <LatencyWaterfall steps={latencySteps} />
+              <LatencyWaterfall steps={latencySteps} budget={50} />
             </DetailSection>
           </div>
         )}

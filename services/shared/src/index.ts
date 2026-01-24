@@ -262,3 +262,7 @@ export type SharedLogLevel = LogLevel;
 
 // Time Utilities
 export * from "./utils/time/Clock";
+
+// Governance
+export * from "./governance/types.js";
+export * from "./governance/crypto.js";

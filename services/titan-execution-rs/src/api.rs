@@ -1,11 +1,11 @@
-use actix_web::{web, HttpResponse, Responder};
-use serde::Serialize;
-use crate::shadow_state::ShadowState;
-use crate::risk_guard::{RiskGuard, RiskRejectionReason};
+use crate::risk_guard::RiskGuard;
 use crate::risk_policy::RiskState;
-use std::sync::Arc;
-use parking_lot::RwLock;
+use crate::shadow_state::ShadowState;
+use actix_web::{web, HttpResponse, Responder};
 use async_nats::Client as NatsClient;
+use parking_lot::RwLock;
+use serde::Serialize;
+use std::sync::Arc;
 
 #[derive(Serialize)]
 pub struct HealthResponse {
@@ -27,14 +27,16 @@ pub struct StatusResponse {
     unsafe_actions: Vec<String>,
 }
 
-pub async fn health_check(
-    nats: web::Data<NatsClient>,
-) -> impl Responder {
+pub async fn health_check(nats: web::Data<NatsClient>) -> impl Responder {
     let nats_status = nats.connection_state();
     let is_connected = matches!(nats_status, async_nats::connection::State::Connected);
 
     let status = if is_connected { "ok" } else { "unhealthy" };
-    let mut http_status = if is_connected { HttpResponse::Ok() } else { HttpResponse::ServiceUnavailable() };
+    let mut http_status = if is_connected {
+        HttpResponse::Ok()
+    } else {
+        HttpResponse::ServiceUnavailable()
+    };
 
     http_status.json(HealthResponse {
         status: status.to_string(),
@@ -45,31 +47,28 @@ pub async fn health_check(
     })
 }
 
-pub async fn system_status(
-    risk_guard: web::Data<Arc<RiskGuard>>,
-) -> impl Responder {
+pub async fn system_status(risk_guard: web::Data<Arc<RiskGuard>>) -> impl Responder {
     let policy = risk_guard.get_policy();
-    
+
     let (mode, actions, unsafe_actions) = match policy.current_state {
-        RiskState::Normal => (
-            "NORMAL",
-            vec!["Monitor Logs"],
-            vec![]
-        ),
+        RiskState::Normal => ("NORMAL", vec!["Monitor Logs"], vec![]),
         RiskState::Cautious => (
             "CAUTIOUS",
             vec!["Monitor Slippage", "Check Market Volatility"],
-            vec![]
+            vec![],
         ),
         RiskState::Defensive => (
             "DEFENSIVE",
-            vec!["Investigate Cause", "Manual Reset Required to Resume Opening"],
-            vec!["Do NOT Force Open Positions"]
+            vec![
+                "Investigate Cause",
+                "Manual Reset Required to Resume Opening",
+            ],
+            vec!["Do NOT Force Open Positions"],
         ),
         RiskState::Emergency => (
             "EMERGENCY",
             vec!["ALL TRADING HALTED", "Investigate IMMEDIATELY"],
-            vec!["Do NOT Restart without Audit"]
+            vec!["Do NOT Restart without Audit"],
         ),
     };
 
@@ -90,16 +89,7 @@ pub async fn get_positions(data: web::Data<Arc<RwLock<ShadowState>>>) -> impl Re
 
 // Define scope configuration
 pub fn config(cfg: &mut web::ServiceConfig) {
-    cfg.service(
-        web::resource("/health")
-        .route(web::get().to(health_check))
-    )
-    .service(
-        web::resource("/status")
-        .route(web::get().to(system_status))
-    )
-    .service(
-        web::resource("/positions")
-            .route(web::get().to(get_positions))
-    );
+    cfg.service(web::resource("/health").route(web::get().to(health_check)))
+        .service(web::resource("/status").route(web::get().to(system_status)))
+        .service(web::resource("/positions").route(web::get().to(get_positions)));
 }

@@ -65,10 +65,10 @@ impl Default for RiskPolicy {
 
         Self {
             current_state: RiskState::Normal,
-            max_position_notional: dec!(50000.0), 
-            max_account_leverage: dec!(10.0),     
-            max_daily_loss: dec!(-1000.0),        
-            max_open_orders_per_symbol: 5,        
+            max_position_notional: dec!(50000.0),
+            max_account_leverage: dec!(10.0),
+            max_daily_loss: dec!(-1000.0),
+            max_open_orders_per_symbol: 5,
             symbol_whitelist: whitelist,
             max_slippage_bps: default_max_slippage(),
             max_staleness_ms: default_max_staleness(),

@@ -12,6 +12,7 @@ import Overview from '@/pages/Overview';
 import LiveOps from '@/pages/LiveOps';
 import TradeControl from '@/pages/ops/TradeControl';
 import TradeHistory from '@/pages/ops/TradeHistory';
+import RiskPage from '@/pages/ops/Risk';
 import Scavenger from '@/pages/phases/Scavenger';
 import Hunter from '@/pages/phases/Hunter';
 import Sentinel from '@/pages/phases/Sentinel';
@@ -58,6 +59,7 @@ const App = () => (
                   <Route path="/" element={<Overview />} />
                   <Route path="/live" element={<LiveOps />} />
                   <Route path="/trade" element={<TradeControl />} />
+                  <Route path="/risk" element={<RiskPage />} />
 
                   {/* Strategy Phases */}
                   <Route path="/phases/scavenger" element={<Scavenger />} />

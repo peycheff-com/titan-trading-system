@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { Shield, AlertTriangle, Edit3, ArrowLeftRight, TrendingUp } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useSentinelSocket } from '@/hooks/useSentinelSocket';
 
 interface ContextType {
   safetyLocked: boolean;
@@ -24,18 +25,34 @@ export default function SentinelPhase() {
   const [hasDraft, setHasDraft] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  // Hook Integration
+  const { isConnected, health } = useSentinelSocket();
+
+  // Derived Status
   const status = {
-    status: 'offline' as const,
-    enabled: false,
-    allocationWeight: 0,
-    activeStrategies: 0,
+    status: isConnected ? 'online' : 'offline',
+    enabled: isConnected,
+    allocationWeight: 100, // Placeholder
+    activeStrategies: 1,
   };
-  const sentinelData = {
-    basisTrades: [] as any[],
-    fundingRates: [] as any[],
-    hedgeStatus: { hedgeRatio: 0, targetRatio: 0, deltaExposure: 0 },
+
+  // Maps backend positions to UI format
+  const basisTrades = health?.positions.map((p: any) => ({
+      pair: p.symbol,
+      currentBasis: p.currentBasis,
+      avgBasis: p.entryBasis, // approximate
+      position: p.spotSize * p.spotEntry, // USD value
+      pnl: p.unrealizedPnL
+  })) || [];
+
+  // Placeholder for funding rates if not in health report (often separate stream)
+  const fundingRates: any[] = [];
+
+  const hedgeStatus = {
+      hedgeRatio: 1.0, // active arb aims for 1.0
+      targetRatio: 1.0,
+      deltaExposure: health?.delta || 0
   };
-  const { basisTrades, fundingRates, hedgeStatus } = sentinelData;
 
   const handleCreateDraft = () => {
     if (safetyLocked) {

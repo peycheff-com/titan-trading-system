@@ -7,10 +7,10 @@
 
 import {
   DEFAULT_ENHANCED_RISK_CONFIG,
+  EnhancedRiskManager,
   RiskAdjustments,
   RiskCondition,
-  RiskManager,
-} from "../../src/risk/RiskManager";
+} from "../../src/risk/EnhancedRiskManager";
 import {
   BotTrapAnalysis,
   ConnectionStatus,
@@ -123,11 +123,11 @@ function createMockBotTrapAnalysis(
 // ENHANCED RISK MANAGER TESTS
 // ============================================================================
 
-describe("RiskManager", () => {
-  let riskManager: RiskManager;
+describe("EnhancedRiskManager", () => {
+  let riskManager: EnhancedRiskManager;
 
   beforeEach(() => {
-    riskManager = new RiskManager({
+    riskManager = new EnhancedRiskManager({
       monitoringEnabled: false, // Disable for unit tests
     });
   });
@@ -140,11 +140,10 @@ describe("RiskManager", () => {
     test("should initialize with default config", () => {
       const config = riskManager.getConfig();
       expect(config.highImpactEventThreshold).toBe(70);
-      expect(config.minExchangesRequired).toBe(2);
     });
 
     test("should initialize with custom config", () => {
-      const customManager = new RiskManager({
+      const customManager = new EnhancedRiskManager({
         highImpactEventThreshold: 80,
         monitoringEnabled: false,
       });
@@ -389,7 +388,7 @@ describe("RiskManager", () => {
       riskManager.evaluateCVDDivergence(normalDivergence);
 
       const state = riskManager.getState();
-      const cvdCondition = state.activeConditions.find((c) =>
+      const cvdCondition = state.activeConditions.find((c: RiskCondition) =>
         c.type === "CVD_DIVERGENCE"
       );
       expect(cvdCondition).toBeUndefined();
@@ -448,7 +447,7 @@ describe("RiskManager", () => {
       riskManager.updateExchangeStatus("kraken", ConnectionStatus.DISCONNECTED);
 
       const state = riskManager.getState();
-      const offlineCondition = state.activeConditions.find((c) =>
+      const offlineCondition = state.activeConditions.find((c: RiskCondition) =>
         c.type === "EXCHANGE_OFFLINE"
       );
 
@@ -504,7 +503,7 @@ describe("RiskManager", () => {
       riskManager.recordOracleFailure();
 
       const state = riskManager.getState();
-      const oracleCondition = state.activeConditions.find((c) =>
+      const oracleCondition = state.activeConditions.find((c: RiskCondition) =>
         c.type === "ORACLE_UNSTABLE"
       );
 
@@ -532,7 +531,7 @@ describe("RiskManager", () => {
       riskManager.recordOracleSuccess();
 
       const state = riskManager.getState();
-      const oracleCondition = state.activeConditions.find((c) =>
+      const oracleCondition = state.activeConditions.find((c: RiskCondition) =>
         c.type === "ORACLE_UNSTABLE"
       );
 

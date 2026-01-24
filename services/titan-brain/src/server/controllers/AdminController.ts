@@ -1,6 +1,6 @@
-import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { TitanBrain } from '../../engine/TitanBrain.js';
-import { Logger } from '../../logging/Logger.js';
+import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { TitanBrain } from "../../engine/TitanBrain.js";
+import { Logger } from "../../logging/Logger.js";
 import {
   CreateOperatorRequestBody,
   CreateOperatorSchema,
@@ -12,9 +12,9 @@ import {
   ManualTradeSchema,
   OverrideRequestBody,
   OverrideRequestSchema,
-} from '../../schemas/apiSchemas.js';
-import { AllocationVector, RiskGuardianConfig } from '../../types/index.js';
-import { AuthMiddleware } from '../../security/AuthMiddleware.js';
+} from "../../schemas/apiSchemas.js";
+import { AllocationVector, RiskGuardianConfig } from "../../types/index.js";
+import { AuthMiddleware } from "../../security/AuthMiddleware.js";
 
 export class AdminController {
   constructor(
@@ -28,85 +28,112 @@ export class AdminController {
    */
   registerRoutes(server: FastifyInstance): void {
     // Public / Login
-    server.post<{ Body: LoginRequestBody }>('/auth/login', this.handleLogin.bind(this));
+    server.post<{ Body: LoginRequestBody }>(
+      "/auth/login",
+      this.handleLogin.bind(this),
+    );
 
     // Protected Routes (Admin)
     const adminGuard = {
-      preHandler: [this.auth.verifyToken.bind(this.auth), this.auth.requireRole('admin')],
+      preHandler: [
+        this.auth.verifyToken.bind(this.auth),
+        this.auth.requireRole("admin"),
+      ],
     };
     const operatorGuard = {
       preHandler: [this.auth.verifyToken.bind(this.auth)],
     }; // Basic auth
 
-    server.post<{ Body: import('../../schemas/apiSchemas.js').BreakerResetBody }>(
-      '/breaker/reset',
+    server.post<
+      { Body: import("../../schemas/apiSchemas.js").BreakerResetBody }
+    >(
+      "/breaker/reset",
       adminGuard,
       this.handleBreakerReset.bind(this),
     );
 
+    // Emergency Halt
+    server.post<{ Body: { operatorId: string; reason: string } }>(
+      "/risk/halt",
+      adminGuard,
+      this.handleEmergencyHalt.bind(this),
+    );
+
     // Overrides
     server.post<{ Body: OverrideRequestBody }>(
-      '/admin/override',
+      "/admin/override",
       adminGuard,
       this.handleCreateOverride.bind(this),
     );
     server.delete<{ Body: DeactivateOverrideRequestBody }>(
-      '/admin/override',
+      "/admin/override",
       adminGuard,
       this.handleDeactivateOverride.bind(this),
     );
-    server.get('/admin/override', operatorGuard, this.handleGetOverride.bind(this)); // Read-only allowed for operators
+    server.get(
+      "/admin/override",
+      operatorGuard,
+      this.handleGetOverride.bind(this),
+    ); // Read-only allowed for operators
     server.get<{ Querystring: { operatorId?: string; limit?: string } }>(
-      '/admin/override/history',
+      "/admin/override/history",
       operatorGuard,
       this.handleOverrideHistory.bind(this),
     );
 
     // Admin actions
     server.post<{ Body: CreateOperatorRequestBody }>(
-      '/admin/operator',
+      "/admin/operator",
       adminGuard,
       this.handleCreateOperator.bind(this),
     );
     server.post<{ Body: ManualTradeRequestBody }>(
-      '/trade/manual',
+      "/trade/manual",
       adminGuard,
       this.handleManualTrade.bind(this),
     );
     server.delete<{ Body: { reason: string } }>(
-      '/trade/cancel-all',
+      "/trade/cancel-all",
       adminGuard,
       this.handleCancelAllTrades.bind(this),
     );
 
     // Risk & Audit
     server.patch<{
-      Body: Partial<import('../../types/index.js').RiskGuardianConfig>;
-    }>('/risk/config', adminGuard, this.handleUpdateRiskConfig.bind(this));
+      Body: Partial<import("../../types/index.js").RiskGuardianConfig>;
+    }>("/risk/config", adminGuard, this.handleUpdateRiskConfig.bind(this));
     server.post<{ Body: { exchange?: string } }>(
-      '/reconciliation/trigger',
+      "/reconciliation/trigger",
       adminGuard,
       this.handleTriggerReconciliation.bind(this),
     );
     server.get<{ Querystring: { limit?: string; signalId?: string } }>(
-      '/audit/decisions',
+      "/audit/decisions",
       operatorGuard,
       this.handleAuditDecisions.bind(this),
     );
-    server.get('/risk/state', operatorGuard, this.handleRiskState.bind(this));
-    server.get('/risk/regime-history', operatorGuard, this.handleRegimeHistory.bind(this));
+    server.get("/risk/state", operatorGuard, this.handleRiskState.bind(this));
+    server.get(
+      "/risk/regime-history",
+      operatorGuard,
+      this.handleRegimeHistory.bind(this),
+    );
     // Infrastructure / DR
     server.post<{ Body: { operatorId: string } }>(
-      '/admin/infra/failover',
+      "/admin/infra/failover",
       adminGuard,
       this.handleFailover.bind(this),
     );
     server.post<{ Body: { operatorId: string; backupId: string } }>(
-      '/admin/infra/restore',
+      "/admin/infra/restore",
       adminGuard,
       this.handleRestore.bind(this),
     );
-    server.get('/admin/infra/status', operatorGuard, this.handleInfraStatus.bind(this));
+    server.get(
+      "/admin/infra/status",
+      operatorGuard,
+      this.handleInfraStatus.bind(this),
+    );
   }
 
   /**
@@ -119,22 +146,25 @@ export class AdminController {
     try {
       const parseResult = LoginSchema.safeParse(request.body);
       if (!parseResult.success) {
-        reply.status(400).send({ error: 'Invalid login request' });
+        reply.status(400).send({ error: "Invalid login request" });
         return;
       }
 
       const { operatorId, password } = parseResult.data;
 
       // Verify credentials via Brain (which checks against DB/Config)
-      const isValid = await this.brain.verifyOperatorCredentials(operatorId, password);
+      const isValid = await this.brain.verifyOperatorCredentials(
+        operatorId,
+        password,
+      );
       if (!isValid) {
-        reply.status(401).send({ error: 'Invalid credentials' });
+        reply.status(401).send({ error: "Invalid credentials" });
         return;
       }
 
       // Get operator roles (Assuming brain returns simple bool now, we might default to 'admin' for now or fetch roles)
       // TODO: Enhance verifyOperatorCredentials to return Operator object with roles
-      const roles = ['admin']; // detailed implementation pending in Brain
+      const roles = ["admin"]; // detailed implementation pending in Brain
 
       const token = this.auth.generateToken(operatorId, roles);
 
@@ -145,7 +175,7 @@ export class AdminController {
         roles,
       });
     } catch (error) {
-      reply.status(500).send({ error: 'Login failed' });
+      reply.status(500).send({ error: "Login failed" });
     }
   }
 
@@ -159,9 +189,9 @@ export class AdminController {
     try {
       const { operatorId } = request.body;
 
-      if (!operatorId || typeof operatorId !== 'string') {
+      if (!operatorId || typeof operatorId !== "string") {
         reply.status(400).send({
-          error: 'operatorId is required',
+          error: "operatorId is required",
           timestamp: Date.now(),
         });
         return;
@@ -171,14 +201,42 @@ export class AdminController {
 
       reply.send({
         success: true,
-        message: 'Circuit breaker reset',
+        message: "Circuit breaker reset",
         operatorId,
         timestamp: Date.now(),
       });
     } catch (error) {
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
+      });
+    }
+  }
+
+  /**
+   * Handle POST /risk/halt - Logic Emergency Halt
+   */
+  async handleEmergencyHalt(
+    request: FastifyRequest<{ Body: { operatorId: string; reason: string } }>,
+    reply: FastifyReply,
+  ): Promise<void> {
+    try {
+      const { operatorId, reason } = request.body;
+      if (!operatorId || !reason) {
+        reply.status(400).send({ error: "operatorId and reason required" });
+        return;
+      }
+
+      await this.brain.triggerEmergencyHalt(operatorId, reason);
+
+      reply.send({
+        success: true,
+        message: "EMERGENCY HALT TRIGGERED",
+        timestamp: Date.now(),
+      });
+    } catch (error) {
+      reply.status(500).send({
+        error: error instanceof Error ? error.message : "Unknown error",
       });
     }
   }
@@ -195,8 +253,10 @@ export class AdminController {
 
       if (!parseResult.success) {
         reply.status(400).send({
-          error: 'Validation failed',
-          details: parseResult.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`),
+          error: "Validation failed",
+          details: parseResult.error.issues.map((e) =>
+            `${e.path.join(".")}: ${e.message}`
+          ),
           timestamp: Date.now(),
         });
         return;
@@ -222,7 +282,7 @@ export class AdminController {
       if (success) {
         reply.send({
           success: true,
-          message: 'Manual override created successfully',
+          message: "Manual override created successfully",
           allocation,
           operatorId: body.operatorId,
           reason: body.reason,
@@ -230,13 +290,14 @@ export class AdminController {
         });
       } else {
         reply.status(401).send({
-          error: 'Failed to create override - authentication failed or override already active',
+          error:
+            "Failed to create override - authentication failed or override already active",
           timestamp: Date.now(),
         });
       }
     } catch (error) {
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
@@ -254,8 +315,10 @@ export class AdminController {
 
       if (!parseResult.success) {
         reply.status(400).send({
-          error: 'Validation failed',
-          details: parseResult.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`),
+          error: "Validation failed",
+          details: parseResult.error.issues.map((e) =>
+            `${e.path.join(".")}: ${e.message}`
+          ),
           timestamp: Date.now(),
         });
         return;
@@ -263,24 +326,27 @@ export class AdminController {
 
       const body = parseResult.data;
 
-      const success = await this.brain.deactivateManualOverride(body.operatorId, body.password);
+      const success = await this.brain.deactivateManualOverride(
+        body.operatorId,
+      );
 
       if (success) {
         reply.send({
           success: true,
-          message: 'Manual override deactivated successfully',
+          message: "Manual override deactivated successfully",
           operatorId: body.operatorId,
           timestamp: Date.now(),
         });
       } else {
         reply.status(401).send({
-          error: 'Failed to deactivate override - authentication failed or no active override',
+          error:
+            "Failed to deactivate override - authentication failed or no active override",
           timestamp: Date.now(),
         });
       }
     } catch (error) {
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
@@ -289,7 +355,10 @@ export class AdminController {
   /**
    * Handle GET /admin/override - Get current manual override status
    */
-  async handleGetOverride(_request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  async handleGetOverride(
+    _request: FastifyRequest,
+    reply: FastifyReply,
+  ): Promise<void> {
     try {
       const override = this.brain.getCurrentManualOverride();
       const warningBannerActive = this.brain.isWarningBannerActive();
@@ -301,7 +370,7 @@ export class AdminController {
       });
     } catch (error) {
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
@@ -311,14 +380,19 @@ export class AdminController {
    * Handle GET /admin/override/history - Get manual override history
    */
   async handleOverrideHistory(
-    request: FastifyRequest<{ Querystring: { operatorId?: string; limit?: string } }>,
+    request: FastifyRequest<
+      { Querystring: { operatorId?: string; limit?: string } }
+    >,
     reply: FastifyReply,
   ): Promise<void> {
     try {
       const operatorId = request.query.operatorId;
-      const limit = parseInt(request.query.limit ?? '50', 10);
+      const limit = parseInt(request.query.limit ?? "50", 10);
 
-      const history = await this.brain.getManualOverrideHistory(operatorId, Math.min(limit, 100));
+      const history = await this.brain.getManualOverrideHistory(
+        operatorId,
+        Math.min(limit, 100),
+      );
 
       reply.send({
         history,
@@ -327,7 +401,7 @@ export class AdminController {
       });
     } catch (error) {
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
@@ -345,8 +419,10 @@ export class AdminController {
 
       if (!parseResult.success) {
         reply.status(400).send({
-          error: 'Validation failed',
-          details: parseResult.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`),
+          error: "Validation failed",
+          details: parseResult.error.issues.map((e) =>
+            `${e.path.join(".")}: ${e.message}`
+          ),
           timestamp: Date.now(),
         });
         return;
@@ -363,20 +439,20 @@ export class AdminController {
       if (success) {
         reply.send({
           success: true,
-          message: 'Operator created successfully',
+          message: "Operator created successfully",
           operatorId: body.operatorId,
           permissions: body.permissions,
           timestamp: Date.now(),
         });
       } else {
         reply.status(400).send({
-          error: 'Failed to create operator - operator may already exist',
+          error: "Failed to create operator - operator may already exist",
           timestamp: Date.now(),
         });
       }
     } catch (error) {
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
@@ -394,25 +470,28 @@ export class AdminController {
 
       if (!parseResult.success) {
         reply.status(400).send({
-          error: 'Validation failed',
-          details: parseResult.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`),
+          error: "Validation failed",
+          details: parseResult.error.issues.map((e) =>
+            `${e.path.join(".")}: ${e.message}`
+          ),
         });
         return;
       }
 
       const body = parseResult.data;
-      const signalId = await this.brain.getManualTradeService().executeManualTrade(body);
+      const signalId = await this.brain.getManualTradeService()
+        .executeManualTrade(body);
 
       reply.send({
         success: true,
         signalId,
-        message: 'Manual trade signal forwarded to execution',
+        message: "Manual trade signal forwarded to execution",
         timestamp: Date.now(),
       });
     } catch (error) {
-      this.logger.error('Failed to process manual trade', error as Error);
+      this.logger.error("Failed to process manual trade", error as Error);
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
@@ -429,13 +508,13 @@ export class AdminController {
       await this.brain.getManualTradeService().cancelAllTrades();
       reply.send({
         success: true,
-        message: 'Emergency close triggered',
+        message: "Emergency close triggered",
         timestamp: Date.now(),
       });
     } catch (error) {
-      this.logger.error('Failed to execute emergency close', error as Error);
+      this.logger.error("Failed to execute emergency close", error as Error);
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
@@ -451,7 +530,7 @@ export class AdminController {
     try {
       const config = request.body;
       if (!config || Object.keys(config).length === 0) {
-        reply.status(400).send({ error: 'No configuration provided' });
+        reply.status(400).send({ error: "No configuration provided" });
         return;
       }
 
@@ -460,13 +539,13 @@ export class AdminController {
 
       reply.send({
         success: true,
-        message: 'Risk configuration updated and broadcast',
+        message: "Risk configuration updated and broadcast",
         config,
         timestamp: Date.now(),
       });
     } catch (error) {
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       });
     }
@@ -482,7 +561,7 @@ export class AdminController {
     const service = this.brain.getReconciliationService();
     if (!service) {
       reply.status(503).send({
-        error: 'Reconciliation Service not available',
+        error: "Reconciliation Service not available",
       });
       return;
     }
@@ -497,9 +576,9 @@ export class AdminController {
         reply.send({ reports });
       }
     } catch (error) {
-      this.logger.error('Manual reconciliation failed', error as Error);
+      this.logger.error("Manual reconciliation failed", error as Error);
       reply.status(500).send({
-        error: 'Reconciliation failed',
+        error: "Reconciliation failed",
         details: String(error),
       });
     }
@@ -509,26 +588,34 @@ export class AdminController {
    * Handle GET /audit/decisions
    */
   async handleAuditDecisions(
-    request: FastifyRequest<{ Querystring: { limit?: string; signalId?: string } }>,
+    request: FastifyRequest<
+      { Querystring: { limit?: string; signalId?: string } }
+    >,
     reply: FastifyReply,
   ): Promise<void> {
     // Requires implementation in Brain to fetch from EventStore strictly for audit
     // For now assuming 501 or basic implementation
-    reply.status(501).send({ error: 'Not implemented' });
+    reply.status(501).send({ error: "Not implemented" });
   }
 
   /**
    * Handle GET /risk/state
    */
-  async handleRiskState(_request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  async handleRiskState(
+    _request: FastifyRequest,
+    reply: FastifyReply,
+  ): Promise<void> {
     // Placeholder
-    reply.send({ state: 'unknown' });
+    reply.send({ state: "unknown" });
   }
 
   /**
    * Handle GET /risk/regime-history
    */
-  async handleRegimeHistory(_request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  async handleRegimeHistory(
+    _request: FastifyRequest,
+    reply: FastifyReply,
+  ): Promise<void> {
     // Placeholder
     reply.send({ history: [] });
   }
@@ -543,7 +630,7 @@ export class AdminController {
     try {
       const { operatorId } = request.body;
       if (!operatorId) {
-        reply.status(400).send({ error: 'operatorId is required' });
+        reply.status(400).send({ error: "operatorId is required" });
         return;
       }
 
@@ -551,13 +638,13 @@ export class AdminController {
 
       reply.send({
         success: true,
-        message: 'Failover sequence initiated',
+        message: "Failover sequence initiated",
         timestamp: Date.now(),
       });
     } catch (error) {
-      this.logger.error('Failover trigger failed', error as Error);
+      this.logger.error("Failover trigger failed", error as Error);
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       });
     }
   }
@@ -575,7 +662,7 @@ export class AdminController {
       const { operatorId, backupId } = request.body;
       if (!operatorId || !backupId) {
         reply.status(400).send({
-          error: 'operatorId and backupId are required',
+          error: "operatorId and backupId are required",
         });
         return;
       }
@@ -584,13 +671,13 @@ export class AdminController {
 
       reply.send({
         success: true,
-        message: 'Restore sequence initiated',
+        message: "Restore sequence initiated",
         timestamp: Date.now(),
       });
     } catch (error) {
-      this.logger.error('Restore trigger failed', error as Error);
+      this.logger.error("Restore trigger failed", error as Error);
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       });
     }
   }
@@ -598,13 +685,16 @@ export class AdminController {
   /**
    * Handle GET /admin/infra/status - Get infrastructure health and backup status
    */
-  async handleInfraStatus(_request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  async handleInfraStatus(
+    _request: FastifyRequest,
+    reply: FastifyReply,
+  ): Promise<void> {
     try {
       const status = this.brain.getInfraStatus();
       reply.send(status);
     } catch (error) {
       reply.status(500).send({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       });
     }
   }

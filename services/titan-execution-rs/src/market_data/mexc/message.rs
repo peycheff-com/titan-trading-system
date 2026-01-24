@@ -1,7 +1,7 @@
-use serde::Deserialize;
-use rust_decimal::Decimal;
 use crate::market_data::model::{PublicTrade, Side};
-use chrono::{Utc, TimeZone};
+use chrono::{TimeZone, Utc};
+use rust_decimal::Decimal;
+use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct MexcWsMessage {

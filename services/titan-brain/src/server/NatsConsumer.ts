@@ -1,7 +1,7 @@
-import { getNatsClient, NatsClient, TitanSubject } from '@titan/shared';
-import { TitanBrain } from '../engine/TitanBrain.js';
-import { getLogger, StructuredLogger } from '../monitoring/index.js';
-import { WebSocketService } from './WebSocketService.js';
+import { getNatsClient, NatsClient, TitanSubject } from "@titan/shared";
+import { TitanBrain } from "../engine/TitanBrain.js";
+import { getLogger, StructuredLogger } from "../monitoring/index.js";
+import { WebSocketService } from "./WebSocketService.js";
 
 export class NatsConsumer {
   private nats: NatsClient;
@@ -17,7 +17,6 @@ export class NatsConsumer {
   }
 
   setWebSocketService(wsService: WebSocketService) {
-     
     this.webSocketService = wsService;
   }
 
@@ -25,15 +24,15 @@ export class NatsConsumer {
     try {
       if (!this.nats.isConnected()) {
         await this.nats.connect({
-          servers: [natsUrl || process.env.NATS_URL || 'nats://localhost:4222'],
+          servers: [natsUrl || process.env.NATS_URL || "nats://localhost:4222"],
         });
-        this.logger.info('NATS Consumer connected (New Connection)');
+        this.logger.info("NATS Consumer connected (New Connection)");
       } else {
-        this.logger.info('NATS Consumer reused existing connection');
+        this.logger.info("NATS Consumer reused existing connection");
       }
       this.subscribeToTopics();
     } catch (err) {
-      this.logger.error('Failed to connect NATS Consumer', err as Error);
+      this.logger.error("Failed to connect NATS Consumer", err as Error);
       throw err;
     }
   }
@@ -50,55 +49,64 @@ export class NatsConsumer {
     // Subscribe to Execution Fills (Wildcard for venues/symbols)
     // Topic: titan.evt.exec.fill.v1.{venue}.{account}.{symbol}
     this.nats.subscribe(
-      TitanSubject.EXECUTION_FILL + '.*', // Use suffix wildcard
+      TitanSubject.EXECUTION_FILL + ".*", // Use suffix wildcard
       async (data: any, subject) => {
         this.handleExecutionReport(data);
       },
-      'BRAIN_RISK', // Durable consumer name as per Manifest
+      "BRAIN_RISK", // Durable consumer name as per Manifest
     );
 
     // Subscribe to Dashboard Updates
-    this.nats.subscribe(TitanSubject.DASHBOARD_UPDATES, (data: any, subject) => {
-      if (this.webSocketService) {
-        if (data.type) {
-          if (data.type === 'SIGNAL') {
-            this.webSocketService.broadcastSignal(data.data);
-          } else if (data.type === 'TRADE') {
-            this.webSocketService.broadcastTrade(data.data);
-          } else if (data.type === 'ALERT') {
-            this.webSocketService.broadcastAlert(data.level, data.message);
-          } else if (data.type === 'PHASE1_UPDATE') {
-            this.webSocketService.broadcastPhase1Update(data.tripwires, data.sensorStatus);
-          } else if (data.type === 'STATE_UPDATE') {
-            this.webSocketService.broadcastStateUpdate(data);
+    this.nats.subscribe(
+      TitanSubject.DASHBOARD_UPDATES,
+      (data: any, subject) => {
+        if (this.webSocketService) {
+          if (data.type) {
+            if (data.type === "SIGNAL") {
+              this.webSocketService.broadcastSignal(data.data);
+            } else if (data.type === "TRADE") {
+              this.webSocketService.broadcastTrade(data.data);
+            } else if (data.type === "ALERT") {
+              this.webSocketService.broadcastAlert(data.level, data.message);
+            } else if (data.type === "PHASE1_UPDATE") {
+              this.webSocketService.broadcastPhase1Update(
+                data.tripwires,
+                data.sensorStatus,
+              );
+            } else if (data.type === "STATE_UPDATE") {
+              this.webSocketService.broadcastStateUpdate(data);
+            }
           }
         }
-      }
-    });
+      },
+    );
 
     // Subscribe to PowerLaw Updates
-    this.nats.subscribe(TitanSubject.EVT_REGIME_UPDATE, async (data: any, subject) => {
-      try {
-        // Validate structure roughly
-        if (data.symbol && data.tailExponent) {
-          // Relaxed check
-          await this.brain.handlePowerLawUpdate({
-            symbol: data.symbol,
-            tailExponent: Number(data.tailExponent),
-            tailConfidence: Number(data.tailConfidence),
-            exceedanceProbability: Number(data.exceedanceProbability),
-            volatilityCluster: {
-              state: data.volatilityCluster.state,
-              persistence: Number(data.volatilityCluster.persistence),
-              sigma: Number(data.volatilityCluster.sigma || 0),
-            },
-            timestamp: data.timestamp || Date.now(),
-          });
+    this.nats.subscribe(
+      TitanSubject.EVT_REGIME_UPDATE,
+      async (data: any, subject) => {
+        try {
+          // Validate structure roughly
+          if (data.symbol && data.tailExponent) {
+            // Relaxed check
+            await this.brain.handlePowerLawUpdate({
+              symbol: data.symbol,
+              tailExponent: Number(data.tailExponent),
+              tailConfidence: Number(data.tailConfidence),
+              exceedanceProbability: Number(data.exceedanceProbability),
+              volatilityCluster: {
+                state: data.volatilityCluster.state,
+                persistence: Number(data.volatilityCluster.persistence),
+                sigma: Number(data.volatilityCluster.sigma || 0),
+              },
+              timestamp: data.timestamp || Date.now(),
+            });
+          }
+        } catch (err) {
+          this.logger.error("Error handling PowerLaw update", err as Error);
         }
-      } catch (err) {
-        this.logger.error('Error handling PowerLaw update', err as Error);
-      }
-    });
+      },
+    );
 
     // Subscribe to Market Data
     this.nats.subscribe(
@@ -113,36 +121,65 @@ export class NatsConsumer {
             });
           }
         } catch (err) {
-          this.logger.error('Error handling Market Data', err as Error);
+          this.logger.error("Error handling Market Data", err as Error);
         }
       },
       // No durable name -> ephemeral consumer for real-time data
     );
 
     // Subscribe to Phase Posture (All Phases)
-    this.nats.subscribe(`${TitanSubject.EVT_PHASE_POSTURE}.*`, async (data: any, subject) => {
-      if (this.webSocketService) {
-        this.webSocketService.broadcastPhasePosture(data);
-      }
-    });
+    this.nats.subscribe(
+      `${TitanSubject.EVT_PHASE_POSTURE}.*`,
+      async (data: any, subject) => {
+        if (this.webSocketService) {
+          this.webSocketService.broadcastPhasePosture(data);
+        }
+      },
+    );
 
     // Subscribe to Phase Diagnostics (All Phases)
-    this.nats.subscribe(`${TitanSubject.EVT_PHASE_DIAGNOSTICS}.*`, async (data: any, subject) => {
-      if (this.webSocketService) {
-        this.webSocketService.broadcastPhaseDiagnostics(data);
-      }
-    });
+    this.nats.subscribe(
+      `${TitanSubject.EVT_PHASE_DIAGNOSTICS}.*`,
+      async (data: any, subject) => {
+        if (this.webSocketService) {
+          this.webSocketService.broadcastPhaseDiagnostics(data);
+        }
+      },
+    );
+
+    // Subscribe to AI Optimization Proposals (The Synapse)
+    this.nats.subscribe(
+      TitanSubject.CMD_AI_OPTIMIZE_PROPOSAL,
+      async (data: any, subject) => {
+        try {
+          // Unwrap payload if needed (envelope)
+          let payload = data;
+          if (
+            data && typeof data === "object" && "payload" in data &&
+            "type" in data
+          ) {
+            payload = data.payload;
+          }
+          await this.brain.handleAIProposal(payload);
+        } catch (err) {
+          this.logger.error("Error handling AI Proposal", err as Error);
+        }
+      },
+      "BRAIN_GOVERNANCE", // Durable consumer for governance/proposals
+    );
   }
 
   private async handleExecutionReport(data: any): Promise<void> {
     // Dual Read Strategy: unwraps Envelope if present
-     
+
     let payload = data;
-    if (data && typeof data === 'object' && 'payload' in data && 'type' in data) {
+    if (
+      data && typeof data === "object" && "payload" in data && "type" in data
+    ) {
       payload = data.payload;
     }
 
-    this.logger.info('Received Execution Report via NATS', {
+    this.logger.info("Received Execution Report via NATS", {
       orderId: payload.orderId || payload.order_id,
       symbol: payload.symbol,
       status: payload.status,
@@ -152,18 +189,21 @@ export class NatsConsumer {
       // Map incoming NATS data to Brain's ExecutionReport interface
       // Handling both snake_case (from Python/Rust services) and camelCase (Node services)
       const report = {
-        type: 'EXECUTION_REPORT', // Event type
-        phaseId: payload.phaseId || payload.phase_id || 'unknown',
+        type: "EXECUTION_REPORT", // Event type
+        phaseId: payload.phaseId || payload.phase_id || "unknown",
         signalId: payload.signalId || payload.signal_id,
         symbol: payload.symbol,
-        side: (payload.side || 'BUY').toUpperCase(),
-        price: Number(payload.fillPrice || payload.fill_price || payload.price || 0),
+        side: (payload.side || "BUY").toUpperCase(),
+        price: Number(
+          payload.fillPrice || payload.fill_price || payload.price || 0,
+        ),
         qty: Number(payload.fillSize || payload.fill_size || payload.qty || 0),
         timestamp: payload.timestamp || Date.now(),
         status: payload.status, // FILLED, PARTIALLY_FILLED, etc.
         reason: payload.reason,
         // Map fillId from upstream (execution_id in exchange or trade_id)
-        fillId: payload.fillId || payload.fill_id || payload.trade_id || payload.execution_id,
+        fillId: payload.fillId || payload.fill_id || payload.trade_id ||
+          payload.execution_id,
         executionId: payload.executionId || payload.execution_id, // Keep redundant executionId for now if used elsewhere
       };
 
@@ -184,7 +224,10 @@ export class NatsConsumer {
         });
       }
     } catch (err) {
-      this.logger.error('Error handling Execution Report via NATS', err as Error);
+      this.logger.error(
+        "Error handling Execution Report via NATS",
+        err as Error,
+      );
     }
   }
 

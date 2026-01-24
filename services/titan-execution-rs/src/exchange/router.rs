@@ -156,19 +156,26 @@ impl ExecutionRouter {
         }
 
         if targets.is_empty() {
-            warn!("⚠️ No valid adapters found for routing intent {:?}", intent.source);
+            warn!(
+                "⚠️ No valid adapters found for routing intent {:?}",
+                intent.source
+            );
             return targets;
         }
 
         // Respect Fanout Configuration
         let fanout_allowed = rule.fanout.unwrap_or(false);
         if !fanout_allowed && targets.len() > 1 {
-             warn!(
+            warn!(
                 "⚠️ Fanout disabled. Clamping to single target (from {} candidates).",
                 targets.len()
             );
             // Sort by weight descending to pick the "best" one
-            targets.sort_by(|a, b| b.weight.partial_cmp(&a.weight).unwrap_or(std::cmp::Ordering::Equal));
+            targets.sort_by(|a, b| {
+                b.weight
+                    .partial_cmp(&a.weight)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            });
             targets.truncate(1);
         }
 
@@ -195,7 +202,10 @@ impl ExecutionRouter {
 
         let total_weight: f64 = routes.iter().map(|route| route.weight).sum();
         let normalized_weights: Vec<f64> = if total_weight > 0.0 {
-            routes.iter().map(|route| route.weight / total_weight).collect()
+            routes
+                .iter()
+                .map(|route| route.weight / total_weight)
+                .collect()
         } else {
             vec![1.0 / routes.len() as f64; routes.len()]
         };
@@ -211,7 +221,7 @@ impl ExecutionRouter {
             } else {
                 let weight_dec = Decimal::from_f64_retain(weight).unwrap_or(Decimal::ZERO);
                 // Round weight to avoid fp precision issues (e.g. 0.7 -> 0.6999999)
-                let weight_dec = weight_dec.round_dp(4); 
+                let weight_dec = weight_dec.round_dp(4);
                 let portion = order_req.quantity * weight_dec;
                 remaining_qty -= portion;
                 portion
@@ -230,7 +240,10 @@ impl ExecutionRouter {
 
             let req_clone = req.clone();
             let handle = tokio::spawn(async move {
-                info!("🚀 Routing to {}: {:?} {}", name_clone, req.side, req.symbol);
+                info!(
+                    "🚀 Routing to {}: {:?} {}",
+                    name_clone, req.side, req.symbol
+                );
                 let res = adapter.place_order(req).await;
                 (name_clone, req_clone, res)
             });
@@ -251,7 +264,10 @@ impl ExecutionRouter {
         if let Some(adapter) = self.get_adapter(exchange) {
             adapter.get_positions().await
         } else {
-            Err(ExchangeError::Config(format!("Exchange '{}' not found", exchange)))
+            Err(ExchangeError::Config(format!(
+                "Exchange '{}' not found",
+                exchange
+            )))
         }
     }
 }
@@ -260,7 +276,7 @@ impl ExecutionRouter {
 mod tests {
     use super::*;
     use crate::exchange::adapter::{ExchangeAdapter, ExchangeError, OrderRequest, OrderResponse};
-    use crate::model::{OrderType, Side, Position};
+    use crate::model::{OrderType, Position, Side};
     use async_trait::async_trait;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
@@ -289,7 +305,11 @@ mod tests {
             })
         }
 
-        async fn cancel_order(&self, _symbol: &str, _order_id: &str) -> Result<OrderResponse, ExchangeError> {
+        async fn cancel_order(
+            &self,
+            _symbol: &str,
+            _order_id: &str,
+        ) -> Result<OrderResponse, ExchangeError> {
             Err(ExchangeError::Api("not implemented".to_string()))
         }
 
@@ -367,15 +387,15 @@ mod tests {
         };
 
         let results = router.execute(&intent, order_req).await;
-        
+
         // Multi-Venue: Should return 2 results
         assert_eq!(results.len(), 2);
-        
-        // Verify Quantities (Order depends on hash map iteration, so checking sum is safer, 
+
+        // Verify Quantities (Order depends on hash map iteration, so checking sum is safer,
         // but implementation iterates `routes` which came from `resolve_routes` which iterates config map.
-        // `resolve_routes` creates vector. 
+        // `resolve_routes` creates vector.
         // Let's check that we have one 7.0 and one 3.0
-        
+
         let quantities: Vec<Decimal> = results.iter().map(|(_, req, _)| req.quantity).collect();
         assert!(quantities.contains(&dec!(7.0)));
         assert!(quantities.contains(&dec!(3.0)));
@@ -439,12 +459,12 @@ mod tests {
         };
 
         let results = router.execute(&intent, order_req).await;
-        
+
         assert_eq!(results.len(), 3);
-        
+
         let total_qty: Decimal = results.iter().map(|(_, req, _)| req.quantity).sum();
         assert_eq!(total_qty, dec!(1.0));
-        
+
         // Ensure no route got 0 size or negative (implicit in sum check, but good to know)
         for (_, req, _) in &results {
             assert!(req.quantity > Decimal::ZERO);

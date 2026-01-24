@@ -1,6 +1,6 @@
-use std::sync::Arc;
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct VolatilityState {
@@ -18,10 +18,10 @@ pub struct ImpactEstimate {
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum OrderRouting {
-    PostOnly,   // Maker only (passive)
-    Limit,      // Standard limit (patient)
-    IOC,        // Taker (aggressive)
-    Rejected,   // Too hazardous
+    PostOnly, // Maker only (passive)
+    Limit,    // Standard limit (patient)
+    IOC,      // Taker (aggressive)
+    Rejected, // Too hazardous
 }
 
 #[derive(Clone)]
@@ -49,16 +49,20 @@ impl ImpactCalculator {
     ) -> ImpactEstimate {
         // Default to $100M daily volume if unknown (safe fallback for majors, risky for alts)
         // Ideally we should warn or reject if unknown.
-        let daily_vol = self.daily_volumes.get(symbol).map(|v| *v).unwrap_or(100_000_000.0);
-        
+        let daily_vol = self
+            .daily_volumes
+            .get(symbol)
+            .map(|v| *v)
+            .unwrap_or(100_000_000.0);
+
         // Default vol to 3% if unknown
         let sigma = vol_state.map(|v| v.sigma).unwrap_or(0.03);
 
         let volume_ratio = notional_usd / daily_vol;
-        
+
         // Square-root law: I = c * sigma * sqrt(Q / V)
-        // c is empirically around 0.5 to 1.0 for full order impact, 
-        // but for "bps cost" we use a tuned constant. 
+        // c is empirically around 0.5 to 1.0 for full order impact,
+        // but for "bps cost" we use a tuned constant.
         // Let's use 0.7 as a conservative constant for impact cost.
         let impact_fraction = 0.7 * sigma * volume_ratio.sqrt();
         let impact_bps = impact_fraction * 10_000.0;

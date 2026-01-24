@@ -1,7 +1,6 @@
 use crate::model::{DriftClass, DriftReport, Intent, TradeRecord};
 use rust_decimal::prelude::ToPrimitive;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tracing::warn;
 
 pub struct DriftDetector {
     // Configuration thresholds

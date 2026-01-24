@@ -9,7 +9,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
-import { createHash } from "crypto";
+import * as crypto from "crypto";
 
 /**
  * Configuration version entry
@@ -464,7 +464,7 @@ export class ConfigVersionHistory {
    */
   private calculateHash(data: any): string {
     const jsonString = JSON.stringify(data, Object.keys(data).sort());
-    return createHash("sha256").update(jsonString).digest("hex");
+    return crypto.createHash("sha256").update(jsonString).digest("hex");
   }
 
   /**

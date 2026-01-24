@@ -6,8 +6,8 @@
   "riskPerTrade": 0.015,
   "exchanges": {},
   "alignmentWeights": {
-    "daily": 45,
-    "h4": 35,
+    "daily": 50,
+    "h4": 30,
     "m15": 20
   },
   "rsConfig": {
@@ -109,5 +109,5 @@
     "notifyOnEmergency": true
   },
   "version": 2,
-  "lastModified": 1769162311169
+  "lastModified": 1769277589443
 }

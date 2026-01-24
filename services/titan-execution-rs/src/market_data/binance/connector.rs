@@ -1,14 +1,16 @@
-use async_trait::async_trait;
-use crate::market_data::connector::{MarketDataConnector, MarketDataError, Subscription, StreamType};
+use crate::market_data::binance::message::{BinanceStreamWrapper, BinanceWsMessage};
+use crate::market_data::connector::{
+    MarketDataConnector, MarketDataError, StreamType, Subscription,
+};
 use crate::market_data::model::MarketDataEvent;
-use crate::market_data::binance::message::{BinanceWsMessage, BinanceStreamWrapper};
+use async_trait::async_trait;
+use futures::{SinkExt, StreamExt};
+use serde_json::json;
+use std::collections::HashSet;
 use tokio::sync::mpsc;
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
-use futures::{StreamExt, SinkExt};
+use tracing::{error, info};
 use url::Url;
-use tracing::{info, error};
-use std::collections::HashSet;
-use serde_json::json;
 
 const BINANCE_WS_URL: &str = "wss://fstream.binance.com/stream";
 
@@ -30,12 +32,15 @@ impl BinanceConnector {
         }
     }
 
-    async fn handle_msg(text: &str, tx: &mpsc::Sender<MarketDataEvent>) -> Result<(), MarketDataError> {
+    async fn handle_msg(
+        text: &str,
+        tx: &mpsc::Sender<MarketDataEvent>,
+    ) -> Result<(), MarketDataError> {
         // Binance usually sends {"stream":"...", "data":{...}}
         if let Ok(wrapper) = serde_json::from_str::<BinanceStreamWrapper>(text) {
-             if let Some(trade) = wrapper.data.to_model() {
-                 let _ = tx.send(MarketDataEvent::Trade(trade)).await;
-             }
+            if let Some(trade) = wrapper.data.to_model() {
+                let _ = tx.send(MarketDataEvent::Trade(trade)).await;
+            }
         } else {
             // Check if direct message (unlikely for /stream endpoint but possible)
             if let Ok(msg) = serde_json::from_str::<BinanceWsMessage>(text) {
@@ -52,19 +57,22 @@ impl BinanceConnector {
 impl MarketDataConnector for BinanceConnector {
     async fn connect(&mut self) -> Result<(), MarketDataError> {
         // For initial connection, we don't need streams params if we subscribe later.
-        // But /stream requires at least one stream usually? 
-        // Actually /stream?streams=... is for connect-time. 
+        // But /stream requires at least one stream usually?
+        // Actually /stream?streams=... is for connect-time.
         // We can connect to basic /ws (Raw) or /stream (Combined).
         // Combined is better for multiple symbols.
         // Let's us /stream with no params initially? Or just /stream.
-        
+
         // Binance docs say: wss://fstream.binance.com/stream?streams=<streamName1>/<streamName2>
         // But we want dynamic subscription.
         // So we can connect to `wss://fstream.binance.com/ws` (Raw stream mode? No, that's usually single stream).
-        // Or `wss://fstream.binance.com/stream` and then send SUBSCRIBE command. 
-        
-        let url = Url::parse(BINANCE_WS_URL).map_err(|e| MarketDataError::Connection(e.to_string()))?;
-        let (ws_stream, _) = connect_async(url).await.map_err(|e| MarketDataError::Connection(e.to_string()))?;
+        // Or `wss://fstream.binance.com/stream` and then send SUBSCRIBE command.
+
+        let url =
+            Url::parse(BINANCE_WS_URL).map_err(|e| MarketDataError::Connection(e.to_string()))?;
+        let (ws_stream, _) = connect_async(url)
+            .await
+            .map_err(|e| MarketDataError::Connection(e.to_string()))?;
         info!("Connected to Binance WebSocket");
 
         let (mut write, mut read) = ws_stream.split();
@@ -74,10 +82,10 @@ impl MarketDataConnector for BinanceConnector {
         // Spawn writer
         tokio::spawn(async move {
             while let Some(msg) = write_rx.recv().await {
-                 if let Err(e) = write.send(msg).await {
-                     error!("Failed to send WS message: {}", e);
-                     break;
-                 }
+                if let Err(e) = write.send(msg).await {
+                    error!("Failed to send WS message: {}", e);
+                    break;
+                }
             }
         });
 
@@ -97,8 +105,8 @@ impl MarketDataConnector for BinanceConnector {
                         // Tungstenite handles pong?
                     }
                     Ok(Message::Close(_)) => {
-                         error!("Binance stream closed");
-                         break;
+                        error!("Binance stream closed");
+                        break;
                     }
                     Err(e) => {
                         error!("Binance WS Error: {}", e);
@@ -118,11 +126,18 @@ impl MarketDataConnector for BinanceConnector {
         let symbol_lower = subscription.symbol.to_lowercase().replace("/", "");
         let stream_name = match subscription.stream_type {
             StreamType::PublicTrade => format!("{}@aggTrade", symbol_lower),
-            _ => return Err(MarketDataError::Subscription("Unsupported stream type".to_string())),
+            _ => {
+                return Err(MarketDataError::Subscription(
+                    "Unsupported stream type".to_string(),
+                ))
+            }
         };
 
         // Binance Subscribe ID
-        let id = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_micros() as u64;
+        let id = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_micros() as u64;
 
         let payload = json!({
             "method": "SUBSCRIBE",
@@ -133,7 +148,8 @@ impl MarketDataConnector for BinanceConnector {
         });
 
         if let Some(tx) = &self.write_tx {
-            tx.send(Message::Text(payload.to_string())).await
+            tx.send(Message::Text(payload.to_string()))
+                .await
                 .map_err(|e| MarketDataError::Subscription(e.to_string()))?;
             self.subscriptions.insert(subscription.symbol);
             Ok(())

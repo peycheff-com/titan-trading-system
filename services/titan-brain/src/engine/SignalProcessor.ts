@@ -50,10 +50,43 @@ export class SignalProcessor {
 
     // Subscribe to titan.signal.submit.v1
     this.nats.subscribe(TitanSubject.SIGNAL_SUBMIT, async (data: any) => {
-      // In a real NATS consumer scenario, we might need to repackage this
-      // But for TitanBrain direct calls, processSignal expects IntentSignal
-      // For NATS events, we would need to map 'data' to IntentSignal
-      // For now, assuming direct calls from Brain mostly
+      try {
+        // Handle envelope or raw payload
+        const signal = data.payload || data;
+
+        // Ensure proper ID mapping if needed (NatsClient uses signal_id, IntentSignal expects signalId)
+        // We might need a mapper here.
+        const mappedSignal: IntentSignal = {
+          signalId: signal.signal_id || signal.signalId,
+          symbol: signal.symbol,
+          side: signal.direction === 1
+            ? "BUY"
+            : signal.direction === -1
+            ? "SELL"
+            : signal.side,
+          type: signal.type || "MARKET",
+          confidence: signal.confidence || 1.0,
+          phaseId: signal.source === "scavenger"
+            ? "phase1"
+            : (signal.phase_id || "phase1"),
+          requestedSize: signal.size || 0,
+          leverage: signal.leverage || 1,
+          timestamp: signal.timestamp || Date.now(),
+          entryPrice: signal.entry_zone?.[0] || signal.entryPrice,
+          stopLossPrice: signal.stop_loss || signal.stopLossPrice,
+          takeProfitPrice: signal.take_profits?.[0] || signal.takeProfitPrice, // Optional mapping
+          // Spread other props just in case
+          ...signal,
+        };
+
+        this.logger.info(
+          `📨 Received Signal from NATS: ${mappedSignal.signalId} (${mappedSignal.phaseId})`,
+        );
+
+        await this.processSignal(mappedSignal);
+      } catch (err) {
+        this.logger.error("Failed to process NATS signal", err as Error);
+      }
     });
   }
 

@@ -42,8 +42,9 @@ describe("CorrelationManager", () => {
   describe("calcCorrelation", () => {
     it("should calculate correlation between two symbols", async () => {
       // Mock price data - perfectly correlated (both go up)
+      const now = Date.now();
       const priceData1: OHLCV[] = Array.from({ length: 24 }, (_, i) => ({
-        timestamp: Date.now() - (23 - i) * 60 * 60 * 1000,
+        timestamp: now - (23 - i) * 60 * 60 * 1000,
         open: 100 + i,
         high: 105 + i,
         low: 95 + i,
@@ -52,7 +53,7 @@ describe("CorrelationManager", () => {
       }));
 
       const priceData2: OHLCV[] = Array.from({ length: 24 }, (_, i) => ({
-        timestamp: Date.now() - (23 - i) * 60 * 60 * 1000,
+        timestamp: now - (23 - i) * 60 * 60 * 1000,
         open: 200 + i * 2,
         high: 210 + i * 2,
         low: 190 + i * 2,

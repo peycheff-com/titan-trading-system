@@ -40,6 +40,7 @@ export interface IntentSignal {
   position_size?: number; // Proposed position size (USD/Notional) from Phase
   velocity?: number;
   trap_type?: string;
+  type?: string; // Signal type, e.g., 'BUY_SETUP'
   timestamp: number; // Signal generation time (t_signal)
   t_analysis?: number; // Time analysis completed
   t_decision?: number; // Time Brain approved
@@ -47,7 +48,6 @@ export interface IntentSignal {
   t_exchange?: number; // Exchange matching engine timestamp
   max_slippage_bps?: number; // Maximum allowed slippage in basis points
   fill_feasibility?: number; // Score 0-100: Feasibility of getting filled (spread, queue depth)
-  expected_impact_bps?: number; // Expected price impact in bps
   expected_impact_bps?: number; // Expected price impact in bps
   latency_profile?: LatencyProfile; // End-to-end latency measurement timestamps
 
@@ -57,6 +57,7 @@ export interface IntentSignal {
   causation_id?: string;
   env?: string;
   subject?: string;
+  metadata?: any;
 }
 
 /**

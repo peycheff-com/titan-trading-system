@@ -72,12 +72,15 @@ use crate::market_data::model::{OrderBookL2, OrderBookLevel};
 impl BybitOrderBook {
     pub fn to_model(&self, ts: i64, is_snapshot: bool) -> Option<OrderBookL2> {
         let parse_levels = |levels: &Vec<(String, String)>| -> Vec<OrderBookLevel> {
-            levels.iter().filter_map(|(p, s)| {
-                Some(OrderBookLevel {
-                    price: Decimal::from_str_exact(p).ok()?,
-                    quantity: Decimal::from_str_exact(s).ok()?,
+            levels
+                .iter()
+                .filter_map(|(p, s)| {
+                    Some(OrderBookLevel {
+                        price: Decimal::from_str_exact(p).ok()?,
+                        quantity: Decimal::from_str_exact(s).ok()?,
+                    })
                 })
-            }).collect()
+                .collect()
         };
 
         Some(OrderBookL2 {

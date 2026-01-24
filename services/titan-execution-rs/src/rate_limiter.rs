@@ -1,4 +1,3 @@
-
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
@@ -27,7 +26,7 @@ impl TokenBucket {
     pub fn try_acquire(&self, amount: usize) -> bool {
         let mut tokens = self.tokens.lock().unwrap();
         let mut last = self.last_update.lock().unwrap();
-        
+
         self.refill(&mut tokens, &mut last);
 
         if *tokens >= amount as f64 {
@@ -53,7 +52,7 @@ impl TokenBucket {
     fn refill(&self, tokens: &mut f64, last_update: &mut Instant) {
         let now = Instant::now();
         let elapsed = now.duration_since(*last_update).as_secs_f64();
-        
+
         let new_tokens = elapsed * self.fill_rate_per_sec;
         if new_tokens > 0.0 {
             *tokens = (*tokens + new_tokens).min(self.capacity as f64);
@@ -78,9 +77,9 @@ mod tests {
         let bucket = TokenBucket::new(10, 10.0); // 10 tokens per second
         assert!(bucket.try_acquire(10));
         assert!(!bucket.try_acquire(1));
-        
+
         // Sleep 110ms -> should gain ~1.1 tokens -> 1 token available
-        std::thread::sleep(Duration::from_millis(110)); 
+        std::thread::sleep(Duration::from_millis(110));
         assert!(bucket.try_acquire(1));
     }
 
@@ -88,11 +87,11 @@ mod tests {
     async fn test_token_bucket_async_acquire() {
         let bucket = TokenBucket::new(1, 10.0); // 10 tokens/sec, cap 1
         assert!(bucket.try_acquire(1));
-        
+
         let start = Instant::now();
         bucket.acquire(1).await; // Should wait ~100ms
         let elapsed = start.elapsed();
-        
+
         assert!(elapsed.as_millis() >= 90);
     }
 }

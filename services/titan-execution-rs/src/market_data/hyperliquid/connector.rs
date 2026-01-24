@@ -1,14 +1,16 @@
-use async_trait::async_trait;
-use crate::market_data::connector::{MarketDataConnector, MarketDataError, Subscription, StreamType};
-use crate::market_data::model::MarketDataEvent;
+use crate::market_data::connector::{
+    MarketDataConnector, MarketDataError, StreamType, Subscription,
+};
 use crate::market_data::hyperliquid::message::HyperliquidMessage;
+use crate::market_data::model::MarketDataEvent;
+use async_trait::async_trait;
+use futures::{SinkExt, StreamExt};
+use serde_json::json;
+use std::collections::HashSet;
 use tokio::sync::mpsc;
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
-use futures::{StreamExt, SinkExt};
+use tracing::{error, info, warn};
 use url::Url;
-use tracing::{info, warn, error};
-use std::collections::HashSet;
-use serde_json::json;
 
 const HL_WS_URL: &str = "wss://api.hyperliquid.xyz/ws";
 
@@ -30,7 +32,10 @@ impl HyperliquidConnector {
         }
     }
 
-    async fn handle_msg(text: &str, tx: &mpsc::Sender<MarketDataEvent>) -> Result<(), MarketDataError> {
+    async fn handle_msg(
+        text: &str,
+        tx: &mpsc::Sender<MarketDataEvent>,
+    ) -> Result<(), MarketDataError> {
         // Hyperliquid sends {"channel": "trades", "data": ...}
         match serde_json::from_str::<HyperliquidMessage>(text) {
             Ok(HyperliquidMessage::Trades { data }) => {
@@ -51,7 +56,7 @@ impl HyperliquidConnector {
             }
             Err(e) => {
                 if !text.contains("pong") {
-                     warn!("Failed to parse HL msg: {}", e);
+                    warn!("Failed to parse HL msg: {}", e);
                 }
             }
         }
@@ -63,7 +68,9 @@ impl HyperliquidConnector {
 impl MarketDataConnector for HyperliquidConnector {
     async fn connect(&mut self) -> Result<(), MarketDataError> {
         let url = Url::parse(HL_WS_URL).map_err(|e| MarketDataError::Connection(e.to_string()))?;
-        let (ws_stream, _) = connect_async(url).await.map_err(|e| MarketDataError::Connection(e.to_string()))?;
+        let (ws_stream, _) = connect_async(url)
+            .await
+            .map_err(|e| MarketDataError::Connection(e.to_string()))?;
         info!("Connected to Hyperliquid WebSocket");
 
         let (mut write, mut read) = ws_stream.split();
@@ -73,10 +80,10 @@ impl MarketDataConnector for HyperliquidConnector {
         // Spawn writer
         tokio::spawn(async move {
             while let Some(msg) = write_rx.recv().await {
-                 if let Err(e) = write.send(msg).await {
-                     error!("Failed to send HL message: {}", e);
-                     break;
-                 }
+                if let Err(e) = write.send(msg).await {
+                    error!("Failed to send HL message: {}", e);
+                    break;
+                }
             }
         });
 
@@ -88,18 +95,18 @@ impl MarketDataConnector for HyperliquidConnector {
                     Ok(Message::Text(text)) => {
                         // info!("HL Raw: {}", text);
                         if let Err(e) = Self::handle_msg(&text, &event_tx).await {
-                             warn!("Error handling HL message: {}", e);
+                            warn!("Error handling HL message: {}", e);
                         }
                     }
                     Ok(Message::Ping(_)) => {
                         // Tungstenite handles pong? Hyperliquid might need app-level ping?
                         // Docs say: "The server will send pings... client must respond with pong" (usually standard)
-                        // Or client sends ping? 
+                        // Or client sends ping?
                         // Usually standard WS Heartbeat.
                     }
                     Ok(Message::Close(_)) => {
-                         error!("HL stream closed");
-                         break;
+                        error!("HL stream closed");
+                        break;
                     }
                     Err(e) => {
                         error!("HL WS Error: {}", e);
@@ -116,16 +123,20 @@ impl MarketDataConnector for HyperliquidConnector {
     async fn subscribe(&mut self, subscription: Subscription) -> Result<(), MarketDataError> {
         // Hyperliquid Sub Format:
         // { "method": "subscribe", "subscription": { "type": "trades", "coin": "BTC" } }
-        
+
         // Symbol should be just "BTC" or "ETH" (no USDT suffix usually for HL, or maybe "kBONK")
         // We'll trust the input symbol is correct for now (e.g. "BTC")
-        
+
         let coin = subscription.symbol.replace("USDT", "").replace("/", ""); // Simple heuristic for now
-        
+
         let sub_type = match subscription.stream_type {
             StreamType::PublicTrade => "trades",
             StreamType::OrderBookL2 => "l2Book",
-            _ => return Err(MarketDataError::Subscription("Unsupported stream type".to_string())),
+            _ => {
+                return Err(MarketDataError::Subscription(
+                    "Unsupported stream type".to_string(),
+                ))
+            }
         };
 
         let payload = json!({
@@ -137,7 +148,8 @@ impl MarketDataConnector for HyperliquidConnector {
         });
 
         if let Some(tx) = &self.write_tx {
-            tx.send(Message::Text(payload.to_string())).await
+            tx.send(Message::Text(payload.to_string()))
+                .await
                 .map_err(|e| MarketDataError::Subscription(e.to_string()))?;
             self.subscriptions.insert(subscription.symbol);
             Ok(())

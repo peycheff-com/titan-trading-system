@@ -1,4 +1,4 @@
-import { BacktestResult, ValidationReport } from "../types/index.js";
+import { BacktestResult, ValidationReport } from '../types/index.js';
 
 export interface GateConfig {
   maxDrawdown: number; // e.g., 0.20 (20%)
@@ -15,10 +15,7 @@ export class ShippingGate {
     this.config = config;
   }
 
-  evaluate(
-    baseline: BacktestResult,
-    proposed: BacktestResult,
-  ): ValidationReport {
+  evaluate(baseline: BacktestResult, proposed: BacktestResult): ValidationReport {
     const report: ValidationReport = {
       passed: true,
       metrics: proposed,
@@ -30,11 +27,9 @@ export class ShippingGate {
       // eslint-disable-next-line functional/immutable-data
       report.passed = false;
       // eslint-disable-next-line functional/immutable-data
-      report.rejectionReason = `Max Drawdown ${
-        (proposed.metrics.maxDrawdown * 100).toFixed(
-          2,
-        )
-      }% exceeds limit ${(this.config.maxDrawdown * 100).toFixed(2)}%`;
+      report.rejectionReason = `Max Drawdown ${(proposed.metrics.maxDrawdown * 100).toFixed(
+        2,
+      )}% exceeds limit ${(this.config.maxDrawdown * 100).toFixed(2)}%`;
       return report;
     }
 
@@ -59,11 +54,9 @@ export class ShippingGate {
         // eslint-disable-next-line functional/immutable-data
         report.passed = false;
         // eslint-disable-next-line functional/immutable-data
-        report.rejectionReason = `Max Single Day Loss ${
-          (maxLoss * 100).toFixed(
-            2,
-          )
-        }% exceeds cap ${(this.config.tailRiskCap * 100).toFixed(2)}%`;
+        report.rejectionReason = `Max Single Day Loss ${(maxLoss * 100).toFixed(
+          2,
+        )}% exceeds cap ${(this.config.tailRiskCap * 100).toFixed(2)}%`;
         return report;
       }
     }
@@ -73,11 +66,9 @@ export class ShippingGate {
       // eslint-disable-next-line functional/immutable-data
       report.passed = false;
       // eslint-disable-next-line functional/immutable-data
-      report.rejectionReason = `Sharpe Ratio ${
-        proposed.metrics.sharpeRatio.toFixed(
-          2,
-        )
-      } below minimum ${this.config.minSharpe}`;
+      report.rejectionReason = `Sharpe Ratio ${proposed.metrics.sharpeRatio.toFixed(
+        2,
+      )} below minimum ${this.config.minSharpe}`;
       return report;
     }
 
