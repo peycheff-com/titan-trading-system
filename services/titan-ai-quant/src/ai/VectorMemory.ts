@@ -1,4 +1,4 @@
-import { ApiKey, client, WeaviateClient } from "weaviate-ts-client";
+import client, { ApiKey, WeaviateClient } from "weaviate-ts-client";
 
 export class VectorMemory {
   private client: WeaviateClient;
