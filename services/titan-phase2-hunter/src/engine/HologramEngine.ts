@@ -274,12 +274,20 @@ export class HologramEngine extends EventEmitter {
 
       return finalState;
     } catch (error) {
-      this.logger.error(
-        `Failed to analyze hologram for ${symbol}`,
-        error as Error,
-      );
+      const msg = (error as Error).message;
+      if (
+        msg.includes("Insufficient candles") ||
+        msg.includes("Insufficient fractals")
+      ) {
+        this.logger.warn(`Skipping ${symbol}: ${msg}`);
+      } else {
+        this.logger.error(
+          `Failed to analyze hologram for ${symbol}`,
+          error as Error,
+        );
+      }
       throw new Error(
-        `Failed to analyze hologram for ${symbol}: ${(error as Error).message}`,
+        `Failed to analyze hologram for ${symbol}: ${msg}`,
       );
     }
   }

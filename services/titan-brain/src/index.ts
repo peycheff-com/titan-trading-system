@@ -68,7 +68,7 @@ function createStandardInitSteps(): any[] {
     {
       name: "init-nats",
       description: "Initialize NATS connection",
-      timeout: 15000,
+      timeout: 30000,
       required: true,
       dependencies: ["load-config"],
       execute: async () => {
@@ -78,9 +78,9 @@ function createStandardInitSteps(): any[] {
     {
       name: "init-engine",
       description: "Initialize core engine",
-      timeout: 60000,
+      timeout: 600000,
       required: true,
-      dependencies: ["init-db", "init-redis"],
+      dependencies: ["init-db", "init-redis", "init-nats"],
       execute: async () => {
         /* Overridden in main */
       },

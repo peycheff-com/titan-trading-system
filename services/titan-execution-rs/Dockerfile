@@ -53,6 +53,9 @@ RUN groupadd -g 1001 titan && \
 # Copy binary from builder
 COPY --chown=titan:titan --from=builder /usr/src/app/target/release/titan-execution-rs /app/titan-execution-rs
 
+# Ensure data directory is writable (Wait, /app is the CWD)
+RUN chown titan:titan /app
+
 # Switch to non-root user
 USER titan
 

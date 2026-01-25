@@ -9,21 +9,18 @@
 
 /* eslint-disable functional/no-let */
 
-import { EventEmitter } from "eventemitter3";
-import {
-  RealTimeOptimizer,
-  RealTimeOptimizerConfig,
-} from "./RealTimeOptimizer.js";
+import { EventEmitter } from 'eventemitter3';
+import { RealTimeOptimizer, RealTimeOptimizerConfig } from './RealTimeOptimizer.js';
 import {
   MarketRegime,
   PredictiveAnalytics,
   PredictiveAnalyticsConfig,
   RiskAdjustment,
   StrategyPrediction,
-} from "./PredictiveAnalytics.js";
-import { TitanAnalyst } from "./TitanAnalyst.js";
-import { getTelemetryService } from "@titan/shared";
-import { Config, OHLCV, RegimeSnapshot, Trade } from "../types/index.js";
+} from './PredictiveAnalytics.js';
+import { TitanAnalyst } from './TitanAnalyst.js';
+import { getTelemetryService } from '@titan/shared';
+import { Config, OHLCV, RegimeSnapshot, Trade } from '../types/index.js';
 
 /**
  * Analytics update event structure
@@ -88,7 +85,7 @@ export interface AIIntegrationStatus {
   };
   currentRegimes: Record<string, MarketRegime>;
   activeStrategies: Record<string, number>;
-  riskLevel: "low" | "medium" | "high" | "critical";
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
   performanceScore: number;
 }
 
@@ -130,10 +127,7 @@ export class EnhancedAIIntegration extends EventEmitter {
   private riskAdjustmentCount = 0;
   private lastRiskAdjustmentTime = 0;
 
-  constructor(
-    analyst?: TitanAnalyst,
-    config: Partial<EnhancedAIIntegrationConfig> = {},
-  ) {
+  constructor(analyst?: TitanAnalyst, config: Partial<EnhancedAIIntegrationConfig> = {}) {
     super();
 
     this.analyst = analyst || new TitanAnalyst();
@@ -144,45 +138,30 @@ export class EnhancedAIIntegration extends EventEmitter {
       predictiveAnalytics: config.predictiveAnalytics || {},
       strategySelectionInterval: config.strategySelectionInterval ?? 300000, // 5 minutes
       riskAdjustmentInterval: config.riskAdjustmentInterval ?? 600000, // 10 minutes
-      performanceEvaluationInterval: config.performanceEvaluationInterval ??
-        900000, // 15 minutes
-      enableAutomatedStrategySelection:
-        config.enableAutomatedStrategySelection ?? true,
+      performanceEvaluationInterval: config.performanceEvaluationInterval ?? 900000, // 15 minutes
+      enableAutomatedStrategySelection: config.enableAutomatedStrategySelection ?? true,
       enableAdaptiveRiskManagement: config.enableAdaptiveRiskManagement ?? true,
       maxRiskAdjustmentFrequency: config.maxRiskAdjustmentFrequency ?? 6,
       strategyAllocationLimits: {
-        maxSingleStrategy: config.strategyAllocationLimits?.maxSingleStrategy ??
-          0.6,
-        minDiversification:
-          config.strategyAllocationLimits?.minDiversification ?? 2,
+        maxSingleStrategy: config.strategyAllocationLimits?.maxSingleStrategy ?? 0.6,
+        minDiversification: config.strategyAllocationLimits?.minDiversification ?? 2,
         ...config.strategyAllocationLimits,
       },
     };
 
     // Initialize components
-    this.realTimeOptimizer = new RealTimeOptimizer(
-      this.analyst,
-      this.config.realTimeOptimizer,
-    );
-    this.predictiveAnalytics = new PredictiveAnalytics(
-      this.config.predictiveAnalytics,
-    );
+    this.realTimeOptimizer = new RealTimeOptimizer(this.analyst, this.config.realTimeOptimizer);
+    this.predictiveAnalytics = new PredictiveAnalytics(this.config.predictiveAnalytics);
 
     this.setupEventHandlers();
-    this.telemetry.info(
-      "EnhancedAIIntegration",
-      "Enhanced AI integration initialized",
-    );
+    this.telemetry.info('EnhancedAIIntegration', 'Enhanced AI integration initialized');
   }
 
   /**
    * Start enhanced AI integration
    */
   start(): void {
-    this.telemetry.info(
-      "EnhancedAIIntegration",
-      "Starting enhanced AI integration",
-    );
+    this.telemetry.info('EnhancedAIIntegration', 'Starting enhanced AI integration');
 
     // Start core components
     this.realTimeOptimizer.start();
@@ -193,11 +172,7 @@ export class EnhancedAIIntegration extends EventEmitter {
       // eslint-disable-next-line functional/immutable-data
       this.strategySelectionTimer = setInterval(() => {
         this.runStrategySelection().catch((error) => {
-          this.telemetry.error(
-            "EnhancedAIIntegration",
-            "Strategy selection failed",
-            error,
-          );
+          this.telemetry.error('EnhancedAIIntegration', 'Strategy selection failed', error);
         });
       }, this.config.strategySelectionInterval);
     }
@@ -206,11 +181,7 @@ export class EnhancedAIIntegration extends EventEmitter {
       // eslint-disable-next-line functional/immutable-data
       this.riskAdjustmentTimer = setInterval(() => {
         this.runRiskAdjustment().catch((error) => {
-          this.telemetry.error(
-            "EnhancedAIIntegration",
-            "Risk adjustment failed",
-            error,
-          );
+          this.telemetry.error('EnhancedAIIntegration', 'Risk adjustment failed', error);
         });
       }, this.config.riskAdjustmentInterval);
     }
@@ -218,25 +189,18 @@ export class EnhancedAIIntegration extends EventEmitter {
     // eslint-disable-next-line functional/immutable-data
     this.performanceEvaluationTimer = setInterval(() => {
       this.evaluatePerformance().catch((error) => {
-        this.telemetry.error(
-          "EnhancedAIIntegration",
-          "Performance evaluation failed",
-          error,
-        );
+        this.telemetry.error('EnhancedAIIntegration', 'Performance evaluation failed', error);
       });
     }, this.config.performanceEvaluationInterval);
 
-    this.emit("started");
+    this.emit('started');
   }
 
   /**
    * Stop enhanced AI integration
    */
   stop(): void {
-    this.telemetry.info(
-      "EnhancedAIIntegration",
-      "Stopping enhanced AI integration",
-    );
+    this.telemetry.info('EnhancedAIIntegration', 'Stopping enhanced AI integration');
 
     // Stop core components
     this.realTimeOptimizer.stop();
@@ -261,7 +225,7 @@ export class EnhancedAIIntegration extends EventEmitter {
       this.performanceEvaluationTimer = null;
     }
 
-    this.emit("stopped");
+    this.emit('stopped');
   }
 
   /**
@@ -269,7 +233,7 @@ export class EnhancedAIIntegration extends EventEmitter {
    */
   addMarketData(symbol: string, ohlcv: OHLCV[]): void {
     this.predictiveAnalytics.addMarketData(symbol, ohlcv);
-    this.emit("marketDataAdded", { symbol, dataPoints: ohlcv.length });
+    this.emit('marketDataAdded', { symbol, dataPoints: ohlcv.length });
   }
 
   /**
@@ -277,7 +241,7 @@ export class EnhancedAIIntegration extends EventEmitter {
    */
   addRegimeSnapshot(snapshot: RegimeSnapshot): void {
     this.predictiveAnalytics.addRegimeSnapshot(snapshot);
-    this.emit("regimeSnapshotAdded", snapshot);
+    this.emit('regimeSnapshotAdded', snapshot);
   }
 
   /**
@@ -285,7 +249,7 @@ export class EnhancedAIIntegration extends EventEmitter {
    */
   addTrade(trade: Trade): void {
     this.predictiveAnalytics.addTrade(trade);
-    this.emit("tradeAdded", trade);
+    this.emit('tradeAdded', trade);
   }
 
   /**
@@ -293,31 +257,27 @@ export class EnhancedAIIntegration extends EventEmitter {
    */
   private setupEventHandlers(): void {
     // Real-time optimizer events
-    this.realTimeOptimizer.on("proposalApplied", (event) => {
-      this.telemetry.info(
-        "EnhancedAIIntegration",
-        "Parameter optimization applied",
-        {
-          targetKey: event.proposal.targetKey,
-        },
-      );
-      this.emit("parameterOptimized", event);
+    this.realTimeOptimizer.on('proposalApplied', (event) => {
+      this.telemetry.info('EnhancedAIIntegration', 'Parameter optimization applied', {
+        targetKey: event.proposal.targetKey,
+      });
+      this.emit('parameterOptimized', event);
     });
 
-    this.realTimeOptimizer.on("abTestCompleted", (event) => {
-      this.telemetry.info("EnhancedAIIntegration", "A/B test completed", {
+    this.realTimeOptimizer.on('abTestCompleted', (event) => {
+      this.telemetry.info('EnhancedAIIntegration', 'A/B test completed', {
         testId: event.test.id,
         recommendation: event.result.recommendation,
       });
-      this.emit("abTestCompleted", event);
+      this.emit('abTestCompleted', event);
     });
 
     // Predictive analytics events
-    this.predictiveAnalytics.on("regimeUpdated", (event) => {
+    this.predictiveAnalytics.on('regimeUpdated', (event) => {
       this.handleRegimeChange(event.symbol, event.regime);
     });
 
-    this.predictiveAnalytics.on("analyticsCycleCompleted", (event) => {
+    this.predictiveAnalytics.on('analyticsCycleCompleted', (event) => {
       this.handleAnalyticsUpdate(event);
     });
   }
@@ -326,23 +286,16 @@ export class EnhancedAIIntegration extends EventEmitter {
    * Handle regime change
    */
   private handleRegimeChange(symbol: string, regime: MarketRegime): void {
-    this.telemetry.info(
-      "EnhancedAIIntegration",
-      `Regime change detected: ${symbol} -> ${regime}`,
-    );
+    this.telemetry.info('EnhancedAIIntegration', `Regime change detected: ${symbol} -> ${regime}`);
 
     // Trigger immediate strategy reselection for this symbol
     if (this.config.enableAutomatedStrategySelection) {
       this.runStrategySelectionForSymbol(symbol).catch((error) => {
-        this.telemetry.error(
-          "EnhancedAIIntegration",
-          "Strategy reselection failed",
-          error,
-        );
+        this.telemetry.error('EnhancedAIIntegration', 'Strategy reselection failed', error);
       });
     }
 
-    this.emit("regimeChanged", { symbol, regime });
+    this.emit('regimeChanged', { symbol, regime });
   }
 
   /**
@@ -351,12 +304,9 @@ export class EnhancedAIIntegration extends EventEmitter {
   private handleAnalyticsUpdate(event: AnalyticsUpdateEvent): void {
     // Check for significant volatility predictions
     for (const volPrediction of event.volatilityPredictions) {
-      if (
-        volPrediction.predictedVolatility >
-          volPrediction.currentVolatility * 1.5
-      ) {
+      if (volPrediction.predictedVolatility > volPrediction.currentVolatility * 1.5) {
         this.telemetry.warn(
-          "EnhancedAIIntegration",
+          'EnhancedAIIntegration',
           `Volatility spike predicted for ${volPrediction.symbol}`,
           {
             current: volPrediction.currentVolatility,
@@ -368,8 +318,8 @@ export class EnhancedAIIntegration extends EventEmitter {
         if (this.config.enableAdaptiveRiskManagement) {
           this.runRiskAdjustment().catch((error) => {
             this.telemetry.error(
-              "EnhancedAIIntegration",
-              "Emergency risk adjustment failed",
+              'EnhancedAIIntegration',
+              'Emergency risk adjustment failed',
               error,
             );
           });
@@ -379,16 +329,12 @@ export class EnhancedAIIntegration extends EventEmitter {
 
     // Check correlation analysis
     if (event.correlationAnalysis.portfolioCorrelation > 0.8) {
-      this.telemetry.warn(
-        "EnhancedAIIntegration",
-        "High portfolio correlation detected",
-        {
-          correlation: event.correlationAnalysis.portfolioCorrelation,
-        },
-      );
+      this.telemetry.warn('EnhancedAIIntegration', 'High portfolio correlation detected', {
+        correlation: event.correlationAnalysis.portfolioCorrelation,
+      });
     }
 
-    this.emit("analyticsUpdated", event);
+    this.emit('analyticsUpdated', event);
   }
 
   /**
@@ -396,10 +342,7 @@ export class EnhancedAIIntegration extends EventEmitter {
    */
   private async runStrategySelection(): Promise<void> {
     try {
-      this.telemetry.debug(
-        "EnhancedAIIntegration",
-        "Running strategy selection",
-      );
+      this.telemetry.debug('EnhancedAIIntegration', 'Running strategy selection');
 
       const regimes = this.predictiveAnalytics.getCurrentRegimes();
 
@@ -407,13 +350,9 @@ export class EnhancedAIIntegration extends EventEmitter {
         await this.runStrategySelectionForSymbol(symbol);
       }
 
-      this.emit("strategySelectionCompleted");
+      this.emit('strategySelectionCompleted');
     } catch (error) {
-      this.telemetry.error(
-        "EnhancedAIIntegration",
-        "Strategy selection failed",
-        error as Error,
-      );
+      this.telemetry.error('EnhancedAIIntegration', 'Strategy selection failed', error as Error);
     }
   }
 
@@ -427,19 +366,11 @@ export class EnhancedAIIntegration extends EventEmitter {
     }
 
     // Get strategy predictions
-    const strategies = [
-      "oi_wipeout",
-      "funding_spike",
-      "liquidity_sweep",
-      "volatility_spike",
-    ];
+    const strategies = ['oi_wipeout', 'funding_spike', 'liquidity_sweep', 'volatility_spike'];
     const predictions: StrategyPrediction[] = [];
 
     for (const strategy of strategies) {
-      const prediction = this.predictiveAnalytics.predictStrategyPerformance(
-        strategy,
-        symbol,
-      );
+      const prediction = this.predictiveAnalytics.predictStrategyPerformance(strategy, symbol);
       if (prediction) {
         // eslint-disable-next-line functional/immutable-data
         predictions.push(prediction);
@@ -456,17 +387,13 @@ export class EnhancedAIIntegration extends EventEmitter {
     // eslint-disable-next-line functional/immutable-data
     this.currentStrategySelection.set(symbol, selection);
 
-    this.telemetry.info(
-      "EnhancedAIIntegration",
-      `Strategy selection updated for ${symbol}`,
-      {
-        regime,
-        selectedStrategies: selection.selectedStrategies.length,
-        totalAllocation: selection.totalAllocation,
-      },
-    );
+    this.telemetry.info('EnhancedAIIntegration', `Strategy selection updated for ${symbol}`, {
+      regime,
+      selectedStrategies: selection.selectedStrategies.length,
+      totalAllocation: selection.totalAllocation,
+    });
 
-    this.emit("strategySelectionUpdated", { symbol, selection });
+    this.emit('strategySelectionUpdated', { symbol, selection });
   }
 
   /**
@@ -480,23 +407,18 @@ export class EnhancedAIIntegration extends EventEmitter {
     // Sort strategies by expected performance
     const sortedPredictions = predictions
       .filter((p) => p.predictedPerformance.expectedReturn > 0)
-      .sort((a, b) =>
-        b.predictedPerformance.sharpeRatio - a.predictedPerformance.sharpeRatio
-      );
+      .sort((a, b) => b.predictedPerformance.sharpeRatio - a.predictedPerformance.sharpeRatio);
 
-    const selectedStrategies: StrategySelection["selectedStrategies"] = [];
-    const disabledStrategies: StrategySelection["disabledStrategies"] = [];
+    const selectedStrategies: StrategySelection['selectedStrategies'] = [];
+    const disabledStrategies: StrategySelection['disabledStrategies'] = [];
 
     let totalAllocation = 0;
 
     // Apply regime-specific selection logic
     const maxStrategies = this.getMaxStrategiesForRegime(regime);
-    const baseAllocation = 1 /
-      Math.min(maxStrategies, sortedPredictions.length);
+    const baseAllocation = 1 / Math.min(maxStrategies, sortedPredictions.length);
 
-    for (
-      let i = 0; i < Math.min(maxStrategies, sortedPredictions.length); i++
-    ) {
+    for (let i = 0; i < Math.min(maxStrategies, sortedPredictions.length); i++) {
       const prediction = sortedPredictions[i];
 
       // Calculate allocation based on confidence and performance
@@ -504,16 +426,10 @@ export class EnhancedAIIntegration extends EventEmitter {
       let allocation = baseAllocation * prediction.confidence;
 
       // Apply regime adjustments
-      allocation *= this.getRegimeAllocationMultiplier(
-        regime,
-        prediction.strategy,
-      );
+      allocation *= this.getRegimeAllocationMultiplier(regime, prediction.strategy);
 
       // Ensure limits
-      allocation = Math.min(
-        allocation,
-        this.config.strategyAllocationLimits.maxSingleStrategy,
-      );
+      allocation = Math.min(allocation, this.config.strategyAllocationLimits.maxSingleStrategy);
 
       if (allocation > 0.1 && totalAllocation + allocation <= 1.0) {
         // eslint-disable-next-line functional/immutable-data
@@ -521,13 +437,9 @@ export class EnhancedAIIntegration extends EventEmitter {
           strategy: prediction.strategy,
           allocation,
           confidence: prediction.confidence,
-          reasoning: `Expected Sharpe: ${
-            prediction.predictedPerformance.sharpeRatio.toFixed(
-              2,
-            )
-          }, Win Rate: ${
-            (prediction.predictedPerformance.winProbability * 100).toFixed(1)
-          }%`,
+          reasoning: `Expected Sharpe: ${prediction.predictedPerformance.sharpeRatio.toFixed(
+            2,
+          )}, Win Rate: ${(prediction.predictedPerformance.winProbability * 100).toFixed(1)}%`,
         });
         totalAllocation += allocation;
       }
@@ -539,30 +451,23 @@ export class EnhancedAIIntegration extends EventEmitter {
         // eslint-disable-next-line functional/immutable-data
         disabledStrategies.push({
           strategy: prediction.strategy,
-          reasoning: prediction.predictedPerformance.expectedReturn <= 0
-            ? "Negative expected return"
-            : "Lower priority in current regime",
+          reasoning:
+            prediction.predictedPerformance.expectedReturn <= 0
+              ? 'Negative expected return'
+              : 'Lower priority in current regime',
         });
       }
     }
 
     // Ensure minimum diversification
-    if (
-      selectedStrategies.length <
-        this.config.strategyAllocationLimits.minDiversification
-    ) {
+    if (selectedStrategies.length < this.config.strategyAllocationLimits.minDiversification) {
       // Add more strategies if available
       for (const prediction of sortedPredictions) {
-        if (
-          selectedStrategies.length >=
-            this.config.strategyAllocationLimits.minDiversification
-        ) {
+        if (selectedStrategies.length >= this.config.strategyAllocationLimits.minDiversification) {
           break;
         }
 
-        if (
-          !selectedStrategies.find((s) => s.strategy === prediction.strategy)
-        ) {
+        if (!selectedStrategies.find((s) => s.strategy === prediction.strategy)) {
           const allocation = Math.min(0.2, (1.0 - totalAllocation) / 2);
           if (allocation > 0.05) {
             // eslint-disable-next-line functional/immutable-data
@@ -570,7 +475,7 @@ export class EnhancedAIIntegration extends EventEmitter {
               strategy: prediction.strategy,
               allocation,
               confidence: prediction.confidence * 0.8, // Reduced confidence for forced diversification
-              reasoning: "Added for diversification",
+              reasoning: 'Added for diversification',
             });
             totalAllocation += allocation;
           }
@@ -598,22 +503,17 @@ export class EnhancedAIIntegration extends EventEmitter {
         return;
       }
 
-      this.telemetry.debug("EnhancedAIIntegration", "Running risk adjustment");
+      this.telemetry.debug('EnhancedAIIntegration', 'Running risk adjustment');
 
       const currentConfig = await this.loadCurrentConfig();
-      const riskAdjustments = this.predictiveAnalytics.generateRiskAdjustment(
-        currentConfig,
-      );
+      const riskAdjustments = this.predictiveAnalytics.generateRiskAdjustment(currentConfig);
 
       if (riskAdjustments.length === 0) {
         return;
       }
 
       // Apply risk adjustments
-      const adjustedConfig = this.applyRiskAdjustments(
-        currentConfig,
-        riskAdjustments,
-      );
+      const adjustedConfig = this.applyRiskAdjustments(currentConfig, riskAdjustments);
       const riskScore = this.calculateRiskScore(riskAdjustments);
 
       // eslint-disable-next-line functional/immutable-data
@@ -630,15 +530,11 @@ export class EnhancedAIIntegration extends EventEmitter {
       if (this.currentRiskConfig.confidence >= 0.7) {
         await this.applyRiskConfiguration(adjustedConfig);
 
-        this.telemetry.info(
-          "EnhancedAIIntegration",
-          "Risk configuration adjusted",
-          {
-            adjustments: riskAdjustments.length,
-            riskScore,
-            confidence: this.currentRiskConfig.confidence,
-          },
-        );
+        this.telemetry.info('EnhancedAIIntegration', 'Risk configuration adjusted', {
+          adjustments: riskAdjustments.length,
+          riskScore,
+          confidence: this.currentRiskConfig.confidence,
+        });
       }
 
       // eslint-disable-next-line functional/immutable-data
@@ -646,13 +542,9 @@ export class EnhancedAIIntegration extends EventEmitter {
       // eslint-disable-next-line functional/immutable-data
       this.lastRiskAdjustmentTime = Date.now();
 
-      this.emit("riskAdjusted", this.currentRiskConfig);
+      this.emit('riskAdjusted', this.currentRiskConfig);
     } catch (error) {
-      this.telemetry.error(
-        "EnhancedAIIntegration",
-        "Risk adjustment failed",
-        error as Error,
-      );
+      this.telemetry.error('EnhancedAIIntegration', 'Risk adjustment failed', error as Error);
     }
   }
 
@@ -661,7 +553,7 @@ export class EnhancedAIIntegration extends EventEmitter {
    */
   private async evaluatePerformance(): Promise<void> {
     try {
-      this.telemetry.debug("EnhancedAIIntegration", "Evaluating performance");
+      this.telemetry.debug('EnhancedAIIntegration', 'Evaluating performance');
 
       const optimizerStats = this.realTimeOptimizer.getStats();
       const analyticsStats = this.predictiveAnalytics.getStats();
@@ -703,11 +595,11 @@ export class EnhancedAIIntegration extends EventEmitter {
         this.performanceHistory = this.performanceHistory.slice(-50);
       }
 
-      this.emit("performanceEvaluated", { score: performanceScore });
+      this.emit('performanceEvaluated', { score: performanceScore });
     } catch (error) {
       this.telemetry.error(
-        "EnhancedAIIntegration",
-        "Performance evaluation failed",
+        'EnhancedAIIntegration',
+        'Performance evaluation failed',
         error as Error,
       );
     }
@@ -718,11 +610,11 @@ export class EnhancedAIIntegration extends EventEmitter {
    */
   private getMaxStrategiesForRegime(regime: MarketRegime): number {
     switch (regime) {
-      case "high_volatility":
-      case "risk_off":
+      case 'high_volatility':
+      case 'risk_off':
         return 2; // Conservative in volatile/risky conditions
-      case "bull_trending":
-      case "risk_on":
+      case 'bull_trending':
+      case 'risk_on':
         return 4; // More aggressive in favorable conditions
       default:
         return 3; // Balanced approach
@@ -732,10 +624,7 @@ export class EnhancedAIIntegration extends EventEmitter {
   /**
    * Get regime allocation multiplier
    */
-  private getRegimeAllocationMultiplier(
-    regime: MarketRegime,
-    strategy: string,
-  ): number {
+  private getRegimeAllocationMultiplier(regime: MarketRegime, strategy: string): number {
     // Strategy-specific regime adjustments
     const adjustments: Record<string, Record<MarketRegime, number>> = {
       oi_wipeout: {
@@ -795,30 +684,26 @@ export class EnhancedAIIntegration extends EventEmitter {
   /**
    * Apply risk adjustments to configuration
    */
-  private applyRiskAdjustments(
-    baseConfig: Config,
-    adjustments: RiskAdjustment[],
-  ): Config {
+  private applyRiskAdjustments(baseConfig: Config, adjustments: RiskAdjustment[]): Config {
     const adjustedConfig = JSON.parse(JSON.stringify(baseConfig));
 
     for (const adjustment of adjustments) {
       switch (adjustment.trigger) {
-        case "volatility_spike":
+        case 'volatility_spike':
           // eslint-disable-next-line functional/immutable-data
           adjustedConfig.risk.max_daily_loss = adjustment.recommendedRisk;
           break;
-        case "correlation_increase":
+        case 'correlation_increase':
           // eslint-disable-next-line functional/immutable-data
           adjustedConfig.risk.max_position_size = adjustment.recommendedRisk;
           break;
-        case "regime_change":
+        case 'regime_change':
           // eslint-disable-next-line functional/immutable-data
           adjustedConfig.risk.max_open_positions = adjustment.recommendedRisk;
           break;
-        case "performance_degradation":
+        case 'performance_degradation':
           // eslint-disable-next-line functional/immutable-data
-          adjustedConfig.risk.emergency_flatten_threshold =
-            adjustment.recommendedRisk;
+          adjustedConfig.risk.emergency_flatten_threshold = adjustment.recommendedRisk;
           break;
       }
     }
@@ -859,8 +744,7 @@ export class EnhancedAIIntegration extends EventEmitter {
     }
 
     const avgConfidence =
-      adjustments.reduce((sum, adj) => sum + adj.confidence, 0) /
-      adjustments.length;
+      adjustments.reduce((sum, adj) => sum + adj.confidence, 0) / adjustments.length;
     return avgConfidence;
   }
 
@@ -889,7 +773,7 @@ export class EnhancedAIIntegration extends EventEmitter {
       },
       execution: {
         latency_penalty: 200,
-        slippage_model: "realistic",
+        slippage_model: 'realistic',
         limit_chaser_enabled: true,
         max_fill_time: 1000,
       },
@@ -901,7 +785,7 @@ export class EnhancedAIIntegration extends EventEmitter {
    */
   private async applyRiskConfiguration(_config: Config): Promise<void> {
     // This would apply to the actual config system
-    this.telemetry.info("EnhancedAIIntegration", "Risk configuration applied");
+    this.telemetry.info('EnhancedAIIntegration', 'Risk configuration applied');
   }
 
   /**
@@ -924,20 +808,20 @@ export class EnhancedAIIntegration extends EventEmitter {
 
     // Calculate risk level
 
-    let riskLevel: "low" | "medium" | "high" | "critical" = "low";
+    let riskLevel: 'low' | 'medium' | 'high' | 'critical' = 'low';
     if (this.currentRiskConfig) {
       const score = this.currentRiskConfig.riskScore;
-      if (score > 75) riskLevel = "critical";
-      else if (score > 50) riskLevel = "high";
-      else if (score > 25) riskLevel = "medium";
+      if (score > 75) riskLevel = 'critical';
+      else if (score > 50) riskLevel = 'high';
+      else if (score > 25) riskLevel = 'medium';
     }
 
     // Calculate performance score
     const recentPerformance = this.performanceHistory.slice(-5);
-    const performanceScore = recentPerformance.length > 0
-      ? recentPerformance.reduce((sum, p) => sum + p.score, 0) /
-        recentPerformance.length
-      : 50;
+    const performanceScore =
+      recentPerformance.length > 0
+        ? recentPerformance.reduce((sum, p) => sum + p.score, 0) / recentPerformance.length
+        : 50;
 
     return {
       timestamp: Date.now(),
@@ -987,9 +871,6 @@ export class EnhancedAIIntegration extends EventEmitter {
     this.realTimeOptimizer.shutdown();
     this.predictiveAnalytics.shutdown();
     this.removeAllListeners();
-    this.telemetry.info(
-      "EnhancedAIIntegration",
-      "Enhanced AI integration shutdown",
-    );
+    this.telemetry.info('EnhancedAIIntegration', 'Enhanced AI integration shutdown');
   }
 }

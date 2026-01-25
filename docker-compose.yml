@@ -15,6 +15,8 @@ services:
       timeout: 10s
       retries: 5
       start_period: 10s
+    networks:
+      - titan-network
 
   postgres:
     image: postgres:16-alpine
@@ -65,9 +67,18 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgres://postgres:password@postgres:5432/titan_brain_production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=titan_brain_production
+      - DB_USER=postgres
+      - DB_PASSWORD=password
       - REDIS_URL=redis://redis:6379
       - NATS_URL=nats://nats:4222
+      - NATS_USER=brain
+      - NATS_PASS=brain_password
       - PORT=3100
+    volumes:
+      - ./services/titan-brain/config:/app/services/titan-brain/config
     depends_on:
       nats:
         condition: service_healthy
@@ -81,11 +92,13 @@ services:
 
   titan-execution-rs:
     build:
-      context: .
-      dockerfile: services/titan-execution-rs/Dockerfile
+      context: services/titan-execution-rs
+      dockerfile: Dockerfile
     container_name: titan-execution-rs
     environment:
       - NATS_URL=nats://nats:4222
+      - NATS_USER=execution
+      - NATS_PASS=execution_password
       # Add other rust env vars if needed
     depends_on:
       nats:
@@ -104,7 +117,7 @@ services:
     ports:
       - '8080:8080'
     environment:
-      - VITE_API_URL=http://localhost:3100 # Browser accesses this, so localhost is usually correct for dev, but in prod usually needs domain
+      - VITE_API_URL=http://localhost:3100
     depends_on:
       titan-brain:
         condition: service_healthy
@@ -121,7 +134,13 @@ services:
       - '8081:8081'
     environment:
       - NATS_URL=nats://nats:4222
+      - NATS_USER=scavenger
+      - NATS_PASS=scavenger_password
       - PORT=8081
+      - BINANCE_API_KEY=mock_key
+      - BINANCE_API_SECRET=mock_secret
+      - BYBIT_API_KEY=mock_key
+      - BYBIT_API_SECRET=mock_secret
     depends_on:
       nats:
         condition: service_healthy
@@ -138,7 +157,10 @@ services:
       - '8083:8083'
     environment:
       - NATS_URL=nats://nats:4222
+      - NATS_USER=hunter
+      - NATS_PASS=hunter_password
       - PORT=8083
+      - HEADLESS_MODE=true
     depends_on:
       nats:
         condition: service_healthy
@@ -155,6 +177,8 @@ services:
       - '8084:8084'
     environment:
       - NATS_URL=nats://nats:4222
+      - NATS_USER=sentinel
+      - NATS_PASS=sentinel_password
       - PORT=8084
     depends_on:
       nats:
@@ -172,7 +196,10 @@ services:
       - '8082:8082'
     environment:
       - NATS_URL=nats://nats:4222
+      - NATS_USER=quant
+      - NATS_PASS=quant_password
       - PORT=8082
+      - GEMINI_API_KEY=mock_gemini_key
     depends_on:
       nats:
         condition: service_healthy
@@ -187,6 +214,8 @@ services:
     container_name: titan-powerlaw-lab
     environment:
       - NATS_URL=nats://nats:4222
+      - NATS_USER=powerlaw
+      - NATS_PASS=powerlaw_password
     volumes:
       - powerlaw_data:/data
     depends_on:

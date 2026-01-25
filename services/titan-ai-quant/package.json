@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
+    "build:all": "npm run build",
     "start": "echo '[DEBUG] STARTING_BUILD' && npm run build && echo '[DEBUG] BUILD_COMPLETE' && node dist/titan-ai-quant/src/server.js",
     "dev": "ts-node src/index.ts",
     "test": "jest",

@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
+    "build:all": "npm run build",
     "dev": "tsc && node --watch dist/index.js",
     "test": "npm run test:unit",
     "test:unit": "jest --config jest.config.cjs",

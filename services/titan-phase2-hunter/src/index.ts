@@ -303,7 +303,15 @@ class HunterApplication {
       await this.binanceClient.initialize();
 
       // Initialize IPC connection to execution engine
-      this.logEvent("INFO", "🔗 Connecting to execution engine via NATS...");
+      this.logEvent(
+        "INFO",
+        "🔗 Connecting to execution engine via NATS... VERIFIED UPDATE",
+      );
+      console.log("DEBUG: Env Check", {
+        USER: process.env.NATS_USER,
+        PASS: process.env.NATS_PASS ? "YES" : "NO",
+        URL: process.env.NATS_URL,
+      });
       try {
         await this.signalClient.connect();
         this.logEvent("INFO", "✅ SignalClient connection established");
@@ -596,9 +604,10 @@ class HunterApplication {
     // Subscribe to top 5 symbols for CVD monitoring
     const topSymbols = this.currentHolograms.slice(0, 5);
 
-    for (const hologram of topSymbols) {
-      // Subscribe to Binance spot trades for CVD calculation
-      this.binanceClient.subscribeAggTrades(hologram.symbol, (trade) => {
+    // Prepare batch subscriptions
+    const subscriptions = topSymbols.map((hologram) => ({
+      symbol: hologram.symbol,
+      callback: (trade: any) => {
         // Record trade for CVD calculation
         const cvdTrade = {
           symbol: hologram.symbol,
@@ -612,8 +621,11 @@ class HunterApplication {
 
         // Record trade for Institutional Flow Classification
         this.institutionalFlowClassifier.recordTrade(cvdTrade);
-      });
-    }
+      },
+    }));
+
+    // Subscribe to Binance spot trades for CVD calculation in a single batch
+    this.binanceClient.subscribeAggTradesBatch(subscriptions);
   }
 
   /**
@@ -706,11 +718,13 @@ class HunterApplication {
       await this.initializeComponents();
 
       // Start all monitoring cycles
+      // Start all monitoring cycles
       this.startHologramScanCycle();
       this.startSessionMonitoring();
       this.startPOIDetectionCycle();
       this.startCVDMonitoring();
       this.startStateBroadcast();
+      this.startHealthServer();
 
       // Setup keyboard handling
       this.setupKeyboardHandling();
@@ -863,6 +877,32 @@ class HunterApplication {
 
     // Start the React-based Hunter Application
     startHunterApp();
+  }
+
+  /**
+   * Start HTTP Health Check Server
+   */
+  private startHealthServer(): void {
+    const http = require("http");
+    const port = 8083;
+
+    const server = http.createServer((req: any, res: any) => {
+      if (req.url === "/health") {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({
+          status: "healthy",
+          timestamp: new Date().toISOString(),
+          uptime: process.uptime(),
+        }));
+      } else {
+        res.writeHead(404);
+        res.end();
+      }
+    });
+
+    server.listen(port, "0.0.0.0", () => {
+      this.logEvent("INFO", `🏥 Health check server listening on port ${port}`);
+    });
   }
 
   /**

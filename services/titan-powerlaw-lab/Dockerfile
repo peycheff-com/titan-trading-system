@@ -5,11 +5,19 @@ WORKDIR /app
 
 # Copy root package files for workspace resolution
 COPY package.json package-lock.json ./
+COPY tsconfig.json ./
 COPY services/titan-powerlaw-lab/package.json services/titan-powerlaw-lab/
 
 # Install dependencies
 # Note: No shared dependency here as per package.json
 RUN npm ci --workspace=services/titan-powerlaw-lab
+
+# Copy shared service
+COPY services/shared/ services/shared/
+
+# Install dependencies for shared first (or all)
+RUN npm ci --workspace=services/shared
+RUN npm run build --workspace=services/shared
 
 # Copy source code
 COPY services/titan-powerlaw-lab services/titan-powerlaw-lab/
@@ -32,11 +40,12 @@ RUN addgroup -g 1001 -S titan && \
 
 # Copy built application and production dependencies
 COPY --from=builder /app/package.json /app/package-lock.json ./
+COPY --from=builder /app/services/shared services/shared/
 COPY --from=builder /app/services/titan-powerlaw-lab/package.json services/titan-powerlaw-lab/
 COPY --from=builder /app/services/titan-powerlaw-lab/dist services/titan-powerlaw-lab/dist/
 
-# Install production dependencies only
-RUN npm ci --workspace=services/titan-powerlaw-lab --omit=dev
+# Install production dependencies for all workspaces to ensure shared deps (like ws) are present
+RUN npm ci --omit=dev
 
 WORKDIR /app/services/titan-powerlaw-lab
 

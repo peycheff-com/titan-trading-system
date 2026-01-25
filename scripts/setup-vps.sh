@@ -46,15 +46,14 @@ echo "👤 Creating deploy user..."
 useradd -m -s /bin/bash -G docker deploy || true
 
 # =============================================================================
-# 6. CLONE REPOSITORY
+# 6. SETUP DIRECTORY (PUSH DEPLOYMENT MODE)
 # =============================================================================
 echo "📂 Setting up application directory..."
 mkdir -p /opt/titan
-cd /opt/titan
-
-if [ ! -d ".git" ]; then
-    git clone https://github.com/peycheff-com/titan-trading-system.git .
-fi
+# skip git clone for push deployment
+# if [ ! -d ".git" ]; then
+#     git clone https://github.com/peycheff-com/titan-trading-system.git .
+# fi
 
 chown -R deploy:deploy /opt/titan
 
@@ -62,17 +61,18 @@ chown -R deploy:deploy /opt/titan
 # 7. SETUP ENVIRONMENT
 # =============================================================================
 echo "⚙️ Setting up environment..."
-if [ ! -f ".env" ]; then
-    cp .env.example .env
-    echo "⚠️  Please edit /opt/titan/.env with your production values!"
-fi
+# Env file will be pushed manually
+# if [ ! -f ".env" ]; then
+#     cp .env.example .env
+#     echo "⚠️  Please edit /opt/titan/.env with your production values!"
+# fi
 
 # =============================================================================
-# 8. BUILD & START
+# 8. BUILD & START (SKIPPED IN SETUP)
 # =============================================================================
-echo "🏗️ Building and starting services..."
-docker compose -f docker-compose.prod.yml build --parallel
-docker compose -f docker-compose.prod.yml up -d
+echo "info: Skipping build/start in setup script. Run verify/deploy steps manually after code push."
+# docker compose -f docker-compose.prod.yml build --parallel
+# docker compose -f docker-compose.prod.yml up -d
 
 # =============================================================================
 # COMPLETE

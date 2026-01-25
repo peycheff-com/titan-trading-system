@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "build": "cargo build --release",
+    "build:all": "cargo build --release",
     "test": "cargo test",
     "start": "cargo run --release",
     "lint": "cargo clippy",

@@ -1,6 +1,6 @@
 use actix_web::{
     dev::{Service, ServiceRequest, ServiceResponse, Transform},
-    Error, HttpMessage, HttpResponse,
+    Error, HttpMessage,
 };
 use futures::future::{ok, Ready};
 use futures::Future;

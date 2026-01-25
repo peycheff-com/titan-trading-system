@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc && mkdir -p dist/db && cp src/db/schema.sql dist/db/",
+    "build:all": "npm run build",
     "start": "echo '[DEBUG] STARTING_BUILD' && npm run build && echo '[DEBUG] BUILD_COMPLETE' && npm run migrate && node dist/index.js",
     "dev": "tsc && node --watch dist/index.js",
     "test": "npm run test:unit",

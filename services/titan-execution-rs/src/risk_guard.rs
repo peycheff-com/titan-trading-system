@@ -91,7 +91,7 @@ use std::sync::atomic::{AtomicI64, Ordering};
 pub struct RiskGuard {
     policy: RwLock<RiskPolicy>,
     shadow_state: Arc<RwLock<ShadowState>>,
-    current_state: AtomicI64, // Keep for backward compat or remove? Let's keep for now but sync.
+    // current_state: AtomicI64, // Removed unused field
     last_heartbeat: AtomicI64,
     state_manager: RwLock<RiskStateManager>,
     staleness_monitor: RwLock<StalenessMonitor>,
@@ -103,7 +103,7 @@ impl RiskGuard {
         Self {
             policy: RwLock::new(policy),
             shadow_state,
-            current_state: AtomicI64::new(0), // 0=Normal
+            // current_state: AtomicI64::new(0),
             last_heartbeat: AtomicI64::new(chrono::Utc::now().timestamp_millis()),
             state_manager: RwLock::new(RiskStateManager::new()),
             staleness_monitor: RwLock::new(StalenessMonitor::new()),

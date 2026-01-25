@@ -27,7 +27,7 @@ use titan_execution_rs::risk_policy::RiskPolicy;
 use titan_execution_rs::shadow_state::ShadowState;
 use titan_execution_rs::simulation_engine::SimulationEngine;
 use titan_execution_rs::sre::SreMonitor;
-use tracing_subscriber::FmtSubscriber;
+// use tracing_subscriber::FmtSubscriber;
 
 fn load_secrets_from_files() {
     const FILE_SUFFIX: &str = "_FILE";
@@ -115,9 +115,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     // Connect to NATS
     let nats_url = env::var("NATS_URL").unwrap_or_else(|_| "nats://localhost:4222".to_string());
+    let nats_user = env::var("NATS_USER").ok();
+    let nats_pass = env::var("NATS_PASS").ok();
+
     info!("Connecting to NATS at {}", nats_url);
 
-    let nats_client = match async_nats::connect(&nats_url).await {
+    let mut connect_opts = async_nats::ConnectOptions::new();
+    if let (Some(user), Some(pass)) = (nats_user, nats_pass) {
+        connect_opts = connect_opts.user_and_password(user, pass);
+    }
+
+    let nats_client = match async_nats::connect_with_options(&nats_url, connect_opts).await {
         Ok(c) => {
             info!("✅ Connected to NATS");
             c
