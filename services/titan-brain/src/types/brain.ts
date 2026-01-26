@@ -153,3 +153,5 @@ export interface ActiveInferenceConfig {
   /** Offset for surprise sigmoid (center point) */
   surpriseOffset: number;
 }
+
+export const _forceEmit = true;

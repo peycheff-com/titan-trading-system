@@ -96,3 +96,5 @@ export interface BreakerCheckInput {
   dailyStartEquity: number;
   recentTrades: Array<{ pnl: number; timestamp: number }>;
 }
+
+export const _forceEmit = true;

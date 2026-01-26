@@ -6,5 +6,5 @@
     "types": ["node", "jest"]
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "tests", "src/index-enhanced.ts", "**/*.test.ts"]
+  "exclude": ["node_modules", "dist", "tests", "**/*.test.ts"]
 }

@@ -71,3 +71,5 @@ export interface ExecutionEngineClient {
   shutdown(): Promise<void>;
   healthCheck(): Promise<boolean>;
 }
+
+export const _forceEmit = true;

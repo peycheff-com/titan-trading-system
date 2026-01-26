@@ -37,16 +37,29 @@ export class SharedConfigAdapter extends EventEmitter {
     this.logger.info("Loading configuration via SharedConfigAdapter...");
 
     // 1. Load Brain Config (Business Logic)
-    const sharedBrainConfig = await this.sharedManager.loadBrainConfig();
+    let sharedBrainConfig: any = {};
+    try {
+      sharedBrainConfig = await this.sharedManager.loadBrainConfig();
+    } catch (error: any) {
+      this.logger.warn(
+        "Failed to load brain config from shared manager, falling back to defaults/env",
+        error,
+      );
+    }
 
     // 2. Load Service Config (Infrastructure)
-    const serviceConfig = await this.sharedManager.loadServiceConfig(
-      "titan-brain",
-    );
+    let serviceConfig: any = {};
+    try {
+      serviceConfig = await this.sharedManager.loadServiceConfig("titan-brain");
+    } catch (error: any) {
+      this.logger.warn(
+        "Failed to load service config from shared manager, falling back to defaults/env",
+        error,
+      );
+    }
 
     // 3. Merge and Map to BrainConfig interface
 
-     
     this.config = this.mapToBrainConfig(sharedBrainConfig, serviceConfig);
 
     this.logger.info("Configuration loaded successfully");

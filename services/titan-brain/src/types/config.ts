@@ -126,3 +126,5 @@ export interface EnvConfig {
   BYBIT_API_KEY?: string;
   BYBIT_API_SECRET?: string;
 }
+
+export const _forceEmit = true;

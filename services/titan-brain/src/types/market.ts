@@ -20,3 +20,5 @@ export interface MarketSignal {
     [key: string]: any;
   };
 }
+
+export const _forceEmit = true;

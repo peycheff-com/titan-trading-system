@@ -1,5 +1,5 @@
 // Initialize OpenTelemetry Tracing (Must be first)
-import "./tracing.js";
+// import "./tracing.js";
 
 /**
  * Titan Brain - Phase 5 Orchestrator (Enhanced)

@@ -72,3 +72,5 @@ export interface CapitalFlowConfig {
   /** Base delay for exponential backoff (ms) */
   retryBaseDelay: number;
 }
+
+export const _forceEmit = true;

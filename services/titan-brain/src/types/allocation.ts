@@ -71,3 +71,5 @@ export interface AllocationEngineConfig {
   transitionPoints: TransitionPoints;
   leverageCaps: LeverageCaps;
 }
+
+export const _forceEmit = true;

@@ -5,3 +5,5 @@
 
 export { BudgetState } from '@titan/shared';
 export type { ExecutionQualityReport, PhaseBudget } from '@titan/shared';
+
+export const _forceEmit = true;

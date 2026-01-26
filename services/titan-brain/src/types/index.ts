@@ -101,3 +101,5 @@ export {
   ServerConfig,
   TitanBrainConfig,
 } from './config.js';
+
+export const _forceEmit = true;

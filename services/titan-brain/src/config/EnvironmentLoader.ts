@@ -1,4 +1,13 @@
-import { EquityTier, TitanBrainConfig } from '../types/index.js';
+// import { EquityTier, TitanBrainConfig } from '../types/index.js'; // REMOVED
+
+export enum EquityTier {
+  MICRO = "MICRO", // < $1,500
+  SMALL = "SMALL", // $1,500 - $5,000
+  MEDIUM = "MEDIUM", // $5,000 - $25,000
+  LARGE = "LARGE", // $25,000 - $50,000
+  INSTITUTIONAL = "INSTITUTIONAL", // > $50,000
+}
+type TitanBrainConfig = any;
 
 export function loadConfigFromEnvironment(): Partial<TitanBrainConfig> {
   return {
@@ -18,7 +27,9 @@ export function loadConfigFromEnvironment(): Partial<TitanBrainConfig> {
 }
 
 function loadBrainConfig(): Partial<TitanBrainConfig> {
-  if (process.env.BRAIN_SIGNAL_TIMEOUT || process.env.BRAIN_METRIC_UPDATE_INTERVAL) {
+  if (
+    process.env.BRAIN_SIGNAL_TIMEOUT || process.env.BRAIN_METRIC_UPDATE_INTERVAL
+  ) {
     return {
       brain: {
         signalTimeout: process.env.BRAIN_SIGNAL_TIMEOUT
@@ -82,7 +93,10 @@ function loadAllocationConfig(): Partial<TitanBrainConfig> {
 }
 
 function loadPerformanceConfig(): Partial<TitanBrainConfig> {
-  if (process.env.PERFORMANCE_WINDOW_DAYS || process.env.PERFORMANCE_MIN_TRADE_COUNT) {
+  if (
+    process.env.PERFORMANCE_WINDOW_DAYS ||
+    process.env.PERFORMANCE_MIN_TRADE_COUNT
+  ) {
     return {
       performanceTracker: {
         windowDays: process.env.PERFORMANCE_WINDOW_DAYS
@@ -110,7 +124,9 @@ function loadPerformanceConfig(): Partial<TitanBrainConfig> {
 }
 
 function loadRiskConfig(): Partial<TitanBrainConfig> {
-  if (process.env.RISK_MAX_CORRELATION || process.env.RISK_CORRELATION_PENALTY) {
+  if (
+    process.env.RISK_MAX_CORRELATION || process.env.RISK_CORRELATION_PENALTY
+  ) {
     return {
       riskGuardian: {
         maxCorrelation: process.env.RISK_MAX_CORRELATION
@@ -135,7 +151,9 @@ function loadRiskConfig(): Partial<TitanBrainConfig> {
 }
 
 function loadCapitalConfig(): Partial<TitanBrainConfig> {
-  if (process.env.CAPITAL_SWEEP_THRESHOLD || process.env.CAPITAL_RESERVE_LIMIT) {
+  if (
+    process.env.CAPITAL_SWEEP_THRESHOLD || process.env.CAPITAL_RESERVE_LIMIT
+  ) {
     return {
       capitalFlow: {
         sweepThreshold: process.env.CAPITAL_SWEEP_THRESHOLD
@@ -158,7 +176,9 @@ function loadCapitalConfig(): Partial<TitanBrainConfig> {
 }
 
 function loadBreakerConfig(): Partial<TitanBrainConfig> {
-  if (process.env.BREAKER_MAX_DAILY_DRAWDOWN || process.env.BREAKER_MIN_EQUITY) {
+  if (
+    process.env.BREAKER_MAX_DAILY_DRAWDOWN || process.env.BREAKER_MIN_EQUITY
+  ) {
     return {
       circuitBreaker: {
         maxDailyDrawdown: process.env.BREAKER_MAX_DAILY_DRAWDOWN
@@ -225,8 +245,10 @@ function loadServerConfig(): Partial<TitanBrainConfig> {
     return {
       server: {
         host: process.env.SERVER_HOST,
-        port: process.env.SERVER_PORT ? parseInt(process.env.SERVER_PORT) : undefined,
-        corsOrigins: process.env.CORS_ORIGINS?.split(','),
+        port: process.env.SERVER_PORT
+          ? parseInt(process.env.SERVER_PORT)
+          : undefined,
+        corsOrigins: process.env.CORS_ORIGINS?.split(","),
       } as any,
     };
   }
@@ -245,9 +267,11 @@ function loadNotificationConfig(): Partial<TitanBrainConfig> {
         email: {
           enabled: !!process.env.EMAIL_SMTP_HOST,
           smtpHost: process.env.EMAIL_SMTP_HOST,
-          smtpPort: process.env.EMAIL_SMTP_PORT ? parseInt(process.env.EMAIL_SMTP_PORT) : undefined,
+          smtpPort: process.env.EMAIL_SMTP_PORT
+            ? parseInt(process.env.EMAIL_SMTP_PORT)
+            : undefined,
           from: process.env.EMAIL_FROM,
-          to: process.env.EMAIL_TO?.split(','),
+          to: process.env.EMAIL_TO?.split(","),
         },
       } as any,
     };
@@ -275,13 +299,15 @@ function loadServicesConfig(): Partial<TitanBrainConfig> {
 }
 
 function loadReconciliationConfig(): Partial<TitanBrainConfig> {
-  if (process.env.RECONCILIATION_INTERVAL || process.env.RECONCILIATION_EXCHANGES) {
+  if (
+    process.env.RECONCILIATION_INTERVAL || process.env.RECONCILIATION_EXCHANGES
+  ) {
     return {
       reconciliation: {
         intervalMs: process.env.RECONCILIATION_INTERVAL
           ? parseInt(process.env.RECONCILIATION_INTERVAL)
           : undefined,
-        exchanges: process.env.RECONCILIATION_EXCHANGES?.split(','),
+        exchanges: process.env.RECONCILIATION_EXCHANGES?.split(","),
       } as any,
     };
   }

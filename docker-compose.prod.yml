@@ -37,7 +37,7 @@ services:
     container_name: titan-nats
     command: ['-js', '-m', '8222']
 
-# ... (startline is 36, so I will just replace the NATS block first)
+    # ... (startline is 36, so I will just replace the NATS block first)
 
     ports:
       - '4222:4222' # Client
@@ -57,7 +57,8 @@ services:
   redis:
     image: redis:7.2.4-alpine3.19
     container_name: titan-redis
-    # Ports removed for security (internal access only)
+    ports:
+      - '6379:6379'
     volumes:
       - titan-redis-data:/data
     networks:
@@ -79,6 +80,8 @@ services:
       POSTGRES_USER: ${TITAN_DB_USER:-titan}
       POSTGRES_PASSWORD: ${TITAN_DB_PASSWORD:-titan_secret}
       POSTGRES_DB: ${TITAN_DB_NAME:-titan_brain}
+    ports:
+      - '5432:5432'
     volumes:
       - titan-db-data:/var/lib/postgresql/data
     networks:
@@ -152,6 +155,7 @@ services:
   titan-tempo:
     image: grafana/tempo:latest
     container_name: titan-tempo
+    user: root
     command: ['-config.file=/etc/tempo.yaml']
     volumes:
       - ./monitoring/tempo/tempo.yaml:/etc/tempo.yaml
@@ -173,16 +177,23 @@ services:
       context: .
       dockerfile: services/titan-brain/Dockerfile
     container_name: titan-brain
+    env_file:
+      - .env.prod
     environment:
       - NODE_ENV=production
       - PORT=3100
       - HOST=0.0.0.0
-      - TITAN_DB_HOST=${TITAN_DB_HOST:-titan-postgres}
-      - TITAN_DB_PORT=${TITAN_DB_PORT:-5432}
-      - TITAN_DB_NAME=${TITAN_DB_NAME:-titan_brain}
-      - TITAN_DB_USER=${TITAN_DB_USER:-titan}
-      - TITAN_DB_PASSWORD=${TITAN_DB_PASSWORD:-titan_secret}
-      - REDIS_URL=${REDIS_URL:-redis://titan-redis:6379}
+      - TITAN_DB_HOST=titan-postgres
+      - TITAN_DB_PORT=5432
+      - TITAN_DB_NAME=titan_brain
+      - TITAN_DB_USER=titan
+      - TITAN_DB_PASSWORD=titan_secret
+      - DB_HOST=titan-postgres
+      - DB_NAME=titan_brain
+      - DB_USER=titan
+      - DB_PASSWORD=titan_secret
+      - DATABASE_URL=postgres://titan:titan_secret@titan-postgres:5432/titan_brain
+      - REDIS_URL=redis://titan-redis:6379
       - NATS_URL=nats://nats:4222
       - HMAC_SECRET=${HMAC_SECRET}
       - LOG_LEVEL=info

@@ -86,3 +86,5 @@ export interface EventStore {
   getStream(traceId: string): Promise<TitanEvent[]>;
   replayAll(since: number): Promise<TitanEvent[]>;
 }
+
+export const _forceEmit = true;
