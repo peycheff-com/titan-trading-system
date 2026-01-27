@@ -39,7 +39,7 @@ export function SystemStatusBanner({
           <span>All services operational.</span>
           <span>Exchange Connected.</span>
           <span className="flex items-center gap-1 font-semibold">
-             <Scale className="h-3 w-3" /> Truth: {Math.round(truthConfidence * 100)}%
+            <Scale className="h-3 w-3" /> Truth: {Math.round(truthConfidence * 100)}%
           </span>
         </AlertDescription>
       </Alert>
@@ -71,9 +71,9 @@ export function SystemStatusBanner({
               </span>
             ))}
         {truthConfidence < 0.8 && (
-            <span className="flex items-center gap-1 text-amber-600 font-bold">
-                <Scale className="h-3 w-3" /> Trust Degraded ({Math.round(truthConfidence * 100)}%)
-            </span>
+          <span className="flex items-center gap-1 text-amber-600 font-bold">
+            <Scale className="h-3 w-3" /> Trust Degraded ({Math.round(truthConfidence * 100)}%)
+          </span>
         )}
       </AlertDescription>
     </Alert>

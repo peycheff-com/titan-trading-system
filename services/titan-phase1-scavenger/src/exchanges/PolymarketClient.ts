@@ -8,15 +8,14 @@ export interface PolymarketMarket {
 }
 
 export class PolymarketClient {
-  private baseURL = "https://gamma-api.polymarket.com";
+  private baseURL = 'https://gamma-api.polymarket.com';
 
   /**
    * Fetch active BTC markets from Polymarket
    */
   async getBTCMarkets(): Promise<PolymarketMarket[]> {
     try {
-      const url =
-        `${this.baseURL}/events?limit=20&active=true&closed=false&details=true&slug=crypto`;
+      const url = `${this.baseURL}/events?limit=20&active=true&closed=false&details=true&slug=crypto`;
       const response = await fetch(url);
 
       if (!response.ok) {
@@ -29,32 +28,31 @@ export class PolymarketClient {
         | { markets: PolymarketMarket[] };
       const data: PolymarketMarket[] = Array.isArray(rawData)
         ? rawData
-        : "events" in rawData
-        ? rawData.events
-        : "markets" in rawData
-        ? rawData.markets
-        : [];
+        : 'events' in rawData
+          ? rawData.events
+          : 'markets' in rawData
+            ? rawData.markets
+            : [];
 
       // Filter for BTC related markets manually for safety
       const markets = data.filter(
         (m) =>
           m.question &&
-          (m.question.includes("Bitcoin") || m.question.includes("BTC")) &&
-          m.question.includes("Price"),
+          (m.question.includes('Bitcoin') || m.question.includes('BTC')) &&
+          m.question.includes('Price'),
       );
 
       return markets.map((m) => ({
         id: m.id,
         question: m.question,
-        outcomePrices: typeof m.outcomePrices === "string"
-          ? JSON.parse(m.outcomePrices)
-          : m.outcomePrices, // Handle JSON string if needed
+        outcomePrices:
+          typeof m.outcomePrices === 'string' ? JSON.parse(m.outcomePrices) : m.outcomePrices, // Handle JSON string if needed
         clobTokenIds: m.clobTokenIds,
         volume: m.volume,
         endDate: m.endDate,
       }));
     } catch (error) {
-      console.error("Error fetching Polymarket data:", error);
+      console.error('Error fetching Polymarket data:', error);
       return [];
     }
   }
@@ -74,9 +72,8 @@ export class PolymarketClient {
       return {
         id: m.id,
         question: m.question,
-        outcomePrices: typeof m.outcomePrices === "string"
-          ? JSON.parse(m.outcomePrices)
-          : m.outcomePrices,
+        outcomePrices:
+          typeof m.outcomePrices === 'string' ? JSON.parse(m.outcomePrices) : m.outcomePrices,
         clobTokenIds: m.clobTokenIds,
         volume: m.volume,
         endDate: m.endDate,

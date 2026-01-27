@@ -37,10 +37,10 @@ chmod +x scripts/provision-infrastructure.sh
 
 ### 2. Validate Installation
 
+Manually verify service status:
+
 ```bash
-# Run validation script
-chmod +x scripts/validate-infrastructure.sh
-./scripts/validate-infrastructure.sh
+docker compose -f docker-compose.prod.yml ps
 ```
 
 ### 3. Configure Environment
@@ -156,20 +156,15 @@ vm.swappiness = 10
 
 ## Validation and Testing
 
-### Infrastructure Validation Script
-The validation script checks all components and configurations:
+### Infrastructure Validation
+
+Ensure all containers are running and healthy:
 
 ```bash
-./scripts/validate-infrastructure.sh
+docker compose -f docker-compose.prod.yml ps
 ```
 
-**Validation Checks:**
-- System specifications (RAM, CPU, disk)
-- Dependency installations and versions
-- Service status and connectivity
-- Security configurations
-- System limits and kernel parameters
-- Directory structure and permissions
+The output should show `healthy` status for core services (nats, redis, postgres).
 
 ### Manual Validation Commands
 
@@ -281,27 +276,12 @@ After successful infrastructure provisioning:
 
 1. **Deploy Titan Services**
    ```bash
-   ./scripts/deploy-services.sh
+   docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
    ```
 
-2. **Configure Monitoring**
+2. **Verify Logs**
    ```bash
-   ./scripts/setup-monitoring.sh
-   ```
-
-3. **Set Up Backup System**
-   ```bash
-   ./scripts/setup-backups.sh
-   ```
-
-4. **Run Security Audit**
-   ```bash
-   ./scripts/security-audit.sh
-   ```
-
-5. **Performance Testing**
-   ```bash
-   ./scripts/performance-test.sh
+   docker compose -f docker-compose.prod.yml logs -f
    ```
 
 ## Support and Documentation

@@ -37,21 +37,22 @@ export default function SentinelPhase() {
   };
 
   // Maps backend positions to UI format
-  const basisTrades = health?.positions.map((p: any) => ({
+  const basisTrades =
+    health?.positions.map((p: any) => ({
       pair: p.symbol,
       currentBasis: p.currentBasis,
       avgBasis: p.entryBasis, // approximate
       position: p.spotSize * p.spotEntry, // USD value
-      pnl: p.unrealizedPnL
-  })) || [];
+      pnl: p.unrealizedPnL,
+    })) || [];
 
   // Placeholder for funding rates if not in health report (often separate stream)
   const fundingRates: any[] = [];
 
   const hedgeStatus = {
-      hedgeRatio: 1.0, // active arb aims for 1.0
-      targetRatio: 1.0,
-      deltaExposure: health?.delta || 0
+    hedgeRatio: 1.0, // active arb aims for 1.0
+    targetRatio: 1.0,
+    deltaExposure: health?.delta || 0,
   };
 
   const handleCreateDraft = () => {
@@ -78,7 +79,7 @@ export default function SentinelPhase() {
             </p>
           </div>
         </div>
-        <StatusPill status={status.status} size="md" />
+        <StatusPill status={status.status as any} size="md" />
       </div>
 
       {/* Phase Intent Card */}
@@ -152,7 +153,7 @@ export default function SentinelPhase() {
                 key: 'currentBasis',
                 header: 'Current',
                 align: 'right',
-                render: (t) => (
+                render: (t: any) => (
                   <span
                     className={cn(
                       'font-mono',
@@ -167,7 +168,7 @@ export default function SentinelPhase() {
                 key: 'avgBasis',
                 header: 'Avg',
                 align: 'right',
-                render: (t) => (
+                render: (t: any) => (
                   <span className="font-mono text-muted-foreground">
                     {(t.avgBasis * 100).toFixed(3)}%
                   </span>
@@ -177,13 +178,13 @@ export default function SentinelPhase() {
                 key: 'position',
                 header: 'Position',
                 align: 'right',
-                render: (t) => formatCurrency(t.position),
+                render: (t: any) => formatCurrency(t.position),
               },
               {
                 key: 'pnl',
                 header: 'PnL',
                 align: 'right',
-                render: (t) => (
+                render: (t: any) => (
                   <span
                     className={cn(
                       'font-mono',
@@ -196,7 +197,7 @@ export default function SentinelPhase() {
               },
             ]}
             data={basisTrades}
-            keyExtractor={(t) => t.pair}
+            keyExtractor={(t: any) => t.pair}
           />
         </div>
 
@@ -214,7 +215,7 @@ export default function SentinelPhase() {
                 key: 'current',
                 header: 'Current',
                 align: 'right',
-                render: (f) => (
+                render: (f: any) => (
                   <span
                     className={cn(
                       'font-mono',
@@ -229,7 +230,7 @@ export default function SentinelPhase() {
                 key: 'predicted',
                 header: 'Predicted',
                 align: 'right',
-                render: (f) => (
+                render: (f: any) => (
                   <span className="font-mono text-muted-foreground">
                     {formatPercent(f.predicted * 100, 4)}
                   </span>
@@ -238,7 +239,7 @@ export default function SentinelPhase() {
               { key: 'nextIn', header: 'Next In', align: 'right' },
             ]}
             data={fundingRates}
-            keyExtractor={(f) => f.symbol}
+            keyExtractor={(f: any) => f.symbol}
           />
         </div>
       </div>

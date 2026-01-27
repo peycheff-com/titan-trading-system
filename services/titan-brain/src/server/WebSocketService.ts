@@ -144,7 +144,7 @@ export class WebSocketService {
    */
   attachToServer(server: { server: unknown }): void {
     // Create WebSocket server attached to the HTTP server
-     
+
     this.wss = new WebSocketServer({
       server: server.server as import('http').Server,
       path: '/ws/console',
@@ -162,7 +162,6 @@ export class WebSocketService {
    * Create standalone WebSocket server on a specific port
    */
   listen(port: number, host: string = '0.0.0.0'): void {
-     
     this.wss = new WebSocketServer({
       port,
       host,
@@ -226,7 +225,6 @@ export class WebSocketService {
         endpoint,
       };
 
-       
       this.clients.set(ws, clientInfo);
       this.logger.info(`WebSocket client connected: ${clientId} on ${endpoint}`);
 
@@ -244,7 +242,7 @@ export class WebSocketService {
         if (info) {
           this.logger.info(`WebSocket client disconnected: ${info.id}`);
         }
-         
+
         this.clients.delete(ws);
       });
 
@@ -299,14 +297,12 @@ export class WebSocketService {
         case 'ping':
           this.sendToClient(ws, { type: 'pong', timestamp: Date.now() });
           if (clientInfo) {
-             
             clientInfo.lastPing = Date.now();
           }
           break;
 
         case 'pong':
           if (clientInfo) {
-             
             clientInfo.lastPing = Date.now();
           }
           break;
@@ -433,7 +429,6 @@ export class WebSocketService {
    * Update master arm state
    */
   setMasterArm(enabled: boolean): void {
-     
     this.masterArm = enabled;
     this.broadcastStateUpdate();
   }
@@ -442,7 +437,6 @@ export class WebSocketService {
    * Update positions
    */
   setPositions(positions: Position[]): void {
-     
     this.positions = positions;
     this.broadcastStateUpdate();
   }
@@ -478,7 +472,6 @@ export class WebSocketService {
    * Start ping interval to keep connections alive
    */
   private startPingInterval(): void {
-     
     this.pingIntervalId = setInterval(() => {
       const now = Date.now();
 
@@ -487,7 +480,7 @@ export class WebSocketService {
         if (now - info.lastPing > this.config.pingTimeout + this.config.pingInterval) {
           this.logger.warn(`Client ${info.id} timed out, closing connection`);
           ws.terminate();
-           
+
           this.clients.delete(ws);
           return;
         }
@@ -509,7 +502,6 @@ export class WebSocketService {
       return;
     }
 
-     
     this.stateUpdateIntervalId = setInterval(() => {
       if (this.clients.size > 0) {
         this.broadcastStateUpdate();
@@ -538,13 +530,13 @@ export class WebSocketService {
     // Stop intervals
     if (this.pingIntervalId) {
       clearInterval(this.pingIntervalId);
-       
+
       this.pingIntervalId = null;
     }
 
     if (this.stateUpdateIntervalId) {
       clearInterval(this.stateUpdateIntervalId);
-       
+
       this.stateUpdateIntervalId = null;
     }
 
@@ -552,7 +544,7 @@ export class WebSocketService {
     this.clients.forEach((info, ws) => {
       ws.close(1000, 'Server shutting down');
     });
-     
+
     this.clients.clear();
 
     // Close WebSocket server
@@ -560,7 +552,7 @@ export class WebSocketService {
       await new Promise<void>((resolve) => {
         this.wss!.close(() => resolve());
       });
-       
+
       this.wss = null;
     }
 

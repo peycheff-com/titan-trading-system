@@ -19,7 +19,6 @@ const actionTypes = {
   REMOVE_TOAST: 'REMOVE_TOAST',
 } as const;
 
- 
 let count = 0;
 
 function genId() {
@@ -59,7 +58,6 @@ const addToRemoveQueue = (toastId: string) => {
   }
 
   const timeout = setTimeout(() => {
-     
     toastTimeouts.delete(toastId);
     dispatch({
       type: 'REMOVE_TOAST',
@@ -67,7 +65,6 @@ const addToRemoveQueue = (toastId: string) => {
     });
   }, TOAST_REMOVE_DELAY);
 
-   
   toastTimeouts.set(toastId, timeout);
 };
 
@@ -126,7 +123,6 @@ export const reducer = (state: State, action: Action): State => {
 
 const listeners: Array<(state: State) => void> = [];
 
- 
 let memoryState: State = { toasts: [] };
 
 function dispatch(action: Action) {
@@ -171,12 +167,10 @@ function useToast() {
   const [state, setState] = React.useState<State>(memoryState);
 
   React.useEffect(() => {
-     
     listeners.push(setState);
     return () => {
       const index = listeners.indexOf(setState);
       if (index > -1) {
-         
         listeners.splice(index, 1);
       }
     };

@@ -167,10 +167,10 @@ export default function Overview() {
               compact
             />
           </div>
-          
+
           {/* AI Consciousness (New) */}
           <div className="mt-4">
-             <AIStateWidget aiState={data?.aiState} />
+            <AIStateWidget aiState={data?.aiState} />
           </div>
         </div>
       </div>

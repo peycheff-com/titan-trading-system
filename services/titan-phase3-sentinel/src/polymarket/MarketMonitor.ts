@@ -1,6 +1,6 @@
-import { Market, PolymarketClient } from "./PolymarketClient.js";
-import { ArbEngine, ArbSignal } from "./ArbEngine.js";
-import { SignalClient } from "@titan/shared";
+import { Market, PolymarketClient } from './PolymarketClient.js';
+import { ArbEngine, ArbSignal } from './ArbEngine.js';
+import { SignalClient } from '@titan/shared';
 // import { v4 as uuidv4 } from 'uuid';
 
 export class MarketMonitor {
@@ -13,14 +13,14 @@ export class MarketMonitor {
   constructor(private intervalMs: number = 5000) {
     this.client = new PolymarketClient();
     this.engine = new ArbEngine();
-    this.signalClient = new SignalClient({ source: "sentinel" });
+    this.signalClient = new SignalClient({ source: 'sentinel' });
   }
 
   async start() {
     if (this.isRunning) return;
     // eslint-disable-next-line functional/immutable-data
     this.isRunning = true;
-    console.log("Starting Market Monitor...");
+    console.log('Starting Market Monitor...');
 
     this.poll(); // Initial poll
     // eslint-disable-next-line functional/immutable-data
@@ -35,7 +35,7 @@ export class MarketMonitor {
       // eslint-disable-next-line functional/immutable-data
       this.pollingInterval = null;
     }
-    console.log("Market Monitor stopped.");
+    console.log('Market Monitor stopped.');
   }
 
   private async poll() {
@@ -53,7 +53,7 @@ export class MarketMonitor {
         }
       }
     } catch (error) {
-      console.error("Error in poll loop:", error);
+      console.error('Error in poll loop:', error);
     }
   }
 
@@ -64,22 +64,18 @@ export class MarketMonitor {
     }
 
     for (const signal of signals) {
-      console.log(
-        `[SIGNAL] ${signal.type} on ${market.slug} (${signal.outcomeId})`,
-      );
+      console.log(`[SIGNAL] ${signal.type} on ${market.slug} (${signal.outcomeId})`);
 
       // Dispatch to Titan Brain via SignalClient
       // signal_id generation can be handled here or in client
-      const signalId = `sentinel-poly-${Date.now()}-${
-        Math.floor(Math.random() * 1000)
-      }`;
+      const signalId = `sentinel-poly-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
       const prepareResp = await this.signalClient.sendPrepare({
         signal_id: signalId,
-        source: "sentinel",
-        symbol: "POLYMARKET", // Sentinel logic should resolve this or pass metadata
-        direction: "LONG",
-        type: "BUY_SETUP" as any, // Temporary cast until shared types updated
+        source: 'sentinel',
+        symbol: 'POLYMARKET', // Sentinel logic should resolve this or pass metadata
+        direction: 'LONG',
+        type: 'BUY_SETUP' as any, // Temporary cast until shared types updated
         entry_zone: { min: signal.price, max: signal.price * 1.05 },
         stop_loss: 0,
         take_profits: [],
@@ -97,12 +93,12 @@ export class MarketMonitor {
       if (prepareResp.prepared) {
         const confirmResp = await this.signalClient.sendConfirm(signalId);
         if (confirmResp.executed) {
-          console.log("  > Dispatched to Titan Brain (SignalClient) ✓");
+          console.log('  > Dispatched to Titan Brain (SignalClient) ✓');
         } else {
-          console.log("  > Brain Rejected ✗: " + confirmResp.reason);
+          console.log('  > Brain Rejected ✗: ' + confirmResp.reason);
         }
       } else {
-        console.log("  > Prepare FAILED ✗: " + prepareResp.reason);
+        console.log('  > Prepare FAILED ✗: ' + prepareResp.reason);
       }
     }
   }

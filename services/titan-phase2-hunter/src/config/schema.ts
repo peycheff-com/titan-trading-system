@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { EventCategory } from "../types";
+import { z } from 'zod';
+import { EventCategory } from '../types';
 
 // Inline definition to avoid import issues during testing
 export const ExchangeConfigBase = z.object({
@@ -31,11 +31,10 @@ export const PhaseConfigBaseSchema = z.object({
           maxDrawdown: z.number().min(0.01).max(1).optional(),
           maxPositionSize: z.number().min(0.01).max(1).optional(),
           riskPerTrade: z.number().min(0.001).max(0.1).optional(),
-          exchanges: z.record(z.string(), ExchangeConfigBase.partial())
-            .optional(),
+          exchanges: z.record(z.string(), ExchangeConfigBase.partial()).optional(),
           parameters: z.record(z.string(), z.unknown()).optional(),
         })
-        .partial(),
+        .partial()
     )
     .optional(),
 });
@@ -50,9 +49,9 @@ export const AlignmentWeightsSchema = z
     h4: z.number().min(20).max(40), // 20-40%
     m15: z.number().min(10).max(30), // 10-30%
   })
-  .refine((data) => Math.abs(data.daily + data.h4 + data.m15 - 100) <= 0.1, {
-    message: "Alignment weights must sum to 100%",
-    path: ["daily"], // Highlight "daily" but applies to the whole object
+  .refine(data => Math.abs(data.daily + data.h4 + data.m15 - 100) <= 0.1, {
+    message: 'Alignment weights must sum to 100%',
+    path: ['daily'], // Highlight "daily" but applies to the whole object
   });
 
 export const RSConfigSchema = z.object({
@@ -117,32 +116,39 @@ export const BotTrapConfigSchema = z.object({
 
 export const GlobalAggregatorConfigSchema = z.object({
   enabled: z.boolean(),
-  exchanges: z.array(z.enum(["binance", "coinbase", "kraken"])),
-  exchangeWeights: z.object({
-    binance: z.number().min(20).max(50),
-    coinbase: z.number().min(20).max(50),
-    kraken: z.number().min(20).max(50),
-  }).refine((weights) => {
-    const sum = weights.binance + weights.coinbase + weights.kraken;
-    return Math.abs(sum - 100) <= 0.1;
-  }, { message: "Exchange weights must sum to 100%" }),
-  weightingMethod: z.enum(["volume", "liquidity", "hybrid"]),
+  exchanges: z.array(z.enum(['binance', 'coinbase', 'kraken'])),
+  exchangeWeights: z
+    .object({
+      binance: z.number().min(20).max(50),
+      coinbase: z.number().min(20).max(50),
+      kraken: z.number().min(20).max(50),
+    })
+    .refine(
+      weights => {
+        const sum = weights.binance + weights.coinbase + weights.kraken;
+        return Math.abs(sum - 100) <= 0.1;
+      },
+      { message: 'Exchange weights must sum to 100%' }
+    ),
+  weightingMethod: z.enum(['volume', 'liquidity', 'hybrid']),
   consensusThreshold: z.number().min(0.5).max(1.0),
   manipulationSensitivity: z.number(),
   reconnectInterval: z.number(),
 });
 
-export const ConvictionConfigSchema = z.object({
-  enabled: z.boolean(),
-  minMultiplier: z.number().min(0.5).max(1.5),
-  maxMultiplier: z.number().min(1.0).max(2.0), // Requirement 16.5 & 7.5
-  oracleAlignmentBonus: z.number(),
-  globalCVDBonus: z.number(),
-  trapReduction: z.number(),
-}).refine((data) => data.minMultiplier < data.maxMultiplier, {
-  message: "Min multiplier must be less than max multiplier",
-  path: ["minMultiplier"],
-});
+export const ConvictionConfigSchema = z
+  .object({
+    enabled: z.boolean(),
+    minMultiplier: z.number().min(0.5).max(1.5),
+    maxMultiplier: z.number().min(1.0).max(2.0), // Requirement 16.5 & 7.5
+    oracleAlignmentBonus: z.number(),
+    globalCVDBonus: z.number(),
+    trapReduction: z.number(),
+  })
+  .refine(data => data.minMultiplier < data.maxMultiplier, {
+    message: 'Min multiplier must be less than max multiplier',
+    path: ['minMultiplier'],
+  });
 
 export const EnhancedRiskConfigSchema = z.object({
   highImpactEventThreshold: z.number(),
@@ -178,7 +184,7 @@ export const HunterConfigSchema = PhaseConfigBaseSchema.extend({
   // Enhanced 2026 Sections
   oracle: OracleConfigSchema.default({
     enabled: true,
-    polymarketApiKey: "",
+    polymarketApiKey: '',
     vetoThreshold: 40,
     convictionMultiplierMax: 1.5,
     eventCategories: [
@@ -213,9 +219,9 @@ export const HunterConfigSchema = PhaseConfigBaseSchema.extend({
   }),
   globalAggregator: GlobalAggregatorConfigSchema.default({
     enabled: true,
-    exchanges: ["binance", "coinbase", "kraken"],
+    exchanges: ['binance', 'coinbase', 'kraken'],
     exchangeWeights: { binance: 40, coinbase: 35, kraken: 25 },
-    weightingMethod: "volume",
+    weightingMethod: 'volume',
     consensusThreshold: 0.67,
     manipulationSensitivity: 70,
     reconnectInterval: 5000,

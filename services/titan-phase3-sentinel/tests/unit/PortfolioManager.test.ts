@@ -11,7 +11,7 @@ jest.mock("../../src/portfolio/TransferManager.js");
 const mockGateway = {
     name: "mock",
     initialize: jest.fn(),
-    getPrice: jest.fn().mockResolvedValue(100),
+    getPrice: jest.fn().mockReturnValue(Promise.resolve(100)) as any,
     getAccountInfo: jest.fn(),
     executeOrder: jest.fn(),
     transfer: jest.fn(),

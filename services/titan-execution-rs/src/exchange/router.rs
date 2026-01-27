@@ -22,6 +22,12 @@ pub struct ExecutionRouter {
     routing: RoutingConfig,
 }
 
+impl Default for ExecutionRouter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ExecutionRouter {
     pub fn new() -> Self {
         Self::with_routing(RoutingConfig::default())

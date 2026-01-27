@@ -10,7 +10,7 @@
  * - 5.6: Add enhanced signal confidence calculation
  */
 
-import { EventEmitter } from "events";
+import { EventEmitter } from 'events';
 import {
   BotTrapAnalysis,
   ConflictAnalysis,
@@ -20,8 +20,8 @@ import {
   LayerValidation,
   OracleScore,
   TechnicalSignal,
-} from "../types";
-import { HologramState } from "../types";
+} from '../types';
+import { HologramState } from '../types';
 
 /**
  * Signal validation configuration
@@ -32,7 +32,7 @@ export interface SignalValidatorConfig {
   requireGlobalCVDConfirmation: boolean;
   botTrapVetoEnabled: boolean;
   minConfidenceThreshold: number;
-  conflictResolutionStrategy: "conservative" | "weighted" | "majority";
+  conflictResolutionStrategy: 'conservative' | 'weighted' | 'majority';
 }
 
 // Types moved to ../../types/index.ts
@@ -46,7 +46,7 @@ export const DEFAULT_SIGNAL_VALIDATOR_CONFIG: SignalValidatorConfig = {
   requireGlobalCVDConfirmation: true,
   botTrapVetoEnabled: true,
   minConfidenceThreshold: 50,
-  conflictResolutionStrategy: "conservative",
+  conflictResolutionStrategy: 'conservative',
 };
 
 /**
@@ -71,7 +71,7 @@ export class SignalValidator extends EventEmitter {
     oracleScore: OracleScore | null,
     flowValidation: FlowValidation | null,
     botTrapAnalysis: BotTrapAnalysis | null,
-    globalCVD: GlobalCVDData | null,
+    globalCVD: GlobalCVDData | null
   ): EnhancedValidationResult {
     const reasoning: string[] = [];
     const layerValidations: LayerValidation[] = [];
@@ -104,27 +104,27 @@ export class SignalValidator extends EventEmitter {
     const adjustedConfidence = this.calculateAdjustedConfidence(
       signal.confidence,
       layerValidations,
-      conflictAnalysis,
+      conflictAnalysis
     );
 
     // Determine final recommendation
     const recommendation = this.determineRecommendation(
       layerValidations,
       conflictAnalysis,
-      adjustedConfidence,
+      adjustedConfidence
     );
 
     // Build reasoning
     for (const validation of layerValidations) {
-      if (validation.recommendation !== "proceed") {
+      if (validation.recommendation !== 'proceed') {
         // eslint-disable-next-line functional/immutable-data
         reasoning.push(`${validation.layer}: ${validation.reasoning}`);
       }
     }
 
     // Determine overall validity
-    const isValid = recommendation !== "veto" &&
-      adjustedConfidence >= this.config.minConfidenceThreshold;
+    const isValid =
+      recommendation !== 'veto' && adjustedConfidence >= this.config.minConfidenceThreshold;
 
     const result: EnhancedValidationResult = {
       isValid,
@@ -137,7 +137,7 @@ export class SignalValidator extends EventEmitter {
       timestamp: new Date(),
     };
 
-    this.emit("signalValidated", result);
+    this.emit('signalValidated', result);
     return result;
   }
 
@@ -146,61 +146,56 @@ export class SignalValidator extends EventEmitter {
    */
   private validateOracleLayer(
     signal: TechnicalSignal,
-    oracleScore: OracleScore | null,
+    oracleScore: OracleScore | null
   ): LayerValidation {
     if (!oracleScore) {
       return {
-        layer: "oracle",
+        layer: 'oracle',
         isValid: !this.config.requireOracleConfirmation,
         confidence: 0,
-        reasoning: "No Oracle data available",
-        recommendation: this.config.requireOracleConfirmation
-          ? "caution"
-          : "proceed",
+        reasoning: 'No Oracle data available',
+        recommendation: this.config.requireOracleConfirmation ? 'caution' : 'proceed',
       };
     }
 
     // Check for veto
     if (oracleScore.veto) {
       return {
-        layer: "oracle",
+        layer: 'oracle',
         isValid: false,
         confidence: oracleScore.confidence,
-        reasoning: oracleScore.vetoReason || "Oracle veto triggered",
-        recommendation: "veto",
+        reasoning: oracleScore.vetoReason || 'Oracle veto triggered',
+        recommendation: 'veto',
       };
     }
 
     // Check alignment
-    const isAligned = this.isOracleAligned(
-      signal.direction,
-      oracleScore.sentiment,
-    );
+    const isAligned = this.isOracleAligned(signal.direction, oracleScore.sentiment);
 
     if (isAligned && oracleScore.sentiment >= 40) {
       return {
-        layer: "oracle",
+        layer: 'oracle',
         isValid: true,
         confidence: oracleScore.confidence,
         reasoning: `Oracle aligned (sentiment: ${oracleScore.sentiment})`,
-        recommendation: "proceed",
+        recommendation: 'proceed',
       };
     } else if (!isAligned && Math.abs(oracleScore.sentiment) >= 40) {
       return {
-        layer: "oracle",
+        layer: 'oracle',
         isValid: false,
         confidence: oracleScore.confidence,
         reasoning: `Oracle conflicts (sentiment: ${oracleScore.sentiment})`,
-        recommendation: "caution",
+        recommendation: 'caution',
       };
     }
 
     return {
-      layer: "oracle",
+      layer: 'oracle',
       isValid: true,
       confidence: oracleScore.confidence,
-      reasoning: "Oracle neutral",
-      recommendation: "proceed",
+      reasoning: 'Oracle neutral',
+      recommendation: 'proceed',
     };
   }
 
@@ -209,124 +204,114 @@ export class SignalValidator extends EventEmitter {
    */
   private validateFlowLayer(
     signal: TechnicalSignal,
-    flowValidation: FlowValidation | null,
+    flowValidation: FlowValidation | null
   ): LayerValidation {
     if (!flowValidation) {
       return {
-        layer: "flow",
+        layer: 'flow',
         isValid: !this.config.requireFlowConfirmation,
         confidence: 0,
-        reasoning: "No Flow validation data available",
-        recommendation: this.config.requireFlowConfirmation
-          ? "caution"
-          : "proceed",
+        reasoning: 'No Flow validation data available',
+        recommendation: this.config.requireFlowConfirmation ? 'caution' : 'proceed',
       };
     }
 
     if (!flowValidation.isValid) {
       return {
-        layer: "flow",
+        layer: 'flow',
         isValid: false,
         confidence: flowValidation.confidence,
         reasoning: `Flow validation failed (${flowValidation.flowType})`,
-        recommendation: "caution",
+        recommendation: 'caution',
       };
     }
 
     // Check for institutional flow alignment
     if (
-      flowValidation.flowType === "passive_absorption" &&
+      flowValidation.flowType === 'passive_absorption' &&
       flowValidation.institutionalProbability >= 70
     ) {
       return {
-        layer: "flow",
+        layer: 'flow',
         isValid: true,
         confidence: flowValidation.confidence,
-        reasoning: `Institutional absorption detected (${
-          flowValidation.institutionalProbability.toFixed(
-            0,
-          )
-        }%)`,
-        recommendation: "proceed",
+        reasoning: `Institutional absorption detected (${flowValidation.institutionalProbability.toFixed(
+          0
+        )}%)`,
+        recommendation: 'proceed',
       };
     }
 
-    if (flowValidation.flowType === "aggressive_pushing") {
+    if (flowValidation.flowType === 'aggressive_pushing') {
       return {
-        layer: "flow",
+        layer: 'flow',
         isValid: true,
         confidence: flowValidation.confidence,
-        reasoning: "Aggressive pushing detected - proceed with caution",
-        recommendation: "caution",
+        reasoning: 'Aggressive pushing detected - proceed with caution',
+        recommendation: 'caution',
       };
     }
 
     return {
-      layer: "flow",
+      layer: 'flow',
       isValid: true,
       confidence: flowValidation.confidence,
       reasoning: `Flow validated (${flowValidation.flowType})`,
-      recommendation: "proceed",
+      recommendation: 'proceed',
     };
   }
 
   /**
    * Validate Bot Trap layer
    */
-  private validateBotTrapLayer(
-    botTrapAnalysis: BotTrapAnalysis | null,
-  ): LayerValidation {
+  private validateBotTrapLayer(botTrapAnalysis: BotTrapAnalysis | null): LayerValidation {
     if (!botTrapAnalysis) {
       return {
-        layer: "botTrap",
+        layer: 'botTrap',
         isValid: true,
         confidence: 0,
-        reasoning: "No Bot Trap analysis available",
-        recommendation: "proceed",
+        reasoning: 'No Bot Trap analysis available',
+        recommendation: 'proceed',
       };
     }
 
     if (!botTrapAnalysis.isSuspect) {
       return {
-        layer: "botTrap",
+        layer: 'botTrap',
         isValid: true,
         confidence: 100 - botTrapAnalysis.suspicionScore,
-        reasoning: "No bot trap detected",
-        recommendation: "proceed",
+        reasoning: 'No bot trap detected',
+        recommendation: 'proceed',
       };
     }
 
     // Check suspicion level
-    if (
-      botTrapAnalysis.suspicionScore >= 80 && this.config.botTrapVetoEnabled
-    ) {
+    if (botTrapAnalysis.suspicionScore >= 80 && this.config.botTrapVetoEnabled) {
       return {
-        layer: "botTrap",
+        layer: 'botTrap',
         isValid: false,
         confidence: 100 - botTrapAnalysis.suspicionScore,
-        reasoning:
-          `High bot trap suspicion (${botTrapAnalysis.suspicionScore}%)`,
-        recommendation: "veto",
+        reasoning: `High bot trap suspicion (${botTrapAnalysis.suspicionScore}%)`,
+        recommendation: 'veto',
       };
     }
 
     if (botTrapAnalysis.suspicionScore >= 50) {
       return {
-        layer: "botTrap",
+        layer: 'botTrap',
         isValid: true,
         confidence: 100 - botTrapAnalysis.suspicionScore,
-        reasoning:
-          `Moderate bot trap suspicion (${botTrapAnalysis.suspicionScore}%)`,
-        recommendation: "caution",
+        reasoning: `Moderate bot trap suspicion (${botTrapAnalysis.suspicionScore}%)`,
+        recommendation: 'caution',
       };
     }
 
     return {
-      layer: "botTrap",
+      layer: 'botTrap',
       isValid: true,
       confidence: 100 - botTrapAnalysis.suspicionScore,
       reasoning: `Low bot trap suspicion (${botTrapAnalysis.suspicionScore}%)`,
-      recommendation: "proceed",
+      recommendation: 'proceed',
     };
   }
 
@@ -335,74 +320,68 @@ export class SignalValidator extends EventEmitter {
    */
   private validateGlobalCVDLayer(
     signal: TechnicalSignal,
-    globalCVD: GlobalCVDData | null,
+    globalCVD: GlobalCVDData | null
   ): LayerValidation {
     if (!globalCVD) {
       return {
-        layer: "globalCVD",
+        layer: 'globalCVD',
         isValid: !this.config.requireGlobalCVDConfirmation,
         confidence: 0,
-        reasoning: "No Global CVD data available",
-        recommendation: this.config.requireGlobalCVDConfirmation
-          ? "caution"
-          : "proceed",
+        reasoning: 'No Global CVD data available',
+        recommendation: this.config.requireGlobalCVDConfirmation ? 'caution' : 'proceed',
       };
     }
 
     // Check for manipulation
     if (globalCVD.manipulation.detected) {
       return {
-        layer: "globalCVD",
+        layer: 'globalCVD',
         isValid: false,
         confidence: globalCVD.confidence,
-        reasoning:
-          `Manipulation detected on ${globalCVD.manipulation.suspectExchange}`,
-        recommendation: "veto",
+        reasoning: `Manipulation detected on ${globalCVD.manipulation.suspectExchange}`,
+        recommendation: 'veto',
       };
     }
 
     // Check consensus alignment
-    const isAligned = this.isGlobalCVDAligned(
-      signal.direction,
-      globalCVD.consensus,
-    );
+    const isAligned = this.isGlobalCVDAligned(signal.direction, globalCVD.consensus);
 
-    if (globalCVD.consensus === "conflicted") {
+    if (globalCVD.consensus === 'conflicted') {
       return {
-        layer: "globalCVD",
+        layer: 'globalCVD',
         isValid: true,
         confidence: globalCVD.confidence,
-        reasoning: "Conflicting signals across exchanges",
-        recommendation: "caution",
+        reasoning: 'Conflicting signals across exchanges',
+        recommendation: 'caution',
       };
     }
 
     if (isAligned) {
       return {
-        layer: "globalCVD",
+        layer: 'globalCVD',
         isValid: true,
         confidence: globalCVD.confidence,
         reasoning: `Global CVD aligned (${globalCVD.consensus})`,
-        recommendation: "proceed",
+        recommendation: 'proceed',
       };
     }
 
-    if (!isAligned && globalCVD.consensus !== "neutral") {
+    if (!isAligned && globalCVD.consensus !== 'neutral') {
       return {
-        layer: "globalCVD",
+        layer: 'globalCVD',
         isValid: false,
         confidence: globalCVD.confidence,
         reasoning: `Global CVD conflicts (${globalCVD.consensus})`,
-        recommendation: "caution",
+        recommendation: 'caution',
       };
     }
 
     return {
-      layer: "globalCVD",
+      layer: 'globalCVD',
       isValid: true,
       confidence: globalCVD.confidence,
-      reasoning: "Global CVD neutral",
-      recommendation: "proceed",
+      reasoning: 'Global CVD neutral',
+      recommendation: 'proceed',
     };
   }
 
@@ -412,73 +391,58 @@ export class SignalValidator extends EventEmitter {
    */
   private analyzeConflicts(validations: LayerValidation[]): ConflictAnalysis {
     const conflictingLayers: string[] = [];
-    const recommendations = validations.map((v) => v.recommendation);
+    const recommendations = validations.map(v => v.recommendation);
 
     // Check for veto recommendations
-    const vetoLayers = validations.filter((v) => v.recommendation === "veto");
+    const vetoLayers = validations.filter(v => v.recommendation === 'veto');
     if (vetoLayers.length > 0) {
       return {
         hasConflict: true,
-        conflictingLayers: vetoLayers.map((v) => v.layer),
-        resolution: "veto",
-        reasoning: `Veto from: ${vetoLayers.map((v) => v.layer).join(", ")}`,
+        conflictingLayers: vetoLayers.map(v => v.layer),
+        resolution: 'veto',
+        reasoning: `Veto from: ${vetoLayers.map(v => v.layer).join(', ')}`,
       };
     }
 
     // Check for caution recommendations
-    const cautionLayers = validations.filter((v) =>
-      v.recommendation === "caution"
-    );
-    const proceedLayers = validations.filter((v) =>
-      v.recommendation === "proceed"
-    );
+    const cautionLayers = validations.filter(v => v.recommendation === 'caution');
+    const proceedLayers = validations.filter(v => v.recommendation === 'proceed');
 
     if (cautionLayers.length > 0 && proceedLayers.length > 0) {
       // eslint-disable-next-line functional/immutable-data
-      conflictingLayers.push(...cautionLayers.map((v) => v.layer));
+      conflictingLayers.push(...cautionLayers.map(v => v.layer));
 
       // Apply conflict resolution strategy
       switch (this.config.conflictResolutionStrategy) {
-        case "conservative":
+        case 'conservative':
           return {
             hasConflict: true,
             conflictingLayers,
-            resolution: cautionLayers.length >= 2 ? "veto" : "reduce",
-            reasoning:
-              `Conservative: ${cautionLayers.length} layers recommend caution`,
+            resolution: cautionLayers.length >= 2 ? 'veto' : 'reduce',
+            reasoning: `Conservative: ${cautionLayers.length} layers recommend caution`,
           };
 
-        case "weighted":
+        case 'weighted': {
           // Weight by confidence
-          const cautionWeight = cautionLayers.reduce(
-            (sum, v) => sum + v.confidence,
-            0,
-          );
-          const proceedWeight = proceedLayers.reduce(
-            (sum, v) => sum + v.confidence,
-            0,
-          );
+          const cautionWeight = cautionLayers.reduce((sum, v) => sum + v.confidence, 0);
+          const proceedWeight = proceedLayers.reduce((sum, v) => sum + v.confidence, 0);
 
           return {
             hasConflict: true,
             conflictingLayers,
-            resolution: cautionWeight > proceedWeight ? "reduce" : "proceed",
-            reasoning: `Weighted: caution=${
-              cautionWeight.toFixed(
-                0,
-              )
-            }, proceed=${proceedWeight.toFixed(0)}`,
+            resolution: cautionWeight > proceedWeight ? 'reduce' : 'proceed',
+            reasoning: `Weighted: caution=${cautionWeight.toFixed(
+              0
+            )}, proceed=${proceedWeight.toFixed(0)}`,
           };
+        }
 
-        case "majority":
+        case 'majority':
           return {
             hasConflict: true,
             conflictingLayers,
-            resolution: cautionLayers.length > proceedLayers.length
-              ? "reduce"
-              : "proceed",
-            reasoning:
-              `Majority: ${cautionLayers.length} caution vs ${proceedLayers.length} proceed`,
+            resolution: cautionLayers.length > proceedLayers.length ? 'reduce' : 'proceed',
+            reasoning: `Majority: ${cautionLayers.length} caution vs ${proceedLayers.length} proceed`,
           };
       }
     }
@@ -486,8 +450,8 @@ export class SignalValidator extends EventEmitter {
     return {
       hasConflict: false,
       conflictingLayers: [],
-      resolution: "proceed",
-      reasoning: "No conflicts detected",
+      resolution: 'proceed',
+      reasoning: 'No conflicts detected',
     };
   }
 
@@ -498,7 +462,7 @@ export class SignalValidator extends EventEmitter {
   private calculateAdjustedConfidence(
     originalConfidence: number,
     validations: LayerValidation[],
-    conflictAnalysis: ConflictAnalysis,
+    conflictAnalysis: ConflictAnalysis
   ): number {
     // eslint-disable-next-line functional/no-let
     let adjustedConfidence = originalConfidence;
@@ -507,15 +471,15 @@ export class SignalValidator extends EventEmitter {
     for (const validation of validations) {
       if (validation.confidence > 0) {
         switch (validation.recommendation) {
-          case "proceed":
+          case 'proceed':
             // Boost confidence slightly for aligned layers
             adjustedConfidence += (validation.confidence - 50) * 0.05;
             break;
-          case "caution":
+          case 'caution':
             // Reduce confidence for cautionary layers
             adjustedConfidence -= validation.confidence * 0.1;
             break;
-          case "veto":
+          case 'veto':
             // Significant reduction for veto layers
             adjustedConfidence -= validation.confidence * 0.3;
             break;
@@ -539,40 +503,36 @@ export class SignalValidator extends EventEmitter {
   private determineRecommendation(
     validations: LayerValidation[],
     conflictAnalysis: ConflictAnalysis,
-    adjustedConfidence: number,
-  ): "proceed" | "proceed_cautiously" | "reduce_size" | "veto" {
+    adjustedConfidence: number
+  ): 'proceed' | 'proceed_cautiously' | 'reduce_size' | 'veto' {
     // Check for veto conditions
-    if (conflictAnalysis.resolution === "veto") {
-      return "veto";
+    if (conflictAnalysis.resolution === 'veto') {
+      return 'veto';
     }
 
     if (adjustedConfidence < this.config.minConfidenceThreshold) {
-      return "veto";
+      return 'veto';
     }
 
     // Check for reduce conditions
-    if (conflictAnalysis.resolution === "reduce") {
-      return "reduce_size";
+    if (conflictAnalysis.resolution === 'reduce') {
+      return 'reduce_size';
     }
 
     // Check for caution conditions
-    const cautionCount =
-      validations.filter((v) => v.recommendation === "caution").length;
+    const cautionCount = validations.filter(v => v.recommendation === 'caution').length;
     if (cautionCount > 0) {
-      return "proceed_cautiously";
+      return 'proceed_cautiously';
     }
 
-    return "proceed";
+    return 'proceed';
   }
 
   /**
    * Check if Oracle sentiment aligns with signal direction
    */
-  private isOracleAligned(
-    direction: "LONG" | "SHORT",
-    sentiment: number,
-  ): boolean {
-    if (direction === "LONG") {
+  private isOracleAligned(direction: 'LONG' | 'SHORT', sentiment: number): boolean {
+    if (direction === 'LONG') {
       return sentiment > 0;
     }
     return sentiment < 0;
@@ -582,13 +542,13 @@ export class SignalValidator extends EventEmitter {
    * Check if Global CVD consensus aligns with signal direction
    */
   private isGlobalCVDAligned(
-    direction: "LONG" | "SHORT",
-    consensus: "bullish" | "bearish" | "neutral" | "conflicted",
+    direction: 'LONG' | 'SHORT',
+    consensus: 'bullish' | 'bearish' | 'neutral' | 'conflicted'
   ): boolean {
-    if (direction === "LONG") {
-      return consensus === "bullish";
+    if (direction === 'LONG') {
+      return consensus === 'bullish';
     }
-    return consensus === "bearish";
+    return consensus === 'bearish';
   }
 
   /**
@@ -597,7 +557,7 @@ export class SignalValidator extends EventEmitter {
   updateConfig(config: Partial<SignalValidatorConfig>): void {
     // eslint-disable-next-line functional/immutable-data
     this.config = { ...this.config, ...config };
-    this.emit("configUpdated", this.config);
+    this.emit('configUpdated', this.config);
   }
 
   /**

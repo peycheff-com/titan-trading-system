@@ -33,7 +33,7 @@ services:
   # INFRASTRUCTURE
   # =============================================================================
   nats:
-    image: nats:2.10.22-alpine
+    image: nats:2.10.24-alpine
     container_name: titan-nats
     command: ['-js', '-m', '8222']
 
@@ -55,7 +55,7 @@ services:
   # REDIS - Cache & Message Queue
   # =============================================================================
   redis:
-    image: redis:7.2.4-alpine3.19
+    image: redis:7.4-alpine
     container_name: titan-redis
     ports:
       - '6379:6379'
@@ -215,8 +215,9 @@ services:
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:3100/health']
       interval: 30s
-      timeout: 5s
-      retries: 3
+      timeout: 10s
+      retries: 5
+      start_period: 300s
     deploy:
       resources:
         limits:
@@ -346,7 +347,7 @@ services:
       - titan-brain
     restart: unless-stopped
     healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://localhost:8083/health']
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:8083/health']
       interval: 30s
       timeout: 5s
       retries: 3
@@ -374,7 +375,7 @@ services:
       - titan-brain
     restart: unless-stopped
     healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://localhost:8084/health']
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:8084/health']
       interval: 30s
       timeout: 5s
       retries: 3

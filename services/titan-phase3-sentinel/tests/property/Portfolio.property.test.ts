@@ -38,8 +38,14 @@ describe("Portfolio Manager Property Tests", () => {
                         { minLength: 1, maxLength: 5 },
                     ),
                     async (trades) => {
-                        const gateway = new BinanceGateway();
-                        const tracker = new PositionTracker(gateway);
+                        const gateway = new BinanceGateway(
+                            "key",
+                            "secret",
+                            true,
+                        );
+                        const tracker = new PositionTracker({
+                            "BINANCE": gateway,
+                        });
 
                         // Manually inject positions via updateSize to simulate state
                         let expectedNav = 0;

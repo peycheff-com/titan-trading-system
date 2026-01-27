@@ -28,7 +28,6 @@ export class FeatureManager extends EventEmitter {
 
   public static getInstance(logger: Logger, redisUrl: string): FeatureManager {
     if (!FeatureManager.instance) {
-       
       FeatureManager.instance = new FeatureManager(logger, redisUrl);
     }
     return FeatureManager.instance;
@@ -38,7 +37,6 @@ export class FeatureManager extends EventEmitter {
     this.logger.info('Starting FeatureManager polling');
     await this.refresh();
 
-     
     this.pollInterval = setInterval(async () => {
       await this.refresh();
     }, intervalMs);
@@ -47,7 +45,7 @@ export class FeatureManager extends EventEmitter {
   public stop(): void {
     if (this.pollInterval) {
       clearInterval(this.pollInterval);
-       
+
       this.pollInterval = null;
     }
     this.redis.disconnect();
@@ -73,7 +71,6 @@ export class FeatureManager extends EventEmitter {
         const hasChanges = JSON.stringify(this.flags) !== JSON.stringify(newFlags);
 
         if (hasChanges) {
-           
           this.flags = { ...this.flags, ...newFlags };
           this.logger.info('Feature flags updated', undefined, {
             flags: this.flags,

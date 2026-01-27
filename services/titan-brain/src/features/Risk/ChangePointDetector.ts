@@ -1,4 +1,4 @@
-import { RegimeState } from '@titan/shared/dist/ipc/index.js';
+import { RegimeState } from "@titan/shared/dist/ipc/index.js";
 
 /**
  * Change Point Detector (CPD)
@@ -30,20 +30,21 @@ export class ChangePointDetector {
    * Update the detector with new price data and determine regime via BOCPD
    * @returns CPDResult with regime and change probability score
    */
-  update(price: number, _timestamp: number): { regime: RegimeState; changeScore: number } {
+  update(
+    price: number,
+    _timestamp: number,
+  ): { regime: RegimeState; changeScore: number } {
     if (this.lastPrice === null || this.lastPrice <= 0) {
-       
       this.lastPrice = price;
       return { regime: RegimeState.STABLE, changeScore: 0 };
     }
 
     const ret = (price - this.lastPrice) / this.lastPrice;
-     
+
     this.lastPrice = price;
-     
+
     this.returnsHistory.push(ret);
     if (this.returnsHistory.length > this.WINDOW_SIZE) {
-       
       this.returnsHistory.shift();
     }
 
@@ -51,10 +52,18 @@ export class ChangePointDetector {
     // 1. Predictive Probability: P(x_t | r_{t-1}, x_{t-1}^(r))
     // Assume Gaussian: N(0, VAR)
     const probs = this.runLengthProbs.map(() => {
-      // Simplified: Fixed variance for now, real implementation would update Normal-Inverse-Gamma params
-      const prob =
-        Math.exp((-0.5 * Math.pow(ret - this.PREDICTIVE_MEAN, 2)) / this.PREDICTIVE_VAR) /
-        Math.sqrt(2 * Math.PI * this.PREDICTIVE_VAR);
+      // Dynamic Variance: Use recent history or fallback to prior
+      // We use a Bayesian update approximation by using the rolling variance of the last 20 periods
+      // This allows the model to adapt to changing market conditions (heteroscedasticity)
+      const dynamicVar = Math.max(
+        this.calculateVariance(this.returnsHistory.slice(-20)),
+        this.PREDICTIVE_VAR, // Minimum floor (prior)
+      );
+
+      const prob = Math.exp(
+        (-0.5 * Math.pow(ret - this.PREDICTIVE_MEAN, 2)) / dynamicVar,
+      ) /
+        Math.sqrt(2 * Math.PI * dynamicVar);
       return prob;
     });
 
@@ -72,13 +81,15 @@ export class ChangePointDetector {
     // 4. Update and Normalize
     const newRunLengthProbs = [cpProb, ...growthProbs];
     const totalProb = newRunLengthProbs.reduce((a, b) => a + b, 0);
-     
+
     this.runLengthProbs = newRunLengthProbs.map((p) => p / (totalProb || 1));
-     
+
     this.runLengthProbs = this.runLengthProbs.slice(0, this.WINDOW_SIZE); // Prune tail
 
     // 5. Determine State
-    const maxRunLength = this.runLengthProbs.indexOf(Math.max(...this.runLengthProbs));
+    const maxRunLength = this.runLengthProbs.indexOf(
+      Math.max(...this.runLengthProbs),
+    );
     const changeScore = this.runLengthProbs[0]; // Probability of recent change
 
     // Heuristic mapping of "Regime" based on Volatility + Run Length
@@ -87,7 +98,11 @@ export class ChangePointDetector {
     return { regime, changeScore };
   }
 
-  private classifyRegime(currentRet: number, runLength: number, changeScore: number): RegimeState {
+  private classifyRegime(
+    currentRet: number,
+    runLength: number,
+    changeScore: number,
+  ): RegimeState {
     const vol = this.calculateStdDev(this.returnsHistory.slice(-20));
 
     // Crash Logic overrides everything
@@ -103,7 +118,9 @@ export class ChangePointDetector {
     // Established Regimes
     if (vol > 0.005) {
       // Trending or Mean Reverting?
-      const trend = Math.abs(this.returnsHistory.slice(-10).reduce((a, b) => a + b, 0));
+      const trend = Math.abs(
+        this.returnsHistory.slice(-10).reduce((a, b) => a + b, 0),
+      );
       if (trend > 0.01) return RegimeState.VOLATILE_BREAKOUT;
       return RegimeState.MEAN_REVERSION;
     }
@@ -114,7 +131,17 @@ export class ChangePointDetector {
   private calculateStdDev(data: number[]): number {
     if (data.length === 0) return 0;
     const mean = data.reduce((a, b) => a + b, 0) / data.length;
-    const variance = data.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / data.length;
+    const variance =
+      data.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / data.length;
     return Math.sqrt(variance);
+  }
+
+  private calculateVariance(data: number[]): number {
+    if (data.length < 2) return 0;
+    const mean = data.reduce((a, b) => a + b, 0) / data.length;
+    const variance =
+      data.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) /
+      (data.length - 1);
+    return variance;
   }
 }

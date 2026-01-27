@@ -1,21 +1,16 @@
-import { EventEmitter } from "events";
-import { ExchangeRouter } from "../router/ExchangeRouter.js";
-import { PortfolioManager } from "../portfolio/PortfolioManager.js";
-import { RiskManager } from "../risk/RiskManager.js";
-import { VacuumMonitor } from "../vacuum/VacuumMonitor.js";
-import { PerformanceTracker } from "../performance/PerformanceTracker.js";
-import { SignalGenerator } from "./StatEngine.js";
-import { PriceMonitor } from "../router/PriceMonitor.js";
-import type { Signal } from "../types/signals.js";
-import type { IExchangeGateway } from "../exchanges/interfaces.js";
-import { DEFAULT_SIGNAL_THRESHOLDS } from "../types/signals.js";
-import type { HealthReport, PerformanceMetrics } from "../types/portfolio.js";
-import {
-  getNatsClient,
-  type IntentSignal,
-  SignalClient,
-  TitanSubject,
-} from "@titan/shared";
+import { EventEmitter } from 'events';
+import { ExchangeRouter } from '../router/ExchangeRouter.js';
+import { PortfolioManager } from '../portfolio/PortfolioManager.js';
+import { RiskManager } from '../risk/RiskManager.js';
+import { VacuumMonitor } from '../vacuum/VacuumMonitor.js';
+import { PerformanceTracker } from '../performance/PerformanceTracker.js';
+import { SignalGenerator } from './StatEngine.js';
+import { PriceMonitor } from '../router/PriceMonitor.js';
+import type { Signal } from '../types/signals.js';
+import type { IExchangeGateway } from '../exchanges/interfaces.js';
+import { DEFAULT_SIGNAL_THRESHOLDS } from '../types/signals.js';
+import type { HealthReport, PerformanceMetrics } from '../types/portfolio.js';
+import { getNatsClient, type IntentSignal, SignalClient, TitanSubject } from '@titan/shared';
 
 export interface SentinelConfig {
   updateIntervalMs: number;
@@ -50,7 +45,7 @@ export class SentinelCore extends EventEmitter {
   private signalClient: SignalClient;
 
   // State from NATS
-  private currentRegime: string = "STABLE";
+  private currentRegime: string = 'STABLE';
   private currentAPTR: number = 0;
   private allocatedEquity: number = 0;
 
@@ -59,7 +54,7 @@ export class SentinelCore extends EventEmitter {
   public updateBudget(equity: number) {
     // eslint-disable-next-line functional/immutable-data
     this.allocatedEquity = equity;
-    this.emit("log", `💰 Budget Updated: $${equity.toFixed(2)}`);
+    this.emit('log', `💰 Budget Updated: $${equity.toFixed(2)}`);
   }
 
   public getRegime(): string {
@@ -103,14 +98,14 @@ export class SentinelCore extends EventEmitter {
     this.signals = new SignalGenerator(DEFAULT_SIGNAL_THRESHOLDS);
     this.vacuum = new VacuumMonitor(this.signals); // Pass signalGenerator
     this.performance = new PerformanceTracker(config.initialCapital);
-    this.signalClient = new SignalClient({ source: "sentinel" });
+    this.signalClient = new SignalClient({ source: 'sentinel' });
   }
 
   async start(): Promise<void> {
     if (this.isRunning) return;
     // eslint-disable-next-line functional/immutable-data
     this.isRunning = true;
-    this.emit("log", "Sentinel Core Starting...");
+    this.emit('log', 'Sentinel Core Starting...');
 
     // Initialize Portfolio
     await this.portfolio.initialize();
@@ -118,25 +113,22 @@ export class SentinelCore extends EventEmitter {
     // Connect Signal Client
     try {
       await this.signalClient.connect();
-      this.emit("log", "✅ Signal Client Connected");
+      this.emit('log', '✅ Signal Client Connected');
     } catch (e) {
-      this.emit("log", `⚠️ Signal Client Connect Failed: ${e}`);
+      this.emit('log', `⚠️ Signal Client Connect Failed: ${e}`);
     }
 
     // Start Loops
     // eslint-disable-next-line functional/immutable-data
-    this.tickInterval = setInterval(
-      () => this.onTick(),
-      this.config.updateIntervalMs,
-    );
-    this.emit("log", "Sentinel Core Started.");
+    this.tickInterval = setInterval(() => this.onTick(), this.config.updateIntervalMs);
+    this.emit('log', 'Sentinel Core Started.');
   }
 
   async stop(): Promise<void> {
     // eslint-disable-next-line functional/immutable-data
     this.isRunning = false;
     if (this.tickInterval) clearInterval(this.tickInterval);
-    this.emit("log", "Sentinel Core Stopped.");
+    this.emit('log', 'Sentinel Core Stopped.');
   }
 
   public updateRegime(regime: string, aptr: number) {
@@ -147,26 +139,19 @@ export class SentinelCore extends EventEmitter {
     this.currentAPTR = aptr;
 
     if (oldRegime !== regime) {
-      this.emit(
-        "log",
-        `⚠️ Regime Change: ${oldRegime} -> ${regime} (APTR: ${
-          aptr.toFixed(4)
-        })`,
-      );
+      this.emit('log', `⚠️ Regime Change: ${oldRegime} -> ${regime} (APTR: ${aptr.toFixed(4)})`);
     }
   }
 
   private async onTick(): Promise<void> {
     try {
       // 1. Update Prices
-      const allPrices = await this.priceMonitor.getAllPrices(
-        this.config.symbol,
-      );
+      const allPrices = await this.priceMonitor.getAllPrices(this.config.symbol);
 
       if (allPrices.length < 2) return;
 
-      const spotQuote = allPrices.find((p) => p.exchange.includes("spot"));
-      const perpQuote = allPrices.find((p) => p.exchange.includes("perp"));
+      const spotQuote = allPrices.find((p) => p.exchange.includes('spot'));
+      const perpQuote = allPrices.find((p) => p.exchange.includes('perp'));
 
       if (!spotQuote || !perpQuote) return;
 
@@ -181,13 +166,8 @@ export class SentinelCore extends EventEmitter {
       const riskStatus = this.risk.evaluate(health, health.nav);
 
       if (!riskStatus.withinLimits) {
-        this.emit(
-          "log",
-          `Risk Limit Violated: ${riskStatus.violations.join(", ")}`,
-        );
-        const isCritical = riskStatus.violations.some((v) =>
-          v.includes("CRITICAL")
-        );
+        this.emit('log', `Risk Limit Violated: ${riskStatus.violations.join(', ')}`);
+        const isCritical = riskStatus.violations.some((v) => v.includes('CRITICAL'));
         if (isCritical) return;
       }
 
@@ -197,10 +177,8 @@ export class SentinelCore extends EventEmitter {
         // Optimization: Don't spam log
         if (Math.random() < 0.01) {
           this.emit(
-            "log",
-            `⚠️ Liquidity Gate: Spread too wide (${
-              (spotQuote.spread * 100).toFixed(4)
-            }%)`,
+            'log',
+            `⚠️ Liquidity Gate: Spread too wide (${(spotQuote.spread * 100).toFixed(4)}%)`,
           );
         }
         return;
@@ -211,7 +189,7 @@ export class SentinelCore extends EventEmitter {
 
       // 4. Unwind Logic (Post-Trade)
       // Aggressive Unwind in CRASH regime
-      const isCrash = this.currentRegime === "CRASH";
+      const isCrash = this.currentRegime === 'CRASH';
       const spreadThreshold = isCrash ? 0.05 : 0.1; // 0.05% vs 0.1% spread tolerance
       const deviationThreshold = isCrash ? 0.01 : 0.02; // 1% vs 2% basis deviation
 
@@ -232,12 +210,10 @@ export class SentinelCore extends EventEmitter {
               currentBasis,
             );
             this.emit(
-              "log",
-              `🚨 UNWIND (Spread): ${position.symbol} spread ${
-                (spotQuote.spread * 100).toFixed(
-                  3,
-                )
-              }% > ${(actualThreshold * 100).toFixed(3)}%`,
+              'log',
+              `🚨 UNWIND (Spread): ${position.symbol} spread ${(spotQuote.spread * 100).toFixed(
+                3,
+              )}% > ${(actualThreshold * 100).toFixed(3)}%`,
             );
             continue;
           }
@@ -247,17 +223,10 @@ export class SentinelCore extends EventEmitter {
         const basisDiff = Math.abs(currentBasis - position.entryBasis);
         if (basisDiff > deviationThreshold) {
           // 2% move against?
-          this.performance.closeTrade(
-            position.id,
-            perpPrice,
-            Date.now(),
-            currentBasis,
-          );
+          this.performance.closeTrade(position.id, perpPrice, Date.now(), currentBasis);
           this.emit(
-            "log",
-            `🚨 UNWIND (Basis Deviation): ${
-              basisDiff.toFixed(4)
-            } > ${deviationThreshold}`,
+            'log',
+            `🚨 UNWIND (Basis Deviation): ${basisDiff.toFixed(4)} > ${deviationThreshold}`,
           );
         }
       }
@@ -268,16 +237,13 @@ export class SentinelCore extends EventEmitter {
       // currentBasis is already defined above at line 176
 
       // CRASH Protocol: Halt new positions
-      if (this.currentRegime === "CRASH") {
+      if (this.currentRegime === 'CRASH') {
         // No new signals
       } else {
         this.signals.updateBasis(this.config.symbol, currentBasis);
         const basisSignal = this.signals.getSignal(this.config.symbol);
 
-        if (
-          basisSignal &&
-          (basisSignal.action === "EXPAND" || basisSignal.action === "CONTRACT")
-        ) {
+        if (basisSignal && (basisSignal.action === 'EXPAND' || basisSignal.action === 'CONTRACT')) {
           await this.executeSignal(basisSignal);
           currentSignals = [basisSignal];
         }
@@ -291,7 +257,7 @@ export class SentinelCore extends EventEmitter {
       );
 
       if (vacOpp) {
-        this.emit("log", "Vacuum Opportunity Detected!");
+        this.emit('log', 'Vacuum Opportunity Detected!');
       }
 
       // 5. Broadcast State
@@ -306,10 +272,10 @@ export class SentinelCore extends EventEmitter {
         },
       };
 
-      this.emit("tick", state);
+      this.emit('tick', state);
       this.publishState(state);
     } catch (e) {
-      this.emit("error", e instanceof Error ? e : new Error(String(e)));
+      this.emit('error', e instanceof Error ? e : new Error(String(e)));
     }
   }
 
@@ -319,8 +285,8 @@ export class SentinelCore extends EventEmitter {
 
     // Publish Posture
     const posturePayload = {
-      phase: "sentinel",
-      status: this.isRunning ? "RUNNING" : "STOPPED",
+      phase: 'sentinel',
+      status: this.isRunning ? 'RUNNING' : 'STOPPED',
       regime: this.currentRegime,
       metrics: {
         nav: state.health.nav,
@@ -334,7 +300,7 @@ export class SentinelCore extends EventEmitter {
 
     // Publish Diagnostics
     const diagnosticsPayload = {
-      phase: "sentinel",
+      phase: 'sentinel',
       health: state.health.riskStatus,
       alerts: state.health.alerts,
       system: {
@@ -343,17 +309,13 @@ export class SentinelCore extends EventEmitter {
       },
       timestamp: Date.now(),
     };
-    nats.publish(
-      `${TitanSubject.EVT_PHASE_DIAGNOSTICS}.sentinel`,
-      diagnosticsPayload,
-    );
+    nats.publish(`${TitanSubject.EVT_PHASE_DIAGNOSTICS}.sentinel`, diagnosticsPayload);
   }
 
   private async executeSignal(signal: Signal): Promise<void> {
     // Truth Layer Sizing: Use Allocated Equity if available, else static config
-    const capitalBase = this.allocatedEquity > 0
-      ? this.allocatedEquity
-      : this.config.initialCapital;
+    const capitalBase =
+      this.allocatedEquity > 0 ? this.allocatedEquity : this.config.initialCapital;
 
     // Sizing Strategy:
     // STABLE: 10% of capital per trade
@@ -362,7 +324,7 @@ export class SentinelCore extends EventEmitter {
 
     // eslint-disable-next-line functional/no-let
     let sizingPercentage = 0.1;
-    if (this.currentRegime === "VOLATILE") {
+    if (this.currentRegime === 'VOLATILE') {
       sizingPercentage = 0.05;
     }
 
@@ -377,12 +339,10 @@ export class SentinelCore extends EventEmitter {
     // For now, let's just log the calculated size.
 
     this.emit(
-      "log",
-      `Generaring Intent with Truth Sizing: ${sizingPercentage * 100}% of $${
-        capitalBase.toFixed(
-          0,
-        )
-      } => $${calculatedSize.toFixed(2)}`,
+      'log',
+      `Generaring Intent with Truth Sizing: ${sizingPercentage * 100}% of $${capitalBase.toFixed(
+        0,
+      )} => $${calculatedSize.toFixed(2)}`,
     );
 
     // Orchestrate Intent
@@ -390,12 +350,12 @@ export class SentinelCore extends EventEmitter {
     // EXPAND: Buy Perp, Sell Spot
     // CONTRACT: Sell Perp, Buy Spot
 
-    const direction = signal.action === "EXPAND" ? "LONG" : "SHORT";
+    const direction = signal.action === 'EXPAND' ? 'LONG' : 'SHORT';
 
     // Construct Intent
     const intent: IntentSignal = {
       signal_id: `sentinel-${Date.now()}-${signal.symbol}`,
-      source: "sentinel",
+      source: 'sentinel',
       symbol: signal.symbol,
       direction: direction,
       entry_zone: {
@@ -411,24 +371,22 @@ export class SentinelCore extends EventEmitter {
       // Truth Layer Injection
       position_size: calculatedSize,
 
-      trap_type: "BASIS_ARB",
+      trap_type: 'BASIS_ARB',
     };
 
     try {
-      this.emit("log", `📤 Sending PREPARE...`);
+      this.emit('log', `📤 Sending PREPARE...`);
       const prepareResult = await this.signalClient.sendPrepare(intent);
 
       if (prepareResult.prepared) {
-        const confirmResult = await this.signalClient.sendConfirm(
-          intent.signal_id,
-        );
-        this.emit("log", `✅ CONFIRM Executed: ${confirmResult.executed}`);
+        const confirmResult = await this.signalClient.sendConfirm(intent.signal_id);
+        this.emit('log', `✅ CONFIRM Executed: ${confirmResult.executed}`);
 
         // Simple performance tracking (approximate)
         this.performance.recordTrade({
           id: intent.signal_id,
           symbol: signal.symbol,
-          type: "BASIS_SCALP",
+          type: 'BASIS_SCALP',
           entryTime: Date.now(),
           exitTime: 0,
           entryBasis: signal.basis,
@@ -439,10 +397,10 @@ export class SentinelCore extends EventEmitter {
           entryPrice: confirmResult.fill_price || 0,
         });
       } else {
-        this.emit("log", `❌ PREPARE Rejected: ${prepareResult.reason}`);
+        this.emit('log', `❌ PREPARE Rejected: ${prepareResult.reason}`);
       }
     } catch (error) {
-      this.emit("log", `❌ Execution Error: ${error}`);
+      this.emit('log', `❌ Execution Error: ${error}`);
     }
   }
 }

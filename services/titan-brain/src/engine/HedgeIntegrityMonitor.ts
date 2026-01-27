@@ -10,7 +10,7 @@ import { Logger } from "../logging/Logger.js";
 import { RiskGuardian } from "../features/Risk/RiskGuardian.js";
 import { SignalProcessor } from "./SignalProcessor.js";
 import { PositionManager } from "./PositionManager.js";
-import { IntentSignal } from "../types/index.js";
+import { IntentSignal, Position } from "../types/index.js";
 import { v4 as uuidv4 } from "uuid";
 
 export class HedgeIntegrityMonitor {
@@ -53,25 +53,41 @@ export class HedgeIntegrityMonitor {
       // Get current positions
       const positions = this.positionManager.getPositions();
 
-      // Calculate delta
-      const delta = this.riskGuardian.calculatePortfolioDelta(positions);
+      // Group positions by symbol
+      const positionsBySymbol = new Map<string, Position[]>();
+      for (const pos of positions) {
+        if (!positionsBySymbol.has(pos.symbol)) {
+          positionsBySymbol.set(pos.symbol, []);
+        }
+        positionsBySymbol.get(pos.symbol)!.push(pos);
+      }
 
-      if (Math.abs(delta) > this.DELTA_THRESHOLD_USD) {
-        this.logger.warn(
-          `⚠️ Hedge Integrity Breach: Delta ${
-            delta.toFixed(2)
-          } > ${this.DELTA_THRESHOLD_USD}`,
+      // Check delta for each symbol
+      for (const [symbol, symbolPositions] of positionsBySymbol) {
+        const delta = this.riskGuardian.calculatePortfolioDelta(
+          symbolPositions,
         );
 
-        // Trigger Correction
-        await this.triggerForceHedge(delta);
+        if (Math.abs(delta) > this.DELTA_THRESHOLD_USD) {
+          this.logger.warn(
+            `⚠️ Hedge Integrity Breach (${symbol}): Delta ${
+              delta.toFixed(2)
+            } > ${this.DELTA_THRESHOLD_USD}`,
+          );
+
+          // Trigger Correction per symbol
+          await this.triggerForceHedge(symbol, delta);
+        }
       }
     } catch (error) {
       this.logger.error("Failed to check hedge integrity", error as Error);
     }
   }
 
-  private async triggerForceHedge(currentDelta: number): Promise<void> {
+  private async triggerForceHedge(
+    symbol: string,
+    currentDelta: number,
+  ): Promise<void> {
     // Negative delta -> We are Short -> Need to BUY to flatten
     // Positive delta -> We are Long -> Need to SELL to flatten
 
@@ -84,11 +100,7 @@ export class HedgeIntegrityMonitor {
     const signal: IntentSignal = {
       signalId: `sentinel-${uuidv4()}`,
       phaseId: "phase3",
-      symbol: "BTC/USDT", // Assuming BTC for now, or need to calculate per symbol?
-      // Ideally we'd know which symbol caused the delta.
-      // RiskGuardian.portfolioDelta is aggregated.
-      // For now, assuming single-asset or BTC-dominant portfolio.
-      // TODO: Multi-asset support requires Per-Symbol Delta check.
+      symbol: symbol, // Dynamic symbol
       side: side,
       requestedSize: size,
       timestamp: Date.now(),
@@ -100,11 +112,10 @@ export class HedgeIntegrityMonitor {
     };
 
     this.logger.info(
-      `🚨 Emitting FORCE_HEDGE signal: ${side} $${size.toFixed(2)}`,
+      `🚨 Emitting FORCE_HEDGE signal: ${symbol} ${side} $${size.toFixed(2)}`,
     );
 
-    // Push directly to processor (bypassing queue/router for speed? or standard route?)
-    // Standard route to ensure checks still pass (though Phase 3 is auto-approved usually)
+    // Push directly to processor
     await this.signalProcessor.processSignal(signal);
   }
 }

@@ -76,27 +76,22 @@ impl BinanceAdapter {
 
         serde_json::from_str(&text).map_err(|e| e.to_string())
     }
-}
 
-#[async_trait]
-impl ExchangeAdapter for BinanceAdapter {
-    async fn get_positions(&self) -> Result<Vec<Position>, String> {
-        // GET /fapi/v2/positionRisk
-        let res = self.request(Method::GET, "/fapi/v2/positionRisk", vec![]).await?;
-        
+    // Extracted pure function for testing
+    fn parse_positions(res: &Value) -> Result<Vec<Position>, String> {
         let mut positions = Vec::new();
         if let Some(arr) = res.as_array() {
             for item in arr {
-                let amt = item["positionAmt"].as_str().unwrap().parse::<Decimal>().unwrap();
+                let amt_str = item["positionAmt"].as_str().ok_or("Missing positionAmt")?;
+                let amt = amt_str.parse::<Decimal>().map_err(|e| e.to_string())?;
+                
                 if !amt.is_zero() {
-                     // Convert to internal Position struct
-                     // Simplified mapping
                      positions.push(Position {
-                        symbol: item["symbol"].as_str().unwrap().to_string(),
+                        symbol: item["symbol"].as_str().unwrap_or("").to_string(),
                         side: if amt.is_sign_positive() { Side::Long } else { Side::Short },
                         size: amt.abs(),
-                        entry_price: item["entryPrice"].as_str().unwrap().parse().unwrap(),
-                        stop_loss: Decimal::ZERO, // Not in positionRisk directly usually
+                        entry_price: item["entryPrice"].as_str().unwrap_or("0").parse().unwrap_or_default(),
+                        stop_loss: Decimal::ZERO,
                         take_profits: vec![],
                         signal_id: "MANUAL".to_string(),
                         opened_at: chrono::Utc::now(),
@@ -108,6 +103,15 @@ impl ExchangeAdapter for BinanceAdapter {
             }
         }
         Ok(positions)
+    }
+}
+
+#[async_trait]
+impl ExchangeAdapter for BinanceAdapter {
+    async fn get_positions(&self) -> Result<Vec<Position>, String> {
+        // GET /fapi/v2/positionRisk
+        let res = self.request(Method::GET, "/fapi/v2/positionRisk", vec![]).await?;
+        Self::parse_positions(&res)
     }
 
     async fn place_order(&self, order: Order) -> Result<OrderId, String> {
@@ -167,5 +171,44 @@ impl ExchangeAdapter for BinanceAdapter {
              }
         }
         Ok(Decimal::ZERO)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_parse_positions() {
+        let data = json!([
+            {
+                "symbol": "BTCUSDT",
+                "positionAmt": "0.5",
+                "entryPrice": "50000",
+                "markPrice": "51000",
+                "unRealizedProfit": "500",
+                "liquidationPrice": "0",
+                "leverage": "10",
+                "maxNotionalValue": "1000000",
+                "marginType": "cross",
+                "isolatedMargin": "0.00000000",
+                "isAutoAddMargin": "false",
+                "positionSide": "BOTH"
+            },
+            {
+                "symbol": "ETHUSDT",
+                "positionAmt": "0.0",
+                "entryPrice": "0",
+                "markPrice": "3000", 
+                 // ...
+            }
+        ]);
+
+        let positions = BinanceAdapter::parse_positions(&data).expect("Failed to parse");
+        assert_eq!(positions.len(), 1);
+        assert_eq!(positions[0].symbol, "BTCUSDT");
+        assert_eq!(positions[0].size.to_string(), "0.5");
+        assert_eq!(positions[0].side, Side::Long);
     }
 }

@@ -13,10 +13,12 @@ export class MockBinanceSpotClient {
   }
 
   onTrade(symbol: string, callback: (trades: Trade[]) => void): void {
+    // eslint-disable-next-line functional/immutable-data
     this.callbacks.set(symbol, callback);
   }
 
   offTrade(symbol: string): void {
+    // eslint-disable-next-line functional/immutable-data
     this.callbacks.delete(symbol);
   }
 
@@ -27,6 +29,7 @@ export class MockBinanceSpotClient {
   }
 
   close(): void {
+    // eslint-disable-next-line functional/immutable-data
     this.callbacks.clear();
   }
 

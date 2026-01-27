@@ -5,7 +5,11 @@
  * Requirements: 1.1, 1.7, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6
  */
 
-import { getNatsClient, RegimeState } from "@titan/shared";
+import {
+  getNatsClient,
+  RegimeState,
+  signedProposalSchema,
+} from "@titan/shared";
 
 import { TruthRepository } from "../db/repositories/TruthRepository.js";
 import {
@@ -223,8 +227,9 @@ export class TitanBrain
     );
 
     // Initialize Proposal Gateway (Sovereign Trust Layer)
-    // TODO: Load authorized keys from config/env
-    this.proposalGateway = new ProposalGateway(logger, []);
+    const authorizedKeys = (process.env.GOVERNANCE_KEYS || "").split(",")
+      .filter((k) => k.length > 0);
+    this.proposalGateway = new ProposalGateway(logger, authorizedKeys);
 
     // Initialize Manual Trade Service
     this.manualTradeService = new ManualTradeService(() =>
@@ -312,37 +317,8 @@ export class TitanBrain
     }
 
     // Persist final state
-    if (this.stateRecoveryService) {
-      await this.stateRecoveryService.persistState({
-        allocation: this.allocationEngine.getWeights(
-          this.stateManager.getEquity(),
-        ),
-        performance: await this.performanceTracker.getAllPhasePerformance()
-          .then((phases) => {
-            return {
-              phase1: phases.find((p) => p.phaseId === "phase1")!,
-              phase2: phases.find((p) => p.phaseId === "phase2")!,
-              phase3: phases.find((p) => p.phaseId === "phase3")!,
-              manual: phases.find((p) => p.phaseId === "manual") || {
-                phaseId: "manual",
-                sharpeRatio: 0,
-                totalPnL: 0,
-                tradeCount: 0,
-                winRate: 0,
-                avgWin: 0,
-                avgLoss: 0,
-                modifier: 1,
-              },
-            };
-          }),
-        highWatermark: this.capitalFlowManager.getHighWatermark(),
-        riskMetrics: null, // this.riskGuardian.getMetrics(), // RiskGuardian needs getMetrics() exposed
-        equity: this.stateManager.getEquity(),
-        dailyStartEquity: this.stateManager.getDailyStartEquity(),
-        positions: this.stateManager.getPositions(),
-        lastUpdated: Date.now(),
-      });
-    }
+    // Persist final state
+    await this.saveStateSnapshot();
 
     logger.info("Titan Brain shutdown complete");
   }
@@ -571,7 +547,16 @@ export class TitanBrain
         id: decision.proposalId,
         reason: decision.reason,
       });
-      // TODO: Actually execute the proposal (Param Update, Model Promotion, etc.)
+
+      // Execute the proposal
+      try {
+        const parsed = signedProposalSchema.parse(payload);
+        await this.executeProposal(parsed.payload);
+      } catch (error) {
+        logger.error("Failed to execute accepted proposal", error as Error);
+        // We technically accepted it but failed to run.
+        // Should we update decision status? The gateway returned a decision value object, not a DB record we can update here easily.
+      }
     } else {
       logger.warn("Proposal Rejected by Sovereign Gateway", undefined, {
         id: decision.proposalId,
@@ -580,6 +565,45 @@ export class TitanBrain
     }
 
     return decision;
+  }
+
+  /**
+   * Execute verified proposal payload
+   */
+  private async executeProposal(payload: any): Promise<void> {
+    logger.info(`Executing Proposal Type: ${payload.type}`);
+
+    switch (payload.type) {
+      case "UPDATE_PARAM":
+        await this.handleUpdateParamProposal(payload);
+        break;
+
+      case "EMERGENCY_HALT":
+        await this.triggerEmergencyHalt(
+          "GOVERNANCE",
+          payload.data?.reason || "Governance Decree",
+        );
+        break;
+
+      default:
+        logger.warn(`Unknown proposal type: ${payload.type}`);
+    }
+  }
+
+  private async handleUpdateParamProposal(payload: any): Promise<void> {
+    const { target, value } = payload.data || {};
+    if (!target) return;
+
+    logger.info(
+      `Applying Parameter Update: ${target} => ${JSON.stringify(value)}`,
+    );
+
+    if (target === "risk_config") {
+      await this.updateRiskConfig(value);
+    } else if (target === "allocation") {
+      // TODO: Handle allocation updates via AllocationEngine or StateManager
+      // this.stateManager.setAllocation(value);
+    }
   }
 
   // --- Dashboard ---
@@ -929,8 +953,52 @@ export class TitanBrain
 
   private startSnapshotTimer(): void {
     this.snapshotTimer = setInterval(() => {
-      // Persist snapshot logic
+      this.saveStateSnapshot().catch((err) =>
+        logger.error("Failed to save periodic snapshot", err)
+      );
     }, this.SNAPSHOT_INTERVAL_MS);
+  }
+
+  /**
+   * Capture and persist current system state
+   */
+  private async saveStateSnapshot(): Promise<void> {
+    if (!this.stateRecoveryService) return;
+
+    try {
+      await this.stateRecoveryService.persistState({
+        allocation: this.allocationEngine.getWeights(
+          this.stateManager.getEquity(),
+        ),
+        performance: await this.performanceTracker.getAllPhasePerformance()
+          .then((phases) => {
+            return {
+              phase1: phases.find((p) => p.phaseId === "phase1")!,
+              phase2: phases.find((p) => p.phaseId === "phase2")!,
+              phase3: phases.find((p) => p.phaseId === "phase3")!,
+              manual: phases.find((p) => p.phaseId === "manual") || {
+                phaseId: "manual",
+                sharpeRatio: 0,
+                totalPnL: 0,
+                tradeCount: 0,
+                winRate: 0,
+                avgWin: 0,
+                avgLoss: 0,
+                modifier: 1,
+              },
+            };
+          }),
+        highWatermark: this.capitalFlowManager.getHighWatermark(),
+        riskMetrics: null, // this.riskGuardian.getMetrics(),
+        equity: this.stateManager.getEquity(),
+        dailyStartEquity: this.stateManager.getDailyStartEquity(),
+        positions: this.stateManager.getPositions(),
+        lastUpdated: Date.now(),
+      });
+      // logger.debug("State snapshot saved");
+    } catch (error) {
+      logger.error("Error saving state snapshot", error as Error);
+    }
   }
 
   handleMarketData(

@@ -61,9 +61,8 @@ export function CommandPalette() {
 
   const groups = routes.reduce(
     (acc, route) => {
-       
       if (!acc[route.group]) acc[route.group] = [];
-       
+
       acc[route.group].push(route);
       return acc;
     },

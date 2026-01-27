@@ -10,8 +10,8 @@
  * - Push execution_complete events
  */
 
-import fetch, { RequestInit } from "node-fetch";
-import { Logger } from "../logging/Logger.js";
+import fetch, { RequestInit } from 'node-fetch';
+import { Logger } from '../logging/Logger.js';
 
 export interface ConsoleClientConfig {
   consoleUrl: string;
@@ -76,9 +76,7 @@ export class ConsoleClient {
    */
   async connect(): Promise<boolean> {
     if (!this.config.enabled) {
-      this.logger.info(
-        "📡 Console Client disabled (set CONSOLE_URL to enable)",
-      );
+      this.logger.info('📡 Console Client disabled (set CONSOLE_URL to enable)');
       return false;
     }
 
@@ -87,17 +85,15 @@ export class ConsoleClient {
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
       const response = await fetch(`${this.config.consoleUrl}/health`, {
-        method: "GET",
-        signal: controller.signal as RequestInit["signal"],
+        method: 'GET',
+        signal: controller.signal as RequestInit['signal'],
       });
 
       clearTimeout(timeoutId);
 
       if (response.ok) {
         this.isConnected = true;
-        this.logger.info(
-          `✅ Connected to Console at ${this.config.consoleUrl}`,
-        );
+        this.logger.info(`✅ Connected to Console at ${this.config.consoleUrl}`);
         return true;
       } else {
         this.logger.warn(`⚠️  Console health check failed: ${response.status}`);
@@ -116,7 +112,7 @@ export class ConsoleClient {
   async pushTrapMapUpdate(update: TrapMapUpdate): Promise<void> {
     if (!this.config.enabled) return;
 
-    await this.sendEvent("trap_map_updated", update);
+    await this.sendEvent('trap_map_updated', update);
   }
 
   /**
@@ -126,7 +122,7 @@ export class ConsoleClient {
   async pushSensorStatusUpdate(update: SensorStatusUpdate): Promise<void> {
     if (!this.config.enabled) return;
 
-    await this.sendEvent("sensor_status_updated", update);
+    await this.sendEvent('sensor_status_updated', update);
   }
 
   /**
@@ -136,7 +132,7 @@ export class ConsoleClient {
   async pushTrapSprung(event: TrapSprungEvent): Promise<void> {
     if (!this.config.enabled) return;
 
-    await this.sendEvent("trap_sprung", event);
+    await this.sendEvent('trap_sprung', event);
   }
 
   /**
@@ -146,7 +142,7 @@ export class ConsoleClient {
   async pushExecutionComplete(event: ExecutionCompleteEvent): Promise<void> {
     if (!this.config.enabled) return;
 
-    await this.sendEvent("execution_complete", event);
+    await this.sendEvent('execution_complete', event);
   }
 
   /**
@@ -155,29 +151,24 @@ export class ConsoleClient {
   private async sendEvent(eventType: string, data: unknown): Promise<void> {
     let lastError: Error | null = null;
 
-    for (
-      let attempt = 1; attempt <= (this.config.retryAttempts || 3); attempt++
-    ) {
+    for (let attempt = 1; attempt <= (this.config.retryAttempts || 3); attempt++) {
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-        const response = await fetch(
-          `${this.config.consoleUrl}/api/scavenger/events`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              event_type: eventType,
-              data,
-              source: "scavenger",
-              timestamp: Date.now(),
-            }),
-            signal: controller.signal as RequestInit["signal"],
+        const response = await fetch(`${this.config.consoleUrl}/api/scavenger/events`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           },
-        );
+          body: JSON.stringify({
+            event_type: eventType,
+            data,
+            source: 'scavenger',
+            timestamp: Date.now(),
+          }),
+          signal: controller.signal as RequestInit['signal'],
+        });
 
         clearTimeout(timeoutId);
 
@@ -185,9 +176,7 @@ export class ConsoleClient {
           // Success
           return;
         } else {
-          lastError = new Error(
-            `HTTP ${response.status}: ${response.statusText}`,
-          );
+          lastError = new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
       } catch (error) {
         lastError = error as Error;
@@ -195,8 +184,7 @@ export class ConsoleClient {
 
       // Retry with exponential backoff
       if (attempt < (this.config.retryAttempts || 3)) {
-        const delay = (this.config.retryDelayMs || 1000) *
-          Math.pow(2, attempt - 1);
+        const delay = (this.config.retryDelayMs || 1000) * Math.pow(2, attempt - 1);
         await this.sleep(delay);
       }
     }

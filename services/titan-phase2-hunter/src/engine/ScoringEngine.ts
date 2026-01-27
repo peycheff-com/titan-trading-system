@@ -10,14 +10,9 @@
  * - 5.3: Extend existing holographic state with 2026 enhancement data
  */
 
-import { EventEmitter } from "events";
-import {
-  BotTrapAnalysis,
-  FlowValidation,
-  GlobalCVDData,
-  OracleScore,
-} from "../types";
-import { HologramState, HologramStatus } from "../types";
+import { EventEmitter } from 'events';
+import { BotTrapAnalysis, FlowValidation, GlobalCVDData, OracleScore } from '../types';
+import { HologramState, HologramStatus } from '../types';
 
 /**
  * Scoring weights configuration
@@ -123,19 +118,15 @@ export class ScoringEngine extends EventEmitter {
     flowValidation: FlowValidation | null,
     botTrapAnalysis: BotTrapAnalysis | null,
     globalCVD: GlobalCVDData | null,
-    regime: string = "STABLE",
-    alpha: number = 3.0,
+    regime: string = 'STABLE',
+    alpha: number = 3.0
   ): ScoringBreakdown {
     const reasoning: string[] = [];
 
     // Calculate classic component scores (0-100 scale)
     const dailyBiasScore = this.calculateDailyBiasScore(classicHologram);
-    const fourHourLocationScore = this.calculateFourHourLocationScore(
-      classicHologram,
-    );
-    const fifteenMinFlowScore = this.calculateFifteenMinFlowScore(
-      classicHologram,
-    );
+    const fourHourLocationScore = this.calculateFourHourLocationScore(classicHologram);
+    const fifteenMinFlowScore = this.calculateFifteenMinFlowScore(classicHologram);
 
     // Calculate Oracle contribution (0-100 scale, can be negative for conflicts)
     const oracleContribution = this.calculateOracleContribution(oracleScore);
@@ -147,30 +138,25 @@ export class ScoringEngine extends EventEmitter {
     const botTrapPenalty = this.calculateBotTrapPenalty(botTrapAnalysis);
 
     // Calculate Global CVD contribution (0-100 scale)
-    const globalCVDContribution = this.calculateGlobalCVDContribution(
-      globalCVD,
-    );
+    const globalCVDContribution = this.calculateGlobalCVDContribution(globalCVD);
 
     // Apply weighted formula (Requirement 5.1)
     // Enhanced Score = Daily_Bias × 0.4 + 4H_Location × 0.25 + 15m_Flow × 0.15 + Oracle_Score × 0.2
     const { weights } = this.config;
 
-    const rawScore = dailyBiasScore * weights.dailyBias +
+    const rawScore =
+      dailyBiasScore * weights.dailyBias +
       fourHourLocationScore * weights.fourHourLocation +
       fifteenMinFlowScore * weights.fifteenMinFlow +
       oracleContribution * weights.oracleScore;
 
     // eslint-disable-next-line functional/immutable-data
     reasoning.push(
-      `Base score: ${rawScore.toFixed(1)} (Daily: ${
-        dailyBiasScore.toFixed(
-          0,
-        )
-      }, 4H: ${fourHourLocationScore.toFixed(0)}, 15m: ${
-        fifteenMinFlowScore.toFixed(
-          0,
-        )
-      }, Oracle: ${oracleContribution.toFixed(0)})`,
+      `Base score: ${rawScore.toFixed(1)} (Daily: ${dailyBiasScore.toFixed(
+        0
+      )}, 4H: ${fourHourLocationScore.toFixed(0)}, 15m: ${fifteenMinFlowScore.toFixed(
+        0
+      )}, Oracle: ${oracleContribution.toFixed(0)})`
     );
 
     // Apply enhancement adjustments
@@ -184,11 +170,9 @@ export class ScoringEngine extends EventEmitter {
       if (flowAdjustment !== 0) {
         // eslint-disable-next-line functional/immutable-data
         reasoning.push(
-          `Flow adjustment: ${flowAdjustment > 0 ? "+" : ""}${
-            flowAdjustment.toFixed(
-              1,
-            )
-          } (${flowValidation.flowType})`,
+          `Flow adjustment: ${flowAdjustment > 0 ? '+' : ''}${flowAdjustment.toFixed(
+            1
+          )} (${flowValidation.flowType})`
         );
       }
     }
@@ -207,11 +191,9 @@ export class ScoringEngine extends EventEmitter {
       if (cvdAdjustment !== 0) {
         // eslint-disable-next-line functional/immutable-data
         reasoning.push(
-          `Global CVD adjustment: ${cvdAdjustment > 0 ? "+" : ""}${
-            cvdAdjustment.toFixed(
-              1,
-            )
-          } (${globalCVD.consensus})`,
+          `Global CVD adjustment: ${cvdAdjustment > 0 ? '+' : ''}${cvdAdjustment.toFixed(
+            1
+          )} (${globalCVD.consensus})`
         );
       }
     }
@@ -240,7 +222,7 @@ export class ScoringEngine extends EventEmitter {
     const { daily } = hologram;
 
     // Strong trend = 100, Range = 50
-    if (daily.trend === "BULL" || daily.trend === "BEAR") {
+    if (daily.trend === 'BULL' || daily.trend === 'BEAR') {
       return 100;
     }
     return 50; // RANGE
@@ -253,20 +235,20 @@ export class ScoringEngine extends EventEmitter {
     const { h4, daily } = hologram;
 
     // Score based on alignment with daily bias
-    if (daily.trend === "BULL") {
+    if (daily.trend === 'BULL') {
       // For bullish bias, DISCOUNT is best (100), EQUILIBRIUM is okay (70), PREMIUM is bad (30)
-      if (h4.location === "DISCOUNT") return 100;
-      if (h4.location === "EQUILIBRIUM") return 70;
+      if (h4.location === 'DISCOUNT') return 100;
+      if (h4.location === 'EQUILIBRIUM') return 70;
       return 30; // PREMIUM
-    } else if (daily.trend === "BEAR") {
+    } else if (daily.trend === 'BEAR') {
       // For bearish bias, PREMIUM is best (100), EQUILIBRIUM is okay (70), DISCOUNT is bad (30)
-      if (h4.location === "PREMIUM") return 100;
-      if (h4.location === "EQUILIBRIUM") return 70;
+      if (h4.location === 'PREMIUM') return 100;
+      if (h4.location === 'EQUILIBRIUM') return 70;
       return 30; // DISCOUNT
     }
 
     // RANGE - equilibrium is best
-    if (h4.location === "EQUILIBRIUM") return 80;
+    if (h4.location === 'EQUILIBRIUM') return 80;
     return 50;
   }
 
@@ -286,7 +268,7 @@ export class ScoringEngine extends EventEmitter {
     }
 
     // Trend alignment adds 20 points
-    if (m15.trend === daily.trend && daily.trend !== "RANGE") {
+    if (m15.trend === daily.trend && daily.trend !== 'RANGE') {
       score += 20;
     }
 
@@ -315,18 +297,16 @@ export class ScoringEngine extends EventEmitter {
   /**
    * Calculate Flow contribution (0-100)
    */
-  private calculateFlowContribution(
-    flowValidation: FlowValidation | null,
-  ): number {
+  private calculateFlowContribution(flowValidation: FlowValidation | null): number {
     if (!flowValidation) return 50; // Neutral if no flow data
 
     // eslint-disable-next-line functional/no-let
     let score = 50;
 
     // Flow type contribution
-    if (flowValidation.flowType === "passive_absorption") {
+    if (flowValidation.flowType === 'passive_absorption') {
       score += 25; // Bullish institutional flow
-    } else if (flowValidation.flowType === "aggressive_pushing") {
+    } else if (flowValidation.flowType === 'aggressive_pushing') {
       score -= 15; // Potentially bearish
     }
 
@@ -343,9 +323,7 @@ export class ScoringEngine extends EventEmitter {
   /**
    * Calculate Bot Trap penalty (0-50)
    */
-  private calculateBotTrapPenalty(
-    botTrapAnalysis: BotTrapAnalysis | null,
-  ): number {
+  private calculateBotTrapPenalty(botTrapAnalysis: BotTrapAnalysis | null): number {
     if (!botTrapAnalysis || !botTrapAnalysis.isSuspect) return 0;
 
     // Penalty based on suspicion score
@@ -356,9 +334,7 @@ export class ScoringEngine extends EventEmitter {
   /**
    * Calculate Global CVD contribution (0-100)
    */
-  private calculateGlobalCVDContribution(
-    globalCVD: GlobalCVDData | null,
-  ): number {
+  private calculateGlobalCVDContribution(globalCVD: GlobalCVDData | null): number {
     if (!globalCVD) return 50; // Neutral if no Global CVD data
 
     // eslint-disable-next-line functional/no-let
@@ -366,16 +342,16 @@ export class ScoringEngine extends EventEmitter {
 
     // Consensus contribution
     switch (globalCVD.consensus) {
-      case "bullish":
+      case 'bullish':
         score += 25;
         break;
-      case "bearish":
+      case 'bearish':
         score -= 25;
         break;
-      case "conflicted":
+      case 'conflicted':
         score -= 10; // Slight penalty for conflicting signals
         break;
-        // 'neutral' stays at 50
+      // 'neutral' stays at 50
     }
 
     // Manipulation detection penalty
@@ -400,15 +376,15 @@ export class ScoringEngine extends EventEmitter {
     botTrapAnalysis: BotTrapAnalysis | null,
     globalCVD: GlobalCVDData | null,
     flowValidation: FlowValidation | null,
-    regime: string = "STABLE", // "STABLE" | "VOLATILE" | "CRASH"
-    alpha: number = 3.0,
-  ): "A+" | "A" | "B" | "C" | "VETO" {
+    regime: string = 'STABLE', // "STABLE" | "VOLATILE" | "CRASH"
+    alpha: number = 3.0
+  ): 'A+' | 'A' | 'B' | 'C' | 'VETO' {
     const { alignmentThresholds, vetoConditions } = this.config;
 
     // 1. Regime-Based Dynamic Thresholds
     // If regime is VOLATILE or Alpha is low (< 2.5), we demand higher quality
     const thresholds = { ...alignmentThresholds };
-    if (regime === "VOLATILE" || regime === "CRASH" || alpha < 2.5) {
+    if (regime === 'VOLATILE' || regime === 'CRASH' || alpha < 2.5) {
       // eslint-disable-next-line functional/immutable-data
       thresholds.aPlus += 5; // 80 -> 85
       // eslint-disable-next-line functional/immutable-data
@@ -420,11 +396,11 @@ export class ScoringEngine extends EventEmitter {
 
     // 2. Extreme Volatility Filter (Alpha < 2.0)
     // In extreme tails (Alpha < 2), markets are wild. We discard 'B' setups entirely.
-    const isExtremeVolatility = alpha < 2.0 || regime === "CRASH";
+    const isExtremeVolatility = alpha < 2.0 || regime === 'CRASH';
 
     // Check veto conditions first
     if (vetoConditions.oracleVetoEnabled && oracleScore?.veto) {
-      return "VETO";
+      return 'VETO';
     }
 
     if (
@@ -432,7 +408,7 @@ export class ScoringEngine extends EventEmitter {
       botTrapAnalysis?.isSuspect &&
       botTrapAnalysis.suspicionScore >= 80
     ) {
-      return "VETO";
+      return 'VETO';
     }
 
     if (
@@ -440,7 +416,7 @@ export class ScoringEngine extends EventEmitter {
       globalCVD?.manipulation.detected &&
       globalCVD.manipulation.divergenceScore >= 80
     ) {
-      return "VETO";
+      return 'VETO';
     }
 
     if (
@@ -449,25 +425,25 @@ export class ScoringEngine extends EventEmitter {
       !flowValidation.isValid &&
       flowValidation.confidence >= 80
     ) {
-      return "VETO";
+      return 'VETO';
     }
 
     // Determine alignment based on adjusted thresholds
-    if (score >= thresholds.aPlus) return "A+";
-    if (score >= thresholds.a) return "A";
+    if (score >= thresholds.aPlus) return 'A+';
+    if (score >= thresholds.a) return 'A';
 
     // For B setups, check extreme volatility
     if (score >= thresholds.b) {
       if (isExtremeVolatility) {
         // Downgrade B to C (No Play) in extreme uncertainty
-        return "C";
+        return 'C';
       }
-      return "B";
+      return 'B';
     }
 
-    if (score >= thresholds.c) return "C";
+    if (score >= thresholds.c) return 'C';
 
-    return "VETO"; // Score too low
+    return 'VETO'; // Score too low
   }
 
   /**
@@ -476,8 +452,8 @@ export class ScoringEngine extends EventEmitter {
   determineConvictionLevel(
     score: number,
     oracleScore: OracleScore | null,
-    globalCVD: GlobalCVDData | null,
-  ): "low" | "medium" | "high" | "extreme" {
+    globalCVD: GlobalCVDData | null
+  ): 'low' | 'medium' | 'high' | 'extreme' {
     // Base conviction from score
     // eslint-disable-next-line functional/no-let
     let convictionPoints = 0;
@@ -487,28 +463,24 @@ export class ScoringEngine extends EventEmitter {
     else if (score >= 70) convictionPoints += 1;
 
     // Oracle alignment bonus
-    if (
-      oracleScore && Math.abs(oracleScore.sentiment) >= 60 &&
-      oracleScore.confidence >= 70
-    ) {
+    if (oracleScore && Math.abs(oracleScore.sentiment) >= 60 && oracleScore.confidence >= 70) {
       convictionPoints += 1;
     }
 
     // Global CVD consensus bonus
     if (
       globalCVD &&
-      (globalCVD.consensus === "bullish" ||
-        globalCVD.consensus === "bearish") &&
+      (globalCVD.consensus === 'bullish' || globalCVD.consensus === 'bearish') &&
       globalCVD.confidence >= 70
     ) {
       convictionPoints += 1;
     }
 
     // Map points to conviction level
-    if (convictionPoints >= 4) return "extreme";
-    if (convictionPoints >= 3) return "high";
-    if (convictionPoints >= 2) return "medium";
-    return "low";
+    if (convictionPoints >= 4) return 'extreme';
+    if (convictionPoints >= 3) return 'high';
+    if (convictionPoints >= 2) return 'medium';
+    return 'low';
   }
 
   /**
@@ -529,7 +501,7 @@ export class ScoringEngine extends EventEmitter {
         ...config.vetoConditions,
       },
     };
-    this.emit("configUpdated", this.config);
+    this.emit('configUpdated', this.config);
   }
 
   /**

@@ -127,7 +127,7 @@ impl RiskGuard {
                 "🛡️ Risk State Transition: {:?} -> {:?}",
                 policy.current_state, new_state
             );
-            policy.current_state = new_state.clone();
+            policy.current_state = new_state;
 
             // Metrics Export
             let metric_val = match new_state {
@@ -417,13 +417,13 @@ impl RiskGuard {
 
     pub fn is_reduce_only(intent: &Intent) -> bool {
         use crate::model::IntentType;
-        match intent.intent_type {
+        matches!(
+            intent.intent_type,
             IntentType::Close
-            | IntentType::CloseLong
-            | IntentType::CloseShort
-            | IntentType::ForceSync => true,
-            _ => false,
-        }
+                | IntentType::CloseLong
+                | IntentType::CloseShort
+                | IntentType::ForceSync
+        )
     }
 }
 

@@ -59,7 +59,7 @@ const ChartContainer = React.forwardRef<
     </ChartContext.Provider>
   );
 });
- 
+
 ChartContainer.displayName = 'Chart';
 
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
@@ -95,13 +95,19 @@ const ChartTooltip = RechartsPrimitive.Tooltip;
 
 const ChartTooltipContent = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<typeof RechartsPrimitive.Tooltip> &
     React.ComponentProps<'div'> & {
       hideLabel?: boolean;
       hideIndicator?: boolean;
       indicator?: 'line' | 'dot' | 'dashed';
       nameKey?: string;
       labelKey?: string;
+      active?: boolean;
+      payload?: any[];
+      label?: any;
+      formatter?: any;
+      color?: string;
+      labelFormatter?: any;
+      labelClassName?: string;
     }
 >(
   (
@@ -235,7 +241,7 @@ const ChartTooltipContent = React.forwardRef<
     );
   },
 );
- 
+
 ChartTooltipContent.displayName = 'ChartTooltip';
 
 const ChartLegend = RechartsPrimitive.Legend;
@@ -243,7 +249,9 @@ const ChartLegend = RechartsPrimitive.Legend;
 const ChartLegendContent = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<'div'> &
-    Pick<RechartsPrimitive.LegendProps, 'payload' | 'verticalAlign'> & {
+    React.ComponentProps<'div'> &
+    Pick<RechartsPrimitive.LegendProps, 'verticalAlign'> & {
+      payload?: any[];
       hideIcon?: boolean;
       nameKey?: string;
     }
@@ -291,7 +299,7 @@ const ChartLegendContent = React.forwardRef<
     </div>
   );
 });
- 
+
 ChartLegendContent.displayName = 'ChartLegend';
 
 // Helper to extract item config from a payload.
@@ -305,7 +313,6 @@ function getPayloadConfigFromPayload(config: ChartConfig, payload: unknown, key:
       ? payload.payload
       : undefined;
 
-   
   let configLabelKey: string = key;
 
   if (key in payload && typeof payload[key as keyof typeof payload] === 'string') {

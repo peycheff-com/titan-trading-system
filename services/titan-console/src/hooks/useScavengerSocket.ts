@@ -39,7 +39,6 @@ const playTrapSprungSound = () => {
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
 
-     
     oscillator.type = 'sawtooth';
     oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // A4
     oscillator.frequency.exponentialRampToValueAtTime(880, audioContext.currentTime + 0.1); // Slide up to A5
@@ -83,7 +82,6 @@ export function useScavengerSocket() {
 
       const ws = new WebSocket(wsUrl);
 
-       
       ws.onopen = () => {
         console.log('✅ Scavenger WS Connected');
         setState((prev) => ({ ...prev, isConnected: true }));
@@ -92,7 +90,6 @@ export function useScavengerSocket() {
         ws.send(JSON.stringify({ type: 'request_state' }));
       };
 
-       
       ws.onclose = () => {
         console.log('🔌 Scavenger WS Disconnected');
         setState((prev) => ({ ...prev, isConnected: false }));
@@ -102,12 +99,10 @@ export function useScavengerSocket() {
         reconnectTimeoutRef.current = setTimeout(connect, 3000);
       };
 
-       
       ws.onerror = (error) => {
         console.warn('⚠️ Scavenger WS Error:', error);
       };
 
-       
       ws.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);

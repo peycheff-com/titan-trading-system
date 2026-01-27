@@ -138,7 +138,7 @@ fn test_negative_contract_compliance() {
     for line in reader.lines() {
         let line = line.unwrap();
         // meaningful test: try strict deserialize
-        let result: Result<Intent, _> = serde_json::from_str(&line);
+        let _result: Result<Intent, _> = serde_json::from_str(&line);
         // We assert that it FAILS (is Err) because the schema matches our struct
         // Note: Our fixture is minimal, but our Intent struct has many required fields like 'symbol'.
         // So deserializing `{"signal_id": ...}` should fail if fields are missing.

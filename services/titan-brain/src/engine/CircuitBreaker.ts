@@ -77,7 +77,6 @@ export class CircuitBreaker {
    * Set the position closure handler
    */
   setPositionHandler(handler: PositionClosureHandler): void {
-     
     this.positionHandler = handler;
   }
 
@@ -85,7 +84,6 @@ export class CircuitBreaker {
    * Set the notification handler
    */
   setNotificationHandler(handler: NotificationHandler): void {
-     
     this.notificationHandler = handler;
   }
 
@@ -93,7 +91,6 @@ export class CircuitBreaker {
    * Set the event persistence handler
    */
   setEventPersistence(persistence: BreakerEventPersistence): void {
-     
     this.eventPersistence = persistence;
   }
 
@@ -104,7 +101,6 @@ export class CircuitBreaker {
     save(key: string, value: string): Promise<void>;
     load(key: string): Promise<string | null>;
   }): void {
-     
     this.stateStore = store;
   }
 
@@ -142,21 +138,21 @@ export class CircuitBreaker {
       const data = await this.stateStore.load(this.STATE_KEY);
       if (data) {
         const state = JSON.parse(data);
-         
+
         this.active = state.active;
-         
+
         this.breakerType = state.breakerType;
-         
+
         this.triggerReason = state.triggerReason;
-         
+
         this.triggeredAt = state.triggeredAt;
-         
+
         this.cooldownEndsAt = state.cooldownEndsAt;
-         
+
         this.dailyStartEquity = state.dailyStartEquity;
-         
+
         this.tripCount = state.tripCount;
-         
+
         this.lastTripTime = state.lastTripTime;
         console.log('✅ Circuit Breaker state restored from persistence');
       }
@@ -170,7 +166,6 @@ export class CircuitBreaker {
    * Should be called at the start of each trading day
    */
   setDailyStartEquity(equity: number): void {
-     
     this.dailyStartEquity = Math.max(0, equity);
   }
 
@@ -192,7 +187,6 @@ export class CircuitBreaker {
 
     // Update daily start equity if provided
     if (dailyStartEquity > 0) {
-       
       this.dailyStartEquity = dailyStartEquity;
     }
 
@@ -266,19 +260,18 @@ export class CircuitBreaker {
 
     const timestamp = Date.now();
 
-     
     this.active = true;
-     
+
     this.breakerType = BreakerType.HARD;
-     
+
     this.triggerReason = reason;
-     
+
     this.triggeredAt = timestamp;
-     
+
     this.cooldownEndsAt = undefined;
-     
+
     this.tripCount++;
-     
+
     this.lastTripTime = timestamp;
 
     await this.persistState();
@@ -342,19 +335,18 @@ export class CircuitBreaker {
 
     const timestamp = Date.now();
 
-     
     this.active = true;
-     
+
     this.breakerType = BreakerType.SOFT;
-     
+
     this.triggerReason = reason;
-     
+
     this.triggeredAt = timestamp;
-     
+
     this.cooldownEndsAt = timestamp + this.config.cooldownMinutes * 60 * 1000;
-     
+
     this.tripCount++;
-     
+
     this.lastTripTime = timestamp;
 
     await this.persistState();
@@ -401,15 +393,15 @@ export class CircuitBreaker {
     const previousType = this.breakerType;
 
     // Reset state
-     
+
     this.active = false;
-     
+
     this.breakerType = undefined;
-     
+
     this.triggerReason = undefined;
-     
+
     this.triggeredAt = undefined;
-     
+
     this.cooldownEndsAt = undefined;
 
     await this.persistState();
@@ -478,17 +470,16 @@ export class CircuitBreaker {
     const tradeTime = timestamp ?? Date.now();
 
     // Add to recent losses tracking
-     
+
     this.recentLosses.push({ pnl, timestamp: tradeTime });
 
     // Clean up old trades outside the window
     const windowStart = tradeTime - this.config.consecutiveLossWindow;
-     
+
     this.recentLosses = this.recentLosses.filter((t) => t.timestamp >= windowStart);
 
     // If profitable trade, reset consecutive loss counter
     if (pnl >= 0) {
-       
       this.recentLosses = this.recentLosses.filter(
         (t) => t.pnl < 0 && t.timestamp > tradeTime - this.config.consecutiveLossWindow,
       );
@@ -533,7 +524,7 @@ export class CircuitBreaker {
       .sort((a, b) => b.timestamp - a.timestamp);
 
     // Count consecutive losses from most recent
-     
+
     let consecutiveLosses = 0;
     for (const trade of tradesInWindow) {
       if (trade.pnl < 0) {
@@ -557,17 +548,17 @@ export class CircuitBreaker {
       Date.now() >= this.cooldownEndsAt
     ) {
       // Auto-reset soft breaker after cooldown
-       
+
       this.active = false;
-       
+
       this.breakerType = undefined;
-       
+
       this.triggerReason = undefined;
-       
+
       this.triggeredAt = undefined;
-       
+
       this.triggeredAt = undefined;
-       
+
       this.cooldownEndsAt = undefined;
       this.persistState().catch((err) => console.error('Failed to persist state check', err));
     }

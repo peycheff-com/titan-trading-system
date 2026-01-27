@@ -90,7 +90,7 @@ export class RateLimiter {
     try {
       // Get current hit count from cache
       const cacheResult = await this.cacheManager.get<string>(key);
-       
+
       let hits: Array<{ timestamp: number; success?: boolean }> = [];
 
       if (cacheResult.success && cacheResult.value) {
@@ -112,7 +112,7 @@ export class RateLimiter {
       hits = hits.filter((hit) => hit.timestamp > windowStart);
 
       // Count relevant hits based on configuration
-       
+
       let relevantHits = hits.length;
       if (finalConfig.skipSuccessfulRequests || finalConfig.skipFailedRequests) {
         relevantHits = hits.filter((hit) => {
@@ -132,7 +132,6 @@ export class RateLimiter {
 
       // Add current request to hits if we're tracking it
       if (allowed) {
-         
         hits.push({ timestamp: now });
 
         // Store updated hits with TTL
@@ -190,7 +189,6 @@ export class RateLimiter {
 
       // Update the most recent hit with success status
       if (hits.length > 0) {
-         
         hits[hits.length - 1].success = success;
 
         const ttlMs = Math.ceil(finalConfig.windowMs / 1000);

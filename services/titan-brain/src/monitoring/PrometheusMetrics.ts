@@ -168,7 +168,7 @@ export class PrometheusMetrics {
       labelNames,
       registers: [this.registry],
     });
-     
+
     this.counters.set(name, counter);
   }
 
@@ -182,7 +182,7 @@ export class PrometheusMetrics {
       labelNames,
       registers: [this.registry],
     });
-     
+
     this.gauges.set(name, gauge);
   }
 
@@ -202,7 +202,7 @@ export class PrometheusMetrics {
       buckets: buckets || [0.1, 5, 15, 50, 100, 500],
       registers: [this.registry],
     });
-     
+
     this.histograms.set(name, histogram);
   }
 
@@ -266,19 +266,19 @@ export class PrometheusMetrics {
 
     // Update internal stats
     const latStats = this.latencyStats.get(phaseId) || { sum: 0, count: 0 };
-     
+
     latStats.sum += latencyMs;
-     
+
     latStats.count++;
-     
+
     this.latencyStats.set(phaseId, latStats);
 
     const decStats = this.decisionStats.get(phaseId) || { approved: 0, total: 0 };
-     
+
     decStats.total++;
-     
+
     if (approved) decStats.approved++;
-     
+
     this.decisionStats.set(phaseId, decStats);
   }
 
@@ -305,11 +305,11 @@ export class PrometheusMetrics {
 
     // Update internal stats
     const cStats = this.cacheStats.get(cacheName) || { hits: 0, total: 0 };
-     
+
     cStats.total++;
-     
+
     if (hit) cStats.hits++;
-     
+
     this.cacheStats.set(cacheName, cStats);
   }
 
@@ -430,11 +430,11 @@ export class PrometheusMetrics {
       prefix: this.prefix,
     });
     this.initializeMetrics();
-     
+
     this.latencyStats.clear();
-     
+
     this.decisionStats.clear();
-     
+
     this.cacheStats.clear();
   }
 
@@ -471,7 +471,7 @@ export class PrometheusMetrics {
 /**
  * Singleton instance for global metrics collection
  */
- 
+
 let metricsInstance: PrometheusMetrics | null = null;
 
 /**

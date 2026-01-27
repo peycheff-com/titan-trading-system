@@ -5,7 +5,7 @@
  * Requirements: 7.1, 7.4
  */
 
-import { createClient, RedisClientType } from 'redis';
+import { createClient } from 'redis';
 import { IntentSignal, PhaseId, RedisConfig } from '../types/index.js';
 
 /**
@@ -54,7 +54,7 @@ const DEFAULT_CONFIG: Partial<SignalQueueConfig> = {
  */
 export class SignalQueue {
   private readonly config: SignalQueueConfig;
-  private client: RedisClientType | null = null;
+  private client: any | null = null;
   private connected: boolean = false;
 
   /** Redis key names */
@@ -75,12 +75,11 @@ export class SignalQueue {
   async connect(): Promise<void> {
     if (this.connected) return;
 
-     
     this.client = createClient({
       url: this.config.url,
     });
 
-    this.client.on('error', (err) => {
+    this.client.on('error', (err: any) => {
       console.error('Redis client error:', err);
     });
 
@@ -89,7 +88,7 @@ export class SignalQueue {
     });
 
     await this.client.connect();
-     
+
     this.connected = true;
     console.log('✅ Signal queue connected to Redis');
   }
@@ -100,9 +99,9 @@ export class SignalQueue {
   async disconnect(): Promise<void> {
     if (this.client && this.connected) {
       await this.client.quit();
-       
+
       this.connected = false;
-       
+
       this.client = null;
       console.log('🛑 Signal queue disconnected from Redis');
     }
@@ -295,14 +294,14 @@ export class SignalQueue {
     const results = await this.client.zRange(this.queueKey, 0, -1);
 
     return results
-      .map((value) => {
+      .map((value: string) => {
         try {
           return JSON.parse(value) as QueuedSignalEntry;
         } catch {
           return null;
         }
       })
-      .filter((entry): entry is QueuedSignalEntry => entry !== null);
+      .filter((entry: QueuedSignalEntry | null): entry is QueuedSignalEntry => entry !== null);
   }
 
   /**
@@ -358,7 +357,7 @@ export class SignalQueue {
     const processedCount = await this.client.hLen(this.processedKey);
 
     // Get oldest signal age
-     
+
     let oldestSignalAge: number | null = null;
     const oldest = await this.client.zRange(this.queueKey, 0, 0);
     if (oldest && oldest.length > 0) {
@@ -390,11 +389,10 @@ export class SignalQueue {
 
     const signals: IntentSignal[] = [];
 
-     
     for (let i = 0; i < limit; i++) {
       const signal = await this.dequeue();
       if (!signal) break;
-       
+
       signals.push(signal);
     }
 

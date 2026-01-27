@@ -1,10 +1,10 @@
-export type SystemStatus = "healthy" | "degraded" | "critical" | "offline";
-export type Severity = "info" | "warning" | "critical";
-export type Phase = "scavenger" | "hunter" | "sentinel";
+export type SystemStatus = 'healthy' | 'degraded' | 'critical' | 'offline';
+export type Severity = 'info' | 'warning' | 'critical';
+export type Phase = 'scavenger' | 'hunter' | 'sentinel';
 
 export interface TimelineEvent {
   id: string;
-  type: "trade" | "alert" | "system" | "risk";
+  type: 'trade' | 'alert' | 'system' | 'risk';
   severity: Severity;
   message: string;
   symbol: string | null;
@@ -25,9 +25,9 @@ export function formatTimeAgo(timestamp: number): string {
 }
 
 export function formatCurrency(amount: number, decimals = 2): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   }).format(amount);
@@ -38,7 +38,7 @@ export function formatPercent(value: number, decimals = 2): string {
 }
 
 export function formatNumber(value: number, decimals = 2): string {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat('en-US', {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   }).format(value);

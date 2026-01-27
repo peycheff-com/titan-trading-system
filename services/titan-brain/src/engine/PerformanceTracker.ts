@@ -60,7 +60,7 @@ export class PerformanceTracker {
     );
 
     // Update daily PnL (simple in-memory tracking)
-     
+
     this.dailyPnL += pnl;
   }
 
@@ -145,7 +145,7 @@ export class PerformanceTracker {
       [phaseId, windowStart],
     );
 
-    return result.rows.map((row) => ({
+    return result.rows.map((row: any) => ({
       id: row.id,
       phaseId: row.phase_id as PhaseId,
       pnl: parseFloat(row.pnl),

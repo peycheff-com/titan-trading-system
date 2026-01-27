@@ -10,7 +10,7 @@ pub enum ReplayEvent {
     MarketData(BookTicker),
 
     /// Signal Intent (from Strategy) -> Triggers Execution Pipeline
-    Signal(Intent),
+    Signal(Box<Intent>),
 
     /// Risk Policy Update -> Updates RiskGuard
     RiskPolicy { policy: RiskPolicy, ts: i64 },

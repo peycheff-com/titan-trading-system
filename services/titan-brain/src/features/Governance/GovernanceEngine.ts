@@ -1,13 +1,9 @@
-import { Logger } from "../../logging/Logger.js";
-import { EventEmitter } from "events";
-import { DefconLevel, SystemHealth } from "./types.js";
-import {
-  calculateDefconLevel,
-  canOpenPosition,
-  getLeverageMultiplier,
-} from "./logic.js";
+import { Logger } from '../../logging/Logger.js';
+import { EventEmitter } from 'events';
+import { DefconLevel, SystemHealth } from './types.js';
+import { calculateDefconLevel, canOpenPosition, getLeverageMultiplier } from './logic.js';
 
-export { DefconLevel, SystemHealth } from "./types.js";
+export { DefconLevel, SystemHealth } from './types.js';
 
 export class GovernanceEngine extends EventEmitter {
   private logger: Logger;
@@ -23,8 +19,8 @@ export class GovernanceEngine extends EventEmitter {
 
   constructor() {
     super();
-    this.logger = Logger.getInstance("governance-engine");
-    this.logger.info("🏛️ Governance Engine Initialized (DEFCON: NORMAL)");
+    this.logger = Logger.getInstance('governance-engine');
+    this.logger.info('🏛️ Governance Engine Initialized (DEFCON: NORMAL)');
   }
 
   public getDefconLevel(): DefconLevel {
@@ -33,8 +29,8 @@ export class GovernanceEngine extends EventEmitter {
 
   public setOverride(level: DefconLevel | null) {
     this.overrideLevel = level;
-    this.logger.warn(`Manual Override: ${level || "CLEARED"}`);
-    this.emit("defcon_change", this.getDefconLevel());
+    this.logger.warn(`Manual Override: ${level || 'CLEARED'}`);
+    this.emit('defcon_change', this.getDefconLevel());
   }
 
   public updateHealth(health: SystemHealth) {
@@ -48,7 +44,7 @@ export class GovernanceEngine extends EventEmitter {
       );
 
       this.currentLevel = calculatedLevel;
-      this.emit("defcon_change", this.getDefconLevel());
+      this.emit('defcon_change', this.getDefconLevel());
     }
   }
 

@@ -102,6 +102,7 @@ Phase 2 solves this by:
 ## Why This Wins for Bulgaria (200ms latency)
 
 - We use **Limit Orders (Post-Only)** that rest on the order book at Order Blocks, earning Maker rebates
+- **Rate Limit Resilience**: Optimized Binance interaction to stay under 1200 weight/min restrictions
 - We don't care about 200ms lag because our order is **waiting** at a pre-calculated level for price to come to us
 - We trade **structural manipulation** (hours to days), not tick arbitrage (milliseconds)
 - We enter during **Killzones** (London/NY open) when institutional flow provides follow-through

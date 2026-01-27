@@ -73,7 +73,7 @@ export class InMemorySignalQueue {
    */
   async connect(): Promise<void> {
     // Start cleanup interval for expired idempotency keys
-     
+
     this.cleanupInterval = setInterval(() => {
       this.cleanupExpired();
     }, 60000); // Every minute
@@ -87,7 +87,7 @@ export class InMemorySignalQueue {
   async disconnect(): Promise<void> {
     if (this.cleanupInterval) {
       clearInterval(this.cleanupInterval);
-       
+
       this.cleanupInterval = null;
     }
     console.log('🛑 Signal queue disconnected (in-memory mode)');
@@ -108,7 +108,6 @@ export class InMemorySignalQueue {
 
     for (const [signalId, expiresAt] of this.idempotencyMap.entries()) {
       if (expiresAt <= now) {
-         
         this.idempotencyMap.delete(signalId);
       }
     }
@@ -131,9 +130,9 @@ export class InMemorySignalQueue {
     // Check queue size and evict oldest if necessary
     if (this.queue.length >= this.config.maxQueueSize) {
       // Remove lowest priority (lowest score) signal
-       
+
       this.queue.sort((a, b) => a.score - b.score);
-       
+
       this.queue.shift();
     }
 
@@ -153,15 +152,15 @@ export class InMemorySignalQueue {
     };
 
     // Add to queue
-     
+
     this.queue.push(entry);
 
     // Sort by score (descending - highest priority first)
-     
+
     this.queue.sort((a, b) => b.score - a.score);
 
     // Mark signal ID as seen for idempotency
-     
+
     this.idempotencyMap.set(signal.signalId, now + this.config.idempotencyTTL);
 
     return true;
@@ -179,7 +178,7 @@ export class InMemorySignalQueue {
     }
 
     // Remove and return highest priority (first element)
-     
+
     const entry = this.queue.shift();
     return entry ? entry.signal : null;
   }
@@ -212,7 +211,6 @@ export class InMemorySignalQueue {
 
     // Check if expired
     if (expiresAt <= Date.now()) {
-       
       this.idempotencyMap.delete(signalId);
       return false;
     }
@@ -226,13 +224,11 @@ export class InMemorySignalQueue {
    * @param signalId - Signal ID to mark as processed
    */
   async markProcessed(signalId: string): Promise<void> {
-     
     this.processedMap.set(signalId, Date.now());
 
     // Extend idempotency TTL
     const expiresAt = this.idempotencyMap.get(signalId);
     if (expiresAt) {
-       
       this.idempotencyMap.set(signalId, Date.now() + this.config.idempotencyTTL);
     }
   }
@@ -273,7 +269,6 @@ export class InMemorySignalQueue {
    * Clear the queue
    */
   async clear(): Promise<void> {
-     
     this.queue = [];
   }
 
@@ -281,7 +276,6 @@ export class InMemorySignalQueue {
    * Clear idempotency records
    */
   async clearIdempotency(): Promise<void> {
-     
     this.idempotencyMap.clear();
   }
 
@@ -289,7 +283,6 @@ export class InMemorySignalQueue {
    * Clear processed records
    */
   async clearProcessed(): Promise<void> {
-     
     this.processedMap.clear();
   }
 
@@ -305,7 +298,7 @@ export class InMemorySignalQueue {
     const processedCount = this.processedMap.size;
 
     // Get oldest signal age
-     
+
     let oldestSignalAge: number | null = null;
     if (this.queue.length > 0) {
       // Find oldest by enqueuedAt
@@ -331,11 +324,10 @@ export class InMemorySignalQueue {
   async dequeueBatch(limit: number): Promise<IntentSignal[]> {
     const signals: IntentSignal[] = [];
 
-     
     for (let i = 0; i < limit; i++) {
       const signal = await this.dequeue();
       if (!signal) break;
-       
+
       signals.push(signal);
     }
 

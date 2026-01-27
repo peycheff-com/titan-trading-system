@@ -4,9 +4,9 @@ use rust_decimal::Decimal;
 use std::env;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
-use tracing::{error, info, level_filters::LevelFilter, warn};
+use tracing::{info, level_filters::LevelFilter, warn};
 use tracing_subscriber::EnvFilter;
 
 use titan_execution_rs::circuit_breaker::GlobalHalt;
@@ -176,21 +176,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    let event_stream = reader
-        .lines()
-        .filter_map(|line| line.ok())
-        .filter_map(|line| {
-            if line.trim().is_empty() {
-                return None;
+    let event_stream = reader.lines().map_while(Result::ok).filter_map(|line| {
+        if line.trim().is_empty() {
+            return None;
+        }
+        match serde_json::from_str::<ReplayEvent>(&line) {
+            Ok(ev) => Some(ev),
+            Err(e) => {
+                warn!("Failed to parse line: {}", e);
+                None
             }
-            match serde_json::from_str::<ReplayEvent>(&line) {
-                Ok(ev) => Some(ev),
-                Err(e) => {
-                    warn!("Failed to parse line: {}", e);
-                    None
-                }
-            }
-        });
+        }
+    });
 
     // 8. Run
     engine.run_event_loop(event_stream).await;

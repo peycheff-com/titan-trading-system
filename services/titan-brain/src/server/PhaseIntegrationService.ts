@@ -118,7 +118,6 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
    */
   private initializePhaseWebhooks(): void {
     if (this.config.phase1WebhookUrl) {
-       
       this.phaseWebhooks.set('phase1', {
         url: this.config.phase1WebhookUrl,
         enabled: true,
@@ -128,7 +127,6 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
     }
 
     if (this.config.phase2WebhookUrl) {
-       
       this.phaseWebhooks.set('phase2', {
         url: this.config.phase2WebhookUrl,
         enabled: true,
@@ -138,7 +136,6 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
     }
 
     if (this.config.phase3WebhookUrl) {
-       
       this.phaseWebhooks.set('phase3', {
         url: this.config.phase3WebhookUrl,
         enabled: true,
@@ -163,7 +160,7 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
     }
 
     // Start periodic health checks
-     
+
     this.healthCheckInterval = setInterval(async () => {
       await this.checkAllPhasesHealth();
     }, 60000); // Every 60 seconds
@@ -177,7 +174,7 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
   async shutdown(): Promise<void> {
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval);
-       
+
       this.healthCheckInterval = null;
     }
     console.log('🔌 Phase Integration Service shutdown');
@@ -377,13 +374,12 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
 
     try {
       const response = await this.makeRequest(webhook.url, '/health', 'GET', undefined, 2000);
-       
+
       webhook.healthy = response.status === 'healthy' || response.status === 'ok';
-       
+
       webhook.lastContact = Date.now();
       return webhook.healthy;
     } catch (error) {
-       
       webhook.healthy = false;
       return false;
     }
@@ -401,7 +397,6 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
     };
 
     for (const phaseId of ['phase1', 'phase2', 'phase3'] as PhaseId[]) {
-       
       results[phaseId] = await this.checkPhaseHealth(phaseId);
     }
 
@@ -431,7 +426,6 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
    * Register a phase webhook URL
    */
   registerPhaseWebhook(phaseId: PhaseId, url: string): void {
-     
     this.phaseWebhooks.set(phaseId, {
       url,
       enabled: true,
@@ -445,7 +439,6 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
    * Unregister a phase webhook
    */
   unregisterPhaseWebhook(phaseId: PhaseId): void {
-     
     this.phaseWebhooks.delete(phaseId);
     console.log(`📝 Unregistered webhook for ${phaseId}`);
   }
@@ -480,7 +473,7 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
       const signature = createHmac('sha256', this.config.hmacSecret)
         .update(bodyString)
         .digest('hex');
-       
+
       headers['x-signature'] = signature;
     }
 
@@ -488,10 +481,9 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
     const timeoutId = setTimeout(() => controller.abort(), requestTimeout);
 
     const maxRetries = this.config.maxRetries || 2;
-     
+
     let lastError: Error | null = null;
 
-     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const response = await fetch(url, {

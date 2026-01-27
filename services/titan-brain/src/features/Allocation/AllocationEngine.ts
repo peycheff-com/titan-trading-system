@@ -11,7 +11,7 @@ import {
   EquityTier,
   LeverageCaps,
   TransitionPoints,
-} from "../../types/index.js";
+} from '../../types/index.js';
 
 /**
  * AllocationEngine calculates capital allocation across Titan phases
@@ -33,11 +33,7 @@ export class AllocationEngine {
    * @param midpoint - Center of transition
    * @param steepness - How sharp the transition is (higher = sharper)
    */
-  private sigmoid(
-    x: number,
-    midpoint: number,
-    steepness: number = 0.002,
-  ): number {
+  private sigmoid(x: number, midpoint: number, steepness: number = 0.002): number {
     return 1 / (1 + Math.exp(-steepness * (x - midpoint)));
   }
 
@@ -76,12 +72,8 @@ export class AllocationEngine {
     const safeEquity = Math.max(0, equity);
 
     // Determines effective thresholds based on state
-    const effectiveStartP2 = this.hasEnteredPhase2
-      ? startP2 * this.HYSTERESIS_BUFFER
-      : startP2;
-    const effectiveStartP3 = this.hasEnteredPhase3
-      ? startP3 * this.HYSTERESIS_BUFFER
-      : startP3;
+    const effectiveStartP2 = this.hasEnteredPhase2 ? startP2 * this.HYSTERESIS_BUFFER : startP2;
+    const effectiveStartP3 = this.hasEnteredPhase3 ? startP3 * this.HYSTERESIS_BUFFER : startP3;
 
     // State Updates
 
@@ -243,7 +235,7 @@ export class AllocationEngine {
 
     // 1. Calculate Softmax of Sharpe Ratios for Performance Weights
     // Filter for phases 1, 2, 3 in order
-    const phases = ["phase1", "phase2", "phase3"];
+    const phases = ['phase1', 'phase2', 'phase3'];
     const sharpes = phases.map((id) => {
       const p = performances.find((p) => p.phaseId === id);
       return p ? Math.max(0, p.sharpeRatio) : 0; // Floor at 0 for softmax

@@ -24,7 +24,7 @@ export interface EventPayloads {
     symbol: string;
     price: number;
     trapType: string;
-    direction: "LONG" | "SHORT";
+    direction: 'LONG' | 'SHORT';
     tradeCount: number;
     microCVD: number;
     elapsed: number;
@@ -65,9 +65,7 @@ export interface EventPayloads {
 
 export type EventType = keyof EventPayloads;
 
-export type EventHandler<K extends EventType> = (
-  data: EventPayloads[K],
-) => void;
+export type EventHandler<K extends EventType> = (data: EventPayloads[K]) => void;
 
 export class EventEmitter {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

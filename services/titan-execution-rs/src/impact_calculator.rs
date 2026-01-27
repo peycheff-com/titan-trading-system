@@ -30,6 +30,12 @@ pub struct ImpactCalculator {
     daily_volumes: Arc<DashMap<String, f64>>,
 }
 
+impl Default for ImpactCalculator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ImpactCalculator {
     pub fn new() -> Self {
         Self {

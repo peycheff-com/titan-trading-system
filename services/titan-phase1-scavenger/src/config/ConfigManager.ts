@@ -7,11 +7,8 @@
  * Requirements: 8.4 (Hierarchical Configuration), 3.1 (Shared Lib Adoption)
  */
 
-import { EventEmitter } from "events";
-import {
-  ConfigManager as SharedConfigManager,
-  getConfigManager,
-} from "@titan/shared";
+import { EventEmitter } from 'events';
+import { ConfigManager as SharedConfigManager, getConfigManager } from '@titan/shared';
 
 // Define the Scavenger-specific config interfaces
 // These match the previous logic to ensure TitanTrap engine compatibility.
@@ -98,7 +95,7 @@ export interface BrainOverrideConfig {
     maxPositionSize?: number;
     riskMultiplier?: number;
   };
-  source: "brain" | "phase" | "default";
+  source: 'brain' | 'phase' | 'default';
   timestamp: number;
   version: string;
 }
@@ -114,7 +111,7 @@ export interface MergedConfig extends TrapConfig {
 }
 
 export interface ConfigChangeEvent {
-  type: "phase" | "brain" | "merged";
+  type: 'phase' | 'brain' | 'merged';
   source: string;
   changes: Partial<TrapConfig | BrainOverrideConfig>;
   timestamp: number;
@@ -122,18 +119,18 @@ export interface ConfigChangeEvent {
 
 export class ConfigManager extends EventEmitter {
   private sharedManager: SharedConfigManager;
-  private readonly phaseName = "phase1-scavenger";
+  private readonly phaseName = 'phase1-scavenger';
   private environment: string;
 
   private currentConfig: MergedConfig;
 
-  constructor(environment: string = process.env.NODE_ENV || "development") {
+  constructor(environment: string = process.env.NODE_ENV || 'development') {
     super();
     this.environment = environment;
 
     this.sharedManager = getConfigManager(
       undefined,
-      environment as "development" | "staging" | "production",
+      environment as 'development' | 'staging' | 'production',
     );
 
     // Initialize with defaults to prevent NPE before load
@@ -146,28 +143,26 @@ export class ConfigManager extends EventEmitter {
   public async initialize(): Promise<void> {
     // Load configurations via Shared Manager
     await this.sharedManager.loadBrainConfig();
-    const phaseConfig = await this.sharedManager.loadPhaseConfig(
-      this.phaseName,
-    );
+    const phaseConfig = await this.sharedManager.loadPhaseConfig(this.phaseName);
 
     // If config is empty/missing, apply defaults
     if (!phaseConfig || Object.keys(phaseConfig).length === 0) {
-      console.log("📝 Initializing default configuration for Scavenger...");
+      console.log('📝 Initializing default configuration for Scavenger...');
       await this.savePhaseConfig(this.getDefaultConfig());
     } else {
       this.updateLocalState();
     }
 
     // Setup Event Listeners from Shared Manager
-    this.sharedManager.on("configChanged", (event) => {
+    this.sharedManager.on('configChanged', (event) => {
       this.handleSharedConfigChange(event);
     });
 
-    this.sharedManager.on("configReloaded", (event) => {
+    this.sharedManager.on('configReloaded', (event) => {
       this.handleSharedConfigChange(event);
     });
 
-    console.log("✅ ConfigManager Adapter initialized via @titan/shared");
+    console.log('✅ ConfigManager Adapter initialized via @titan/shared');
   }
 
   private handleSharedConfigChange(event: {
@@ -180,16 +175,17 @@ export class ConfigManager extends EventEmitter {
 
     // Map shared event to Scavenger event
     // Shared event: { level: 'phase'|'brain', key: string, ... }
-    const type = event.level === "brain"
-      ? "brain"
-      : event.level === "phase" && event.key === this.phaseName
-      ? "phase"
-      : null;
+    const type =
+      event.level === 'brain'
+        ? 'brain'
+        : event.level === 'phase' && event.key === this.phaseName
+          ? 'phase'
+          : null;
 
     if (type) {
-      this.emit("configChanged", {
-        type: type as "phase" | "brain",
-        source: "shared-manager",
+      this.emit('configChanged', {
+        type: type as 'phase' | 'brain',
+        source: 'shared-manager',
         changes: {}, // Diffing logic delegated or simplified
         timestamp: event.timestamp || Date.now(),
       });
@@ -197,23 +193,19 @@ export class ConfigManager extends EventEmitter {
   }
 
   private updateLocalState() {
-    const rawPhase = this.sharedManager.getPhaseConfig(
-      this.phaseName,
-    ) as unknown as TrapConfig;
+    const rawPhase = this.sharedManager.getPhaseConfig(this.phaseName) as unknown as TrapConfig;
     const brainConfig = this.sharedManager.getBrainConfig();
 
     // Map Shared Brain Config to Scavenger BrainOverrideConfig
     const brainOverrides: BrainOverrideConfig = {
-      source: "brain",
+      source: 'brain',
       timestamp: Date.now(),
-      version: "2.0",
+      version: '2.0',
       maxGlobalLeverage: brainConfig?.maxTotalLeverage,
       maxGlobalDrawdown: brainConfig?.maxGlobalDrawdown,
-      emergencyFlattenEnabled:
-        (brainConfig?.emergencyFlattenThreshold ?? 0) > 0,
+      emergencyFlattenEnabled: (brainConfig?.emergencyFlattenThreshold ?? 0) > 0,
       // Extract specific phase overrides if they exist in valid structure
-      phase1: brainConfig?.overrides
-        ?.[this.phaseName] as BrainOverrideConfig["phase1"],
+      phase1: brainConfig?.overrides?.[this.phaseName] as BrainOverrideConfig['phase1'],
     };
 
     if (rawPhase) {
@@ -221,10 +213,7 @@ export class ConfigManager extends EventEmitter {
     }
   }
 
-  private buildMergedConfig(
-    phase: TrapConfig,
-    brain: BrainOverrideConfig,
-  ): MergedConfig {
+  private buildMergedConfig(phase: TrapConfig, brain: BrainOverrideConfig): MergedConfig {
     // In Shared Manager, getPhaseConfig() returns the MERGED (Applied) config.
     // So 'phase' argument here is already effectively merged.
     // We map it to the MergedConfig structure Scavenger expects.
@@ -262,9 +251,7 @@ export class ConfigManager extends EventEmitter {
 
   getPhaseConfig(): TrapConfig {
     return (
-      (this.sharedManager.getPhaseConfig(
-        this.phaseName,
-      ) as unknown as TrapConfig) ||
+      (this.sharedManager.getPhaseConfig(this.phaseName) as unknown as TrapConfig) ||
       this.getDefaultConfig()
     );
   }
@@ -294,7 +281,7 @@ export class ConfigManager extends EventEmitter {
     // Scavenger shouldn't update Brain overrides directly usually.
     // But for compatibility we can log a warning or attempt to update local mock.
     console.warn(
-      "⚠️ updateBrainOverrides is deprecated in Shared Architecture. Brain Service manages overrides.",
+      '⚠️ updateBrainOverrides is deprecated in Shared Architecture. Brain Service manages overrides.',
     );
   }
 
@@ -313,8 +300,8 @@ export class ConfigManager extends EventEmitter {
   }
 
   updateExchangeSettings(
-    exchange: "bybit" | "mexc",
-    settings: Partial<TrapConfig["exchanges"]["bybit"]>,
+    exchange: 'bybit' | 'mexc',
+    settings: Partial<TrapConfig['exchanges']['bybit']>,
   ): void {
     const current = this.getPhaseConfig();
     if (current.exchanges && current.exchanges[exchange]) {
@@ -325,9 +312,7 @@ export class ConfigManager extends EventEmitter {
           ...settings,
         },
       };
-      this.updatePhaseConfig(
-        { exchanges: updatedExchanges } as unknown as Partial<TrapConfig>,
-      );
+      this.updatePhaseConfig({ exchanges: updatedExchanges } as unknown as Partial<TrapConfig>);
     }
   }
 
@@ -383,9 +368,9 @@ export class ConfigManager extends EventEmitter {
 
   private getDefaultBrainOverrides(): BrainOverrideConfig {
     return {
-      source: "default",
+      source: 'default',
       timestamp: Date.now(),
-      version: "1.0",
+      version: '1.0',
     };
   }
 }

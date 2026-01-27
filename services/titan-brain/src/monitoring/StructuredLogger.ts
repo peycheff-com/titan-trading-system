@@ -62,7 +62,6 @@ export class StructuredLogger {
 
     // Apply config overrides if needed
     if (config.level !== undefined) {
-       
       let sharedLevel: SharedLogLevel = SharedLogLevel.INFO;
 
       if (typeof config.level === 'number') {
@@ -82,7 +81,6 @@ export class StructuredLogger {
    * Set the current correlation ID
    */
   setCorrelationId(id: string | null): void {
-     
     this.correlationId = id;
   }
 
@@ -98,7 +96,7 @@ export class StructuredLogger {
    */
   generateCorrelationId(): string {
     const id = randomUUID();
-     
+
     this.correlationId = id;
     return id;
   }
@@ -357,30 +355,30 @@ export class StructuredLogger {
       component: this.component,
       sanitizeSensitive: this.sanitizeSensitive,
     });
-     
+
     child.correlationId = this.correlationId;
 
     // Custom context injection for child instances
-     
+
     (child as any)._childContext = context;
 
     const originalInfo = child.info.bind(child);
-     
+
     child.info = (message, ctx) =>
       originalInfo(message, { ...(child as any)._childContext, ...ctx });
 
     const originalDebug = child.debug.bind(child);
-     
+
     child.debug = (message, ctx) =>
       originalDebug(message, { ...(child as any)._childContext, ...ctx });
 
     const originalWarn = child.warn.bind(child);
-     
+
     child.warn = (message, ctx) =>
       originalWarn(message, { ...(child as any)._childContext, ...ctx });
 
     const originalError = child.error.bind(child);
-     
+
     child.error = (message, error, ctx) =>
       originalError(message, error, {
         ...(child as any)._childContext,
@@ -395,13 +393,12 @@ export class StructuredLogger {
    */
   async withCorrelationId<T>(correlationId: string | null, fn: () => Promise<T>): Promise<T> {
     const previousId = this.correlationId;
-     
+
     this.correlationId = correlationId ?? this.generateCorrelationId();
 
     try {
       return await fn();
     } finally {
-       
       this.correlationId = previousId;
     }
   }
@@ -416,7 +413,6 @@ export class StructuredLogger {
   }
 
   setLevel(level: LogLevel): void {
-     
     let sharedLevel = SharedLogLevel.INFO;
     if (level === 'debug') sharedLevel = SharedLogLevel.DEBUG;
     if (level === 'warn') sharedLevel = SharedLogLevel.WARN;
@@ -429,7 +425,7 @@ export class StructuredLogger {
 /**
  * Singleton instance for global logging
  */
- 
+
 let loggerInstance: StructuredLogger | null = null;
 
 /**

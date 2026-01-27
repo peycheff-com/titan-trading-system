@@ -62,5 +62,4 @@ export const HazardButton = React.forwardRef<HTMLButtonElement, HazardButtonProp
   },
 );
 
- 
 HazardButton.displayName = 'HazardButton';

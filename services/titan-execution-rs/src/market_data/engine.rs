@@ -109,45 +109,42 @@ impl MarketDataEngine {
                 info!("Connector {} running event loop", connector.name());
 
                 while let Some(event) = stream.recv().await {
-                    match event {
-                        MarketDataEvent::Trade(trade) => {
-                            // Update Price Cache
-                            let key = trade.symbol.replace("_", "").replace("/", "");
-                            if let Ok(mut map) = prices_clone.write() {
-                                map.insert(key.clone(), trade.price);
+                    if let MarketDataEvent::Trade(trade) = event {
+                        // Update Price Cache
+                        let key = trade.symbol.replace("_", "").replace("/", "");
+                        if let Ok(mut map) = prices_clone.write() {
+                            map.insert(key.clone(), trade.price);
+                        }
+
+                        // Construct Fake Ticker
+                        let ticker = crate::market_data::types::BookTicker {
+                            symbol: key.clone(),
+                            best_bid: trade.price,
+                            best_bid_qty: trade.quantity,
+                            best_ask: trade.price,
+                            best_ask_qty: trade.quantity,
+                            transaction_time: Utc::now().timestamp_millis(),
+                            event_time: Utc::now().timestamp_millis(),
+                        };
+
+                        if let Ok(mut map) = tickers_clone.write() {
+                            map.insert(key.clone(), ticker.clone());
+                        }
+
+                        // NATS Publish
+                        if let Some(nc) = &nats_clone {
+                            // Publish Trade
+                            let subject_trade = format!("market.trade.{}", key);
+                            if let Ok(payload) = serde_json::to_vec(&trade) {
+                                let _ = nc.publish(subject_trade, payload.into()).await;
                             }
 
-                            // Construct Fake Ticker
-                            let ticker = crate::market_data::types::BookTicker {
-                                symbol: key.clone(),
-                                best_bid: trade.price,
-                                best_bid_qty: trade.quantity,
-                                best_ask: trade.price,
-                                best_ask_qty: trade.quantity,
-                                transaction_time: Utc::now().timestamp_millis(),
-                                event_time: Utc::now().timestamp_millis(),
-                            };
-
-                            if let Ok(mut map) = tickers_clone.write() {
-                                map.insert(key.clone(), ticker.clone());
-                            }
-
-                            // NATS Publish
-                            if let Some(nc) = &nats_clone {
-                                // Publish Trade
-                                let subject_trade = format!("market.trade.{}", key);
-                                if let Ok(payload) = serde_json::to_vec(&trade) {
-                                    let _ = nc.publish(subject_trade, payload.into()).await;
-                                }
-
-                                // Publish Ticker (Price)
-                                let subject_price = format!("market.price.{}", key);
-                                if let Ok(payload) = serde_json::to_vec(&ticker) {
-                                    let _ = nc.publish(subject_price, payload.into()).await;
-                                }
+                            // Publish Ticker (Price)
+                            let subject_price = format!("market.price.{}", key);
+                            if let Ok(payload) = serde_json::to_vec(&ticker) {
+                                let _ = nc.publish(subject_price, payload.into()).await;
                             }
                         }
-                        _ => {}
                     }
                 }
                 warn!("Connector {} stream ended", connector.name());

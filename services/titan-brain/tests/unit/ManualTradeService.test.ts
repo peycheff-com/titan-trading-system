@@ -114,10 +114,15 @@ describe("ManualTradeService", () => {
         it("should propagate errors from closeAllPositions", async () => {
             const error = new Error("Panic close failed");
             mockExecutionClient.closeAllPositions.mockRejectedValue(error);
+            const consoleSpy = jest.spyOn(console, "error").mockImplementation(
+                () => {},
+            );
 
             await expect(manualTradeService.cancelAllTrades())
                 .rejects
                 .toThrow("Panic close failed");
+
+            consoleSpy.mockRestore();
         });
     });
 });

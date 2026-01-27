@@ -80,7 +80,7 @@ export class InMemoryCache extends EventEmitter {
     }
 
     // Run cleanup every 30 seconds
-     
+
     this.cleanupInterval = setInterval(() => {
       this.cleanupExpired();
     }, 30000);
@@ -95,15 +95,13 @@ export class InMemoryCache extends EventEmitter {
 
     for (const [key, entry] of this.cache.entries()) {
       if (entry.expiresAt <= now) {
-         
         expiredKeys.push(key);
       }
     }
 
     for (const key of expiredKeys) {
-       
       this.cache.delete(key);
-       
+
       this.stats.expired++;
     }
 
@@ -128,12 +126,12 @@ export class InMemoryCache extends EventEmitter {
 
     // Remove the oldest entries
     const actualEvictCount = Math.min(count, entries.length);
-     
+
     for (let i = 0; i < actualEvictCount; i++) {
       const [key] = entries[i];
-       
+
       this.cache.delete(key);
-       
+
       this.stats.evictions++;
     }
 
@@ -150,7 +148,6 @@ export class InMemoryCache extends EventEmitter {
     const entry = this.cache.get(key);
 
     if (!entry) {
-       
       this.stats.misses++;
       this.emit('miss', { key });
       return undefined;
@@ -158,22 +155,21 @@ export class InMemoryCache extends EventEmitter {
 
     // Check if entry has expired
     if (entry.expiresAt <= Date.now()) {
-       
       this.cache.delete(key);
-       
+
       this.stats.expired++;
-       
+
       this.stats.misses++;
       this.emit('expired', { key });
       return undefined;
     }
 
     // Update access statistics
-     
+
     entry.accessCount++;
-     
+
     entry.lastAccessed = Date.now();
-     
+
     this.stats.hits++;
 
     this.emit('hit', { key, accessCount: entry.accessCount });
@@ -196,7 +192,7 @@ export class InMemoryCache extends EventEmitter {
     }
 
     // Set the entry
-     
+
     this.cache.set(key, {
       value,
       expiresAt,
@@ -216,7 +212,6 @@ export class InMemoryCache extends EventEmitter {
    * Delete a value from cache
    */
   delete(key: string): boolean {
-     
     const existed = this.cache.delete(key);
 
     if (existed) {
@@ -238,9 +233,8 @@ export class InMemoryCache extends EventEmitter {
 
     // Check if entry has expired
     if (entry.expiresAt <= Date.now()) {
-       
       this.cache.delete(key);
-       
+
       this.stats.expired++;
       return false;
     }
@@ -257,7 +251,6 @@ export class InMemoryCache extends EventEmitter {
     for (const key of keys) {
       const value = this.get<T>(key);
       if (value !== undefined) {
-         
         result.set(key, value);
       }
     }
@@ -278,7 +271,6 @@ export class InMemoryCache extends EventEmitter {
    * Delete multiple values from cache
    */
   deleteMultiple(keys: string[]): number {
-     
     let deletedCount = 0;
 
     for (const key of keys) {
@@ -295,17 +287,17 @@ export class InMemoryCache extends EventEmitter {
    */
   clear(): void {
     const previousSize = this.cache.size;
-     
+
     this.cache.clear();
 
     // Reset stats
-     
+
     this.stats.hits = 0;
-     
+
     this.stats.misses = 0;
-     
+
     this.stats.evictions = 0;
-     
+
     this.stats.expired = 0;
 
     this.emit('clear', { previousSize });
@@ -320,7 +312,6 @@ export class InMemoryCache extends EventEmitter {
 
     for (const [key, entry] of this.cache.entries()) {
       if (entry.expiresAt > now) {
-         
         validKeys.push(key);
       }
     }
@@ -336,7 +327,7 @@ export class InMemoryCache extends EventEmitter {
     const hitRate = totalRequests > 0 ? (this.stats.hits / totalRequests) * 100 : 0;
 
     // Estimate memory usage (rough calculation)
-     
+
     let estimatedMemoryUsage = 0;
     for (const [key, entry] of this.cache.entries()) {
       // Rough estimation: key size + JSON serialized value size + overhead
@@ -369,7 +360,6 @@ export class InMemoryCache extends EventEmitter {
 
     for (const [key, entry] of this.cache.entries()) {
       if (entry.expiresAt <= threshold && entry.expiresAt > now) {
-         
         expiringEntries.push({
           key,
           expiresAt: entry.expiresAt,
@@ -378,7 +368,6 @@ export class InMemoryCache extends EventEmitter {
       }
     }
 
-     
     return expiringEntries.sort((a, b) => a.timeLeft - b.timeLeft);
   }
 
@@ -412,15 +401,14 @@ export class InMemoryCache extends EventEmitter {
 
     // Check if entry has expired
     if (entry.expiresAt <= Date.now()) {
-       
       this.cache.delete(key);
-       
+
       this.stats.expired++;
       return false;
     }
 
     // Update expiration time
-     
+
     entry.expiresAt = Date.now() + ttlMs;
 
     this.emit('ttl_updated', {
@@ -446,9 +434,8 @@ export class InMemoryCache extends EventEmitter {
 
     // Check if entry has expired
     if (entry.expiresAt <= now) {
-       
       this.cache.delete(key);
-       
+
       this.stats.expired++;
       return null;
     }
@@ -462,7 +449,7 @@ export class InMemoryCache extends EventEmitter {
   shutdown(): void {
     if (this.cleanupInterval) {
       clearInterval(this.cleanupInterval);
-       
+
       this.cleanupInterval = null;
     }
 

@@ -1,0 +1,16 @@
+{
+  "ignores": [
+    "vite",
+    "weaviate-client",
+    "@stryker-mutator/*",
+    "@types/jest",
+    "cross-env",
+    "dependency-cruiser",
+    "knip",
+    "license-checker",
+    "madge",
+    "@eslint/js",
+    "@jest/globals",
+    "@titan/shared"
+  ]
+}

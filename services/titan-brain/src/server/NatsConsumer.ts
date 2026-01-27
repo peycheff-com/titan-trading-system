@@ -228,6 +228,7 @@ export class NatsConsumer {
         "Error handling Execution Report via NATS",
         err as Error,
       );
+      throw err; // Propagate error to trigger Nack/Redelivery
     }
   }
 

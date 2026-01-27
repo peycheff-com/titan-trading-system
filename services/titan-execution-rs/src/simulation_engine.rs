@@ -33,21 +33,17 @@ impl SimulationEngine {
 
         // 2. Determine execution price based on side and aggressive/passive
         // For now, assume TAKING liquidity (crossing spread) for immediate fill simulation
-        let (fill_price, _liquidity) = match intent.intent_type {
-            // Setup = Entry. Direction 1 = Long (Buy) => Ask Price
-            // Close = Exit. Direction 1 = Long (Close Long?) -> Wait, Close Long means SELL.
-            _ => {
-                let is_buy = match intent.direction {
-                    1 => true,
-                    _ => false, // Simplification, need robust mapping
-                };
+        let (fill_price, _liquidity) = {
+            let is_buy = match intent.direction {
+                1 => true,
+                _ => false, // Simplification, need robust mapping
+            };
 
-                // If Buy, we pay Best Ask. If Sell, we take Best Bid.
-                if is_buy {
-                    (ticker.best_ask, ticker.best_ask_qty)
-                } else {
-                    (ticker.best_bid, ticker.best_bid_qty)
-                }
+            // If Buy, we pay Best Ask. If Sell, we take Best Bid.
+            if is_buy {
+                (ticker.best_ask, ticker.best_ask_qty)
+            } else {
+                (ticker.best_bid, ticker.best_bid_qty)
             }
         };
 

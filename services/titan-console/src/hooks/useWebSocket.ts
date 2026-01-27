@@ -33,7 +33,6 @@ export function useWebSocket<T = unknown>({
       const ws = new WebSocket(fullUrl);
       wsRef.current = ws;
 
-       
       ws.onopen = () => {
         console.log('WebSocket Connected');
         setStatus('CONNECTED');
@@ -42,7 +41,6 @@ export function useWebSocket<T = unknown>({
         toast.success('Connected to Titan Core');
       };
 
-       
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
@@ -53,7 +51,6 @@ export function useWebSocket<T = unknown>({
         }
       };
 
-       
       ws.onclose = (event) => {
         console.log('WebSocket Disconnected:', event.code, event.reason);
         setStatus('DISCONNECTED');
@@ -71,7 +68,6 @@ export function useWebSocket<T = unknown>({
         }
       };
 
-       
       ws.onerror = (event) => {
         console.error('WebSocket Error:', event);
         setError(new Error('WebSocket connection error'));

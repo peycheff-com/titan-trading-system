@@ -194,7 +194,7 @@ export class ServiceClient extends EventEmitter {
    */
   async request<T = any>(config: RequestConfig): Promise<ServiceResponse<T>> {
     // Apply request interceptors
-     
+
     let processedConfig = config;
     for (const interceptor of this.requestInterceptors) {
       processedConfig = await interceptor(processedConfig);
@@ -214,17 +214,16 @@ export class ServiceClient extends EventEmitter {
 
     // Add correlation ID if not present
     if (!finalConfig.correlationId) {
-       
       finalConfig.correlationId = this.generateCorrelationId();
     }
 
     // Add correlation ID to headers
-     
+
     finalConfig.headers!['x-correlation-id'] = finalConfig.correlationId;
 
     // Build full URL
     const fullUrl = this.buildUrl(finalConfig.url);
-     
+
     finalConfig.url = fullUrl;
 
     this.logger.debug('Making HTTP request', finalConfig.correlationId, {
@@ -241,7 +240,7 @@ export class ServiceClient extends EventEmitter {
       });
 
       // Apply response interceptors
-       
+
       let processedResponse = response;
       for (const interceptor of this.responseInterceptors) {
         processedResponse = (await interceptor(processedResponse)) as ServiceResponse<T>;
@@ -250,7 +249,6 @@ export class ServiceClient extends EventEmitter {
       this.emit('response', processedResponse);
       return processedResponse as ServiceResponse<T>;
     } catch (error) {
-       
       let processedError =
         error instanceof ServiceClientError
           ? error
@@ -276,12 +274,11 @@ export class ServiceClient extends EventEmitter {
    * Execute request with retry logic
    */
   private async executeWithRetry<T>(config: RequestConfig): Promise<ServiceResponse<T>> {
-     
     let lastError: ServiceClientError | undefined;
     const maxRetries = config.retries || 0;
 
     // Try initial request + retries
-     
+
     for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
       try {
         const response = await this.executeRequest<T>(config, attempt);
@@ -378,7 +375,7 @@ export class ServiceClient extends EventEmitter {
       const duration = Date.now() - startTime;
 
       // Parse response
-       
+
       let data: T;
       const contentType = response.headers.get('content-type') || '';
 
@@ -391,7 +388,6 @@ export class ServiceClient extends EventEmitter {
       // Build response headers object
       const responseHeaders: Record<string, string> = {};
       response.headers.forEach((value, key) => {
-         
         responseHeaders[key] = value;
       });
 
@@ -519,10 +515,8 @@ export class ServiceClient extends EventEmitter {
 
     for (const [key, value] of Object.entries(headers)) {
       if (sensitiveHeaders.includes(key.toLowerCase())) {
-         
         sanitized[key] = '[REDACTED]';
       } else {
-         
         sanitized[key] = value;
       }
     }
@@ -591,7 +585,6 @@ export class ServiceClient extends EventEmitter {
    * Add request interceptor
    */
   addRequestInterceptor(interceptor: RequestInterceptor): void {
-     
     this.requestInterceptors.push(interceptor);
   }
 
@@ -599,7 +592,6 @@ export class ServiceClient extends EventEmitter {
    * Add response interceptor
    */
   addResponseInterceptor(interceptor: ResponseInterceptor): void {
-     
     this.responseInterceptors.push(interceptor);
   }
 
@@ -607,7 +599,6 @@ export class ServiceClient extends EventEmitter {
    * Add error interceptor
    */
   addErrorInterceptor(interceptor: ErrorInterceptor): void {
-     
     this.errorInterceptors.push(interceptor);
   }
 

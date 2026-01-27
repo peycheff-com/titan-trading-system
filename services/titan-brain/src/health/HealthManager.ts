@@ -211,9 +211,8 @@ export class MemoryHealthComponent implements HealthComponent {
       const usedMemory = memUsage.heapUsed;
       const memoryUsageRatio = usedMemory / totalMemory;
 
-       
       let status = HealthStatus.HEALTHY;
-       
+
       let message = 'Memory usage normal';
 
       if (memoryUsageRatio > this.CRITICAL_THRESHOLD) {
@@ -331,7 +330,6 @@ export class HealthManager extends EventEmitter {
    * Register a health component
    */
   registerComponent(component: HealthComponent): void {
-     
     this.components.set(component.name, component);
     this.emit('component:registered', { name: component.name });
   }
@@ -340,7 +338,6 @@ export class HealthManager extends EventEmitter {
    * Unregister a health component
    */
   unregisterComponent(name: string): void {
-     
     this.components.delete(name);
     this.emit('component:unregistered', { name });
   }
@@ -377,7 +374,6 @@ export class HealthManager extends EventEmitter {
       uptime: Date.now() - this.startTime,
     };
 
-     
     this.lastHealthCheck = systemHealth;
     this.emit('health:checked', systemHealth);
 
@@ -444,7 +440,6 @@ export class HealthManager extends EventEmitter {
       clearInterval(this.healthCheckInterval);
     }
 
-     
     this.healthCheckInterval = setInterval(async () => {
       try {
         await this.checkHealth();
@@ -462,7 +457,7 @@ export class HealthManager extends EventEmitter {
   stopPeriodicChecks(): void {
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval);
-       
+
       this.healthCheckInterval = null;
     }
 
@@ -495,9 +490,9 @@ export class HealthManager extends EventEmitter {
    */
   shutdown(): void {
     this.stopPeriodicChecks();
-     
+
     this.components.clear();
-     
+
     this.lastHealthCheck = null;
     this.emit('shutdown');
   }

@@ -34,6 +34,7 @@ export class MockBybitPerpsClient {
       timestamp: Date.now(),
     };
 
+    // eslint-disable-next-line functional/immutable-data
     this.orders.push(order);
     console.log(
       `[MockBybit] Order Placed: ${params.side} ${params.qty} ${params.symbol} @ ${order.price}`,
@@ -57,6 +58,7 @@ export class MockBybitPerpsClient {
 
   // Helper to set price for simulation
   public setPrice(symbol: string, price: number) {
+    // eslint-disable-next-line functional/immutable-data
     this.currentPrices.set(symbol, price);
   }
 

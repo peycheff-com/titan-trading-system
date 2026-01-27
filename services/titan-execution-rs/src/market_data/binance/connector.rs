@@ -21,6 +21,12 @@ pub struct BinanceConnector {
     subscriptions: HashSet<String>,
 }
 
+impl Default for BinanceConnector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BinanceConnector {
     pub fn new() -> Self {
         let (tx, rx) = mpsc::channel(1000);

@@ -4,6 +4,15 @@ import { HMACValidator } from "../../src/security/HMACValidator";
 import { TitanBrain } from "../../src/engine/TitanBrain";
 
 // Mock dependencies
+jest.mock("mnemonist/lru-cache", () => {
+  return class LRUCache {
+    constructor() {}
+    set() {}
+    get() {}
+    clear() {}
+  };
+}, { virtual: true });
+
 jest.mock("../../src/services/canary/CanaryMonitor", () => ({
   CanaryMonitor: jest.fn().mockImplementation(() => ({
     startMonitoring: jest.fn(),

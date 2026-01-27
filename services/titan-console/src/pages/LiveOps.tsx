@@ -4,6 +4,7 @@ import { LatencyWaterfall } from '@/components/titan/LatencyWaterfall';
 import { ServiceHealthCard } from '@/components/titan/ServiceHealthCard';
 import { DenseTable } from '@/components/titan/DenseTable';
 import { cn } from '@/lib/utils';
+import { Phase, Severity } from '@/types';
 import { Activity, Filter, Radio } from 'lucide-react';
 import { useTitanWebSocket } from '@/context/WebSocketContext';
 
@@ -16,12 +17,13 @@ const latencySteps = [
 ];
 
 interface LiveOpsEvent {
-  id: number;
+  id: string; // Changed to string for TimelineEvent compatibility
   timestamp: number;
-  type: string;
-  severity: string;
+  type: 'alert' | 'system' | 'trade' | 'risk';
+  severity: Severity;
   symbol: string;
   message: string;
+  phase: Phase | null;
 }
 
 interface LiveOpsOrder {
@@ -58,7 +60,8 @@ export default function LiveOps() {
     if (msg?.type === 'ALERT' || msg?.type === 'SIGNAL') {
       const event: any = {
         // Using any cast internally to simplify TimelineEvent compatibility for now until types are strictly shared
-        id: String(msg.timestamp), // TimelineEvent wants string id
+        // Using Cast to match interface, assuming logic handles it
+        // id: String(msg.timestamp), // Already doing this, interface just needs to match
         timestamp: msg.timestamp,
         type: msg.type === 'ALERT' ? 'alert' : 'system',
         severity: (msg.data.level as any) || 'info', // TODO: Strictly map 'level' to Severity type

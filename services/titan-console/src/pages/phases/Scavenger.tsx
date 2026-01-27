@@ -41,8 +41,8 @@ export default function ScavengerPhase() {
   // Hook into Real-time Data
   const { isConnected, trapMap, sensorStatus } = useScavengerSocket();
 
-  const armedTripwires = trapMap.filter((t) => t.proximity < 0.1); // Consider <10% as "Armed/Watching"
-  const criticalTripwires = trapMap.filter((t) => t.proximity < 0.02); // <2% is Critical
+  const armedTripwires = trapMap.filter((t: any) => t.proximity < 0.1); // Consider <10% as "Armed/Watching"
+  const criticalTripwires = trapMap.filter((t: any) => t.proximity < 0.02); // <2% is Critical
 
   const getBaseUrl = () => getTitanExecutionUrl();
 
@@ -163,7 +163,7 @@ export default function ScavengerPhase() {
             </p>
           </div>
         </div>
-        <StatusPill status={isConnected ? 'active' : 'offline'} size="md" />
+        <StatusPill status={isConnected ? 'healthy' : 'offline'} size="md" />
       </div>
 
       {/* Phase Intent Card */}

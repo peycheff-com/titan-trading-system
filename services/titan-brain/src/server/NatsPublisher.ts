@@ -4,8 +4,8 @@
  * Used by Titan Brain to trigger AI Quant optimizations and other cross-service events.
  */
 
-import { getNatsClient, NatsClient, TitanSubject } from "@titan/shared";
-import { getLogger, StructuredLogger } from "../monitoring/index.js";
+import { getNatsClient, NatsClient, TitanSubject } from '@titan/shared';
+import { getLogger, StructuredLogger } from '../monitoring/index.js';
 
 export interface AIOptimizationRequest {
   reason: string;
@@ -34,13 +34,13 @@ export class NatsPublisher {
 
     try {
       await this.nats.connect({
-        servers: [natsUrl || process.env.NATS_URL || "nats://localhost:4222"],
+        servers: [natsUrl || process.env.NATS_URL || 'nats://localhost:4222'],
       });
 
       this.connected = true;
-      this.logger.info("NatsPublisher connected");
+      this.logger.info('NatsPublisher connected');
     } catch (err) {
-      this.logger.error("Failed to connect NatsPublisher", err as Error);
+      this.logger.error('Failed to connect NatsPublisher', err as Error);
       throw err;
     }
   }
@@ -52,57 +52,46 @@ export class NatsPublisher {
    */
   async triggerAIOptimization(request: AIOptimizationRequest): Promise<void> {
     if (!this.connected) {
-      this.logger.warn(
-        "NatsPublisher not connected, cannot trigger AI optimization",
-      );
+      this.logger.warn('NatsPublisher not connected, cannot trigger AI optimization');
       return;
     }
 
     try {
-      await this.nats.publishEnvelope(
-        TitanSubject.AI_OPTIMIZATION_REQUESTS,
-        request,
-        {
-          type: "titan.control.ai.optimize.v1",
-          version: 1,
-          producer: "titan-brain",
-          // Logic for correlation_id could be improved here if available
-        },
-      );
-      this.logger.info("AI optimization request published", {
+      await this.nats.publishEnvelope(TitanSubject.AI_OPTIMIZATION_REQUESTS, request, {
+        type: 'titan.control.ai.optimize.v1',
+        version: 1,
+        producer: 'titan-brain',
+        // Logic for correlation_id could be improved here if available
+      });
+      this.logger.info('AI optimization request published', {
         reason: request.reason,
         triggeredBy: request.triggeredBy,
         phaseId: request.phaseId,
       });
     } catch (err) {
-      this.logger.error(
-        "Failed to publish AI optimization request",
-        err as Error,
-      );
+      this.logger.error('Failed to publish AI optimization request', err as Error);
     }
   }
 
   async publishRiskCommand(command: any): Promise<void> {
     if (!this.connected) {
-      this.logger.warn(
-        "NatsPublisher not connected, cannot publish RISK command",
-      );
+      this.logger.warn('NatsPublisher not connected, cannot publish RISK command');
       return;
     }
     try {
       // Enforce titan.cmd.risk prefix (lowercase to match Rust/JetStream convention)
       const subject = `titan.cmd.risk.${command.action.toLowerCase()}`; // e.g. titan.cmd.risk.halt
       await this.nats.publishEnvelope(subject as any, command, {
-        type: "titan.control.risk.v1",
+        type: 'titan.control.risk.v1',
         version: 1,
-        producer: "titan-brain",
+        producer: 'titan-brain',
       });
       this.logger.info(`Risk Command Published: ${subject}`, {
         action: command.action,
         actor: command.actor_id,
       });
     } catch (err) {
-      this.logger.error("Failed to publish Risk command", err as Error);
+      this.logger.error('Failed to publish Risk command', err as Error);
       throw err;
     }
   }

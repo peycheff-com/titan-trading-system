@@ -1,10 +1,6 @@
-import { EventEmitter } from "events";
-import {
-  ConfigManager as SharedConfigManager,
-  getConfigManager,
-  Logger,
-} from "@titan/shared";
-import { BrainConfig, ConfigDefaults } from "./BrainConfig.js";
+import { EventEmitter } from 'events';
+import { ConfigManager as SharedConfigManager, getConfigManager, Logger } from '@titan/shared';
+import { BrainConfig, ConfigDefaults } from './BrainConfig.js';
 
 /**
  * Adapter to bridge @titan/shared ConfigManager with Brain's local configuration requirements.
@@ -21,7 +17,8 @@ export class SharedConfigAdapter extends EventEmitter {
     super();
     this.sharedManager = getConfigManager();
     // Logger is optional in constructor, will use shared logger if needed or console
-    this.logger = logger ||
+    this.logger =
+      logger ||
       ({
         info: console.log,
         warn: console.warn,
@@ -34,7 +31,7 @@ export class SharedConfigAdapter extends EventEmitter {
    * Load and validate configuration from shared config manager
    */
   async loadConfig(): Promise<BrainConfig> {
-    this.logger.info("Loading configuration via SharedConfigAdapter...");
+    this.logger.info('Loading configuration via SharedConfigAdapter...');
 
     // 1. Load Brain Config (Business Logic)
     let sharedBrainConfig: any = {};
@@ -42,7 +39,7 @@ export class SharedConfigAdapter extends EventEmitter {
       sharedBrainConfig = await this.sharedManager.loadBrainConfig();
     } catch (error: any) {
       this.logger.warn(
-        "Failed to load brain config from shared manager, falling back to defaults/env",
+        'Failed to load brain config from shared manager, falling back to defaults/env',
         error,
       );
     }
@@ -50,10 +47,10 @@ export class SharedConfigAdapter extends EventEmitter {
     // 2. Load Service Config (Infrastructure)
     let serviceConfig: any = {};
     try {
-      serviceConfig = await this.sharedManager.loadServiceConfig("titan-brain");
+      serviceConfig = await this.sharedManager.loadServiceConfig('titan-brain');
     } catch (error: any) {
       this.logger.warn(
-        "Failed to load service config from shared manager, falling back to defaults/env",
+        'Failed to load service config from shared manager, falling back to defaults/env',
         error,
       );
     }
@@ -62,8 +59,8 @@ export class SharedConfigAdapter extends EventEmitter {
 
     this.config = this.mapToBrainConfig(sharedBrainConfig, serviceConfig);
 
-    this.logger.info("Configuration loaded successfully");
-    this.emit("config:loaded", this.config);
+    this.logger.info('Configuration loaded successfully');
+    this.emit('config:loaded', this.config);
     return this.config;
   }
 
@@ -74,8 +71,7 @@ export class SharedConfigAdapter extends EventEmitter {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private mapToBrainConfig(brainConfig: any, serviceConfig: any): BrainConfig {
     const nodeEnv =
-      (process.env.NODE_ENV as "development" | "production" | "test") ||
-      "development";
+      (process.env.NODE_ENV as 'development' | 'production' | 'test') || 'development';
     const defaults = ConfigDefaults[nodeEnv];
 
     const dbConfig = this.mapDatabaseConfig(serviceConfig);
@@ -99,31 +95,28 @@ export class SharedConfigAdapter extends EventEmitter {
     const databaseUrl = envUrl || constructedUrl || serviceUrl;
 
     if (!databaseUrl) {
-      throw new Error("Database URL not found in config or env");
+      throw new Error('Database URL not found in config or env');
     }
 
     return {
       databaseUrl,
       databaseHost: process.env.TITAN_DB_HOST || serviceConfig.database?.host,
-      databasePort: parseInt(
-        process.env.TITAN_DB_PORT || serviceConfig.database?.port || "5432",
-      ),
+      databasePort: parseInt(process.env.TITAN_DB_PORT || serviceConfig.database?.port || '5432'),
       databaseUser: process.env.TITAN_DB_USER || serviceConfig.database?.user,
-      databasePassword: process.env.TITAN_DB_PASSWORD ||
-        serviceConfig.database?.password,
+      databasePassword: process.env.TITAN_DB_PASSWORD || serviceConfig.database?.password,
       databaseName: process.env.TITAN_DB_NAME || serviceConfig.database?.name,
-      databasePoolMin: parseInt(process.env.DATABASE_POOL_MIN || "2"),
-      databasePoolMax: parseInt(process.env.DATABASE_POOL_MAX || "10"),
+      databasePoolMin: parseInt(process.env.DATABASE_POOL_MIN || '2'),
+      databasePoolMax: parseInt(process.env.DATABASE_POOL_MAX || '10'),
     };
   }
 
   private getConstructedUrl(): string | undefined {
     if (!process.env.TITAN_DB_HOST) return undefined;
     const host = process.env.TITAN_DB_HOST;
-    const port = process.env.TITAN_DB_PORT || "5432";
-    const user = process.env.TITAN_DB_USER || "postgres";
-    const pass = process.env.TITAN_DB_PASSWORD || "postgres";
-    const name = process.env.TITAN_DB_NAME || "titan_brain";
+    const port = process.env.TITAN_DB_PORT || '5432';
+    const user = process.env.TITAN_DB_USER || 'postgres';
+    const pass = process.env.TITAN_DB_PASSWORD || 'postgres';
+    const name = process.env.TITAN_DB_NAME || 'titan_brain';
     return `postgres://${user}:${pass}@${host}:${port}/${name}`;
   }
 
@@ -131,20 +124,15 @@ export class SharedConfigAdapter extends EventEmitter {
   private getServiceUrl(serviceConfig: any): string | undefined {
     if (!serviceConfig.database) return undefined;
     const db = serviceConfig.database;
-    const base =
-      `postgres://${db.user}:${db.password}@${db.host}:${db.port}/${db.name}`;
+    const base = `postgres://${db.user}:${db.password}@${db.host}:${db.port}/${db.name}`;
     return db.ssl ? `${base}?sslmode=require` : base;
   }
 
-  private mapCoreConfig(
-    serviceConfig: any,
-    defaults: any,
-    brainConfig: any,
-  ): any {
+  private mapCoreConfig(serviceConfig: any, defaults: any, brainConfig: any): any {
     return {
       // Core
-      port: serviceConfig.port || parseInt(process.env.PORT || "3000"),
-      host: process.env.HOST || "0.0.0.0",
+      port: serviceConfig.port || parseInt(process.env.PORT || '3000'),
+      host: process.env.HOST || '0.0.0.0',
 
       // Redis
       redisUrl: process.env.REDIS_URL || serviceConfig.redis?.url,
@@ -154,8 +142,7 @@ export class SharedConfigAdapter extends EventEmitter {
 
       // Security
       hmacSecret: process.env.HMAC_SECRET,
-      hmacAlgorithm: (process.env.HMAC_ALGORITHM as "sha256" | "sha512") ||
-        "sha256",
+      hmacAlgorithm: (process.env.HMAC_ALGORITHM as 'sha256' | 'sha512') || 'sha256',
 
       // Logging
 
@@ -167,38 +154,29 @@ export class SharedConfigAdapter extends EventEmitter {
         process.env.RATE_LIMIT_WINDOW_MS || String(defaults.rateLimitWindowMs),
       ),
       rateLimitMaxRequests: parseInt(
-        process.env.RATE_LIMIT_MAX_REQUESTS ||
-          String(defaults.rateLimitMaxRequests),
+        process.env.RATE_LIMIT_MAX_REQUESTS || String(defaults.rateLimitMaxRequests),
       ),
 
       // Health
       healthCheckInterval: parseInt(
-        process.env.HEALTH_CHECK_INTERVAL ||
-          String(defaults.healthCheckInterval),
+        process.env.HEALTH_CHECK_INTERVAL || String(defaults.healthCheckInterval),
       ),
 
       // Service Discovery
-      phase1ServiceUrl: brainConfig.phase1ServiceUrl ||
-        process.env.PHASE1_SERVICE_URL,
-      phase2ServiceUrl: brainConfig.phase2ServiceUrl ||
-        process.env.PHASE2_SERVICE_URL,
-      phase3ServiceUrl: brainConfig.phase3ServiceUrl ||
-        process.env.PHASE3_SERVICE_URL,
+      phase1ServiceUrl: brainConfig.phase1ServiceUrl || process.env.PHASE1_SERVICE_URL,
+      phase2ServiceUrl: brainConfig.phase2ServiceUrl || process.env.PHASE2_SERVICE_URL,
+      phase3ServiceUrl: brainConfig.phase3ServiceUrl || process.env.PHASE3_SERVICE_URL,
 
       // Deployment
       deploymentEnvironment: process.env.DEPLOYMENT_ENVIRONMENT,
       serviceName: process.env.SERVICE_NAME,
 
       // CORS
-      corsOrigins: this.parseCorsOrigins(process.env.CORS_ORIGINS || "*"),
+      corsOrigins: this.parseCorsOrigins(process.env.CORS_ORIGINS || '*'),
 
       // Startup
-      startupTimeout: parseInt(
-        process.env.STARTUP_TIMEOUT || String(defaults.startupTimeout),
-      ),
-      shutdownTimeout: parseInt(
-        process.env.SHUTDOWN_TIMEOUT || String(defaults.shutdownTimeout),
-      ),
+      startupTimeout: parseInt(process.env.STARTUP_TIMEOUT || String(defaults.startupTimeout)),
+      shutdownTimeout: parseInt(process.env.SHUTDOWN_TIMEOUT || String(defaults.shutdownTimeout)),
     };
   }
 
@@ -207,27 +185,26 @@ export class SharedConfigAdapter extends EventEmitter {
     return {
       maxLeverage: brainConfig.maxTotalLeverage || defaults.risk.maxLeverage,
       fatTailBuffer: brainConfig.fatTailBuffer || defaults.risk.fatTailBuffer,
-      tailIndexThreshold: brainConfig.tailIndexThreshold ||
-        defaults.risk.tailIndexThreshold,
+      tailIndexThreshold: brainConfig.tailIndexThreshold || defaults.risk.tailIndexThreshold,
       maxImpactBps: brainConfig.maxImpactBps || defaults.risk.maxImpactBps,
     };
   }
 
   private parseCorsOrigins(corsOriginsStr: string): string[] {
-    if (corsOriginsStr === "*") return ["*"];
+    if (corsOriginsStr === '*') return ['*'];
     return corsOriginsStr
-      .split(",")
+      .split(',')
       .map((o) => o.trim())
       .filter((o) => o.length > 0);
   }
 
   getConfig(): BrainConfig {
-    if (!this.config) throw new Error("Configuration not loaded");
+    if (!this.config) throw new Error('Configuration not loaded');
     return { ...this.config };
   }
 
   getDatabaseConfig() {
-    if (!this.config) throw new Error("Configuration not loaded");
+    if (!this.config) throw new Error('Configuration not loaded');
     return {
       url: this.config.databaseUrl,
       host: this.config.databaseHost,

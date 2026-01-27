@@ -25,7 +25,7 @@
  * - Leverage: 20x
  */
 
-import { Tripwire } from "../types/index.js";
+import { Tripwire } from '../types/index.js';
 
 interface OIHistoryPoint {
   oi: number;
@@ -82,9 +82,7 @@ export class OIWipeoutDetector {
 
       // 2. Get OI from 5 minutes ago
       const history = this.oiHistory.get(symbol) || [];
-      const fiveMinAgo = history.find((h) =>
-        Date.now() - h.timestamp >= 300000
-      );
+      const fiveMinAgo = history.find((h) => Date.now() - h.timestamp >= 300000);
 
       if (!fiveMinAgo) {
         // Not enough history yet
@@ -95,7 +93,7 @@ export class OIWipeoutDetector {
       const oiDrop = (fiveMinAgo.oi - currentOI) / fiveMinAgo.oi;
 
       // 4. Calculate price drop %
-      const priceHistory = await this.bybitClient.fetchOHLCV(symbol, "1m", 5);
+      const priceHistory = await this.bybitClient.fetchOHLCV(symbol, '1m', 5);
       if (priceHistory.length < 5) {
         return null;
       }
@@ -126,20 +124,18 @@ export class OIWipeoutDetector {
       console.log(`💀 OI WIPEOUT DETECTED: ${symbol}`);
       console.log(`   Price Drop: ${(priceDrop * 100).toFixed(1)}%`);
       console.log(`   OI Drop: ${(oiDrop * 100).toFixed(1)}%`);
-      console.log(`   CVD: ${cvd > 0 ? "GREEN" : "RED"}`);
+      console.log(`   CVD: ${cvd > 0 ? 'GREEN' : 'RED'}`);
       console.log(
-        `   Target: ${targetPrice.toFixed(2)} (+${
-          ((targetPrice / currentPrice - 1) * 100).toFixed(
-            1,
-          )
-        }%)`,
+        `   Target: ${targetPrice.toFixed(2)} (+${((targetPrice / currentPrice - 1) * 100).toFixed(
+          1,
+        )}%)`,
       );
 
       return {
         symbol,
         triggerPrice: currentPrice, // Enter immediately
-        direction: "LONG",
-        trapType: "OI_WIPEOUT",
+        direction: 'LONG',
+        trapType: 'OI_WIPEOUT',
         confidence: 95,
         leverage: 20,
         estimatedCascadeSize: 0.05, // 5% bounce expected
@@ -150,7 +146,7 @@ export class OIWipeoutDetector {
     } catch (error: unknown) {
       // Check for Geo-blocking (HTTP 403)
       const err = error as { message?: string };
-      if (err && (err.message || "").includes("403")) {
+      if (err && (err.message || '').includes('403')) {
         if (!this.isGeoBlocked) {
           console.warn(
             `⛔ Geo-blocking detected for ${symbol} (HTTP 403). Disabling OIWipeoutDetector.`,

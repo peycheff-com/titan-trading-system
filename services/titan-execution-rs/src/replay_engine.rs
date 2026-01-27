@@ -14,7 +14,7 @@ pub struct ReplayEngine {
     shadow_state: Arc<RwLock<ShadowState>>,
     risk_guard: Arc<RiskGuard>,
     time_provider: Arc<SimulatedTimeProvider>,
-    ctx: Arc<ExecutionContext>,
+    _ctx: Arc<ExecutionContext>,
 
     // Results
     pub fills: Vec<FillReport>,
@@ -34,7 +34,7 @@ impl ReplayEngine {
             shadow_state,
             risk_guard,
             time_provider,
-            ctx,
+            _ctx: ctx,
             fills: Vec::new(),
             events: Vec::new(),
         }
@@ -74,7 +74,7 @@ impl ReplayEngine {
                     // Pipeline call
                     let result = self
                         .pipeline
-                        .process_intent(intent.clone(), intent.signal_id.clone())
+                        .process_intent(*intent.clone(), intent.signal_id.clone())
                         .await;
 
                     match result {

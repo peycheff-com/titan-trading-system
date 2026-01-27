@@ -322,6 +322,7 @@ impl ShadowState {
         None
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn confirm_execution(
         &mut self,
         signal_id: &str,
@@ -652,6 +653,7 @@ impl ShadowState {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn close_position(
         &mut self,
         signal_id: &str,
@@ -759,7 +761,7 @@ impl ShadowState {
                 pnl = %pnl,
                 "Position closed"
             );
-            return Some(ExecutionEvent::Closed(trade_record));
+            Some(ExecutionEvent::Closed(trade_record))
         }
     }
 

@@ -22,7 +22,15 @@ impl OrderBookManager {
             books: HashMap::new(),
         }
     }
+}
 
+impl Default for OrderBookManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl OrderBookManager {
     pub fn apply_event(&mut self, event: &OrderBookL2) {
         let book = self
             .books

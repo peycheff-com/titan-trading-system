@@ -63,7 +63,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Initialize logging
     // --- Observability Setup (Phase 4) ---
     // Initialize OpenTelemetry
-    use opentelemetry::{global, KeyValue};
+    use opentelemetry::KeyValue;
     use opentelemetry_otlp::WithExportConfig;
     use opentelemetry_sdk::{trace as sdktrace, Resource};
     use tracing_subscriber::layer::SubscriberExt;
@@ -250,7 +250,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         match BinanceAdapter::new(binance_config) {
             Ok(adapter) => {
                 let binance_adapter = Arc::new(adapter);
-                if let Ok(_) = binance_adapter.init().await {
+                if (binance_adapter.init().await).is_ok() {
                     router.register("binance", binance_adapter);
                 } else {
                     error!("❌ Failed to initialize Binance adapter");
@@ -268,7 +268,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         match BybitAdapter::new(bybit_config) {
             Ok(adapter) => {
                 let bybit_adapter = Arc::new(adapter);
-                if let Ok(_) = bybit_adapter.init().await {
+                if (bybit_adapter.init().await).is_ok() {
                     router.register("bybit", bybit_adapter);
                 } else {
                     error!("❌ Failed to initialize Bybit adapter");
@@ -286,7 +286,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         match MexcAdapter::new(mexc_config) {
             Ok(adapter) => {
                 let mexc_adapter = Arc::new(adapter);
-                if let Ok(_) = mexc_adapter.init().await {
+                if (mexc_adapter.init().await).is_ok() {
                     router.register("mexc", mexc_adapter);
                 } else {
                     error!("❌ Failed to initialize MEXC adapter/ping");

@@ -9,7 +9,7 @@ AI Quant outputs.
    - Hypothesis, data selection, and feature engineering
    - Document expected edge and failure modes
 
-2. **Backtest**
+2. **Backtest** (via `services/titan-backtesting`)
    - Use historical data and realistic execution assumptions
    - Include fees, slippage, and latency models
    - Produce a reproducible report in `artifacts/`

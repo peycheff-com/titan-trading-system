@@ -293,7 +293,7 @@ export class OptimizedQueries {
     const winRate = tradeCount > 0 ? winCount / tradeCount : 0;
 
     // Calculate Sharpe ratio
-     
+
     let sharpeRatio = 0;
     if (tradeCount >= 2 && stddevPnl > 0 && !isNaN(stddevPnl)) {
       sharpeRatio = (avgPnl / stddevPnl) * ANNUALIZATION_FACTOR;
@@ -302,7 +302,7 @@ export class OptimizedQueries {
     }
 
     // Calculate modifier
-     
+
     let modifier = 1.0;
     if (tradeCount >= 10) {
       if (sharpeRatio < 0) {
@@ -349,7 +349,6 @@ export class OptimizedQueries {
 
     const result = new Map<PhaseId, number[]>();
     for (const phaseId of phaseIds) {
-       
       result.set(phaseId, []);
     }
 
@@ -357,7 +356,6 @@ export class OptimizedQueries {
       const phaseId = row.phase_id as PhaseId;
       const pnlArray = result.get(phaseId);
       if (pnlArray) {
-         
         pnlArray.push(parseFloat(row.pnl));
       }
     }

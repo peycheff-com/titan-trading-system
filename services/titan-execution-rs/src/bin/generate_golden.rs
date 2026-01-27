@@ -52,8 +52,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut timestamp = 1700000000000;
 
     // 1. Initial State: Normal
-    let mut policy = RiskPolicy::default();
-    policy.current_state = RiskState::Normal;
+    let mut policy = RiskPolicy {
+        current_state: RiskState::Normal,
+        ..Default::default()
+    };
     write_event(
         &mut file,
         ReplayEvent::RiskPolicy {
@@ -121,7 +123,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 child_fills: vec![],
                 filled_size: dec!(0),
             };
-            write_event(&mut file, ReplayEvent::Signal(intent))?;
+            write_event(&mut file, ReplayEvent::Signal(Box::new(intent)))?;
         }
 
         // Inject a Risk Policy Update mid-stream

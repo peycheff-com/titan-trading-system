@@ -73,7 +73,6 @@ export class ServiceDiscovery {
    * Register a service endpoint
    */
   registerService(endpoint: ServiceEndpoint): void {
-     
     this.services.set(endpoint.name, endpoint);
 
     // Create service client with proper configuration
@@ -84,11 +83,11 @@ export class ServiceDiscovery {
     };
 
     const client = new ServiceClient(clientConfig, this.logger);
-     
+
     this.serviceClients.set(endpoint.name, client);
 
     // Initialize service status
-     
+
     this.serviceStatus.set(endpoint.name, {
       name: endpoint.name,
       url: endpoint.url,
@@ -156,7 +155,6 @@ export class ServiceDiscovery {
           },
         };
 
-         
         services.push(endpoint);
       }
     }
@@ -181,7 +179,6 @@ export class ServiceDiscovery {
               },
             };
 
-             
             services.push(endpoint);
           }
         }
@@ -284,7 +281,7 @@ export class ServiceDiscovery {
     this.performHealthChecks();
 
     // Schedule periodic health checks
-     
+
     this.healthCheckInterval = setInterval(() => {
       this.performHealthChecks();
     }, this.config.healthCheckInterval);
@@ -301,7 +298,7 @@ export class ServiceDiscovery {
   stopHealthChecking(): void {
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval);
-       
+
       this.healthCheckInterval = null;
     }
 
@@ -342,15 +339,15 @@ export class ServiceDiscovery {
       const responseTime = Date.now() - startTime;
 
       // Update status - healthy
-       
+
       status.healthy = true;
-       
+
       status.lastCheck = Date.now();
-       
+
       status.responseTime = responseTime;
-       
+
       status.error = null;
-       
+
       status.consecutiveFailures = 0;
 
       return true;
@@ -358,15 +355,15 @@ export class ServiceDiscovery {
       const responseTime = Date.now() - startTime;
 
       // Update status - unhealthy
-       
+
       status.consecutiveFailures++;
-       
+
       status.healthy = status.consecutiveFailures < this.config.maxConsecutiveFailures;
-       
+
       status.lastCheck = Date.now();
-       
+
       status.responseTime = responseTime;
-       
+
       status.error = error instanceof Error ? error.message : String(error);
 
       if (status.consecutiveFailures >= this.config.maxConsecutiveFailures) {
@@ -444,11 +441,11 @@ export class ServiceDiscovery {
    */
   shutdown(): void {
     this.stopHealthChecking();
-     
+
     this.services.clear();
-     
+
     this.serviceClients.clear();
-     
+
     this.serviceStatus.clear();
 
     this.logger.info('Service discovery shutdown complete');

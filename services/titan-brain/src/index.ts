@@ -68,7 +68,7 @@ function createStandardInitSteps(): any[] {
     {
       name: "init-nats",
       description: "Initialize NATS connection",
-      timeout: 30000,
+      timeout: 60000,
       required: true,
       dependencies: ["load-config"],
       execute: async () => {
@@ -197,7 +197,7 @@ async function main(): Promise<void> {
   try {
     // Initialize startup manager
     startupManager = new StartupManager({
-      maxStartupTime: 60000, // 60 seconds for production
+      maxStartupTime: 300000, // 5 minutes for production
       gracefulShutdownTimeout: 30000, // 30 seconds
     });
 
@@ -420,6 +420,7 @@ async function main(): Promise<void> {
           defaultHighWatermark: 0,
         },
         getNatsClient(),
+        riskGuardian,
       );
       logger.info("   ✅ StateRecoveryService initialized");
 

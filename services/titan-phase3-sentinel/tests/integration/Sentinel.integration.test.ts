@@ -1,9 +1,9 @@
 import { SentinelConfig, SentinelCore } from "../../src/engine/SentinelCore";
-import { ExchangeGateway } from "../../src/exchanges/ExchangeGateway";
+import { IExchangeGateway } from "../../src/exchanges/interfaces";
 import { Order, OrderSide, OrderType } from "../../src/types/orders";
 
 // Mock Gateway
-class MockGateway implements ExchangeGateway {
+class MockGateway implements IExchangeGateway {
     name: string;
     constructor(public id: string) {
         this.name = id;
@@ -17,8 +17,9 @@ class MockGateway implements ExchangeGateway {
         return 10000;
     }
 
-    async getOrderBook(symbol: string) {
-        return { bids: [], asks: [], timestamp: Date.now() };
+    async getTicker(symbol: string) {
+        const price = await this.getPrice(symbol);
+        return { price, bid: price, ask: price };
     }
 
     async executeOrder(order: Order) {
@@ -27,21 +28,20 @@ class MockGateway implements ExchangeGateway {
             orderId: "mock-id",
             filledSize: order.size,
             avgPrice: 10000,
+            fees: 0,
+            status: "FILLED" as const,
+            timestamp: Date.now(),
         };
     }
 
-    async getBalance() {
-        return { free: 10000, used: 0, total: 10000 };
-    }
-
-    async getPosition(symbol: string) {
-        return null;
+    async getBalance(asset: string): Promise<number> {
+        return 10000;
     }
 }
 
 describe("Sentinel Core Integration", () => {
     let core: SentinelCore;
-    let gateways: ExchangeGateway[];
+    let gateways: IExchangeGateway[];
 
     const config: SentinelConfig = {
         symbol: "BTC",

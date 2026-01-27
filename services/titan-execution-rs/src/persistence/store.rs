@@ -86,7 +86,8 @@ impl PersistenceStore {
 
     pub fn save_intent(&self, intent: &Intent) -> Result<(), StoreError> {
         // WAL first
-        self.wal.append(&WalEntry::IntentReceived(intent.clone()))?;
+        self.wal
+            .append(&WalEntry::IntentReceived(Box::new(intent.clone())))?;
 
         // State update
         let txn = self.store.begin_write()?;

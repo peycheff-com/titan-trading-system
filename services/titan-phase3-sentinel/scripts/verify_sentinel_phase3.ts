@@ -6,13 +6,13 @@ import { OrderBook } from "../src/types/statistics.js";
 async function verifyRiskManager() {
     console.log("\n--- Verifying Risk Manager Dynamic Leverage ---");
     const riskManager = new RiskManager({
-        maxDrawdown: 0.1,
+        maxPositionSize: 100000,
         criticalDrawdown: 0.15,
         dailyDrawdownLimit: 0.05,
         maxLeverage: 10, // Base max leverage
+        stopLossThreshold: 0.02,
         criticalDelta: 0.2,
         maxDelta: 0.1,
-        maxPositionSize: 100000,
     });
 
     const health = {
@@ -89,14 +89,13 @@ async function verifyVacuumMonitor() {
         bids: [[49990, 2.0]], // $100k roughly
         asks: [[50010, 2.0]],
         timestamp: Date.now(),
-        symbol: "BTCUSDT",
     };
 
     // Inject Liquidation Event to boost confidence > 0.6
     monitor.onLiquidation({
-        id: "liq-1",
         symbol: "BTCUSDT",
         side: "SELL",
+        exchange: "BINANCE",
         price: 49500,
         size: 2000, // > MIN_LIQUIDATION_SIZE (1000)
         timestamp: Date.now(),
@@ -125,7 +124,6 @@ async function verifyVacuumMonitor() {
         bids: [[49990, 0.1]], // $5k
         asks: [[50010, 0.1]],
         timestamp: Date.now(),
-        symbol: "BTCUSDT",
     };
 
     // Trigger basis condition

@@ -1,8 +1,4 @@
-import {
-  ConfigManager,
-  MergedConfig,
-  TrapConfig,
-} from 'titan-phase1-scavenger/dist/config/ConfigManager.js';
+import { MergedConfig, TrapConfig } from 'titan-phase1-scavenger/dist/config/ConfigManager.js';
 import { EventEmitter } from 'events';
 
 export class MockConfigManager extends EventEmitter {
@@ -23,6 +19,7 @@ export class MockConfigManager extends EventEmitter {
 
   // Helper to modify config during test
   public setConfig(updates: Partial<MergedConfig>) {
+    // eslint-disable-next-line functional/immutable-data
     this.config = { ...this.config, ...updates };
     this.emit('configChanged', {
       type: 'merged',

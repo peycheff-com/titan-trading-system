@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils';
 import { LucideIcon, Inbox, AlertCircle, Loader2 } from 'lucide-react';
 
 interface EmptyStateProps {
-  icon?: LucideIcon;
+  icon?: any;
   title: string;
   description?: string;
   action?: React.ReactNode;

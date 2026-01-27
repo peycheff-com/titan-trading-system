@@ -18,7 +18,7 @@ export class LeadLagDetector {
   private calculationInterval: number = 1000; // Recalculate every 1 second
 
   // Default leader is BINANCE for all symbols until proven otherwise
-  private currentLeader: Map<string, "BINANCE" | "BYBIT"> = new Map();
+  private currentLeader: Map<string, 'BINANCE' | 'BYBIT'> = new Map();
   private correlation: Map<string, number> = new Map();
 
   constructor() {}
@@ -26,18 +26,11 @@ export class LeadLagDetector {
   /**
    * Record a price update from an exchange
    */
-  recordPrice(
-    symbol: string,
-    source: "BINANCE" | "BYBIT",
-    price: number,
-    timestamp: number,
-  ): void {
+  recordPrice(symbol: string, source: 'BINANCE' | 'BYBIT', price: number, timestamp: number): void {
     // Quantize timestamp to bucket size
     const bucket = Math.floor(timestamp / this.bucketSize) * this.bucketSize;
 
-    const pricesMap = source === "BINANCE"
-      ? this.binancePrices
-      : this.bybitPrices;
+    const pricesMap = source === 'BINANCE' ? this.binancePrices : this.bybitPrices;
 
     if (!pricesMap.has(symbol)) {
       pricesMap.set(symbol, new Map());
@@ -61,8 +54,8 @@ export class LeadLagDetector {
   /**
    * Determine which exchange is leading for a specific symbol
    */
-  getLeader(symbol: string): "BINANCE" | "BYBIT" {
-    return this.currentLeader.get(symbol) || "BINANCE";
+  getLeader(symbol: string): 'BINANCE' | 'BYBIT' {
+    return this.currentLeader.get(symbol) || 'BINANCE';
   }
 
   getCorrelation(symbol: string): number {
@@ -124,34 +117,27 @@ export class LeadLagDetector {
 
     // Simple heuristic
     if (rPlus > rMinus && rPlus > r0) {
-      if (this.currentLeader.get(symbol) !== "BINANCE") {
+      if (this.currentLeader.get(symbol) !== 'BINANCE') {
         console.log(
-          `📡 Lead/Lag Flip [${symbol}]: BINANCE is leading (R+=${
-            rPlus.toFixed(
-              3,
-            )
-          } vs R-=${rMinus.toFixed(3)})`,
+          `📡 Lead/Lag Flip [${symbol}]: BINANCE is leading (R+=${rPlus.toFixed(
+            3,
+          )} vs R-=${rMinus.toFixed(3)})`,
         );
-        this.currentLeader.set(symbol, "BINANCE");
+        this.currentLeader.set(symbol, 'BINANCE');
       }
     } else if (rMinus > rPlus && rMinus > r0) {
-      if (this.currentLeader.get(symbol) !== "BYBIT") {
+      if (this.currentLeader.get(symbol) !== 'BYBIT') {
         console.log(
-          `📡 Lead/Lag Flip [${symbol}]: BYBIT is leading (R-=${
-            rMinus.toFixed(
-              3,
-            )
-          } vs R+=${rPlus.toFixed(3)})`,
+          `📡 Lead/Lag Flip [${symbol}]: BYBIT is leading (R-=${rMinus.toFixed(
+            3,
+          )} vs R+=${rPlus.toFixed(3)})`,
         );
-        this.currentLeader.set(symbol, "BYBIT");
+        this.currentLeader.set(symbol, 'BYBIT');
       }
     }
   }
 
-  private findNearest(
-    map: Map<number, number>,
-    target: number,
-  ): number | undefined {
+  private findNearest(map: Map<number, number>, target: number): number | undefined {
     if (map.has(target)) return map.get(target);
     // Look back up to 5 buckets
     for (let i = 1; i <= 5; i++) {
@@ -162,11 +148,7 @@ export class LeadLagDetector {
     return undefined;
   }
 
-  private correlationCoefficient(
-    x: number[],
-    y: number[],
-    lag: number,
-  ): number {
+  private correlationCoefficient(x: number[], y: number[], lag: number): number {
     // Apply lag
     let x_s: number[], y_s: number[];
 
@@ -194,9 +176,7 @@ export class LeadLagDetector {
     const sum_y2 = y_s.reduce((a, b) => a + b * b, 0);
 
     const numerator = n * sum_xy - sum_x * sum_y;
-    const denominator = Math.sqrt(
-      (n * sum_x2 - sum_x * sum_x) * (n * sum_y2 - sum_y * sum_y),
-    );
+    const denominator = Math.sqrt((n * sum_x2 - sum_x * sum_x) * (n * sum_y2 - sum_y * sum_y));
 
     if (denominator === 0) return 0;
     return numerator / denominator;

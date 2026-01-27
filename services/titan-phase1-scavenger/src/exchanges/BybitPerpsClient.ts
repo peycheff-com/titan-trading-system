@@ -7,18 +7,13 @@
  * Requirements: 7.1-7.7 (Execution), 11.1-11.7 (Multi-Timeframe Data)
  */
 
-import { createHmac } from "crypto";
+import { createHmac } from 'crypto';
 // Force Rebuild 2026-01-08-01
-import {
-  OHLCV,
-  OrderParams,
-  OrderResult,
-  OrderStatus,
-} from "../types/index.js";
+import { OHLCV, OrderParams, OrderResult, OrderStatus } from '../types/index.js';
 
 // Import fetch with proper typing for Jest compatibility
-import fetch from "node-fetch";
-import WebSocket from "ws";
+import fetch from 'node-fetch';
+import WebSocket from 'ws';
 
 export interface BybitTickerUpdate {
   topic: string;
@@ -35,11 +30,7 @@ export interface BybitTickerUpdate {
   };
 }
 
-type TickerCallback = (
-  symbol: string,
-  price: number,
-  timestamp: number,
-) => void;
+type TickerCallback = (symbol: string, price: number, timestamp: number) => void;
 
 export interface BybitSymbolInfo {
   symbol: string;
@@ -160,7 +151,7 @@ interface CacheEntry<T> {
 }
 
 export class BybitPerpsClient {
-  private baseUrl = "https://api.bybit.com";
+  private baseUrl = 'https://api.bybit.com';
   private apiKey: string;
   private apiSecret: string;
   private cache = new Map<string, CacheEntry<unknown>>();
@@ -173,7 +164,7 @@ export class BybitPerpsClient {
   private ws: WebSocket | null = null;
   private tickerCallbacks: Map<string, TickerCallback> = new Map();
   private wsPingInterval?: NodeJS.Timeout;
-  private readonly WS_URL = "wss://stream.bybit.com/v5/public/linear";
+  private readonly WS_URL = 'wss://stream.bybit.com/v5/public/linear';
 
   constructor(apiKey: string, apiSecret: string) {
     this.apiKey = apiKey;
@@ -201,13 +192,13 @@ export class BybitPerpsClient {
   private connectWebSocket(symbols: string[]): void {
     this.ws = new WebSocket(this.WS_URL);
 
-    this.ws.on("open", () => {
-      console.log("✅ Bybit WebSocket connected");
+    this.ws.on('open', () => {
+      console.log('✅ Bybit WebSocket connected');
 
       // Send subscription
       const args = symbols.map((s) => `tickers.${s.toUpperCase()}`);
       const msg = {
-        op: "subscribe",
+        op: 'subscribe',
         args: args,
       };
       this.ws?.send(JSON.stringify(msg));
@@ -215,18 +206,18 @@ export class BybitPerpsClient {
       // Start heartbeat
       this.wsPingInterval = setInterval(() => {
         if (this.ws?.readyState === WebSocket.OPEN) {
-          this.ws.send(JSON.stringify({ op: "ping" }));
+          this.ws.send(JSON.stringify({ op: 'ping' }));
         }
       }, 20000);
     });
 
-    this.ws.on("message", (data: WebSocket.Data) => {
+    this.ws.on('message', (data: WebSocket.Data) => {
       try {
         const msg = JSON.parse(data.toString());
 
         // Handle ticker update
-        if (msg.topic && msg.topic.startsWith("tickers.") && msg.data) {
-          const symbol = msg.topic.split(".")[1];
+        if (msg.topic && msg.topic.startsWith('tickers.') && msg.data) {
+          const symbol = msg.topic.split('.')[1];
           const tickerData = msg.data;
           const price = parseFloat(tickerData.lastPrice);
           const ts = msg.ts; // Bybit timestamp (ms)
@@ -237,18 +228,18 @@ export class BybitPerpsClient {
           }
         }
       } catch (err) {
-        console.error("❌ Error parsing Bybit WS message", err);
+        console.error('❌ Error parsing Bybit WS message', err);
       }
     });
 
-    this.ws.on("close", () => {
-      console.warn("⚠️ Bybit WebSocket closed. Reconnecting...");
+    this.ws.on('close', () => {
+      console.warn('⚠️ Bybit WebSocket closed. Reconnecting...');
       if (this.wsPingInterval) clearInterval(this.wsPingInterval);
       setTimeout(() => this.connectWebSocket(symbols), 2000);
     });
 
-    this.ws.on("error", (err) => {
-      console.error("❌ Bybit WebSocket error:", err);
+    this.ws.on('error', (err) => {
+      console.error('❌ Bybit WebSocket error:', err);
     });
   }
 
@@ -271,8 +262,8 @@ export class BybitPerpsClient {
     if (cached) return cached;
 
     try {
-      const response = await this.makeRequest("GET", "/v5/market/tickers", {
-        category: "linear",
+      const response = await this.makeRequest('GET', '/v5/market/tickers', {
+        category: 'linear',
       });
 
       if (response.retCode !== 0) {
@@ -282,7 +273,7 @@ export class BybitPerpsClient {
       // Sort by 24h volume and take top N
       const tickers = response.result.list as BybitTickerInfo[];
       const sortedSymbols = tickers
-        .filter((ticker) => ticker.symbol.endsWith("USDT"))
+        .filter((ticker) => ticker.symbol.endsWith('USDT'))
         .sort((a, b) => parseFloat(b.turnover24h) - parseFloat(a.turnover24h))
         .slice(0, limit)
         .map((ticker) => ticker.symbol);
@@ -291,9 +282,7 @@ export class BybitPerpsClient {
       return sortedSymbols;
     } catch (error) {
       throw new Error(
-        `Failed to fetch top symbols: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+        `Failed to fetch top symbols: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
     }
   }
@@ -305,11 +294,7 @@ export class BybitPerpsClient {
    * @param limit - Number of candles (max 1000)
    * @returns Promise with OHLCV array
    */
-  public async fetchOHLCV(
-    symbol: string,
-    interval: string,
-    limit: number = 200,
-  ): Promise<OHLCV[]> {
+  public async fetchOHLCV(symbol: string, interval: string, limit: number = 200): Promise<OHLCV[]> {
     const cacheKey = `ohlcv_${symbol}_${interval}_${limit}`;
     const cached = this.getFromCache<OHLCV[]>(cacheKey);
     if (cached) return cached;
@@ -318,8 +303,8 @@ export class BybitPerpsClient {
       // Convert interval to Bybit format
       const bybitInterval = this.convertInterval(interval);
 
-      const response = await this.makeRequest("GET", "/v5/market/kline", {
-        category: "linear",
+      const response = await this.makeRequest('GET', '/v5/market/kline', {
+        category: 'linear',
         symbol: symbol.toUpperCase(),
         interval: bybitInterval,
         limit: Math.min(limit, 1000).toString(),
@@ -347,7 +332,7 @@ export class BybitPerpsClient {
     } catch (error) {
       throw new Error(
         `Failed to fetch OHLCV for ${symbol}: ${
-          error instanceof Error ? error.message : "Unknown error"
+          error instanceof Error ? error.message : 'Unknown error'
         }`,
       );
     }
@@ -360,8 +345,8 @@ export class BybitPerpsClient {
    */
   public async getCurrentPrice(symbol: string): Promise<number> {
     try {
-      const response = await this.makeRequest("GET", "/v5/market/tickers", {
-        category: "linear",
+      const response = await this.makeRequest('GET', '/v5/market/tickers', {
+        category: 'linear',
         symbol: symbol.toUpperCase(),
       });
 
@@ -378,7 +363,7 @@ export class BybitPerpsClient {
     } catch (error) {
       throw new Error(
         `Failed to get current price for ${symbol}: ${
-          error instanceof Error ? error.message : "Unknown error"
+          error instanceof Error ? error.message : 'Unknown error'
         }`,
       );
     }
@@ -391,8 +376,8 @@ export class BybitPerpsClient {
    */
   public async getTicker(symbol: string): Promise<BybitTickerInfo> {
     try {
-      const response = await this.makeRequest("GET", "/v5/market/tickers", {
-        category: "linear",
+      const response = await this.makeRequest('GET', '/v5/market/tickers', {
+        category: 'linear',
         symbol: symbol.toUpperCase(),
       });
 
@@ -409,7 +394,7 @@ export class BybitPerpsClient {
     } catch (error) {
       throw new Error(
         `Failed to get ticker for ${symbol}: ${
-          error instanceof Error ? error.message : "Unknown error"
+          error instanceof Error ? error.message : 'Unknown error'
         }`,
       );
     }
@@ -422,10 +407,10 @@ export class BybitPerpsClient {
   public async getEquity(): Promise<number> {
     try {
       const response = await this.makeRequest(
-        "GET",
-        "/v5/account/wallet-balance",
+        'GET',
+        '/v5/account/wallet-balance',
         {
-          accountType: "UNIFIED",
+          accountType: 'UNIFIED',
         },
         true,
       );
@@ -436,15 +421,13 @@ export class BybitPerpsClient {
 
       const account = response.result.list[0] as BybitAccountInfo;
       if (!account) {
-        throw new Error("No account data found");
+        throw new Error('No account data found');
       }
 
       return parseFloat(account.totalEquity);
     } catch (error) {
       throw new Error(
-        `Failed to get equity: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+        `Failed to get equity: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
     }
   }
@@ -457,22 +440,19 @@ export class BybitPerpsClient {
   public async placeOrder(params: OrderParams): Promise<OrderResult> {
     try {
       const orderParams: Record<string, string> = {
-        category: "linear",
+        category: 'linear',
         symbol: params.symbol.toUpperCase(),
         side: params.side,
-        orderType: params.type === "POST_ONLY"
-          ? "Limit"
-          : params.type === "LIMIT"
-          ? "Limit"
-          : "Market",
+        orderType:
+          params.type === 'POST_ONLY' ? 'Limit' : params.type === 'LIMIT' ? 'Limit' : 'Market',
         qty: params.qty.toString(),
-        timeInForce: params.type === "POST_ONLY" ? "PostOnly" : "GTC",
+        timeInForce: params.type === 'POST_ONLY' ? 'PostOnly' : 'GTC',
       };
 
       // Add price for limit orders
-      if (params.type === "LIMIT" || params.type === "POST_ONLY") {
+      if (params.type === 'LIMIT' || params.type === 'POST_ONLY') {
         if (!params.price) {
-          throw new Error("Price is required for limit orders");
+          throw new Error('Price is required for limit orders');
         }
         orderParams.price = params.price.toString();
       }
@@ -485,12 +465,7 @@ export class BybitPerpsClient {
         orderParams.takeProfit = params.takeProfit.toString();
       }
 
-      const response = await this.makeRequest(
-        "POST",
-        "/v5/order/create",
-        orderParams,
-        true,
-      );
+      const response = await this.makeRequest('POST', '/v5/order/create', orderParams, true);
 
       if (response.retCode !== 0) {
         throw new Error(`Bybit API error: ${response.retMsg}`);
@@ -501,17 +476,15 @@ export class BybitPerpsClient {
       return {
         orderId: orderData.orderId,
         symbol: orderData.symbol,
-        side: orderData.side as "Buy" | "Sell",
+        side: orderData.side as 'Buy' | 'Sell',
         qty: parseFloat(orderData.qty),
-        price: parseFloat(orderData.price || orderData.avgPrice || "0"),
+        price: parseFloat(orderData.price || orderData.avgPrice || '0'),
         status: this.mapOrderStatus(orderData.orderStatus),
         timestamp: parseInt(orderData.createTime),
       };
     } catch (error) {
       throw new Error(
-        `Failed to place order: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+        `Failed to place order: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
     }
   }
@@ -532,10 +505,7 @@ export class BybitPerpsClient {
       try {
         // Set timeout for each attempt
         const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(
-            () => reject(new Error("Order timeout after 2 seconds")),
-            2000,
-          );
+          setTimeout(() => reject(new Error('Order timeout after 2 seconds')), 2000);
         });
 
         const orderPromise = this.placeOrder(params);
@@ -543,22 +513,16 @@ export class BybitPerpsClient {
 
         return result;
       } catch (error) {
-        lastError = error instanceof Error ? error : new Error("Unknown error");
+        lastError = error instanceof Error ? error : new Error('Unknown error');
 
         if (attempt < maxRetries) {
-          console.warn(
-            `⚠️ Order attempt ${
-              attempt + 1
-            } failed, retrying: ${lastError.message}`,
-          );
+          console.warn(`⚠️ Order attempt ${attempt + 1} failed, retrying: ${lastError.message}`);
           await this.sleep(this.RETRY_DELAY);
         }
       }
     }
 
-    throw new Error(
-      `Order failed after ${maxRetries + 1} attempts: ${lastError!.message}`,
-    );
+    throw new Error(`Order failed after ${maxRetries + 1} attempts: ${lastError!.message}`);
   }
 
   /**
@@ -570,28 +534,28 @@ export class BybitPerpsClient {
    * @returns Promise with API response
    */
   private async makeRequest(
-    method: "GET" | "POST",
+    method: 'GET' | 'POST',
     endpoint: string,
     params: Record<string, any> = {},
     signed: boolean = false,
   ): Promise<any> {
     const timestamp = Date.now().toString();
     let url = `${this.baseUrl}${endpoint}`;
-    let body = "";
+    let body = '';
 
     // Prepare headers
     const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      "X-BAPI-TIMESTAMP": timestamp,
-      "X-BAPI-RECV-WINDOW": "5000",
+      'Content-Type': 'application/json',
+      'X-BAPI-TIMESTAMP': timestamp,
+      'X-BAPI-RECV-WINDOW': '5000',
     };
 
     if (signed) {
-      headers["X-BAPI-API-KEY"] = this.apiKey;
+      headers['X-BAPI-API-KEY'] = this.apiKey;
     }
 
     // Prepare request data
-    if (method === "GET") {
+    if (method === 'GET') {
       const queryString = new URLSearchParams(params).toString();
       if (queryString) {
         url += `?${queryString}`;
@@ -602,26 +566,24 @@ export class BybitPerpsClient {
 
     // Generate signature for authenticated requests
     if (signed) {
-      const signaturePayload = timestamp +
+      const signaturePayload =
+        timestamp +
         this.apiKey +
-        "5000" +
-        (method === "GET" ? new URLSearchParams(params).toString() : body);
-      headers["X-BAPI-SIGN"] = createHmac("sha256", this.apiSecret)
+        '5000' +
+        (method === 'GET' ? new URLSearchParams(params).toString() : body);
+      headers['X-BAPI-SIGN'] = createHmac('sha256', this.apiSecret)
         .update(signaturePayload)
-        .digest("hex");
+        .digest('hex');
     }
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(
-        () => controller.abort(),
-        this.REQUEST_TIMEOUT,
-      );
+      const timeoutId = setTimeout(() => controller.abort(), this.REQUEST_TIMEOUT);
 
       const response = await fetch(url, {
         method,
         headers,
-        body: method === "POST" ? body : undefined,
+        body: method === 'POST' ? body : undefined,
         signal: controller.signal,
       });
 
@@ -633,13 +595,11 @@ export class BybitPerpsClient {
 
       return await response.json();
     } catch (error) {
-      if (error instanceof Error && error.name === "AbortError") {
-        throw new Error("Request timeout");
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timeout');
       }
       throw new Error(
-        `Request failed: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+        `Request failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
     }
   }
@@ -651,16 +611,16 @@ export class BybitPerpsClient {
    */
   private convertInterval(interval: string): string {
     const intervalMap: { [key: string]: string } = {
-      "1m": "1",
-      "5m": "5",
-      "15m": "15",
-      "30m": "30",
-      "1h": "60",
-      "4h": "240",
-      "1d": "D",
-      "1D": "D",
-      "1w": "W",
-      "1W": "W",
+      '1m': '1',
+      '5m': '5',
+      '15m': '15',
+      '30m': '30',
+      '1h': '60',
+      '4h': '240',
+      '1d': 'D',
+      '1D': 'D',
+      '1w': 'W',
+      '1W': 'W',
     };
 
     return intervalMap[interval] || interval;
@@ -673,16 +633,16 @@ export class BybitPerpsClient {
    */
   private mapOrderStatus(bybitStatus: string): OrderStatus {
     const statusMap: { [key: string]: OrderStatus } = {
-      New: "NEW",
-      PartiallyFilled: "PARTIALLY_FILLED",
-      Filled: "FILLED",
-      Cancelled: "CANCELLED",
-      Rejected: "REJECTED",
-      PartiallyFilledCanceled: "CANCELLED",
-      Deactivated: "CANCELLED",
+      New: 'NEW',
+      PartiallyFilled: 'PARTIALLY_FILLED',
+      Filled: 'FILLED',
+      Cancelled: 'CANCELLED',
+      Rejected: 'REJECTED',
+      PartiallyFilledCanceled: 'CANCELLED',
+      Deactivated: 'CANCELLED',
     };
 
-    return statusMap[bybitStatus] || "NEW";
+    return statusMap[bybitStatus] || 'NEW';
   }
 
   /**
@@ -748,8 +708,8 @@ export class BybitPerpsClient {
    */
   public async getFundingRate(symbol: string): Promise<number> {
     try {
-      const response = await this.makeRequest("GET", "/v5/market/tickers", {
-        category: "linear",
+      const response = await this.makeRequest('GET', '/v5/market/tickers', {
+        category: 'linear',
         symbol: symbol.toUpperCase(),
       });
 
@@ -766,7 +726,7 @@ export class BybitPerpsClient {
     } catch (error) {
       throw new Error(
         `Failed to get funding rate for ${symbol}: ${
-          error instanceof Error ? error.message : "Unknown error"
+          error instanceof Error ? error.message : 'Unknown error'
         }`,
       );
     }
@@ -779,15 +739,11 @@ export class BybitPerpsClient {
    */
   public async getOpenInterest(symbol: string): Promise<number> {
     try {
-      const response = await this.makeRequest(
-        "GET",
-        "/v5/market/open-interest",
-        {
-          category: "linear",
-          symbol: symbol.toUpperCase(),
-          intervalTime: "5min", // Required param, though latest is returned
-        },
-      );
+      const response = await this.makeRequest('GET', '/v5/market/open-interest', {
+        category: 'linear',
+        symbol: symbol.toUpperCase(),
+        intervalTime: '5min', // Required param, though latest is returned
+      });
 
       if (response.retCode !== 0) {
         throw new Error(`Bybit API error: ${response.retMsg}`);
@@ -803,7 +759,7 @@ export class BybitPerpsClient {
     } catch (error) {
       throw new Error(
         `Failed to get open interest for ${symbol}: ${
-          error instanceof Error ? error.message : "Unknown error"
+          error instanceof Error ? error.message : 'Unknown error'
         }`,
       );
     }
@@ -816,8 +772,8 @@ export class BybitPerpsClient {
    */
   public async get24hVolume(symbol: string): Promise<number> {
     try {
-      const response = await this.makeRequest("GET", "/v5/market/tickers", {
-        category: "linear",
+      const response = await this.makeRequest('GET', '/v5/market/tickers', {
+        category: 'linear',
         symbol: symbol.toUpperCase(),
       });
 
@@ -834,7 +790,7 @@ export class BybitPerpsClient {
     } catch (error) {
       throw new Error(
         `Failed to get 24h volume for ${symbol}: ${
-          error instanceof Error ? error.message : "Unknown error"
+          error instanceof Error ? error.message : 'Unknown error'
         }`,
       );
     }

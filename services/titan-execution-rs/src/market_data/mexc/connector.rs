@@ -31,7 +31,15 @@ impl MexcConnector {
             subscriptions: HashSet::new(),
         }
     }
+}
 
+impl Default for MexcConnector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl MexcConnector {
     async fn handle_msg(
         text: &str,
         tx: &mpsc::Sender<MarketDataEvent>,
@@ -107,7 +115,7 @@ impl MarketDataConnector for MexcConnector {
             loop {
                 tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
                 let ping = json!({"method": "ping"});
-                if let Err(_) = ping_tx.send(Message::Text(ping.to_string())).await {
+                if (ping_tx.send(Message::Text(ping.to_string())).await).is_err() {
                     break;
                 }
             }

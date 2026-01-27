@@ -7,9 +7,9 @@
  * Requirements: 3.5 - Configuration version history for rollback
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import { dirname, join } from "path";
-import * as crypto from "crypto";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { dirname, join } from 'path';
+import * as crypto from 'crypto';
 
 /**
  * Configuration version entry
@@ -17,7 +17,7 @@ import * as crypto from "crypto";
 export interface ConfigVersion {
   version: number;
   timestamp: number;
-  configType: "brain" | "phase" | "service";
+  configType: 'brain' | 'phase' | 'service';
   configKey: string;
   data: any;
   hash: string;
@@ -30,7 +30,7 @@ export interface ConfigVersion {
  * Version history metadata
  */
 export interface VersionHistoryMetadata {
-  configType: "brain" | "phase" | "service";
+  configType: 'brain' | 'phase' | 'service';
   configKey: string;
   currentVersion: number;
   totalVersions: number;
@@ -49,7 +49,7 @@ export interface VersionComparison {
     path: string;
     oldValue: any;
     newValue: any;
-    changeType: "added" | "modified" | "removed";
+    changeType: 'added' | 'modified' | 'removed';
   }>;
   summary: {
     added: number;
@@ -78,7 +78,7 @@ export class ConfigVersionHistory {
   private enableCompression: boolean;
 
   constructor(
-    historyDirectory: string = "./config/.history",
+    historyDirectory: string = './config/.history',
     maxVersions: number = 100,
     enableCompression: boolean = false,
   ) {
@@ -96,7 +96,7 @@ export class ConfigVersionHistory {
    * Save configuration version
    */
   saveVersion(
-    configType: "brain" | "phase" | "service",
+    configType: 'brain' | 'phase' | 'service',
     configKey: string,
     data: any,
     author?: string,
@@ -107,9 +107,7 @@ export class ConfigVersionHistory {
     const history = this.loadHistory(configType, configKey);
 
     // Calculate next version number
-    const nextVersion = history.length > 0
-      ? Math.max(...history.map((v) => v.version)) + 1
-      : 1;
+    const nextVersion = history.length > 0 ? Math.max(...history.map((v) => v.version)) + 1 : 1;
 
     // Calculate hash of configuration data
     const hash = this.calculateHash(data);
@@ -118,9 +116,7 @@ export class ConfigVersionHistory {
     if (history.length > 0) {
       const lastVersion = history[history.length - 1];
       if (lastVersion.hash === hash) {
-        console.log(
-          `⚠️ Configuration unchanged, skipping version save for ${configKey}`,
-        );
+        console.log(`⚠️ Configuration unchanged, skipping version save for ${configKey}`);
         return lastVersion;
       }
     }
@@ -151,9 +147,7 @@ export class ConfigVersionHistory {
     // Save history
     this.saveHistory(configType, configKey, history);
 
-    console.log(
-      `📝 Saved configuration version ${nextVersion} for ${configKey}`,
-    );
+    console.log(`📝 Saved configuration version ${nextVersion} for ${configKey}`);
 
     return version;
   }
@@ -162,7 +156,7 @@ export class ConfigVersionHistory {
    * Get specific configuration version
    */
   getVersion(
-    configType: "brain" | "phase" | "service",
+    configType: 'brain' | 'phase' | 'service',
     configKey: string,
     version: number,
   ): ConfigVersion | null {
@@ -174,7 +168,7 @@ export class ConfigVersionHistory {
    * Get latest configuration version
    */
   getLatestVersion(
-    configType: "brain" | "phase" | "service",
+    configType: 'brain' | 'phase' | 'service',
     configKey: string,
   ): ConfigVersion | null {
     const history = this.loadHistory(configType, configKey);
@@ -184,10 +178,7 @@ export class ConfigVersionHistory {
   /**
    * Get all versions for configuration
    */
-  getAllVersions(
-    configType: "brain" | "phase" | "service",
-    configKey: string,
-  ): ConfigVersion[] {
+  getAllVersions(configType: 'brain' | 'phase' | 'service', configKey: string): ConfigVersion[] {
     return this.loadHistory(configType, configKey);
   }
 
@@ -195,7 +186,7 @@ export class ConfigVersionHistory {
    * Get version history metadata
    */
   getMetadata(
-    configType: "brain" | "phase" | "service",
+    configType: 'brain' | 'phase' | 'service',
     configKey: string,
   ): VersionHistoryMetadata | null {
     const history = this.loadHistory(configType, configKey);
@@ -222,7 +213,7 @@ export class ConfigVersionHistory {
    * Compare two configuration versions
    */
   compareVersions(
-    configType: "brain" | "phase" | "service",
+    configType: 'brain' | 'phase' | 'service',
     configKey: string,
     fromVersion: number,
     toVersion: number,
@@ -237,9 +228,9 @@ export class ConfigVersionHistory {
     const changes = this.detectChanges(fromConfig.data, toConfig.data);
 
     const summary = {
-      added: changes.filter((c) => c.changeType === "added").length,
-      modified: changes.filter((c) => c.changeType === "modified").length,
-      removed: changes.filter((c) => c.changeType === "removed").length,
+      added: changes.filter((c) => c.changeType === 'added').length,
+      modified: changes.filter((c) => c.changeType === 'modified').length,
+      removed: changes.filter((c) => c.changeType === 'removed').length,
     };
 
     return {
@@ -254,21 +245,15 @@ export class ConfigVersionHistory {
    * Rollback to specific version
    */
   rollbackToVersion(
-    configType: "brain" | "phase" | "service",
+    configType: 'brain' | 'phase' | 'service',
     configKey: string,
     targetVersion: number,
   ): RollbackResult {
     try {
       const history = this.loadHistory(configType, configKey);
-      const currentVersion = history.length > 0
-        ? history[history.length - 1].version
-        : 0;
+      const currentVersion = history.length > 0 ? history[history.length - 1].version : 0;
 
-      const targetConfig = this.getVersion(
-        configType,
-        configKey,
-        targetVersion,
-      );
+      const targetConfig = this.getVersion(configType, configKey, targetVersion);
 
       if (!targetConfig) {
         return {
@@ -284,14 +269,12 @@ export class ConfigVersionHistory {
         configType,
         configKey,
         targetConfig.data,
-        "system",
+        'system',
         `Rollback to version ${targetVersion}`,
-        ["rollback"],
+        ['rollback'],
       );
 
-      console.log(
-        `🔄 Rolled back ${configKey} from version ${currentVersion} to ${targetVersion}`,
-      );
+      console.log(`🔄 Rolled back ${configKey} from version ${currentVersion} to ${targetVersion}`);
 
       return {
         success: true,
@@ -304,7 +287,7 @@ export class ConfigVersionHistory {
         success: false,
         fromVersion: 0,
         toVersion: targetVersion,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -313,7 +296,7 @@ export class ConfigVersionHistory {
    * Search versions by criteria
    */
   searchVersions(
-    configType: "brain" | "phase" | "service",
+    configType: 'brain' | 'phase' | 'service',
     configKey: string,
     criteria: {
       author?: string;
@@ -333,10 +316,7 @@ export class ConfigVersionHistory {
 
       // Filter by tags
       if (criteria.tags && criteria.tags.length > 0) {
-        if (
-          !version.tags ||
-          !criteria.tags.some((tag) => version.tags!.includes(tag))
-        ) {
+        if (!version.tags || !criteria.tags.some((tag) => version.tags!.includes(tag))) {
           return false;
         }
       }
@@ -351,10 +331,7 @@ export class ConfigVersionHistory {
       }
 
       // Filter by comment
-      if (
-        criteria.comment &&
-        (!version.comment || !version.comment.includes(criteria.comment))
-      ) {
+      if (criteria.comment && (!version.comment || !version.comment.includes(criteria.comment))) {
         return false;
       }
 
@@ -366,7 +343,7 @@ export class ConfigVersionHistory {
    * Delete old versions (keep only last N versions)
    */
   pruneHistory(
-    configType: "brain" | "phase" | "service",
+    configType: 'brain' | 'phase' | 'service',
     configKey: string,
     keepVersions: number,
   ): number {
@@ -390,7 +367,7 @@ export class ConfigVersionHistory {
    * Export version history to JSON
    */
   exportHistory(
-    configType: "brain" | "phase" | "service",
+    configType: 'brain' | 'phase' | 'service',
     configKey: string,
     outputPath: string,
   ): void {
@@ -402,18 +379,16 @@ export class ConfigVersionHistory {
       versions: history,
     };
 
-    writeFileSync(outputPath, JSON.stringify(exportData, null, 2), "utf8");
+    writeFileSync(outputPath, JSON.stringify(exportData, null, 2), 'utf8');
 
-    console.log(
-      `📤 Exported version history for ${configKey} to ${outputPath}`,
-    );
+    console.log(`📤 Exported version history for ${configKey} to ${outputPath}`);
   }
 
   /**
    * Import version history from JSON
    */
   importHistory(
-    configType: "brain" | "phase" | "service",
+    configType: 'brain' | 'phase' | 'service',
     configKey: string,
     inputPath: string,
     merge: boolean = false,
@@ -422,7 +397,7 @@ export class ConfigVersionHistory {
       throw new Error(`Import file not found: ${inputPath}`);
     }
 
-    const importData = JSON.parse(readFileSync(inputPath, "utf8"));
+    const importData = JSON.parse(readFileSync(inputPath, 'utf8'));
     const importedVersions = importData.versions as ConfigVersion[];
 
     if (merge) {
@@ -436,24 +411,19 @@ export class ConfigVersionHistory {
 
       // Remove duplicates based on hash
       const uniqueHistory = mergedHistory.filter(
-        (version, index, self) =>
-          index === self.findIndex((v) => v.hash === version.hash),
+        (version, index, self) => index === self.findIndex((v) => v.hash === version.hash),
       );
 
       this.saveHistory(configType, configKey, uniqueHistory);
 
-      console.log(
-        `📥 Imported and merged ${importedVersions.length} versions for ${configKey}`,
-      );
+      console.log(`📥 Imported and merged ${importedVersions.length} versions for ${configKey}`);
 
       return importedVersions.length;
     } else {
       // Replace existing history
       this.saveHistory(configType, configKey, importedVersions);
 
-      console.log(
-        `📥 Imported ${importedVersions.length} versions for ${configKey}`,
-      );
+      console.log(`📥 Imported ${importedVersions.length} versions for ${configKey}`);
 
       return importedVersions.length;
     }
@@ -464,7 +434,7 @@ export class ConfigVersionHistory {
    */
   private calculateHash(data: any): string {
     const jsonString = JSON.stringify(data, Object.keys(data).sort());
-    return crypto.createHash("sha256").update(jsonString).digest("hex");
+    return crypto.createHash('sha256').update(jsonString).digest('hex');
   }
 
   /**
@@ -473,18 +443,18 @@ export class ConfigVersionHistory {
   private detectChanges(
     oldData: any,
     newData: any,
-    path: string = "",
+    path: string = '',
   ): Array<{
     path: string;
     oldValue: any;
     newValue: any;
-    changeType: "added" | "modified" | "removed";
+    changeType: 'added' | 'modified' | 'removed';
   }> {
     const changes: Array<{
       path: string;
       oldValue: any;
       newValue: any;
-      changeType: "added" | "modified" | "removed";
+      changeType: 'added' | 'modified' | 'removed';
     }> = [];
 
     // Check for added and modified keys
@@ -498,19 +468,17 @@ export class ConfigVersionHistory {
           path: currentPath,
           oldValue: undefined,
           newValue: newData[key],
-          changeType: "added",
+          changeType: 'added',
         });
       } else if (
-        typeof newData[key] === "object" &&
+        typeof newData[key] === 'object' &&
         newData[key] !== null &&
-        typeof oldData[key] === "object" &&
+        typeof oldData[key] === 'object' &&
         oldData[key] !== null
       ) {
         // Recursively check nested objects
         // eslint-disable-next-line functional/immutable-data
-        changes.push(
-          ...this.detectChanges(oldData[key], newData[key], currentPath),
-        );
+        changes.push(...this.detectChanges(oldData[key], newData[key], currentPath));
       } else if (newData[key] !== oldData[key]) {
         // Value modified
         // eslint-disable-next-line functional/immutable-data
@@ -518,7 +486,7 @@ export class ConfigVersionHistory {
           path: currentPath,
           oldValue: oldData[key],
           newValue: newData[key],
-          changeType: "modified",
+          changeType: 'modified',
         });
       }
     }
@@ -532,7 +500,7 @@ export class ConfigVersionHistory {
           path: currentPath,
           oldValue: oldData[key],
           newValue: undefined,
-          changeType: "removed",
+          changeType: 'removed',
         });
       }
     }
@@ -544,7 +512,7 @@ export class ConfigVersionHistory {
    * Load version history from file
    */
   private loadHistory(
-    configType: "brain" | "phase" | "service",
+    configType: 'brain' | 'phase' | 'service',
     configKey: string,
   ): ConfigVersion[] {
     const historyPath = this.getHistoryFilePath(configType, configKey);
@@ -554,13 +522,10 @@ export class ConfigVersionHistory {
     }
 
     try {
-      const content = readFileSync(historyPath, "utf8");
+      const content = readFileSync(historyPath, 'utf8');
       return JSON.parse(content) as ConfigVersion[];
     } catch (error) {
-      console.error(
-        `❌ Failed to load version history for ${configKey}:`,
-        error,
-      );
+      console.error(`❌ Failed to load version history for ${configKey}:`, error);
       return [];
     }
   }
@@ -569,7 +534,7 @@ export class ConfigVersionHistory {
    * Save version history to file
    */
   private saveHistory(
-    configType: "brain" | "phase" | "service",
+    configType: 'brain' | 'phase' | 'service',
     configKey: string,
     history: ConfigVersion[],
   ): void {
@@ -580,12 +545,9 @@ export class ConfigVersionHistory {
       if (!existsSync(dir)) {
         mkdirSync(dir, { recursive: true });
       }
-      writeFileSync(historyPath, JSON.stringify(history, null, 2), "utf8");
+      writeFileSync(historyPath, JSON.stringify(history, null, 2), 'utf8');
     } catch (error) {
-      console.error(
-        `❌ Failed to save version history for ${configKey}:`,
-        error,
-      );
+      console.error(`❌ Failed to save version history for ${configKey}:`, error);
       throw error;
     }
   }
@@ -594,7 +556,7 @@ export class ConfigVersionHistory {
    * Get history file path
    */
   private getHistoryFilePath(
-    _configType: "brain" | "phase" | "service",
+    _configType: 'brain' | 'phase' | 'service',
     configKey: string,
   ): string {
     return join(this.historyDirectory, `${configKey}.history.json`);
@@ -603,10 +565,7 @@ export class ConfigVersionHistory {
   /**
    * Clear all version history
    */
-  clearHistory(
-    configType: "brain" | "phase" | "service",
-    configKey: string,
-  ): void {
+  clearHistory(configType: 'brain' | 'phase' | 'service', configKey: string): void {
     this.saveHistory(configType, configKey, []);
     console.log(`🗑️ Cleared version history for ${configKey}`);
   }

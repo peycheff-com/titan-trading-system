@@ -174,13 +174,11 @@ export class NotificationService {
 
     // Send via Telegram if enabled
     if (this.config.telegram.enabled) {
-       
       promises.push(this.sendTelegramNotification(message));
     }
 
     // Send via Email if enabled
     if (this.config.email.enabled) {
-       
       promises.push(this.sendEmailNotification(message));
     }
 
@@ -317,10 +315,8 @@ _${new Date(message.timestamp).toISOString()}_`;
    * Retry mechanism for network requests
    */
   private async retryRequest(fn: () => Promise<void>): Promise<void> {
-     
     let lastError: Error | null = null;
 
-     
     for (let attempt = 1; attempt <= this.retryAttempts; attempt++) {
       try {
         await fn();
@@ -346,7 +342,6 @@ _${new Date(message.timestamp).toISOString()}_`;
    * Update configuration
    */
   updateConfig(config: NotificationConfig): void {
-     
     this.config = config;
   }
 
@@ -367,7 +362,7 @@ _${new Date(message.timestamp).toISOString()}_`;
           timestamp: Date.now(),
         };
         await this.sendTelegramNotification(testMessage);
-         
+
         results.telegram = true;
       } catch (error) {
         console.error('Telegram test failed:', error);
@@ -385,7 +380,7 @@ _${new Date(message.timestamp).toISOString()}_`;
           timestamp: Date.now(),
         };
         await this.sendEmailNotification(testMessage);
-         
+
         results.email = true;
       } catch (error) {
         console.error('Email test failed:', error);

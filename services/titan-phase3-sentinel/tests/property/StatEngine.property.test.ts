@@ -170,8 +170,8 @@ describe("StatEngine Property Tests", () => {
                 fc.property(
                     fc.string(),
                     fc.string(),
-                    fc.array(fc.double({ noNaN: true, noInfinity: true })),
-                    fc.array(fc.double({ noNaN: true, noInfinity: true })),
+                    fc.array(fc.double({ noNaN: true })),
+                    fc.array(fc.double({ noNaN: true })),
                     (sym1, sym2, vals1, vals2) => {
                         fc.pre(sym1 !== sym2);
 

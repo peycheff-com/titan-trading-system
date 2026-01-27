@@ -7,17 +7,13 @@
  * Requirements: 5.4 - Performance monitoring and alerting systems
  */
 
-import { EventEmitter } from "eventemitter3";
-import { getWebSocketManager } from "./WebSocketManager";
+import { EventEmitter } from 'eventemitter3';
+import { getWebSocketManager } from './WebSocketManager';
 // Execution Service removal
 // import { getExecutionService } from "./ExecutionService";
 
-import { getTelemetryService } from "./TelemetryService";
-import {
-  type CPUStats,
-  getResourceOptimizer,
-  type MemoryStats,
-} from "./ResourceOptimizer";
+import { getTelemetryService } from './TelemetryService';
+import { type CPUStats, getResourceOptimizer, type MemoryStats } from './ResourceOptimizer';
 
 // Simple color logging utility
 const colors = {
@@ -65,7 +61,7 @@ export interface PerformanceAlert {
   timestamp: number;
   service: string;
   metric: string;
-  level: "warning" | "critical";
+  level: 'warning' | 'critical';
   value: number;
   threshold: number;
   message: string;
@@ -74,7 +70,7 @@ export interface PerformanceAlert {
 
 interface ResourceAlert {
   type: string;
-  level: "warning" | "critical";
+  level: 'warning' | 'critical';
   value: number;
   threshold: number;
   message: string;
@@ -92,9 +88,9 @@ interface LogEntry {
 export interface ScalingRecommendation {
   timestamp: number;
   service: string;
-  action: "scale_up" | "scale_down" | "optimize" | "restart";
+  action: 'scale_up' | 'scale_down' | 'optimize' | 'restart';
   reason: string;
-  priority: "low" | "medium" | "high";
+  priority: 'low' | 'medium' | 'high';
   estimatedImpact: string;
 }
 
@@ -154,7 +150,7 @@ export class PerformanceMonitor extends EventEmitter {
 
     this.config = { ...DEFAULT_CONFIG, ...config };
 
-    console.log(colors.blue("🚀 Performance Monitor initialized"));
+    console.log(colors.blue('🚀 Performance Monitor initialized'));
   }
 
   /**
@@ -212,7 +208,7 @@ export class PerformanceMonitor extends EventEmitter {
     // Remove event listeners
     this.removeAllListeners();
 
-    console.log(colors.yellow("📊 Performance monitoring stopped"));
+    console.log(colors.yellow('📊 Performance monitoring stopped'));
   }
 
   /**
@@ -222,18 +218,18 @@ export class PerformanceMonitor extends EventEmitter {
     const resourceOptimizer = getResourceOptimizer();
 
     // Listen for resource alerts
-    resourceOptimizer.on("alert", (alert) => {
+    resourceOptimizer.on('alert', (alert) => {
       this.handleResourceAlert(alert);
     });
 
     // Listen for GC events
-    resourceOptimizer.on("gc", (gcEvent) => {
+    resourceOptimizer.on('gc', (gcEvent) => {
       if (gcEvent.duration > 100) {
         // Long GC pause
         this.createAlert(
-          "memory",
-          "gc_pause",
-          "warning",
+          'memory',
+          'gc_pause',
+          'warning',
           gcEvent.duration,
           100,
           `Long garbage collection pause: ${gcEvent.duration.toFixed(2)}ms`,
@@ -243,11 +239,11 @@ export class PerformanceMonitor extends EventEmitter {
 
     // Listen for WebSocket events
     const wsManager = getWebSocketManager();
-    wsManager.on("connectionError", (error) => {
+    wsManager.on('connectionError', (error) => {
       this.createAlert(
-        "websocket",
-        "connection_error",
-        "warning",
+        'websocket',
+        'connection_error',
+        'warning',
         1,
         0,
         `WebSocket connection error: ${error.exchange}`,
@@ -258,8 +254,8 @@ export class PerformanceMonitor extends EventEmitter {
 
     // Listen for telemetry events
     const telemetry = getTelemetryService();
-    telemetry.on("log", (entry) => {
-      if (entry.level === "ERROR" || entry.level === "FATAL") {
+    telemetry.on('log', (entry) => {
+      if (entry.level === 'ERROR' || entry.level === 'FATAL') {
         this.trackErrorRate(entry);
       }
     });
@@ -281,15 +277,16 @@ export class PerformanceMonitor extends EventEmitter {
       // Get WebSocket metrics
       const wsStats = wsManager.getGlobalStats();
       const wsPerformance = wsManager.getAllPerformanceMetrics();
-      const avgLatency = Object.values(wsPerformance).reduce(
-            (sum: number, metrics: any) => sum + (metrics.averageLatency || 0),
-            0,
-          ) / Object.keys(wsPerformance).length || 0;
-      const avgCompression = Object.values(wsPerformance).reduce(
-            (sum: number, metrics: any) =>
-              sum + (metrics.compressionRatio || 0),
-            0,
-          ) / Object.keys(wsPerformance).length || 0;
+      const avgLatency =
+        Object.values(wsPerformance).reduce(
+          (sum: number, metrics: any) => sum + (metrics.averageLatency || 0),
+          0,
+        ) / Object.keys(wsPerformance).length || 0;
+      const avgCompression =
+        Object.values(wsPerformance).reduce(
+          (sum: number, metrics: any) => sum + (metrics.compressionRatio || 0),
+          0,
+        ) / Object.keys(wsPerformance).length || 0;
 
       // Get execution metrics (Stubbed - Service Removed)
       const trackedOrders: any[] = [];
@@ -337,12 +334,9 @@ export class PerformanceMonitor extends EventEmitter {
       this.analyzeMetrics(metrics);
 
       // Emit metrics event
-      this.emit("metrics", metrics);
+      this.emit('metrics', metrics);
     } catch (error) {
-      console.error(
-        colors.red("❌ Failed to collect performance metrics:"),
-        error,
-      );
+      console.error(colors.red('❌ Failed to collect performance metrics:'), error);
     }
   }
 
@@ -351,7 +345,7 @@ export class PerformanceMonitor extends EventEmitter {
    */
   private handleResourceAlert(alert: ResourceAlert): void {
     this.createAlert(
-      "resource",
+      'resource',
       alert.type,
       alert.level,
       alert.value,
@@ -366,7 +360,7 @@ export class PerformanceMonitor extends EventEmitter {
   private createAlert(
     service: string,
     metric: string,
-    level: "warning" | "critical",
+    level: 'warning' | 'critical',
     value: number,
     threshold: number,
     message: string,
@@ -401,11 +395,11 @@ export class PerformanceMonitor extends EventEmitter {
     this.activeAlerts.set(alertId, alert);
 
     // Log alert
-    const color = level === "critical" ? colors.red : colors.yellow;
+    const color = level === 'critical' ? colors.red : colors.yellow;
     console.log(color(`🚨 ${level.toUpperCase()} ALERT: ${message}`));
 
     // Emit alert event
-    this.emit("alert", alert);
+    this.emit('alert', alert);
 
     // Generate recommendations if auto-scaling is enabled
     if (this.config.autoScalingEnabled) {
@@ -419,11 +413,11 @@ export class PerformanceMonitor extends EventEmitter {
   private trackErrorRate(logEntry: LogEntry): void {
     // This would need a more sophisticated implementation
     // For now, just create an alert for critical errors
-    if (logEntry.level === "FATAL") {
+    if (logEntry.level === 'FATAL') {
       this.createAlert(
-        "telemetry",
-        "fatal_error",
-        "critical",
+        'telemetry',
+        'fatal_error',
+        'critical',
         1,
         0,
         `Fatal error in ${logEntry.service}: ${logEntry.message}`,
@@ -436,61 +430,41 @@ export class PerformanceMonitor extends EventEmitter {
    */
   private analyzeMetrics(metrics: PerformanceMetrics): void {
     // Memory analysis
-    if (
-      metrics.memory.heapUsagePercent >
-        this.config.alertThresholds.memoryCritical
-    ) {
+    if (metrics.memory.heapUsagePercent > this.config.alertThresholds.memoryCritical) {
       this.createAlert(
-        "memory",
-        "heap_usage",
-        "critical",
+        'memory',
+        'heap_usage',
+        'critical',
         metrics.memory.heapUsagePercent,
         this.config.alertThresholds.memoryCritical,
         `Critical memory usage: ${metrics.memory.heapUsagePercent.toFixed(1)}%`,
-        [
-          "Consider increasing heap size",
-          "Review memory leaks",
-          "Force garbage collection",
-        ],
+        ['Consider increasing heap size', 'Review memory leaks', 'Force garbage collection'],
       );
     }
 
     // CPU analysis
     if (metrics.cpu.cpuUsagePercent > this.config.alertThresholds.cpuCritical) {
       this.createAlert(
-        "cpu",
-        "usage",
-        "critical",
+        'cpu',
+        'usage',
+        'critical',
         metrics.cpu.cpuUsagePercent,
         this.config.alertThresholds.cpuCritical,
         `Critical CPU usage: ${metrics.cpu.cpuUsagePercent.toFixed(1)}%`,
-        [
-          "Scale horizontally",
-          "Optimize algorithms",
-          "Review blocking operations",
-        ],
+        ['Scale horizontally', 'Optimize algorithms', 'Review blocking operations'],
       );
     }
 
     // WebSocket analysis
-    if (
-      metrics.websocket.averageLatency >
-        this.config.alertThresholds.latencyCritical
-    ) {
+    if (metrics.websocket.averageLatency > this.config.alertThresholds.latencyCritical) {
       this.createAlert(
-        "websocket",
-        "latency",
-        "critical",
+        'websocket',
+        'latency',
+        'critical',
         metrics.websocket.averageLatency,
         this.config.alertThresholds.latencyCritical,
-        `Critical WebSocket latency: ${
-          metrics.websocket.averageLatency.toFixed(1)
-        }ms`,
-        [
-          "Check network connectivity",
-          "Optimize message processing",
-          "Enable compression",
-        ],
+        `Critical WebSocket latency: ${metrics.websocket.averageLatency.toFixed(1)}ms`,
+        ['Check network connectivity', 'Optimize message processing', 'Enable compression'],
       );
     }
 
@@ -498,19 +472,13 @@ export class PerformanceMonitor extends EventEmitter {
     if (metrics.execution.successRate < 90) {
       // Less than 90% success rate
       this.createAlert(
-        "execution",
-        "success_rate",
-        "warning",
+        'execution',
+        'success_rate',
+        'warning',
         metrics.execution.successRate,
         90,
-        `Low execution success rate: ${
-          metrics.execution.successRate.toFixed(1)
-        }%`,
-        [
-          "Check exchange connectivity",
-          "Review order parameters",
-          "Implement retry logic",
-        ],
+        `Low execution success rate: ${metrics.execution.successRate.toFixed(1)}%`,
+        ['Check exchange connectivity', 'Review order parameters', 'Implement retry logic'],
       );
     }
   }
@@ -523,41 +491,41 @@ export class PerformanceMonitor extends EventEmitter {
     let recommendation: ScalingRecommendation | null = null;
 
     switch (alert.service) {
-      case "memory":
-        if (alert.level === "critical") {
+      case 'memory':
+        if (alert.level === 'critical') {
           recommendation = {
             timestamp: Date.now(),
-            service: "system",
-            action: "scale_up",
-            reason: "Critical memory usage detected",
-            priority: "high",
-            estimatedImpact: "Prevent out-of-memory crashes",
+            service: 'system',
+            action: 'scale_up',
+            reason: 'Critical memory usage detected',
+            priority: 'high',
+            estimatedImpact: 'Prevent out-of-memory crashes',
           };
         }
         break;
 
-      case "cpu":
-        if (alert.level === "critical") {
+      case 'cpu':
+        if (alert.level === 'critical') {
           recommendation = {
             timestamp: Date.now(),
-            service: "system",
-            action: "scale_up",
-            reason: "Critical CPU usage detected",
-            priority: "high",
-            estimatedImpact: "Improve response times and prevent bottlenecks",
+            service: 'system',
+            action: 'scale_up',
+            reason: 'Critical CPU usage detected',
+            priority: 'high',
+            estimatedImpact: 'Improve response times and prevent bottlenecks',
           };
         }
         break;
 
-      case "websocket":
-        if (alert.metric === "latency" && alert.level === "critical") {
+      case 'websocket':
+        if (alert.metric === 'latency' && alert.level === 'critical') {
           recommendation = {
             timestamp: Date.now(),
-            service: "websocket",
-            action: "optimize",
-            reason: "High WebSocket latency detected",
-            priority: "medium",
-            estimatedImpact: "Reduce message processing delays",
+            service: 'websocket',
+            action: 'optimize',
+            reason: 'High WebSocket latency detected',
+            priority: 'medium',
+            estimatedImpact: 'Reduce message processing delays',
           };
         }
         break;
@@ -578,7 +546,7 @@ export class PerformanceMonitor extends EventEmitter {
           `💡 Scaling recommendation: ${recommendation.action} ${recommendation.service} - ${recommendation.reason}`,
         ),
       );
-      this.emit("recommendation", recommendation);
+      this.emit('recommendation', recommendation);
     }
   }
 
@@ -590,9 +558,7 @@ export class PerformanceMonitor extends EventEmitter {
     const cutoff = Date.now() - maxAge;
 
     // eslint-disable-next-line functional/immutable-data
-    this.metricsHistory = this.metricsHistory.filter((metrics) =>
-      metrics.timestamp > cutoff
-    );
+    this.metricsHistory = this.metricsHistory.filter((metrics) => metrics.timestamp > cutoff);
 
     // Clean up old alerts
     for (const [alertId, alert] of this.activeAlerts) {
@@ -649,7 +615,7 @@ export class PerformanceMonitor extends EventEmitter {
   updateConfig(config: Partial<PerformanceMonitorConfig>): void {
     // eslint-disable-next-line functional/immutable-data
     this.config = { ...this.config, ...config };
-    console.log(colors.blue("⚙️ Performance monitor configuration updated"));
+    console.log(colors.blue('⚙️ Performance monitor configuration updated'));
   }
 
   /**
@@ -664,7 +630,7 @@ export class PerformanceMonitor extends EventEmitter {
   } {
     const currentMetrics = this.getCurrentMetrics();
     const criticalAlerts = Array.from(this.activeAlerts.values()).filter(
-      (alert) => alert.level === "critical",
+      (alert) => alert.level === 'critical',
     );
 
     return {
@@ -680,7 +646,7 @@ export class PerformanceMonitor extends EventEmitter {
    * Shutdown and cleanup
    */
   shutdown(): void {
-    console.log(colors.blue("🛑 Shutting down Performance Monitor..."));
+    console.log(colors.blue('🛑 Shutting down Performance Monitor...'));
     this.stopMonitoring();
     // eslint-disable-next-line functional/immutable-data
     this.metricsHistory = [];

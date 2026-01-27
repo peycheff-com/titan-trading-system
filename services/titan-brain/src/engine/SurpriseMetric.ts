@@ -45,24 +45,22 @@ export class SurpriseMetric {
    * Convert a raw numeric series (e.g. price returns) into a probability distribution (histogram)
    */
   static toDistribution(data: number[], bins: number = 10): number[] {
-     
     if (data.length === 0) return Array(bins).fill(0);
 
     const min = Math.min(...data);
     const max = Math.max(...data);
-     
+
     if (min === max) return Array(bins).fill(1 / bins); // Uniform if flat
 
     const range = max - min;
     const binWidth = range / bins;
-     
+
     const bucketCounts = Array(bins).fill(0);
 
     data.forEach((val) => {
-       
       let binIndex = Math.floor((val - min) / binWidth);
       if (binIndex >= bins) binIndex = bins - 1;
-       
+
       bucketCounts[binIndex]++;
     });
 

@@ -24,7 +24,6 @@ export function useTitanStream(subjectFilter: string = '>') {
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
-     
     ws.onopen = () => {
       console.log('✅ Connected to Titan Stream');
       setIsConnected(true);
@@ -32,7 +31,6 @@ export function useTitanStream(subjectFilter: string = '>') {
       ws.send(JSON.stringify({ type: 'SUBSCRIBE', subject: subjectFilter }));
     };
 
-     
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
@@ -47,7 +45,6 @@ export function useTitanStream(subjectFilter: string = '>') {
       }
     };
 
-     
     ws.onclose = () => {
       console.log('❌ Disconnected from Titan Stream');
       setIsConnected(false);

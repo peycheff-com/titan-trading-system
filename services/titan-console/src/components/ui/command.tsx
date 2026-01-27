@@ -19,10 +19,10 @@ const Command = React.forwardRef<
     {...props}
   />
 ));
- 
+
 Command.displayName = CommandPrimitive.displayName;
 
-type CommandDialogProps = DialogProps;
+type CommandDialogProps = any;
 
 const CommandDialog = ({ children, ...props }: CommandDialogProps) => {
   return (
@@ -53,7 +53,6 @@ const CommandInput = React.forwardRef<
   </div>
 ));
 
- 
 CommandInput.displayName = CommandPrimitive.Input.displayName;
 
 const CommandList = React.forwardRef<
@@ -67,7 +66,6 @@ const CommandList = React.forwardRef<
   />
 ));
 
- 
 CommandList.displayName = CommandPrimitive.List.displayName;
 
 const CommandEmpty = React.forwardRef<
@@ -77,7 +75,6 @@ const CommandEmpty = React.forwardRef<
   <CommandPrimitive.Empty ref={ref} className="py-6 text-center text-sm" {...props} />
 ));
 
- 
 CommandEmpty.displayName = CommandPrimitive.Empty.displayName;
 
 const CommandGroup = React.forwardRef<
@@ -94,7 +91,6 @@ const CommandGroup = React.forwardRef<
   />
 ));
 
- 
 CommandGroup.displayName = CommandPrimitive.Group.displayName;
 
 const CommandSeparator = React.forwardRef<
@@ -107,7 +103,7 @@ const CommandSeparator = React.forwardRef<
     {...props}
   />
 ));
- 
+
 CommandSeparator.displayName = CommandPrimitive.Separator.displayName;
 
 const CommandItem = React.forwardRef<
@@ -124,7 +120,6 @@ const CommandItem = React.forwardRef<
   />
 ));
 
- 
 CommandItem.displayName = CommandPrimitive.Item.displayName;
 
 const CommandShortcut = ({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>) => {
@@ -135,7 +130,7 @@ const CommandShortcut = ({ className, ...props }: React.HTMLAttributes<HTMLSpanE
     />
   );
 };
- 
+
 CommandShortcut.displayName = 'CommandShortcut';
 
 export {

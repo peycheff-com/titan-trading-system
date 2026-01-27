@@ -17,6 +17,11 @@ def scan_zombies(root_dir):
         # Skip rust services or non-js
         if not os.path.exists(os.path.join(service_path, 'package.json')):
             continue
+
+        # Skip Rust services
+        if os.path.exists(os.path.join(service_path, 'Cargo.toml')):
+            print(f"⏩ Skipping {service} (Rust service)")
+            continue
             
         print(f"\n🔍 Checking {service}...")
         try:

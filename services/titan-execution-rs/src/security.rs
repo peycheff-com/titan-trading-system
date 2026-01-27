@@ -11,8 +11,14 @@ type HmacSha256 = Hmac<Sha256>;
 #[derive(Clone)]
 pub struct HmacValidator {
     secret: String,
-    require_timestamp: bool,
+    _require_timestamp: bool,
     timestamp_tolerance: i64, // seconds
+}
+
+impl Default for HmacValidator {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl HmacValidator {
@@ -39,7 +45,7 @@ impl HmacValidator {
 
         Self {
             secret,
-            require_timestamp,
+            _require_timestamp: require_timestamp,
             timestamp_tolerance,
         }
     }
@@ -91,7 +97,7 @@ impl HmacValidator {
         mac.update(canonical.as_bytes());
         let result = mac.finalize();
         let expected_bytes = result.into_bytes();
-        let expected_sig = hex::encode(expected_bytes);
+        let _expected_sig = hex::encode(expected_bytes);
 
         // Constant time comparison
         // But we are in Rust, hex string comparison is not constant time usually.
@@ -105,7 +111,7 @@ impl HmacValidator {
 
         mac_verify
             .verify_slice(&sig_bytes)
-            .map_err(|_| format!("Signature mismatch."))?;
+            .map_err(|_| "Signature mismatch.".to_string())?;
 
         Ok(())
     }
@@ -114,14 +120,29 @@ impl HmacValidator {
     /// Sig String: timestamp:action:actor_id:command_id
     pub fn validate_risk_command(&self, payload: &Value) -> Result<(), String> {
         if self.secret.is_empty() {
-             return Err("HMAC validation enabled but no secret configured".to_string());
+            return Err("HMAC validation enabled but no secret configured".to_string());
         }
 
-        let signature = payload.get("signature").and_then(|s| s.as_str()).ok_or("Missing signature")?;
-        let timestamp = payload.get("timestamp").and_then(|t| t.as_i64()).ok_or("Missing timestamp")?;
-        let action = payload.get("action").and_then(|s| s.as_str()).ok_or("Missing action")?;
-        let actor_id = payload.get("actor_id").and_then(|s| s.as_str()).ok_or("Missing actor_id")?;
-        let command_id = payload.get("command_id").and_then(|s| s.as_str()).ok_or("Missing command_id")?;
+        let signature = payload
+            .get("signature")
+            .and_then(|s| s.as_str())
+            .ok_or("Missing signature")?;
+        let timestamp = payload
+            .get("timestamp")
+            .and_then(|t| t.as_i64())
+            .ok_or("Missing timestamp")?;
+        let action = payload
+            .get("action")
+            .and_then(|s| s.as_str())
+            .ok_or("Missing action")?;
+        let actor_id = payload
+            .get("actor_id")
+            .and_then(|s| s.as_str())
+            .ok_or("Missing actor_id")?;
+        let command_id = payload
+            .get("command_id")
+            .and_then(|s| s.as_str())
+            .ok_or("Missing command_id")?;
 
         // 1. Check Timestamp Tolerance
         let now_ms = chrono::Utc::now().timestamp_millis();
@@ -141,11 +162,12 @@ impl HmacValidator {
         // 3. Verify
         let mut mac = HmacSha256::new_from_slice(self.secret.as_bytes())
             .map_err(|_| "Invalid secret key length".to_string())?;
-        
+
         mac.update(sig_string.as_bytes());
 
         let sig_bytes = hex::decode(signature).map_err(|_| "Invalid hex signature")?;
-        mac.verify_slice(&sig_bytes).map_err(|_| "Signature mismatch".to_string())?;
+        mac.verify_slice(&sig_bytes)
+            .map_err(|_| "Signature mismatch".to_string())?;
 
         Ok(())
     }
@@ -153,7 +175,7 @@ impl HmacValidator {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+
     use serde_json::json;
 
     #[test]

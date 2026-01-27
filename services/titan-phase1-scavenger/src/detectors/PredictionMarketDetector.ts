@@ -1,6 +1,6 @@
-import { Tripwire } from "../types/index.js";
-import { PolymarketClient } from "../exchanges/PolymarketClient.js";
-import { BinanceSpotClient } from "../exchanges/BinanceSpotClient.js";
+import { Tripwire } from '../types/index.js';
+import { PolymarketClient } from '../exchanges/PolymarketClient.js';
+import { BinanceSpotClient } from '../exchanges/BinanceSpotClient.js';
 
 export class PredictionMarketDetector {
   private client: PolymarketClient;
@@ -24,7 +24,7 @@ export class PredictionMarketDetector {
   async scan(): Promise<Tripwire[]> {
     const tripwires: Tripwire[] = [];
     const markets = await this.client.getBTCMarkets();
-    const currentPrice = await this.binanceClient.getSpotPrice("BTCUSDT");
+    const currentPrice = await this.binanceClient.getSpotPrice('BTCUSDT');
 
     for (const market of markets) {
       // Logic: Parse question to find target price
@@ -32,7 +32,7 @@ export class PredictionMarketDetector {
       const targetMatch = market.question.match(/\$([\d,]+)/);
       if (!targetMatch) continue;
 
-      const targetPrice = parseFloat(targetMatch[1].replace(/,/g, ""));
+      const targetPrice = parseFloat(targetMatch[1].replace(/,/g, ''));
       const yesPrice = parseFloat(market.outcomePrices[0]); // Assuming index 0 is YES (simplified)
 
       // Track history
@@ -50,18 +50,16 @@ export class PredictionMarketDetector {
         // Arbitrary filter: Target must be close enough to be relevant (< 5% away)
         if (distanceToTarget > 0 && distanceToTarget < 0.05) {
           console.log(
-            `🔮 ORACLE SPIKE: ${market.question} (Prob: ${
-              (yesPrice * 100).toFixed(
-                0,
-              )
-            }%, +${(spike * 100).toFixed(0)}%)`,
+            `🔮 ORACLE SPIKE: ${market.question} (Prob: ${(yesPrice * 100).toFixed(
+              0,
+            )}%, +${(spike * 100).toFixed(0)}%)`,
           );
 
           tripwires.push({
-            symbol: "BTCUSDT",
+            symbol: 'BTCUSDT',
             triggerPrice: currentPrice, // Trigger NOW (Market/Aggressive)
-            direction: "LONG",
-            trapType: "PREDICTION_SPIKE", // New Type
+            direction: 'LONG',
+            trapType: 'PREDICTION_SPIKE', // New Type
             confidence: 85, // High confidence due to Oracle
             leverage: 15,
             estimatedCascadeSize: distanceToTarget,

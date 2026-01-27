@@ -524,10 +524,9 @@ export class SecurityAuditLogger {
 
     if (!existing || now - existing.lastReset > 60000) {
       // Reset every minute
-       
+
       this.eventCounts.set(key, { count: 1, lastReset: now });
     } else {
-       
       existing.count++;
     }
   }
@@ -609,7 +608,6 @@ export class SecurityAuditLogger {
       const timeWindow = timeRangeHours * 60 * 60 * 1000;
 
       if (now - value.lastReset <= timeWindow) {
-         
         stats[key] = value.count;
       }
     }
@@ -621,7 +619,7 @@ export class SecurityAuditLogger {
 /**
  * Singleton instance for global security audit logging
  */
- 
+
 let auditLoggerInstance: SecurityAuditLogger | null = null;
 
 /**

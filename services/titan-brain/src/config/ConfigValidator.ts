@@ -7,7 +7,7 @@
  * Requirements: 1.3.1, 1.3.2, 1.3.3, 1.3.4, 1.3.5
  */
 
-import { Logger } from "../logging/Logger.js";
+import { Logger } from '../logging/Logger.js';
 
 /**
  * Configuration validation rule
@@ -15,7 +15,7 @@ import { Logger } from "../logging/Logger.js";
 export interface ValidationRule {
   name: string;
   required: boolean;
-  type: "string" | "number" | "boolean" | "url" | "port" | "enum";
+  type: 'string' | 'number' | 'boolean' | 'url' | 'port' | 'enum';
   defaultValue?: string | number | boolean;
   enumValues?: string[];
   minValue?: number;
@@ -61,7 +61,7 @@ export class ConfigValidator {
   private readonly logger: Logger;
 
   constructor(logger?: Logger) {
-    this.logger = logger ?? Logger.getInstance("config-validator");
+    this.logger = logger ?? Logger.getInstance('config-validator');
     this.rules = new Map();
     this.initializeDefaultRules();
   }
@@ -73,187 +73,185 @@ export class ConfigValidator {
     const defaultRules: ValidationRule[] = [
       // Core application settings
       {
-        name: "NODE_ENV",
+        name: 'NODE_ENV',
         required: true,
-        type: "enum",
-        enumValues: ["development", "production", "test"],
-        defaultValue: "production",
-        description: "Node.js environment mode",
+        type: 'enum',
+        enumValues: ['development', 'production', 'test'],
+        defaultValue: 'production',
+        description: 'Node.js environment mode',
       },
       {
-        name: "PORT",
+        name: 'PORT',
         required: true,
-        type: "port",
+        type: 'port',
         defaultValue: 3000,
-        description: "HTTP server port",
+        description: 'HTTP server port',
       },
       {
-        name: "HOST",
+        name: 'HOST',
         required: false,
-        type: "string",
-        defaultValue: "0.0.0.0",
-        description: "HTTP server host",
+        type: 'string',
+        defaultValue: '0.0.0.0',
+        description: 'HTTP server host',
       },
 
       // Database configuration
       {
-        name: "DATABASE_URL",
+        name: 'DATABASE_URL',
         required: true,
-        type: "url",
-        description: "PostgreSQL database connection URL",
+        type: 'url',
+        description: 'PostgreSQL database connection URL',
       },
       {
-        name: "DATABASE_POOL_MIN",
+        name: 'DATABASE_POOL_MIN',
         required: false,
-        type: "number",
+        type: 'number',
         defaultValue: 2,
         minValue: 1,
         maxValue: 50,
-        description: "Minimum database connection pool size",
+        description: 'Minimum database connection pool size',
       },
       {
-        name: "DATABASE_POOL_MAX",
+        name: 'DATABASE_POOL_MAX',
         required: false,
-        type: "number",
+        type: 'number',
         defaultValue: 10,
         minValue: 1,
         maxValue: 100,
-        description: "Maximum database connection pool size",
+        description: 'Maximum database connection pool size',
       },
 
       // Redis configuration (optional)
       {
-        name: "REDIS_URL",
+        name: 'REDIS_URL',
         required: false,
-        type: "url",
-        description:
-          "Redis connection URL (optional, falls back to in-memory cache)",
+        type: 'url',
+        description: 'Redis connection URL (optional, falls back to in-memory cache)',
       },
 
       // Security configuration
       {
-        name: "HMAC_SECRET",
+        name: 'HMAC_SECRET',
         required: false,
-        type: "string",
-        description: "HMAC secret for webhook signature verification",
+        type: 'string',
+        description: 'HMAC secret for webhook signature verification',
       },
       {
-        name: "HMAC_ALGORITHM",
+        name: 'HMAC_ALGORITHM',
         required: false,
-        type: "enum",
-        enumValues: ["sha256", "sha512"],
-        defaultValue: "sha256",
-        description: "HMAC algorithm for signature verification",
+        type: 'enum',
+        enumValues: ['sha256', 'sha512'],
+        defaultValue: 'sha256',
+        description: 'HMAC algorithm for signature verification',
       },
 
       // Logging configuration
       {
-        name: "LOG_LEVEL",
+        name: 'LOG_LEVEL',
         required: false,
-        type: "enum",
-        enumValues: ["fatal", "error", "warn", "info", "debug", "trace"],
-        defaultValue: "info",
-        description: "Logging level",
+        type: 'enum',
+        enumValues: ['fatal', 'error', 'warn', 'info', 'debug', 'trace'],
+        defaultValue: 'info',
+        description: 'Logging level',
       },
 
       // Rate limiting configuration
       {
-        name: "RATE_LIMIT_WINDOW_MS",
+        name: 'RATE_LIMIT_WINDOW_MS',
         required: false,
-        type: "number",
+        type: 'number',
         defaultValue: 60000,
         minValue: 1000,
         maxValue: 3600000,
-        description: "Rate limiting window in milliseconds",
+        description: 'Rate limiting window in milliseconds',
       },
       {
-        name: "RATE_LIMIT_MAX_REQUESTS",
+        name: 'RATE_LIMIT_MAX_REQUESTS',
         required: false,
-        type: "number",
+        type: 'number',
         defaultValue: 100,
         minValue: 1,
         maxValue: 10000,
-        description: "Maximum requests per rate limiting window",
+        description: 'Maximum requests per rate limiting window',
       },
 
       // Health check configuration
       {
-        name: "HEALTH_CHECK_INTERVAL",
+        name: 'HEALTH_CHECK_INTERVAL',
         required: false,
-        type: "number",
+        type: 'number',
         defaultValue: 30000,
         minValue: 5000,
         maxValue: 300000,
-        description: "Health check interval in milliseconds",
+        description: 'Health check interval in milliseconds',
       },
 
       // Service discovery configuration
       {
-        name: "PHASE1_SERVICE_URL",
+        name: 'PHASE1_SERVICE_URL',
         required: false,
-        type: "url",
-        description: "Phase 1 (Scavenger) service URL",
+        type: 'url',
+        description: 'Phase 1 (Scavenger) service URL',
       },
       {
-        name: "PHASE2_SERVICE_URL",
+        name: 'PHASE2_SERVICE_URL',
         required: false,
-        type: "url",
-        description: "Phase 2 (Hunter) service URL",
+        type: 'url',
+        description: 'Phase 2 (Hunter) service URL',
       },
       {
-        name: "PHASE3_SERVICE_URL",
+        name: 'PHASE3_SERVICE_URL',
         required: false,
-        type: "url",
-        description: "Phase 3 (Sentinel) service URL",
+        type: 'url',
+        description: 'Phase 3 (Sentinel) service URL',
       },
 
       // Deployment configuration (platform-agnostic)
       {
-        name: "DEPLOYMENT_ENVIRONMENT",
+        name: 'DEPLOYMENT_ENVIRONMENT',
         required: false,
-        type: "string",
-        description: "Deployment environment name (e.g., production, staging)",
+        type: 'string',
+        description: 'Deployment environment name (e.g., production, staging)',
       },
       {
-        name: "SERVICE_NAME",
+        name: 'SERVICE_NAME',
         required: false,
-        type: "string",
-        description: "Service name for identification",
+        type: 'string',
+        description: 'Service name for identification',
       },
 
       // CORS configuration
       {
-        name: "CORS_ORIGINS",
+        name: 'CORS_ORIGINS',
         required: false,
-        type: "string",
-        defaultValue: "*",
-        description: "CORS allowed origins (comma-separated)",
+        type: 'string',
+        defaultValue: '*',
+        description: 'CORS allowed origins (comma-separated)',
       },
 
       // Startup configuration
       {
-        name: "STARTUP_TIMEOUT",
+        name: 'STARTUP_TIMEOUT',
         required: false,
-        type: "number",
+        type: 'number',
         defaultValue: 60000,
         minValue: 10000,
         maxValue: 300000,
-        description: "Maximum startup time in milliseconds",
+        description: 'Maximum startup time in milliseconds',
       },
       {
-        name: "SHUTDOWN_TIMEOUT",
+        name: 'SHUTDOWN_TIMEOUT',
         required: false,
-        type: "number",
+        type: 'number',
         defaultValue: 10000,
         minValue: 1000,
         maxValue: 60000,
-        description: "Graceful shutdown timeout in milliseconds",
+        description: 'Graceful shutdown timeout in milliseconds',
       },
     ];
 
     for (const rule of defaultRules) {
       if (this.rules instanceof Map) {
-         
         this.rules.set(rule.name, rule);
       }
     }
@@ -264,7 +262,6 @@ export class ConfigValidator {
    */
   addRule(rule: ValidationRule): void {
     if (this.rules instanceof Map) {
-       
       this.rules.set(rule.name, rule);
     }
   }
@@ -274,7 +271,6 @@ export class ConfigValidator {
    */
   removeRule(name: string): void {
     if (this.rules instanceof Map) {
-       
       this.rules.delete(name);
     }
   }
@@ -283,17 +279,11 @@ export class ConfigValidator {
    * Validate all environment variables
    */
   validate(): ConfigValidationResult {
-    const results = Array.from(this.rules.values()).map((rule) =>
-      this.validateVariable(rule)
-    );
+    const results = Array.from(this.rules.values()).map((rule) => this.validateVariable(rule));
 
     const variables = results;
-    const errors = results.filter((r) => !r.valid && r.error).map((r) =>
-      r.error as string
-    );
-    const warnings = results.filter((r) => r.warning).map((r) =>
-      r.warning as string
-    );
+    const errors = results.filter((r) => !r.valid && r.error).map((r) => r.error as string);
+    const warnings = results.filter((r) => r.warning).map((r) => r.warning as string);
 
     const summary = {
       total: variables.length,
@@ -311,7 +301,7 @@ export class ConfigValidator {
       summary,
     };
 
-    this.logger.info("Environment variable validation completed", undefined, {
+    this.logger.info('Environment variable validation completed', undefined, {
       valid: validationResult.valid,
       errors: errors.length,
       warnings: warnings.length,
@@ -328,15 +318,14 @@ export class ConfigValidator {
     const rawValue = process.env[rule.name];
 
     // Check if variable is missing
-    if (rawValue === undefined || rawValue === "") {
+    if (rawValue === undefined || rawValue === '') {
       if (rule.required) {
         if (rule.defaultValue !== undefined) {
           return {
             name: rule.name,
             value: rule.defaultValue,
             valid: true,
-            warning:
-              `Using default value for required variable ${rule.name}: ${rule.defaultValue}`,
+            warning: `Using default value for required variable ${rule.name}: ${rule.defaultValue}`,
             usingDefault: true,
           };
         } else {
@@ -398,17 +387,17 @@ export class ConfigValidator {
     error?: string;
   } {
     switch (rule.type) {
-      case "string":
+      case 'string':
         return this.validateString(rule, rawValue);
-      case "number":
+      case 'number':
         return this.validateNumber(rule, rawValue);
-      case "boolean":
+      case 'boolean':
         return this.validateBoolean(rule, rawValue);
-      case "url":
+      case 'url':
         return this.validateUrl(rule, rawValue);
-      case "port":
+      case 'port':
         return this.validatePort(rule, rawValue);
-      case "enum":
+      case 'enum':
         return this.validateEnum(rule, rawValue);
       default:
         return {
@@ -494,19 +483,18 @@ export class ConfigValidator {
   } {
     const lowerValue = value.toLowerCase();
 
-    if (["true", "1", "yes", "on"].includes(lowerValue)) {
+    if (['true', '1', 'yes', 'on'].includes(lowerValue)) {
       return { valid: true, value: true };
     }
 
-    if (["false", "0", "no", "off"].includes(lowerValue)) {
+    if (['false', '0', 'no', 'off'].includes(lowerValue)) {
       return { valid: true, value: false };
     }
 
     return {
       valid: false,
       value: false,
-      error:
-        `${rule.name} must be a boolean value (true/false, 1/0, yes/no, on/off), got: ${value}`,
+      error: `${rule.name} must be a boolean value (true/false, 1/0, yes/no, on/off), got: ${value}`,
     };
   }
 
@@ -558,8 +546,7 @@ export class ConfigValidator {
       return {
         valid: false,
         value: numValue,
-        error:
-          `${rule.name} must be a valid port number (1-65535), got: ${numValue}`,
+        error: `${rule.name} must be a valid port number (1-65535), got: ${numValue}`,
       };
     }
 
@@ -581,9 +568,7 @@ export class ConfigValidator {
       return {
         valid: false,
         value,
-        error: `${rule.name} must be one of: ${
-          rule.enumValues?.join(", ")
-        }, got: ${value}`,
+        error: `${rule.name} must be one of: ${rule.enumValues?.join(', ')}, got: ${value}`,
       };
     }
 
@@ -595,29 +580,17 @@ export class ConfigValidator {
    */
   getConfigSummary(): Record<string, string> {
     const summary: Record<string, string> = {};
-    const sensitivePatterns = [
-      /secret/i,
-      /password/i,
-      /key/i,
-      /token/i,
-      /auth/i,
-      /credential/i,
-    ];
+    const sensitivePatterns = [/secret/i, /password/i, /key/i, /token/i, /auth/i, /credential/i];
 
     for (const rule of this.rules.values()) {
       const value = process.env[rule.name];
-      const isSensitive = sensitivePatterns.some((pattern) =>
-        pattern.test(rule.name)
-      );
+      const isSensitive = sensitivePatterns.some((pattern) => pattern.test(rule.name));
 
       if (value === undefined) {
-         
-        summary[rule.name] = "[NOT SET]";
+        summary[rule.name] = '[NOT SET]';
       } else if (isSensitive) {
-         
-        summary[rule.name] = "[CONFIGURED]";
+        summary[rule.name] = '[CONFIGURED]';
       } else {
-         
         summary[rule.name] = value;
       }
     }

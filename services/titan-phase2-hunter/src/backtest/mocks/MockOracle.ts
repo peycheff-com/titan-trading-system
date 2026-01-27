@@ -1,11 +1,11 @@
-import { Oracle } from "../../oracle/Oracle";
+import { Oracle } from '../../oracle/Oracle';
 import {
   EventCategory,
   ImpactLevel,
   OracleScore,
   PredictionMarketEvent,
   TechnicalSignal,
-} from "../../types";
+} from '../../types';
 
 export class MockOracle extends Oracle {
   private mockEvents: PredictionMarketEvent[] = [];
@@ -22,12 +22,12 @@ export class MockOracle extends Oracle {
       oracle: {
         enabled: true,
         updateInterval: 300,
-        polymarketApiKey: "mock-key",
+        polymarketApiKey: 'mock-key',
         sentimentThreshold: 20,
         confidenceWeight: 0.5,
         vetoEnabled: true,
         maxEventsPerScan: 50,
-        categories: ["crypto_price", "fed_policy"],
+        categories: ['crypto_price', 'fed_policy'],
       },
       eventMonitor: {
         enabled: true,
@@ -70,7 +70,7 @@ export class MockOracle extends Oracle {
 
   public async calculateOracleScore(
     symbol: string,
-    direction: "LONG" | "SHORT",
+    direction: 'LONG' | 'SHORT'
   ): Promise<OracleScore> {
     return {
       sentiment: this.scoreOverride?.sentiment ?? 0,
@@ -98,24 +98,17 @@ export class MockOracle extends Oracle {
 
     // Filter events valid for the current time
     const activeEvents = this.mockEvents.filter(
-      (e) =>
-        e.lastUpdate.getTime() <= this.currentTime &&
-        e.resolution.getTime() > this.currentTime,
+      e => e.lastUpdate.getTime() <= this.currentTime && e.resolution.getTime() > this.currentTime
     );
 
     // Simple logic: if 'crash' event exists with > 50% prob, veto LONG
     const crashEvent = activeEvents.find(
-      (e) =>
-        e.title.toLowerCase().includes("crash") ||
-        e.title.toLowerCase().includes("correction"),
+      e => e.title.toLowerCase().includes('crash') || e.title.toLowerCase().includes('correction')
     );
 
-    if (
-      crashEvent && crashEvent.probability > 50 && signal.direction === "LONG"
-    ) {
+    if (crashEvent && crashEvent.probability > 50 && signal.direction === 'LONG') {
       veto = true;
-      vetoReason =
-        `High probability of crash: ${crashEvent.title} (${crashEvent.probability}%)`;
+      vetoReason = `High probability of crash: ${crashEvent.title} (${crashEvent.probability}%)`;
     }
 
     // Apply overrides if any
@@ -139,9 +132,7 @@ export class MockOracle extends Oracle {
 
     // Check scheduled events first for overrides
     const scheduled = this.scheduledEvents.find(
-      (e) =>
-        e.timestamp <= this.currentTime &&
-        e.timestamp > this.currentTime - 24 * 60 * 60 * 1000,
+      e => e.timestamp <= this.currentTime && e.timestamp > this.currentTime - 24 * 60 * 60 * 1000
     );
 
     if (scheduled) {
@@ -153,13 +144,12 @@ export class MockOracle extends Oracle {
       sentiment,
       confidence,
       events: activeEvents,
-      veto: (sentiment < -50 && signal.direction === "LONG") ||
-          (sentiment > 50 && signal.direction === "SHORT")
-        ? true
-        : veto, // Simple veto logic from scheduled events
-      vetoReason: scheduled
-        ? `Scheduled Event Sentiment: ${sentiment}`
-        : vetoReason,
+      veto:
+        (sentiment < -50 && signal.direction === 'LONG') ||
+        (sentiment > 50 && signal.direction === 'SHORT')
+          ? true
+          : veto, // Simple veto logic from scheduled events
+      vetoReason: scheduled ? `Scheduled Event Sentiment: ${sentiment}` : vetoReason,
       convictionMultiplier,
       timestamp: new Date(this.currentTime),
     };
@@ -170,14 +160,14 @@ export class MockOracle extends Oracle {
     title: string,
     probability: number,
     startTime: number,
-    durationMinutes: number,
+    durationMinutes: number
   ): PredictionMarketEvent {
     // This helper logic would ideally reside in a factory or utility
     // but useful here for quick mock setup
     return {
       id: `evt-${Math.random()}`,
       title,
-      description: "Mock event",
+      description: 'Mock event',
       probability,
       volume: 100000,
       liquidity: 50000,
@@ -185,7 +175,7 @@ export class MockOracle extends Oracle {
       impact: ImpactLevel.HIGH,
       resolution: new Date(startTime + durationMinutes * 60000),
       lastUpdate: new Date(startTime),
-      source: "polymarket",
+      source: 'polymarket',
       // Note: `timestamp` property might be missing in PredictionMarketEvent interface in types.ts?
       // Checking types.ts previously: PredictionMarketEvent had id, title, description, probability...
       // It has `lastUpdate` and `resolution`, but `evaluateSignal` usage might imply creation time.

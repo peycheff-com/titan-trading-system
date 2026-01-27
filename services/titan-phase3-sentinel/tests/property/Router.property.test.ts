@@ -5,11 +5,18 @@ import { ExchangeRouter } from "../../src/router/ExchangeRouter";
 import type { IExchangeGateway } from "../../src/exchanges/interfaces";
 import type { Order, OrderResult } from "../../src/types/orders";
 
-// Mock Gateway
 class MockGateway implements IExchangeGateway {
     private price: number;
     constructor(price: number) {
         this.price = price;
+    }
+    async getTicker(
+        symbol: string,
+    ): Promise<{ price: number; bid: number; ask: number }> {
+        return { price: this.price, bid: this.price, ask: this.price };
+    }
+    get name(): string {
+        return "Mock";
     }
     async getPrice(symbol: string): Promise<number> {
         return this.price;
@@ -24,7 +31,7 @@ class MockGateway implements IExchangeGateway {
             status: "FILLED",
             filledSize: order.size,
             avgPrice: this.price,
-            fees: 0, // Simplified for router test, router uses calc fees
+            fees: 0,
             timestamp: Date.now(),
         };
     }

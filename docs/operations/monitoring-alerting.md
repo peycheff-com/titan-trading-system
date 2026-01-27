@@ -24,6 +24,18 @@ Alert rules are defined in `monitoring/prometheus/config/alert-rules-comprehensi
 - HighMemoryUsage: > 400MB for 5m
 - LowDiskSpace: < 10% free
 
+## Tracing (OpenTelemetry)
+
+Distributed tracing is implemented primarily in the **Rust Execution Engine** (`titan-execution-rs`).
+
+- **Protocol**: OTLP/gRPC
+- **Endpoint**: `http://tempo:4317` (Internal Docker Network)
+- **Standard Tags**:
+  - `service.name`: `titan-execution-rs`
+  - `service.version`: `0.1.0`
+
+Traces allow visualization of the "Message-to-Fill" lifecycle across the NATS bus.
+
 ## Dashboards
 
 Grafana dashboards are provisioned from:

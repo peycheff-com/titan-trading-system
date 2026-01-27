@@ -46,7 +46,7 @@ impl RedbStore {
         Ok(self.db.begin_read()?)
     }
 
-    pub fn check_idempotency(&self, key: &str, ttl_ms: i64) -> Result<bool, StoreError> {
+    pub fn check_idempotency(&self, key: &str, _ttl_ms: i64) -> Result<bool, StoreError> {
         let read_txn = self.db.begin_read()?;
         let table = read_txn.open_table(IDEMPOTENCY_TABLE)?;
 

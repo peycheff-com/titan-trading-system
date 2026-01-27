@@ -8,8 +8,8 @@
  * - Estimate slippage using Square-Root Law.
  */
 
-import { IntentSignal } from '../types/index.js';
-import { logger } from '../utils/Logger.js';
+import { IntentSignal } from "../types/index.js";
+import { logger } from "../utils/Logger.js";
 
 export interface TradeGateConfig {
   /** Maker fee rate (e.g., 0.0002 for 0.02%) */
@@ -68,23 +68,27 @@ export class TradeGate {
     // IntentSignal currently doesn't specify order type, assuming Taker for safety in cost model.
     const feeCost = this.config.takerFee;
 
-    // 2.2 Spread Cost (Assumed 1/2 spread if crossing, but we model full spread impact as cost)
-    // For now, use a fixed estimate or derive from volatility if available, but let's assume
-    // market data is not attached to signal yet -> use default 2bps (0.0002)
-    const spreadCost = 0.0002;
-
-    // 2.3 Slippage (Impact)
-    // Formula: Impact = c * sigma * sqrt(OrderSize / DailyVolume)
-    // Impact BPS = Impact * 10000
+    // 2.2 Calculate Volatility (needed for Spread and Slippage)
     const sigma = signal.volatility ?? 0.03; // Default 3% daily vol
     const dailyVol = this.config.defaultDailyVolume;
+
+    // 2.3 Spread Cost (Assumed 1/2 spread if crossing, but we model full spread impact as cost)
+    // Dynamic: Spread typically widens with volatility.
+    // Approx: Spread ~ 0.1 * Daily Volatility (heuristic) or min 2bps
+    const estimatedSpread = Math.max(0.0002, sigma * 0.1);
+    const spreadCost = estimatedSpread;
+
+    // 2.4 Slippage (Impact)
+    // Formula: Impact = c * sigma * sqrt(OrderSize / DailyVolume)
+    // Impact BPS = Impact * 10000
     const size = signal.requestedSize;
 
     const volumeRatio = size / dailyVol;
     const impactParams = Math.sqrt(volumeRatio);
 
     // Slippage in decimal (e.g. 0.0005 for 5bps)
-    const slippageCost = this.config.volatilityMultiplier * sigma * impactParams;
+    const slippageCost = this.config.volatilityMultiplier * sigma *
+      impactParams;
 
     // 3. Total Friction
     const totalFriction = feeCost + spreadCost + slippageCost;
@@ -98,19 +102,29 @@ export class TradeGate {
 
     const accepted = expectedEdge > requiredEdge;
 
-    const acceptedStr = accepted ? '✅ ACCEPTED' : '❌ REJECTED';
+    const acceptedStr = accepted ? "✅ ACCEPTED" : "❌ REJECTED";
     const reason = accepted
-      ? `Positive Expectancy: Edge ${(expectedEdge * 100).toFixed(
+      ? `Positive Expectancy: Edge ${
+        (expectedEdge * 100).toFixed(
           3,
-        )}% > Cost ${(totalFriction * 100).toFixed(3)}%`
-      : `Negative Expectancy: Edge ${(expectedEdge * 100).toFixed(
+        )
+      }% > Cost ${(totalFriction * 100).toFixed(3)}% (Spr: ${
+        (spreadCost * 10000).toFixed(1)
+      }bps)`
+      : `Negative Expectancy: Edge ${
+        (expectedEdge * 100).toFixed(
           3,
-        )}% <= Cost ${(totalFriction * 100).toFixed(3)}% (Req: ${(requiredEdge * 100).toFixed(
+        )
+      }% <= Cost ${(totalFriction * 100).toFixed(3)}% (Req: ${
+        (requiredEdge * 100).toFixed(
           3,
-        )}%)`;
+        )
+      }%)`;
 
     // Log the check
-    logger.info(`[TradeGate] ${acceptedStr} ${signal.symbol} ${signal.side} $${size}: ${reason}`);
+    logger.info(
+      `[TradeGate] ${acceptedStr} ${signal.symbol} ${signal.side} $${size}: ${reason}`,
+    );
 
     return {
       accepted,
@@ -130,8 +144,7 @@ export class TradeGate {
    * Update configuration dynamically
    */
   public updateConfig(newConfig: Partial<TradeGateConfig>): void {
-     
     this.config = { ...this.config, ...newConfig };
-    logger.info('TradeGate config updated');
+    logger.info("TradeGate config updated");
   }
 }

@@ -7,21 +7,21 @@
  * Requirements: 10.5 - Predictive analytics for market regime detection
  */
 
-import { EventEmitter } from 'eventemitter3';
-import { getTelemetryService } from '@titan/shared';
-import { Config, OHLCV, RegimeSnapshot, Trade } from '../types/index.js';
+import { EventEmitter } from "eventemitter3";
+import { getTelemetryService } from "@titan/shared";
+import { Config, OHLCV, RegimeSnapshot, Trade } from "../types/index.js";
 
 /**
  * Market regime types
  */
 export type MarketRegime =
-  | 'bull_trending'
-  | 'bear_trending'
-  | 'sideways'
-  | 'high_volatility'
-  | 'low_volatility'
-  | 'risk_off'
-  | 'risk_on';
+  | "bull_trending"
+  | "bear_trending"
+  | "sideways"
+  | "high_volatility"
+  | "low_volatility"
+  | "risk_off"
+  | "risk_on";
 
 /**
  * Volatility prediction
@@ -69,7 +69,7 @@ export interface StrategyPrediction {
     sharpeRatio: number;
   };
   confidence: number;
-  recommendedAction: 'increase' | 'decrease' | 'maintain' | 'pause';
+  recommendedAction: "increase" | "decrease" | "maintain" | "pause";
 }
 
 /**
@@ -78,16 +78,16 @@ export interface StrategyPrediction {
 export interface RiskAdjustment {
   timestamp: number;
   trigger:
-    | 'volatility_spike'
-    | 'correlation_increase'
-    | 'regime_change'
-    | 'performance_degradation';
+    | "volatility_spike"
+    | "correlation_increase"
+    | "regime_change"
+    | "performance_degradation";
   currentRisk: number;
   recommendedRisk: number;
   adjustment: number;
   reasoning: string;
   confidence: number;
-  urgency: 'low' | 'medium' | 'high' | 'critical';
+  urgency: "low" | "medium" | "high" | "critical";
 }
 
 /**
@@ -174,7 +174,10 @@ export class PredictiveAnalytics extends EventEmitter {
       modelUpdateFrequency: config.modelUpdateFrequency ?? 3600000, // 1 hour
     };
 
-    this.telemetry.info('PredictiveAnalytics', 'Predictive analytics engine initialized');
+    this.telemetry.info(
+      "PredictiveAnalytics",
+      "Predictive analytics engine initialized",
+    );
   }
 
   /**
@@ -182,16 +185,20 @@ export class PredictiveAnalytics extends EventEmitter {
    */
   start(): void {
     if (this.updateTimer) {
-      this.telemetry.warn('PredictiveAnalytics', 'Analytics already running');
+      this.telemetry.warn("PredictiveAnalytics", "Analytics already running");
       return;
     }
 
-    this.telemetry.info('PredictiveAnalytics', 'Starting predictive analytics');
+    this.telemetry.info("PredictiveAnalytics", "Starting predictive analytics");
 
     // eslint-disable-next-line functional/immutable-data
     this.updateTimer = setInterval(() => {
       this.runAnalyticsCycle().catch((error) => {
-        this.telemetry.error('PredictiveAnalytics', 'Analytics cycle failed', error);
+        this.telemetry.error(
+          "PredictiveAnalytics",
+          "Analytics cycle failed",
+          error,
+        );
       });
     }, this.config.updateInterval);
 
@@ -199,12 +206,16 @@ export class PredictiveAnalytics extends EventEmitter {
       // eslint-disable-next-line functional/immutable-data
       this.modelUpdateTimer = setInterval(() => {
         this.updateMLModels().catch((error) => {
-          this.telemetry.error('PredictiveAnalytics', 'Model update failed', error);
+          this.telemetry.error(
+            "PredictiveAnalytics",
+            "Model update failed",
+            error,
+          );
         });
       }, this.config.modelUpdateFrequency);
     }
 
-    this.emit('started');
+    this.emit("started");
   }
 
   /**
@@ -223,8 +234,15 @@ export class PredictiveAnalytics extends EventEmitter {
       this.modelUpdateTimer = null;
     }
 
-    this.telemetry.info('PredictiveAnalytics', 'Predictive analytics stopped');
-    this.emit('stopped');
+    this.telemetry.info("PredictiveAnalytics", "Predictive analytics stopped");
+    this.emit("stopped");
+  }
+
+  /**
+   * Add market data (alias for AIIntegration compatibility)
+   */
+  processMarketData(symbol: string, ohlcv: OHLCV[]): void {
+    this.addMarketData(symbol, ohlcv);
   }
 
   /**
@@ -242,12 +260,12 @@ export class PredictiveAnalytics extends EventEmitter {
     const validOHLCV = ohlcv.filter(
       (d) =>
         d &&
-        typeof d.timestamp === 'number' &&
-        typeof d.open === 'number' &&
-        typeof d.high === 'number' &&
-        typeof d.low === 'number' &&
-        typeof d.close === 'number' &&
-        typeof d.volume === 'number',
+        typeof d.timestamp === "number" &&
+        typeof d.open === "number" &&
+        typeof d.high === "number" &&
+        typeof d.low === "number" &&
+        typeof d.close === "number" &&
+        typeof d.volume === "number",
     );
 
     // eslint-disable-next-line functional/immutable-data
@@ -261,7 +279,7 @@ export class PredictiveAnalytics extends EventEmitter {
       data.filter((d) => d && d.timestamp > cutoff),
     );
 
-    this.emit('marketDataUpdated', { symbol, dataPoints: data.length });
+    this.emit("marketDataUpdated", { symbol, dataPoints: data.length });
   }
 
   /**
@@ -290,7 +308,7 @@ export class PredictiveAnalytics extends EventEmitter {
     // Update current regime
     this.updateCurrentRegime(symbol, snapshot);
 
-    this.emit('regimeUpdated', {
+    this.emit("regimeUpdated", {
       symbol,
       regime: this.currentRegimes.get(symbol),
     });
@@ -308,7 +326,7 @@ export class PredictiveAnalytics extends EventEmitter {
     // eslint-disable-next-line functional/immutable-data
     this.tradeHistory = this.tradeHistory.filter((t) => t.timestamp > cutoff);
 
-    this.emit('tradeAdded', trade);
+    this.emit("tradeAdded", trade);
   }
 
   /**
@@ -332,26 +350,26 @@ export class PredictiveAnalytics extends EventEmitter {
     // Regime classification logic
     if (volatility > 0.03) {
       // High volatility threshold
-      return 'high_volatility';
+      return "high_volatility";
     } else if (volatility < 0.01) {
       // Low volatility threshold
-      return 'low_volatility';
+      return "low_volatility";
     } else if (trend > 0.02) {
       // Strong uptrend
-      return 'bull_trending';
+      return "bull_trending";
     } else if (trend < -0.02) {
       // Strong downtrend
-      return 'bear_trending';
+      return "bear_trending";
     } else if (Math.abs(momentum) < 0.005) {
       // Low momentum
-      return 'sideways';
+      return "sideways";
     } else {
       // Use regime snapshots for risk sentiment
       const recentRegimes = regimes.slice(-10);
-      const avgRegimeState =
-        recentRegimes.reduce((sum, r) => sum + r.regimeState, 0) / recentRegimes.length;
+      const avgRegimeState = recentRegimes.reduce((sum, r) =>
+        sum + r.regimeState, 0) / recentRegimes.length;
 
-      return avgRegimeState > 0.5 ? 'risk_on' : 'risk_off';
+      return avgRegimeState > 0.5 ? "risk_on" : "risk_off";
     }
   }
 
@@ -370,10 +388,13 @@ export class PredictiveAnalytics extends EventEmitter {
     const currentVolatility = this.calculateVolatility(returns);
 
     // Simple GARCH-like prediction (simplified)
-    const volatilityHistory = this.calculateRollingVolatility(data, this.config.volatilityWindow);
+    const volatilityHistory = this.calculateRollingVolatility(
+      data,
+      this.config.volatilityWindow,
+    );
     const predictedVolatility = this.forecastVolatility(volatilityHistory);
 
-    const regime = this.currentRegimes.get(symbol) || 'sideways';
+    const regime = this.currentRegimes.get(symbol) || "sideways";
 
     return {
       timestamp: Date.now(),
@@ -391,7 +412,7 @@ export class PredictiveAnalytics extends EventEmitter {
    */
   analyzeCorrelations(): CorrelationAnalysis {
     const symbols = Array.from(this.marketData.keys());
-    const pairs: CorrelationAnalysis['pairs'] = [];
+    const pairs: CorrelationAnalysis["pairs"] = [];
 
     // Calculate pairwise correlations
     // eslint-disable-next-line functional/no-let
@@ -417,10 +438,9 @@ export class PredictiveAnalytics extends EventEmitter {
 
     // Calculate portfolio-level metrics
     const correlations = pairs.map((p) => Math.abs(p.correlation));
-    const portfolioCorrelation =
-      correlations.length > 0
-        ? correlations.reduce((sum, c) => sum + c, 0) / correlations.length
-        : 0;
+    const portfolioCorrelation = correlations.length > 0
+      ? correlations.reduce((sum, c) => sum + c, 0) / correlations.length
+      : 0;
 
     const diversificationScore = Math.max(0, 1 - portfolioCorrelation);
     const riskConcentration = portfolioCorrelation;
@@ -437,7 +457,10 @@ export class PredictiveAnalytics extends EventEmitter {
   /**
    * Predict strategy performance
    */
-  predictStrategyPerformance(strategy: string, symbol: string): StrategyPrediction | null {
+  predictStrategyPerformance(
+    strategy: string,
+    symbol: string,
+  ): StrategyPrediction | null {
     const regime = this.currentRegimes.get(symbol);
     if (!regime) {
       return null;
@@ -454,10 +477,11 @@ export class PredictiveAnalytics extends EventEmitter {
 
     // Calculate performance metrics
     const returns = historicalTrades.map((t) => t.pnlPercent);
-    const expectedReturn = returns.reduce((sum, r) => sum + r, 0) / returns.length;
+    const expectedReturn = returns.reduce((sum, r) => sum + r, 0) /
+      returns.length;
     const expectedVolatility = this.calculateVolatility(returns);
-    const winProbability =
-      historicalTrades.filter((t) => t.pnl > 0).length / historicalTrades.length;
+    const winProbability = historicalTrades.filter((t) => t.pnl > 0).length /
+      historicalTrades.length;
     const maxDrawdown = this.calculateMaxDrawdown(returns);
     const sharpeRatio = expectedReturn / (expectedVolatility || 1);
 
@@ -471,8 +495,12 @@ export class PredictiveAnalytics extends EventEmitter {
       regime,
       predictedPerformance: {
         expectedReturn: expectedReturn * regimeAdjustment.returnMultiplier,
-        expectedVolatility: expectedVolatility * regimeAdjustment.volatilityMultiplier,
-        winProbability: Math.min(0.95, winProbability * regimeAdjustment.winRateMultiplier),
+        expectedVolatility: expectedVolatility *
+          regimeAdjustment.volatilityMultiplier,
+        winProbability: Math.min(
+          0.95,
+          winProbability * regimeAdjustment.winRateMultiplier,
+        ),
         maxDrawdown: maxDrawdown * regimeAdjustment.drawdownMultiplier,
         sharpeRatio: sharpeRatio * regimeAdjustment.sharpeMultiplier,
       },
@@ -493,14 +521,14 @@ export class PredictiveAnalytics extends EventEmitter {
       // eslint-disable-next-line functional/immutable-data
       adjustments.push({
         timestamp: Date.now(),
-        trigger: 'correlation_increase',
+        trigger: "correlation_increase",
         currentRisk: currentConfig.risk.max_position_size,
         recommendedRisk: currentConfig.risk.max_position_size * 0.7,
         adjustment: -0.3,
         reasoning:
-          'High portfolio correlation detected, reducing position sizes to manage concentration risk',
+          "High portfolio correlation detected, reducing position sizes to manage concentration risk",
         confidence: 0.85,
-        urgency: 'high',
+        urgency: "high",
       });
     }
 
@@ -509,35 +537,41 @@ export class PredictiveAnalytics extends EventEmitter {
       const volatilityPrediction = this.predictVolatility(symbol);
       if (
         volatilityPrediction &&
-        volatilityPrediction.predictedVolatility > volatilityPrediction.currentVolatility * 1.5
+        volatilityPrediction.predictedVolatility >
+          volatilityPrediction.currentVolatility * 1.5
       ) {
         // eslint-disable-next-line functional/immutable-data
         adjustments.push({
           timestamp: Date.now(),
-          trigger: 'volatility_spike',
+          trigger: "volatility_spike",
           currentRisk: currentConfig.risk.max_daily_loss,
           recommendedRisk: currentConfig.risk.max_daily_loss * 0.8,
           adjustment: -0.2,
-          reasoning: `Predicted volatility spike for ${symbol}, reducing daily loss limit`,
+          reasoning:
+            `Predicted volatility spike for ${symbol}, reducing daily loss limit`,
           confidence: volatilityPrediction.confidence,
-          urgency: 'medium',
+          urgency: "medium",
         });
       }
     }
 
     // Check for regime changes
     for (const [symbol, regime] of this.currentRegimes) {
-      if (regime === 'risk_off' || regime === 'high_volatility') {
+      if (regime === "risk_off" || regime === "high_volatility") {
         // eslint-disable-next-line functional/immutable-data
         adjustments.push({
           timestamp: Date.now(),
-          trigger: 'regime_change',
+          trigger: "regime_change",
           currentRisk: currentConfig.risk.max_open_positions,
-          recommendedRisk: Math.max(1, Math.floor(currentConfig.risk.max_open_positions * 0.6)),
+          recommendedRisk: Math.max(
+            1,
+            Math.floor(currentConfig.risk.max_open_positions * 0.6),
+          ),
           adjustment: -0.4,
-          reasoning: `Risk-off regime detected for ${symbol}, reducing maximum open positions`,
+          reasoning:
+            `Risk-off regime detected for ${symbol}, reducing maximum open positions`,
           confidence: 0.8,
-          urgency: 'high',
+          urgency: "high",
         });
       }
     }
@@ -550,7 +584,7 @@ export class PredictiveAnalytics extends EventEmitter {
    */
   private async runAnalyticsCycle(): Promise<void> {
     try {
-      this.telemetry.debug('PredictiveAnalytics', 'Running analytics cycle');
+      this.telemetry.debug("PredictiveAnalytics", "Running analytics cycle");
 
       // Update regimes for all symbols
       for (const symbol of this.marketData.keys()) {
@@ -573,9 +607,12 @@ export class PredictiveAnalytics extends EventEmitter {
         }
 
         // Predict performance for common strategies
-        const strategies = ['oi_wipeout', 'funding_spike', 'liquidity_sweep'];
+        const strategies = ["oi_wipeout", "funding_spike", "liquidity_sweep"];
         for (const strategy of strategies) {
-          const strategyPrediction = this.predictStrategyPerformance(strategy, symbol);
+          const strategyPrediction = this.predictStrategyPerformance(
+            strategy,
+            symbol,
+          );
           if (strategyPrediction) {
             // eslint-disable-next-line functional/immutable-data
             strategyPredictions.push(strategyPrediction);
@@ -587,14 +624,18 @@ export class PredictiveAnalytics extends EventEmitter {
       const correlationAnalysis = this.analyzeCorrelations();
 
       // Emit results
-      this.emit('analyticsCycleCompleted', {
+      this.emit("analyticsCycleCompleted", {
         regimes: Object.fromEntries(this.currentRegimes),
         volatilityPredictions,
         strategyPredictions,
         correlationAnalysis,
       });
     } catch (error) {
-      this.telemetry.error('PredictiveAnalytics', 'Analytics cycle failed', error as Error);
+      this.telemetry.error(
+        "PredictiveAnalytics",
+        "Analytics cycle failed",
+        error as Error,
+      );
     }
   }
 
@@ -607,7 +648,7 @@ export class PredictiveAnalytics extends EventEmitter {
     }
 
     try {
-      this.telemetry.debug('PredictiveAnalytics', 'Updating ML models');
+      this.telemetry.debug("PredictiveAnalytics", "Updating ML models");
 
       // Update volatility models for each symbol
       for (const symbol of this.marketData.keys()) {
@@ -617,16 +658,23 @@ export class PredictiveAnalytics extends EventEmitter {
         }
       }
 
-      this.emit('modelsUpdated');
+      this.emit("modelsUpdated");
     } catch (error) {
-      this.telemetry.error('PredictiveAnalytics', 'Model update failed', error as Error);
+      this.telemetry.error(
+        "PredictiveAnalytics",
+        "Model update failed",
+        error as Error,
+      );
     }
   }
 
   /**
    * Update volatility model for symbol
    */
-  private async updateVolatilityModel(symbol: string, data: OHLCV[]): Promise<void> {
+  private async updateVolatilityModel(
+    symbol: string,
+    data: OHLCV[],
+  ): Promise<void> {
     // Simplified model update - in practice would use actual ML libraries
     const features = this.extractFeatures(data);
     const model = {
@@ -638,9 +686,13 @@ export class PredictiveAnalytics extends EventEmitter {
 
     // eslint-disable-next-line functional/immutable-data
     this.volatilityModels.set(symbol, model);
-    this.telemetry.debug('PredictiveAnalytics', `Updated volatility model for ${symbol}`, {
-      accuracy: model.accuracy,
-    });
+    this.telemetry.debug(
+      "PredictiveAnalytics",
+      `Updated volatility model for ${symbol}`,
+      {
+        accuracy: model.accuracy,
+      },
+    );
   }
 
   /**
@@ -652,7 +704,7 @@ export class PredictiveAnalytics extends EventEmitter {
 
     return {
       timestamp: Date.now(),
-      symbol: 'BTCUSDT', // Would be passed as parameter
+      symbol: "BTCUSDT", // Would be passed as parameter
       returns: returns.slice(-5),
       volatility: this.calculateVolatility(returns),
       momentum: this.calculateMomentum(recentData),
@@ -700,7 +752,9 @@ export class PredictiveAnalytics extends EventEmitter {
     if (returns.length === 0) return 0;
 
     const mean = returns.reduce((sum, r) => sum + r, 0) / returns.length;
-    const variance = returns.reduce((sum, r) => sum + Math.pow(r - mean, 2), 0) / returns.length;
+    const variance =
+      returns.reduce((sum, r) => sum + Math.pow(r - mean, 2), 0) /
+      returns.length;
     return Math.sqrt(variance);
   }
 
@@ -724,7 +778,8 @@ export class PredictiveAnalytics extends EventEmitter {
     const recent = data.slice(-5);
     const older = data.slice(-10, -5);
 
-    const recentAvg = recent.reduce((sum, d) => sum + d.close, 0) / recent.length;
+    const recentAvg = recent.reduce((sum, d) => sum + d.close, 0) /
+      recent.length;
     const olderAvg = older.reduce((sum, d) => sum + d.close, 0) / older.length;
 
     return (recentAvg - olderAvg) / olderAvg;
@@ -767,8 +822,10 @@ export class PredictiveAnalytics extends EventEmitter {
     const recent = data.slice(-5);
     const older = data.slice(-10, -5);
 
-    const recentAvgVol = recent.reduce((sum, d) => sum + d.volume, 0) / recent.length;
-    const olderAvgVol = older.reduce((sum, d) => sum + d.volume, 0) / older.length;
+    const recentAvgVol = recent.reduce((sum, d) => sum + d.volume, 0) /
+      recent.length;
+    const olderAvgVol = older.reduce((sum, d) => sum + d.volume, 0) /
+      older.length;
 
     return (recentAvgVol - olderAvgVol) / olderAvgVol;
   }
@@ -829,8 +886,12 @@ export class PredictiveAnalytics extends EventEmitter {
       return null;
     }
 
-    const returns1 = this.calculateReturns(data1.slice(-this.config.correlationWindow));
-    const returns2 = this.calculateReturns(data2.slice(-this.config.correlationWindow));
+    const returns1 = this.calculateReturns(
+      data1.slice(-this.config.correlationWindow),
+    );
+    const returns2 = this.calculateReturns(
+      data2.slice(-this.config.correlationWindow),
+    );
 
     const minLength = Math.min(returns1.length, returns2.length);
     const r1 = returns1.slice(-minLength);
@@ -861,7 +922,8 @@ export class PredictiveAnalytics extends EventEmitter {
 
     // Simple significance test (t-statistic)
     const n = r1.length;
-    const tStat = correlation * Math.sqrt((n - 2) / (1 - correlation * correlation));
+    const tStat = correlation *
+      Math.sqrt((n - 2) / (1 - correlation * correlation));
     const significance = Math.abs(tStat) > 2 ? 0.95 : 0.5; // Simplified
 
     return { correlation, significance };
@@ -899,7 +961,7 @@ export class PredictiveAnalytics extends EventEmitter {
     sharpeMultiplier: number;
   } {
     switch (regime) {
-      case 'bull_trending':
+      case "bull_trending":
         return {
           returnMultiplier: 1.2,
           volatilityMultiplier: 0.9,
@@ -907,7 +969,7 @@ export class PredictiveAnalytics extends EventEmitter {
           drawdownMultiplier: 0.8,
           sharpeMultiplier: 1.3,
         };
-      case 'bear_trending':
+      case "bear_trending":
         return {
           returnMultiplier: 0.8,
           volatilityMultiplier: 1.2,
@@ -915,7 +977,7 @@ export class PredictiveAnalytics extends EventEmitter {
           drawdownMultiplier: 1.3,
           sharpeMultiplier: 0.7,
         };
-      case 'high_volatility':
+      case "high_volatility":
         return {
           returnMultiplier: 1.1,
           volatilityMultiplier: 1.5,
@@ -923,7 +985,7 @@ export class PredictiveAnalytics extends EventEmitter {
           drawdownMultiplier: 1.5,
           sharpeMultiplier: 0.6,
         };
-      case 'low_volatility':
+      case "low_volatility":
         return {
           returnMultiplier: 0.9,
           volatilityMultiplier: 0.6,
@@ -931,7 +993,7 @@ export class PredictiveAnalytics extends EventEmitter {
           drawdownMultiplier: 0.7,
           sharpeMultiplier: 1.2,
         };
-      case 'risk_off':
+      case "risk_off":
         return {
           returnMultiplier: 0.7,
           volatilityMultiplier: 1.3,
@@ -939,7 +1001,7 @@ export class PredictiveAnalytics extends EventEmitter {
           drawdownMultiplier: 1.4,
           sharpeMultiplier: 0.5,
         };
-      case 'risk_on':
+      case "risk_on":
         return {
           returnMultiplier: 1.1,
           volatilityMultiplier: 1.1,
@@ -964,15 +1026,15 @@ export class PredictiveAnalytics extends EventEmitter {
   private getRecommendedAction(
     expectedReturn: number,
     regime: MarketRegime,
-  ): 'increase' | 'decrease' | 'maintain' | 'pause' {
-    if (regime === 'risk_off' || regime === 'high_volatility') {
-      return expectedReturn > 0.02 ? 'maintain' : 'pause';
-    } else if (regime === 'bull_trending' || regime === 'risk_on') {
-      return expectedReturn > 0.01 ? 'increase' : 'maintain';
+  ): "increase" | "decrease" | "maintain" | "pause" {
+    if (regime === "risk_off" || regime === "high_volatility") {
+      return expectedReturn > 0.02 ? "maintain" : "pause";
+    } else if (regime === "bull_trending" || regime === "risk_on") {
+      return expectedReturn > 0.01 ? "increase" : "maintain";
     } else if (expectedReturn < -0.01) {
-      return 'decrease';
+      return "decrease";
     } else {
-      return 'maintain';
+      return "maintain";
     }
   }
 
@@ -1021,6 +1083,9 @@ export class PredictiveAnalytics extends EventEmitter {
   shutdown(): void {
     this.stop();
     this.removeAllListeners();
-    this.telemetry.info('PredictiveAnalytics', 'Predictive analytics engine shutdown');
+    this.telemetry.info(
+      "PredictiveAnalytics",
+      "Predictive analytics engine shutdown",
+    );
   }
 }

@@ -17,7 +17,7 @@
  * - 7.1-7.7: Conviction-based Position Sizing
  */
 
-import { EventEmitter } from "events";
+import { EventEmitter } from 'events';
 import {
   BOS,
   BotTrapAnalysis,
@@ -36,22 +36,22 @@ import {
   TechnicalSignal,
   TimeframeState,
   VetoResult,
-} from "../types";
-import { FractalMath } from "./FractalMath";
-import { BybitPerpsClient } from "../exchanges/BybitPerpsClient";
-import { InstitutionalFlowClassifier } from "../flow/InstitutionalFlowClassifier";
-import { Oracle } from "../oracle";
-import { AdvancedFlowValidator } from "../flow";
-import { BotTrapDetector } from "../bottrap";
-import { GlobalLiquidityAggregator } from "../global-liquidity";
-import { ScoringBreakdown, ScoringEngine } from "./ScoringEngine";
-import { SignalValidator } from "./SignalValidator";
-import { ConvictionSizingEngine } from "./ConvictionSizingEngine";
-import { getConfigManager, PhaseConfig } from "@titan/shared";
+} from '../types';
+import { FractalMath } from './FractalMath';
+import { BybitPerpsClient } from '../exchanges/BybitPerpsClient';
+import { InstitutionalFlowClassifier } from '../flow/InstitutionalFlowClassifier';
+import { Oracle } from '../oracle';
+import { AdvancedFlowValidator } from '../flow';
+import { BotTrapDetector } from '../bottrap';
+import { GlobalLiquidityAggregator } from '../global-liquidity';
+import { ScoringBreakdown, ScoringEngine } from './ScoringEngine';
+import { SignalValidator } from './SignalValidator';
+import { ConvictionSizingEngine } from './ConvictionSizingEngine';
+import { getConfigManager, PhaseConfig } from '@titan/shared';
 // We import from ConfigManager for specific Hunter types if needed,
 // but relying on shared ConfigManager is cleaner for runtime config.
-import { Phase2Config } from "../config/ConfigManager";
-import { Logger } from "../logging/Logger";
+import { Phase2Config } from '../config/ConfigManager';
+import { Logger } from '../logging/Logger';
 
 export class HologramEngine extends EventEmitter {
   private bybitClient: BybitPerpsClient;
@@ -72,13 +72,13 @@ export class HologramEngine extends EventEmitter {
   private signalValidator: SignalValidator;
 
   // Market Regime Tracking
-  private currentRegime: string = "STABLE";
+  private currentRegime: string = 'STABLE';
   private currentAlpha: number = 3.0;
 
   constructor(
     bybitClient: BybitPerpsClient,
     flowClassifier: InstitutionalFlowClassifier,
-    logger?: Logger,
+    logger?: Logger
   ) {
     super();
     this.bybitClient = bybitClient;
@@ -140,9 +140,9 @@ export class HologramEngine extends EventEmitter {
     try {
       // 1. Fetch Basic Market Data (Candles)
       const [dailyCandles, h4Candles, m15Candles] = await Promise.all([
-        this.fetchCachedOHLCV(symbol, "1D", 100),
-        this.fetchCachedOHLCV(symbol, "4h", 200),
-        this.fetchCachedOHLCV(symbol, "15m", 500),
+        this.fetchCachedOHLCV(symbol, '1D', 100),
+        this.fetchCachedOHLCV(symbol, '4h', 200),
+        this.fetchCachedOHLCV(symbol, '15m', 500),
       ]);
 
       FractalMath.validateCandles(dailyCandles, 5);
@@ -150,9 +150,9 @@ export class HologramEngine extends EventEmitter {
       FractalMath.validateCandles(m15Candles, 5);
 
       // 2. Perform Classic Analysis
-      const daily = this.analyzeTimeframe(dailyCandles, "1D");
-      const h4 = this.analyzeTimeframe(h4Candles, "4H");
-      const m15 = this.analyzeTimeframe(m15Candles, "15m");
+      const daily = this.analyzeTimeframe(dailyCandles, '1D');
+      const h4 = this.analyzeTimeframe(h4Candles, '4H');
+      const m15 = this.analyzeTimeframe(m15Candles, '15m');
       const volatility = this.calcVolatility(h4Candles);
 
       // 3. Classic Flow Classifier (Backward Compatibility)
@@ -176,7 +176,7 @@ export class HologramEngine extends EventEmitter {
         h4,
         m15,
         alignmentScore: 0, // Will be calculated by ScoringEngine
-        status: "CONFLICT", // Interim
+        status: 'CONFLICT', // Interim
         veto: { vetoed: false, reason: null, direction: null },
         rsScore: 0,
         flowScore,
@@ -193,7 +193,7 @@ export class HologramEngine extends EventEmitter {
         botTrapAnalysis,
         globalCVD,
         this.currentRegime,
-        this.currentAlpha,
+        this.currentAlpha
       );
 
       // Determine Alignment & Conviction
@@ -204,22 +204,20 @@ export class HologramEngine extends EventEmitter {
         globalCVD,
         flowValidation,
         this.currentRegime,
-        this.currentAlpha,
+        this.currentAlpha
       );
 
       const convictionLevel = this.scoringEngine.determineConvictionLevel(
         scoring.adjustedScore,
         oracleScore,
-        globalCVD,
+        globalCVD
       );
 
       // 6. Apply Veto Logic (Unified)
       // We map Alignment 'VETO' to VetoResult
       const veto: VetoResult = {
-        vetoed: alignment === "VETO",
-        reason: alignment === "VETO"
-          ? "Enhanced Veto Triggered (Score/Oracle/Flow/CVD)"
-          : null,
+        vetoed: alignment === 'VETO',
+        reason: alignment === 'VETO' ? 'Enhanced Veto Triggered (Score/Oracle/Flow/CVD)' : null,
         direction: null, // Specific direction veto logic handled in scoring engine implicitly
       };
 
@@ -230,21 +228,19 @@ export class HologramEngine extends EventEmitter {
         // eslint-disable-next-line functional/immutable-data
         veto.vetoed = true;
         // eslint-disable-next-line functional/immutable-data
-        veto.reason = veto.reason
-          ? `${veto.reason} | ${classicVeto.reason}`
-          : classicVeto.reason;
+        veto.reason = veto.reason ? `${veto.reason} | ${classicVeto.reason}` : classicVeto.reason;
         // eslint-disable-next-line functional/immutable-data
         veto.direction = classicVeto.direction;
       }
 
       // 7. Calculate Status
       const status: HologramStatus = veto.vetoed
-        ? "NO_PLAY"
-        : alignment === "A+"
-        ? "A+"
-        : alignment === "A" || alignment === "B" // Map A/B to B for classic compatibility? Or strictly A+ -> A+, others -> B?
-        ? "B"
-        : "CONFLICT";
+        ? 'NO_PLAY'
+        : alignment === 'A+'
+          ? 'A+'
+          : alignment === 'A' || alignment === 'B' // Map A/B to B for classic compatibility? Or strictly A+ -> A+, others -> B?
+            ? 'B'
+            : 'CONFLICT';
 
       // 8. RS Score & Expectancy
       const rsScore = await this.calcRelativeStrength(symbol);
@@ -258,12 +254,9 @@ export class HologramEngine extends EventEmitter {
         veto,
         rsScore,
         realizedExpectancy: 0,
-        direction: veto.direction ||
-          (daily.trend === "BULL"
-            ? "LONG"
-            : daily.trend === "BEAR"
-            ? "SHORT"
-            : null),
+        direction:
+          veto.direction ||
+          (daily.trend === 'BULL' ? 'LONG' : daily.trend === 'BEAR' ? 'SHORT' : null),
         enhancedScore: scoring.adjustedScore,
         convictionLevel,
         enhancementsActive,
@@ -275,26 +268,16 @@ export class HologramEngine extends EventEmitter {
       return finalState;
     } catch (error) {
       const msg = (error as Error).message;
-      if (
-        msg.includes("Insufficient candles") ||
-        msg.includes("Insufficient fractals")
-      ) {
+      if (msg.includes('Insufficient candles') || msg.includes('Insufficient fractals')) {
         this.logger.warn(`Skipping ${symbol}: ${msg}`);
       } else {
-        this.logger.error(
-          `Failed to analyze hologram for ${symbol}`,
-          error as Error,
-        );
+        this.logger.error(`Failed to analyze hologram for ${symbol}`, error as Error);
       }
-      throw new Error(
-        `Failed to analyze hologram for ${symbol}: ${msg}`,
-      );
+      throw new Error(`Failed to analyze hologram for ${symbol}: ${msg}`);
     }
   }
 
-  public async validateSignal(
-    signal: TechnicalSignal,
-  ): Promise<EnhancedValidationResult> {
+  public async validateSignal(signal: TechnicalSignal): Promise<EnhancedValidationResult> {
     const oracleScore = await this.getOracleScore(signal.symbol);
     const flowValidation = await this.getFlowValidation(signal.symbol);
     const botTrapAnalysis = await this.getBotTrapAnalysis(signal.symbol);
@@ -305,14 +288,11 @@ export class HologramEngine extends EventEmitter {
       oracleScore,
       flowValidation,
       botTrapAnalysis,
-      globalCVD,
+      globalCVD
     );
   }
 
-  public async calculatePositionSize(
-    baseSize: number,
-    symbol: string,
-  ): Promise<ConvictionSizing> {
+  public async calculatePositionSize(baseSize: number, symbol: string): Promise<ConvictionSizing> {
     const oracleScore = await this.getOracleScore(symbol);
     const flowValidation = await this.getFlowValidation(symbol);
     const botTrapAnalysis = await this.getBotTrapAnalysis(symbol);
@@ -323,7 +303,7 @@ export class HologramEngine extends EventEmitter {
       oracleScore,
       flowValidation,
       botTrapAnalysis,
-      globalCVD,
+      globalCVD
     );
   }
 
@@ -331,16 +311,13 @@ export class HologramEngine extends EventEmitter {
   // INTERNAL HELPERS
   // ============================================================================
 
-  private analyzeTimeframe(
-    candles: OHLCV[],
-    timeframe: "1D" | "4H" | "15m",
-  ): TimeframeState {
+  private analyzeTimeframe(candles: OHLCV[], timeframe: '1D' | '4H' | '15m'): TimeframeState {
     const fractals = FractalMath.detectFractals(candles);
     const bos = FractalMath.detectBOS(candles, fractals);
     const trend = FractalMath.getTrendState(bos);
     // eslint-disable-next-line functional/no-let
     let mss: MSS | null = null;
-    if (timeframe === "15m" && bos.length > 0) {
+    if (timeframe === '15m' && bos.length > 0) {
       mss = FractalMath.detectMSS(candles, fractals, trend);
     }
     const dealingRange = FractalMath.calcDealingRange(fractals);
@@ -362,28 +339,26 @@ export class HologramEngine extends EventEmitter {
   private applyClassicVeto(
     daily: TimeframeState,
     h4: TimeframeState,
-    volatility: number,
+    volatility: number
   ): VetoResult {
-    if (daily.trend === "BULL" && h4.location === "PREMIUM") {
+    if (daily.trend === 'BULL' && h4.location === 'PREMIUM') {
       return {
         vetoed: true,
-        reason: "Daily BULL/4H PREMIUM",
-        direction: "LONG",
+        reason: 'Daily BULL/4H PREMIUM',
+        direction: 'LONG',
       };
     }
-    if (daily.trend === "BEAR" && h4.location === "DISCOUNT") {
+    if (daily.trend === 'BEAR' && h4.location === 'DISCOUNT') {
       return {
         vetoed: true,
-        reason: "Daily BEAR/4H DISCOUNT",
-        direction: "SHORT",
+        reason: 'Daily BEAR/4H DISCOUNT',
+        direction: 'SHORT',
       };
     }
-    if (volatility > 80 && h4.location === "EQUILIBRIUM") {
+    if (volatility > 80 && h4.location === 'EQUILIBRIUM') {
       return {
         vetoed: true,
-        reason: `Extreme Volatility (${
-          volatility.toFixed(0)
-        }) requires Premium/Discount`,
+        reason: `Extreme Volatility (${volatility.toFixed(0)}) requires Premium/Discount`,
         direction: null,
       };
     }
@@ -393,7 +368,7 @@ export class HologramEngine extends EventEmitter {
   private async fetchCachedOHLCV(
     symbol: string,
     interval: string,
-    limit: number,
+    limit: number
   ): Promise<OHLCV[]> {
     const cacheKey = `${symbol}-${interval}-${limit}`;
     const cached = this.cache.get(cacheKey);
@@ -416,21 +391,21 @@ export class HologramEngine extends EventEmitter {
       const tr = Math.max(
         candles[idx].high - candles[idx].low,
         Math.abs(candles[idx].high - candles[idx - 1].close),
-        Math.abs(candles[idx].low - candles[idx - 1].close),
+        Math.abs(candles[idx].low - candles[idx - 1].close)
       );
       sumTr += tr;
     }
     const atr = sumTr / period;
     const currentPrice = candles[candles.length - 1].close;
-    return Math.min(((atr / currentPrice) * 100) * 20, 100);
+    return Math.min((atr / currentPrice) * 100 * 20, 100);
   }
 
   public async calcRelativeStrength(symbol: string): Promise<number> {
-    if (symbol.toUpperCase() === "BTCUSDT") return 0;
+    if (symbol.toUpperCase() === 'BTCUSDT') return 0;
     try {
       const [asset, btc] = await Promise.all([
-        this.fetchCachedOHLCV(symbol, "4h", 2),
-        this.fetchCachedOHLCV("BTCUSDT", "4h", 2),
+        this.fetchCachedOHLCV(symbol, '4h', 2),
+        this.fetchCachedOHLCV('BTCUSDT', '4h', 2),
       ]);
       if (asset.length < 2 || btc.length < 2) return 0;
       const assetChg = (asset[1].close - asset[0].close) / asset[0].close;
@@ -451,22 +426,20 @@ export class HologramEngine extends EventEmitter {
     try {
       return await this.oracle.evaluateSignal({
         symbol,
-        direction: "LONG",
+        direction: 'LONG',
         confidence: 50,
         entryPrice: 0,
         stopLoss: 0,
         takeProfit: 0,
         timestamp: new Date(),
-        source: "hologram",
+        source: 'hologram',
       });
     } catch {
       return null;
     }
   }
 
-  private async getFlowValidation(
-    symbol: string,
-  ): Promise<FlowValidation | null> {
+  private async getFlowValidation(symbol: string): Promise<FlowValidation | null> {
     if (!this.flowValidator) return null;
     try {
       const state = this.flowValidator.getState();
@@ -474,7 +447,7 @@ export class HologramEngine extends EventEmitter {
         return {
           isValid: true,
           confidence: state.avgConfidence,
-          flowType: "neutral",
+          flowType: 'neutral',
           sweepCount: 0,
           icebergDensity: 0,
           institutionalProbability: 0,
@@ -487,9 +460,7 @@ export class HologramEngine extends EventEmitter {
     }
   }
 
-  private async getBotTrapAnalysis(
-    _symbol: string,
-  ): Promise<BotTrapAnalysis | null> {
+  private async getBotTrapAnalysis(_symbol: string): Promise<BotTrapAnalysis | null> {
     if (!this.botTrapDetector) return null;
     try {
       const rate = this.botTrapDetector.getTrapDetectionRate();
@@ -515,57 +486,32 @@ export class HologramEngine extends EventEmitter {
   }
 
   private areEnhancementsActive(): boolean {
-    return !!(this.oracle || this.flowValidator || this.botTrapDetector ||
-      this.globalAggregator);
+    return !!(this.oracle || this.flowValidator || this.botTrapDetector || this.globalAggregator);
   }
 
   // Event Setup
   private setupEventForwarding(): void {
-    this.scoringEngine.on(
-      "configUpdated",
-      (c) => this.emit("scoringConfigUpdated", c),
-    );
-    this.sizingEngine.on(
-      "sizingCalculated",
-      (s) => this.emit("sizingCalculated", s),
-    );
-    this.signalValidator.on(
-      "signalValidated",
-      (r) => this.emit("validationComplete", r),
-    );
+    this.scoringEngine.on('configUpdated', c => this.emit('scoringConfigUpdated', c));
+    this.sizingEngine.on('sizingCalculated', s => this.emit('sizingCalculated', s));
+    this.signalValidator.on('signalValidated', r => this.emit('validationComplete', r));
   }
 
   private setupOracleEvents(): void {
-    this.oracle?.on("signalEvaluated", (d) => this.emit("oracleEvaluation", d));
-    this.oracle?.on(
-      "connectionError",
-      (e) => this.logger.error("Oracle connection error", e),
-    );
+    this.oracle?.on('signalEvaluated', d => this.emit('oracleEvaluation', d));
+    this.oracle?.on('connectionError', e => this.logger.error('Oracle connection error', e));
   }
 
   private setupFlowValidatorEvents(): void {
-    this.flowValidator?.on(
-      "flowValidated",
-      (d) => this.emit("flowValidation", d),
-    );
+    this.flowValidator?.on('flowValidated', d => this.emit('flowValidation', d));
   }
 
   private setupBotTrapEvents(): void {
-    this.botTrapDetector?.on(
-      "trapDetected",
-      (d) => this.emit("botTrapDetected", d),
-    );
+    this.botTrapDetector?.on('trapDetected', d => this.emit('botTrapDetected', d));
   }
 
   private setupGlobalAggregatorEvents(): void {
-    this.globalAggregator?.on(
-      "globalCVDUpdate",
-      (d) => this.emit("globalCVDUpdate", d),
-    );
-    this.globalAggregator?.on(
-      "manipulationDetected",
-      (d) => this.emit("manipulationDetected", d),
-    );
+    this.globalAggregator?.on('globalCVDUpdate', d => this.emit('globalCVDUpdate', d));
+    this.globalAggregator?.on('manipulationDetected', d => this.emit('manipulationDetected', d));
   }
 
   public clearCache(): void {
@@ -581,24 +527,16 @@ export class HologramEngine extends EventEmitter {
    * Validate hologram state for completeness
    */
   public static validateHologramState(hologram: HologramState): boolean {
-    if (!hologram.symbol || typeof hologram.symbol !== "string") {
-      throw new Error("Invalid symbol");
+    if (!hologram.symbol || typeof hologram.symbol !== 'string') {
+      throw new Error('Invalid symbol');
     }
-    if (!hologram.timestamp) throw new Error("Invalid timestamp");
+    if (!hologram.timestamp) throw new Error('Invalid timestamp');
     if (hologram.alignmentScore < 0 || hologram.alignmentScore > 100) {
-      throw new Error("alignment score must be 0-100");
+      throw new Error('alignment score must be 0-100');
     }
-    const validStatuses: HologramStatus[] = [
-      "A+",
-      "A",
-      "B",
-      "C",
-      "CONFLICT",
-      "NO_PLAY",
-      "VETO",
-    ];
+    const validStatuses: HologramStatus[] = ['A+', 'A', 'B', 'C', 'CONFLICT', 'NO_PLAY', 'VETO'];
     if (!validStatuses.includes(hologram.status)) {
-      throw new Error("invalid status");
+      throw new Error('invalid status');
     }
     return true;
   }
@@ -607,22 +545,17 @@ export class HologramEngine extends EventEmitter {
    * Get human-readable hologram summary
    */
   public static getHologramSummary(hologram: HologramState): string {
-    const { symbol, status, alignmentScore, rsScore, daily, h4, m15 } =
-      hologram;
-    const emoji = status === "A+" || status === "A"
-      ? "🟢"
-      : status === "B"
-      ? "🟡"
-      : "🔴";
-    const rsEmoji = rsScore >= 0 ? "📈" : "📉";
+    const { symbol, status, alignmentScore, rsScore, daily, h4, m15 } = hologram;
+    const emoji = status === 'A+' || status === 'A' ? '🟢' : status === 'B' ? '🟡' : '🔴';
+    const rsEmoji = rsScore >= 0 ? '📈' : '📉';
 
     const dailyStr = `Daily: ${daily.trend}/${daily.location}`;
     const h4Str = `4H: ${h4.trend}/${h4.location}`;
-    const m15Suffix = m15.mss ? "/MSS" : `/${m15.location}`;
+    const m15Suffix = m15.mss ? '/MSS' : `/${m15.location}`;
     const m15Str = `15m: ${m15.trend}${m15Suffix}`;
 
-    return `${emoji} ${symbol} | ${status} | Score: ${alignmentScore} | RS: ${
-      (rsScore * 100).toFixed(1)
-    }% ${rsEmoji} | ${dailyStr} | ${h4Str} | ${m15Str}`;
+    return `${emoji} ${symbol} | ${status} | Score: ${alignmentScore} | RS: ${(
+      rsScore * 100
+    ).toFixed(1)}% ${rsEmoji} | ${dailyStr} | ${h4Str} | ${m15Str}`;
   }
 }

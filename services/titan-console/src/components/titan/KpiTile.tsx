@@ -10,6 +10,7 @@ interface KpiTileProps {
   variant?: 'default' | 'positive' | 'negative' | 'warning';
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  icon?: React.ElementType;
 }
 
 export function KpiTile({
@@ -21,6 +22,7 @@ export function KpiTile({
   variant = 'default',
   size = 'md',
   className,
+  icon,
 }: KpiTileProps) {
   const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
 
@@ -38,6 +40,11 @@ export function KpiTile({
         <span className="text-xxs font-medium uppercase tracking-wider text-muted-foreground">
           {label}
         </span>
+        {icon && !trend && !subValue && (
+            <div className="text-muted-foreground">
+                {(() => { const Icon = icon; return <Icon className="h-4 w-4" />; })()}
+            </div>
+        )}
         {trend && (
           <div
             className={cn(

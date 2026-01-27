@@ -44,10 +44,13 @@ export const ActionDialog: React.FC<ActionDialogProps> = ({
   // If not armed, render the disabled trigger (or wrap it)
   if (requireArmed && !isArmed) {
     return (
-      <div className="opacity-50 cursor-not-allowed relative group" onClick={() => toast.error("Console must be ARMED to perform this action.")}>
+      <div
+        className="opacity-50 cursor-not-allowed relative group"
+        onClick={() => toast.error('Console must be ARMED to perform this action.')}
+      >
         {trigger}
         <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-[1px] rounded transition-opacity opacity-0 group-hover:opacity-100">
-           <Lock className="w-4 h-4 text-muted-foreground" />
+          <Lock className="w-4 h-4 text-muted-foreground" />
         </div>
       </div>
     );
@@ -70,8 +73,8 @@ export const ActionDialog: React.FC<ActionDialogProps> = ({
       setReason('');
       setConfirmation('');
     } catch (error) {
-       // Error handling usually done in onConfirm or global handler, but we catch here to stop loading state
-       console.error("Action failed", error);
+      // Error handling usually done in onConfirm or global handler, but we catch here to stop loading state
+      console.error('Action failed', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -79,31 +82,32 @@ export const ActionDialog: React.FC<ActionDialogProps> = ({
 
   const getDangerColor = () => {
     switch (dangerLevel) {
-      case 'critical': return 'text-red-600';
-      case 'high': return 'text-orange-600';
-      default: return 'text-yellow-600';
+      case 'critical':
+        return 'text-red-600';
+      case 'high':
+        return 'text-orange-600';
+      default:
+        return 'text-yellow-600';
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger}
-      </DialogTrigger>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="sm:max-w-[425px] border-l-4 border-l-red-500">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-red-600">
             <AlertTriangle className="h-5 w-5" />
             {title}
           </DialogTitle>
-          <DialogDescription>
-            {description}
-          </DialogDescription>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="reason">Audit Reason <span className="text-red-500">*</span></Label>
+            <Label htmlFor="reason">
+              Audit Reason <span className="text-red-500">*</span>
+            </Label>
             <Input
               id="reason"
               placeholder="e.g. Market dislocation detected"
@@ -114,7 +118,8 @@ export const ActionDialog: React.FC<ActionDialogProps> = ({
           </div>
           <div className="space-y-2">
             <Label htmlFor="confirmation">
-              Type <span className="font-mono font-bold select-all text-red-600">{actionName}</span> to confirm
+              Type <span className="font-mono font-bold select-all text-red-600">{actionName}</span>{' '}
+              to confirm
             </Label>
             <Input
               id="confirmation"
@@ -130,12 +135,16 @@ export const ActionDialog: React.FC<ActionDialogProps> = ({
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button 
-            variant="destructive" 
+          <Button
+            variant="destructive"
             onClick={handleConfirm}
-            disabled={confirmation.toUpperCase() !== actionName.toUpperCase() || !reason.trim() || isSubmitting}
+            disabled={
+              confirmation.toUpperCase() !== actionName.toUpperCase() ||
+              !reason.trim() ||
+              isSubmitting
+            }
           >
-            {isSubmitting ? "Executing..." : "Confirm Action"}
+            {isSubmitting ? 'Executing...' : 'Confirm Action'}
           </Button>
         </DialogFooter>
       </DialogContent>

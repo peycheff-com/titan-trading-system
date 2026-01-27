@@ -2,6 +2,7 @@ use crate::risk_guard::RiskGuard;
 use crate::risk_policy::RiskState;
 use tracing::warn;
 
+#[derive(Default)]
 pub struct SreMonitor;
 
 impl SreMonitor {
@@ -12,7 +13,7 @@ impl SreMonitor {
     pub fn check_slos(&self, risk_guard: &RiskGuard) {
         let metric_families = prometheus::gather();
         for mf in metric_families {
-            if mf.get_name() == "titan_execution_bulgaria_adverse_selection_bps" {
+            if mf.name() == "titan_execution_bulgaria_adverse_selection_bps" {
                 for metric in mf.get_metric() {
                     let histogram = metric.get_histogram();
                     // Check bucket for > 20bps adverse selection
@@ -26,8 +27,8 @@ impl SreMonitor {
                     let total_count = histogram.get_sample_count();
 
                     for b in histogram.get_bucket() {
-                        if (b.get_upper_bound() - 20.0).abs() < 0.001 {
-                            count_le_20 = b.get_cumulative_count();
+                        if (b.upper_bound() - 20.0).abs() < 0.001 {
+                            count_le_20 = b.cumulative_count();
                             break;
                         }
                     }

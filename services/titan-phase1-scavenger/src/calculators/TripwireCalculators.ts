@@ -6,7 +6,7 @@
  * levels (liquidation clusters, daily levels, Bollinger breakouts).
  */
 
-import { OHLCV, Tripwire } from "../types/index.js";
+import { OHLCV, Tripwire } from '../types/index.js';
 export { OHLCV, Tripwire };
 
 interface VolumeProfileNode {
@@ -25,10 +25,7 @@ export class TripwireCalculators {
    * @param symbol - Ticker symbol
    * @returns Tripwire or null if no valid cluster found
    */
-  static calcLiquidationCluster(
-    ohlcv: OHLCV[],
-    symbol: string = "",
-  ): Tripwire | null {
+  static calcLiquidationCluster(ohlcv: OHLCV[], symbol: string = ''): Tripwire | null {
     if (ohlcv.length < 50) {
       return null; // Insufficient data
     }
@@ -59,25 +56,25 @@ export class TripwireCalculators {
     const trap =
       longCluster && (!shortCluster || longCluster.volume > shortCluster.volume)
         ? {
-          symbol, // Set by caller or default
-          triggerPrice: longCluster.price * 1.002, // +0.2% above cluster
-          direction: "LONG" as const,
-          trapType: "LIQUIDATION" as const,
-          confidence: 95,
-          leverage: 20,
-          estimatedCascadeSize: 0.05, // 5% expected move
-          activated: false,
-        }
+            symbol, // Set by caller or default
+            triggerPrice: longCluster.price * 1.002, // +0.2% above cluster
+            direction: 'LONG' as const,
+            trapType: 'LIQUIDATION' as const,
+            confidence: 95,
+            leverage: 20,
+            estimatedCascadeSize: 0.05, // 5% expected move
+            activated: false,
+          }
         : {
-          symbol,
-          triggerPrice: shortCluster!.price * 0.998, // -0.2% below cluster
-          direction: "SHORT" as const,
-          trapType: "LIQUIDATION" as const,
-          confidence: 95,
-          leverage: 20,
-          estimatedCascadeSize: 0.05,
-          activated: false,
-        };
+            symbol,
+            triggerPrice: shortCluster!.price * 0.998, // -0.2% below cluster
+            direction: 'SHORT' as const,
+            trapType: 'LIQUIDATION' as const,
+            confidence: 95,
+            leverage: 20,
+            estimatedCascadeSize: 0.05,
+            activated: false,
+          };
 
     return trap;
   }
@@ -116,13 +113,10 @@ export class TripwireCalculators {
     const priceStep = (maxPrice - minPrice) / bins;
 
     // Initialize bins
-    const profile: VolumeProfileNode[] = Array.from(
-      { length: bins },
-      (_, i) => ({
-        price: minPrice + i * priceStep + priceStep / 2, // Center of bin
-        volume: 0,
-      }),
-    );
+    const profile: VolumeProfileNode[] = Array.from({ length: bins }, (_, i) => ({
+      price: minPrice + i * priceStep + priceStep / 2, // Center of bin
+      volume: 0,
+    }));
 
     // Accumulate volume in bins
     for (const bar of ohlcv) {
@@ -147,7 +141,7 @@ export class TripwireCalculators {
    * @param symbol - Ticker symbol
    * @returns Tripwire or null if not close to any daily level
    */
-  static calcDailyLevel(ohlcv: OHLCV[], symbol: string = ""): Tripwire | null {
+  static calcDailyLevel(ohlcv: OHLCV[], symbol: string = ''): Tripwire | null {
     // Need at least 48 bars (2 days of 1h data)
     if (ohlcv.length < 48) {
       return null;
@@ -174,8 +168,8 @@ export class TripwireCalculators {
       return {
         symbol,
         triggerPrice: pdh * 1.001, // +0.1% above PDH
-        direction: "LONG",
-        trapType: "DAILY_LEVEL",
+        direction: 'LONG',
+        trapType: 'DAILY_LEVEL',
         confidence: 85,
         leverage: 12,
         estimatedCascadeSize: 0.03,
@@ -186,8 +180,8 @@ export class TripwireCalculators {
       return {
         symbol,
         triggerPrice: pdl * 0.999, // -0.1% below PDL
-        direction: "SHORT",
-        trapType: "DAILY_LEVEL",
+        direction: 'SHORT',
+        trapType: 'DAILY_LEVEL',
         confidence: 85,
         leverage: 12,
         estimatedCascadeSize: 0.03,
@@ -208,10 +202,7 @@ export class TripwireCalculators {
    * @param symbol - Ticker symbol
    * @returns Tripwire or null if no squeeze detected
    */
-  static calcBollingerBreakout(
-    ohlcv: OHLCV[],
-    symbol: string = "",
-  ): Tripwire | null {
+  static calcBollingerBreakout(ohlcv: OHLCV[], symbol: string = ''): Tripwire | null {
     const period = 20;
 
     // Need at least 92 bars (20 for calculation + 72 for historical comparison)
@@ -252,15 +243,13 @@ export class TripwireCalculators {
 
     // Determine direction based on price position relative to SMA
     const currentPrice = closes[closes.length - 1];
-    const direction = currentPrice > sma ? "LONG" : "SHORT";
+    const direction = currentPrice > sma ? 'LONG' : 'SHORT';
 
     return {
       symbol,
-      triggerPrice: direction === "LONG"
-        ? upperBand * 1.001
-        : lowerBand * 0.999,
+      triggerPrice: direction === 'LONG' ? upperBand * 1.001 : lowerBand * 0.999,
       direction,
-      trapType: "BOLLINGER",
+      trapType: 'BOLLINGER',
       confidence: 90,
       leverage: 15,
       estimatedCascadeSize: 0.04,
@@ -340,11 +329,7 @@ export class TripwireCalculators {
       const prevLow = ohlcv[i - 1].low;
 
       // True Range
-      tr[i] = Math.max(
-        high - low,
-        Math.abs(high - prevClose),
-        Math.abs(low - prevClose),
-      );
+      tr[i] = Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
 
       // Directional Movement
       const upMove = high - prevHigh;

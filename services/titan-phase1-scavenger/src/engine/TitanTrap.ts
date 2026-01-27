@@ -11,28 +11,28 @@
  * 4. State Layer (TrapStateManager): shared state
  */
 
-import { EventEmitter } from "../events/EventEmitter.js";
-import { getNatsClient, SignalClient, TitanSubject } from "@titan/shared";
-import { CVDCalculator } from "../calculators/CVDCalculator.js";
-import { LeadLagDetector } from "../calculators/LeadLagDetector.js";
-import { TripwireCalculators } from "../calculators/TripwireCalculators.js";
-import { PositionSizeCalculator } from "../calculators/PositionSizeCalculator.js";
-import { BinanceSpotClient } from "../exchanges/BinanceSpotClient.js";
-import { BybitPerpsClient } from "../exchanges/BybitPerpsClient.js";
-import { ConfigManager } from "../config/ConfigManager.js";
-import { VelocityCalculator } from "../calculators/VelocityCalculator.js";
-import { Trade, Tripwire } from "../types/index.js";
-import { Logger } from "../logging/Logger.js";
-import { OIWipeoutDetector } from "../detectors/OIWipeoutDetector.js";
-import { FundingSqueezeDetector } from "../detectors/FundingSqueezeDetector.js";
-import { BasisArbDetector } from "../detectors/BasisArbDetector.js";
-import { UltimateBulgariaProtocol } from "../detectors/UltimateBulgariaProtocol.js";
+import { EventEmitter } from '../events/EventEmitter.js';
+import { getNatsClient, SignalClient, TitanSubject } from '@titan/shared';
+import { CVDCalculator } from '../calculators/CVDCalculator.js';
+import { LeadLagDetector } from '../calculators/LeadLagDetector.js';
+import { TripwireCalculators } from '../calculators/TripwireCalculators.js';
+import { PositionSizeCalculator } from '../calculators/PositionSizeCalculator.js';
+import { BinanceSpotClient } from '../exchanges/BinanceSpotClient.js';
+import { BybitPerpsClient } from '../exchanges/BybitPerpsClient.js';
+import { ConfigManager } from '../config/ConfigManager.js';
+import { VelocityCalculator } from '../calculators/VelocityCalculator.js';
+import { Trade, Tripwire } from '../types/index.js';
+import { Logger } from '../logging/Logger.js';
+import { OIWipeoutDetector } from '../detectors/OIWipeoutDetector.js';
+import { FundingSqueezeDetector } from '../detectors/FundingSqueezeDetector.js';
+import { BasisArbDetector } from '../detectors/BasisArbDetector.js';
+import { UltimateBulgariaProtocol } from '../detectors/UltimateBulgariaProtocol.js';
 
 // Components
-import { TrapStateManager } from "./components/TrapStateManager.js";
-import { TrapGenerator } from "./components/TrapGenerator.js";
-import { TrapExecutor } from "./components/TrapExecutor.js";
-import { TrapDetector } from "./components/TrapDetector.js";
+import { TrapStateManager } from './components/TrapStateManager.js';
+import { TrapGenerator } from './components/TrapGenerator.js';
+import { TrapExecutor } from './components/TrapExecutor.js';
+import { TrapDetector } from './components/TrapDetector.js';
 
 /**
  * TitanTrap Engine
@@ -89,9 +89,11 @@ export class TitanTrap {
     this.positionSizeCalculator = dependencies.positionSizeCalculator;
 
     // Initialize Signal Client (Brain IPC)
-    this.signalClient = dependencies.signalClient || new SignalClient({
-      source: "scavenger",
-    });
+    this.signalClient =
+      dependencies.signalClient ||
+      new SignalClient({
+        source: 'scavenger',
+      });
     // Removed legacy setupExecutionEventListeners (dead IPC)
 
     // Initialize Components
@@ -139,9 +141,7 @@ export class TitanTrap {
 
     // Wire up Bybit callbacks
     if (this.bybitClient) {
-      this.generator.setOnTickerCallback(
-        this.detector.onBybitTicker.bind(this.detector),
-      );
+      this.generator.setOnTickerCallback(this.detector.onBybitTicker.bind(this.detector));
     }
   }
 
@@ -153,17 +153,17 @@ export class TitanTrap {
    * Start the TitanTrap engine
    */
   async start(): Promise<void> {
-    this.logger.info("🕸️ Starting TitanTrap Engine...");
+    this.logger.info('🕸️ Starting TitanTrap Engine...');
 
     try {
-      this.logger.info("🔌 Connecting to Signal Service via NATS...");
+      this.logger.info('🔌 Connecting to Signal Service via NATS...');
       await this.signalClient.connect();
-      this.logger.info("✅ Connected to Signal Service");
+      this.logger.info('✅ Connected to Signal Service');
     } catch (error) {
       // Non-fatal, retry handled by NATS
       this.logger.warn(
-        "⚠️ Failed to connect to Signal Service (initial): " +
-          (error instanceof Error ? error.message : "Unknown error"),
+        '⚠️ Failed to connect to Signal Service (initial): ' +
+          (error instanceof Error ? error.message : 'Unknown error'),
       );
     }
 
@@ -179,14 +179,14 @@ export class TitanTrap {
       await this.updateSubscriptions();
     }, updateInterval);
 
-    this.logger.info("✅ TitanTrap Engine started");
+    this.logger.info('✅ TitanTrap Engine started');
   }
 
   /**
    * Stop the TitanTrap engine
    */
   async stop(): Promise<void> {
-    this.logger.info("🛑 Stopping TitanTrap Engine...");
+    this.logger.info('🛑 Stopping TitanTrap Engine...');
 
     if (this.preComputationInterval) clearInterval(this.preComputationInterval);
     if (this.memoryMonitorInterval) clearInterval(this.memoryMonitorInterval);
@@ -195,7 +195,7 @@ export class TitanTrap {
     try {
       // no disconnect method on signalClient? It uses shared NATS.
       // We can leave it open or check. NatsClient is usually long-lived.
-      this.logger.info("✅ Signal Client clean up (noop)");
+      this.logger.info('✅ Signal Client clean up (noop)');
     } catch (error) {
       // ignore
     }
@@ -205,17 +205,13 @@ export class TitanTrap {
       this.bybitClient.close();
     }
 
-    this.logger.info("✅ TitanTrap Engine stopped");
+    this.logger.info('✅ TitanTrap Engine stopped');
   }
 
   /**
    * EXPOSED for index.tsx: Handle Binance Tick
    */
-  public async onBinanceTick(
-    symbol: string,
-    price: number,
-    trades: Trade[],
-  ): Promise<void> {
+  public async onBinanceTick(symbol: string, price: number, trades: Trade[]): Promise<void> {
     await this.detector.onBinanceTick(symbol, price, trades);
   }
 
@@ -237,7 +233,7 @@ export class TitanTrap {
    * Force Reconnect IPC
    */
   public async forceIPCReconnect(): Promise<void> {
-    this.logger.warn("🔌 Forcing IPC Reconnection...");
+    this.logger.warn('🔌 Forcing IPC Reconnection...');
     await this.signalClient.forceReconnect();
   }
 
@@ -257,11 +253,9 @@ export class TitanTrap {
 
       if (heapUsedMB > 150) {
         this.logger.warn(
-          `⚠️ RESOURCE_WARNING: Memory usage ${
-            heapUsedMB.toFixed(2)
-          }MB exceeds 150MB threshold`,
+          `⚠️ RESOURCE_WARNING: Memory usage ${heapUsedMB.toFixed(2)}MB exceeds 150MB threshold`,
         );
-        this.eventEmitter.emit("RESOURCE_WARNING", {
+        this.eventEmitter.emit('RESOURCE_WARNING', {
           memoryUsageMB: heapUsedMB,
           heapTotalMB,
           rssMB,
@@ -283,15 +277,12 @@ export class TitanTrap {
     if (!nats.isConnected()) return;
 
     const posturePayload = {
-      phase: "scavenger",
-      status: "RUNNING",
-      regime: "MULTI",
+      phase: 'scavenger',
+      status: 'RUNNING',
+      regime: 'MULTI',
       metrics: {
         activeTraps: this.stateManager.getTrapMap().size,
-        topSymbols: Array.from(this.stateManager.getTrapMap().keys()).slice(
-          0,
-          5,
-        ),
+        topSymbols: Array.from(this.stateManager.getTrapMap().keys()).slice(0, 5),
         equity: this.executor.getCachedEquity(),
       },
       timestamp: Date.now(),
@@ -299,8 +290,8 @@ export class TitanTrap {
     nats.publish(`${TitanSubject.EVT_PHASE_POSTURE}.scavenger`, posturePayload);
 
     const diagnosticsPayload = {
-      phase: "scavenger",
-      health: "HEALTHY",
+      phase: 'scavenger',
+      health: 'HEALTHY',
       alerts: [],
       system: {
         memory: process.memoryUsage(),
@@ -308,19 +299,14 @@ export class TitanTrap {
       },
       timestamp: Date.now(),
     };
-    nats.publish(
-      `${TitanSubject.EVT_PHASE_DIAGNOSTICS}.scavenger`,
-      diagnosticsPayload,
-    );
+    nats.publish(`${TitanSubject.EVT_PHASE_DIAGNOSTICS}.scavenger`, diagnosticsPayload);
   }
 
   private async updateSubscriptions(): Promise<void> {
     const symbols = this.stateManager.getAllSymbols();
     if (symbols.length === 0) return;
 
-    this.logger.info(
-      `🔄 Updating Binance subscriptions for ${symbols.length} symbols`,
-    );
+    this.logger.info(`🔄 Updating Binance subscriptions for ${symbols.length} symbols`);
     await this.binanceClient.subscribeAggTrades(symbols);
 
     for (const symbol of symbols) {

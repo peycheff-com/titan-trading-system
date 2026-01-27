@@ -22,6 +22,12 @@ pub struct BybitConnector {
     subscriptions: HashSet<String>,
 }
 
+impl Default for BybitConnector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BybitConnector {
     pub fn new() -> Self {
         let (tx, rx) = mpsc::channel(1000);
@@ -114,7 +120,7 @@ impl MarketDataConnector for BybitConnector {
             loop {
                 tokio::time::sleep(tokio::time::Duration::from_secs(20)).await;
                 let ping = json!({"op": "ping"});
-                if let Err(_) = ping_tx.send(Message::Text(ping.to_string())).await {
+                if (ping_tx.send(Message::Text(ping.to_string())).await).is_err() {
                     break;
                 }
             }

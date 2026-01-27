@@ -22,7 +22,7 @@ const defaultColors = [
 
 export function LatencyWaterfall({ steps, className, budget }: LatencyWaterfallProps) {
   const totalDuration = steps.reduce((sum, step) => sum + step.duration, 0);
-   
+
   let accumulated = 0;
 
   return (
@@ -50,11 +50,11 @@ export function LatencyWaterfall({ steps, className, budget }: LatencyWaterfallP
           );
         })}
         {budget && (
-             <div 
-                className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10 opacity-70 border-l border-dashed border-red-200"
-                style={{ left: `${Math.min((budget / totalDuration) * 100, 100)}%` }}
-                title={`SLO Budget: ${budget}ms`}
-             />
+          <div
+            className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10 opacity-70 border-l border-dashed border-red-200"
+            style={{ left: `${Math.min((budget / totalDuration) * 100, 100)}%` }}
+            title={`SLO Budget: ${budget}ms`}
+          />
         )}
       </div>
 

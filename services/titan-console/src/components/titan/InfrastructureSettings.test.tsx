@@ -4,7 +4,7 @@ import { InfrastructureSettings } from './InfrastructureSettings';
 
 // Mock fetch
 const mockFetch = vi.fn();
- 
+
 global.fetch = mockFetch;
 
 // Mock child components to simplify test (optional but cleaner)

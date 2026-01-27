@@ -14,7 +14,7 @@ const WebSocketContext = createContext<WebSocketContextType | undefined>(undefin
 export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { status, error, sendMessage, lastMessage } = useWebSocket({
     // Using default URL from hook
-    onMessage: (msg) => console.log('Global WS Message:', msg?.type),
+    onMessage: (msg) => console.log('Global WS Message:', (msg as any)?.type),
   });
 
   const isConnected = status === 'CONNECTED';

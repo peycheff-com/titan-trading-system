@@ -13,6 +13,12 @@ pub struct RiskStateManager {
     drift_threshold: usize,
 }
 
+impl Default for RiskStateManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RiskStateManager {
     pub fn new() -> Self {
         Self {
@@ -64,7 +70,7 @@ impl RiskStateManager {
     }
 
     fn check_transitions(&mut self) -> Option<RiskState> {
-        let old_state = self.current_state.clone();
+        let old_state = self.current_state;
 
         // 1. Check Emergency (Logic Errors)
         if self.consecutive_errors >= self.error_threshold {
@@ -83,7 +89,7 @@ impl RiskStateManager {
                 "RISK STATE TRANSITION: {:?} -> {:?}",
                 old_state, self.current_state
             );
-            Some(self.current_state.clone())
+            Some(self.current_state)
         } else {
             None
         }

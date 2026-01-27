@@ -17,8 +17,10 @@ pub struct ExposureCalculator;
 
 impl ExposureCalculator {
     pub fn calculate(positions: &HashMap<String, Position>) -> ExposureMetrics {
-        let mut metrics = ExposureMetrics::default();
-        metrics.position_count = positions.len();
+        let mut metrics = ExposureMetrics {
+            position_count: positions.len(),
+            ..Default::default()
+        };
 
         for position in positions.values() {
             // Use mark price for valuation if available, otherwise entry price (fallback)

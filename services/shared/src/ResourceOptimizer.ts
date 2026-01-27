@@ -7,11 +7,11 @@
  * Requirements: 5.4 - Memory and resource optimization
  */
 
-import { EventEmitter } from "eventemitter3";
-import { performance, PerformanceEntry, PerformanceObserver } from "perf_hooks";
-import * as v8 from "v8";
-import * as process from "process";
-import * as os from "os";
+import { EventEmitter } from 'eventemitter3';
+import { performance, PerformanceEntry, PerformanceObserver } from 'perf_hooks';
+import * as v8 from 'v8';
+import * as process from 'process';
+import * as os from 'os';
 
 // Simple color logging utility
 const colors = {
@@ -127,7 +127,7 @@ export class ResourceOptimizer extends EventEmitter {
     this.setupGCMonitoring();
     this.optimizeGarbageCollection();
 
-    console.log(colors.blue("🚀 Resource Optimizer initialized"));
+    console.log(colors.blue('🚀 Resource Optimizer initialized'));
   }
 
   /**
@@ -143,9 +143,7 @@ export class ResourceOptimizer extends EventEmitter {
       this.collectResourceMetrics();
     }, intervalMs);
 
-    console.log(
-      colors.green(`📊 Resource monitoring started (${intervalMs}ms interval)`),
-    );
+    console.log(colors.green(`📊 Resource monitoring started (${intervalMs}ms interval)`));
   }
 
   /**
@@ -164,7 +162,7 @@ export class ResourceOptimizer extends EventEmitter {
       this.gcObserver = null;
     }
 
-    console.log(colors.yellow("📊 Resource monitoring stopped"));
+    console.log(colors.yellow('📊 Resource monitoring stopped'));
   }
 
   /**
@@ -235,13 +233,11 @@ export class ResourceOptimizer extends EventEmitter {
       const memoryFreed = before.heapUsed - after.heapUsed;
       console.log(colors.green(`🗑️ Forced GC freed ${memoryFreed}MB`));
 
-      this.emit("gcForced", { before, after, memoryFreed });
+      this.emit('gcForced', { before, after, memoryFreed });
       return true;
     }
 
-    console.warn(
-      colors.yellow("⚠️ Garbage collection not exposed. Use --expose-gc flag."),
-    );
+    console.warn(colors.yellow('⚠️ Garbage collection not exposed. Use --expose-gc flag.'));
     return false;
   }
 
@@ -251,16 +247,13 @@ export class ResourceOptimizer extends EventEmitter {
   private optimizeGarbageCollection(): void {
     // Set V8 flags for better GC performance
     const gcFlags = [
-      "--max-old-space-size=512", // 512MB heap limit
-      "--optimize-for-size", // Optimize for memory usage
-      "--gc-interval=100", // More frequent GC
+      '--max-old-space-size=512', // 512MB heap limit
+      '--optimize-for-size', // Optimize for memory usage
+      '--gc-interval=100', // More frequent GC
     ];
 
     // Note: These flags need to be set at Node.js startup
-    console.log(
-      colors.blue("🔧 GC optimization flags recommended:"),
-      gcFlags.join(" "),
-    );
+    console.log(colors.blue('🔧 GC optimization flags recommended:'), gcFlags.join(' '));
   }
 
   /**
@@ -272,20 +265,20 @@ export class ResourceOptimizer extends EventEmitter {
       const entries = list.getEntries();
 
       for (const entry of entries) {
-        if (entry.entryType === "gc") {
+        if (entry.entryType === 'gc') {
           this.trackGCEvent(entry);
         }
       }
     });
 
-    this.gcObserver.observe({ entryTypes: ["gc"] });
+    this.gcObserver.observe({ entryTypes: ['gc'] });
   }
 
   /**
    * Track garbage collection event
    */
   private trackGCEvent(entry: PerformanceEntry): void {
-    const gcType = (entry as GCPerformanceEntry).detail?.kind || "unknown";
+    const gcType = (entry as GCPerformanceEntry).detail?.kind || 'unknown';
     const duration = entry.duration;
 
     if (!this.gcStats.has(gcType)) {
@@ -310,7 +303,7 @@ export class ResourceOptimizer extends EventEmitter {
     stats.lastGC = Date.now();
 
     // Emit GC event
-    this.emit("gc", {
+    this.emit('gc', {
       type: gcType,
       duration,
       stats: { ...stats },
@@ -319,11 +312,7 @@ export class ResourceOptimizer extends EventEmitter {
     // Log long GC pauses
     if (duration > 100) {
       // 100ms threshold
-      console.warn(
-        colors.yellow(
-          `⏱️ Long GC pause: ${gcType} took ${duration.toFixed(2)}ms`,
-        ),
-      );
+      console.warn(colors.yellow(`⏱️ Long GC pause: ${gcType} took ${duration.toFixed(2)}ms`));
     }
   }
 
@@ -352,7 +341,7 @@ export class ResourceOptimizer extends EventEmitter {
     this.checkResourceThresholds(memory, cpu);
 
     // Emit metrics event
-    this.emit("metrics", { memory, cpu });
+    this.emit('metrics', { memory, cpu });
   }
 
   /**
@@ -361,17 +350,17 @@ export class ResourceOptimizer extends EventEmitter {
   private checkResourceThresholds(memory: MemoryStats, cpu: CPUStats): void {
     // Memory threshold checks
     if (memory.heapUsagePercent > this.thresholds.memoryCritical) {
-      this.emit("alert", {
-        type: "memory",
-        level: "critical",
+      this.emit('alert', {
+        type: 'memory',
+        level: 'critical',
         message: `Heap usage critical: ${memory.heapUsagePercent.toFixed(1)}%`,
         value: memory.heapUsagePercent,
         threshold: this.thresholds.memoryCritical,
       });
     } else if (memory.heapUsagePercent > this.thresholds.memoryWarning) {
-      this.emit("alert", {
-        type: "memory",
-        level: "warning",
+      this.emit('alert', {
+        type: 'memory',
+        level: 'warning',
         message: `Heap usage high: ${memory.heapUsagePercent.toFixed(1)}%`,
         value: memory.heapUsagePercent,
         threshold: this.thresholds.memoryWarning,
@@ -380,17 +369,17 @@ export class ResourceOptimizer extends EventEmitter {
 
     // Heap size checks
     if (memory.heapUsed > this.thresholds.heapCritical) {
-      this.emit("alert", {
-        type: "heap",
-        level: "critical",
+      this.emit('alert', {
+        type: 'heap',
+        level: 'critical',
         message: `Heap size critical: ${memory.heapUsed}MB`,
         value: memory.heapUsed,
         threshold: this.thresholds.heapCritical,
       });
     } else if (memory.heapUsed > this.thresholds.heapWarning) {
-      this.emit("alert", {
-        type: "heap",
-        level: "warning",
+      this.emit('alert', {
+        type: 'heap',
+        level: 'warning',
         message: `Heap size high: ${memory.heapUsed}MB`,
         value: memory.heapUsed,
         threshold: this.thresholds.heapWarning,
@@ -399,17 +388,17 @@ export class ResourceOptimizer extends EventEmitter {
 
     // CPU threshold checks
     if (cpu.cpuUsagePercent > this.thresholds.cpuCritical) {
-      this.emit("alert", {
-        type: "cpu",
-        level: "critical",
+      this.emit('alert', {
+        type: 'cpu',
+        level: 'critical',
         message: `CPU usage critical: ${cpu.cpuUsagePercent.toFixed(1)}%`,
         value: cpu.cpuUsagePercent,
         threshold: this.thresholds.cpuCritical,
       });
     } else if (cpu.cpuUsagePercent > this.thresholds.cpuWarning) {
-      this.emit("alert", {
-        type: "cpu",
-        level: "warning",
+      this.emit('alert', {
+        type: 'cpu',
+        level: 'warning',
         message: `CPU usage high: ${cpu.cpuUsagePercent.toFixed(1)}%`,
         value: cpu.cpuUsagePercent,
         threshold: this.thresholds.cpuWarning,
@@ -420,10 +409,7 @@ export class ResourceOptimizer extends EventEmitter {
   /**
    * Run performance benchmark
    */
-  async benchmark(
-    name: string,
-    fn: () => Promise<unknown> | unknown,
-  ): Promise<BenchmarkResult> {
+  async benchmark(name: string, fn: () => Promise<unknown> | unknown): Promise<BenchmarkResult> {
     const memoryBefore = this.getMemoryStats();
     const startTime = performance.now();
 
@@ -457,22 +443,20 @@ export class ResourceOptimizer extends EventEmitter {
 
     console.log(
       colors.cyan(
-        `⏱️ Benchmark '${name}': ${
-          result.duration.toFixed(2)
-        }ms, Memory Δ: ${result.memoryDelta}MB`,
+        `⏱️ Benchmark '${name}': ${result.duration.toFixed(
+          2,
+        )}ms, Memory Δ: ${result.memoryDelta}MB`,
       ),
     );
 
-    this.emit("benchmark", result);
+    this.emit('benchmark', result);
     return result;
   }
 
   /**
    * Get resource usage history
    */
-  getResourceHistory(): Array<
-    { timestamp: number; memory: MemoryStats; cpu: CPUStats }
-  > {
+  getResourceHistory(): Array<{ timestamp: number; memory: MemoryStats; cpu: CPUStats }> {
     return [...this.resourceHistory];
   }
 
@@ -530,7 +514,7 @@ export class ResourceOptimizer extends EventEmitter {
     // Force garbage collection if available
     this.forceGarbageCollection();
 
-    console.log(colors.green("🧹 Memory optimization completed"));
+    console.log(colors.green('🧹 Memory optimization completed'));
   }
 
   /**
@@ -539,14 +523,14 @@ export class ResourceOptimizer extends EventEmitter {
   setThresholds(thresholds: Partial<ResourceThresholds>): void {
     // eslint-disable-next-line functional/immutable-data
     this.thresholds = { ...this.thresholds, ...thresholds };
-    console.log(colors.blue("🎯 Resource thresholds updated"));
+    console.log(colors.blue('🎯 Resource thresholds updated'));
   }
 
   /**
    * Shutdown and cleanup
    */
   shutdown(): void {
-    console.log(colors.blue("🛑 Shutting down Resource Optimizer..."));
+    console.log(colors.blue('🛑 Shutting down Resource Optimizer...'));
     this.stopMonitoring();
     this.removeAllListeners();
   }
@@ -561,9 +545,7 @@ let resourceOptimizerInstance: ResourceOptimizer | null = null;
 /**
  * Get or create the global Resource Optimizer instance
  */
-export function getResourceOptimizer(
-  thresholds?: Partial<ResourceThresholds>,
-): ResourceOptimizer {
+export function getResourceOptimizer(thresholds?: Partial<ResourceThresholds>): ResourceOptimizer {
   if (!resourceOptimizerInstance) {
     resourceOptimizerInstance = new ResourceOptimizer(thresholds);
   }

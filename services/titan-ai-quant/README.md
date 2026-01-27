@@ -13,7 +13,8 @@ The Titan AI Quant is a sophisticated offline advisor that analyzes trading perf
 - **AI-Powered Analysis**: Uses Gemini 1.5 Flash for cost-effective pattern recognition
 - **Backtesting Validation**: All proposals validated through realistic simulation
 - **Interactive UI**: Chat interface and approval workflow for human oversight
-- **Strategic Memory**: SQLite-based learning system that improves over time
+- **Interactive UI**: Chat interface and approval workflow for human oversight
+- **Strategic Memory**: Weaviate Vector Database for high-dimensional pattern matching
 
 ## Quick Start
 
@@ -54,7 +55,7 @@ npm run dev
 │                     Data Layer                               │
 │  ┌──────────────────┐         ┌──────────────────┐         │
 │  │     Journal      │────────→│ Strategic Memory │         │
-│  │  (Log Parser)    │         │    (SQLite)      │         │
+│  │  (Log Parser)    │         │ (Weaviate Vector)│         │
 │  └──────────────────┘         └──────────────────┘         │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -78,14 +79,13 @@ Uses Gemini 1.5 Flash to analyze patterns and generate optimization proposals.
 - Symbol-specific issue detection
 - Regime-aware optimization proposals
 
-### 3. Strategic Memory (SQLite Database)
-Persistent learning system that improves recommendations over time.
+### 3. Strategic Memory (Weaviate Vector Database)
+Persistent learning system that uses vector embeddings to match current market conditions with historical patterns.
 
-**Storage:**
-- Trading insights with confidence scores
-- Optimization proposals and their outcomes
-- Configuration version history
-- Performance tracking across parameter changes
+**Capabilities:**
+- Semantic search over trade history
+- Regime similarity matching (e.g. "Find times when Volatility > 5% and Trend was Flat")
+- Outcome persistence for optimization proposals
 
 ### 4. Guardrails (Safety System)
 Prevents dangerous configurations through strict validation.
@@ -118,8 +118,10 @@ GEMINI_API_KEY=your_gemini_api_key_here
 # Rate Limiting (optional)
 MAX_REQUESTS_PER_MINUTE=10
 
-# Database (optional - defaults to ./data/strategic_memory.db)
-DATABASE_PATH=./data/strategic_memory.db
+# Weaviate Configuration
+WEAVIATE_SCHEME=http
+WEAVIATE_HOST=localhost:8080
+WEAVIATE_API_KEY= # Optional for local, required for cloud
 
 # Logging (optional)
 LOG_LEVEL=info

@@ -156,7 +156,6 @@ export class DashboardService {
    * @param provider - Function that returns wallet balances
    */
   registerWalletProvider(exchange: string, provider: () => Promise<WalletBalance[]>): void {
-     
     this.walletProviders.set(exchange, provider);
   }
 
@@ -199,9 +198,9 @@ export class DashboardService {
     };
 
     // Cache the result
-     
+
     this.navCache = result;
-     
+
     this.navCacheTime = Date.now();
 
     return result;
@@ -287,24 +286,22 @@ export class DashboardService {
 
     // Calculate correlation matrix for all positions
     const correlations: Record<string, Record<string, number>> = {};
-     
+
     for (let i = 0; i < positions.length; i++) {
-       
       for (let j = i + 1; j < positions.length; j++) {
         const symbolA = positions[i].symbol;
         const symbolB = positions[j].symbol;
 
-         
         if (!correlations[symbolA]) correlations[symbolA] = {};
-         
+
         if (!correlations[symbolB]) correlations[symbolB] = {};
 
         // For now, use a placeholder correlation calculation
         // In a real implementation, this would access the risk guardian's correlation data
         const correlation = 0.5;
-         
+
         correlations[symbolA][symbolB] = correlation;
-         
+
         correlations[symbolB][symbolA] = correlation;
       }
     }
@@ -360,7 +357,6 @@ export class DashboardService {
    * @returns Recent decisions with metadata
    */
   async getRecentDecisions(limit: number = this.config.maxRecentDecisions, phaseFilter?: PhaseId) {
-     
     let decisions = this.brain.getRecentDecisions(limit);
 
     // Apply phase filter if specified
@@ -447,9 +443,9 @@ export class DashboardService {
     };
 
     // Cache the result
-     
+
     this.dashboardCache = extendedData;
-     
+
     this.dashboardCacheTime = Date.now();
 
     return extendedData;
@@ -480,13 +476,12 @@ export class DashboardService {
    * Clear all caches
    */
   clearCache(): void {
-     
     this.dashboardCache = null;
-     
+
     this.dashboardCacheTime = 0;
-     
+
     this.navCache = null;
-     
+
     this.navCacheTime = 0;
   }
 
@@ -549,7 +544,7 @@ export class DashboardService {
    */
   private estimateProcessingTime(decision: BrainDecision): number {
     // Simple estimation based on decision complexity
-     
+
     let baseTime = 10; // Base 10ms
 
     if (decision.risk.riskMetrics) {

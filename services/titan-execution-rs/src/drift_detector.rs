@@ -6,7 +6,7 @@ pub struct DriftDetector {
     // Configuration thresholds
     spread_threshold_bps: f64,
     latency_budget_ms: i64,
-    correlation_threshold_bps: f64,
+    _correlation_threshold_bps: f64,
 }
 
 impl DriftDetector {
@@ -18,7 +18,7 @@ impl DriftDetector {
         Self {
             spread_threshold_bps,
             latency_budget_ms,
-            correlation_threshold_bps,
+            _correlation_threshold_bps: correlation_threshold_bps,
         }
     }
 
@@ -75,12 +75,10 @@ impl DriftDetector {
                 } else {
                     None
                 }
+            } else if entry_price < zone_min {
+                Some((zone_min - entry_price) / zone_min * 10000.0)
             } else {
-                if entry_price < zone_min {
-                    Some((zone_min - entry_price) / zone_min * 10000.0)
-                } else {
-                    None
-                }
+                None
             };
 
             if let Some(bps) = deviation {

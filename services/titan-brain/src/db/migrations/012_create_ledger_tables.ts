@@ -1,12 +1,12 @@
-import { Pool } from "pg";
+import { Pool } from 'pg';
 
 export const version = 12;
-export const name = "create_ledger_tables";
+export const name = 'create_ledger_tables';
 
 export async function up(pool: Pool): Promise<void> {
   const client = await pool.connect();
   try {
-    await client.query("BEGIN");
+    await client.query('BEGIN');
 
     // 1. Ledger Accounts (Chart of Accounts)
     await client.query(`
@@ -36,7 +36,7 @@ export async function up(pool: Pool): Promise<void> {
 
     // FIX: Ensure posted_at column exists if table was created by initial schema without it
     await client.query(
-      "ALTER TABLE ledger_transactions ADD COLUMN IF NOT EXISTS posted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;",
+      'ALTER TABLE ledger_transactions ADD COLUMN IF NOT EXISTS posted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;',
     );
 
     // 3. Ledger Entries (The separate legs)
@@ -66,9 +66,9 @@ export async function up(pool: Pool): Promise<void> {
             ALTER TABLE ledger_entries ENABLE ROW LEVEL SECURITY;
         `);
 
-    await client.query("COMMIT");
+    await client.query('COMMIT');
   } catch (error) {
-    await client.query("ROLLBACK");
+    await client.query('ROLLBACK');
     throw error;
   } finally {
     client.release();
@@ -78,13 +78,13 @@ export async function up(pool: Pool): Promise<void> {
 export async function down(pool: Pool): Promise<void> {
   const client = await pool.connect();
   try {
-    await client.query("BEGIN");
+    await client.query('BEGIN');
     await client.query(`DROP TABLE IF EXISTS ledger_entries;`);
     await client.query(`DROP TABLE IF EXISTS ledger_transactions;`);
     await client.query(`DROP TABLE IF EXISTS ledger_accounts;`);
-    await client.query("COMMIT");
+    await client.query('COMMIT');
   } catch (error) {
-    await client.query("ROLLBACK");
+    await client.query('ROLLBACK');
     throw error;
   } finally {
     client.release();

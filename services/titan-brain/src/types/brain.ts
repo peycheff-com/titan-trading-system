@@ -3,11 +3,11 @@
  * Defines types for the main orchestrator
  */
 
-import { AllocationVector } from "./allocation.js";
-import { PhaseId, PhasePerformance } from "./performance.js";
-import { IntentSignal, RiskDecision, RiskMetrics } from "./risk.js";
-import { TreasuryStatus } from "./capital.js";
-import { BreakerStatus } from "./breaker.js";
+import { AllocationVector } from './allocation.js';
+import { PhaseId, PhasePerformance } from './performance.js';
+import { IntentSignal, RiskDecision, RiskMetrics } from './risk.js';
+import { TreasuryStatus } from './capital.js';
+import { BreakerStatus } from './breaker.js';
 
 /**
  * Brain decision result

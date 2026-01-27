@@ -1,8 +1,21 @@
 {
+  "files": [],
+  "references": [
+    { "path": "./services/shared" },
+    { "path": "./services/titan-ai-quant" },
+    { "path": "./services/titan-backtesting" },
+    { "path": "./services/titan-brain" },
+    { "path": "./services/titan-console" },
+    { "path": "./services/titan-phase1-scavenger" },
+    { "path": "./services/titan-phase2-hunter" },
+    { "path": "./services/titan-phase3-sentinel" },
+    { "path": "./services/titan-powerlaw-lab" }
+  ],
   "compilerOptions": {
     "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
     "lib": ["ES2022"],
     "strict": true,
     "esModuleInterop": true,
@@ -16,5 +29,5 @@
     "emitDecoratorMetadata": true,
     "composite": true
   },
-  "exclude": ["node_modules", "dist", "tests", "**/*.test.ts"]
+  "exclude": ["node_modules", "dist"]
 }

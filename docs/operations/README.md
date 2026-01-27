@@ -58,36 +58,43 @@ The Titan Trading System consists of interconnected microservices managed by Doc
 
 ### Core Services
 
-1. **Titan Brain** (Port 3100)
-   - Master orchestrator and decision maker
+1. **Titan Brain** (Port 3100 HTTP / 3101 WS)
+   - Master orchestrator, Active Inference, Risk Guardian
    - **Critical**: System cannot function without Brain
 
 2. **Titan Execution** (Port 3002)
-   - Order execution and position tracking
+   - Order execution, Redb persistence, Shadow State
    - **Critical**: Required for all trading operations
 
-3. **Titan Console** (Port 5173 usually)
-   - Web-based monitoring dashboard
+3. **Titan Console** (Port 5173 / 8080)
+   - Web-based monitoring dashboard (Vite)
    - **Important**: Required for operational visibility
 
-### Trading Phases
+### Trading Phases & Research
 
 4. **Titan Scavenger** (Phase 1)
    - Trap detection & scalping
-   - Runs as independent container
 
 5. **Titan Hunter** (Phase 2)
    - Holographic market structure
-   - Runs as independent container
 
 6. **Titan Sentinel** (Phase 3)
    - Arb & Basis strategies
 
+7. **Titan AI Quant**
+   - Gemini AI optimization & Parameter tuning
+
+8. **Titan Backtesting** (New)
+   - Simulation & Strategy Validation
+
+9. **Titan PowerLaw Lab** (Experimental)
+   - Fractal analysis
+
 ### Supporting Infrastructure
 
 - **PostgreSQL**: Data persistence (Volume mapped)
-- **NATS JetStream**: Event bus
-- **Redis**: Caching (optional/status)
+- **NATS JetStream**: Event bus (Persistent Streams)
+- **Redis**: Caching (Optional, disabled by default in Brain)
 
 ## Operational Responsibilities
 

@@ -260,7 +260,7 @@ mod tests {
 
         let params = OrderParams {
             signal_id: "sig-sell".to_string(),
-            symbol: "BTC/USDT".to_string(),
+            symbol: "BTCUSDT".to_string(),
             side: Side::Sell,
             size: dec!(1.0),
             limit_price: Some(dec!(100.00)),

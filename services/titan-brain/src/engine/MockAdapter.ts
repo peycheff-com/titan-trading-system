@@ -5,7 +5,6 @@ export class MockAdapter {
   private engine: ActiveInferenceEngine | null = null;
 
   registerEngine(engine: ActiveInferenceEngine) {
-     
     this.engine = engine;
   }
 

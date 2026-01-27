@@ -100,6 +100,12 @@ pub struct DeterministicIdProvider {
     counter: Mutex<u64>,
 }
 
+impl Default for DeterministicIdProvider {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DeterministicIdProvider {
     pub fn new() -> Self {
         Self {

@@ -7,14 +7,14 @@
  * Requirements: 18.1-18.8 (Runtime Configuration)
  */
 
-import { EventEmitter } from "events";
+import { EventEmitter } from 'events';
 import {
   ConfigManager as SharedConfigManager,
   getConfigManager,
   PhaseConfig as SharedPhaseConfig,
-} from "@titan/shared";
-import { HunterConfig, HunterConfigSchema } from "./schema";
-import { EventCategory } from "../types";
+} from '@titan/shared';
+import { HunterConfig, HunterConfigSchema } from './schema';
+import { EventCategory } from '../types';
 
 /**
  * Complete Phase 2 configuration
@@ -23,20 +23,20 @@ import { EventCategory } from "../types";
 export type Phase2Config = HunterConfig;
 
 // Export types compatible with tests
-export type AlignmentWeights = HunterConfig["alignmentWeights"];
-export type RSConfig = HunterConfig["rsConfig"];
-export type RiskConfig = HunterConfig["riskConfig"];
-export type PortfolioConfig = HunterConfig["portfolioConfig"];
-export type ForwardTestConfig = HunterConfig["forwardTestConfig"];
+export type AlignmentWeights = HunterConfig['alignmentWeights'];
+export type RSConfig = HunterConfig['rsConfig'];
+export type RiskConfig = HunterConfig['riskConfig'];
+export type PortfolioConfig = HunterConfig['portfolioConfig'];
+export type ForwardTestConfig = HunterConfig['forwardTestConfig'];
 
 // Export Enhanced types for usage
-export type OracleConfig = HunterConfig["oracle"];
-export type FlowValidatorConfig = HunterConfig["flowValidator"];
-export type BotTrapConfig = HunterConfig["botTrapDetector"];
-export type GlobalAggregatorConfig = HunterConfig["globalAggregator"];
-export type ConvictionConfig = HunterConfig["conviction"];
-export type EnhancedRiskConfig = HunterConfig["enhancedRisk"];
-export type EmergencyConfig = HunterConfig["emergency"];
+export type OracleConfig = HunterConfig['oracle'];
+export type FlowValidatorConfig = HunterConfig['flowValidator'];
+export type BotTrapConfig = HunterConfig['botTrapDetector'];
+export type GlobalAggregatorConfig = HunterConfig['globalAggregator'];
+export type ConvictionConfig = HunterConfig['conviction'];
+export type EnhancedRiskConfig = HunterConfig['enhancedRisk'];
+export type EmergencyConfig = HunterConfig['emergency'];
 
 /**
  * Configuration validation result
@@ -51,7 +51,7 @@ export interface ValidationResult {
  * Configuration change event
  */
 export interface ConfigChangeEvent {
-  section: keyof Phase2Config | "all";
+  section: keyof Phase2Config | 'all';
   oldValue: any;
   newValue: any;
   timestamp: number;
@@ -99,7 +99,7 @@ const DEFAULT_CONFIG: Phase2Config = {
   // Enhanced 2026 Defaults
   oracle: {
     enabled: true,
-    polymarketApiKey: "",
+    polymarketApiKey: '',
     vetoThreshold: 40,
     convictionMultiplierMax: 1.5,
     eventCategories: [
@@ -134,13 +134,13 @@ const DEFAULT_CONFIG: Phase2Config = {
   },
   globalAggregator: {
     enabled: true,
-    exchanges: ["binance", "coinbase", "kraken"],
+    exchanges: ['binance', 'coinbase', 'kraken'],
     exchangeWeights: {
       binance: 40,
       coinbase: 35,
       kraken: 25,
     },
-    weightingMethod: "volume",
+    weightingMethod: 'volume',
     consensusThreshold: 0.67,
     manipulationSensitivity: 70,
     reconnectInterval: 5000,
@@ -183,10 +183,10 @@ const DEFAULT_CONFIG: Phase2Config = {
 export class ConfigManager extends EventEmitter {
   private config: Phase2Config;
   private sharedManager: SharedConfigManager;
-  private readonly phaseName = "phase2-hunter";
+  private readonly phaseName = 'phase2-hunter';
   private environment: string;
 
-  constructor(environment: string = process.env.NODE_ENV || "development") {
+  constructor(environment: string = process.env.NODE_ENV || 'development') {
     super();
     this.environment = environment;
 
@@ -207,25 +207,25 @@ export class ConfigManager extends EventEmitter {
     // Merge with defaults to ensure we have all fields before Zod validation
     // (Shared config might strictly be "PhaseConfig" and miss Hunter fields)
     const pendingConfig = this.mergeWithDefaults(
-      rawPhaseConfig as unknown as Partial<Phase2Config>,
+      rawPhaseConfig as unknown as Partial<Phase2Config>
     );
 
     if (!rawPhaseConfig || Object.keys(rawPhaseConfig).length === 0) {
-      console.log("📋 Initializing default configuration for Hunter...");
+      console.log('📋 Initializing default configuration for Hunter...');
       await this.saveConfig(pendingConfig); // Save defaults (also validates)
     } else {
       this.updateLocalState(pendingConfig);
 
-      console.log("✅ Configuration loaded and validated successfully via Zod");
+      console.log('✅ Configuration loaded and validated successfully via Zod');
     }
 
     // Setup Event Listeners
-    this.sharedManager.on("configChanged", (event) => {
-      if (event.level === "phase" && event.key === this.phaseName) {
+    this.sharedManager.on('configChanged', event => {
+      if (event.level === 'phase' && event.key === this.phaseName) {
         const oldConfig = { ...this.config };
         this.updateLocalState();
-        this.emit("configReloaded", {
-          section: "all",
+        this.emit('configReloaded', {
+          section: 'all',
           oldValue: oldConfig,
           newValue: this.config,
           timestamp: Date.now(),
@@ -233,12 +233,12 @@ export class ConfigManager extends EventEmitter {
       }
     });
 
-    this.sharedManager.on("configReloaded", () => {
+    this.sharedManager.on('configReloaded', () => {
       // Full reload logic
       const oldConfig = { ...this.config };
       this.updateLocalState();
-      this.emit("configReloaded", {
-        section: "all",
+      this.emit('configReloaded', {
+        section: 'all',
         oldValue: oldConfig,
         newValue: this.config,
         timestamp: Date.now(),
@@ -246,9 +246,7 @@ export class ConfigManager extends EventEmitter {
       } as ConfigChangeEvent);
     });
 
-    console.log(
-      "✅ ConfigManager Adapter initialized via @titan/shared + Zod Rule Engine",
-    );
+    console.log('✅ ConfigManager Adapter initialized via @titan/shared + Zod Rule Engine');
   }
 
   private updateLocalState(forceConfig?: Phase2Config) {
@@ -258,19 +256,14 @@ export class ConfigManager extends EventEmitter {
       return;
     }
 
-    const rawConfig = this.sharedManager.getPhaseConfig(
-      this.phaseName,
-    ) as unknown as Phase2Config;
+    const rawConfig = this.sharedManager.getPhaseConfig(this.phaseName) as unknown as Phase2Config;
 
     if (rawConfig) {
       const merged = this.mergeWithDefaults(rawConfig);
       // Validate merged config using Zod
       const result = HunterConfigSchema.safeParse(merged);
       if (!result.success) {
-        console.error(
-          "❌ Configuration validation failed after reload:",
-          result.error.format(),
-        );
+        console.error('❌ Configuration validation failed after reload:', result.error.format());
         // Fallback or throw? For now, we keep the old config or warn
         // In production, invalid config on reload should probably be rejected
         return;
@@ -304,7 +297,7 @@ export class ConfigManager extends EventEmitter {
       // Cast to unknown first to avoid partial overlap issues if PhaseConfig definition is stricter or different
       this.sharedManager.savePhaseConfig(
         this.phaseName,
-        validatedConfig as unknown as SharedPhaseConfig,
+        validatedConfig as unknown as SharedPhaseConfig
       );
 
       // Update local state (optimistic)
@@ -312,14 +305,14 @@ export class ConfigManager extends EventEmitter {
       // eslint-disable-next-line functional/immutable-data
       this.config = { ...config };
 
-      this.emit("configChanged", {
-        section: "all",
+      this.emit('configChanged', {
+        section: 'all',
         oldValue: oldConfig,
         newValue: config,
         timestamp: Date.now(),
       } as ConfigChangeEvent);
     } catch (error) {
-      console.error("❌ Failed to save configuration:", error);
+      console.error('❌ Failed to save configuration:', error);
       throw error;
     }
   }
@@ -334,9 +327,7 @@ export class ConfigManager extends EventEmitter {
   /**
    * Update alignment weights
    */
-  updateAlignmentWeights(
-    weights: Partial<Phase2Config["alignmentWeights"]>,
-  ): void {
+  updateAlignmentWeights(weights: Partial<Phase2Config['alignmentWeights']>): void {
     const newWeights = { ...this.config.alignmentWeights, ...weights };
     this.updateLocalConfigSection({ alignmentWeights: newWeights });
   }
@@ -351,7 +342,7 @@ export class ConfigManager extends EventEmitter {
   /**
    * Update RS configuration
    */
-  updateRSConfig(rsConfig: Partial<Phase2Config["rsConfig"]>): void {
+  updateRSConfig(rsConfig: Partial<Phase2Config['rsConfig']>): void {
     const newRSConfig = { ...this.config.rsConfig, ...rsConfig };
     this.updateLocalConfigSection({ rsConfig: newRSConfig });
   }
@@ -359,7 +350,7 @@ export class ConfigManager extends EventEmitter {
   /**
    * Update risk configuration
    */
-  updateRiskConfig(riskConfig: Partial<Phase2Config["riskConfig"]>): void {
+  updateRiskConfig(riskConfig: Partial<Phase2Config['riskConfig']>): void {
     const newRiskConfig = { ...this.config.riskConfig, ...riskConfig };
     this.updateLocalConfigSection({ riskConfig: newRiskConfig });
   }
@@ -367,9 +358,7 @@ export class ConfigManager extends EventEmitter {
   /**
    * Update portfolio configuration
    */
-  updatePortfolioConfig(
-    portfolioConfig: Partial<Phase2Config["portfolioConfig"]>,
-  ): void {
+  updatePortfolioConfig(portfolioConfig: Partial<Phase2Config['portfolioConfig']>): void {
     const newPortfolioConfig = {
       ...this.config.portfolioConfig,
       ...portfolioConfig,
@@ -380,9 +369,7 @@ export class ConfigManager extends EventEmitter {
   /**
    * Update forward test configuration
    */
-  updateForwardTestConfig(
-    forwardTestConfig: Partial<Phase2Config["forwardTestConfig"]>,
-  ): void {
+  updateForwardTestConfig(forwardTestConfig: Partial<Phase2Config['forwardTestConfig']>): void {
     const newForwardTestConfig = {
       ...this.config.forwardTestConfig,
       ...forwardTestConfig,
@@ -392,21 +379,17 @@ export class ConfigManager extends EventEmitter {
 
   // Enhanced 2026 Update Methods
 
-  updateOracleConfig(oracleConfig: Partial<Phase2Config["oracle"]>): void {
+  updateOracleConfig(oracleConfig: Partial<Phase2Config['oracle']>): void {
     const newOracleConfig = { ...this.config.oracle, ...oracleConfig };
     this.updateLocalConfigSection({ oracle: newOracleConfig });
   }
 
-  updateFlowValidatorConfig(
-    flowConfig: Partial<Phase2Config["flowValidator"]>,
-  ): void {
+  updateFlowValidatorConfig(flowConfig: Partial<Phase2Config['flowValidator']>): void {
     const newFlowConfig = { ...this.config.flowValidator, ...flowConfig };
     this.updateLocalConfigSection({ flowValidator: newFlowConfig });
   }
 
-  updateBotTrapConfig(
-    botTrapConfig: Partial<Phase2Config["botTrapDetector"]>,
-  ): void {
+  updateBotTrapConfig(botTrapConfig: Partial<Phase2Config['botTrapDetector']>): void {
     const newBotTrapConfig = {
       ...this.config.botTrapDetector,
       ...botTrapConfig,
@@ -414,9 +397,7 @@ export class ConfigManager extends EventEmitter {
     this.updateLocalConfigSection({ botTrapDetector: newBotTrapConfig });
   }
 
-  updateGlobalAggregatorConfig(
-    aggregatorConfig: Partial<Phase2Config["globalAggregator"]>,
-  ): void {
+  updateGlobalAggregatorConfig(aggregatorConfig: Partial<Phase2Config['globalAggregator']>): void {
     const newAggregatorConfig = {
       ...this.config.globalAggregator,
       ...aggregatorConfig,
@@ -424,9 +405,7 @@ export class ConfigManager extends EventEmitter {
     this.updateLocalConfigSection({ globalAggregator: newAggregatorConfig });
   }
 
-  updateConvictionConfig(
-    convictionConfig: Partial<Phase2Config["conviction"]>,
-  ): void {
+  updateConvictionConfig(convictionConfig: Partial<Phase2Config['conviction']>): void {
     const newConvictionConfig = {
       ...this.config.conviction,
       ...convictionConfig,
@@ -434,9 +413,7 @@ export class ConfigManager extends EventEmitter {
     this.updateLocalConfigSection({ conviction: newConvictionConfig });
   }
 
-  updateEnhancedRiskConfig(
-    enhancedRiskConfig: Partial<Phase2Config["enhancedRisk"]>,
-  ): void {
+  updateEnhancedRiskConfig(enhancedRiskConfig: Partial<Phase2Config['enhancedRisk']>): void {
     const newRiskConfig = {
       ...this.config.enhancedRisk,
       ...enhancedRiskConfig,
@@ -444,9 +421,7 @@ export class ConfigManager extends EventEmitter {
     this.updateLocalConfigSection({ enhancedRisk: newRiskConfig });
   }
 
-  updateEmergencyConfig(
-    emergencyConfig: Partial<Phase2Config["emergency"]>,
-  ): void {
+  updateEmergencyConfig(emergencyConfig: Partial<Phase2Config['emergency']>): void {
     const newEmergencyConfig = { ...this.config.emergency, ...emergencyConfig };
     this.updateLocalConfigSection({ emergency: newEmergencyConfig });
   }
@@ -539,7 +514,7 @@ export class ConfigManager extends EventEmitter {
    * Reset configuration to defaults
    */
   resetToDefaults(): void {
-    console.log("🔄 Resetting configuration to defaults");
+    console.log('🔄 Resetting configuration to defaults');
     this.saveConfig({ ...DEFAULT_CONFIG });
   }
 
@@ -554,18 +529,18 @@ export class ConfigManager extends EventEmitter {
       `⚡ Risk: Leverage ${config.riskConfig.maxLeverage}x, Stop ${config.riskConfig.stopLossPercent}%, Target ${config.riskConfig.targetPercent}%`,
       `💼 Portfolio: Max ${config.portfolioConfig.maxConcurrentPositions} positions, Heat ${config.portfolioConfig.maxPortfolioHeat}%, Correlation ${config.portfolioConfig.correlationThreshold}`,
       `🧪 Forward Test: ${
-        config.forwardTestConfig.enabled ? "Enabled" : "Disabled"
+        config.forwardTestConfig.enabled ? 'Enabled' : 'Disabled'
       }, Duration ${config.forwardTestConfig.duration}h, Signals Only: ${config.forwardTestConfig.logSignalsOnly}`,
       `🔮 Oracle: ${
-        config.oracle.enabled ? "Enabled" : "Disabled"
+        config.oracle.enabled ? 'Enabled' : 'Disabled'
       }, Veto ${config.oracle.vetoThreshold}%`,
       `🌊 Flow: ${
-        config.flowValidator.enabled ? "Enabled" : "Disabled"
+        config.flowValidator.enabled ? 'Enabled' : 'Disabled'
       }, Sweep ${config.flowValidator.sweepThreshold}`,
       `🪤 BotTrap: ${
-        config.botTrapDetector.enabled ? "Enabled" : "Disabled"
+        config.botTrapDetector.enabled ? 'Enabled' : 'Disabled'
       }, Precision ${config.botTrapDetector.precisionThreshold}%`,
-    ].join("\n");
+    ].join('\n');
   }
 
   /**
@@ -594,11 +569,11 @@ export class ConfigManager extends EventEmitter {
    */
   getEnabledEnhancements(): string[] {
     return [
-      this.config.oracle.enabled ? "Oracle" : null,
-      this.config.flowValidator.enabled ? "FlowValidator" : null,
-      this.config.botTrapDetector.enabled ? "BotTrapDetector" : null,
-      this.config.globalAggregator.enabled ? "GlobalAggregator" : null,
-      this.config.conviction.enabled ? "Conviction" : null,
+      this.config.oracle.enabled ? 'Oracle' : null,
+      this.config.flowValidator.enabled ? 'FlowValidator' : null,
+      this.config.botTrapDetector.enabled ? 'BotTrapDetector' : null,
+      this.config.globalAggregator.enabled ? 'GlobalAggregator' : null,
+      this.config.conviction.enabled ? 'Conviction' : null,
     ].filter((item): item is string => item !== null);
   }
 }

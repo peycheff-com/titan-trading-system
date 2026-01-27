@@ -349,7 +349,7 @@ const Settings = () => {
                 {/* Mode is usually env var driven, but if we allow override: */}
                 <Select
                   value={config.mode || 'MOCK'}
-                  onValueChange={(val) => saveConfig('mode', val)}
+                  onValueChange={(val: any) => saveConfig('mode', val)}
                 >
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Select mode" />
@@ -389,7 +389,7 @@ const Settings = () => {
                       min={1}
                       max={20}
                       step={0.5}
-                      onValueChange={(val) =>
+                      onValueChange={(val: any) =>
                         setLocalRisk({ ...localRisk, phase1_risk_pct: val[0] / 100 })
                       }
                     />
@@ -407,7 +407,7 @@ const Settings = () => {
                       min={1}
                       max={10}
                       step={0.5}
-                      onValueChange={(val) =>
+                      onValueChange={(val: any) =>
                         setLocalRisk({ ...localRisk, phase2_risk_pct: val[0] / 100 })
                       }
                     />
@@ -425,7 +425,7 @@ const Settings = () => {
                       <Input
                         type="number"
                         value={localGuardrails.maxLeverage}
-                        onChange={(e) =>
+                        onChange={(e: any) =>
                           setLocalGuardrails({
                             ...localGuardrails,
                             maxLeverage: parseInt(e.target.value) || 1,
@@ -438,7 +438,7 @@ const Settings = () => {
                       <Input
                         type="number"
                         value={localGuardrails.maxPositionSizePct}
-                        onChange={(e) =>
+                        onChange={(e: any) =>
                           setLocalGuardrails({
                             ...localGuardrails,
                             maxPositionSizePct: parseInt(e.target.value) || 1,
@@ -452,7 +452,7 @@ const Settings = () => {
                         type="number"
                         step="0.1"
                         value={localGuardrails.minConfidenceScore}
-                        onChange={(e) =>
+                        onChange={(e: any) =>
                           setLocalGuardrails({
                             ...localGuardrails,
                             minConfidenceScore: parseFloat(e.target.value) || 0.1,
@@ -501,7 +501,7 @@ const Settings = () => {
                       min={0}
                       max={0.2}
                       step={0.001}
-                      onValueChange={(val) =>
+                      onValueChange={(val: any) =>
                         setLocalFees({ ...localFees, maker_fee_pct: val[0] / 100 })
                       }
                     />
@@ -518,7 +518,7 @@ const Settings = () => {
                       min={0}
                       max={0.2}
                       step={0.001}
-                      onValueChange={(val) =>
+                      onValueChange={(val: number[]) =>
                         setLocalFees({ ...localFees, taker_fee_pct: val[0] / 100 })
                       }
                     />
@@ -551,7 +551,7 @@ const Settings = () => {
                     <Input
                       type="number"
                       value={localSafety.max_consecutive_losses}
-                      onChange={(e) =>
+                      onChange={(e: any) =>
                         setLocalSafety({
                           ...localSafety,
                           max_consecutive_losses: parseInt(e.target.value) || 0,
@@ -575,7 +575,7 @@ const Settings = () => {
                       min={1}
                       max={20}
                       step={0.5}
-                      onValueChange={(val) =>
+                      onValueChange={(val: number[]) =>
                         setLocalSafety({ ...localSafety, max_daily_drawdown_pct: val[0] / 100 })
                       }
                     />
@@ -593,7 +593,7 @@ const Settings = () => {
                       min={1}
                       max={30}
                       step={0.5}
-                      onValueChange={(val) =>
+                      onValueChange={(val: number[]) =>
                         setLocalSafety({ ...localSafety, max_weekly_drawdown_pct: val[0] / 100 })
                       }
                     />
@@ -604,7 +604,7 @@ const Settings = () => {
                     <Input
                       type="number"
                       value={localSafety.circuit_breaker_cooldown_hours}
-                      onChange={(e) =>
+                      onChange={(e: any) =>
                         setLocalSafety({
                           ...localSafety,
                           circuit_breaker_cooldown_hours: parseInt(e.target.value) || 0,
@@ -649,7 +649,7 @@ const Settings = () => {
                       min={0}
                       max={2000}
                       step={10}
-                      onValueChange={(val) =>
+                      onValueChange={(val: number[]) =>
                         setLocalBacktester({ ...localBacktester, bulgariaLatencyMs: val[0] })
                       }
                     />
@@ -670,7 +670,7 @@ const Settings = () => {
                       min={0}
                       max={5}
                       step={0.1}
-                      onValueChange={(val) =>
+                      onValueChange={(val: number[]) =>
                         setLocalBacktester({ ...localBacktester, bulgariaSlippagePct: val[0] })
                       }
                     />
@@ -703,7 +703,7 @@ const Settings = () => {
                 <Switch
                   id="whitelist-enabled"
                   checked={localWhitelist.enabled}
-                  onCheckedChange={(checked) =>
+                onCheckedChange={(checked: boolean) =>
                     setLocalWhitelist({ ...localWhitelist, enabled: checked })
                   }
                 />
@@ -716,7 +716,7 @@ const Settings = () => {
                     <Checkbox
                       id={`asset-${asset}`}
                       checked={enabled}
-                      onCheckedChange={(checked) => {
+                      onCheckedChange={(checked: boolean | 'indeterminate') => {
                         const newAssets = { ...localWhitelist.assets, [asset]: !!checked };
                         setLocalWhitelist({ ...localWhitelist, assets: newAssets });
                       }}
@@ -753,7 +753,7 @@ const Settings = () => {
                     <Input
                       type="number"
                       value={localSystem.rate_limit_per_sec}
-                      onChange={(e) =>
+                      onChange={(e: any) =>
                         setLocalSystem({
                           ...localSystem,
                           rate_limit_per_sec: parseInt(e.target.value) || 10,
@@ -778,7 +778,7 @@ const Settings = () => {
                       <Input
                         type="number"
                         value={localMemory.maxRecords}
-                        onChange={(e) =>
+                        onChange={(e: any) =>
                           setLocalMemory({
                             ...localMemory,
                             maxRecords: parseInt(e.target.value) || 1000,
@@ -791,7 +791,7 @@ const Settings = () => {
                       <Input
                         type="number"
                         value={localMemory.archiveAfterDays}
-                        onChange={(e) =>
+                        onChange={(e: any) =>
                           setLocalMemory({
                             ...localMemory,
                             archiveAfterDays: parseInt(e.target.value) || 90,
@@ -837,7 +837,7 @@ const Settings = () => {
                     </div>
                     <Switch
                       checked={localApiKeys.testnet}
-                      onCheckedChange={(checked) =>
+                      onCheckedChange={(checked: boolean) =>
                         setLocalApiKeys({ ...localApiKeys, testnet: checked })
                       }
                     />
@@ -854,7 +854,7 @@ const Settings = () => {
                         type="password"
                         value={localApiKeys.bybit_api_key || ''}
                         placeholder="Masked"
-                        onChange={(e) =>
+                        onChange={(e: any) =>
                           setLocalApiKeys({ ...localApiKeys, bybit_api_key: e.target.value })
                         }
                       />
@@ -866,7 +866,7 @@ const Settings = () => {
                         type="password"
                         value={localApiKeys.bybit_api_secret || ''}
                         placeholder="Masked"
-                        onChange={(e) =>
+                        onChange={(e: any) =>
                           setLocalApiKeys({ ...localApiKeys, bybit_api_secret: e.target.value })
                         }
                       />
@@ -938,7 +938,7 @@ const Settings = () => {
                 <Input
                   type="password"
                   value={localApiKey}
-                  onChange={(e) => setLocalApiKey(e.target.value)}
+                  onChange={(e: any) => setLocalApiKey(e.target.value)}
                   placeholder={config.api_keys.has_api_key ? '••••••••••••••••' : 'Enter API Key'}
                 />
               </div>
@@ -948,7 +948,7 @@ const Settings = () => {
                 <Input
                   type="password"
                   value={localApiSecret}
-                  onChange={(e) => setLocalApiSecret(e.target.value)}
+                  onChange={(e: any) => setLocalApiSecret(e.target.value)}
                   placeholder={
                     config.api_keys.has_api_secret ? '••••••••••••••••' : 'Enter API Secret'
                   }

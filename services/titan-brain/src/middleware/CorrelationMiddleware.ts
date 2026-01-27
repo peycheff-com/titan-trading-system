@@ -62,7 +62,7 @@ export function createCorrelationMiddleware(
     }
 
     // Get or generate correlation ID
-     
+
     let correlationId = request.headers[finalConfig.headerName.toLowerCase()] as string;
 
     if (!correlationId && finalConfig.generateIfMissing) {
@@ -75,7 +75,7 @@ export function createCorrelationMiddleware(
     }
 
     // Add correlation ID to request
-     
+
     (request as RequestWithCorrelation).correlationId = correlationId;
 
     // Add correlation ID to response headers

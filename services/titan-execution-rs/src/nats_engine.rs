@@ -20,6 +20,7 @@ use crate::simulation_engine::SimulationEngine;
 
 /// Start the NATS Engine (Consumer Loop and Halt Listener)
 /// Returns a handle to the consumer task
+#[allow(clippy::too_many_arguments)]
 pub async fn start_nats_engine(
     client: async_nats::Client,
     shadow_state: Arc<RwLock<ShadowState>>,
@@ -783,53 +784,63 @@ pub async fn start_nats_engine(
             );
             e
         })?;
-    
+
     let global_halt_for_risk = global_halt_risk; // Move into this task
     let hmac_validator_risk_consumer = hmac_validator_risk;
 
-    let mut risk_messages = risk_consumer.messages().await.map_err(|e| e)?;
-    
+    let mut risk_messages = risk_consumer.messages().await?;
+
     tokio::spawn(async move {
         info!("👮 Risk Enforcer listening on '{}'", risk_subject);
         while let Some(msg_result) = risk_messages.next().await {
             if let Ok(msg) = msg_result {
                 // Parse Payload directly
-                 if let Ok(value) = serde_json::from_slice::<serde_json::Value>(&msg.payload) {
-                    
+                if let Ok(value) = serde_json::from_slice::<serde_json::Value>(&msg.payload) {
                     // 1. Validate Signature
                     if let Err(e) = hmac_validator_risk_consumer.validate_risk_command(&value) {
-                         error!("⛔ REJECTED Risk Command (Signature Verify Failed): {}", e);
-                         // ACK to drain bad commands
-                         msg.ack().await.ok();
-                         continue;
+                        error!("⛔ REJECTED Risk Command (Signature Verify Failed): {}", e);
+                        // ACK to drain bad commands
+                        msg.ack().await.ok();
+                        continue;
                     }
 
                     // 2. Action Dispatch
-                    let action = value.get("action").and_then(|s| s.as_str()).unwrap_or("UNKNOWN");
-                    let actor_id = value.get("actor_id").and_then(|s| s.as_str()).unwrap_or("sys");
-                    let reason = value.get("reason").and_then(|s| s.as_str()).unwrap_or("No reason");
+                    let action = value
+                        .get("action")
+                        .and_then(|s| s.as_str())
+                        .unwrap_or("UNKNOWN");
+                    let actor_id = value
+                        .get("actor_id")
+                        .and_then(|s| s.as_str())
+                        .unwrap_or("sys");
+                    let reason = value
+                        .get("reason")
+                        .and_then(|s| s.as_str())
+                        .unwrap_or("No reason");
 
                     match action {
                         "HALT" => {
-                            warn!("🚨 SOVEREIGN HALT RECEIVED from {} Reason: {}", actor_id, reason);
+                            warn!(
+                                "🚨 SOVEREIGN HALT RECEIVED from {} Reason: {}",
+                                actor_id, reason
+                            );
                             global_halt_for_risk.set_halt(true, reason);
-                        },
+                        }
                         "OVERRIDE_ALLOCATION" => {
                             info!("⚠️ Manual Override Received (TODO: Implement Logic)");
                             // TODO: inject into RiskGuard or ShadowState
-                        },
+                        }
                         _ => {
                             warn!("Unknown Risk Action: {}", action);
                         }
                     }
 
                     // 3. ACK
-                     msg.ack().await.ok();
-
-                 } else {
-                     error!("Malformed Risk Command JSON");
-                     msg.ack().await.ok();
-                 }
+                    msg.ack().await.ok();
+                } else {
+                    error!("Malformed Risk Command JSON");
+                    msg.ack().await.ok();
+                }
             }
         }
     });

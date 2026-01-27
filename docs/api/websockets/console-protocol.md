@@ -4,8 +4,8 @@ The Console WebSocket provides real-time updates for the Titan Console dashboard
 
 ## Connection Details
 
-- **URL**: `ws://localhost:3002/ws/console` (development)
-- **URL**: `wss://titan-execution.yourdomain.com/ws/console` (production)
+- **URL**: `ws://localhost:3101/ws/console` (development)
+- **URL**: `wss://titan-brain.yourdomain.com/ws/console` (production)
 - **Protocol**: WebSocket (RFC 6455)
 - **Authentication**: None (internal service communication)
 - **Reconnection**: Automatic with exponential backoff

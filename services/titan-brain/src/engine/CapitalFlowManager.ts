@@ -6,13 +6,13 @@
  */
 
 import {
+  CapitalFlowConfig,
   SweepDecision,
   SweepResult,
-  TreasuryStatus,
   TreasuryOperation,
-  CapitalFlowConfig,
-} from '../types/index.js';
-import { DatabaseManager } from '../db/DatabaseManager.js';
+  TreasuryStatus,
+} from "../types/index.js";
+import { DatabaseManager } from "../db/DatabaseManager.js";
 
 /**
  * Exchange API interface for wallet operations
@@ -60,7 +60,11 @@ export class CapitalFlowManager {
   /** Sweep notifier */
   private sweepNotifier: SweepNotifier | null = null;
 
-  constructor(config: CapitalFlowConfig, db?: DatabaseManager, exchangeAPI?: ExchangeWalletAPI) {
+  constructor(
+    config: CapitalFlowConfig,
+    db?: DatabaseManager,
+    exchangeAPI?: ExchangeWalletAPI,
+  ) {
     this.config = config;
     this.db = db ?? null;
     this.exchangeAPI = exchangeAPI ?? null;
@@ -70,7 +74,6 @@ export class CapitalFlowManager {
    * Set the sweep notifier
    */
   setSweepNotifier(notifier: SweepNotifier): void {
-     
     this.sweepNotifier = notifier;
   }
 
@@ -95,7 +98,6 @@ export class CapitalFlowManager {
     );
 
     if (result.rows.length > 0) {
-       
       this.highWatermark = parseFloat(result.rows[0].value);
     }
   }
@@ -113,7 +115,6 @@ export class CapitalFlowManager {
     );
 
     if (result.rows.length > 0) {
-       
       this.totalSwept = parseFloat(result.rows[0].total);
     }
   }
@@ -125,7 +126,6 @@ export class CapitalFlowManager {
    * @param amount - Target allocation in USD
    */
   setTargetAllocation(amount: number): void {
-     
     this.targetAllocation = Math.max(0, amount);
   }
 
@@ -149,15 +149,17 @@ export class CapitalFlowManager {
       return;
     }
 
-     
     this.highWatermark = value;
 
     // Persist to database
     if (this.db) {
-      await this.db.query(`INSERT INTO high_watermark (value, updated_at) VALUES ($1, $2)`, [
-        value,
-        Date.now(),
-      ]);
+      await this.db.query(
+        `INSERT INTO high_watermark (value, updated_at) VALUES ($1, $2)`,
+        [
+          value,
+          Date.now(),
+        ],
+      );
     }
 
     console.log(`High watermark set to $${value}`);
@@ -179,15 +181,18 @@ export class CapitalFlowManager {
     }
 
     const previousWatermark = this.highWatermark;
-     
+
     this.highWatermark = equity;
 
     // Persist to database
     if (this.db) {
-      await this.db.query(`INSERT INTO high_watermark (value, updated_at) VALUES ($1, $2)`, [
-        equity,
-        Date.now(),
-      ]);
+      await this.db.query(
+        `INSERT INTO high_watermark (value, updated_at) VALUES ($1, $2)`,
+        [
+          equity,
+          Date.now(),
+        ],
+      );
     }
 
     return true;
@@ -204,14 +209,15 @@ export class CapitalFlowManager {
     const futuresBalance = await this.getFuturesBalance();
 
     // Calculate threshold (target allocation * sweep threshold)
-    const sweepTriggerLevel = this.targetAllocation * this.config.sweepThreshold;
+    const sweepTriggerLevel = this.targetAllocation *
+      this.config.sweepThreshold;
 
     // Check if we exceed the threshold
     if (futuresBalance <= sweepTriggerLevel) {
       return {
         shouldSweep: false,
         amount: 0,
-        reason: 'Futures balance does not exceed sweep threshold',
+        reason: "Futures balance does not exceed sweep threshold",
         futuresBalance,
         targetAllocation: this.targetAllocation,
       };
@@ -228,7 +234,8 @@ export class CapitalFlowManager {
       return {
         shouldSweep: false,
         amount: 0,
-        reason: `Cannot sweep: would violate reserve limit of $${this.config.reserveLimit}`,
+        reason:
+          `Cannot sweep: would violate reserve limit of $${this.config.reserveLimit}`,
         futuresBalance,
         targetAllocation: this.targetAllocation,
       };
@@ -241,7 +248,7 @@ export class CapitalFlowManager {
       return {
         shouldSweep: false,
         amount: 0,
-        reason: 'No excess to sweep after reserve limit',
+        reason: "No excess to sweep after reserve limit",
         futuresBalance,
         targetAllocation: this.targetAllocation,
       };
@@ -250,7 +257,12 @@ export class CapitalFlowManager {
     return {
       shouldSweep: true,
       amount: sweepAmount,
-      reason: `Excess of $${sweepAmount.toFixed(2)} detected (${((futuresBalance / this.targetAllocation - 1) * 100).toFixed(1)}% over target)`,
+      reason: `Excess of $${sweepAmount.toFixed(2)} detected (${
+        (
+          (futuresBalance / this.targetAllocation - 1) *
+          100
+        ).toFixed(1)
+      }% over target)`,
       futuresBalance,
       targetAllocation: this.targetAllocation,
     };
@@ -274,7 +286,7 @@ export class CapitalFlowManager {
       return {
         success: false,
         amount: 0,
-        error: 'Invalid sweep amount: must be positive',
+        error: "Invalid sweep amount: must be positive",
         timestamp,
       };
     }
@@ -287,32 +299,35 @@ export class CapitalFlowManager {
       return {
         success: false,
         amount: 0,
-        error: `Sweep would violate reserve limit: $${remainingAfterSweep.toFixed(2)} < $${this.config.reserveLimit}`,
+        error: `Sweep would violate reserve limit: $${
+          remainingAfterSweep.toFixed(
+            2,
+          )
+        } < $${this.config.reserveLimit}`,
         timestamp,
       };
     }
 
     // Execute transfer with retry logic
-     
+
     let lastError: string | undefined;
 
-     
     for (let attempt = 1; attempt <= this.config.maxRetries; attempt++) {
       try {
         const result = await this.executeTransfer(amount);
 
         if (result.success) {
           // Update total swept (monotonically increasing)
-           
+
           this.totalSwept += amount;
 
           // Log the operation
           await this.logTreasuryOperation({
             timestamp,
-            operationType: 'SWEEP',
+            operationType: "SWEEP",
             amount,
-            fromWallet: 'FUTURES',
-            toWallet: 'SPOT',
+            fromWallet: "FUTURES",
+            toWallet: "SPOT",
             reason: `Automated profit sweep (attempt ${attempt})`,
             highWatermark: this.highWatermark,
           });
@@ -323,13 +338,13 @@ export class CapitalFlowManager {
               const newBalance = await this.getFuturesBalance();
               await this.sweepNotifier.sendSweepNotification(
                 amount,
-                'FUTURES',
-                'SPOT',
+                "FUTURES",
+                "SPOT",
                 `Automated profit sweep (attempt ${attempt})`,
                 newBalance,
               );
             } catch (error) {
-              console.error('Failed to send sweep notification:', error);
+              console.error("Failed to send sweep notification:", error);
             }
           }
 
@@ -343,7 +358,7 @@ export class CapitalFlowManager {
 
         lastError = result.error;
       } catch (error) {
-        lastError = error instanceof Error ? error.message : 'Unknown error';
+        lastError = error instanceof Error ? error.message : "Unknown error";
       }
 
       // Exponential backoff before retry
@@ -356,7 +371,8 @@ export class CapitalFlowManager {
     return {
       success: false,
       amount: 0,
-      error: `Sweep failed after ${this.config.maxRetries} attempts: ${lastError}`,
+      error:
+        `Sweep failed after ${this.config.maxRetries} attempts: ${lastError}`,
       timestamp,
     };
   }
@@ -368,10 +384,10 @@ export class CapitalFlowManager {
     amount: number,
   ): Promise<{ success: boolean; transactionId?: string; error?: string }> {
     if (!this.exchangeAPI) {
-      // Mock success for testing without exchange API
       return {
-        success: true,
-        transactionId: `mock-${Date.now()}`,
+        success: false,
+        error:
+          "Exchange Wallet API not initialized - Cannot perform real transfer",
       };
     }
 
@@ -424,7 +440,9 @@ export class CapitalFlowManager {
    * Log a treasury operation to the database
    * Requirement 4.7: Log all sweep transactions
    */
-  private async logTreasuryOperation(operation: TreasuryOperation): Promise<void> {
+  private async logTreasuryOperation(
+    operation: TreasuryOperation,
+  ): Promise<void> {
     if (!this.db) return;
 
     await this.db.query(
@@ -470,13 +488,13 @@ export class CapitalFlowManager {
       [limit],
     );
 
-    return result.rows.map((row) => ({
+    return result.rows.map((row: any) => ({
       id: row.id,
       timestamp: parseInt(row.timestamp, 10),
-      operationType: row.operation_type as 'SWEEP' | 'MANUAL_TRANSFER',
+      operationType: row.operation_type as "SWEEP" | "MANUAL_TRANSFER",
       amount: parseFloat(row.amount),
-      fromWallet: row.from_wallet as 'FUTURES' | 'SPOT',
-      toWallet: row.to_wallet as 'FUTURES' | 'SPOT',
+      fromWallet: row.from_wallet as "FUTURES" | "SPOT",
+      toWallet: row.to_wallet as "FUTURES" | "SPOT",
       reason: row.reason ?? undefined,
       highWatermark: parseFloat(row.high_watermark),
     }));
@@ -540,7 +558,10 @@ export class CapitalFlowManager {
    * @param currentEquity - Equity after the trade
    * @returns true if equity increased by more than 10%
    */
-  shouldTriggerSweepOnEquityIncrease(previousEquity: number, currentEquity: number): boolean {
+  shouldTriggerSweepOnEquityIncrease(
+    previousEquity: number,
+    currentEquity: number,
+  ): boolean {
     if (previousEquity <= 0) return false;
 
     const percentIncrease = (currentEquity - previousEquity) / previousEquity;

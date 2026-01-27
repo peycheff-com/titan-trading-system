@@ -5,6 +5,9 @@ import tseslint from 'typescript-eslint';
 export default tseslint.config(
   ...baseConfig,
   {
+    ignores: ["**/*.d.ts", "**/*.test.ts", "**/*.test.tsx", "**/tests/**", "**/dist/**", "**/node_modules/**"],
+  },
+  {
     plugins: {
       functional,
     },

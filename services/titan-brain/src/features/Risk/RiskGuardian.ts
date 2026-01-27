@@ -423,327 +423,338 @@ export class RiskGuardian {
       };
     }
 
-    // 0c. Survival Mode Check (Tail Risk)
-    // Calculate APTR for current + signal
-    const alphas = new Map<string, number>();
+    try {
+      // 0c. Survival Mode Check (Tail Risk)
+      // Calculate APTR for current + signal
+      const alphas = new Map<string, number>();
 
-    this.powerLawMetrics.forEach((m, s) => alphas.set(s, m.tailExponent));
+      this.powerLawMetrics.forEach((m, s) => alphas.set(s, m.tailExponent));
 
-    if (!alphas.has(signal.symbol)) alphas.set(signal.symbol, 2.0);
+      if (!alphas.has(signal.symbol)) alphas.set(signal.symbol, 2.0);
 
-    const currentAPTR = this.tailRiskCalculator.calculateAPTR(
-      currentPositions,
-      alphas,
-    );
-    const criticalThreshold = 0.5; // 50% max equity @ 20% crash
+      const currentAPTR = this.tailRiskCalculator.calculateAPTR(
+        currentPositions,
+        alphas,
+      );
+      const criticalThreshold = 0.5; // 50% max equity @ 20% crash
 
-    if (
-      this.tailRiskCalculator.isRiskCritical(
-        currentAPTR,
-        this.currentEquity,
-        criticalThreshold,
-      )
-    ) {
       if (
-        defcon !== DefconLevel.DEFENSIVE && defcon !== DefconLevel.EMERGENCY
+        this.tailRiskCalculator.isRiskCritical(
+          currentAPTR,
+          this.currentEquity,
+          criticalThreshold,
+        )
       ) {
-        console.warn(
-          `[RiskGuardian] APTR Critical (${
-            currentAPTR.toFixed(2)
-          }). Triggering Survival Mode.`,
-        );
-        this.governanceEngine.setOverride(DefconLevel.DEFENSIVE);
-      }
+        if (
+          defcon !== DefconLevel.DEFENSIVE && defcon !== DefconLevel.EMERGENCY
+        ) {
+          console.warn(
+            `[RiskGuardian] APTR Critical (${
+              currentAPTR.toFixed(2)
+            }). Triggering Survival Mode.`,
+          );
+          this.governanceEngine.setOverride(DefconLevel.DEFENSIVE);
+        }
 
-      return {
-        approved: false,
-        reason: `SURVIVAL_MODE: APTR Critical (${currentAPTR.toFixed(2)} > ${
-          (
-            this.currentEquity * criticalThreshold
-          ).toFixed(2)
-        })`,
-        riskMetrics: this.getRiskMetrics(currentPositions),
-      };
-    }
-
-    // 0e. Bayesian Confidence Calibration
-    // Replaces raw confidence with evidential probability
-
-    let effectiveConfidence = signal.confidence ?? 80;
-    if (signal.phaseId === "phase1" && signal.type !== "MANUAL") {
-      const trapType = (signal as any).trap_type || "UNKNOWN";
-      const calibratedProb = this.bayesianCalibrator.getCalibratedProbability(
-        trapType,
-        effectiveConfidence,
-      );
-      // Map back to 0-100 scale for legacy compatibility
-      effectiveConfidence = calibratedProb * 100;
-      console.log(
-        `[RiskGuardian] ${
-          this.bayesianCalibrator.getShrinkageReport(
-            trapType,
-            signal.confidence ?? 80,
-          )
-        }`,
-      );
-    }
-
-    // Update confidence check
-    if (effectiveConfidence / 100 < this.config.minConfidenceScore) {
-      return {
-        approved: false,
-        reason: `CONFIDENCE_VETO: Calibrated ${
-          effectiveConfidence.toFixed(
-            2,
-          )
-        }% < ${this.config.minConfidenceScore * 100}%`,
-        riskMetrics: this.getRiskMetrics(currentPositions),
-      };
-    }
-
-    // Initial signal size
-
-    let effectiveSize = signal.requestedSize;
-
-    // 0f. Fractal Phase Risk Constraints
-    if (this.config.fractal && this.config.fractal[signal.phaseId]) {
-      const constraints = this.config.fractal[signal.phaseId];
-      const phasePositions = currentPositions.filter((p) =>
-        p.phaseId === signal.phaseId
-      );
-      const phaseNotional = phasePositions.reduce((sum, p) => sum + p.size, 0) +
-        effectiveSize;
-      const phaseLeverage = phaseNotional / this.currentEquity;
-
-      if (phaseLeverage > constraints.maxLeverage) {
         return {
           approved: false,
-          reason: `FRACTAL_VETO: ${signal.phaseId} leverage ${
-            phaseLeverage.toFixed(
-              2,
-            )
-          }x > max ${constraints.maxLeverage}x`,
-          riskMetrics: this.getRiskMetrics(currentPositions),
-        };
-      }
-
-      if (phaseNotional > this.currentEquity * constraints.maxAllocation) {
-        return {
-          approved: false,
-          reason: `FRACTAL_VETO: ${signal.phaseId} allocation ${
+          reason: `SURVIVAL_MODE: APTR Critical (${currentAPTR.toFixed(2)} > ${
             (
-              (phaseNotional / this.currentEquity) *
-              100
-            ).toFixed(1)
-          }% > max ${constraints.maxAllocation * 100}%`,
+              this.currentEquity * criticalThreshold
+            ).toFixed(2)
+          })`,
           riskMetrics: this.getRiskMetrics(currentPositions),
         };
       }
-    }
 
-    const currentLeverage = this.calculateCombinedLeverage(currentPositions);
-    const portfolioDelta = this.calculatePortfolioDelta(currentPositions);
-    const portfolioBeta = this.getPortfolioBeta(currentPositions);
+      // 0e. Bayesian Confidence Calibration
+      // Replaces raw confidence with evidential probability
 
-    // Requirement: Latency Feedback Loop
-    if (signal.latencyProfile && signal.latencyProfile.endToEnd > 200) {
-      if (signal.latencyProfile.endToEnd > 500) {
-        return {
-          approved: false,
-          reason:
-            `LATENCY_VETO: System lag ${signal.latencyProfile.endToEnd}ms > 500ms`,
-          riskMetrics: this.getRiskMetrics(currentPositions),
-        };
+      let effectiveConfidence = signal.confidence ?? 80;
+      if (signal.phaseId === "phase1" && signal.type !== "MANUAL") {
+        const trapType = (signal as any).trap_type || "UNKNOWN";
+        const calibratedProb = this.bayesianCalibrator.getCalibratedProbability(
+          trapType,
+          effectiveConfidence,
+        );
+        // Map back to 0-100 scale for legacy compatibility
+        effectiveConfidence = calibratedProb * 100;
+        console.log(
+          `[RiskGuardian] ${
+            this.bayesianCalibrator.getShrinkageReport(
+              trapType,
+              signal.confidence ?? 80,
+            )
+          }`,
+        );
       }
-      const penalty = 0.25;
-      effectiveSize = signal.requestedSize * (1 - penalty);
-      console.warn(
-        `[RiskGuardian] High Latency (${signal.latencyProfile.endToEnd}ms) - Penalizing size by 25%`,
-      );
-    }
 
-    const projectedLeverage = this.calculateProjectedLeverage(
-      { ...signal, requestedSize: effectiveSize },
-      currentPositions,
-    );
-
-    // 0d. PowerLaw Regime Gates & Continuous Throttling
-    const plMetrics = this.powerLawMetrics.get(signal.symbol) ??
-      this.powerLawMetrics.get("BTCUSDT");
-    if (plMetrics) {
-      // Rule 1: Extreme Tail Risk Gating
-      if (plMetrics.tailExponent < 2.0 && projectedLeverage > 5) {
+      // Update confidence check
+      if (effectiveConfidence / 100 < this.config.minConfidenceScore) {
         return {
           approved: false,
-          reason: `TAIL_RISK_VETO: Extreme tail risk (α=${
-            plMetrics.tailExponent.toFixed(
+          reason: `CONFIDENCE_VETO: Calibrated ${
+            effectiveConfidence.toFixed(
               2,
             )
-          }) prohibits leverage > 5x`,
+          }% < ${this.config.minConfidenceScore * 100}%`,
           riskMetrics: this.getRiskMetrics(currentPositions),
         };
       }
 
-      // Rule 2: Volatility Cluster Gating
-      if (
-        plMetrics.volatilityCluster.state === "expanding" &&
-        signal.phaseId === "phase1"
-      ) {
-        return {
-          approved: false,
-          reason: `REGIME_VETO: Expanding volatility rejects Phase 1 scalps`,
-          riskMetrics: this.getRiskMetrics(currentPositions),
-        };
+      // Initial signal size
+
+      let effectiveSize = signal.requestedSize;
+
+      // 0f. Fractal Phase Risk Constraints
+      if (this.config.fractal && this.config.fractal[signal.phaseId]) {
+        const constraints = this.config.fractal[signal.phaseId];
+        const phasePositions = currentPositions.filter((p) =>
+          p.phaseId === signal.phaseId
+        );
+        const phaseNotional = phasePositions.reduce((sum, p) =>
+          sum + p.size, 0) +
+          effectiveSize;
+        const phaseLeverage = phaseNotional / this.currentEquity;
+
+        if (phaseLeverage > constraints.maxLeverage) {
+          return {
+            approved: false,
+            reason: `FRACTAL_VETO: ${signal.phaseId} leverage ${
+              phaseLeverage.toFixed(
+                2,
+              )
+            }x > max ${constraints.maxLeverage}x`,
+            riskMetrics: this.getRiskMetrics(currentPositions),
+          };
+        }
+
+        if (phaseNotional > this.currentEquity * constraints.maxAllocation) {
+          return {
+            approved: false,
+            reason: `FRACTAL_VETO: ${signal.phaseId} allocation ${
+              (
+                (phaseNotional / this.currentEquity) *
+                100
+              ).toFixed(1)
+            }% > max ${constraints.maxAllocation * 100}%`,
+            riskMetrics: this.getRiskMetrics(currentPositions),
+          };
+        }
       }
 
-      // Rule 3: Continuous Alpha Throttling
-      // Apply size reduction based on heavy tails
-      // Multiplier = Min(1.0, (Alpha - 1.0) / 2.0)
-      // Alpha 3.0 -> 1.0 (No penalty)
-      // Alpha 2.0 -> 0.5 (50% size detection)
-      // Alpha 1.5 -> 0.25
-      const alphaThrottle = this.getAlphaThrottle(plMetrics.tailExponent);
-      if (alphaThrottle < 1.0 && signal.phaseId !== "phase3") {
-        effectiveSize = effectiveSize * alphaThrottle;
+      const currentLeverage = this.calculateCombinedLeverage(currentPositions);
+      const portfolioDelta = this.calculatePortfolioDelta(currentPositions);
+      const portfolioBeta = this.getPortfolioBeta(currentPositions);
+
+      // Requirement: Latency Feedback Loop
+      if (signal.latencyProfile && signal.latencyProfile.endToEnd > 200) {
+        if (signal.latencyProfile.endToEnd > 500) {
+          return {
+            approved: false,
+            reason:
+              `LATENCY_VETO: System lag ${signal.latencyProfile.endToEnd}ms > 500ms`,
+            riskMetrics: this.getRiskMetrics(currentPositions),
+          };
+        }
+        const penalty = 0.25;
+        effectiveSize = signal.requestedSize * (1 - penalty);
         console.warn(
-          `[RiskGuardian] Alpha Throttling (α=${
-            plMetrics.tailExponent.toFixed(
-              2,
-            )
-          }) -> Scaling size by ${(alphaThrottle * 100).toFixed(0)}%`,
+          `[RiskGuardian] High Latency (${signal.latencyProfile.endToEnd}ms) - Penalizing size by 25%`,
         );
       }
-    }
 
-    // Cost-Aware Veto (Expectancy Check)
-    if (this.config.costVeto?.enabled) {
-      const expectancy = this.checkExpectancy(
-        signal,
-        effectiveConfidence / 100,
+      const projectedLeverage = this.calculateProjectedLeverage(
+        { ...signal, requestedSize: effectiveSize },
+        currentPositions,
       );
-      if (!expectancy.passed) {
-        return {
-          approved: false,
-          reason: `COST_AWARE_VETO: ${expectancy.reason}`,
-          riskMetrics: this.getRiskMetrics(currentPositions),
-        };
+
+      // 0d. PowerLaw Regime Gates & Continuous Throttling
+      const plMetrics = this.powerLawMetrics.get(signal.symbol) ??
+        this.powerLawMetrics.get("BTCUSDT");
+      if (plMetrics) {
+        // Rule 1: Extreme Tail Risk Gating
+        if (plMetrics.tailExponent < 2.0 && projectedLeverage > 5) {
+          return {
+            approved: false,
+            reason: `TAIL_RISK_VETO: Extreme tail risk (α=${
+              plMetrics.tailExponent.toFixed(
+                2,
+              )
+            }) prohibits leverage > 5x`,
+            riskMetrics: this.getRiskMetrics(currentPositions),
+          };
+        }
+
+        // Rule 2: Volatility Cluster Gating
+        if (
+          plMetrics.volatilityCluster.state === "expanding" &&
+          signal.phaseId === "phase1"
+        ) {
+          return {
+            approved: false,
+            reason: `REGIME_VETO: Expanding volatility rejects Phase 1 scalps`,
+            riskMetrics: this.getRiskMetrics(currentPositions),
+          };
+        }
+
+        // Rule 3: Continuous Alpha Throttling
+        // Apply size reduction based on heavy tails
+        // Multiplier = Min(1.0, (Alpha - 1.0) / 2.0)
+        // Alpha 3.0 -> 1.0 (No penalty)
+        // Alpha 2.0 -> 0.5 (50% size detection)
+        // Alpha 1.5 -> 0.25
+        const alphaThrottle = this.getAlphaThrottle(plMetrics.tailExponent);
+        if (alphaThrottle < 1.0 && signal.phaseId !== "phase3") {
+          effectiveSize = effectiveSize * alphaThrottle;
+          console.warn(
+            `[RiskGuardian] Alpha Throttling (α=${
+              plMetrics.tailExponent.toFixed(
+                2,
+              )
+            }) -> Scaling size by ${(alphaThrottle * 100).toFixed(0)}%`,
+          );
+        }
       }
-    }
 
-    // Calculate correlation with existing positions
-    const maxCorrelation = this.calculateMaxCorrelationWithPositions(
-      signal,
-      currentPositions,
-    );
-
-    const riskMetrics: RiskMetrics = {
-      currentLeverage,
-      projectedLeverage,
-      correlation: maxCorrelation,
-      portfolioDelta,
-      portfolioBeta,
-    };
-
-    // Requirement 3.5: Phase 3 hedge auto-approval
-    if (this.isPhase3HedgeThatReducesDelta(signal, portfolioDelta)) {
-      return {
-        approved: true,
-        reason: "Phase 3 hedge approved: reduces global delta",
-        adjustedSize: signal.requestedSize,
-        riskMetrics,
-      };
-    }
-
-    // Requirement 3.8: Check minimum stop distance
-    const entryPrice = signal.entryPrice ?? this.getSignalPrice(signal);
-
-    if (signal.stopLossPrice && entryPrice) {
-      const volatility = signal.volatility ??
-        this.calculateVolatility(signal.symbol);
-      const stopDistance = Math.abs(entryPrice - signal.stopLossPrice);
-      const minDistance = volatility * this.config.minStopDistanceMultiplier;
-
-      if (stopDistance < minDistance) {
-        return {
-          approved: false,
-          reason: `Stop distance too tight: ${stopDistance.toFixed(2)} < ${
-            minDistance.toFixed(
-              2,
-            )
-          } (${this.config.minStopDistanceMultiplier}x ATR)`,
-          riskMetrics,
-        };
-      }
-    }
-
-    // Requirement 3.3: Check leverage cap
-    const govMultiplier = this.governanceEngine.getLeverageMultiplier();
-    const maxLeverage =
-      this.allocationEngine.getMaxLeverage(this.currentEquity) * govMultiplier;
-    if (projectedLeverage > maxLeverage) {
-      return {
-        approved: false,
-        reason: `Leverage cap exceeded: projected ${
-          projectedLeverage.toFixed(
-            2,
-          )
-        }x > max ${maxLeverage}x`,
-        riskMetrics,
-      };
-    }
-
-    // Requirement 3.7: High correlation check
-    if (maxCorrelation > this.config.maxCorrelation) {
-      if (this.correlationNotifier) {
-        const affectedPositions = this.getCorrelatedPositions(
+      // Cost-Aware Veto (Expectancy Check)
+      if (this.config.costVeto?.enabled) {
+        const expectancy = this.checkExpectancy(
           signal,
-          currentPositions,
+          effectiveConfidence / 100,
         );
-        this.correlationNotifier
-          .sendHighCorrelationWarning(
-            maxCorrelation,
-            this.config.maxCorrelation,
-            affectedPositions,
-          )
-          .catch((error) => {
-            console.error("Failed to send high correlation warning:", error);
-          });
+        if (!expectancy.passed) {
+          return {
+            approved: false,
+            reason: `COST_AWARE_VETO: ${expectancy.reason}`,
+            riskMetrics: this.getRiskMetrics(currentPositions),
+          };
+        }
       }
 
-      const hasCorrelatedSameDirection = this
-        .hasCorrelatedSameDirectionPosition(
-          signal,
-          currentPositions,
-        );
+      // Calculate correlation with existing positions
+      const maxCorrelation = this.calculateMaxCorrelationWithPositions(
+        signal,
+        currentPositions,
+      );
 
-      if (hasCorrelatedSameDirection) {
-        effectiveSize = effectiveSize * (1 - this.config.correlationPenalty);
+      const riskMetrics: RiskMetrics = {
+        currentLeverage,
+        projectedLeverage,
+        correlation: maxCorrelation,
+        portfolioDelta,
+        portfolioBeta,
+      };
 
+      // Requirement 3.5: Phase 3 hedge auto-approval
+      if (this.isPhase3HedgeThatReducesDelta(signal, portfolioDelta)) {
         return {
           approved: true,
-          reason: `High correlation (${
-            maxCorrelation.toFixed(
-              2,
-            )
-          }) with same direction: size reduced by ${
-            this.config.correlationPenalty * 100
-          }%`,
-          adjustedSize: effectiveSize,
+          reason: "Phase 3 hedge approved: reduces global delta",
+          adjustedSize: signal.requestedSize,
           riskMetrics,
         };
       }
+
+      // Requirement 3.8: Check minimum stop distance
+      const entryPrice = signal.entryPrice ?? this.getSignalPrice(signal);
+
+      if (signal.stopLossPrice && entryPrice) {
+        const volatility = signal.volatility ??
+          this.calculateVolatility(signal.symbol);
+        const stopDistance = Math.abs(entryPrice - signal.stopLossPrice);
+        const minDistance = volatility * this.config.minStopDistanceMultiplier;
+
+        if (stopDistance < minDistance) {
+          return {
+            approved: false,
+            reason: `Stop distance too tight: ${stopDistance.toFixed(2)} < ${
+              minDistance.toFixed(
+                2,
+              )
+            } (${this.config.minStopDistanceMultiplier}x ATR)`,
+            riskMetrics,
+          };
+        }
+      }
+
+      // Requirement 3.3: Check leverage cap
+      const govMultiplier = this.governanceEngine.getLeverageMultiplier();
+      const maxLeverage =
+        this.allocationEngine.getMaxLeverage(this.currentEquity) *
+        govMultiplier;
+      if (projectedLeverage > maxLeverage) {
+        return {
+          approved: false,
+          reason: `Leverage cap exceeded: projected ${
+            projectedLeverage.toFixed(
+              2,
+            )
+          }x > max ${maxLeverage}x`,
+          riskMetrics,
+        };
+      }
+
+      // Requirement 3.7: High correlation check
+      if (maxCorrelation > this.config.maxCorrelation) {
+        if (this.correlationNotifier) {
+          const affectedPositions = this.getCorrelatedPositions(
+            signal,
+            currentPositions,
+          );
+          this.correlationNotifier
+            .sendHighCorrelationWarning(
+              maxCorrelation,
+              this.config.maxCorrelation,
+              affectedPositions,
+            )
+            .catch((error) => {
+              console.error("Failed to send high correlation warning:", error);
+            });
+        }
+
+        const hasCorrelatedSameDirection = this
+          .hasCorrelatedSameDirectionPosition(
+            signal,
+            currentPositions,
+          );
+
+        if (hasCorrelatedSameDirection) {
+          effectiveSize = effectiveSize * (1 - this.config.correlationPenalty);
+
+          return {
+            approved: true,
+            reason: `High correlation (${
+              maxCorrelation.toFixed(
+                2,
+              )
+            }) with same direction: size reduced by ${
+              this.config.correlationPenalty * 100
+            }%`,
+            adjustedSize: effectiveSize,
+            riskMetrics,
+          };
+        }
+      }
+
+      const wasAdjusted = effectiveSize !== signal.requestedSize;
+
+      return {
+        approved: true,
+        reason: wasAdjusted
+          ? "Signal approved with size adjustment: Risk/Latency/Alpha"
+          : "Signal approved: within risk limits",
+        adjustedSize: effectiveSize,
+        riskMetrics,
+      };
+    } catch (err: any) {
+      console.error("[RiskGuardian] Risk check failed:", err);
+      return {
+        approved: false,
+        reason: `RISK_CHECK_ERROR: ${err.message}`,
+        riskMetrics: this.getRiskMetrics(currentPositions),
+      };
     }
-
-    const wasAdjusted = effectiveSize !== signal.requestedSize;
-
-    return {
-      approved: true,
-      reason: wasAdjusted
-        ? "Signal approved with size adjustment: Risk/Latency/Alpha"
-        : "Signal approved: within risk limits",
-      adjustedSize: effectiveSize,
-      riskMetrics,
-    };
   }
 
   /**
@@ -925,8 +936,10 @@ export class RiskGuardian {
     const historyB = this.priceHistory.get(assetB) ?? [];
 
     if (historyA.length < 2 || historyB.length < 2) {
-      // Insufficient data - assume moderate correlation
-      return 0.5;
+      // Insufficient data for strict correlation check - Fail Closed
+      throw new Error(
+        `Insufficient price history for correlation check: ${assetA} or ${assetB}`,
+      );
     }
 
     // Align timestamps and calculate returns

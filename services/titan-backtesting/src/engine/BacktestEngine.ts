@@ -1,11 +1,11 @@
 import { BacktestResult, OHLCV, SimulationConfig, Trade } from '../types/index.js';
 import { EventEmitter } from 'events';
 // Import Strategy Engine from Phase 1 (Core Logic)
-// @ts-ignore - Dynamic import to avoid build strictness for now
+// Dynamic import to avoid build strictness for now
 import { TitanTrap } from 'titan-phase1-scavenger/src/engine/TitanTrap.js';
-// @ts-ignore
+
 import { TripwireCalculators } from 'titan-phase1-scavenger/src/calculators/TripwireCalculators.js';
-// @ts-ignore
+
 import { VelocityCalculator } from 'titan-phase1-scavenger/src/calculators/VelocityCalculator.js';
 
 import { MockBinanceSpotClient } from '../mocks/MockBinanceSpotClient.js';
@@ -93,7 +93,6 @@ export class BacktestEngine extends EventEmitter {
     await this.engine.start();
 
     const startTime = Date.now();
-    let processedCandles = 0;
 
     // 4. Feeder Loop
     // We simulate time by feeding candles/trades sequentially
@@ -117,8 +116,6 @@ export class BacktestEngine extends EventEmitter {
 
       // In a real backtest, we would tick the clock forward here.
       // For now, we assume synchronous processing of the pushed trade.
-
-      processedCandles++;
     }
 
     // Stop Engine

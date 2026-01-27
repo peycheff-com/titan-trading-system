@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ServiceHealthCard } from '@/components/titan/ServiceHealthCard';
 import { ConfirmModal } from '@/components/titan/ConfirmModal';
 import { HazardButton } from '@/components/titan/HazardButton';
@@ -30,7 +31,7 @@ const defaultInfraStatus = {
 export default function InfraPage() {
   const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [showFailoverModal, setShowFailoverModal] = useState(false);
-  const { isArmed, arm, disarm, expiresAt } = useSafety();
+  const { isArmed, armConsole: arm, disarmConsole: disarm, expiresAt } = useSafety();
 
   const { services, backups, standby } = defaultInfraStatus;
   const sbConfig = standbyConfig[standby.status];

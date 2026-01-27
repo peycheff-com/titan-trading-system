@@ -34,10 +34,8 @@ export class ActiveInferenceEngine {
    * returns current Cortisol Level
    */
   public processUpdate(state: MarketState): number {
-     
     this.historyWindow.push(state.price);
     if (this.historyWindow.length > this.config.windowSize) {
-       
       this.historyWindow.shift();
     }
 
@@ -46,9 +44,8 @@ export class ActiveInferenceEngine {
     try {
       // Calculate Returns: (P_t - P_t-1) / P_t-1
       const returns = [];
-       
+
       for (let i = 1; i < this.historyWindow.length; i++) {
-         
         returns.push(
           (this.historyWindow[i] - this.historyWindow[i - 1]) / this.historyWindow[i - 1],
         );
@@ -65,7 +62,7 @@ export class ActiveInferenceEngine {
         this.expectedDistribution,
         currentDistribution,
       );
-       
+
       this.lastSurprise = surprise;
 
       // Map Surprise to Cortisol (Sigmoid activation)
@@ -76,7 +73,6 @@ export class ActiveInferenceEngine {
       const k = this.config.sensitivity;
       const x0 = this.config.surpriseOffset;
 
-       
       this.cortisolLevel = this.sigmoid((surprise - x0) * k);
 
       return this.cortisolLevel;
@@ -107,10 +103,10 @@ export class ActiveInferenceEngine {
   private generateGaussian(bins: number): number[] {
     // Simplified Bell curve logic
     const dist = [];
-     
+
     for (let i = 0; i < bins; i++) {
       const x = (i - bins / 2) / (bins / 4); // Normalize
-       
+
       dist.push(Math.exp(-0.5 * x * x));
     }
     // Normalize to sum 1

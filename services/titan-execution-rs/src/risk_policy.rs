@@ -3,18 +3,13 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum RiskState {
+    #[default]
     Normal,
     Cautious,
     Defensive,
     Emergency,
-}
-
-impl Default for RiskState {
-    fn default() -> Self {
-        RiskState::Normal
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

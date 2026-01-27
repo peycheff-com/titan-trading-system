@@ -14,9 +14,13 @@ const mockConfig: BrainConfig = {
 
 describe("RiskManager", () => {
     let riskManager: RiskManager;
+    let mockPublisher: any;
 
     beforeEach(() => {
-        riskManager = new RiskManager(mockConfig);
+        mockPublisher = {
+            publishRiskCommand: jest.fn().mockResolvedValue(undefined),
+        };
+        riskManager = new RiskManager(mockConfig, mockPublisher);
     });
 
     it("should initialize with safe state", () => {

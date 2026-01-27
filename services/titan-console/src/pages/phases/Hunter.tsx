@@ -208,7 +208,7 @@ export default function HunterPhase() {
         {
           key: 'conviction',
           header: 'Mult',
-          align: 'right',
+          align: 'right' as const,
           render: (item: any) => (
             <span
               className={cn(
@@ -232,7 +232,7 @@ export default function HunterPhase() {
           header: 'Status',
           render: (item: any) => (
             <StatusPill
-              status={item.status === 'A+' ? 'active' : item.status === 'B' ? 'warning' : 'offline'}
+              status={item.status === 'A+' ? 'healthy' : item.status === 'B' ? 'degraded' : 'offline'}
               size="sm"
             />
           ),
@@ -240,13 +240,13 @@ export default function HunterPhase() {
         {
           key: 'score',
           header: 'Score',
-          align: 'right',
+          align: 'right' as const,
           render: (item: any) => item.score.toFixed(2),
         },
         {
           key: 'timestamp',
           header: 'Updated',
-          align: 'right',
+          align: 'right' as const,
           render: (item: any) => new Date(item.timestamp).toLocaleTimeString(),
         },
       ];

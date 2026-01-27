@@ -1,7 +1,7 @@
-import { DatabaseManager } from "../db/DatabaseManager.js";
-import { getNatsClient, NatsClient } from "@titan/shared";
-import { TitanEvent, TitanEventSchema } from "../events/EventTypes.js";
-import { logger } from "../utils/Logger.js";
+import { DatabaseManager } from '../db/DatabaseManager.js';
+import { getNatsClient, NatsClient } from '@titan/shared';
+import { TitanEvent, TitanEventSchema } from '../events/EventTypes.js';
+import { logger } from '../utils/Logger.js';
 
 export class EventStore {
   private nats: NatsClient;
@@ -17,10 +17,7 @@ export class EventStore {
     // Validate event schema
     const validation = TitanEventSchema.safeParse(event);
     if (!validation.success) {
-      logger.error(
-        "Invalid event schema",
-        new Error(JSON.stringify(validation.error.format())),
-      );
+      logger.error('Invalid event schema', new Error(JSON.stringify(validation.error.format())));
       throw new Error(`Invalid event schema: ${validation.error.message}`);
     }
 
@@ -47,7 +44,7 @@ export class EventStore {
       await this.nats.publishEnvelope(subject, event.payload, {
         type: `titan.event.${event.type.toLowerCase()}.v1`,
         version: event.metadata.version || 1,
-        producer: "titan-brain",
+        producer: 'titan-brain',
         id: event.id,
         correlation_id: event.metadata.traceId, // Using traceId as correlation_id
         causation_id: event.aggregateId, // Mapping aggregateId loosely to causation/context
@@ -77,9 +74,7 @@ export class EventStore {
   /**
    * Replay all events (e.g. for state reconstruction)
    */
-  async replayAll(
-    options?: { startTime?: Date; type?: string },
-  ): Promise<TitanEvent[]> {
+  async replayAll(options?: { startTime?: Date; type?: string }): Promise<TitanEvent[]> {
     let query = `SELECT * FROM event_log`;
     const params: any[] = [];
     const conditions: string[] = [];
@@ -97,7 +92,7 @@ export class EventStore {
     }
 
     if (conditions.length > 0) {
-      query += ` WHERE ${conditions.join(" AND ")}`;
+      query += ` WHERE ${conditions.join(' AND ')}`;
     }
 
     query += ` ORDER BY created_at ASC`;
@@ -109,10 +104,7 @@ export class EventStore {
   /**
    * Get recent events (paginated/limited) for Audit Log UI
    */
-  async getRecentEvents(
-    limit: number = 50,
-    type?: string,
-  ): Promise<TitanEvent[]> {
+  async getRecentEvents(limit: number = 50, type?: string): Promise<TitanEvent[]> {
     let query = `SELECT * FROM event_log`;
     const params: any[] = [];
 
@@ -140,7 +132,7 @@ export class EventStore {
 
     let sql = `SELECT * FROM event_log`;
     if (conditions.length > 0) {
-      sql += ` WHERE ${conditions.join(" AND ")}`;
+      sql += ` WHERE ${conditions.join(' AND ')}`;
     }
     sql += ` ORDER BY created_at DESC LIMIT $${dbParams.length + 1}`;
     dbParams.push(limit);

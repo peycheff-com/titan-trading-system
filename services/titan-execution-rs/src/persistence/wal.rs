@@ -11,7 +11,7 @@ const META_TABLE: TableDefinition<&str, Vec<u8>> = TableDefinition::new("metadat
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum WalEntry {
-    IntentReceived(Intent),
+    IntentReceived(Box<Intent>),
     OrderPlaced {
         signal_id: String,
         exchange: String,

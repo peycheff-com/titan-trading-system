@@ -44,6 +44,9 @@ The Sentinel is an institutional-grade market-neutral hedge fund system that tre
 
 Run as part of the full Titan stack:
 
+**Production Ready (Jan 2026)**.
+
+
 ```bash
 cd ../..
 cd ../..

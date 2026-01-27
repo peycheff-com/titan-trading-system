@@ -46,14 +46,12 @@ export class PositionManager {
     // If size is zero/negligible, remove it
     if (position.size <= 0.000001) {
       if (this.positions.has(key)) {
-         
         this.positions.delete(key);
         logger.info(`[PositionManager] Closed/Removed position: ${key}`);
       }
       return;
     }
 
-     
     this.positions.set(key, position);
     // logger.debug(`[PositionManager] Updated position: ${key} | Size: ${position.size}`);
   }
@@ -83,7 +81,6 @@ export class PositionManager {
    * Useful for risk aggregation.
    */
   public getNetExposure(symbol: string): number {
-     
     let net = 0;
     for (const pos of this.positions.values()) {
       if (pos.symbol === symbol) {
@@ -107,7 +104,6 @@ export class PositionManager {
     const keysToRemove = new Set<string>();
     for (const [key, pos] of this.positions) {
       if (pos.exchange === exchange) {
-         
         keysToRemove.add(key);
       }
     }
@@ -122,20 +118,18 @@ export class PositionManager {
       }
       const key = this.generateKey(pos);
       this.updatePosition(pos);
-       
+
       keysToRemove.delete(key);
     }
 
     // 3. Remove positions not in the new list (stale)
     for (const key of keysToRemove) {
-       
       this.positions.delete(key);
       logger.info(`[PositionManager] Removed stale position during sync: ${key}`);
     }
   }
 
   public clear(): void {
-     
     this.positions.clear();
   }
 }

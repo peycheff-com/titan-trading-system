@@ -207,11 +207,17 @@ psql -h localhost -U postgres -d titan_brain -f src/db/schema.sql
 
 ## Configuration
 
-The Brain supports multiple configuration sources with the following priority (highest to lowest):
+The Brain uses a Zod-validated configuration system that supports defaults, environment variables, and external JSON files.
 
-1. **Environment variables**
-2. **Configuration file (JSON)**
-3. **Default values**
+### Configuration Loading
+
+Configuration is loaded in the following order:
+
+1.  **Defaults**: Hardcoded safe defaults (valid for development).
+2.  **Environment Variables**: `TITAN_*` and standard env vars override defaults.
+3.  **JSON Config**: `CONFIG_FILE=path/to/config.json` overrides everything.
+
+The configuration is strictly validated against a Schema on startup.
 
 ### Environment Variables
 
@@ -229,6 +235,7 @@ cp .env.example .env
 | `INITIAL_EQUITY` | Starting capital (USD) | `200` |
 | `LOG_LEVEL` | Logging level | `info` |
 | `SERVER_PORT` | Webhook server port | `3100` |
+| `MAX_STARTUP_TIME` | Milliseconds to wait for dependencies | `300000` (5 min) |
 
 #### Database Settings
 

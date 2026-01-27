@@ -19,7 +19,6 @@ export class IngestionQueue extends EventEmitter {
   }
 
   public enqueue(event: IngestionEvent): void {
-     
     this.queue.push(event);
     if (this.queue.length >= this.batchSize) {
       this.flush();
@@ -28,7 +27,7 @@ export class IngestionQueue extends EventEmitter {
 
   public startAutoFlush(): void {
     if (this.intervalId) return;
-     
+
     this.intervalId = setInterval(() => {
       if (this.queue.length > 0) {
         this.flush();
@@ -39,7 +38,7 @@ export class IngestionQueue extends EventEmitter {
   public stopAutoFlush(): void {
     if (this.intervalId) {
       clearInterval(this.intervalId);
-       
+
       this.intervalId = null;
     }
     // Flush remaining
@@ -50,7 +49,7 @@ export class IngestionQueue extends EventEmitter {
     if (this.queue.length === 0) return;
 
     const batch = [...this.queue];
-     
+
     this.queue = [];
     this.emit('batch', batch);
   }

@@ -1,27 +1,25 @@
-import { connect, StringCodec } from "nats";
-import { PowerLawEstimator } from "./estimator.js";
+import { connect, StringCodec } from 'nats';
+import { PowerLawEstimator } from './estimator.js';
 
 export class PowerLawService {
   private estimator: PowerLawEstimator;
 
   constructor() {
-    this.estimator = new PowerLawEstimator(
-      process.env.NATS_URL || "nats://localhost:4222",
-    );
+    this.estimator = new PowerLawEstimator(process.env.NATS_URL || 'nats://localhost:4222');
   }
 
   async start() {
-    console.log("Starting Titan Power Law Lab Service...");
+    console.log('Starting Titan Power Law Lab Service...');
 
     // Connect estimator (it manages its own publishing connection)
     await this.estimator.connect();
 
     // Connect local listener for market data
     const nc = await connect({
-      servers: process.env.NATS_URL || "nats://localhost:4222",
+      servers: process.env.NATS_URL || 'nats://localhost:4222',
       user: process.env.NATS_USER,
       pass: process.env.NATS_PASS,
-      name: "titan-powerlaw-lab-listener",
+      name: 'titan-powerlaw-lab-listener',
     });
     console.log(`Deep-Listening to NATS at ${nc.getServer()}`);
 
@@ -29,7 +27,7 @@ export class PowerLawService {
 
     // Subscribe to market ticker data
     // Subject: titan.data.market.ticker.{venue}.{symbol}
-    const subject = "titan.data.market.ticker.>";
+    const subject = 'titan.data.market.ticker.>';
     const sub = nc.subscribe(subject);
     console.log(`Subscribed to ${subject}`);
 
@@ -38,7 +36,7 @@ export class PowerLawService {
       for await (const m of sub) {
         try {
           const subj = m.subject;
-          const parts = subj.split(".");
+          const parts = subj.split('.');
           // Expected: titan.data.market.ticker.bybit.BTCUSDT
           // parts[4] should be symbol
           const symbol = parts[4];

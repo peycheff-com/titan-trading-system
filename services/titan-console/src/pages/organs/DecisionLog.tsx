@@ -35,27 +35,35 @@ export default function DecisionLog() {
 
   useEffect(() => {
     if (token) {
-        fetch(`${getApiBaseUrl()}/audit/logs?limit=50`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+      fetch(`${getApiBaseUrl()}/audit/logs?limit=50`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.data) {
+            // Map TitanEvent to OperatorAction
+            const mapped = data.data
+              .filter((e: any) =>
+                [
+                  'SYSTEM_HALT',
+                  'MANUAL_OVERRIDE',
+                  'CIRCUIT_BREAKER_RESET',
+                  'RESET',
+                  'RISK_CONFIG_UPDATE',
+                ].includes(e.type),
+              )
+              .map((e: any) => ({
+                id: e.id,
+                timestamp: new Date(e.metadata?.timestamp || Date.now()).getTime(),
+                action: e.type,
+                reason: e.payload?.reason || 'No reason provided',
+                status: 'EXECUTED', // Default since event log implies executed/recorded
+                operatorId: e.payload?.operatorId || e.metadata?.actor || 'unknown',
+              }));
+            setAuditLogs(mapped);
+          }
         })
-        .then(res => res.json())
-        .then(data => {
-            if (data.data) {
-                // Map TitanEvent to OperatorAction
-                const mapped = data.data
-                    .filter((e: any) => ['SYSTEM_HALT', 'MANUAL_OVERRIDE', 'CIRCUIT_BREAKER_RESET', 'RESET', 'RISK_CONFIG_UPDATE'].includes(e.type))
-                    .map((e: any) => ({
-                        id: e.id,
-                        timestamp: new Date(e.metadata?.timestamp || Date.now()).getTime(),
-                        action: e.type,
-                        reason: e.payload?.reason || 'No reason provided',
-                        status: 'EXECUTED', // Default since event log implies executed/recorded
-                        operatorId: e.payload?.operatorId || e.metadata?.actor || 'unknown'
-                    }));
-                setAuditLogs(mapped);
-            }
-        })
-        .catch(err => console.error("Failed to fetch audit logs", err));
+        .catch((err) => console.error('Failed to fetch audit logs', err));
     }
   }, [token]);
 
@@ -94,7 +102,7 @@ export default function DecisionLog() {
 
         <TabsContent value="ops" className="mt-4">
           <Card>
-             <CardHeader>
+            <CardHeader>
               <CardTitle className="text-sm">Operator Intervention Log</CardTitle>
             </CardHeader>
             <CardContent>
@@ -102,11 +110,21 @@ export default function DecisionLog() {
                 <table className="w-full caption-bottom text-sm text-left">
                   <thead className="[&_tr]:border-b">
                     <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                      <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Time</th>
-                      <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Action</th>
-                      <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Operator</th>
-                      <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Reason</th>
-                      <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Status</th>
+                      <th className="h-12 px-4 align-middle font-medium text-muted-foreground">
+                        Time
+                      </th>
+                      <th className="h-12 px-4 align-middle font-medium text-muted-foreground">
+                        Action
+                      </th>
+                      <th className="h-12 px-4 align-middle font-medium text-muted-foreground">
+                        Operator
+                      </th>
+                      <th className="h-12 px-4 align-middle font-medium text-muted-foreground">
+                        Reason
+                      </th>
+                      <th className="h-12 px-4 align-middle font-medium text-muted-foreground">
+                        Status
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="[&_tr:last-child]:border-0">
@@ -115,12 +133,10 @@ export default function DecisionLog() {
                         <td className="p-4 align-middle font-mono text-xs text-muted-foreground">
                           {new Date(log.timestamp).toLocaleTimeString()}
                         </td>
-                         <td className="p-4 align-middle font-semibold text-orange-500">
+                        <td className="p-4 align-middle font-semibold text-orange-500">
                           {log.action}
                         </td>
-                        <td className="p-4 align-middle text-xs">
-                          {log.operatorId}
-                        </td>
+                        <td className="p-4 align-middle text-xs">{log.operatorId}</td>
                         <td className="p-4 align-middle italic text-muted-foreground">
                           {log.reason}
                         </td>

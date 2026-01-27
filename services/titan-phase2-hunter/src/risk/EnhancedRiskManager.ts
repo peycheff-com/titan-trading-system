@@ -11,7 +11,7 @@
  * Task 7: Enhanced Risk Management System
  */
 
-import { EventEmitter } from "events";
+import { EventEmitter } from 'events';
 import {
   BotTrapAnalysis,
   ConnectionStatus,
@@ -21,7 +21,7 @@ import {
   ImpactLevel,
   OracleScore,
   PredictionMarketEvent,
-} from "../types";
+} from '../types';
 
 // ============================================================================
 // INTERFACES
@@ -68,21 +68,21 @@ export interface EnhancedRiskManagerConfig {
  * Risk condition types
  */
 export type RiskConditionType =
-  | "HIGH_IMPACT_EVENT"
-  | "EXTREME_UNCERTAINTY"
-  | "SCHEDULED_EVENT"
-  | "CVD_DIVERGENCE"
-  | "BOT_TRAP_FREQUENCY"
-  | "EXCHANGE_OFFLINE"
-  | "ORACLE_UNSTABLE"
-  | "MULTIPLE_EXCHANGE_FAILURE";
+  | 'HIGH_IMPACT_EVENT'
+  | 'EXTREME_UNCERTAINTY'
+  | 'SCHEDULED_EVENT'
+  | 'CVD_DIVERGENCE'
+  | 'BOT_TRAP_FREQUENCY'
+  | 'EXCHANGE_OFFLINE'
+  | 'ORACLE_UNSTABLE'
+  | 'MULTIPLE_EXCHANGE_FAILURE';
 
 /**
  * Active risk condition
  */
 export interface RiskCondition {
   type: RiskConditionType;
-  severity: "low" | "medium" | "high" | "critical";
+  severity: 'low' | 'medium' | 'high' | 'critical';
   description: string;
   adjustments: RiskAdjustments;
   triggeredAt: Date;
@@ -129,14 +129,14 @@ export interface EnhancedRiskState {
  * Event types for EnhancedRiskManager
  */
 export interface EnhancedRiskManagerEvents {
-  "condition:activated": (condition: RiskCondition) => void;
-  "condition:deactivated": (condition: RiskCondition) => void;
-  "adjustments:updated": (adjustments: RiskAdjustments) => void;
-  "exchange:offline": (exchange: string) => void;
-  "exchange:online": (exchange: string) => void;
-  "emergency:triggered": (state: EmergencyState) => void;
-  "emergency:cleared": () => void;
-  "monitoring:update": (state: EnhancedRiskState) => void;
+  'condition:activated': (condition: RiskCondition) => void;
+  'condition:deactivated': (condition: RiskCondition) => void;
+  'adjustments:updated': (adjustments: RiskAdjustments) => void;
+  'exchange:offline': (exchange: string) => void;
+  'exchange:online': (exchange: string) => void;
+  'emergency:triggered': (state: EmergencyState) => void;
+  'emergency:cleared': () => void;
+  'monitoring:update': (state: EnhancedRiskState) => void;
 }
 
 // ============================================================================
@@ -231,7 +231,7 @@ export class EnhancedRiskManager extends EventEmitter {
       }
       return true;
     } catch (error) {
-      console.error("Failed to initialize EnhancedRiskManager:", error);
+      console.error('Failed to initialize EnhancedRiskManager:', error);
       return false;
     }
   }
@@ -240,7 +240,7 @@ export class EnhancedRiskManager extends EventEmitter {
    * Initialize exchange statuses
    */
   private initializeExchangeStatuses(): void {
-    const exchanges = ["binance", "coinbase", "kraken"];
+    const exchanges = ['binance', 'coinbase', 'kraken'];
     for (const exchange of exchanges) {
       // eslint-disable-next-line functional/immutable-data
       this.state.exchangeStatuses.set(exchange, {
@@ -273,28 +273,24 @@ export class EnhancedRiskManager extends EventEmitter {
    * Evaluate high-impact events from Oracle data
    * Requirement 8.1: When high-impact event probability exceeds 70%, reduce positions by 50%
    */
-  evaluateHighImpactEvents(
-    oracleScore: OracleScore | null,
-  ): RiskCondition | null {
+  evaluateHighImpactEvents(oracleScore: OracleScore | null): RiskCondition | null {
     if (!oracleScore || oracleScore.events.length === 0) {
       return null;
     }
 
     // Find high-impact events with probability above threshold
     const highImpactEvents = oracleScore.events.filter(
-      (event) =>
-        event.impact === ImpactLevel.HIGH ||
-        event.impact === ImpactLevel.EXTREME,
+      event => event.impact === ImpactLevel.HIGH || event.impact === ImpactLevel.EXTREME
     );
 
     for (const event of highImpactEvents) {
       if (event.probability >= this.config.highImpactEventThreshold) {
         const condition: RiskCondition = {
-          type: "HIGH_IMPACT_EVENT",
-          severity: event.impact === ImpactLevel.EXTREME ? "critical" : "high",
-          description: `High-impact event "${event.title}" has ${
-            event.probability.toFixed(1)
-          }% probability`,
+          type: 'HIGH_IMPACT_EVENT',
+          severity: event.impact === ImpactLevel.EXTREME ? 'critical' : 'high',
+          description: `High-impact event "${event.title}" has ${event.probability.toFixed(
+            1
+          )}% probability`,
           adjustments: {
             positionSizeMultiplier: this.config.highImpactPositionReduction,
             stopLossAdjustment: 0,
@@ -322,30 +318,27 @@ export class EnhancedRiskManager extends EventEmitter {
    * Evaluate prediction market uncertainty
    * Requirement 8.2: When prediction markets show extreme uncertainty, tighten stop losses
    */
-  evaluatePredictionUncertainty(
-    oracleScore: OracleScore | null,
-  ): RiskCondition | null {
+  evaluatePredictionUncertainty(oracleScore: OracleScore | null): RiskCondition | null {
     if (!oracleScore || oracleScore.events.length === 0) {
       return null;
     }
 
     // Check for events with probability near 50% (high uncertainty)
-    const uncertainEvents = oracleScore.events.filter((event) => {
+    const uncertainEvents = oracleScore.events.filter(event => {
       const distanceFrom50 = Math.abs(event.probability - 50);
       return distanceFrom50 < 10; // Within 10% of 50%
     });
 
     // If multiple high-impact events are uncertain, trigger condition
     const highImpactUncertain = uncertainEvents.filter(
-      (e) => e.impact === ImpactLevel.HIGH || e.impact === ImpactLevel.EXTREME,
+      e => e.impact === ImpactLevel.HIGH || e.impact === ImpactLevel.EXTREME
     );
 
     if (highImpactUncertain.length >= 2) {
       const condition: RiskCondition = {
-        type: "EXTREME_UNCERTAINTY",
-        severity: "high",
-        description:
-          `${highImpactUncertain.length} high-impact events showing extreme uncertainty (near 50%)`,
+        type: 'EXTREME_UNCERTAINTY',
+        severity: 'high',
+        description: `${highImpactUncertain.length} high-impact events showing extreme uncertainty (near 50%)`,
         adjustments: {
           positionSizeMultiplier: 1.0,
           stopLossAdjustment: -this.config.uncertaintyStopLossReduction,
@@ -371,22 +364,20 @@ export class EnhancedRiskManager extends EventEmitter {
    * Evaluate scheduled events for time-based risk adjustments
    * Requirement 8.4, 8.5: Reduce positions 30% when macro event within 24 hours
    */
-  evaluateScheduledEvents(
-    oracleScore: OracleScore | null,
-  ): RiskCondition | null {
+  evaluateScheduledEvents(oracleScore: OracleScore | null): RiskCondition | null {
     if (!oracleScore || oracleScore.events.length === 0) {
       return null;
     }
 
     const now = new Date();
     const thresholdTime = new Date(
-      now.getTime() + this.config.scheduledEventHours * 60 * 60 * 1000,
+      now.getTime() + this.config.scheduledEventHours * 60 * 60 * 1000
     );
 
     // Find high-impact events scheduled within threshold
-    const imminentEvents = oracleScore.events.filter((event) => {
-      const isHighImpact = event.impact === ImpactLevel.HIGH ||
-        event.impact === ImpactLevel.EXTREME;
+    const imminentEvents = oracleScore.events.filter(event => {
+      const isHighImpact =
+        event.impact === ImpactLevel.HIGH || event.impact === ImpactLevel.EXTREME;
       const isImminent = event.resolution <= thresholdTime;
       return isHighImpact && isImminent;
     });
@@ -396,18 +387,16 @@ export class EnhancedRiskManager extends EventEmitter {
         event.resolution < nearest.resolution ? event : nearest
       );
 
-      const hoursUntil = (nearestEvent.resolution.getTime() - now.getTime()) /
-        (1000 * 60 * 60);
+      const hoursUntil = (nearestEvent.resolution.getTime() - now.getTime()) / (1000 * 60 * 60);
 
       const condition: RiskCondition = {
-        type: "SCHEDULED_EVENT",
-        severity: hoursUntil < 6 ? "high" : "medium",
-        description: `High-impact event "${nearestEvent.title}" scheduled in ${
-          hoursUntil.toFixed(1)
-        } hours`,
+        type: 'SCHEDULED_EVENT',
+        severity: hoursUntil < 6 ? 'high' : 'medium',
+        description: `High-impact event "${nearestEvent.title}" scheduled in ${hoursUntil.toFixed(
+          1
+        )} hours`,
         adjustments: {
-          positionSizeMultiplier: 1 -
-            this.config.scheduledEventPositionReduction,
+          positionSizeMultiplier: 1 - this.config.scheduledEventPositionReduction,
           stopLossAdjustment: 0,
           leverageReduction: hoursUntil < 6 ? 0.5 : 0.75,
           haltNewEntries: hoursUntil < 1,
@@ -440,16 +429,13 @@ export class EnhancedRiskManager extends EventEmitter {
     // eslint-disable-next-line functional/immutable-data
     this.state.lastCVDDivergence = globalCVD.manipulation.divergenceScore;
 
-    if (
-      globalCVD.manipulation.divergenceScore >=
-        this.config.cvdDivergenceThreshold
-    ) {
+    if (globalCVD.manipulation.divergenceScore >= this.config.cvdDivergenceThreshold) {
       const condition: RiskCondition = {
-        type: "CVD_DIVERGENCE",
-        severity: globalCVD.manipulation.detected ? "high" : "medium",
-        description: `Global CVD divergence score: ${
-          globalCVD.manipulation.divergenceScore.toFixed(1)
-        } (threshold: ${this.config.cvdDivergenceThreshold})`,
+        type: 'CVD_DIVERGENCE',
+        severity: globalCVD.manipulation.detected ? 'high' : 'medium',
+        description: `Global CVD divergence score: ${globalCVD.manipulation.divergenceScore.toFixed(
+          1
+        )} (threshold: ${this.config.cvdDivergenceThreshold})`,
         adjustments: {
           positionSizeMultiplier: globalCVD.manipulation.detected ? 0.5 : 0.75,
           stopLossAdjustment: 0,
@@ -465,7 +451,7 @@ export class EnhancedRiskManager extends EventEmitter {
     }
 
     // Deactivate if divergence is below threshold
-    this.deactivateConditionByType("CVD_DIVERGENCE");
+    this.deactivateConditionByType('CVD_DIVERGENCE');
     return null;
   }
 
@@ -501,7 +487,7 @@ export class EnhancedRiskManager extends EventEmitter {
       return; // Not enough signals for meaningful rate
     }
 
-    const trapCount = this.recentSignals.filter((s) => s.isBotTrap).length;
+    const trapCount = this.recentSignals.filter(s => s.isBotTrap).length;
     // eslint-disable-next-line functional/immutable-data
     this.state.botTrapRate = trapCount / this.recentSignals.length;
   }
@@ -510,9 +496,7 @@ export class EnhancedRiskManager extends EventEmitter {
    * Evaluate bot trap frequency
    * Requirement 8.3: When Bot Trap patterns increase, raise precision threshold by 25%
    */
-  evaluateBotTrapFrequency(
-    botTrapAnalysis: BotTrapAnalysis | null,
-  ): RiskCondition | null {
+  evaluateBotTrapFrequency(botTrapAnalysis: BotTrapAnalysis | null): RiskCondition | null {
     // Record this signal
     if (botTrapAnalysis) {
       this.recordSignal(botTrapAnalysis.isSuspect);
@@ -520,11 +504,11 @@ export class EnhancedRiskManager extends EventEmitter {
 
     if (this.state.botTrapRate >= this.config.botTrapFrequencyThreshold) {
       const condition: RiskCondition = {
-        type: "BOT_TRAP_FREQUENCY",
-        severity: this.state.botTrapRate >= 0.8 ? "critical" : "high",
-        description: `Bot trap rate: ${
-          (this.state.botTrapRate * 100).toFixed(1)
-        }% (threshold: ${this.config.botTrapFrequencyThreshold * 100}%)`,
+        type: 'BOT_TRAP_FREQUENCY',
+        severity: this.state.botTrapRate >= 0.8 ? 'critical' : 'high',
+        description: `Bot trap rate: ${(this.state.botTrapRate * 100).toFixed(
+          1
+        )}% (threshold: ${this.config.botTrapFrequencyThreshold * 100}%)`,
         adjustments: {
           positionSizeMultiplier: 0.5,
           stopLossAdjustment: -0.005, // Tighter stops
@@ -540,7 +524,7 @@ export class EnhancedRiskManager extends EventEmitter {
     }
 
     // Deactivate if rate is below threshold
-    this.deactivateConditionByType("BOT_TRAP_FREQUENCY");
+    this.deactivateConditionByType('BOT_TRAP_FREQUENCY');
     return null;
   }
 
@@ -563,9 +547,9 @@ export class EnhancedRiskManager extends EventEmitter {
 
       if (isNowOffline && !wasOffline) {
         current.failureCount++;
-        this.emit("exchange:offline", exchange);
+        this.emit('exchange:offline', exchange);
       } else if (!isNowOffline && wasOffline) {
-        this.emit("exchange:online", exchange);
+        this.emit('exchange:online', exchange);
       }
 
       // eslint-disable-next-line functional/immutable-data
@@ -582,17 +566,14 @@ export class EnhancedRiskManager extends EventEmitter {
    */
   evaluateExchangeFailures(): RiskCondition | null {
     const statuses = Array.from(this.state.exchangeStatuses.values());
-    const onlineCount =
-      statuses.filter((s) => s.status === ConnectionStatus.CONNECTED).length;
-    const offlineExchanges = statuses.filter((s) =>
-      s.status !== ConnectionStatus.CONNECTED
-    );
+    const onlineCount = statuses.filter(s => s.status === ConnectionStatus.CONNECTED).length;
+    const offlineExchanges = statuses.filter(s => s.status !== ConnectionStatus.CONNECTED);
 
     // Single exchange offline
     if (offlineExchanges.length === 1) {
       const condition: RiskCondition = {
-        type: "EXCHANGE_OFFLINE",
-        severity: "medium",
+        type: 'EXCHANGE_OFFLINE',
+        severity: 'medium',
         description: `Exchange ${offlineExchanges[0].exchange} is offline`,
         adjustments: {
           positionSizeMultiplier: 0.75,
@@ -611,10 +592,9 @@ export class EnhancedRiskManager extends EventEmitter {
     // Multiple exchanges offline - critical
     if (onlineCount < this.config.minExchangesRequired) {
       const condition: RiskCondition = {
-        type: "MULTIPLE_EXCHANGE_FAILURE",
-        severity: "critical",
-        description:
-          `Only ${onlineCount} exchanges online (minimum required: ${this.config.minExchangesRequired})`,
+        type: 'MULTIPLE_EXCHANGE_FAILURE',
+        severity: 'critical',
+        description: `Only ${onlineCount} exchanges online (minimum required: ${this.config.minExchangesRequired})`,
         adjustments: {
           positionSizeMultiplier: 0,
           stopLossAdjustment: 0,
@@ -630,8 +610,8 @@ export class EnhancedRiskManager extends EventEmitter {
     }
 
     // All exchanges online - deactivate conditions
-    this.deactivateConditionByType("EXCHANGE_OFFLINE");
-    this.deactivateConditionByType("MULTIPLE_EXCHANGE_FAILURE");
+    this.deactivateConditionByType('EXCHANGE_OFFLINE');
+    this.deactivateConditionByType('MULTIPLE_EXCHANGE_FAILURE');
     return null;
   }
 
@@ -653,10 +633,7 @@ export class EnhancedRiskManager extends EventEmitter {
    */
   recordOracleSuccess(): void {
     // eslint-disable-next-line functional/immutable-data
-    this.state.oracleFailureCount = Math.max(
-      0,
-      this.state.oracleFailureCount - 1,
-    );
+    this.state.oracleFailureCount = Math.max(0, this.state.oracleFailureCount - 1);
     this.evaluateOracleStability();
   }
 
@@ -667,10 +644,9 @@ export class EnhancedRiskManager extends EventEmitter {
   evaluateOracleStability(): RiskCondition | null {
     if (this.state.oracleFailureCount >= this.config.oracleStabilityThreshold) {
       const condition: RiskCondition = {
-        type: "ORACLE_UNSTABLE",
-        severity: "medium",
-        description:
-          `Oracle connection unstable (${this.state.oracleFailureCount} failures)`,
+        type: 'ORACLE_UNSTABLE',
+        severity: 'medium',
+        description: `Oracle connection unstable (${this.state.oracleFailureCount} failures)`,
         adjustments: {
           positionSizeMultiplier: this.config.oracleUnstablePositionReduction,
           stopLossAdjustment: 0,
@@ -686,7 +662,7 @@ export class EnhancedRiskManager extends EventEmitter {
     }
 
     // Oracle is stable - deactivate condition
-    this.deactivateConditionByType("ORACLE_UNSTABLE");
+    this.deactivateConditionByType('ORACLE_UNSTABLE');
     return null;
   }
 
@@ -699,9 +675,7 @@ export class EnhancedRiskManager extends EventEmitter {
    */
   private activateCondition(condition: RiskCondition): void {
     // Check if condition of this type already exists
-    const existingIndex = this.state.activeConditions.findIndex((c) =>
-      c.type === condition.type
-    );
+    const existingIndex = this.state.activeConditions.findIndex(c => c.type === condition.type);
 
     if (existingIndex >= 0) {
       // Update existing condition
@@ -711,8 +685,8 @@ export class EnhancedRiskManager extends EventEmitter {
       // Add new condition
       // eslint-disable-next-line functional/immutable-data
       this.state.activeConditions.push(condition);
-      this.emit("condition:activated", condition);
-      this.logRiskCondition(condition, "ACTIVATED");
+      this.emit('condition:activated', condition);
+      this.logRiskCondition(condition, 'ACTIVATED');
     }
 
     // Recalculate aggregated adjustments
@@ -723,14 +697,14 @@ export class EnhancedRiskManager extends EventEmitter {
    * Deactivate a risk condition by type
    */
   private deactivateConditionByType(type: RiskConditionType): void {
-    const index = this.state.activeConditions.findIndex((c) => c.type === type);
+    const index = this.state.activeConditions.findIndex(c => c.type === type);
 
     if (index >= 0) {
       const condition = this.state.activeConditions[index];
       // eslint-disable-next-line functional/immutable-data
       this.state.activeConditions.splice(index, 1);
-      this.emit("condition:deactivated", condition);
-      this.logRiskCondition(condition, "DEACTIVATED");
+      this.emit('condition:deactivated', condition);
+      this.logRiskCondition(condition, 'DEACTIVATED');
 
       // Recalculate aggregated adjustments
       this.recalculateAggregatedAdjustments();
@@ -743,7 +717,7 @@ export class EnhancedRiskManager extends EventEmitter {
   private cleanupExpiredConditions(): void {
     const now = new Date();
     const expiredConditions = this.state.activeConditions.filter(
-      (c) => c.expiresAt && c.expiresAt <= now,
+      c => c.expiresAt && c.expiresAt <= now
     );
 
     for (const condition of expiredConditions) {
@@ -762,37 +736,37 @@ export class EnhancedRiskManager extends EventEmitter {
       // eslint-disable-next-line functional/immutable-data
       adjustments.positionSizeMultiplier = Math.min(
         adjustments.positionSizeMultiplier,
-        condition.adjustments.positionSizeMultiplier,
+        condition.adjustments.positionSizeMultiplier
       );
 
       // Use most restrictive stop loss adjustment (most negative)
       // eslint-disable-next-line functional/immutable-data
       adjustments.stopLossAdjustment = Math.min(
         adjustments.stopLossAdjustment,
-        condition.adjustments.stopLossAdjustment,
+        condition.adjustments.stopLossAdjustment
       );
 
       // Use most restrictive leverage reduction
       // eslint-disable-next-line functional/immutable-data
       adjustments.leverageReduction = Math.min(
         adjustments.leverageReduction,
-        condition.adjustments.leverageReduction,
+        condition.adjustments.leverageReduction
       );
 
       // Halt if any condition requires it
       // eslint-disable-next-line functional/immutable-data
-      adjustments.haltNewEntries = adjustments.haltNewEntries ||
-        condition.adjustments.haltNewEntries;
+      adjustments.haltNewEntries =
+        adjustments.haltNewEntries || condition.adjustments.haltNewEntries;
 
       // Flatten if any condition requires it
       // eslint-disable-next-line functional/immutable-data
-      adjustments.flattenPositions = adjustments.flattenPositions ||
-        condition.adjustments.flattenPositions;
+      adjustments.flattenPositions =
+        adjustments.flattenPositions || condition.adjustments.flattenPositions;
     }
 
     // eslint-disable-next-line functional/immutable-data
     this.state.aggregatedAdjustments = adjustments;
-    this.emit("adjustments:updated", adjustments);
+    this.emit('adjustments:updated', adjustments);
   }
 
   // ============================================================================
@@ -806,7 +780,7 @@ export class EnhancedRiskManager extends EventEmitter {
   evaluateAllConditions(
     oracleScore: OracleScore | null,
     globalCVD: GlobalCVDData | null,
-    botTrapAnalysis: BotTrapAnalysis | null,
+    botTrapAnalysis: BotTrapAnalysis | null
   ): EnhancedRiskState {
     // Clean up expired conditions first
     this.cleanupExpiredConditions();
@@ -853,8 +827,7 @@ export class EnhancedRiskManager extends EventEmitter {
    * Check if new entries are allowed
    */
   canOpenNewPositions(): boolean {
-    return !this.state.aggregatedAdjustments.haltNewEntries &&
-      !this.state.isEmergencyMode;
+    return !this.state.aggregatedAdjustments.haltNewEntries && !this.state.isEmergencyMode;
   }
 
   /**
@@ -889,11 +862,11 @@ export class EnhancedRiskManager extends EventEmitter {
     // eslint-disable-next-line functional/immutable-data
     this.monitoringInterval = setInterval(() => {
       this.cleanupExpiredConditions();
-      this.emit("monitoring:update", this.getState());
+      this.emit('monitoring:update', this.getState());
     }, this.config.monitoringInterval);
 
     console.log(
-      `🛡️ Enhanced Risk Manager: Started monitoring (${this.config.monitoringInterval}ms interval)`,
+      `🛡️ Enhanced Risk Manager: Started monitoring (${this.config.monitoringInterval}ms interval)`
     );
   }
 
@@ -917,13 +890,10 @@ export class EnhancedRiskManager extends EventEmitter {
    * Log risk condition activation/deactivation
    * Requirement 8.7: Log enhanced risk conditions when activated
    */
-  private logRiskCondition(
-    condition: RiskCondition,
-    action: "ACTIVATED" | "DEACTIVATED",
-  ): void {
+  private logRiskCondition(condition: RiskCondition, action: 'ACTIVATED' | 'DEACTIVATED'): void {
     const logEntry = {
       timestamp: new Date().toISOString(),
-      type: "ENHANCED_RISK_CONDITION",
+      type: 'ENHANCED_RISK_CONDITION',
       action,
       condition: {
         type: condition.type,
@@ -985,14 +955,12 @@ export class EnhancedRiskManager extends EventEmitter {
     const conditionsByType: Record<string, number> = {};
     for (const condition of this.state.activeConditions) {
       // eslint-disable-next-line functional/immutable-data
-      conditionsByType[condition.type] =
-        (conditionsByType[condition.type] || 0) + 1;
+      conditionsByType[condition.type] = (conditionsByType[condition.type] || 0) + 1;
     }
 
-    const exchangeOnlineCount =
-      Array.from(this.state.exchangeStatuses.values()).filter(
-        (s) => s.status === ConnectionStatus.CONNECTED,
-      ).length;
+    const exchangeOnlineCount = Array.from(this.state.exchangeStatuses.values()).filter(
+      s => s.status === ConnectionStatus.CONNECTED
+    ).length;
 
     return {
       activeConditionCount: this.state.activeConditions.length,
@@ -1001,8 +969,7 @@ export class EnhancedRiskManager extends EventEmitter {
       oracleFailureCount: this.state.oracleFailureCount,
       botTrapRate: this.state.botTrapRate,
       lastCVDDivergence: this.state.lastCVDDivergence,
-      positionSizeMultiplier:
-        this.state.aggregatedAdjustments.positionSizeMultiplier,
+      positionSizeMultiplier: this.state.aggregatedAdjustments.positionSizeMultiplier,
       isHalted: this.state.aggregatedAdjustments.haltNewEntries,
     };
   }
@@ -1047,7 +1014,7 @@ export class EnhancedRiskManager extends EventEmitter {
 export declare interface EnhancedRiskManager {
   on<U extends keyof EnhancedRiskManagerEvents>(
     event: U,
-    listener: EnhancedRiskManagerEvents[U],
+    listener: EnhancedRiskManagerEvents[U]
   ): this;
   emit<U extends keyof EnhancedRiskManagerEvents>(
     event: U,

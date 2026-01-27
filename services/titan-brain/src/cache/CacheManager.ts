@@ -6,7 +6,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { createClient, RedisClientType } from 'redis';
+import { createClient } from 'redis';
 import { InMemoryCache } from './InMemoryCache.js';
 import { getLogger } from '../monitoring/index.js';
 
@@ -115,7 +115,7 @@ export interface CacheMetrics {
  * Cache manager with Redis primary and in-memory fallback
  */
 export class CacheManager extends EventEmitter {
-  private redisClient: RedisClientType | null = null;
+  private redisClient: any | null = null;
   private readonly inMemoryCache: InMemoryCache;
   private readonly config: CacheConfig;
   private readonly metrics: CacheMetrics;
@@ -145,7 +145,7 @@ export class CacheManager extends EventEmitter {
    */
   static createConfigFromEnv(): CacheConfig {
     const redisUrl = process.env.REDIS_URL;
-     
+
     let redisConfig: CacheConfig['redis'] = undefined;
     const redisDisabled = process.env.REDIS_DISABLED === 'true';
 
@@ -182,7 +182,7 @@ export class CacheManager extends EventEmitter {
       await this.initializeRedis();
     } else {
       logger.info('Redis not configured, using in-memory cache only');
-       
+
       this.metrics.fallbackActive = true;
     }
 
@@ -197,7 +197,6 @@ export class CacheManager extends EventEmitter {
     if (!this.config.redis) return;
 
     try {
-       
       this.redisClient = createClient({
         url: this.config.redis.url,
         socket: {
@@ -206,19 +205,19 @@ export class CacheManager extends EventEmitter {
         },
       });
 
-      this.redisClient.on('error', (err) => {
+      this.redisClient.on('error', (err: any) => {
         logger.error('Redis error:', err);
-         
+
         this.metrics.redisConnected = false;
-         
+
         this.metrics.fallbackActive = true;
       });
 
       this.redisClient.on('connect', () => {
         logger.info('Redis connected');
-         
+
         this.metrics.redisConnected = true;
-         
+
         this.metrics.fallbackActive = false;
       });
 
@@ -227,9 +226,9 @@ export class CacheManager extends EventEmitter {
       (logger as any).warn('Failed to connect to Redis, using fallback:', undefined, {
         error,
       });
-       
+
       this.metrics.redisConnected = false;
-       
+
       this.metrics.fallbackActive = true;
     }
   }
@@ -249,7 +248,6 @@ export class CacheManager extends EventEmitter {
     const startTime = Date.now();
     const key = arg2 ? this.getKey(arg1, arg2) : (arg1 as string);
 
-     
     this.metrics.totalOperations++;
 
     // Try Redis first
@@ -257,11 +255,10 @@ export class CacheManager extends EventEmitter {
       try {
         const value = await this.redisClient.get(key);
         const duration = Date.now() - startTime;
-         
+
         this.totalResponseTime += duration;
 
         if (value) {
-           
           this.metrics.redisHits++;
           this.emit('cache:hit', { source: 'redis', key, duration });
           return {
@@ -270,7 +267,6 @@ export class CacheManager extends EventEmitter {
             source: 'redis',
           };
         } else {
-           
           this.metrics.redisMisses++;
           this.emit('cache:miss', { source: 'redis', key, duration });
           return {
@@ -279,7 +275,6 @@ export class CacheManager extends EventEmitter {
           };
         }
       } catch (err) {
-         
         this.metrics.errors++;
         const duration = Date.now() - startTime;
         this.emit('cache:error', {
@@ -296,11 +291,10 @@ export class CacheManager extends EventEmitter {
     if (this.config.enableInMemoryFallback) {
       const value = this.inMemoryCache.get<T>(key);
       const duration = Date.now() - startTime;
-       
+
       this.totalResponseTime += duration;
 
       if (value !== undefined) {
-         
         this.metrics.memoryHits++;
         this.emit('cache:hit', { source: 'memory', key, duration });
         return {
@@ -309,7 +303,6 @@ export class CacheManager extends EventEmitter {
           source: 'memory',
         };
       } else {
-         
         this.metrics.memoryMisses++;
         this.emit('cache:miss', { source: 'memory', key, duration });
         return {
@@ -345,7 +338,7 @@ export class CacheManager extends EventEmitter {
     const ttl = (isNamespace ? arg4 : arg3) as number | undefined;
 
     const stringValue = JSON.stringify(value);
-     
+
     this.metrics.totalOperations++;
 
     // Try Redis first
@@ -361,7 +354,6 @@ export class CacheManager extends EventEmitter {
           source: 'redis',
         };
       } catch (err) {
-         
         this.metrics.errors++;
         logger.error('Redis set error:', err);
         // Fall through to memory cache
@@ -391,11 +383,10 @@ export class CacheManager extends EventEmitter {
   async delete(arg1: string | CacheNamespace, arg2?: string): Promise<CacheResult<void>> {
     const key = arg2 ? this.getKey(arg1, arg2) : (arg1 as string);
 
-     
     this.metrics.totalOperations++;
-     
+
     let redisSuccess = false;
-     
+
     let memorySuccess = false;
 
     if (this.redisClient && this.metrics.redisConnected) {
@@ -403,7 +394,6 @@ export class CacheManager extends EventEmitter {
         await this.redisClient.del(key);
         redisSuccess = true;
       } catch (err) {
-         
         this.metrics.errors++;
         logger.error('Redis delete error:', err);
       }
@@ -453,11 +443,10 @@ export class CacheManager extends EventEmitter {
   }
 
   async clear(): Promise<CacheResult<void>> {
-     
     this.metrics.totalOperations++;
-     
+
     let redisSuccess = false;
-     
+
     let memorySuccess = false;
 
     if (this.redisClient && this.metrics.redisConnected) {
@@ -465,7 +454,6 @@ export class CacheManager extends EventEmitter {
         await this.redisClient.flushDb();
         redisSuccess = true;
       } catch (err) {
-         
         this.metrics.errors++;
         logger.error('Redis clear error:', err);
       }
@@ -521,7 +509,6 @@ export class CacheManager extends EventEmitter {
   }
 
   async shutdown(): Promise<void> {
-     
     this.isShuttingDown = true;
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval);

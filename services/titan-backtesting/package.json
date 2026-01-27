@@ -23,15 +23,13 @@
   "license": "ISC",
   "dependencies": {
     "@titan/shared": "*",
-    "titan-phase1-scavenger": "*",
-    "pg": "^8.11.0"
-
+    "pg": "^8.11.0",
+    "titan-phase1-scavenger": "*"
   },
   "devDependencies": {
     "@types/jest": "^29.5.11",
     "@types/node": "^20.10.6",
     "@types/pg": "^8.10.9",
-    "fast-check": "^4.4.0",
     "jest": "^29.7.0",
     "ts-jest": "^29.1.1",
     "typescript": "^5.3.3"

@@ -3,7 +3,7 @@ import * as fc from "fast-check";
 import {
     ConvictionSizingConfig,
     ConvictionSizingEngine,
-} from "../../src/engine/enhanced/ConvictionSizingEngine";
+} from "../../src/engine/ConvictionSizingEngine";
 import {
     ImpactLevel,
     OracleScore,

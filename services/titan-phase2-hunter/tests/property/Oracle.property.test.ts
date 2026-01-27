@@ -6,10 +6,7 @@ import {
     PredictionMarketEvent,
 } from "../../src/types";
 import { Oracle } from "../../src/oracle/Oracle";
-import {
-    Enhanced2026ConfigManager,
-    OracleConfig,
-} from "../../src/config/Enhanced2026Config";
+import { ConfigManager, OracleConfig } from "../../src/config/ConfigManager";
 
 describe("Oracle Property Tests", () => {
     describe("SentimentCalculator", () => {
@@ -157,7 +154,7 @@ describe("Oracle Property Tests", () => {
                         enhancedRisk: { eventProximityThreshold: 60 },
                     }),
                     on: () => {},
-                } as unknown as Enhanced2026ConfigManager;
+                } as unknown as ConfigManager;
 
                 const oracle = new Oracle(mockConfigManager);
 
@@ -190,7 +187,7 @@ describe("Oracle Property Tests", () => {
                         enhancedRisk: { eventProximityThreshold: 60 },
                     }),
                     on: () => {},
-                } as unknown as Enhanced2026ConfigManager;
+                } as unknown as ConfigManager;
 
                 const oracle = new Oracle(mockConfigManager);
 

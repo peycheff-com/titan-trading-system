@@ -71,30 +71,31 @@ and AI Quant validation requirements.
 
 ## Services
 
-| Service                   | Description                            | Technology                      |
-| ------------------------- | -------------------------------------- | ------------------------------- |
-| `titan-brain`             | Central orchestrator & risk management | TypeScript, Fastify, PostgreSQL |
-| `titan-execution-rs`      | High-performance order execution       | **Rust**, Actix, NATS           |
-| `titan-phase1-scavenger`  | Trap detection & signal generation     | TypeScript                      |
-| `titan-phase2-hunter`     | Holographic analysis engine            | TypeScript                      |
-| `titan-phase3-sentinel`   | Basis arbitrage engine                 | TypeScript                      |
-| `titan-ai-quant`          | AI parameter optimization              | TypeScript, Gemini AI           |
-| `titan-powerlaw-lab`      | Power Law research & fractal analysis  | TypeScript / Experimental       |
-| `titan-console`           | Web monitoring dashboard               | React, Vite, TailwindCSS        |
-| `@titan/shared`           | Common infrastructure library          | TypeScript                      |
+| Service                   | Description                            | Technology                      | Status |
+| ------------------------- | -------------------------------------- | ------------------------------- | ------ |
+| `titan-brain`             | Master Orchestrator & Risk Guardian    | TS, Fastify, Active Inference   | 🟢 Prod |
+| `titan-execution-rs`      | High-performance Order Engine          | **Rust**, Actix, Redb, NATS     | 🟢 Prod |
+| `titan-phase1-scavenger`  | Trap detection & Signal generation     | TypeScript                      | 🟢 Prod |
+| `titan-phase2-hunter`     | Holographic analysis engine            | TypeScript                      | 🟢 Prod |
+| `titan-phase3-sentinel`   | Basis arbitrage & Market Neutral       | TypeScript                      | 🟢 Prod |
+| `titan-ai-quant`          | AI parameter optimization              | TypeScript, Gemini AI           | 🟡 Beta |
+| `titan-console`           | Operator Control Plane                 | React, Vite, TailwindCSS        | 🟢 Prod |
+| `titan-backtesting`       | Simulation & Strategy Validation       | TypeScript                      | 🟡 Beta |
+| `titan-powerlaw-lab`      | Power Law & Fractal Research           | TypeScript                      | 🧪 Exp |
+| `@titan/shared`           | Common infrastructure library          | TypeScript                      | 🟢 Prod |
 
 ## Technology Stack
 
-| Layer                | Technology                                  |
-| -------------------- | ------------------------------------------- |
-| **Execution Engine** | Rust (sub-millisecond latency)              |
-| **Backend Services** | Node.js 22+, TypeScript, Fastify            |
-| **Event Bus**        | NATS JetStream                              |
-| **Database**         | PostgreSQL (Self-hosted on VPS)             |
-| **Frontend**         | React, Vite, TailwindCSS                    |
-| **AI/ML**            | Google Gemini 2.0 Flash                     |
-| **Deployment**       | DigitalOcean Droplet (VPS) + Docker Compose |
-| **IPC**              | Unix Domain Sockets (FastPath)              |
+| Layer                | Technology                                  | Key Features |
+| -------------------- | ------------------------------------------- | ------------ |
+| **Execution Engine** | Rust (Actix-web, Tokio)                     | Redb Persistence, Shadow State, Sub-ms Latency |
+| **Backend Services** | Node.js 22+, TypeScript, Fastify            | Active Inference, Hot Risk Reload, Zod Validation |
+| **Event Bus**        | NATS JetStream                              | Persistent Streams, Request-Reply |
+| **Database**         | PostgreSQL 16+                              | TimescaleDB (optional), Relational Data |
+| **Frontend**         | React, Vite, TailwindCSS                    | Real-time WebSockets, Recharts |
+| **AI/ML**            | Google Gemini 2.0 Flash                     | Parameter Optimization, Market Analysis |
+| **Deployment**       | DigitalOcean Droplet (VPS) + Docker Compose | Secrets Management, Restart Policies |
+| **IPC**              | Unix Domain Sockets (FastPath)              | Low-latency local comms |
 
 ## Quick Start
 

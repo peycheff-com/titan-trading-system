@@ -43,7 +43,6 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
     // We assume NATS is already connected by shared lib or we wait for it
     // The shared getNatsClient() returns a singleton that should be connected by Brain's startup
     try {
-       
       this.connected = this.nats.isConnected();
       if (this.connected) {
         console.log('✅ Execution Engine NATS client ready');
@@ -59,7 +58,6 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
    * Shutdown the client
    */
   async shutdown(): Promise<void> {
-     
     this.connected = false;
     console.log('🔌 Execution Engine client disconnected');
   }

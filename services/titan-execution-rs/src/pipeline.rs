@@ -41,6 +41,7 @@ pub struct PipelineResult {
 }
 
 impl ExecutionPipeline {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         shadow_state: Arc<RwLock<ShadowState>>,
         order_manager: OrderManager,

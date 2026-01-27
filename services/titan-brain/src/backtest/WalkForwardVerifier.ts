@@ -26,7 +26,6 @@ export class WalkForwardVerifier {
       config,
     });
 
-     
     let windowStart = new Date(config.startDate);
 
     while (windowStart < config.endDate) {

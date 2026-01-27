@@ -10,7 +10,7 @@
  * where P(|R| > x) = x^(-Alpha) (Pareto Survival Function)
  */
 
-import { Position } from "../../types/index.js";
+import { Position } from '../../types/index.js';
 
 export class TailRiskCalculator {
   private readonly CRASH_THRESHOLD = 0.2; // 20% drop considered "Crash"
@@ -75,11 +75,7 @@ export class TailRiskCalculator {
    * @param equity Current Portfolio Equity
    * @param threshold Max allowed APTR as fraction of Equity (e.g. 0.5 = 50%)
    */
-  isRiskCritical(
-    aptr: number,
-    equity: number,
-    threshold: number = 0.5,
-  ): boolean {
+  isRiskCritical(aptr: number, equity: number, threshold: number = 0.5): boolean {
     if (equity <= 0) return true;
     return aptr / equity > threshold;
   }

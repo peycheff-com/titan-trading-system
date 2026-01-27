@@ -48,7 +48,6 @@ export class InputValidator {
 
     // Check if required
     if (options.required && (value === null || value === undefined || value === '')) {
-       
       errors.push(`${fieldName} is required`);
       return { isValid: false, errors };
     }
@@ -60,12 +59,10 @@ export class InputValidator {
 
     // Type check
     if (typeof value !== 'string') {
-       
       errors.push(`${fieldName} must be a string`);
       return { isValid: false, errors };
     }
 
-     
     let sanitizedValue = value;
 
     // Sanitize if requested
@@ -75,24 +72,20 @@ export class InputValidator {
 
     // Length validation
     if (options.minLength !== undefined && sanitizedValue.length < options.minLength) {
-       
       errors.push(`${fieldName} must be at least ${options.minLength} characters long`);
     }
 
     if (options.maxLength !== undefined && sanitizedValue.length > options.maxLength) {
-       
       errors.push(`${fieldName} must be at most ${options.maxLength} characters long`);
     }
 
     // Pattern validation
     if (options.pattern && !options.pattern.test(sanitizedValue)) {
-       
       errors.push(`${fieldName} format is invalid`);
     }
 
     // Allowed values validation
     if (options.allowedValues && !options.allowedValues.includes(sanitizedValue)) {
-       
       errors.push(`${fieldName} must be one of: ${options.allowedValues.join(', ')}`);
     }
 
@@ -115,7 +108,6 @@ export class InputValidator {
 
     // Check if required
     if (options.required && (value === null || value === undefined)) {
-       
       errors.push(`${fieldName} is required`);
       return { isValid: false, errors };
     }
@@ -126,38 +118,33 @@ export class InputValidator {
     }
 
     // Type check and conversion
-     
+
     let numValue: number;
     if (typeof value === 'string') {
       numValue = parseFloat(value);
       if (isNaN(numValue)) {
-         
         errors.push(`${fieldName} must be a valid number`);
         return { isValid: false, errors };
       }
     } else if (typeof value === 'number') {
       numValue = value;
     } else {
-       
       errors.push(`${fieldName} must be a number`);
       return { isValid: false, errors };
     }
 
     // Check for infinity and NaN
     if (!isFinite(numValue)) {
-       
       errors.push(`${fieldName} must be a finite number`);
       return { isValid: false, errors };
     }
 
     // Range validation
     if (options.min !== undefined && numValue < options.min) {
-       
       errors.push(`${fieldName} must be at least ${options.min}`);
     }
 
     if (options.max !== undefined && numValue > options.max) {
-       
       errors.push(`${fieldName} must be at most ${options.max}`);
     }
 
@@ -180,7 +167,6 @@ export class InputValidator {
 
     // Check if required
     if (options.required && (value === null || value === undefined)) {
-       
       errors.push(`${fieldName} is required`);
       return { isValid: false, errors };
     }
@@ -191,7 +177,7 @@ export class InputValidator {
     }
 
     // Type check and conversion
-     
+
     let boolValue: boolean;
     if (typeof value === 'boolean') {
       boolValue = value;
@@ -202,14 +188,12 @@ export class InputValidator {
       } else if (lowerValue === 'false' || lowerValue === '0') {
         boolValue = false;
       } else {
-         
         errors.push(`${fieldName} must be a boolean value (true/false)`);
         return { isValid: false, errors };
       }
     } else if (typeof value === 'number') {
       boolValue = value !== 0;
     } else {
-       
       errors.push(`${fieldName} must be a boolean value`);
       return { isValid: false, errors };
     }
@@ -233,7 +217,6 @@ export class InputValidator {
 
     // Check if required
     if (options.required && (value === null || value === undefined)) {
-       
       errors.push(`${fieldName} is required`);
       return { isValid: false, errors };
     }
@@ -245,19 +228,16 @@ export class InputValidator {
 
     // Type check
     if (!Array.isArray(value)) {
-       
       errors.push(`${fieldName} must be an array`);
       return { isValid: false, errors };
     }
 
     // Length validation
     if (options.minLength !== undefined && value.length < options.minLength) {
-       
       errors.push(`${fieldName} must have at least ${options.minLength} items`);
     }
 
     if (options.maxLength !== undefined && value.length > options.maxLength) {
-       
       errors.push(`${fieldName} must have at most ${options.maxLength} items`);
     }
 
@@ -385,7 +365,6 @@ export class InputValidator {
     const errors: string[] = [];
 
     if (!allocation || typeof allocation !== 'object') {
-       
       errors.push('allocation must be an object');
       return { isValid: false, errors };
     }
@@ -409,7 +388,6 @@ export class InputValidator {
       max: 1,
     });
 
-     
     errors.push(...w1Result.errors, ...w2Result.errors, ...w3Result.errors);
 
     if (errors.length > 0) {
@@ -423,7 +401,6 @@ export class InputValidator {
       (w3Result.sanitizedValue as number);
 
     if (Math.abs(sum - 1.0) > 0.001) {
-       
       errors.push(`allocation weights must sum to 1.0, got ${sum.toFixed(3)}`);
     }
 
@@ -470,7 +447,6 @@ export class InputValidator {
       });
 
       if (!permResult.isValid) {
-         
         errors.push(...permResult.errors);
       }
     }
@@ -490,7 +466,6 @@ export class InputValidator {
     const sanitizedBody: Record<string, unknown> = {};
 
     if (!body || typeof body !== 'object') {
-       
       errors.push('Request body must be an object');
       return { isValid: false, errors };
     }
@@ -527,10 +502,8 @@ export class InputValidator {
     for (const { field, validator } of validations) {
       const result = validator();
       if (!result.isValid) {
-         
         errors.push(...result.errors);
       } else if (result.sanitizedValue !== undefined) {
-         
         sanitizedBody[field] = result.sanitizedValue;
       }
     }

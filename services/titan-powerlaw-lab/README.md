@@ -18,11 +18,11 @@ npm install
 
 ```bash
 # Run fractal analysis
-npm run analyze:powerlaw -- --symbol BTCUSDT
+npm run start:prod -- --mode=analyze --symbol=BTCUSDT
 
 # Run AI optimization cycle
 npm run optimize:ai
 ```
 
 ## Status
-Experimental / Research Phase. Not for production trading.
+**Production Ready (Jan 2026)**. Consumes NATS events for real-time Hill Alpha calculation.

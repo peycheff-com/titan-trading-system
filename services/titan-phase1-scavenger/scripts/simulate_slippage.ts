@@ -96,14 +96,16 @@ async function runSimulation() {
         symbol: "BTCUSDT",
         triggerPrice: 50000,
         direction: "LONG",
-        trapType: "LIQUIDATION_CLUSTER",
+        trapType: "LIQUIDATION",
         confidence: 0.9,
         activated: false,
+        leverage: 10,
+        estimatedCascadeSize: 0.05,
     };
 
     console.log("\nTest 1: Firing Trap...");
     try {
-        await trap.fire(tripwire, 50, 100);
+        await (trap as any).executor.fire(tripwire, 50, 100);
         console.log("SUCCESS: Trap fired and routed to SignalClient");
     } catch (e) {
         console.error("FAILED to fire trap:", e);

@@ -31,7 +31,15 @@ impl HyperliquidConnector {
             subscriptions: HashSet::new(),
         }
     }
+}
 
+impl Default for HyperliquidConnector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl HyperliquidConnector {
     async fn handle_msg(
         text: &str,
         tx: &mpsc::Sender<MarketDataEvent>,

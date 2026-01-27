@@ -7,21 +7,21 @@
  * Requirements: 3.1, 3.3 - Hierarchical configuration and environment-specific loading
  */
 
-import { EventEmitter } from "eventemitter3";
-import { unwatchFile, watchFile, writeFileSync } from "fs";
-import { join } from "path";
-import { HierarchicalConfigLoader } from "./config/HierarchicalConfigLoader";
+import { EventEmitter } from 'eventemitter3';
+import { unwatchFile, watchFile, writeFileSync } from 'fs';
+import { join } from 'path';
+import { HierarchicalConfigLoader } from './config/HierarchicalConfigLoader';
 import {
   BrainConfig as SchemaBrainConfig,
   ConfigValidator,
   Environment,
   PhaseConfig as SchemaPhaseConfig,
-} from "./config/ConfigSchema";
+} from './config/ConfigSchema';
 import {
   type ConfigVersion,
   ConfigVersionHistory,
   getConfigVersionHistory,
-} from "./config/ConfigVersionHistory";
+} from './config/ConfigVersionHistory';
 
 // Simple color logging utility
 const colors = {
@@ -34,7 +34,7 @@ const colors = {
 /**
  * Configuration hierarchy levels
  */
-export type ConfigLevel = "brain" | "phase" | "service";
+export type ConfigLevel = 'brain' | 'phase' | 'service';
 
 /**
  * Re-export types from schema for backward compatibility
@@ -126,11 +126,10 @@ export class ConfigManager extends EventEmitter {
   private environment: Environment;
   private versionHistory: ConfigVersionHistory;
 
-  constructor(configDirectory: string = "./config", environment?: Environment) {
+  constructor(configDirectory: string = './config', environment?: Environment) {
     super();
     this.configDirectory = configDirectory;
-    this.environment = environment || (process.env.NODE_ENV as Environment) ||
-      "development";
+    this.environment = environment || (process.env.NODE_ENV as Environment) || 'development';
     this.configWatcher = new ConfigWatcher(this);
 
     // Initialize hierarchical loader
@@ -144,16 +143,12 @@ export class ConfigManager extends EventEmitter {
 
     // Initialize version history
     this.versionHistory = getConfigVersionHistory(
-      join(configDirectory, ".history"),
+      join(configDirectory, '.history'),
       100, // Keep last 100 versions
       false, // No compression for now
     );
 
-    console.log(
-      colors.blue(
-        `🚀 Config Manager initialized for environment: ${this.environment}`,
-      ),
-    );
+    console.log(colors.blue(`🚀 Config Manager initialized for environment: ${this.environment}`));
   }
 
   /**
@@ -164,10 +159,7 @@ export class ConfigManager extends EventEmitter {
       const result = await this.hierarchicalLoader.loadBrainConfig();
 
       if (result.validation.warnings.length > 0) {
-        console.warn(
-          colors.yellow("⚠️ Brain config warnings:"),
-          result.validation.warnings,
-        );
+        console.warn(colors.yellow('⚠️ Brain config warnings:'), result.validation.warnings);
       }
 
       // eslint-disable-next-line functional/immutable-data
@@ -175,37 +167,30 @@ export class ConfigManager extends EventEmitter {
 
       // Save version to history
       this.versionHistory.saveVersion(
-        "brain",
-        "brain",
+        'brain',
+        'brain',
         result.config,
-        "system",
-        "Configuration loaded",
+        'system',
+        'Configuration loaded',
       );
 
       // Watch configuration files for changes
       for (const source of result.sources) {
-        if (source.path && source.source !== "environment") {
+        if (source.path && source.source !== 'environment') {
           this.configWatcher.watch(source.path, () => {
             this.reloadBrainConfig();
           });
         }
       }
 
-      console.log(colors.green("✅ Brain configuration loaded"));
+      console.log(colors.green('✅ Brain configuration loaded'));
       console.log(
-        colors.blue(
-          `📋 Configuration sources: ${
-            result.sources.map((s) => s.source).join(", ")
-          }`,
-        ),
+        colors.blue(`📋 Configuration sources: ${result.sources.map((s) => s.source).join(', ')}`),
       );
 
       return result.config;
     } catch (error) {
-      console.error(
-        colors.red("❌ Failed to load brain configuration:"),
-        error,
-      );
+      console.error(colors.red('❌ Failed to load brain configuration:'), error);
       throw error;
     }
   }
@@ -230,9 +215,9 @@ export class ConfigManager extends EventEmitter {
         const overrideValidation = ConfigValidator.validatePhaseConfig(config);
         if (!overrideValidation.valid) {
           throw new Error(
-            `Invalid ${phase} configuration after brain overrides: ${
-              overrideValidation.errors.join(", ")
-            }`,
+            `Invalid ${phase} configuration after brain overrides: ${overrideValidation.errors.join(
+              ', ',
+            )}`,
           );
         }
 
@@ -247,10 +232,7 @@ export class ConfigManager extends EventEmitter {
       }
 
       if (result.validation.warnings.length > 0) {
-        console.warn(
-          colors.yellow(`⚠️ ${phase} config warnings:`),
-          result.validation.warnings,
-        );
+        console.warn(colors.yellow(`⚠️ ${phase} config warnings:`), result.validation.warnings);
       }
 
       // Validate against brain limits
@@ -260,17 +242,11 @@ export class ConfigManager extends EventEmitter {
       this.phaseConfigs.set(phase, config);
 
       // Save version to history
-      this.versionHistory.saveVersion(
-        "phase",
-        phase,
-        config,
-        "system",
-        "Configuration loaded",
-      );
+      this.versionHistory.saveVersion('phase', phase, config, 'system', 'Configuration loaded');
 
       // Watch configuration files for changes
       for (const source of result.sources) {
-        if (source.path && source.source !== "environment") {
+        if (source.path && source.source !== 'environment') {
           this.configWatcher.watch(source.path, () => {
             this.reloadPhaseConfig(phase);
           });
@@ -279,19 +255,12 @@ export class ConfigManager extends EventEmitter {
 
       console.log(colors.green(`✅ ${phase} configuration loaded`));
       console.log(
-        colors.blue(
-          `📋 Configuration sources: ${
-            result.sources.map((s) => s.source).join(", ")
-          }`,
-        ),
+        colors.blue(`📋 Configuration sources: ${result.sources.map((s) => s.source).join(', ')}`),
       );
 
       return config;
     } catch (error) {
-      console.error(
-        colors.red(`❌ Failed to load ${phase} configuration:`),
-        error,
-      );
+      console.error(colors.red(`❌ Failed to load ${phase} configuration:`), error);
       throw error;
     }
   }
@@ -304,10 +273,7 @@ export class ConfigManager extends EventEmitter {
       const result = await this.hierarchicalLoader.loadServiceConfig(service);
 
       if (result.validation.warnings.length > 0) {
-        console.warn(
-          colors.yellow(`⚠️ ${service} config warnings:`),
-          result.validation.warnings,
-        );
+        console.warn(colors.yellow(`⚠️ ${service} config warnings:`), result.validation.warnings);
       }
 
       // eslint-disable-next-line functional/immutable-data
@@ -315,16 +281,16 @@ export class ConfigManager extends EventEmitter {
 
       // Save version to history
       this.versionHistory.saveVersion(
-        "service",
+        'service',
         service,
         result.config,
-        "system",
-        "Configuration loaded",
+        'system',
+        'Configuration loaded',
       );
 
       // Watch configuration files for changes
       for (const source of result.sources) {
-        if (source.path && source.source !== "environment") {
+        if (source.path && source.source !== 'environment') {
           this.configWatcher.watch(source.path, () => {
             this.reloadServiceConfig(service);
           });
@@ -333,19 +299,12 @@ export class ConfigManager extends EventEmitter {
 
       console.log(colors.green(`✅ ${service} service configuration loaded`));
       console.log(
-        colors.blue(
-          `📋 Configuration sources: ${
-            result.sources.map((s) => s.source).join(", ")
-          }`,
-        ),
+        colors.blue(`📋 Configuration sources: ${result.sources.map((s) => s.source).join(', ')}`),
       );
 
       return result.config as ServiceConfig;
     } catch (error) {
-      console.error(
-        colors.red(`❌ Failed to load ${service} service configuration:`),
-        error,
-      );
+      console.error(colors.red(`❌ Failed to load ${service} service configuration:`), error);
       throw error;
     }
   }
@@ -356,43 +315,32 @@ export class ConfigManager extends EventEmitter {
   saveBrainConfig(config: BrainConfig): void {
     const validation = ConfigValidator.validateBrainConfig(config);
     if (!validation.valid) {
-      throw new Error(
-        `Invalid brain configuration: ${validation.errors.join(", ")}`,
-      );
+      throw new Error(`Invalid brain configuration: ${validation.errors.join(', ')}`);
     }
 
-    const configPath = join(this.configDirectory, "brain.config.json");
+    const configPath = join(this.configDirectory, 'brain.config.json');
 
     try {
-      writeFileSync(configPath, JSON.stringify(config, null, 2), "utf8");
+      writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
 
       const oldConfig = this.brainConfig;
       // eslint-disable-next-line functional/immutable-data
       this.brainConfig = config;
 
       // Save version to history
-      this.versionHistory.saveVersion(
-        "brain",
-        "brain",
-        config,
-        "user",
-        "Configuration updated",
-      );
+      this.versionHistory.saveVersion('brain', 'brain', config, 'user', 'Configuration updated');
 
-      this.emit("configChanged", {
-        level: "brain" as ConfigLevel,
-        key: "brain",
+      this.emit('configChanged', {
+        level: 'brain' as ConfigLevel,
+        key: 'brain',
         oldValue: oldConfig,
         newValue: config,
         timestamp: Date.now(),
       });
 
-      console.log(colors.green("✅ Brain configuration saved"));
+      console.log(colors.green('✅ Brain configuration saved'));
     } catch (error) {
-      console.error(
-        colors.red("❌ Failed to save brain configuration:"),
-        error,
-      );
+      console.error(colors.red('❌ Failed to save brain configuration:'), error);
       throw error;
     }
   }
@@ -403,9 +351,7 @@ export class ConfigManager extends EventEmitter {
   savePhaseConfig(phase: string, config: PhaseConfig): void {
     const validation = ConfigValidator.validatePhaseConfig(config);
     if (!validation.valid) {
-      throw new Error(
-        `Invalid ${phase} configuration: ${validation.errors.join(", ")}`,
-      );
+      throw new Error(`Invalid ${phase} configuration: ${validation.errors.join(', ')}`);
     }
 
     // Validate against brain limits
@@ -414,23 +360,17 @@ export class ConfigManager extends EventEmitter {
     const configPath = join(this.configDirectory, `${phase}.config.json`);
 
     try {
-      writeFileSync(configPath, JSON.stringify(config, null, 2), "utf8");
+      writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
 
       const oldConfig = this.phaseConfigs.get(phase);
       // eslint-disable-next-line functional/immutable-data
       this.phaseConfigs.set(phase, config);
 
       // Save version to history
-      this.versionHistory.saveVersion(
-        "phase",
-        phase,
-        config,
-        "user",
-        "Configuration updated",
-      );
+      this.versionHistory.saveVersion('phase', phase, config, 'user', 'Configuration updated');
 
-      this.emit("configChanged", {
-        level: "phase" as ConfigLevel,
+      this.emit('configChanged', {
+        level: 'phase' as ConfigLevel,
         key: phase,
         oldValue: oldConfig,
         newValue: config,
@@ -439,10 +379,7 @@ export class ConfigManager extends EventEmitter {
 
       console.log(colors.green(`✅ ${phase} configuration saved`));
     } catch (error) {
-      console.error(
-        colors.red(`❌ Failed to save ${phase} configuration:`),
-        error,
-      );
+      console.error(colors.red(`❌ Failed to save ${phase} configuration:`), error);
       throw error;
     }
   }
@@ -496,21 +433,18 @@ export class ConfigManager extends EventEmitter {
         await this.reloadPhaseConfig(phase);
       }
 
-      this.emit("configReloaded", {
-        level: "brain" as ConfigLevel,
-        key: "brain",
+      this.emit('configReloaded', {
+        level: 'brain' as ConfigLevel,
+        key: 'brain',
         oldValue: oldConfig,
         newValue: this.brainConfig,
         timestamp: Date.now(),
       });
 
-      console.log(colors.green("🔄 Brain configuration reloaded"));
+      console.log(colors.green('🔄 Brain configuration reloaded'));
     } catch (error) {
-      console.error(
-        colors.red("❌ Failed to reload brain configuration:"),
-        error,
-      );
-      this.emit("configError", { level: "brain", key: "brain", error });
+      console.error(colors.red('❌ Failed to reload brain configuration:'), error);
+      this.emit('configError', { level: 'brain', key: 'brain', error });
     }
   }
 
@@ -522,8 +456,8 @@ export class ConfigManager extends EventEmitter {
       const oldConfig = this.phaseConfigs.get(phase);
       await this.loadPhaseConfig(phase);
 
-      this.emit("configReloaded", {
-        level: "phase" as ConfigLevel,
+      this.emit('configReloaded', {
+        level: 'phase' as ConfigLevel,
         key: phase,
         oldValue: oldConfig,
         newValue: this.phaseConfigs.get(phase),
@@ -532,11 +466,8 @@ export class ConfigManager extends EventEmitter {
 
       console.log(colors.green(`🔄 ${phase} configuration reloaded`));
     } catch (error) {
-      console.error(
-        colors.red(`❌ Failed to reload ${phase} configuration:`),
-        error,
-      );
-      this.emit("configError", { level: "phase", key: phase, error });
+      console.error(colors.red(`❌ Failed to reload ${phase} configuration:`), error);
+      this.emit('configError', { level: 'phase', key: phase, error });
     }
   }
 
@@ -548,8 +479,8 @@ export class ConfigManager extends EventEmitter {
       const oldConfig = this.serviceConfigs.get(service);
       await this.loadServiceConfig(service);
 
-      this.emit("configReloaded", {
-        level: "service" as ConfigLevel,
+      this.emit('configReloaded', {
+        level: 'service' as ConfigLevel,
         key: service,
         oldValue: oldConfig,
         newValue: this.serviceConfigs.get(service),
@@ -558,11 +489,8 @@ export class ConfigManager extends EventEmitter {
 
       console.log(colors.green(`🔄 ${service} service configuration reloaded`));
     } catch (error) {
-      console.error(
-        colors.red(`❌ Failed to reload ${service} service configuration:`),
-        error,
-      );
-      this.emit("configError", { level: "service", key: service, error });
+      console.error(colors.red(`❌ Failed to reload ${service} service configuration:`), error);
+      this.emit('configError', { level: 'service', key: service, error });
     }
   }
 
@@ -596,9 +524,9 @@ export class ConfigManager extends EventEmitter {
     for (const [key, value] of Object.entries(override)) {
       if (value !== undefined && value !== null) {
         if (
-          typeof value === "object" &&
+          typeof value === 'object' &&
           !Array.isArray(value) &&
-          typeof (merged as Record<string, unknown>)[key] === "object" &&
+          typeof (merged as Record<string, unknown>)[key] === 'object' &&
           !Array.isArray((merged as Record<string, unknown>)[key])
         ) {
           // eslint-disable-next-line functional/immutable-data
@@ -641,7 +569,7 @@ export class ConfigManager extends EventEmitter {
    * Get configuration version history
    */
   getConfigVersionHistory(
-    configType: "brain" | "phase" | "service",
+    configType: 'brain' | 'phase' | 'service',
     configKey: string,
   ): ConfigVersion[] {
     return this.versionHistory.getAllVersions(configType, configKey);
@@ -650,10 +578,7 @@ export class ConfigManager extends EventEmitter {
   /**
    * Get configuration version history metadata
    */
-  getConfigVersionMetadata(
-    configType: "brain" | "phase" | "service",
-    configKey: string,
-  ): unknown {
+  getConfigVersionMetadata(configType: 'brain' | 'phase' | 'service', configKey: string): unknown {
     return this.versionHistory.getMetadata(configType, configKey);
   }
 
@@ -661,7 +586,7 @@ export class ConfigManager extends EventEmitter {
    * Get specific configuration version
    */
   getConfigVersion(
-    configType: "brain" | "phase" | "service",
+    configType: 'brain' | 'phase' | 'service',
     configKey: string,
     version: number,
   ): ConfigVersion | null {
@@ -672,46 +597,42 @@ export class ConfigManager extends EventEmitter {
    * Rollback configuration to specific version
    */
   async rollbackToVersion(
-    configType: "brain" | "phase" | "service",
+    configType: 'brain' | 'phase' | 'service',
     configKey: string,
     version: number,
   ): Promise<unknown> {
-    const rollbackResult = this.versionHistory.rollbackToVersion(
-      configType,
-      configKey,
-      version,
-    );
+    const rollbackResult = this.versionHistory.rollbackToVersion(configType, configKey, version);
 
     if (!rollbackResult.success) {
       throw new Error(`Rollback failed: ${rollbackResult.error}`);
     }
 
     // Apply the rolled back configuration
-    if (configType === "brain" && configKey === "brain") {
+    if (configType === 'brain' && configKey === 'brain') {
       // eslint-disable-next-line functional/immutable-data
       this.brainConfig = rollbackResult.data;
-      this.emit("configChanged", {
-        level: "brain" as ConfigLevel,
-        key: "brain",
+      this.emit('configChanged', {
+        level: 'brain' as ConfigLevel,
+        key: 'brain',
         oldValue: null,
         newValue: rollbackResult.data,
         timestamp: Date.now(),
       });
-    } else if (configType === "phase") {
+    } else if (configType === 'phase') {
       // eslint-disable-next-line functional/immutable-data
       this.phaseConfigs.set(configKey, rollbackResult.data);
-      this.emit("configChanged", {
-        level: "phase" as ConfigLevel,
+      this.emit('configChanged', {
+        level: 'phase' as ConfigLevel,
         key: configKey,
         oldValue: null,
         newValue: rollbackResult.data,
         timestamp: Date.now(),
       });
-    } else if (configType === "service") {
+    } else if (configType === 'service') {
       // eslint-disable-next-line functional/immutable-data
       this.serviceConfigs.set(configKey, rollbackResult.data);
-      this.emit("configChanged", {
-        level: "service" as ConfigLevel,
+      this.emit('configChanged', {
+        level: 'service' as ConfigLevel,
         key: configKey,
         oldValue: null,
         newValue: rollbackResult.data,
@@ -719,9 +640,7 @@ export class ConfigManager extends EventEmitter {
       });
     }
 
-    console.log(
-      colors.green(`✅ Rolled back ${configKey} to version ${version}`),
-    );
+    console.log(colors.green(`✅ Rolled back ${configKey} to version ${version}`));
 
     return rollbackResult.data;
   }
@@ -730,24 +649,19 @@ export class ConfigManager extends EventEmitter {
    * Compare configuration versions
    */
   compareConfigVersions(
-    configType: "brain" | "phase" | "service",
+    configType: 'brain' | 'phase' | 'service',
     configKey: string,
     fromVersion: number,
     toVersion: number,
   ): unknown {
-    return this.versionHistory.compareVersions(
-      configType,
-      configKey,
-      fromVersion,
-      toVersion,
-    );
+    return this.versionHistory.compareVersions(configType, configKey, fromVersion, toVersion);
   }
 
   /**
    * Search configuration versions by criteria
    */
   searchConfigVersions(
-    configType: "brain" | "phase" | "service",
+    configType: 'brain' | 'phase' | 'service',
     configKey: string,
     criteria: {
       author?: string;
@@ -764,7 +678,7 @@ export class ConfigManager extends EventEmitter {
    * Export configuration version history
    */
   exportConfigHistory(
-    configType: "brain" | "phase" | "service",
+    configType: 'brain' | 'phase' | 'service',
     configKey: string,
     outputPath: string,
   ): void {
@@ -775,41 +689,29 @@ export class ConfigManager extends EventEmitter {
    * Import configuration version history
    */
   importConfigHistory(
-    configType: "brain" | "phase" | "service",
+    configType: 'brain' | 'phase' | 'service',
     configKey: string,
     inputPath: string,
     merge: boolean = false,
   ): number {
-    return this.versionHistory.importHistory(
-      configType,
-      configKey,
-      inputPath,
-      merge,
-    );
+    return this.versionHistory.importHistory(configType, configKey, inputPath, merge);
   }
 
   /**
    * Prune old configuration versions
    */
   pruneConfigHistory(
-    configType: "brain" | "phase" | "service",
+    configType: 'brain' | 'phase' | 'service',
     configKey: string,
     keepVersions: number,
   ): number {
-    return this.versionHistory.pruneHistory(
-      configType,
-      configKey,
-      keepVersions,
-    );
+    return this.versionHistory.pruneHistory(configType, configKey, keepVersions);
   }
 
   /**
    * Clear configuration version history
    */
-  clearConfigHistory(
-    configType: "brain" | "phase" | "service",
-    configKey: string,
-  ): void {
+  clearConfigHistory(configType: 'brain' | 'phase' | 'service', configKey: string): void {
     this.versionHistory.clearHistory(configType, configKey);
   }
 
@@ -817,7 +719,7 @@ export class ConfigManager extends EventEmitter {
    * Shutdown and cleanup
    */
   shutdown(): void {
-    console.log(colors.blue("🛑 Shutting down Config Manager..."));
+    console.log(colors.blue('🛑 Shutting down Config Manager...'));
     this.configWatcher.unwatchAll();
     this.removeAllListeners();
   }

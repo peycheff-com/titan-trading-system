@@ -7,11 +7,11 @@
  * Requirements: 10.1 - Horizontal scaling with load balancing
  */
 
-import { EventEmitter } from "eventemitter3";
-import http from "http";
-import https from "https";
-import { URL } from "url";
-import * as os from "os";
+import { EventEmitter } from 'eventemitter3';
+import http from 'http';
+import https from 'https';
+import { URL } from 'url';
+import * as os from 'os';
 
 // Simple color logging utility
 const colors = {
@@ -29,7 +29,7 @@ export interface BackendServer {
   id: string;
   host: string;
   port: number;
-  protocol: "http" | "https" | "ws" | "wss";
+  protocol: 'http' | 'https' | 'ws' | 'wss';
   weight: number; // Load balancing weight (1-100)
   maxConnections: number;
   healthCheckPath?: string;
@@ -54,12 +54,12 @@ export interface ServerHealth {
  * Load balancing algorithms
  */
 export type LoadBalancingAlgorithm =
-  | "round_robin"
-  | "weighted_round_robin"
-  | "least_connections"
-  | "least_response_time"
-  | "ip_hash"
-  | "resource_based";
+  | 'round_robin'
+  | 'weighted_round_robin'
+  | 'least_connections'
+  | 'least_response_time'
+  | 'ip_hash'
+  | 'resource_based';
 
 /**
  * Load balancer configuration
@@ -121,10 +121,7 @@ export interface LoadBalancingMetrics {
  * Session management for sticky sessions
  */
 class SessionManager {
-  private sessions = new Map<
-    string,
-    { serverId: string; lastAccess: number }
-  >();
+  private sessions = new Map<string, { serverId: string; lastAccess: number }>();
 
   constructor(private sessionTimeout: number) {}
 
@@ -212,9 +209,7 @@ class HealthChecker extends EventEmitter {
     }, this.config.healthCheckInterval);
 
     console.log(
-      colors.green(
-        `🏥 Health checker started (${this.config.healthCheckInterval}ms interval)`,
-      ),
+      colors.green(`🏥 Health checker started (${this.config.healthCheckInterval}ms interval)`),
     );
   }
 
@@ -234,7 +229,7 @@ class HealthChecker extends EventEmitter {
    */
   private async checkAllServers(): Promise<void> {
     const promises = Array.from(this.servers.values()).map((server) =>
-      this.checkServerHealth(server)
+      this.checkServerHealth(server),
     );
 
     await Promise.allSettled(promises);
@@ -251,10 +246,9 @@ class HealthChecker extends EventEmitter {
     let responseTime = 0;
 
     try {
-      const healthCheckUrl =
-        `${server.protocol}://${server.host}:${server.port}${
-          server.healthCheckPath || "/health"
-        }`;
+      const healthCheckUrl = `${server.protocol}://${server.host}:${server.port}${
+        server.healthCheckPath || '/health'
+      }`;
 
       await this.makeHealthCheckRequest(healthCheckUrl);
 
@@ -267,9 +261,7 @@ class HealthChecker extends EventEmitter {
 
     // Update health status
     const currentHealth = this.healthStatus.get(server.id);
-    const consecutiveFailures = isHealthy
-      ? 0
-      : (currentHealth?.consecutiveFailures || 0) + 1;
+    const consecutiveFailures = isHealthy ? 0 : (currentHealth?.consecutiveFailures || 0) + 1;
 
     const health: ServerHealth = {
       serverId: server.id,
@@ -283,9 +275,9 @@ class HealthChecker extends EventEmitter {
     // Check if health status changed
     const wasHealthy = currentHealth?.isHealthy || false;
     if (health.isHealthy !== wasHealthy) {
-      const status = health.isHealthy ? "healthy" : "unhealthy";
+      const status = health.isHealthy ? 'healthy' : 'unhealthy';
       console.log(colors.cyan(`🏥 Server ${server.id} is now ${status}`));
-      this.emit("healthChange", {
+      this.emit('healthChange', {
         serverId: server.id,
         isHealthy: health.isHealthy,
       });
@@ -301,29 +293,27 @@ class HealthChecker extends EventEmitter {
   private makeHealthCheckRequest(url: string): Promise<void> {
     return new Promise((resolve, reject) => {
       const urlObj = new URL(url);
-      const client = urlObj.protocol === "https:" ? https : http;
+      const client = urlObj.protocol === 'https:' ? https : http;
 
       const req = client.request(
         {
           hostname: urlObj.hostname,
           port: urlObj.port,
           path: urlObj.pathname,
-          method: "GET",
+          method: 'GET',
           timeout: this.config.healthCheckTimeout,
         },
         (res) => {
           if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
             resolve();
           } else {
-            reject(
-              new Error(`Health check failed with status ${res.statusCode}`),
-            );
+            reject(new Error(`Health check failed with status ${res.statusCode}`));
           }
         },
       );
 
-      req.on("error", reject);
-      req.on("timeout", () => reject(new Error("Health check timeout")));
+      req.on('error', reject);
+      req.on('timeout', () => reject(new Error('Health check timeout')));
       req.end();
     });
   }
@@ -351,10 +341,7 @@ class HealthChecker extends EventEmitter {
     const health = this.healthStatus.get(serverId);
     if (health) {
       // eslint-disable-next-line functional/immutable-data
-      health.currentConnections = Math.max(
-        0,
-        health.currentConnections + delta,
-      );
+      health.currentConnections = Math.max(0, health.currentConnections + delta);
     }
   }
 }
@@ -387,15 +374,11 @@ export class LoadBalancer extends EventEmitter {
     };
 
     // Set up health checker events
-    this.healthChecker.on("healthChange", (event) => {
-      this.emit("serverHealthChange", event);
+    this.healthChecker.on('healthChange', (event) => {
+      this.emit('serverHealthChange', event);
     });
 
-    console.log(
-      colors.blue(
-        `🔄 Load Balancer initialized with ${config.algorithm} algorithm`,
-      ),
-    );
+    console.log(colors.blue(`🔄 Load Balancer initialized with ${config.algorithm} algorithm`));
   }
 
   /**
@@ -414,11 +397,7 @@ export class LoadBalancer extends EventEmitter {
       healthScore: 100,
     };
 
-    console.log(
-      colors.green(
-        `➕ Added server ${server.id} (${server.host}:${server.port})`,
-      ),
-    );
+    console.log(colors.green(`➕ Added server ${server.id} (${server.host}:${server.port})`));
   }
 
   /**
@@ -448,7 +427,7 @@ export class LoadBalancer extends EventEmitter {
       this.sessionManager.cleanup();
     }, 60000); // Every minute
 
-    console.log(colors.green("🚀 Load Balancer started"));
+    console.log(colors.green('🚀 Load Balancer started'));
   }
 
   /**
@@ -463,7 +442,7 @@ export class LoadBalancer extends EventEmitter {
       this.metricsTimer = null;
     }
 
-    console.log(colors.yellow("🛑 Load Balancer stopped"));
+    console.log(colors.yellow('🛑 Load Balancer stopped'));
   }
 
   /**
@@ -476,7 +455,7 @@ export class LoadBalancer extends EventEmitter {
       .filter((server) => server !== undefined) as BackendServer[];
 
     if (healthyServers.length === 0) {
-      console.warn(colors.red("⚠️ No healthy servers available"));
+      console.warn(colors.red('⚠️ No healthy servers available'));
       return null;
     }
 
@@ -484,9 +463,7 @@ export class LoadBalancer extends EventEmitter {
     if (this.config.enableStickySessions) {
       const sessionId = this.extractSessionId(routingInfo);
       if (sessionId) {
-        const stickyServerId = this.sessionManager.getServerForSession(
-          sessionId,
-        );
+        const stickyServerId = this.sessionManager.getServerForSession(sessionId);
         if (stickyServerId) {
           const stickyServer = this.servers.get(stickyServerId);
           if (stickyServer && healthyServers.includes(stickyServer)) {
@@ -501,22 +478,22 @@ export class LoadBalancer extends EventEmitter {
     let selectedServer: BackendServer | null = null;
 
     switch (this.config.algorithm) {
-      case "round_robin":
+      case 'round_robin':
         selectedServer = this.selectRoundRobin(healthyServers);
         break;
-      case "weighted_round_robin":
+      case 'weighted_round_robin':
         selectedServer = this.selectWeightedRoundRobin(healthyServers);
         break;
-      case "least_connections":
+      case 'least_connections':
         selectedServer = this.selectLeastConnections(healthyServers);
         break;
-      case "least_response_time":
+      case 'least_response_time':
         selectedServer = this.selectLeastResponseTime(healthyServers);
         break;
-      case "ip_hash":
+      case 'ip_hash':
         selectedServer = this.selectIpHash(healthyServers, routingInfo);
         break;
-      case "resource_based":
+      case 'resource_based':
         selectedServer = this.selectResourceBased(healthyServers);
         break;
       default:
@@ -595,12 +572,10 @@ export class LoadBalancer extends EventEmitter {
   /**
    * IP hash selection (for session affinity)
    */
-  private selectIpHash(
-    servers: BackendServer[],
-    routingInfo: RoutingInfo,
-  ): BackendServer {
-    const clientIp = routingInfo.headers["x-forwarded-for"] ||
-      routingInfo.headers["x-real-ip"] ||
+  private selectIpHash(servers: BackendServer[], routingInfo: RoutingInfo): BackendServer {
+    const clientIp =
+      routingInfo.headers['x-forwarded-for'] ||
+      routingInfo.headers['x-real-ip'] ||
       routingInfo.clientId;
     const hash = this.simpleHash(clientIp);
     const index = hash % servers.length;
@@ -616,10 +591,8 @@ export class LoadBalancer extends EventEmitter {
       const bestHealth = this.healthChecker.getServerHealth(best.id);
 
       // Calculate resource score (lower is better)
-      const serverScore = (serverHealth?.cpuUsage || 50) +
-        (serverHealth?.memoryUsage || 50);
-      const bestScore = (bestHealth?.cpuUsage || 50) +
-        (bestHealth?.memoryUsage || 50);
+      const serverScore = (serverHealth?.cpuUsage || 50) + (serverHealth?.memoryUsage || 50);
+      const bestScore = (bestHealth?.cpuUsage || 50) + (bestHealth?.memoryUsage || 50);
 
       return serverScore < bestScore ? server : best;
     });
@@ -654,7 +627,7 @@ export class LoadBalancer extends EventEmitter {
     }
 
     // Try to extract from header
-    const sessionHeader = routingInfo.headers["x-session-id"];
+    const sessionHeader = routingInfo.headers['x-session-id'];
     if (sessionHeader) {
       return sessionHeader;
     }
@@ -666,11 +639,7 @@ export class LoadBalancer extends EventEmitter {
   /**
    * Record request metrics
    */
-  recordRequest(
-    serverId: string,
-    responseTime: number,
-    success: boolean,
-  ): void {
+  recordRequest(serverId: string, responseTime: number, success: boolean): void {
     // eslint-disable-next-line functional/immutable-data
     this.metrics.totalRequests++;
 
@@ -688,14 +657,12 @@ export class LoadBalancer extends EventEmitter {
       // eslint-disable-next-line functional/immutable-data
       serverMetrics.requests++;
       // eslint-disable-next-line functional/immutable-data
-      serverMetrics.responseTime = (serverMetrics.responseTime + responseTime) /
-        2; // Moving average
+      serverMetrics.responseTime = (serverMetrics.responseTime + responseTime) / 2; // Moving average
     }
 
     // Update global average response time
     // eslint-disable-next-line functional/immutable-data
-    this.metrics.averageResponseTime =
-      (this.metrics.averageResponseTime + responseTime) / 2;
+    this.metrics.averageResponseTime = (this.metrics.averageResponseTime + responseTime) / 2;
   }
 
   /**
@@ -704,18 +671,12 @@ export class LoadBalancer extends EventEmitter {
   updateConnectionCount(serverId: string, delta: number): void {
     this.healthChecker.updateConnectionCount(serverId, delta);
     // eslint-disable-next-line functional/immutable-data
-    this.metrics.activeConnections = Math.max(
-      0,
-      this.metrics.activeConnections + delta,
-    );
+    this.metrics.activeConnections = Math.max(0, this.metrics.activeConnections + delta);
 
     const serverMetrics = this.metrics.serverMetrics[serverId];
     if (serverMetrics) {
       // eslint-disable-next-line functional/immutable-data
-      serverMetrics.connections = Math.max(
-        0,
-        serverMetrics.connections + delta,
-      );
+      serverMetrics.connections = Math.max(0, serverMetrics.connections + delta);
     }
   }
 
@@ -738,7 +699,7 @@ export class LoadBalancer extends EventEmitter {
       // eslint-disable-next-line functional/immutable-data
       this.metrics.failedRequests = 0;
 
-      this.emit("metrics", this.metrics);
+      this.emit('metrics', this.metrics);
     }, 60000); // Every minute
   }
 
@@ -779,14 +740,14 @@ export class LoadBalancer extends EventEmitter {
   updateConfig(config: Partial<LoadBalancerConfig>): void {
     // eslint-disable-next-line functional/immutable-data
     this.config = { ...this.config, ...config };
-    console.log(colors.blue("⚙️ Load balancer configuration updated"));
+    console.log(colors.blue('⚙️ Load balancer configuration updated'));
   }
 
   /**
    * Shutdown and cleanup
    */
   shutdown(): void {
-    console.log(colors.blue("🛑 Shutting down Load Balancer..."));
+    console.log(colors.blue('🛑 Shutting down Load Balancer...'));
     this.stop();
     // eslint-disable-next-line functional/immutable-data
     this.servers.clear();
@@ -798,7 +759,7 @@ export class LoadBalancer extends EventEmitter {
  * Default load balancer configuration
  */
 export const DEFAULT_LOAD_BALANCER_CONFIG: LoadBalancerConfig = {
-  algorithm: "least_connections",
+  algorithm: 'least_connections',
   healthCheckInterval: 30000, // 30 seconds
   healthCheckTimeout: 5000, // 5 seconds
   maxFailures: 3,

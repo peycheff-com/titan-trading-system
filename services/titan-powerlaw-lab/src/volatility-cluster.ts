@@ -37,7 +37,6 @@ export class VolatilityClusterDetector {
     // Average persistence of lags 1-3
     const avgPersistence = (acf[1] + acf[2] + acf[3]) / 3;
 
-     
     let state: VolClusterState = 'mean_revert';
 
     // Heuristics tuned for crypto
@@ -70,15 +69,14 @@ export class VolatilityClusterDetector {
     if (variance === 0) return new Array(lags).fill(0);
 
     const acf = [];
-     
+
     for (let lag = 0; lag <= lags; lag++) {
-       
       let sum = 0;
-       
+
       for (let i = 0; i < n - lag; i++) {
         sum += (data[i] - mean) * (data[i + lag] - mean);
       }
-       
+
       acf.push(sum / n / variance);
     }
     return acf;
