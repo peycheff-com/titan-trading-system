@@ -19,27 +19,57 @@ pub struct RiskPolicy {
     pub current_state: RiskState,
 
     /// Maximum notional value (Price * Size) allowed for a single position
+    #[serde(alias = "maxPositionNotional")]
     pub max_position_notional: Decimal,
 
     /// Maximum leverage allowed for the account
+    #[serde(alias = "maxAccountLeverage")]
     pub max_account_leverage: Decimal,
 
     /// Maximum daily loss limit (negative value)
+    #[serde(alias = "maxDailyLoss")]
     pub max_daily_loss: Decimal,
 
     /// Maximum open orders per symbol
+    #[serde(alias = "maxOpenOrdersPerSymbol")]
     pub max_open_orders_per_symbol: usize,
 
     /// Whitelisted symbols
+    #[serde(alias = "symbolWhitelist")]
     pub symbol_whitelist: HashSet<String>,
 
     /// Maximum allowed slippage in basis points (Circuit Breaker)
-    #[serde(default = "default_max_slippage")]
+    #[serde(default = "default_max_slippage", alias = "maxSlippageBps")]
     pub max_slippage_bps: u32,
 
     /// Maximum allowed staleness for market data in ms (Circuit Breaker)
-    #[serde(default = "default_max_staleness")]
+    #[serde(default = "default_max_staleness", alias = "maxStalenessMs")]
     pub max_staleness_ms: i64,
+
+    // --- Strategy Constraints (Brain Veto) ---
+    // These are informational for Rust (for now) but strictly enforced by Brain.
+    // We ingest them to ensure full Policy portability.
+    #[serde(alias = "maxCorrelation", default = "default_max_correlation")]
+    pub max_correlation: Decimal,
+
+    #[serde(alias = "correlationPenalty", default = "default_correlation_penalty")]
+    pub correlation_penalty: Decimal,
+
+    #[serde(alias = "minConfidenceScore", default = "default_min_confidence")]
+    pub min_confidence_score: Decimal,
+
+    #[serde(
+        alias = "minStopDistanceMultiplier",
+        default = "default_min_stop_distance"
+    )]
+    pub min_stop_distance_multiplier: Decimal,
+
+    // --- Metadata ---
+    #[serde(default)]
+    pub version: u32,
+
+    #[serde(alias = "lastUpdated", default)]
+    pub last_updated: i64,
 }
 
 fn default_max_slippage() -> u32 {
@@ -48,6 +78,22 @@ fn default_max_slippage() -> u32 {
 
 fn default_max_staleness() -> i64 {
     5000 // 5 seconds
+}
+
+fn default_max_correlation() -> Decimal {
+    dec!(0.7)
+}
+
+fn default_correlation_penalty() -> Decimal {
+    dec!(0.5)
+}
+
+fn default_min_confidence() -> Decimal {
+    dec!(0.7)
+}
+
+fn default_min_stop_distance() -> Decimal {
+    dec!(1.5)
 }
 
 impl Default for RiskPolicy {
@@ -67,6 +113,14 @@ impl Default for RiskPolicy {
             symbol_whitelist: whitelist,
             max_slippage_bps: default_max_slippage(),
             max_staleness_ms: default_max_staleness(),
+
+            // New defaults
+            max_correlation: default_max_correlation(),
+            correlation_penalty: default_correlation_penalty(),
+            min_confidence_score: default_min_confidence(),
+            min_stop_distance_multiplier: default_min_stop_distance(),
+            version: 1,
+            last_updated: 0,
         }
     }
 }
@@ -82,6 +136,13 @@ impl RiskPolicy {
             symbol_whitelist: HashSet::new(),
             max_slippage_bps: 0,
             max_staleness_ms: 0,
+
+            max_correlation: dec!(0.0),
+            correlation_penalty: dec!(1.0),
+            min_confidence_score: dec!(1.0),
+            min_stop_distance_multiplier: dec!(10.0),
+            version: 1,
+            last_updated: 0,
         }
     }
 }

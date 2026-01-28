@@ -80,22 +80,52 @@ pub async fn start_nats_engine(
         }
     });
 
-    // Listen for urgent kill signals. Payload: { "active": true, "reason": "Manually triggered" }
-    let mut halt_sub = client.subscribe("system.halt").await.map_err(|e| {
-        error!("❌ Failed to subscribe to system.halt: {}", e);
+    // --- System Halt Listener (Unified SystemState) ---
+    // Payload: { "state": "OPEN" | "SOFT_HALT" | "HARD_HALT", "reason": "...", "timestamp": ... }
+    let mut halt_sub = client.subscribe("titan.cmd.sys.halt").await.map_err(|e| {
+        error!("❌ Failed to subscribe to titan.cmd.sys.halt: {}", e);
         e
     })?;
     let halt_state_clone = global_halt.clone();
 
     tokio::spawn(async move {
-        info!("👂 Listening for system.halt signals...");
+        info!("👂 Listening for titan.cmd.sys.halt signals...");
         while let Some(msg) = halt_sub.next().await {
             if let Ok(v) = serde_json::from_slice::<Value>(&msg.payload) {
+                // Check if new SystemState format
+                if let Some(state_str) = v.get("state").and_then(|s| s.as_str()) {
+                    let reason = v
+                        .get("reason")
+                        .and_then(|s| s.as_str())
+                        .unwrap_or("System Command");
+                    
+                    match state_str {
+                        "OPEN" => {
+                            info!("🟢 System State: OPEN. Resuming operations.");
+                            halt_state_clone.set_halt(false, reason);
+                        },
+                        "SOFT_HALT" => {
+                            // Rust currently treats Soft/Hard same (Halt)
+                            warn!("🟡 System State: SOFT_HALT. Reducing risk (treated as HALT in Phase 2).");
+                            halt_state_clone.set_halt(true, reason);
+                        },
+                        "HARD_HALT" => {
+                            error!("🔴 System State: HARD_HALT. Emergency Stop.");
+                            halt_state_clone.set_halt(true, reason);
+                        },
+                        _ => {
+                            warn!("Received unknown system state: {}", state_str);
+                        }
+                    }
+                    continue;
+                }
+
+                // Fallback for Legacy Payload { "active": true, ... }
                 let active = v.get("active").and_then(|b| b.as_bool()).unwrap_or(false);
                 let reason = v
                     .get("reason")
                     .and_then(|s| s.as_str())
-                    .unwrap_or("Unknown");
+                    .unwrap_or("Legacy Command");
                 halt_state_clone.set_halt(active, reason);
             } else {
                 warn!("Received malformed system.halt payload");

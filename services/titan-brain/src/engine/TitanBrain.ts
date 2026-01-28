@@ -290,6 +290,7 @@ export class TitanBrain
         this.eventStore,
         this.truthRepository,
       );
+      this.reconciliationService.start();
     }
 
     // 3. Start metric updates
@@ -603,6 +604,41 @@ export class TitanBrain
     } else if (target === "allocation") {
       // TODO: Handle allocation updates via AllocationEngine or StateManager
       // this.stateManager.setAllocation(value);
+    }
+  }
+
+  /**
+   * Handle System State updates from NATS (Gap-02)
+   */
+  async handleSystemState(state: any, reason: string): Promise<void> {
+    logger.info(`[SystemState] Received update: ${state} (${reason})`);
+
+    switch (state) {
+      case "OPEN":
+        if (this.circuitBreaker.isActive()) {
+          logger.info(
+            "[SystemState] Resetting Circuit Breaker via remote command",
+          );
+          await this.circuitBreaker.reset("REMOTE_COMMAND");
+        }
+        break;
+
+      case "SOFT_HALT":
+        logger.warn("[SystemState] Remote SOFT HALT triggered");
+        // Soft pause triggers a cooldown breaker
+        // We use a generic cooldown if not specified, or just trigger soft pause logic
+        await this.circuitBreaker.triggerSoftPause(
+          reason || "Remote Soft Halt",
+        );
+        break;
+
+      case "HARD_HALT":
+        logger.error("[SystemState] Remote HARD HALT triggered");
+        await this.circuitBreaker.trigger(reason || "Remote Hard Halt");
+        break;
+
+      default:
+        logger.warn(`[SystemState] Unknown state received: ${state}`);
     }
   }
 

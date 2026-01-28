@@ -3,7 +3,7 @@
  * Defines types for risk management and correlation guards
  */
 
-import { PhaseId } from './performance.js';
+import { PhaseId } from "./performance.js";
 
 /**
  * Intent signal from a phase requesting execution
@@ -12,7 +12,7 @@ export interface IntentSignal {
   signalId: string;
   phaseId: PhaseId;
   symbol: string;
-  side: 'BUY' | 'SELL';
+  side: "BUY" | "SELL";
   /** Requested position size in USD notional */
   requestedSize: number;
   timestamp: number;
@@ -40,21 +40,19 @@ export interface IntentSignal {
   /** Exchange where this signal should be executed */
   exchange?: string;
   /** Position mode (One-Way vs Hedge) */
-  positionMode?: 'ONE_WAY' | 'HEDGE';
+  positionMode?: "ONE_WAY" | "HEDGE";
   /** Intent Type */
-  type?: 'MANUAL' | 'STRATEGY' | 'RECONCILIATION' | 'LIQUIDATION';
+  type?: "MANUAL" | "STRATEGY" | "RECONCILIATION" | "LIQUIDATION";
   /** Trap Type for Bayesian Calibration (Phase 1) */
   trap_type?: string;
   /** Additional metadata (source, velocity, orderType, etc.) */
   metadata?: Record<string, unknown>;
 }
 
-/**
- * Risk Policy Command (Brain -> Execution)
- */
+// RiskPolicy for BudgetService broadcast (snake_case to match legacy NATS consumers)
 export interface RiskPolicy {
   current_state: RiskPolicyState;
-  max_position_notional: number; // Decimal in Rust, number here (safely)
+  max_position_notional: number;
   max_account_leverage: number;
   max_daily_loss: number;
   max_open_orders_per_symbol: number;
@@ -64,10 +62,10 @@ export interface RiskPolicy {
 }
 
 export enum RiskPolicyState {
-  Normal = 'Normal',
-  Cautious = 'Cautious',
-  Defensive = 'Defensive',
-  Emergency = 'Emergency',
+  Normal = "Normal",
+  Cautious = "Cautious",
+  Defensive = "Defensive",
+  Emergency = "Emergency",
 }
 
 /**
@@ -75,7 +73,7 @@ export enum RiskPolicyState {
  */
 export interface Position {
   symbol: string;
-  side: 'LONG' | 'SHORT';
+  side: "LONG" | "SHORT";
   /** Position size in USD notional */
   size: number;
   /** Entry price */
@@ -89,7 +87,7 @@ export interface Position {
   /** Exchange where position is held */
   exchange?: string;
   /** Position mode (One-Way vs Hedge) */
-  positionMode?: 'ONE_WAY' | 'HEDGE';
+  positionMode?: "ONE_WAY" | "HEDGE";
 }
 
 /**
@@ -131,26 +129,24 @@ export interface RiskSnapshot {
 /**
  * Risk guardian configuration
  */
-export interface RiskGuardianConfig {
-  /** Maximum correlation before flagging high-risk */
-  maxCorrelation: number;
-  /** Size reduction penalty for high correlation */
-  correlationPenalty: number;
+import { RiskPolicyV1 } from "@titan/shared";
+
+/**
+ * Risk guardian configuration
+ * Extends Unified Risk Policy V1 with Brain-specific settings
+ */
+export interface RiskGuardianConfig extends RiskPolicyV1 {
   /** Interval for beta updates (ms) */
   betaUpdateInterval: number;
   /** Correlation matrix update interval (ms) */
   correlationUpdateInterval: number;
-  /** Minimum stop distance multiplier (x ATR) */
-  minStopDistanceMultiplier: number;
-  /** Minimum confidence score to allow trading (0.0 - 1.0) */
-  minConfidenceScore: number;
-  /** Confidence score configuration */
+  /** Confidence score configuration (Detailed) */
   confidence: ConfidenceScoreConfig;
   /** Fractal risk constraints per phase */
   fractal: {
     [key: string]: PhaseRiskConstraints;
   };
-  riskAversionLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
+  riskAversionLevel?: "LOW" | "MEDIUM" | "HIGH";
   /** Cost-Ensure Veto Configuration */
   costVeto?: {
     enabled: boolean;

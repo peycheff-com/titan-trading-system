@@ -52,6 +52,18 @@ const allocationConfig: AllocationEngineConfig = {
 };
 
 const riskConfig: RiskGuardianConfig = {
+  // --- Policy V1 Fields ---
+  maxAccountLeverage: 10,
+  maxPositionNotional: 50000,
+  maxDailyLoss: -1000,
+  maxOpenOrdersPerSymbol: 5,
+  symbolWhitelist: ["BTCUSDT", "ETHUSDT"],
+  maxSlippageBps: 100,
+  maxStalenessMs: 5000,
+  version: 1,
+  lastUpdated: 0,
+
+  // --- Legacy/Extended Fields ---
   maxCorrelation: 0.8,
   correlationPenalty: 0.5,
   correlationUpdateInterval: 300000, // 5 minutes
@@ -858,6 +870,58 @@ describe("RiskGuardian Unit Tests", () => {
       const decision = riskGuardian.checkSignal(signal, []);
       expect(decision.approved).toBe(false);
       expect(decision.reason).toContain("LATENCY_VETO");
+    });
+  });
+});
+
+  describe("Policy Enforcement", () => {
+    it("should veto if Projected Notional > maxPositionNotional", () => {
+      riskGuardian.setEquity(10000);
+      // maxPositionNotional is 50,000 in test config
+      const signal: IntentSignal = {
+        signalId: "policy-notional-veto",
+        phaseId: "phase1" as PhaseId,
+        symbol: "BTCUSDT",
+        side: "BUY",
+        requestedSize: 50001, // > 50,000
+        timestamp: Date.now(),
+      };
+      
+      const decision = riskGuardian.checkSignal(signal, []);
+      expect(decision.approved).toBe(false);
+      expect(decision.reason).toContain("Max Position Notional Exceeded");
+    });
+
+    it("should veto if Symbol is not in Whitelist", () => {
+      riskGuardian.setEquity(10000);
+      // Whitelist is ['BTCUSDT', 'ETHUSDT']
+      const signal: IntentSignal = {
+        signalId: "policy-whitelist-veto",
+        phaseId: "phase1" as PhaseId,
+        symbol: "DOGEUSDT", // Not in whitelist
+        side: "BUY",
+        requestedSize: 1000,
+        timestamp: Date.now(),
+      };
+      
+      const decision = riskGuardian.checkSignal(signal, []);
+      expect(decision.approved).toBe(false);
+      expect(decision.reason).toContain("not whitelisted");
+    });
+
+    it("should approve valid symbol within limits", () => {
+      riskGuardian.setEquity(10000);
+      const signal: IntentSignal = {
+        signalId: "policy-pass",
+        phaseId: "phase1" as PhaseId,
+        symbol: "BTCUSDT", // In whitelist
+        side: "BUY",
+        requestedSize: 49000, // < 50,000
+        timestamp: Date.now(),
+      };
+      
+      const decision = riskGuardian.checkSignal(signal, []);
+      expect(decision.approved).toBe(true);
     });
   });
 });

@@ -157,9 +157,35 @@ export class RiskGuardian {
             }
         }
 
-        const maxLeverage = this.allocationEngine.getMaxLeverage(
-            this.currentEquity,
+        const maxLeverage = Math.min(
+            this.allocationEngine.getMaxLeverage(this.currentEquity),
+            this.config.maxAccountLeverage,
         );
+
+        // --- Policy Veto 1: Max Position Notional ---
+        if (projectedNotional > this.config.maxPositionNotional) {
+            return {
+                approved: false,
+                reason: `Policy Veto: Max Position Notional Exceeded (${
+                    projectedNotional.toFixed(0)
+                } > ${this.config.maxPositionNotional})`,
+                riskMetrics,
+                adjustedSize: 0,
+            };
+        }
+
+        // --- Policy Veto 2: Symbol Whitelist ---
+        if (
+            this.config.symbolWhitelist &&
+            !this.config.symbolWhitelist.includes(signal.symbol)
+        ) {
+            return {
+                approved: false,
+                reason: `Policy Veto: Symbol ${signal.symbol} not whitelisted`,
+                riskMetrics,
+                adjustedSize: 0,
+            };
+        }
 
         // Cost/Expectancy Veto (Moved before Stop Distance)
         if (

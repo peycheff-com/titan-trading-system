@@ -1,4 +1,9 @@
-import { getNatsClient, NatsClient, TitanSubject } from "@titan/shared";
+import {
+  ExecutionReportSchema,
+  getNatsClient,
+  NatsClient,
+  TitanSubject,
+} from "@titan/shared";
 import { TitanBrain } from "../engine/TitanBrain.js";
 import { getLogger, StructuredLogger } from "../monitoring/index.js";
 import { WebSocketService } from "./WebSocketService.js";
@@ -167,6 +172,46 @@ export class NatsConsumer {
       },
       "BRAIN_GOVERNANCE", // Durable consumer for governance/proposals
     );
+
+    // Subscribe to System Halt Commands (GAP-02)
+    // Payload: { state: "OPEN" | "SOFT_HALT" | "HARD_HALT", ... }
+    this.nats.subscribe(
+      "titan.cmd.sys.halt",
+      async (data: any, subject) => {
+        try {
+          const payload = this.extractPayload(data);
+          const state = payload.state;
+          const reason = payload.reason || "NATS Command";
+
+          // Fallback for legacy { active: true } payload
+          if (!state && payload.active !== undefined) {
+            if (payload.active) {
+              await this.brain.handleSystemState("HARD_HALT", reason);
+            } else {
+              await this.brain.handleSystemState("OPEN", reason);
+            }
+            return;
+          }
+
+          if (state) {
+            await this.brain.handleSystemState(state, reason);
+          }
+        } catch (err) {
+          this.logger.error("Error handling System Halt command", err as Error);
+        }
+      },
+      "BRAIN_SYS_CONTROL", // Durable consumer for system control
+    );
+  }
+
+  // Helper to extract payload from potential envelope
+  private extractPayload(data: any): any {
+    if (
+      data && typeof data === "object" && "payload" in data && "type" in data
+    ) {
+      return data.payload;
+    }
+    return data;
   }
 
   private async handleExecutionReport(data: any): Promise<void> {
@@ -188,29 +233,11 @@ export class NatsConsumer {
     try {
       // Map incoming NATS data to Brain's ExecutionReport interface
       // Handling both snake_case (from Python/Rust services) and camelCase (Node services)
-      const report = {
-        type: "EXECUTION_REPORT", // Event type
-        phaseId: payload.phaseId || payload.phase_id || "unknown",
-        signalId: payload.signalId || payload.signal_id,
-        symbol: payload.symbol,
-        side: (payload.side || "BUY").toUpperCase(),
-        price: Number(
-          payload.fillPrice || payload.fill_price || payload.price || 0,
-        ),
-        qty: Number(payload.fillSize || payload.fill_size || payload.qty || 0),
-        timestamp: payload.timestamp || Date.now(),
-        status: payload.status, // FILLED, PARTIALLY_FILLED, etc.
-        reason: payload.reason,
-        // Map fillId from upstream (execution_id in exchange or trade_id)
-        fillId: payload.fillId || payload.fill_id || payload.trade_id ||
-          payload.execution_id,
-        executionId: payload.executionId || payload.execution_id, // Keep redundant executionId for now if used elsewhere
-      };
+      // ENFORCED: Using Zod Schema for validation and normalization
+      const report = ExecutionReportSchema.parse(payload);
 
       // Forward to Brain engine
-      // Note: Brain.handleExecutionReport takes 'ExecutionReport' which might differ slightly from the webhook body
-      // We cast to any here to match the method signature if strictly typed, or rely on structural typing.
-      await this.brain.handleExecutionReport(report as any);
+      await this.brain.handleExecutionReport(report);
 
       // Also notify WebSocket clients of the fill
       if (this.webSocketService) {
