@@ -33,6 +33,18 @@ export interface BreakerEventPersistence {
 }
 
 /**
+ * Interface for publishing halt commands to execution infrastructure
+ * Allows the CircuitBreaker to propagate halt state to remote services
+ */
+export interface HaltPublisher {
+  publishHalt(
+    state: "HARD_HALT" | "SOFT_HALT" | "NORMAL",
+    reason: string,
+    metadata?: Record<string, unknown>,
+  ): Promise<void>;
+}
+
+/**
  * CircuitBreaker monitors for extreme conditions and triggers
  * emergency halt when thresholds are breached.
  *
@@ -68,6 +80,7 @@ export class CircuitBreaker {
   private positionHandler?: PositionClosureHandler;
   private notificationHandler?: NotificationHandler;
   private eventPersistence?: BreakerEventPersistence;
+  private haltPublisher?: HaltPublisher;
 
   constructor(config: CircuitBreakerConfig) {
     this.config = config;
@@ -92,6 +105,14 @@ export class CircuitBreaker {
    */
   setEventPersistence(persistence: BreakerEventPersistence): void {
     this.eventPersistence = persistence;
+  }
+
+  /**
+   * Set the halt publisher for NATS integration
+   * Enables Circuit Breaker to propagate halt state to Execution Engine
+   */
+  setHaltPublisher(publisher: HaltPublisher): void {
+    this.haltPublisher = publisher;
   }
 
   /**
@@ -324,6 +345,21 @@ export class CircuitBreaker {
         await this.eventPersistence.persistEvent(event);
       } catch (error) {
         console.error("Failed to persist breaker event:", error);
+      }
+    }
+
+    // Propagate halt state to Execution Engine via NATS
+    if (this.haltPublisher) {
+      try {
+        await this.haltPublisher.publishHalt("HARD_HALT", reason, {
+          triggeredAt: timestamp,
+          source: "CircuitBreaker",
+          tripCount: this.tripCount,
+          dailyDrawdown: this.calculateDailyDrawdown(this.dailyStartEquity),
+        });
+        console.log("🚨 HALT published to Execution Engine");
+      } catch (error) {
+        console.error("Failed to publish halt to NATS:", error);
       }
     }
   }

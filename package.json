@@ -16,6 +16,7 @@
     "start:sentinel": "npm start -w services/titan-phase3-sentinel",
     "start:powerlaw-lab": "npm start -w services/titan-powerlaw-lab",
     "start:ai-quant": "npm start -w services/titan-ai-quant",
+    "start:prod": "bash scripts/ops/start_production.sh",
     "build": "turbo run build",
     "test": "turbo run test",
     "test:all": "turbo run test",

@@ -97,3 +97,82 @@ If a migration corrupts data:
    docker compose down
    docker compose up -d
    ```
+
+---
+
+## 🚨 EMERGENCY: "Oh Shit" Button
+
+> [!CAUTION]
+> Use these commands ONLY in genuine emergencies. They bypass normal controls.
+
+### Immediate Full Stop (Fastest)
+
+Create the halt lock file directly on the execution container:
+```bash
+# NUCLEAR OPTION: Creates system.halt file → Engine stops immediately
+docker exec titan-execution sh -c 'echo "EMERGENCY $(date)" > system.halt'
+```
+
+Verify halt is active:
+```bash
+docker exec titan-execution ls -la system.halt
+```
+
+### NATS Halt Command (Standard)
+
+```bash
+# Standard halt via NATS messaging
+docker exec titan-nats nats pub titan.cmd.sys.halt.v1 \
+  '{"state":"HARD_HALT","reason":"OPERATOR EMERGENCY","source":"manual"}'
+```
+
+### Flatten All Positions (Close Everything)
+
+> [!WARNING]
+> This will immediately close ALL open positions at market price.
+
+```bash
+docker exec titan-nats nats pub titan.cmd.risk.flatten '{}'
+```
+
+### Kill Switch (Last Resort)
+
+If messaging is unresponsive, stop containers directly:
+```bash
+# Stop execution first to prevent new orders
+docker stop titan-execution
+
+# Then stop brain
+docker stop titan-brain
+
+# Verify
+docker ps | grep titan
+```
+
+### Recovery from Emergency Halt
+
+1. **Clear the halt file:**
+   ```bash
+   docker exec titan-execution rm -f system.halt
+   ```
+
+2. **Resume via NATS:**
+   ```bash
+   docker exec titan-nats nats pub titan.cmd.sys.halt.v1 \
+     '{"state":"NORMAL","reason":"Emergency cleared","source":"manual"}'
+   ```
+
+3. **Verify system state:**
+   ```bash
+   docker logs titan-execution --tail 20 | grep -E "(HALT|NORMAL)"
+   docker logs titan-brain --tail 20 | grep -E "(Breaker|Resume)"
+   ```
+
+4. **Reset Circuit Breaker (if triggered):**
+   Use the Console UI Armed Mode panel, or:
+   ```bash
+   curl -X POST http://localhost:3100/api/breaker/reset \
+     -H "Content-Type: application/json" \
+     -d '{"operatorId": "YOUR_NAME"}'
+   ```
+
