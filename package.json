@@ -38,7 +38,7 @@
     "sota:license": "bash scripts/sota/check_license.sh",
     "sota:mutation": "npx stryker run stryker.config.mjs",
     "sota:bundle": "npx ts-node scripts/sota/check_bundle_size.ts",
-    "sota:profile": "echo 'Run: 0x -o -- npm start:brain' # Interactive profiling",
+    "sota:profile": "echo 'Install 0x manually: npx 0x -o -- npm start:brain' # Interactive profiling",
     "sota:impact": "bash scripts/sota/check_impact.sh",
     "sota:correctness": "npx jest tests/correctness",
     "sota:typecheck": "tsc -b",
@@ -71,7 +71,7 @@
     "@stryker-mutator/jest-runner": "^9.4.0",
     "@stryker-mutator/typescript-checker": "^9.4.0",
     "@types/jest": "^30.0.0",
-    "0x": "^6.0.0",
+
     "axios": "^1.13.3",
     "commander": "^14.0.2",
     "cross-env": "^10.1.0",
