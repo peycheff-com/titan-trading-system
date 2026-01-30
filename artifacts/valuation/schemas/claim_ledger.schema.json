@@ -1,0 +1,249 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://titan.trading/schemas/claim-ledger/v1",
+  "title": "TitanClaimLedger",
+  "description": "Machine-checkable claim ledger for IP valuation with evidence traceability",
+  "type": "object",
+  "required": ["metadata", "claims"],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "required": ["asOfDate", "timezone", "commitHash", "valuationVersion"],
+      "properties": {
+        "asOfDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of valuation snapshot"
+        },
+        "timezone": {
+          "type": "string",
+          "const": "Europe/Sofia",
+          "description": "Canonical timezone for all timestamps"
+        },
+        "commitHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$",
+          "description": "Full SHA-1 git commit hash"
+        },
+        "valuationVersion": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "description": "Semantic version of this valuation"
+        },
+        "toolchainVersions": {
+          "type": "object",
+          "properties": {
+            "node": { "type": "string" },
+            "npm": { "type": "string" },
+            "rustc": { "type": "string" },
+            "cargo": { "type": "string" },
+            "typescript": { "type": "string" }
+          },
+          "description": "Pinned toolchain versions used for evidence collection"
+        },
+        "containerDigests": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Docker image digests for reproducibility"
+        },
+        "dependencySnapshotDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of OSV/NVD vulnerability scan"
+        },
+        "regulatorySnapshotDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of regulatory document captures"
+        }
+      }
+    },
+    "claims": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Claim" },
+      "description": "All valuation claims with evidence pointers"
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "totalClaims": { "type": "integer", "minimum": 0 },
+        "verified": { "type": "integer", "minimum": 0 },
+        "unknown": { "type": "integer", "minimum": 0 },
+        "buildObligation": { "type": "integer", "minimum": 0 }
+      },
+      "description": "Claim status summary"
+    }
+  },
+  "$defs": {
+    "Claim": {
+      "type": "object",
+      "required": ["id", "statement", "status", "category"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^CLM-[A-Z]+-\\d{3}$",
+          "description": "Unique claim identifier (e.g., CLM-SCOPE-001)"
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 10,
+          "description": "Human-readable claim statement"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["VERIFIED", "UNKNOWN", "BUILD-OBLIGATION"],
+          "description": "Claim verification status"
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "SCOPE",
+            "SECURITY",
+            "SUPPLY-CHAIN",
+            "CORRECTNESS",
+            "OPERABILITY",
+            "REPRODUCIBILITY",
+            "REGULATORY",
+            "FINANCIAL"
+          ],
+          "description": "Claim category for classification"
+        },
+        "subcategory": {
+          "type": "string",
+          "description": "Optional subcategory for finer classification"
+        },
+        "evidencePointers": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Evidence" },
+          "description": "Evidence supporting this claim"
+        },
+        "calculationLinks": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "References to calculations using this claim"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional context or caveats"
+        },
+        "buildObligationSpec": {
+          "type": "object",
+          "properties": {
+            "artifact": { "type": "string" },
+            "criteria": { "type": "string" },
+            "estimatedEffort": { "type": "string" }
+          },
+          "description": "Specification for BUILD-OBLIGATION claims"
+        }
+      }
+    },
+    "Evidence": {
+      "oneOf": [
+        { "$ref": "#/$defs/CodeEvidence" },
+        { "$ref": "#/$defs/RunEvidence" },
+        { "$ref": "#/$defs/WebEvidence" }
+      ]
+    },
+    "CodeEvidence": {
+      "type": "object",
+      "required": ["type", "repoPath", "commitHash"],
+      "properties": {
+        "type": { "const": "CODE" },
+        "repoPath": {
+          "type": "string",
+          "description": "Relative path from repo root"
+        },
+        "symbol": {
+          "type": "string",
+          "description": "Function, class, or module name"
+        },
+        "lineRange": {
+          "type": "string",
+          "pattern": "^L\\d+(-L\\d+)?$",
+          "description": "Line range (e.g., L42 or L42-L100)"
+        },
+        "commitHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "description": {
+          "type": "string",
+          "description": "What this code evidence demonstrates"
+        }
+      }
+    },
+    "RunEvidence": {
+      "type": "object",
+      "required": ["type", "command", "exitCode", "timestamp"],
+      "properties": {
+        "type": { "const": "RUN" },
+        "command": {
+          "type": "string",
+          "description": "Exact command executed"
+        },
+        "exitCode": {
+          "type": "integer",
+          "description": "Process exit code (0 = success)"
+        },
+        "stdoutPath": {
+          "type": "string",
+          "description": "Relative path to captured stdout"
+        },
+        "stderrPath": {
+          "type": "string",
+          "description": "Relative path to captured stderr"
+        },
+        "duration": {
+          "type": "number",
+          "description": "Execution duration in seconds"
+        },
+        "environmentFingerprint": {
+          "type": "string",
+          "description": "SHA-256 of environment variables snapshot"
+        },
+        "artifactHashes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$"
+          },
+          "description": "SHA-256 hashes of output artifacts"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "WebEvidence": {
+      "type": "object",
+      "required": ["type", "url", "snapshotPath", "accessTimestamp", "sha256"],
+      "properties": {
+        "type": { "const": "WEB" },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Original URL of the source"
+        },
+        "snapshotPath": {
+          "type": "string",
+          "description": "Relative path to local snapshot (PDF/HTML)"
+        },
+        "accessTimestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the snapshot was captured (Europe/Sofia)"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "description": "SHA-256 hash of the snapshot file"
+        },
+        "title": {
+          "type": "string",
+          "description": "Document title for reference"
+        }
+      }
+    }
+  }
+}

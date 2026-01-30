@@ -9,7 +9,8 @@
     { "path": "./services/titan-phase1-scavenger" },
     { "path": "./services/titan-phase2-hunter" },
     { "path": "./services/titan-phase3-sentinel" },
-    { "path": "./services/titan-powerlaw-lab" }
+    { "path": "./services/titan-powerlaw-lab" },
+    { "path": "./scripts" }
   ],
   "compilerOptions": {
     "target": "ES2022",

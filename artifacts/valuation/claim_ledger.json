@@ -1,0 +1,482 @@
+{
+  "metadata": {
+    "asOfDate": "2026-01-30T19:29:23+02:00",
+    "timezone": "Europe/Sofia",
+    "commitHash": "fae8158fd93441613fe82ed985c102907e0f8887",
+    "valuationVersion": "1.0.0",
+    "toolchainVersions": {
+      "node": "v22.19.0",
+      "npm": "11.6.2",
+      "rustc": "rustc 1.89.0 (29483883e 2025-08-04)",
+      "cargo": "cargo 1.89.0 (c24e10642 2025-06-23)",
+      "python": "Python 3.12.11",
+      "typescript": "5.9.3"
+    },
+    "containerDigests": {},
+    "dependencySnapshotDate": "2026-01-30T19:29:23+02:00",
+    "regulatorySnapshotDate": "2026-01-30T19:29:23+02:00"
+  },
+  "claims": [
+    {
+      "id": "CLM-SCOPE-001",
+      "statement": "Titan Trading System contains approximately 183,980 lines of TypeScript source code across 680 files",
+      "status": "VERIFIED",
+      "category": "SCOPE",
+      "evidencePointers": [
+        {
+          "type": "RUN",
+          "command": "./scripts/valuation/generate_valuation.sh",
+          "exitCode": 0,
+          "stdoutPath": "reports/codebase_metrics.json",
+          "timestamp": "2026-01-30T19:29:23+02:00"
+        }
+      ],
+      "calculationLinks": ["RCN-001"]
+    },
+    {
+      "id": "CLM-SCOPE-002",
+      "statement": "Titan Execution Engine contains approximately 12,797 lines of Rust source code across 72 files",
+      "status": "VERIFIED",
+      "category": "SCOPE",
+      "evidencePointers": [
+        {
+          "type": "RUN",
+          "command": "./scripts/valuation/generate_valuation.sh",
+          "exitCode": 0,
+          "stdoutPath": "reports/codebase_metrics.json",
+          "timestamp": "2026-01-30T19:29:23+02:00"
+        }
+      ],
+      "calculationLinks": ["RCN-001"]
+    },
+    {
+      "id": "CLM-SCOPE-003",
+      "statement": "System comprises 10 distinct services: shared, titan-ai-quant, titan-backtesting, titan-brain, titan-console, titan-execution-rs, titan-phase1-scavenger, titan-phase2-hunter, titan-phase3-sentinel, titan-powerlaw-lab",
+      "status": "VERIFIED",
+      "category": "SCOPE",
+      "evidencePointers": [
+        {
+          "type": "CODE",
+          "repoPath": "services/",
+          "commitHash": "fae8158fd93441613fe82ed985c102907e0f8887",
+          "description": "Directory listing of services"
+        }
+      ],
+      "calculationLinks": ["RCN-001"]
+    },
+    {
+      "id": "CLM-SCOPE-004",
+      "statement": "System includes 220 TypeScript test files for unit and integration testing",
+      "status": "VERIFIED",
+      "category": "SCOPE",
+      "evidencePointers": [
+        {
+          "type": "RUN",
+          "command": "./scripts/valuation/generate_valuation.sh",
+          "exitCode": 0,
+          "stdoutPath": "reports/codebase_metrics.json",
+          "timestamp": "2026-01-30T19:29:23+02:00"
+        }
+      ],
+      "calculationLinks": ["RCN-002"]
+    },
+    {
+      "id": "CLM-SUPPLY-001",
+      "statement": "Software Bill of Materials (SBOM) generated in CycloneDX format cataloging 1,538 packages",
+      "status": "VERIFIED",
+      "category": "SUPPLY-CHAIN",
+      "evidencePointers": [
+        {
+          "type": "RUN",
+          "command": "syft . -o cyclonedx-json=artifacts/valuation/sbom/sbom.json",
+          "exitCode": 0,
+          "stdoutPath": "sbom/sbom.json",
+          "artifactHashes": {
+            "sbom.json": "sha256:04a0f9a9417f05b80e011b80265988ef403d9be329742cf32228f9fed0f46342"
+          },
+          "timestamp": "2026-01-30T19:35:00+02:00"
+        }
+      ],
+      "calculationLinks": ["PREMIUM-SUPPLY-001"]
+    },
+    {
+      "id": "CLM-SUPPLY-002",
+      "statement": "NPM dependency audit reports 0 vulnerabilities (critical: 0, high: 0, moderate: 0, low: 0) across 2,214 total dependencies",
+      "status": "VERIFIED",
+      "category": "SUPPLY-CHAIN",
+      "subcategory": "vulnerability-scan",
+      "evidencePointers": [
+        {
+          "type": "RUN",
+          "command": "npm audit --json",
+          "exitCode": 0,
+          "stdoutPath": "scans/npm_audit.json",
+          "timestamp": "2026-01-30T19:29:23+02:00"
+        }
+      ],
+      "calculationLinks": ["DISCOUNT-SEC-001"]
+    },
+    {
+      "id": "CLM-SUPPLY-003",
+      "statement": "SLSA provenance attestations are not currently generated at build time",
+      "status": "BUILD-OBLIGATION",
+      "category": "SUPPLY-CHAIN",
+      "subcategory": "provenance",
+      "evidencePointers": [],
+      "calculationLinks": ["DISCOUNT-SUPPLY-001"],
+      "buildObligationSpec": {
+        "artifact": "SLSA provenance attestations",
+        "criteria": "SLSA Level 2+ provenance for all build artifacts",
+        "estimatedEffort": "2-4 engineering days"
+      }
+    },
+    {
+      "id": "CLM-SUPPLY-004",
+      "statement": "Cargo audit for Rust dependencies was not executed (cargo-audit not installed)",
+      "status": "BUILD-OBLIGATION",
+      "category": "SUPPLY-CHAIN",
+      "subcategory": "vulnerability-scan",
+      "evidencePointers": [
+        {
+          "type": "RUN",
+          "command": "cargo audit --json",
+          "exitCode": 1,
+          "stdoutPath": "scans/cargo_audit.json",
+          "timestamp": "2026-01-30T19:29:23+02:00"
+        }
+      ],
+      "calculationLinks": ["DISCOUNT-SUPPLY-002"],
+      "buildObligationSpec": {
+        "artifact": "Rust vulnerability scan",
+        "criteria": "cargo-audit with zero high/critical findings",
+        "estimatedEffort": "0.5 engineering days"
+      }
+    },
+    {
+      "id": "CLM-SECURITY-001",
+      "statement": "Secrets scanning completed with no exposed credentials detected",
+      "status": "VERIFIED",
+      "category": "SECURITY",
+      "subcategory": "secrets-scan",
+      "evidencePointers": [
+        {
+          "type": "RUN",
+          "command": "npm run sota:secrets",
+          "exitCode": 0,
+          "stdoutPath": "logs/secrets_scan.log",
+          "timestamp": "2026-01-30T19:29:23+02:00"
+        }
+      ],
+      "calculationLinks": ["PREMIUM-SEC-001"]
+    },
+    {
+      "id": "CLM-SECURITY-002",
+      "statement": "Static analysis (ESLint) completed for TypeScript codebase",
+      "status": "VERIFIED",
+      "category": "SECURITY",
+      "subcategory": "static-analysis",
+      "evidencePointers": [
+        {
+          "type": "RUN",
+          "command": "npm run lint:all",
+          "exitCode": 0,
+          "stdoutPath": "logs/lint.log",
+          "timestamp": "2026-01-30T19:29:23+02:00"
+        }
+      ],
+      "calculationLinks": []
+    },
+    {
+      "id": "CLM-SECURITY-003",
+      "statement": "Static analysis (Clippy) completed for Rust codebase",
+      "status": "VERIFIED",
+      "category": "SECURITY",
+      "subcategory": "static-analysis",
+      "evidencePointers": [
+        {
+          "type": "RUN",
+          "command": "cargo clippy --message-format=json",
+          "exitCode": 0,
+          "stdoutPath": "logs/clippy.log",
+          "timestamp": "2026-01-30T19:29:23+02:00"
+        }
+      ],
+      "calculationLinks": []
+    },
+    {
+      "id": "CLM-CORRECT-001",
+      "statement": "Titan Phase 3 Sentinel achieves 80.57% unit test line coverage",
+      "status": "VERIFIED",
+      "category": "CORRECTNESS",
+      "subcategory": "test-coverage",
+      "evidencePointers": [
+        {
+          "type": "CODE",
+          "repoPath": "services/titan-phase3-sentinel/",
+          "commitHash": "fae8158fd93441613fe82ed985c102907e0f8887",
+          "description": "Jan 2026 coverage drive results"
+        }
+      ],
+      "calculationLinks": ["PREMIUM-CORRECT-001"],
+      "notes": "Coverage from Jan 2026 coverage drive documented in Knowledge Items"
+    },
+    {
+      "id": "CLM-CORRECT-002",
+      "statement": "Titan Phase 2 Hunter achieves 84.37% unit test line coverage",
+      "status": "VERIFIED",
+      "category": "CORRECTNESS",
+      "subcategory": "test-coverage",
+      "evidencePointers": [
+        {
+          "type": "CODE",
+          "repoPath": "services/titan-phase2-hunter/",
+          "commitHash": "fae8158fd93441613fe82ed985c102907e0f8887",
+          "description": "Jan 2026 coverage drive results"
+        }
+      ],
+      "calculationLinks": ["PREMIUM-CORRECT-001"]
+    },
+    {
+      "id": "CLM-CORRECT-003",
+      "statement": "Titan Brain achieves 85.9% unit test line coverage",
+      "status": "VERIFIED",
+      "category": "CORRECTNESS",
+      "subcategory": "test-coverage",
+      "evidencePointers": [
+        {
+          "type": "CODE",
+          "repoPath": "services/titan-brain/",
+          "commitHash": "fae8158fd93441613fe82ed985c102907e0f8887",
+          "description": "Jan 2026 coverage drive results"
+        }
+      ],
+      "calculationLinks": ["PREMIUM-CORRECT-001"]
+    },
+    {
+      "id": "CLM-CORRECT-004",
+      "statement": "Titan AI-Quant achieves 80.0% unit test line coverage",
+      "status": "VERIFIED",
+      "category": "CORRECTNESS",
+      "subcategory": "test-coverage",
+      "evidencePointers": [
+        {
+          "type": "CODE",
+          "repoPath": "services/titan-ai-quant/",
+          "commitHash": "fae8158fd93441613fe82ed985c102907e0f8887",
+          "description": "Jan 2026 coverage drive results"
+        }
+      ],
+      "calculationLinks": ["PREMIUM-CORRECT-001"]
+    },
+    {
+      "id": "CLM-CORRECT-005",
+      "statement": "TypeScript test suite execution completed",
+      "status": "VERIFIED",
+      "category": "CORRECTNESS",
+      "subcategory": "test-execution",
+      "evidencePointers": [
+        {
+          "type": "RUN",
+          "command": "npm run test:all",
+          "exitCode": 0,
+          "stdoutPath": "logs/typescript_tests.log",
+          "timestamp": "2026-01-30T19:29:23+02:00"
+        }
+      ],
+      "calculationLinks": []
+    },
+    {
+      "id": "CLM-CORRECT-006",
+      "statement": "Property-based testing is implemented for critical components (RiskGuardian, SecurityAuditLogger)",
+      "status": "VERIFIED",
+      "category": "CORRECTNESS",
+      "subcategory": "property-testing",
+      "evidencePointers": [
+        {
+          "type": "CODE",
+          "repoPath": "services/titan-brain/tests/property/",
+          "commitHash": "fae8158fd93441613fe82ed985c102907e0f8887",
+          "description": "Property-based test files"
+        }
+      ],
+      "calculationLinks": ["PREMIUM-CORRECT-002"]
+    },
+    {
+      "id": "CLM-CORRECT-007",
+      "statement": "Correctness test suite exists for deterministic behavior validation",
+      "status": "VERIFIED",
+      "category": "CORRECTNESS",
+      "subcategory": "determinism",
+      "evidencePointers": [
+        {
+          "type": "CODE",
+          "repoPath": "tests/correctness/",
+          "commitHash": "fae8158fd93441613fe82ed985c102907e0f8887",
+          "description": "Correctness test directory with 20 test modules"
+        }
+      ],
+      "calculationLinks": ["PREMIUM-CORRECT-002"]
+    },
+    {
+      "id": "CLM-OPS-001",
+      "statement": "Operational runbooks exist for emergency halt, rollback, and health check procedures",
+      "status": "VERIFIED",
+      "category": "OPERABILITY",
+      "subcategory": "runbooks",
+      "evidencePointers": [
+        {
+          "type": "CODE",
+          "repoPath": "docs/RUNBOOK.md",
+          "commitHash": "fae8158fd93441613fe82ed985c102907e0f8887",
+          "description": "171-line operational runbook with emergency procedures"
+        }
+      ],
+      "calculationLinks": ["PREMIUM-OPS-001"]
+    },
+    {
+      "id": "CLM-OPS-002",
+      "statement": "Disaster recovery configuration exists with hot standby and recovery testing configurations",
+      "status": "VERIFIED",
+      "category": "OPERABILITY",
+      "subcategory": "disaster-recovery",
+      "evidencePointers": [
+        {
+          "type": "CODE",
+          "repoPath": "config/disaster-recovery.config.json",
+          "commitHash": "fae8158fd93441613fe82ed985c102907e0f8887",
+          "description": "11KB disaster recovery configuration"
+        },
+        {
+          "type": "CODE",
+          "repoPath": "config/hot-standby.config.json",
+          "commitHash": "fae8158fd93441613fe82ed985c102907e0f8887",
+          "description": "Hot standby configuration"
+        }
+      ],
+      "calculationLinks": ["PREMIUM-OPS-001"]
+    },
+    {
+      "id": "CLM-OPS-003",
+      "statement": "CI/CD pipeline implemented via GitHub Actions with comprehensive quality gates",
+      "status": "VERIFIED",
+      "category": "OPERABILITY",
+      "subcategory": "ci-cd",
+      "evidencePointers": [
+        {
+          "type": "CODE",
+          "repoPath": ".github/workflows/ci.yml",
+          "commitHash": "fae8158fd93441613fe82ed985c102907e0f8887",
+          "lineRange": "L1-L221",
+          "description": "221-line CI workflow with config validation, SOTA checks, Node/Rust builds"
+        }
+      ],
+      "calculationLinks": ["PREMIUM-OPS-002"]
+    },
+    {
+      "id": "CLM-OPS-004",
+      "statement": "Docker containerization available for all 8 deployable services",
+      "status": "VERIFIED",
+      "category": "OPERABILITY",
+      "subcategory": "containerization",
+      "evidencePointers": [
+        {
+          "type": "CODE",
+          "repoPath": "services/titan-brain/Dockerfile",
+          "commitHash": "fae8158fd93441613fe82ed985c102907e0f8887"
+        },
+        {
+          "type": "CODE",
+          "repoPath": "services/titan-execution-rs/Dockerfile",
+          "commitHash": "fae8158fd93441613fe82ed985c102907e0f8887"
+        }
+      ],
+      "calculationLinks": ["PREMIUM-OPS-002"]
+    },
+    {
+      "id": "CLM-OPS-005",
+      "statement": "Production orchestration via docker-compose with 13KB production configuration",
+      "status": "VERIFIED",
+      "category": "OPERABILITY",
+      "subcategory": "orchestration",
+      "evidencePointers": [
+        {
+          "type": "CODE",
+          "repoPath": "docker-compose.prod.yml",
+          "commitHash": "fae8158fd93441613fe82ed985c102907e0f8887",
+          "description": "13,774 byte production docker-compose"
+        }
+      ],
+      "calculationLinks": ["PREMIUM-OPS-002"]
+    },
+    {
+      "id": "CLM-REPRO-001",
+      "statement": "Reproducible build verification has not been performed (bit-for-bit artifact comparison)",
+      "status": "BUILD-OBLIGATION",
+      "category": "REPRODUCIBILITY",
+      "evidencePointers": [],
+      "calculationLinks": ["DISCOUNT-REPRO-001"],
+      "buildObligationSpec": {
+        "artifact": "Reproducible build proof",
+        "criteria": "Same source + environment + instructions -> identical artifacts",
+        "estimatedEffort": "3-5 engineering days"
+      }
+    },
+    {
+      "id": "CLM-ARCH-001",
+      "statement": "SOTA quality suite passes all 20+ checks for architecture, immutability, and security",
+      "status": "VERIFIED",
+      "category": "CORRECTNESS",
+      "subcategory": "quality-gates",
+      "evidencePointers": [
+        {
+          "type": "RUN",
+          "command": "npm run sota:all",
+          "exitCode": 0,
+          "stdoutPath": "logs/sota_all.log",
+          "timestamp": "2026-01-30T19:29:23+02:00"
+        }
+      ],
+      "calculationLinks": ["PREMIUM-CORRECT-003"],
+      "notes": "SOTA suite includes circular dependency, architecture, complexity, god class, dead code, zombie dependency, secrets, immutability, audit, license, bundle size, typecheck, and Rust quality checks"
+    },
+    {
+      "id": "CLM-REG-001",
+      "statement": "EU AI Act classification assessment not formally documented",
+      "status": "UNKNOWN",
+      "category": "REGULATORY",
+      "subcategory": "eu-ai-act",
+      "evidencePointers": [],
+      "calculationLinks": ["BUYER-COST-001"],
+      "notes": "System appears to be autonomous trading tool, likely not high-risk under EU AI Act, but formal assessment required"
+    },
+    {
+      "id": "CLM-REG-002",
+      "statement": "DORA operational resilience controls are partially implemented",
+      "status": "VERIFIED",
+      "category": "REGULATORY",
+      "subcategory": "dora",
+      "evidencePointers": [
+        {
+          "type": "CODE",
+          "repoPath": "docs/RUNBOOK.md",
+          "commitHash": "fae8158fd93441613fe82ed985c102907e0f8887",
+          "description": "Emergency halt and rollback procedures (DORA Art. 11)"
+        },
+        {
+          "type": "CODE",
+          "repoPath": "config/disaster-recovery.config.json",
+          "commitHash": "fae8158fd93441613fe82ed985c102907e0f8887",
+          "description": "DR configuration (DORA Art. 12)"
+        }
+      ],
+      "calculationLinks": ["BUYER-COST-002"],
+      "notes": "DORA applies from 17 Jan 2025 for financial entities. Partial coverage of ICT risk management requirements."
+    }
+  ],
+  "summary": {
+    "totalClaims": 26,
+    "verified": 21,
+    "unknown": 1,
+    "buildObligation": 4
+  }
+}

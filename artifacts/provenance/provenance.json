@@ -1,0 +1,44 @@
+{
+  "buildDefinition": {
+    "buildType": "https://github.com/peycheff-com/titan-trading-system/build-types/v1",
+    "externalParameters": {
+      "source": {
+        "uri": "https://github.com/peycheff-com/titan-trading-system.git",
+        "digest": {
+          "sha1": "4a039611caa630df5d4274b7417e0f906cb948c5"
+        }
+      },
+      "configSource": {
+        "uri": "https://github.com/peycheff-com/titan-trading-system.git",
+        "digest": {
+          "sha1": "4a039611caa630df5d4274b7417e0f906cb948c5"
+        },
+        "entryPoint": "turbo run build"
+      }
+    },
+    "systemParameters": {
+      "hostname": "MacBook-Pro-Ivan.local",
+      "platform": "darwin",
+      "nodeVersion": "v22.19.0"
+    }
+  },
+  "runDetails": {
+    "builder": {
+      "id": "https://framework.titan-trading.com/builder/titan-sota-builder",
+      "version": "1.0.0"
+    },
+    "metadata": {
+      "invocationId": "07f93618-2fe1-42fe-8e00-99918ac06d2b",
+      "startedOn": "2026-01-30T18:27:13.733Z",
+      "finishedOn": "2026-01-30T18:27:13.749Z"
+    },
+    "byproducts": [
+      {
+        "uri": "package.json",
+        "digest": {
+          "sha256": "ec797173b417e56baa94a40846bc5553c0c022743da47881a6c8144560a01ba4"
+        }
+      }
+    ]
+  }
+}
