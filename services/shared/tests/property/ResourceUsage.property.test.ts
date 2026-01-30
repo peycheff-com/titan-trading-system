@@ -437,6 +437,7 @@ describe("Resource Usage Compliance Property Tests", () => {
             cleanupEfficiency: fc.float({
               min: Math.fround(0.5),
               max: Math.fround(0.9),
+              noNaN: true,
             }),
           }),
           (config) => {

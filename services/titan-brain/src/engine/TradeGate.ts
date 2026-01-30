@@ -8,8 +8,8 @@
  * - Estimate slippage using Square-Root Law.
  */
 
-import { IntentSignal } from "../types/index.js";
-import { logger } from "../utils/Logger.js";
+import { IntentSignal } from '../types/index.js';
+import { logger } from '../utils/Logger.js';
 
 export interface TradeGateConfig {
   /** Maker fee rate (e.g., 0.0002 for 0.02%) */
@@ -87,8 +87,7 @@ export class TradeGate {
     const impactParams = Math.sqrt(volumeRatio);
 
     // Slippage in decimal (e.g. 0.0005 for 5bps)
-    const slippageCost = this.config.volatilityMultiplier * sigma *
-      impactParams;
+    const slippageCost = this.config.volatilityMultiplier * sigma * impactParams;
 
     // 3. Total Friction
     const totalFriction = feeCost + spreadCost + slippageCost;
@@ -102,29 +101,21 @@ export class TradeGate {
 
     const accepted = expectedEdge > requiredEdge;
 
-    const acceptedStr = accepted ? "✅ ACCEPTED" : "❌ REJECTED";
+    const acceptedStr = accepted ? '✅ ACCEPTED' : '❌ REJECTED';
     const reason = accepted
-      ? `Positive Expectancy: Edge ${
-        (expectedEdge * 100).toFixed(
+      ? `Positive Expectancy: Edge ${(expectedEdge * 100).toFixed(
           3,
-        )
-      }% > Cost ${(totalFriction * 100).toFixed(3)}% (Spr: ${
-        (spreadCost * 10000).toFixed(1)
-      }bps)`
-      : `Negative Expectancy: Edge ${
-        (expectedEdge * 100).toFixed(
+        )}% > Cost ${(totalFriction * 100).toFixed(3)}% (Spr: ${(spreadCost * 10000).toFixed(
+          1,
+        )}bps)`
+      : `Negative Expectancy: Edge ${(expectedEdge * 100).toFixed(
           3,
-        )
-      }% <= Cost ${(totalFriction * 100).toFixed(3)}% (Req: ${
-        (requiredEdge * 100).toFixed(
+        )}% <= Cost ${(totalFriction * 100).toFixed(3)}% (Req: ${(requiredEdge * 100).toFixed(
           3,
-        )
-      }%)`;
+        )}%)`;
 
     // Log the check
-    logger.info(
-      `[TradeGate] ${acceptedStr} ${signal.symbol} ${signal.side} $${size}: ${reason}`,
-    );
+    logger.info(`[TradeGate] ${acceptedStr} ${signal.symbol} ${signal.side} $${size}: ${reason}`);
 
     return {
       accepted,
@@ -145,6 +136,6 @@ export class TradeGate {
    */
   public updateConfig(newConfig: Partial<TradeGateConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    logger.info("TradeGate config updated");
+    logger.info('TradeGate config updated');
   }
 }

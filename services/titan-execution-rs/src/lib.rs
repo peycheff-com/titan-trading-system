@@ -14,6 +14,7 @@ pub mod metrics;
 pub mod model;
 pub mod nats_engine;
 pub mod order_manager;
+pub mod performance;
 pub mod persistence;
 pub mod pipeline;
 pub mod rate_limiter;

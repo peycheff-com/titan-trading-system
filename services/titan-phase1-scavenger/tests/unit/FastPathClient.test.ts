@@ -57,72 +57,178 @@ describe("FastPathClient", () => {
     });
 
     it("should handle connection timeout", async () => {
-      const connectPromise = client.connect();
+      // Create a separate client with very short timeout for this test
+      const timeoutClient = new FastPathClient({
+        socketPath: "/tmp/test-ipc.sock",
+        hmacSecret: "test-secret",
+        maxReconnectAttempts: 0, // Setting to 0 means immediate maxReconnectAttemptsReached
+        connectionTimeout: 50, // Very short timeout
+        messageTimeout: 500,
+      });
 
-      // Don't emit connect event to simulate timeout
-      // The promise will reject after connectionTimeout (1000ms default in test config)
-      await expect(connectPromise).rejects.toThrow("IPC connection timeout");
-      expect(client.getConnectionState()).toBe(ConnectionState.FAILED);
-    }, 2000); // Increase test timeout to allow for connection timeout
+      // Register error listener to prevent 'unhandled error' warning
+      timeoutClient.on("error", () => {
+        /* expected */
+      });
 
-    it("should handle connection errors", async () => {
-      const connectPromise = client.connect();
-
-      // Simulate connection error
-      setTimeout(
-        () => mockSocket.emit("error", new Error("Connection refused")),
-        10,
+      const timeoutMockSocket = new MockSocket();
+      mockNet.connect.mockReturnValue(
+        timeoutMockSocket as unknown as net.Socket,
       );
 
+      // Don't emit 'connect' - let it timeout
+      const connectPromise = timeoutClient.connect();
+
+      await expect(connectPromise).rejects.toThrow("IPC connection timeout");
+      expect(timeoutClient.getConnectionState()).toBe(ConnectionState.FAILED);
+
+      // Cleanup
+      await timeoutClient.disconnect();
+    }, 1000);
+
+    it("should handle connection errors", async () => {
+      // Create a separate client for this test
+      // Note: maxReconnectAttempts: 0 doesn't work due to || defaulting in FastPathClient
+      // So we use a very short baseReconnectDelay and just clean up via disconnect()
+      const errorClient = new FastPathClient({
+        socketPath: "/tmp/test-ipc.sock",
+        hmacSecret: "test-secret",
+        maxReconnectAttempts: 1,
+        baseReconnectDelay: 10,
+        connectionTimeout: 1000,
+        messageTimeout: 500,
+      });
+
+      // Register error listener to prevent 'unhandled error' warning
+      errorClient.on("error", () => {
+        /* expected */
+      });
+
+      const errorMockSocket = new MockSocket();
+      mockNet.connect.mockReturnValue(errorMockSocket as unknown as net.Socket);
+
+      const connectPromise = errorClient.connect();
+
+      // Emit error after handlers are set up
+      setImmediate(() => {
+        errorMockSocket.emit("error", new Error("Connection refused"));
+      });
+
+      // Verify the promise rejects with the error
       await expect(connectPromise).rejects.toThrow("Connection refused");
+
+      // Cleanup immediately - this stops any scheduled reconnection timers
+      await errorClient.disconnect();
+
+      // After disconnect, state should be DISCONNECTED
+      expect(errorClient.getConnectionState()).toBe(
+        ConnectionState.DISCONNECTED,
+      );
     });
 
-    it("should attempt automatic reconnection on connection loss", (done) => {
-      let reconnectAttempts = 0;
+    it("should attempt automatic reconnection on connection loss", async () => {
+      // Create client with very short reconnect delay
+      const reconnectClient = new FastPathClient({
+        socketPath: "/tmp/test-ipc.sock",
+        hmacSecret: "test-secret",
+        maxReconnectAttempts: 1,
+        baseReconnectDelay: 10, // Very short delay
+        connectionTimeout: 1000,
+        messageTimeout: 500,
+      });
 
-      client.on("reconnecting", (attempt) => {
-        reconnectAttempts = attempt;
-        if (attempt === 1) {
-          expect(reconnectAttempts).toBe(1);
-          done();
-        }
+      // Register error listener to prevent 'unhandled error' warning
+      reconnectClient.on("error", () => {
+        /* expected during reconnection */
+      });
+
+      const reconnectMockSocket = new MockSocket();
+      mockNet.connect.mockReturnValue(
+        reconnectMockSocket as unknown as net.Socket,
+      );
+
+      let reconnectingEventFired = false;
+      let reconnectAttemptNumber = 0;
+
+      reconnectClient.on("reconnecting", (attempt: number) => {
+        reconnectingEventFired = true;
+        reconnectAttemptNumber = attempt;
       });
 
       // First connect
-      const connectPromise = client.connect();
-      setTimeout(() => mockSocket.emit("connect"), 10);
+      const connectPromise = reconnectClient.connect();
+      setImmediate(() => reconnectMockSocket.emit("connect"));
+      await connectPromise;
 
-      connectPromise.then(() => {
-        // Simulate connection loss
-        mockSocket.emit("close");
-      });
+      expect(reconnectClient.getConnectionState()).toBe(
+        ConnectionState.CONNECTED,
+      );
+
+      // Simulate connection loss
+      reconnectMockSocket.emit("close");
+
+      // Wait for reconnection event to fire (short delay + some buffer)
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Verify reconnection was attempted
+      expect(reconnectingEventFired).toBe(true);
+      expect(reconnectAttemptNumber).toBe(1);
+
+      // Cleanup - this will cancel any pending reconnection timers
+      await reconnectClient.disconnect();
     });
 
-    it("should stop reconnecting after max attempts", () => {
-      jest.useFakeTimers();
-      let maxReconnectReached = false;
+    it("should stop reconnecting after max attempts", async () => {
+      // Create client with minimal retries and very short delays
+      const maxAttemptsClient = new FastPathClient({
+        socketPath: "/tmp/test-ipc.sock",
+        hmacSecret: "test-secret",
+        maxReconnectAttempts: 2,
+        baseReconnectDelay: 10, // Very short delay
+        connectionTimeout: 50,
+        messageTimeout: 500,
+      });
 
-      client.on("maxReconnectAttemptsReached", () => {
+      // Register error listener to prevent 'unhandled error' warning
+      maxAttemptsClient.on("error", () => {
+        /* expected during reconnection attempts */
+      });
+
+      let maxReconnectReached = false;
+      maxAttemptsClient.on("maxReconnectAttemptsReached", () => {
         maxReconnectReached = true;
       });
 
-      // Simulate multiple failed connections
-      for (let i = 0; i < 4; i++) {
-        // Trigger error
-        mockSocket.emit("error", new Error("Connection failed"));
+      // Create mock socket that always fails
+      mockNet.connect.mockImplementation(() => {
+        const socket = new MockSocket();
+        // Emit error after a brief delay to simulate connection failure
+        setImmediate(() =>
+          socket.emit("error", new Error("Connection failed"))
+        );
+        return socket as unknown as net.Socket;
+      });
 
-        // Fast-forward time to bypass backoff delay and trigger next connection attempt
-        jest.runAllTimers();
+      // Start connection - will fail and trigger reconnection attempts
+      const connectPromise = maxAttemptsClient.connect();
 
-        // At this point, attemptConnection should have run (retrying connection)
-        // or we reached max attempts.
-      }
+      // Wait for initial failure
+      await expect(connectPromise).rejects.toThrow("Connection failed");
 
+      // Wait for all reconnection attempts to exhaust (2 attempts * ~10ms delay + buffer)
+      // Each attempt: 10ms base delay * 2^(attempt-1) + some processing time
+      // Attempt 1: 10ms, Attempt 2: 20ms = 30ms total + buffer
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // Verify max attempts reached
       expect(maxReconnectReached).toBe(true);
-      expect(client.getConnectionState()).toBe(ConnectionState.FAILED);
+      expect(maxAttemptsClient.getConnectionState()).toBe(
+        ConnectionState.FAILED,
+      );
 
-      jest.useRealTimers();
-    });
+      // Cleanup
+      await maxAttemptsClient.disconnect();
+    }, 2000);
 
     it("should disconnect gracefully", async () => {
       // Connect first

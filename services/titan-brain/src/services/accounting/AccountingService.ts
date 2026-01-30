@@ -1,13 +1,8 @@
-import { Logger } from "../../logging/Logger.js";
-import {
-  FillReport,
-  getNatsClient,
-  IntentSignal,
-  NatsClient,
-} from "@titan/shared";
-import { FillsRepository } from "../../db/repositories/FillsRepository.js";
-import { LedgerRepository } from "../../db/repositories/LedgerRepository.js";
-import { PostingEngine } from "./PostingEngine.js";
+import { Logger } from '../../logging/Logger.js';
+import { FillReport, getNatsClient, IntentSignal, NatsClient } from '@titan/shared';
+import { FillsRepository } from '../../db/repositories/FillsRepository.js';
+import { LedgerRepository } from '../../db/repositories/LedgerRepository.js';
+import { PostingEngine } from './PostingEngine.js';
 
 interface ReconciliationMetrics {
   latency_signal_to_ingress: number;
@@ -35,44 +30,41 @@ export class AccountingService {
     ledgerRepository: LedgerRepository,
     natsClient?: NatsClient,
   ) {
-    this.logger = Logger.getInstance("accounting-service");
+    this.logger = Logger.getInstance('accounting-service');
     this.nats = natsClient || getNatsClient();
     this.fillsRepository = fillsRepository;
     this.ledgerRepository = ledgerRepository;
   }
 
   async start(): Promise<void> {
-    this.logger.info("Starting Titan Accountant (Phase 4)...");
+    this.logger.info('Starting Titan Accountant (Phase 4)...');
 
     // Subscribe to Intents (to track ingress)
-    await this.nats.subscribe<any>(
-      "titan.cmd.exec.place.v1.>",
-      (msg: any, subject: string) => {
-        // Type as any to handle both Envelope and raw during migration
-        try {
-          // unwrapping logic
-          const intent = msg.payload ? msg.payload : msg;
+    await this.nats.subscribe<any>('titan.cmd.exec.place.v1.>', (msg: any, subject: string) => {
+      // Type as any to handle both Envelope and raw during migration
+      try {
+        // unwrapping logic
+        const intent = msg.payload ? msg.payload : msg;
 
-          // Add t_ingress if not present (it should be added by ExecutionRouter, but Brain sees it here too)
-          // Actually Brain sends it. Brain -> NATS -> Execution.
-          // We want to see what Execution publishes BACK.
-          // Execution publishes `titan.execution.status` or similar.
-          this.trackIntent(intent);
-        } catch (e) {
-          this.logger.error("Failed to parse intent", e as Error);
-        }
-      },
-    );
+        // Add t_ingress if not present (it should be added by ExecutionRouter, but Brain sees it here too)
+        // Actually Brain sends it. Brain -> NATS -> Execution.
+        // We want to see what Execution publishes BACK.
+        // Execution publishes `titan.execution.status` or similar.
+        this.trackIntent(intent);
+      } catch (e) {
+        this.logger.error('Failed to parse intent', e as Error);
+      }
+    });
 
     // Subscribe to Fills (from Execution Service)
     // Subject: titan.evt.exec.fill.v1.<venue>.<account>.<symbol>
     await this.nats.subscribe<FillReport>(
-      "titan.evt.exec.fill.v1.>",
+      'titan.evt.exec.fill.v1.>',
       async (fill: FillReport, subject: string) => {
         try {
           await this.processFill(fill);
         } catch (e) {
-          this.logger.error("Failed to process fill", e as Error);
+          this.logger.error('Failed to process fill', e as Error);
         }
       },
     );
@@ -80,37 +72,34 @@ export class AccountingService {
     // Subscribe to Shadow Fills (Truth Layer)
     // Subject: titan.execution.shadow_fill.<symbol>
     await this.nats.subscribe<FillReport>(
-      "titan.execution.shadow_fill.>",
+      'titan.execution.shadow_fill.>',
       async (fill: FillReport, subject: string) => {
         try {
           this.processShadowFill(fill);
         } catch (e) {
-          this.logger.error("Failed to process shadow fill", e as Error);
+          this.logger.error('Failed to process shadow fill', e as Error);
         }
       },
     );
 
     // Subscribe to Balance Updates
-    await this.nats.subscribe<any>(
-      "titan.evt.exec.balance",
-      async (msg: any) => {
-        try {
-          const balance = msg.payload || msg;
-          this.logger.info("💰 Balance Update", undefined, {
-            ...balance,
-          });
-          // TODO: Update shared state or database if needed
-        } catch (e) {
-          this.logger.error("Failed to process balance update", e as Error);
-        }
-      },
-    );
+    await this.nats.subscribe<any>('titan.evt.exec.balance', async (msg: any) => {
+      try {
+        const balance = msg.payload || msg;
+        this.logger.info('💰 Balance Update', undefined, {
+          ...balance,
+        });
+        // TODO: Update shared state or database if needed
+      } catch (e) {
+        this.logger.error('Failed to process balance update', e as Error);
+      }
+    });
 
-    this.logger.info("Titan Accountant started.");
+    this.logger.info('Titan Accountant started.');
   }
 
   async stop(): Promise<void> {
-    this.logger.info("Stopping Titan Accountant...");
+    this.logger.info('Stopping Titan Accountant...');
     // TODO: Unsubscribe from NATS subjects if client supports it
   }
 
@@ -133,7 +122,7 @@ export class AccountingService {
       shadowFill: fill,
     });
 
-    this.logger.info("👻 Shadow Fill Recorded", undefined, {
+    this.logger.info('👻 Shadow Fill Recorded', undefined, {
       signalId: fill.signal_id,
       price: fill.price,
     });
@@ -151,7 +140,7 @@ export class AccountingService {
       total_rtt: t_now - fill.t_signal,
     };
 
-    this.logger.info("Trade Reconciled", undefined, {
+    this.logger.info('Trade Reconciled', undefined, {
       ...fill,
       metrics,
       reconciled: !!tracked,
@@ -164,7 +153,7 @@ export class AccountingService {
 
       if (driftPct > 0.001) {
         // > 0.1% deviation
-        this.logger.warn("⚠️ Price Drift Detected", undefined, {
+        this.logger.warn('⚠️ Price Drift Detected', undefined, {
           signalId: fill.signal_id,
           realPrice: fill.price,
           shadowPrice: tracked.shadowFill.price,
@@ -172,8 +161,8 @@ export class AccountingService {
         });
 
         // Publish Alert
-        this.nats.publish("titan.alert.drift", {
-          type: "PRICE_DRIFT",
+        this.nats.publish('titan.alert.drift', {
+          type: 'PRICE_DRIFT',
           signalId: fill.signal_id,
           symbol: fill.symbol,
           driftPct,
@@ -192,7 +181,8 @@ export class AccountingService {
 
     // General Ledger Posting
     try {
-      const fillId = fill.fill_id ||
+      const fillId =
+        fill.fill_id ||
         (fill as any).fillId ||
         fill.execution_id ||
         (fill as any).executionId ||
@@ -205,29 +195,22 @@ export class AccountingService {
             fillId, // Ensure ID is passed normalized
           } as FillReport);
           await this.ledgerRepository.createTransaction(txParams);
-          this.logger.info("Ledger Transaction Posted", undefined, {
+          this.logger.info('Ledger Transaction Posted', undefined, {
             correlationId: fillId,
           });
         } else {
-          this.logger.debug(
-            "Ledger Transaction skipped (Idempotent)",
-            undefined,
-            {
-              correlationId: fillId,
-            },
-          );
+          this.logger.debug('Ledger Transaction skipped (Idempotent)', undefined, {
+            correlationId: fillId,
+          });
         }
       }
     } catch (err) {
-      this.logger.error(
-        "CRITICAL: Failed to post to Ledger - Data Integrity Risk",
-        err as Error,
-      );
+      this.logger.error('CRITICAL: Failed to post to Ledger - Data Integrity Risk', err as Error);
 
       // Alert explicit data integrity violation
       const fillId = fill.fill_id || fill.execution_id || (fill as any).id;
-      this.nats.publish("titan.alert.integrity", {
-        type: "LEDGER_FAILURE",
+      this.nats.publish('titan.alert.integrity', {
+        type: 'LEDGER_FAILURE',
         fillId,
         error: err instanceof Error ? err.message : String(err),
       });
@@ -239,10 +222,10 @@ export class AccountingService {
     // In verify phase, we will check if "latency_exchange_to_ack" > 50ms and flag it.
     if (metrics.total_rtt > 200) {
       // > 200ms
-      this.logger.warn("High Latency Detected", undefined, { metrics });
+      this.logger.warn('High Latency Detected', undefined, { metrics });
 
-      this.nats.publish("titan.alert.latency", {
-        type: "HIGH_LATENCY",
+      this.nats.publish('titan.alert.latency', {
+        type: 'HIGH_LATENCY',
         signalId: fill.signal_id,
         metrics,
         threshold: 200,

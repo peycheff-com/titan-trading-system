@@ -7,6 +7,8 @@
  * Requirements: 3.2.1, 3.2.2, 3.2.3
  */
 
+/* eslint-disable functional/immutable-data, functional/no-let, @typescript-eslint/no-explicit-any -- Cache is inherently stateful and uses generic any for flexibility */
+
 import { EventEmitter } from 'events';
 
 /**

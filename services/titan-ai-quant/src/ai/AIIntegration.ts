@@ -1,88 +1,81 @@
-import { EventEmitter } from "events";
-import { TitanAnalyst } from "./TitanAnalyst";
-import { Config, OHLCV, RegimeSnapshot, Trade } from "../types";
-import { PredictiveAnalytics } from "./PredictiveAnalytics";
-import { RealTimeOptimizer } from "./RealTimeOptimizer";
+import { EventEmitter } from 'events';
+import { TitanAnalyst } from './TitanAnalyst';
+import { Config, OHLCV, RegimeSnapshot, Trade } from '../types';
+import { PredictiveAnalytics } from './PredictiveAnalytics';
+import { RealTimeOptimizer } from './RealTimeOptimizer';
 
 export interface AIIntegrationConfig {
-    strategySelectionInterval: number;
-    riskAdjustmentInterval: number;
-    performanceEvaluationInterval: number;
-    enableAutomatedStrategySelection: boolean;
-    enableAdaptiveRiskManagement: boolean;
+  strategySelectionInterval: number;
+  riskAdjustmentInterval: number;
+  performanceEvaluationInterval: number;
+  enableAutomatedStrategySelection: boolean;
+  enableAdaptiveRiskManagement: boolean;
 }
 
 export class AIIntegration extends EventEmitter {
-    private predictiveAnalytics: PredictiveAnalytics;
-    private realTimeOptimizer: RealTimeOptimizer;
-    private config: AIIntegrationConfig;
+  private predictiveAnalytics: PredictiveAnalytics;
+  private realTimeOptimizer: RealTimeOptimizer;
+  private config: AIIntegrationConfig;
 
-    constructor(analyst: TitanAnalyst, config: AIIntegrationConfig) {
-        super();
-        this.config = config;
-        this.predictiveAnalytics = new PredictiveAnalytics({});
-        this.realTimeOptimizer = new RealTimeOptimizer(analyst, {});
-    }
+  constructor(analyst: TitanAnalyst, config: AIIntegrationConfig) {
+    super();
+    this.config = config;
+    this.predictiveAnalytics = new PredictiveAnalytics({});
+    this.realTimeOptimizer = new RealTimeOptimizer(analyst, {});
+  }
 
-    start() {
-        this.emit("started");
-        this.predictiveAnalytics.start();
-        this.realTimeOptimizer.start();
-    }
+  start() {
+    this.emit('started');
+    this.predictiveAnalytics.start();
+    this.realTimeOptimizer.start();
+  }
 
-    stop() {
-        this.predictiveAnalytics.stop();
-        this.realTimeOptimizer.stop();
-        this.emit("stopped");
-    }
+  stop() {
+    this.predictiveAnalytics.stop();
+    this.realTimeOptimizer.stop();
+    this.emit('stopped');
+  }
 
-    shutdown() {
-        this.stop();
-    }
+  shutdown() {
+    this.stop();
+  }
 
-    addMarketData(symbol: string, data: OHLCV[]) {
-        this.emit("marketDataAdded");
-        this.predictiveAnalytics.processMarketData(symbol, data);
-    }
+  addMarketData(symbol: string, data: OHLCV[]) {
+    this.emit('marketDataAdded');
+    this.predictiveAnalytics.processMarketData(symbol, data);
+  }
 
-    addRegimeSnapshot(snapshot: RegimeSnapshot) {
-        this.emit("regimeSnapshotAdded");
-    }
+  addRegimeSnapshot(snapshot: RegimeSnapshot) {
+    this.emit('regimeSnapshotAdded');
+  }
 
-    addTrade(trade: Trade) {
-        this.emit("tradeAdded");
-    }
+  addTrade(trade: Trade) {
+    this.emit('tradeAdded');
+  }
 
-    getStatus() {
-        return {
-            performanceScore: 80, // Stub
-            realTimeOptimizer: this.realTimeOptimizer.getStats(),
-            predictiveAnalytics: this.predictiveAnalytics.getStats(),
-        };
-    }
+  getStatus() {
+    return {
+      performanceScore: 80, // Stub
+      realTimeOptimizer: this.realTimeOptimizer.getStats(),
+      predictiveAnalytics: this.predictiveAnalytics.getStats(),
+    };
+  }
 
-    private selectOptimalStrategies(
-        symbol: string,
-        regime: any,
-        predictions: any[],
-    ) {
-        // Stub implementation for property test
-        const selectedStrategies = predictions.map((p) => ({
-            strategy: p.strategy,
-            allocation: 0.2, // Stub allocation
-            confidence: p.confidence,
-        }));
-        return {
-            selectedStrategies,
-            totalAllocation: selectedStrategies.reduce(
-                (sum: number, s: any) => sum + s.allocation,
-                0,
-            ),
-        };
-    }
+  private selectOptimalStrategies(symbol: string, regime: any, predictions: any[]) {
+    // Stub implementation for property test
+    const selectedStrategies = predictions.map((p) => ({
+      strategy: p.strategy,
+      allocation: 0.2, // Stub allocation
+      confidence: p.confidence,
+    }));
+    return {
+      selectedStrategies,
+      totalAllocation: selectedStrategies.reduce((sum: number, s: any) => sum + s.allocation, 0),
+    };
+  }
 
-    private evaluatePerformance() {
-        // Stub implementation
-        this.emit("performanceEvaluated");
-    }
+  private evaluatePerformance() {
+    // Stub implementation
+    this.emit('performanceEvaluated');
+  }
 }

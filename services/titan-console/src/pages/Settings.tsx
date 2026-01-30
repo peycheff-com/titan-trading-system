@@ -703,7 +703,7 @@ const Settings = () => {
                 <Switch
                   id="whitelist-enabled"
                   checked={localWhitelist.enabled}
-                onCheckedChange={(checked: boolean) =>
+                  onCheckedChange={(checked: boolean) =>
                     setLocalWhitelist({ ...localWhitelist, enabled: checked })
                   }
                 />

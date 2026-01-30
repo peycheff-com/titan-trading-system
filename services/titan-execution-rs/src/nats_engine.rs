@@ -98,21 +98,21 @@ pub async fn start_nats_engine(
                         .get("reason")
                         .and_then(|s| s.as_str())
                         .unwrap_or("System Command");
-                    
+
                     match state_str {
                         "OPEN" => {
                             info!("🟢 System State: OPEN. Resuming operations.");
                             halt_state_clone.set_halt(false, reason);
-                        },
+                        }
                         "SOFT_HALT" => {
                             // Rust currently treats Soft/Hard same (Halt)
                             warn!("🟡 System State: SOFT_HALT. Reducing risk (treated as HALT in Phase 2).");
                             halt_state_clone.set_halt(true, reason);
-                        },
+                        }
                         "HARD_HALT" => {
                             error!("🔴 System State: HARD_HALT. Emergency Stop.");
                             halt_state_clone.set_halt(true, reason);
-                        },
+                        }
                         _ => {
                             warn!("Received unknown system state: {}", state_str);
                         }

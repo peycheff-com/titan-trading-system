@@ -221,12 +221,19 @@ describe("BacktestEngine", () => {
 
       const currentPrice = 50000;
 
+      // Mock Math.random to return a value that triggers fill (> 0.1 threshold)
+      const originalRandom = Math.random;
+      Math.random = jest.fn(() => 0.5);
+
       // Act
       const result = backtestEngine.simulateTrade(
         signal,
         "POST_ONLY",
         currentPrice,
       );
+
+      // Restore Math.random
+      Math.random = originalRandom;
 
       // Assert
       expect(result.filled).toBe(true);

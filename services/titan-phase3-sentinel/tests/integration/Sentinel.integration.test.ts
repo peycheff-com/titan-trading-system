@@ -2,6 +2,10 @@ import { SentinelConfig, SentinelCore } from "../../src/engine/SentinelCore";
 import { IExchangeGateway } from "../../src/exchanges/interfaces";
 import { Order, OrderSide, OrderType } from "../../src/types/orders";
 
+// Skip integration tests in CI or when NATS is not available
+const runIntegration = process.env.CI !== "true" &&
+    process.env.NATS_URL !== undefined;
+
 // Mock Gateway
 class MockGateway implements IExchangeGateway {
     name: string;
@@ -39,7 +43,10 @@ class MockGateway implements IExchangeGateway {
     }
 }
 
-describe("Sentinel Core Integration", () => {
+// Only run integration tests when infrastructure is available
+const describeIntegration = runIntegration ? describe : describe.skip;
+
+describeIntegration("Sentinel Core Integration", () => {
     let core: SentinelCore;
     let gateways: IExchangeGateway[];
 

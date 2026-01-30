@@ -12,9 +12,9 @@
  * - High Volatility Regime -> Cap Position Sizes.
  */
 
-import * as crypto from "crypto";
-import { NatsPublisher } from "../server/NatsPublisher.js";
-import { BrainConfig } from "../config/BrainConfig.js";
+import * as crypto from 'crypto';
+import { NatsPublisher } from '../server/NatsPublisher.js';
+import { BrainConfig } from '../config/BrainConfig.js';
 
 export interface RiskState {
   tailIndex: number; // Current estimated tail index (alpha)
@@ -30,7 +30,7 @@ export class RiskManager {
   // Default Risk State (assume normal/safe conditions initially)
   private state: RiskState = {
     tailIndex: 3.0, // ~3.0 is typical for healthy crypto markets (Cubic Law)
-    volatilityRegime: "NORMAL",
+    volatilityRegime: 'NORMAL',
     maxImpactBps: 10, // 10 basis points max impact
   };
 
@@ -42,10 +42,10 @@ export class RiskManager {
     const secret = process.env.HMAC_SECRET || config.hmacSecret;
 
     if (!secret) {
-      if (process.env.NODE_ENV === "test") {
-        this.HMAC_SECRET = "test-risk-secret";
+      if (process.env.NODE_ENV === 'test') {
+        this.HMAC_SECRET = 'test-risk-secret';
       } else {
-        throw new Error("FATAL: RiskManager requires HMAC_SECRET");
+        throw new Error('FATAL: RiskManager requires HMAC_SECRET');
       }
     } else {
       this.HMAC_SECRET = secret;
@@ -63,26 +63,22 @@ export class RiskManager {
   /**
    * Emit Signed Emergency Halt Command
    */
-  public async emitEmergencyHalt(
-    actorId: string,
-    reason: string,
-  ): Promise<void> {
+  public async emitEmergencyHalt(actorId: string, reason: string): Promise<void> {
     const payload = {
       command_id: crypto.randomUUID(),
       timestamp: Date.now(),
       actor_id: actorId,
-      action: "HALT",
+      action: 'HALT',
       reason,
       ttl_ms: 60000, // Command valid for 1 min
     };
 
     // Sign Deterministically: timestamp:action:actor_id:command_id
-    const sigString =
-      `${payload.timestamp}:${payload.action}:${payload.actor_id}:${payload.command_id}`;
+    const sigString = `${payload.timestamp}:${payload.action}:${payload.actor_id}:${payload.command_id}`;
     const signature = this.signString(sigString);
     const command = { ...payload, signature };
 
-    console.log("[RiskManager] Emitting HALT:", command);
+    console.log('[RiskManager] Emitting HALT:', command);
     await this.natsPublisher.publishRiskCommand(command);
   }
 
@@ -99,7 +95,7 @@ export class RiskManager {
       command_id: crypto.randomUUID(),
       timestamp: Date.now(),
       actor_id: actorId,
-      action: "OVERRIDE_ALLOCATION",
+      action: 'OVERRIDE_ALLOCATION',
       allocation,
       reason,
       duration_ms: durationMinutes * 60 * 1000,
@@ -107,19 +103,16 @@ export class RiskManager {
     };
 
     // Sign Deterministically: timestamp:action:actor_id:command_id
-    const sigString =
-      `${payload.timestamp}:${payload.action}:${payload.actor_id}:${payload.command_id}`;
+    const sigString = `${payload.timestamp}:${payload.action}:${payload.actor_id}:${payload.command_id}`;
     const signature = this.signString(sigString);
     const command = { ...payload, signature };
 
-    console.log("[RiskManager] Emitting OVERRIDE:", command);
+    console.log('[RiskManager] Emitting OVERRIDE:', command);
     await this.natsPublisher.publishRiskCommand(command);
   }
 
   private signString(data: string): string {
-    return crypto.createHmac("sha256", this.HMAC_SECRET).update(data).digest(
-      "hex",
-    );
+    return crypto.createHmac('sha256', this.HMAC_SECRET).update(data).digest('hex');
   }
 
   /**
@@ -166,18 +159,18 @@ export class RiskManager {
 
     // 1. Volatility Regime Penalty
     switch (volatilityRegime) {
-      case "EXTREME":
+      case 'EXTREME':
         multiplier = 0.25; // Quarter size
         break;
-      case "HIGH":
+      case 'HIGH':
         multiplier = 0.5; // Half size
         break;
-      case "LOW":
+      case 'LOW':
         // In low vol, we might actually want to size UP (if strategy allows),
         // but for safety we stick to 1.0 logic here or let strategy handle it.
         multiplier = 1.0;
         break;
-      case "NORMAL":
+      case 'NORMAL':
       default:
         multiplier = 1.0;
     }

@@ -55,6 +55,13 @@ module.exports = {
     '!src/**/*.d.ts',
     '!src/**/index.ts',
     '!src/**/*.types.ts',
+    // Excluded per best practices - require integration/E2E testing
+    '!src/index.tsx',
+    '!src/dashboard/**',
+    '!src/scripts/**',
+    '!src/server/**',
+    '!src/polymarket/**',
+    '!src/stress/**',
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],

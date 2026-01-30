@@ -6,7 +6,7 @@ interface ArmedButtonProps {
   className?: string;
 }
 
-export const ArmedButton: React.FC<ArmedButtonProps> = ({ onExecute, label = "Hold to ARM" }) => {
+export const ArmedButton: React.FC<ArmedButtonProps> = ({ onExecute, label = 'Hold to ARM' }) => {
   const [isArming, setIsArming] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 

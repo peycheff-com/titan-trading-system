@@ -5,9 +5,9 @@
  * Requirements: 9.7, 9.8
  */
 
-import { AllocationVector } from "../types/index.js";
-import { DatabaseManager } from "../db/DatabaseManager.js";
-import bcrypt from "bcrypt";
+import { AllocationVector } from '../types/index.js';
+import { DatabaseManager } from '../db/DatabaseManager.js';
+import bcrypt from 'bcrypt';
 
 export interface ManualOverride {
   id?: number;
@@ -59,7 +59,7 @@ export class ManualOverrideService {
    */
   async initialize(): Promise<void> {
     await this.loadActiveOverride();
-    console.log("Manual Override Service initialized");
+    console.log('Manual Override Service initialized');
   }
 
   /**
@@ -70,10 +70,7 @@ export class ManualOverrideService {
    * @param password - Operator password
    * @returns True if authentication successful
    */
-  async authenticateOperator(
-    operatorId: string,
-    password: string,
-  ): Promise<boolean> {
+  async authenticateOperator(operatorId: string, password: string): Promise<boolean> {
     try {
       const credentials = await this.getOperatorCredentials(operatorId);
       if (!credentials) {
@@ -82,26 +79,19 @@ export class ManualOverrideService {
       }
 
       // Use bcrypt for password verification
-      const isValid = await bcrypt.compare(
-        password,
-        credentials.hashedPassword,
-      );
+      const isValid = await bcrypt.compare(password, credentials.hashedPassword);
       if (!isValid) {
-        console.warn(
-          `Authentication failed: invalid password for operator ${operatorId}`,
-        );
+        console.warn(`Authentication failed: invalid password for operator ${operatorId}`);
         return false;
       }
 
       // Check permissions
-      const hasRequiredPermissions = this.config.requiredPermissions.every((
-        perm,
-      ) => credentials.permissions.includes(perm));
+      const hasRequiredPermissions = this.config.requiredPermissions.every((perm) =>
+        credentials.permissions.includes(perm),
+      );
 
       if (!hasRequiredPermissions) {
-        console.warn(
-          `Authentication failed: operator ${operatorId} lacks required permissions`,
-        );
+        console.warn(`Authentication failed: operator ${operatorId} lacks required permissions`);
         return false;
       }
 
@@ -111,7 +101,7 @@ export class ManualOverrideService {
       console.log(`Operator ${operatorId} authenticated successfully`);
       return true;
     } catch (error) {
-      console.error("Error authenticating operator:", error);
+      console.error('Error authenticating operator:', error);
       return false;
     }
   }
@@ -123,20 +113,16 @@ export class ManualOverrideService {
    * @param request - Override request with operator credentials
    * @returns Created override or null if failed
    */
-  async createOverride(
-    request: OverrideRequest,
-  ): Promise<ManualOverride | null> {
+  async createOverride(request: OverrideRequest): Promise<ManualOverride | null> {
     try {
       // Validate allocation vector
       if (!this.validateAllocationVector(request.allocation)) {
-        throw new Error("Invalid allocation vector: weights must sum to 1.0");
+        throw new Error('Invalid allocation vector: weights must sum to 1.0');
       }
 
       // Check if there's already an active override
       if (this.currentOverride && this.currentOverride.active) {
-        throw new Error(
-          "Cannot create override: another override is already active",
-        );
+        throw new Error('Cannot create override: another override is already active');
       }
 
       // Get current allocation for comparison
@@ -176,7 +162,7 @@ export class ManualOverrideService {
 
       return savedOverride;
     } catch (error) {
-      console.error("Error creating manual override:", error);
+      console.error('Error creating manual override:', error);
       return null;
     }
   }
@@ -190,7 +176,7 @@ export class ManualOverrideService {
   async deactivateOverride(operatorId: string): Promise<boolean> {
     try {
       if (!this.currentOverride || !this.currentOverride.active) {
-        console.warn("No active override to deactivate");
+        console.warn('No active override to deactivate');
         return false;
       }
 
@@ -212,7 +198,7 @@ export class ManualOverrideService {
       console.log(`Manual override deactivated by operator ${operatorId}`);
       return true;
     } catch (error) {
-      console.error("Error deactivating manual override:", error);
+      console.error('Error deactivating manual override:', error);
       return false;
     }
   }
@@ -246,7 +232,7 @@ export class ManualOverrideService {
     const override = this.getCurrentOverride();
 
     if (override && override.active) {
-      console.log("Using manual override allocation");
+      console.log('Using manual override allocation');
       return override.overrideAllocation;
     }
 
@@ -270,10 +256,7 @@ export class ManualOverrideService {
    * @param limit - Maximum number of records to return
    * @returns Array of historical overrides
    */
-  async getOverrideHistory(
-    operatorId?: string,
-    limit: number = 50,
-  ): Promise<ManualOverride[]> {
+  async getOverrideHistory(operatorId?: string, limit: number = 50): Promise<ManualOverride[]> {
     try {
       let query = `SELECT * FROM manual_overrides`;
       const params: any[] = [];
@@ -291,7 +274,7 @@ export class ManualOverrideService {
       const rows = await this.db.queryAll<any>(query, params);
       return rows.map((row) => this.mapRowToOverride(row));
     } catch (error) {
-      console.error("Error getting override history:", error);
+      console.error('Error getting override history:', error);
       return [];
     }
   }
@@ -312,13 +295,13 @@ export class ManualOverrideService {
       const totalResult = await this.db.queryOne<{ count: string }>(
         `SELECT COUNT(*) as count FROM manual_overrides`,
       );
-      const totalOverrides = parseInt(totalResult?.count || "0", 10);
+      const totalOverrides = parseInt(totalResult?.count || '0', 10);
 
       // Get active count
       const activeResult = await this.db.queryOne<{ count: string }>(
         `SELECT COUNT(*) as count FROM manual_overrides WHERE active = true`,
       );
-      const activeOverrides = parseInt(activeResult?.count || "0", 10);
+      const activeOverrides = parseInt(activeResult?.count || '0', 10);
 
       // Get average duration
       const durationResult = await this.db.queryOne<{ avg_duration: string }>(
@@ -326,14 +309,10 @@ export class ManualOverrideService {
          FROM manual_overrides 
          WHERE expires_at IS NOT NULL`,
       );
-      const averageDurationHours = parseFloat(
-        durationResult?.avg_duration || "0",
-      );
+      const averageDurationHours = parseFloat(durationResult?.avg_duration || '0');
 
       // Get top operators
-      const operatorRows = await this.db.queryAll<
-        { operator_id: string; count: string }
-      >(
+      const operatorRows = await this.db.queryAll<{ operator_id: string; count: string }>(
         `SELECT operator_id, COUNT(*) as count 
          FROM manual_overrides 
          GROUP BY operator_id 
@@ -352,7 +331,7 @@ export class ManualOverrideService {
         topOperators,
       };
     } catch (error) {
-      console.error("Error getting override stats:", error);
+      console.error('Error getting override stats:', error);
       return {
         totalOverrides: 0,
         activeOverrides: 0,
@@ -384,13 +363,10 @@ export class ManualOverrideService {
         [operatorId, hashedPassword, JSON.stringify(permissions), Date.now()],
       );
 
-      console.log(
-        `Operator ${operatorId} created with permissions:`,
-        permissions,
-      );
+      console.log(`Operator ${operatorId} created with permissions:`, permissions);
       return true;
     } catch (error) {
-      console.error("Error creating operator:", error);
+      console.error('Error creating operator:', error);
       return false;
     }
   }
@@ -410,47 +386,37 @@ export class ManualOverrideService {
         this.currentOverride = this.mapRowToOverride(row);
 
         // Check if override has expired
-        if (
-          this.currentOverride.expiresAt &&
-          Date.now() > this.currentOverride.expiresAt
-        ) {
+        if (this.currentOverride.expiresAt && Date.now() > this.currentOverride.expiresAt) {
           await this.expireOverride();
         } else {
           this.activateWarningBanner();
-          console.log(
-            `Loaded active override by operator ${this.currentOverride.operatorId}`,
-          );
+          console.log(`Loaded active override by operator ${this.currentOverride.operatorId}`);
         }
       }
     } catch (error) {
-      console.error("Error loading active override:", error);
+      console.error('Error loading active override:', error);
     }
   }
 
   /**
    * Get operator credentials from database
    */
-  private async getOperatorCredentials(
-    operatorId: string,
-  ): Promise<OperatorCredentials | null> {
+  private async getOperatorCredentials(operatorId: string): Promise<OperatorCredentials | null> {
     try {
-      const row = await this.db.queryOne<any>(
-        `SELECT * FROM operators WHERE operator_id = $1`,
-        [
-          operatorId,
-        ],
-      );
+      const row = await this.db.queryOne<any>(`SELECT * FROM operators WHERE operator_id = $1`, [
+        operatorId,
+      ]);
 
       if (!row) return null;
 
       return {
         operatorId: row.operator_id,
         hashedPassword: row.hashed_password,
-        permissions: JSON.parse(row.permissions || "[]"),
+        permissions: JSON.parse(row.permissions || '[]'),
         lastLogin: row.last_login ? parseInt(row.last_login, 10) : undefined,
       };
     } catch (error) {
-      console.error("Error getting operator credentials:", error);
+      console.error('Error getting operator credentials:', error);
       return null;
     }
   }
@@ -460,15 +426,12 @@ export class ManualOverrideService {
    */
   private async updateLastLogin(operatorId: string): Promise<void> {
     try {
-      await this.db.query(
-        `UPDATE operators SET last_login = $1 WHERE operator_id = $2`,
-        [
-          Date.now(),
-          operatorId,
-        ],
-      );
+      await this.db.query(`UPDATE operators SET last_login = $1 WHERE operator_id = $2`, [
+        Date.now(),
+        operatorId,
+      ]);
     } catch (error) {
-      console.error("Error updating last login:", error);
+      console.error('Error updating last login:', error);
     }
   }
 
@@ -498,7 +461,7 @@ export class ManualOverrideService {
         timestamp: Date.now(),
       };
     } catch (error) {
-      console.error("Error getting current allocation:", error);
+      console.error('Error getting current allocation:', error);
       // Return default allocation
       return {
         w1: 1.0,
@@ -512,10 +475,8 @@ export class ManualOverrideService {
   /**
    * Save override to database
    */
-  private async saveOverride(
-    override: ManualOverride,
-  ): Promise<ManualOverride> {
-    const row = await this.db.insert<any>("manual_overrides", {
+  private async saveOverride(override: ManualOverride): Promise<ManualOverride> {
+    const row = await this.db.insert<any>('manual_overrides', {
       operator_id: override.operatorId,
       original_allocation: JSON.stringify(override.originalAllocation),
       override_allocation: JSON.stringify(override.overrideAllocation),
@@ -553,8 +514,7 @@ export class ManualOverrideService {
   private validateAllocationVector(allocation: AllocationVector): boolean {
     const sum = allocation.w1 + allocation.w2 + allocation.w3;
     return (
-      Math.abs(sum - 1.0) < 0.001 && allocation.w1 >= 0 && allocation.w2 >= 0 &&
-      allocation.w3 >= 0
+      Math.abs(sum - 1.0) < 0.001 && allocation.w1 >= 0 && allocation.w2 >= 0 && allocation.w3 >= 0
     );
   }
 
@@ -571,7 +531,7 @@ export class ManualOverrideService {
 
     this.currentOverride = null;
     this.deactivateWarningBanner();
-    console.log("Manual override expired");
+    console.log('Manual override expired');
   }
 
   /**

@@ -1,11 +1,11 @@
 # Complexity Report
-*Generated on 2026-01-26T20:41:48.471Z*
+*Generated on 2026-01-30T14:23:43.408Z*
 
 ## Top 50 Most Complex Functions
 | Score | Type | Location |
 |-------|------|----------|
-| 47 | Cyclomatic | [services/titan-brain/src/engine/RiskGuardian.ts:119](services/titan-brain/src/engine/RiskGuardian.ts#L119) |
-| 42 | Cyclomatic | [services/titan-brain/src/features/Risk/RiskGuardian.ts:383](services/titan-brain/src/features/Risk/RiskGuardian.ts#L383) |
+| 51 | Cyclomatic | [services/titan-brain/src/engine/RiskGuardian.ts:115](services/titan-brain/src/engine/RiskGuardian.ts#L115) |
+| 43 | Cyclomatic | [services/titan-brain/src/features/Risk/RiskGuardian.ts:385](services/titan-brain/src/features/Risk/RiskGuardian.ts#L385) |
 | 37 | Cyclomatic | [services/titan-ai-quant/src/simulation/Backtester.ts:476](services/titan-ai-quant/src/simulation/Backtester.ts#L476) |
 | 30 | Cyclomatic | [services/titan-phase2-hunter/src/execution/SignalGenerator.ts:319](services/titan-phase2-hunter/src/execution/SignalGenerator.ts#L319) |
 | 28 | Cyclomatic | [services/titan-brain/src/startup/StartupManager.ts:195](services/titan-brain/src/startup/StartupManager.ts#L195) |
@@ -17,17 +17,17 @@
 | 25 | Cyclomatic | [services/titan-phase2-hunter/src/backtest/BacktestEngine.ts:738](services/titan-phase2-hunter/src/backtest/BacktestEngine.ts#L738) |
 | 25 | Cyclomatic | [services/titan-phase2-hunter/src/engine/InefficiencyMapper.ts:219](services/titan-phase2-hunter/src/engine/InefficiencyMapper.ts#L219) |
 | 25 | Cyclomatic | [services/titan-phase2-hunter/src/execution/SignalGenerator.ts:153](services/titan-phase2-hunter/src/execution/SignalGenerator.ts#L153) |
-| 24 | Cyclomatic | [services/titan-brain/src/engine/StateRecoveryService.ts:472](services/titan-brain/src/engine/StateRecoveryService.ts#L472) |
+| 24 | Cyclomatic | [services/titan-brain/src/engine/StateRecoveryService.ts:487](services/titan-brain/src/engine/StateRecoveryService.ts#L487) |
 | 24 | Cyclomatic | [services/titan-phase3-sentinel/src/engine/SentinelCore.ts:146](services/titan-phase3-sentinel/src/engine/SentinelCore.ts#L146) |
-| 23 | Cyclomatic | [services/titan-brain/src/server/NatsConsumer.ts:154](services/titan-brain/src/server/NatsConsumer.ts#L154) |
+| 23 | Cyclomatic | [services/shared/src/ipc/FastPathClient.ts:210](services/shared/src/ipc/FastPathClient.ts#L210) |
 | 23 | Cyclomatic | [services/titan-console/src/components/titan/KpiTile.tsx:16](services/titan-console/src/components/titan/KpiTile.tsx#L16) |
-| 21 | Cyclomatic | [services/shared/src/ipc/FastPathClient.ts:210](services/shared/src/ipc/FastPathClient.ts#L210) |
 | 21 | Cyclomatic | [services/titan-ai-quant/src/console/ProposalCard.tsx:47](services/titan-ai-quant/src/console/ProposalCard.tsx#L47) |
 | 21 | Cyclomatic | [services/titan-phase1-scavenger/src/engine/components/TrapExecutor.ts:118](services/titan-phase1-scavenger/src/engine/components/TrapExecutor.ts#L118) |
 | 21 | Cyclomatic | [services/titan-phase2-hunter/src/backtest/ForwardTestMode.ts:768](services/titan-phase2-hunter/src/backtest/ForwardTestMode.ts#L768) |
 | 20 | Cyclomatic | [services/titan-ai-quant/src/console/TrapMonitorWithAI.tsx:324](services/titan-ai-quant/src/console/TrapMonitorWithAI.tsx#L324) |
 | 20 | Cyclomatic | [services/titan-brain/src/security/InputValidator.ts:42](services/titan-brain/src/security/InputValidator.ts#L42) |
 | 20 | Cyclomatic | [services/titan-console/src/components/ui/chart.tsx:175](services/titan-console/src/components/ui/chart.tsx#L175) |
+| 20 | Cyclomatic | [services/titan-console/src/hooks/useVisualAnalysis.ts:121](services/titan-console/src/hooks/useVisualAnalysis.ts#L121) |
 | 19 | Cyclomatic | [services/titan-ai-quant/src/ai/ApprovalWorkflow.ts:189](services/titan-ai-quant/src/ai/ApprovalWorkflow.ts#L189) |
 | 19 | Cyclomatic | [services/titan-ai-quant/src/utils/ErrorHandler.ts:276](services/titan-ai-quant/src/utils/ErrorHandler.ts#L276) |
 | 19 | Cyclomatic | [services/titan-console/src/components/titan/TradeHistoryTable.tsx:66](services/titan-console/src/components/titan/TradeHistoryTable.tsx#L66) |

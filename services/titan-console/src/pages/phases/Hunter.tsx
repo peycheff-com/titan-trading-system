@@ -232,7 +232,9 @@ export default function HunterPhase() {
           header: 'Status',
           render: (item: any) => (
             <StatusPill
-              status={item.status === 'A+' ? 'healthy' : item.status === 'B' ? 'degraded' : 'offline'}
+              status={
+                item.status === 'A+' ? 'healthy' : item.status === 'B' ? 'degraded' : 'offline'
+              }
               size="sm"
             />
           ),

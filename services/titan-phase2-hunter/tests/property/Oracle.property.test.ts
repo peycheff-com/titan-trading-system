@@ -151,6 +151,7 @@ describe("Oracle Property Tests", () => {
                 const mockConfigManager = {
                     getOracleConfig: () => oracleConfig,
                     getConfig: () => ({
+                        oracle: oracleConfig,
                         enhancedRisk: { eventProximityThreshold: 60 },
                     }),
                     on: () => {},
@@ -184,6 +185,7 @@ describe("Oracle Property Tests", () => {
                 const mockConfigManager = {
                     getOracleConfig: () => oracleConfig,
                     getConfig: () => ({
+                        oracle: oracleConfig,
                         enhancedRisk: { eventProximityThreshold: 60 },
                     }),
                     on: () => {},

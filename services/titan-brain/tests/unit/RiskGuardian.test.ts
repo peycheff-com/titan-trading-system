@@ -52,14 +52,14 @@ const allocationConfig: AllocationEngineConfig = {
 };
 
 const riskConfig: RiskGuardianConfig = {
-  // --- Policy V1 Fields ---
-  maxAccountLeverage: 10,
-  maxPositionNotional: 50000,
-  maxDailyLoss: -1000,
-  maxOpenOrdersPerSymbol: 5,
-  symbolWhitelist: ["BTCUSDT", "ETHUSDT"],
-  maxSlippageBps: 100,
-  maxStalenessMs: 5000,
+  // --- Policy V1 Fields (set very permissive to not interfere with test scenarios) ---
+  maxAccountLeverage: 1000,
+  maxPositionNotional: 1_000_000_000,
+  maxDailyLoss: -1_000_000,
+  maxOpenOrdersPerSymbol: 100,
+  symbolWhitelist: [], // Empty = allow all
+  maxSlippageBps: 10000,
+  maxStalenessMs: 60_000,
   version: 1,
   lastUpdated: 0,
 
@@ -872,12 +872,54 @@ describe("RiskGuardian Unit Tests", () => {
       expect(decision.reason).toContain("LATENCY_VETO");
     });
   });
-});
 
   describe("Policy Enforcement", () => {
+    // Create a RiskGuardian with restrictive V1 config for testing policy vetoes
+    let policyRiskGuardian: RiskGuardian;
+
+    beforeEach(() => {
+      const restrictiveConfig: RiskGuardianConfig = {
+        // --- Restrictive Policy V1 Fields for testing vetoes ---
+        maxAccountLeverage: 10,
+        maxPositionNotional: 50000, // 50k limit for testing
+        maxDailyLoss: -1000,
+        maxOpenOrdersPerSymbol: 5,
+        symbolWhitelist: ["BTCUSDT", "ETHUSDT"], // Only allow BTC and ETH
+        maxSlippageBps: 100,
+        maxStalenessMs: 5000,
+        version: 1,
+        lastUpdated: 0,
+
+        // --- Legacy/Extended Fields ---
+        maxCorrelation: 0.8,
+        correlationPenalty: 0.5,
+        correlationUpdateInterval: 300000,
+        betaUpdateInterval: 300000,
+        minStopDistanceMultiplier: 2.0,
+        minConfidenceScore: 0,
+        confidence: {
+          decayRate: 0.1,
+          recoveryRate: 0.05,
+          threshold: 0.2,
+        },
+        fractal: {
+          phase1: { maxLeverage: 1000, maxDrawdown: 1, maxAllocation: 1000 },
+          phase2: { maxLeverage: 1000, maxDrawdown: 1, maxAllocation: 1000 },
+          phase3: { maxLeverage: 1000, maxDrawdown: 1, maxAllocation: 1000 },
+          manual: { maxLeverage: 1000, maxDrawdown: 1, maxAllocation: 1000 },
+        },
+      };
+
+      policyRiskGuardian = new RiskGuardian(
+        restrictiveConfig,
+        allocationEngine,
+        governanceEngine,
+      );
+    });
+
     it("should veto if Projected Notional > maxPositionNotional", () => {
-      riskGuardian.setEquity(10000);
-      // maxPositionNotional is 50,000 in test config
+      policyRiskGuardian.setEquity(10000);
+      // maxPositionNotional is 50,000 in restrictive config
       const signal: IntentSignal = {
         signalId: "policy-notional-veto",
         phaseId: "phase1" as PhaseId,
@@ -886,14 +928,14 @@ describe("RiskGuardian Unit Tests", () => {
         requestedSize: 50001, // > 50,000
         timestamp: Date.now(),
       };
-      
-      const decision = riskGuardian.checkSignal(signal, []);
+
+      const decision = policyRiskGuardian.checkSignal(signal, []);
       expect(decision.approved).toBe(false);
       expect(decision.reason).toContain("Max Position Notional Exceeded");
     });
 
     it("should veto if Symbol is not in Whitelist", () => {
-      riskGuardian.setEquity(10000);
+      policyRiskGuardian.setEquity(10000);
       // Whitelist is ['BTCUSDT', 'ETHUSDT']
       const signal: IntentSignal = {
         signalId: "policy-whitelist-veto",
@@ -903,14 +945,14 @@ describe("RiskGuardian Unit Tests", () => {
         requestedSize: 1000,
         timestamp: Date.now(),
       };
-      
-      const decision = riskGuardian.checkSignal(signal, []);
+
+      const decision = policyRiskGuardian.checkSignal(signal, []);
       expect(decision.approved).toBe(false);
       expect(decision.reason).toContain("not whitelisted");
     });
 
     it("should approve valid symbol within limits", () => {
-      riskGuardian.setEquity(10000);
+      policyRiskGuardian.setEquity(10000);
       const signal: IntentSignal = {
         signalId: "policy-pass",
         phaseId: "phase1" as PhaseId,
@@ -919,8 +961,8 @@ describe("RiskGuardian Unit Tests", () => {
         requestedSize: 49000, // < 50,000
         timestamp: Date.now(),
       };
-      
-      const decision = riskGuardian.checkSignal(signal, []);
+
+      const decision = policyRiskGuardian.checkSignal(signal, []);
       expect(decision.approved).toBe(true);
     });
   });

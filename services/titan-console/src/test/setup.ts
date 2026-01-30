@@ -1,6 +1,6 @@
-import "@testing-library/jest-dom";
-import { cleanup } from "@testing-library/react";
-import { afterEach, vi } from "vitest";
+import '@testing-library/jest-dom';
+import { cleanup } from '@testing-library/react';
+import { afterEach, vi } from 'vitest';
 
 afterEach(() => {
   cleanup();
@@ -25,7 +25,7 @@ if (!global.PointerEvent) {
     tiltX = 0;
     tiltY = 0;
     twist = 0;
-    pointerType = "mouse";
+    pointerType = 'mouse';
     isPrimary = false;
   }
   global.PointerEvent = PointerEventMock as any;

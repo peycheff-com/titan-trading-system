@@ -51,7 +51,6 @@
     "fastify-raw-body": "^5.0.0",
     "ioredis": "^5.4.2",
     "jsonwebtoken": "^9.0.2",
-    "mnemonist": "^0.40.0",
     "nats": "^2.29.3",
     "pg": "^8.13.1",
     "prom-client": "^15.1.3",

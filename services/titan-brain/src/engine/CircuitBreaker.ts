@@ -1,3 +1,5 @@
+/* eslint-disable functional/immutable-data, functional/no-let -- CircuitBreaker is stateful by design */
+
 import {
   BreakerAction,
   BreakerCheckInput,
@@ -6,7 +8,7 @@ import {
   BreakerType,
   CircuitBreakerConfig,
   Position,
-} from "../types/index.js";
+} from '../types/index.js';
 
 /**
  * Interface for position closure callback
@@ -38,7 +40,7 @@ export interface BreakerEventPersistence {
  */
 export interface HaltPublisher {
   publishHalt(
-    state: "HARD_HALT" | "SOFT_HALT" | "NORMAL",
+    state: 'HARD_HALT' | 'SOFT_HALT' | 'NORMAL',
     reason: string,
     metadata?: Record<string, unknown>,
   ): Promise<void>;
@@ -74,7 +76,7 @@ export class CircuitBreaker {
     save(key: string, value: string): Promise<void>;
     load(key: string): Promise<string | null>;
   };
-  private readonly STATE_KEY = "titan:brain:breaker:state";
+  private readonly STATE_KEY = 'titan:brain:breaker:state';
 
   /** External handlers */
   private positionHandler?: PositionClosureHandler;
@@ -145,7 +147,7 @@ export class CircuitBreaker {
       };
       await this.stateStore.save(this.STATE_KEY, JSON.stringify(state));
     } catch (error) {
-      console.error("Failed to persist breaker state:", error);
+      console.error('Failed to persist breaker state:', error);
     }
   }
 
@@ -175,10 +177,10 @@ export class CircuitBreaker {
         this.tripCount = state.tripCount;
 
         this.lastTripTime = state.lastTripTime;
-        console.log("✅ Circuit Breaker state restored from persistence");
+        console.log('✅ Circuit Breaker state restored from persistence');
       }
     } catch (error) {
-      console.error("Failed to load breaker state:", error);
+      console.error('Failed to load breaker state:', error);
     }
   }
 
@@ -228,22 +230,16 @@ export class CircuitBreaker {
     // Requirement 5.1: Daily drawdown exceeds 15%
     if (dailyDrawdown >= this.config.maxDailyDrawdown) {
       this.trigger(
-        `Daily drawdown exceeded: ${(dailyDrawdown * 100).toFixed(2)}% >= ${
-          (
-            this.config.maxDailyDrawdown * 100
-          ).toFixed(0)
-        }%`,
+        `Daily drawdown exceeded: ${(dailyDrawdown * 100).toFixed(2)}% >= ${(
+          this.config.maxDailyDrawdown * 100
+        ).toFixed(0)}%`,
       );
       return this.getStatus();
     }
 
     // Requirement 5.2: Equity below minimum
     if (equity < this.config.minEquity) {
-      this.trigger(
-        `Equity below minimum: $${
-          equity.toFixed(2)
-        } < $${this.config.minEquity}`,
-      );
+      this.trigger(`Equity below minimum: $${equity.toFixed(2)} < $${this.config.minEquity}`);
       return this.getStatus();
     }
 
@@ -309,29 +305,23 @@ export class CircuitBreaker {
         await this.positionHandler.closeAllPositions();
       } catch (error) {
         // Log error but don't prevent breaker activation
-        console.error(
-          "Failed to close positions during circuit breaker trigger:",
-          error,
-        );
+        console.error('Failed to close positions during circuit breaker trigger:', error);
       }
     }
 
     // Requirement 5.6: Send emergency notifications
     if (this.notificationHandler) {
       try {
-        await this.notificationHandler.sendEmergencyNotification(
-          reason,
-          this.dailyStartEquity,
-        );
+        await this.notificationHandler.sendEmergencyNotification(reason, this.dailyStartEquity);
       } catch (error) {
-        console.error("Failed to send emergency notification:", error);
+        console.error('Failed to send emergency notification:', error);
       }
     }
 
     // Requirement 5.7: Log the event
     const event: BreakerEvent = {
       timestamp,
-      eventType: "TRIGGER",
+      eventType: 'TRIGGER',
       breakerType: BreakerType.HARD,
       reason,
       equity: this.dailyStartEquity,
@@ -344,22 +334,22 @@ export class CircuitBreaker {
       try {
         await this.eventPersistence.persistEvent(event);
       } catch (error) {
-        console.error("Failed to persist breaker event:", error);
+        console.error('Failed to persist breaker event:', error);
       }
     }
 
     // Propagate halt state to Execution Engine via NATS
     if (this.haltPublisher) {
       try {
-        await this.haltPublisher.publishHalt("HARD_HALT", reason, {
+        await this.haltPublisher.publishHalt('HARD_HALT', reason, {
           triggeredAt: timestamp,
-          source: "CircuitBreaker",
+          source: 'CircuitBreaker',
           tripCount: this.tripCount,
           dailyDrawdown: this.calculateDailyDrawdown(this.dailyStartEquity),
         });
-        console.log("🚨 HALT published to Execution Engine");
+        console.log('🚨 HALT published to Execution Engine');
       } catch (error) {
-        console.error("Failed to publish halt to NATS:", error);
+        console.error('Failed to publish halt to NATS:', error);
       }
     }
   }
@@ -402,7 +392,7 @@ export class CircuitBreaker {
     // Log the event
     const event: BreakerEvent = {
       timestamp,
-      eventType: "TRIGGER",
+      eventType: 'TRIGGER',
       breakerType: BreakerType.SOFT,
       reason,
       equity: this.dailyStartEquity,
@@ -416,7 +406,7 @@ export class CircuitBreaker {
       try {
         await this.eventPersistence.persistEvent(event);
       } catch (error) {
-        console.error("Failed to persist soft pause event:", error);
+        console.error('Failed to persist soft pause event:', error);
       }
     }
   }
@@ -432,8 +422,8 @@ export class CircuitBreaker {
       return;
     }
 
-    if (!operatorId || operatorId.trim() === "") {
-      throw new Error("Operator ID is required for circuit breaker reset");
+    if (!operatorId || operatorId.trim() === '') {
+      throw new Error('Operator ID is required for circuit breaker reset');
     }
 
     const timestamp = Date.now();
@@ -457,7 +447,7 @@ export class CircuitBreaker {
     // Requirement 5.8: Log the reset with operator identity
     const event: BreakerEvent = {
       timestamp,
-      eventType: "RESET",
+      eventType: 'RESET',
       reason: `Manual reset by operator: ${operatorId}`,
       equity: this.dailyStartEquity,
       operatorId,
@@ -471,7 +461,7 @@ export class CircuitBreaker {
       try {
         await this.eventPersistence.persistEvent(event);
       } catch (error) {
-        console.error("Failed to persist reset event:", error);
+        console.error('Failed to persist reset event:', error);
       }
     }
   }
@@ -524,16 +514,12 @@ export class CircuitBreaker {
     // Clean up old trades outside the window
     const windowStart = tradeTime - this.config.consecutiveLossWindow;
 
-    this.recentLosses = this.recentLosses.filter((t) =>
-      t.timestamp >= windowStart
-    );
+    this.recentLosses = this.recentLosses.filter((t) => t.timestamp >= windowStart);
 
     // If profitable trade, reset consecutive loss counter
     if (pnl >= 0) {
       this.recentLosses = this.recentLosses.filter(
-        (t) =>
-          t.pnl < 0 &&
-          t.timestamp > tradeTime - this.config.consecutiveLossWindow,
+        (t) => t.pnl < 0 && t.timestamp > tradeTime - this.config.consecutiveLossWindow,
       );
     }
   }
@@ -555,17 +541,14 @@ export class CircuitBreaker {
       return 0;
     }
 
-    const drawdown = (this.dailyStartEquity - currentEquity) /
-      this.dailyStartEquity;
+    const drawdown = (this.dailyStartEquity - currentEquity) / this.dailyStartEquity;
     return Math.max(0, drawdown);
   }
 
   /**
    * Count consecutive losses within the time window
    */
-  private countConsecutiveLosses(
-    recentTrades: Array<{ pnl: number; timestamp: number }>,
-  ): number {
+  private countConsecutiveLosses(recentTrades: Array<{ pnl: number; timestamp: number }>): number {
     if (recentTrades.length === 0) {
       return 0;
     }
@@ -615,9 +598,7 @@ export class CircuitBreaker {
       this.triggeredAt = undefined;
 
       this.cooldownEndsAt = undefined;
-      this.persistState().catch((err) =>
-        console.error("Failed to persist state check", err)
-      );
+      this.persistState().catch((err) => console.error('Failed to persist state check', err));
     }
   }
   /**

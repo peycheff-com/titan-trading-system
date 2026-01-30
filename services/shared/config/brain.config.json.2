@@ -1,0 +1,29 @@
+{
+  "brain": {
+    "maxQueueSize": 1300
+  },
+  "allocationEngine": {
+    "equityThresholds": {
+      "phase1ToPhase2": 5000,
+      "phase2ToPhase3": 50000
+    },
+    "rebalanceThreshold": 0.1,
+    "maxAllocationChange": 0.2
+  },
+  "riskGuardian": {
+    "maxDrawdownPct": 0.15,
+    "correlationThreshold": 0.8,
+    "positionSizeLimit": 0.5
+  },
+  "performanceTracker": {
+    "windowDays": 30,
+    "minTradesForStats": 10,
+    "sharpeRatioTarget": 1.5
+  },
+  "circuitBreaker": {
+    "enabled": true,
+    "drawdownThreshold": 0.15,
+    "consecutiveLossThreshold": 5,
+    "cooldownMinutes": 30
+  }
+}

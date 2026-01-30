@@ -7,15 +7,15 @@
  * Requirements: 2.3.1, 2.3.2, 2.3.3, 2.3.4
  */
 
-import { createHmac, timingSafeEqual } from "crypto";
-import { Logger } from "../logging/Logger.js";
+import { createHmac, timingSafeEqual } from 'crypto';
+import { Logger } from '../logging/Logger.js';
 
 /**
  * HMAC validation configuration
  */
 export interface HMACConfig {
   secret: string;
-  algorithm: "sha256" | "sha512";
+  algorithm: 'sha256' | 'sha512';
   headerName: string;
   timestampHeaderName: string;
   timestampTolerance: number; // seconds
@@ -36,10 +36,10 @@ export interface HMACValidationResult {
  * Default HMAC configuration
  */
 const DEFAULT_HMAC_CONFIG: HMACConfig = {
-  secret: "",
-  algorithm: "sha256",
-  headerName: "x-signature",
-  timestampHeaderName: "x-timestamp",
+  secret: '',
+  algorithm: 'sha256',
+  headerName: 'x-signature',
+  timestampHeaderName: 'x-timestamp',
   timestampTolerance: 300, // 5 minutes
   requireTimestamp: true,
 };
@@ -53,13 +53,13 @@ export class HMACValidator {
 
   constructor(config: Partial<HMACConfig>, logger?: Logger) {
     this.config = { ...DEFAULT_HMAC_CONFIG, ...config };
-    this.logger = logger ?? Logger.getInstance("hmac-validator");
+    this.logger = logger ?? Logger.getInstance('hmac-validator');
 
     if (!this.config.secret) {
-      throw new Error("HMAC secret is required");
+      throw new Error('HMAC secret is required');
     }
 
-    this.logger.info("HMAC validator initialized", undefined, {
+    this.logger.info('HMAC validator initialized', undefined, {
       algorithm: this.config.algorithm,
       headerName: this.config.headerName,
       timestampHeaderName: this.config.timestampHeaderName,
@@ -75,22 +75,19 @@ export class HMACValidator {
     const secret = process.env.HMAC_SECRET;
 
     // In test env, allow fallback
-    if (!secret && process.env.NODE_ENV !== "test") {
-      throw new Error("HMAC_SECRET environment variable is required");
+    if (!secret && process.env.NODE_ENV !== 'test') {
+      throw new Error('HMAC_SECRET environment variable is required');
     }
 
-    const effectiveSecret = secret || "test-secret-123";
+    const effectiveSecret = secret || 'test-secret-123';
 
     const config: Partial<HMACConfig> = {
       secret: effectiveSecret,
-      algorithm: (process.env.HMAC_ALGORITHM as "sha256" | "sha512") ||
-        "sha256",
-      headerName: process.env.HMAC_HEADER_NAME || "x-signature",
-      timestampHeaderName: process.env.HMAC_TIMESTAMP_HEADER || "x-timestamp",
-      timestampTolerance: parseInt(
-        process.env.HMAC_TIMESTAMP_TOLERANCE || "300",
-      ),
-      requireTimestamp: process.env.HMAC_REQUIRE_TIMESTAMP !== "false",
+      algorithm: (process.env.HMAC_ALGORITHM as 'sha256' | 'sha512') || 'sha256',
+      headerName: process.env.HMAC_HEADER_NAME || 'x-signature',
+      timestampHeaderName: process.env.HMAC_TIMESTAMP_HEADER || 'x-timestamp',
+      timestampTolerance: parseInt(process.env.HMAC_TIMESTAMP_TOLERANCE || '300'),
+      requireTimestamp: process.env.HMAC_REQUIRE_TIMESTAMP !== 'false',
     };
 
     return new HMACValidator(config, logger);
@@ -107,10 +104,7 @@ export class HMACValidator {
       data = `${timestamp}.${payload}`;
     }
 
-    return createHmac(this.config.algorithm, this.config.secret).update(
-      data,
-      "utf8",
-    ).digest("hex");
+    return createHmac(this.config.algorithm, this.config.secret).update(data, 'utf8').digest('hex');
   }
 
   /**
@@ -137,10 +131,7 @@ export class HMACValidator {
       let age: number | undefined;
 
       if (this.config.requireTimestamp) {
-        const timestampStr = this.getHeaderValue(
-          headers,
-          this.config.timestampHeaderName,
-        );
+        const timestampStr = this.getHeaderValue(headers, this.config.timestampHeaderName);
         if (!timestampStr) {
           return {
             valid: false,
@@ -152,7 +143,7 @@ export class HMACValidator {
         if (isNaN(timestamp)) {
           return {
             valid: false,
-            error: "Invalid timestamp format",
+            error: 'Invalid timestamp format',
           };
         }
 
@@ -163,8 +154,7 @@ export class HMACValidator {
         if (Math.abs(age) > this.config.timestampTolerance) {
           return {
             valid: false,
-            error:
-              `Timestamp too old or too far in future (age: ${age}s, tolerance: ${this.config.timestampTolerance}s)`,
+            error: `Timestamp too old or too far in future (age: ${age}s, tolerance: ${this.config.timestampTolerance}s)`,
             timestamp,
             age,
           };
@@ -177,7 +167,7 @@ export class HMACValidator {
         this.constantTimeDelay();
         return {
           valid: false,
-          error: "Invalid signature format",
+          error: 'Invalid signature format',
           timestamp,
           age,
         };
@@ -190,7 +180,7 @@ export class HMACValidator {
       const isValid = this.timingSafeCompare(signature, expectedSignature);
 
       if (!isValid) {
-        this.logger.warn("HMAC signature validation failed", undefined, {
+        this.logger.warn('HMAC signature validation failed', undefined, {
           expectedLength: expectedSignature.length,
           actualLength: signature.length,
           timestamp,
@@ -200,19 +190,19 @@ export class HMACValidator {
 
       return {
         valid: isValid,
-        error: isValid ? undefined : "Invalid signature",
+        error: isValid ? undefined : 'Invalid signature',
         timestamp,
         age,
       };
     } catch (error) {
       this.logger.error(
-        "HMAC validation error",
+        'HMAC validation error',
         error instanceof Error ? error : new Error(String(error)),
       );
 
       return {
         valid: false,
-        error: "HMAC validation failed due to internal error",
+        error: 'HMAC validation failed due to internal error',
       };
     }
   }
@@ -257,10 +247,7 @@ export class HMACValidator {
   /**
    * Timing-safe string comparison to prevent timing attacks
    */
-  private timingSafeCompare(
-    signature: string,
-    expectedSignature: string,
-  ): boolean {
+  private timingSafeCompare(signature: string, expectedSignature: string): boolean {
     // Ensure both signatures are the same length to prevent length-based timing attacks
     if (signature.length !== expectedSignature.length) {
       this.constantTimeDelay();
@@ -268,13 +255,13 @@ export class HMACValidator {
     }
 
     try {
-      const signatureBuffer = Buffer.from(signature, "hex");
-      const expectedBuffer = Buffer.from(expectedSignature, "hex");
+      const signatureBuffer = Buffer.from(signature, 'hex');
+      const expectedBuffer = Buffer.from(expectedSignature, 'hex');
 
       return timingSafeEqual(signatureBuffer, expectedBuffer);
     } catch (error) {
       // Log security event without exposing details
-      this.logger.warn("HMAC signature buffer conversion failed");
+      this.logger.warn('HMAC signature buffer conversion failed');
       this.constantTimeDelay();
       return false;
     }
@@ -285,18 +272,14 @@ export class HMACValidator {
    */
   private constantTimeDelay(): void {
     // Perform a dummy HMAC calculation to maintain constant time
-    const dummyData = "dummy_data_for_timing_consistency";
-    createHmac(this.config.algorithm, this.config.secret).update(dummyData)
-      .digest("hex");
+    const dummyData = 'dummy_data_for_timing_consistency';
+    createHmac(this.config.algorithm, this.config.secret).update(dummyData).digest('hex');
   }
 
   /**
    * Create HMAC headers for outgoing requests
    */
-  createHeaders(
-    payload: string,
-    includeTimestamp: boolean = true,
-  ): Record<string, string> {
+  createHeaders(payload: string, includeTimestamp: boolean = true): Record<string, string> {
     const headers: Record<string, string> = {};
 
     let timestamp: number | undefined;
@@ -316,7 +299,7 @@ export class HMACValidator {
   /**
    * Get HMAC configuration (without secret)
    */
-  getConfig(): Omit<HMACConfig, "secret"> {
+  getConfig(): Omit<HMACConfig, 'secret'> {
     const { secret, ...config } = this.config;
     return config;
   }
@@ -333,21 +316,17 @@ export class HMACValidator {
    */
   updateSecret(newSecret: string): void {
     if (!newSecret) {
-      throw new Error("HMAC secret cannot be empty");
+      throw new Error('HMAC secret cannot be empty');
     }
 
     this.config.secret = newSecret;
-    this.logger.info("HMAC secret updated");
+    this.logger.info('HMAC secret updated');
   }
 
   /**
    * Test HMAC validation with known payload and signature
    */
-  test(
-    payload: string,
-    expectedSignature: string,
-    timestamp?: number,
-  ): boolean {
+  test(payload: string, expectedSignature: string, timestamp?: number): boolean {
     const actualSignature = this.generateSignature(payload, timestamp);
     return this.timingSafeCompare(expectedSignature, actualSignature);
   }
@@ -356,38 +335,32 @@ export class HMACValidator {
 /**
  * Create HMAC middleware for Fastify
  */
-export function createHMACMiddleware(
-  validator: HMACValidator,
-  logger?: Logger,
-) {
-  const middlewareLogger = logger ?? Logger.getInstance("hmac-middleware");
+export function createHMACMiddleware(validator: HMACValidator, logger?: Logger) {
+  const middlewareLogger = logger ?? Logger.getInstance('hmac-middleware');
 
   return async (request: any, reply: any) => {
     // Skip HMAC validation for health checks and metrics
-    if (
-      request.url === "/health" || request.url === "/status" ||
-      request.url === "/metrics"
-    ) {
+    if (request.url === '/health' || request.url === '/status' || request.url === '/metrics') {
       return;
     }
 
-    const body = request.rawBody || request.body || "";
-    const bodyString = typeof body === "string" ? body : JSON.stringify(body);
+    const body = request.rawBody || request.body || '';
+    const bodyString = typeof body === 'string' ? body : JSON.stringify(body);
 
     const result = validator.validateRequest(bodyString, request.headers);
 
     if (!result.valid) {
-      middlewareLogger.warn("HMAC validation failed", undefined, {
+      middlewareLogger.warn('HMAC validation failed', undefined, {
         ip: request.ip,
         endpoint: request.url,
         error: result.error,
-        userAgent: request.headers["user-agent"],
+        userAgent: request.headers['user-agent'],
         timestamp: result.timestamp,
         age: result.age,
       });
 
       reply.status(401).send({
-        error: "Unauthorized",
+        error: 'Unauthorized',
         message: result.error,
         timestamp: new Date().toISOString(),
       });
@@ -398,7 +371,7 @@ export function createHMACMiddleware(
 
     request.hmacValidation = result;
 
-    middlewareLogger.debug("HMAC validation successful", undefined, {
+    middlewareLogger.debug('HMAC validation successful', undefined, {
       ip: request.ip,
       endpoint: request.url,
       timestamp: result.timestamp,
@@ -412,19 +385,19 @@ export function createHMACMiddleware(
  */
 export const HMACDefaults = {
   development: {
-    algorithm: "sha256" as const,
+    algorithm: 'sha256' as const,
     timestampTolerance: 600, // 10 minutes (more lenient for development)
     requireTimestamp: false,
   },
 
   production: {
-    algorithm: "sha512" as const,
+    algorithm: 'sha512' as const,
     timestampTolerance: 300, // 5 minutes
     requireTimestamp: true,
   },
 
   test: {
-    algorithm: "sha256" as const,
+    algorithm: 'sha256' as const,
     timestampTolerance: 3600, // 1 hour (very lenient for tests)
     requireTimestamp: false,
   },

@@ -7,6 +7,8 @@
  * Requirements: 4.2.1, 4.2.2, 4.2.3, 4.2.4, 4.2.5
  */
 
+/* eslint-disable functional/immutable-data, functional/no-let -- MetricsCollector is stateful by design */
+
 import { EventEmitter } from 'events';
 import { Logger } from '../logging/Logger.js';
 
@@ -350,13 +352,25 @@ export class MetricsCollector extends EventEmitter {
 
     // Record request duration
     this.recordHistogram(this.httpMetrics.requestDuration, duration);
-    this.recordHistogramMetric('http_request_duration_seconds', duration, { method, route });
+    this.recordHistogramMetric('http_request_duration_seconds', duration, {
+      method,
+      route,
+    });
 
     // Record response size
     this.recordHistogram(this.httpMetrics.responseSize, responseSize);
-    this.recordHistogramMetric('http_response_size_bytes', responseSize, { method, route });
+    this.recordHistogramMetric('http_response_size_bytes', responseSize, {
+      method,
+      route,
+    });
 
-    this.emit('http:request', { method, route, statusCode, duration, responseSize });
+    this.emit('http:request', {
+      method,
+      route,
+      statusCode,
+      duration,
+      responseSize,
+    });
   }
 
   /**
@@ -402,7 +416,9 @@ export class MetricsCollector extends EventEmitter {
     }
 
     this.recordHistogram(this.databaseMetrics.queryDuration, duration);
-    this.recordHistogramMetric('database_query_duration_seconds', duration, { operation });
+    this.recordHistogramMetric('database_query_duration_seconds', duration, {
+      operation,
+    });
     this.incrementCounter('database_queries_total', {
       operation,
       status: success ? 'success' : 'error',

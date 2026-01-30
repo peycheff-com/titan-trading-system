@@ -41,9 +41,12 @@ export function KpiTile({
           {label}
         </span>
         {icon && !trend && !subValue && (
-            <div className="text-muted-foreground">
-                {(() => { const Icon = icon; return <Icon className="h-4 w-4" />; })()}
-            </div>
+          <div className="text-muted-foreground">
+            {(() => {
+              const Icon = icon;
+              return <Icon className="h-4 w-4" />;
+            })()}
+          </div>
         )}
         {trend && (
           <div

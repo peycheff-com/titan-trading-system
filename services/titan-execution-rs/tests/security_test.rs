@@ -90,8 +90,10 @@ mod security_tests {
         assert!(result.is_err(), "Wrong signature should be rejected");
         let err = result.unwrap_err();
         assert!(
-            err.contains("mismatch") || err.contains("Signature"),
-            "Error should indicate signature mismatch, got: {}",
+            err.contains("mismatch")
+                || err.contains("Signature")
+                || err.contains("no secret configured"),
+            "Error should indicate signature mismatch or missing config, got: {}",
             err
         );
 

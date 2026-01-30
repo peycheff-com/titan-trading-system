@@ -22,23 +22,10 @@ import { consumerOpts, JSONCodec } from "nats";
 import { FillConfirmation } from "../types/execution.js";
 import { FileSystemBackupService } from "../services/backup/FileSystemBackupService.js";
 import { RiskGuardian } from "../features/Risk/RiskGuardian.js";
+import { RecoveredState, RecoveryConfig } from "./stateRecoveryTypes.js";
 
-export interface RecoveredState {
-  allocation: AllocationVector | null;
-  performance: Record<PhaseId, PhasePerformance>;
-  highWatermark: number;
-  riskMetrics: RiskMetrics | null;
-  equity?: number;
-  positions?: Position[];
-  dailyStartEquity?: number;
-  lastUpdated?: number;
-}
-
-export interface RecoveryConfig {
-  performanceWindowDays: number;
-  defaultAllocation: AllocationVector;
-  defaultHighWatermark: number;
-}
+// Re-export for backward compatibility
+export type { RecoveredState, RecoveryConfig } from "./stateRecoveryTypes.js";
 
 /**
  * Service for recovering system state on startup

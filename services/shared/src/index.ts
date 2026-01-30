@@ -5,7 +5,7 @@
  * across different Titan services for centralized management.
  */
 
-import { loadSecretsFromFiles } from "./config/loadSecrets";
+import { loadSecretsFromFiles } from './config/loadSecrets';
 
 // Ensure *_FILE secrets are promoted to env early in service startup.
 loadSecretsFromFiles();
@@ -19,7 +19,7 @@ export {
   type WebSocketConfig,
   WebSocketManager,
   type WebSocketMessage,
-} from "./WebSocketManager";
+} from './WebSocketManager';
 
 // Telemetry Service
 export {
@@ -32,7 +32,7 @@ export {
   type SignalData,
   type TelemetryConfig,
   TelemetryService,
-} from "./TelemetryService";
+} from './TelemetryService';
 
 // Configuration Management
 export {
@@ -44,7 +44,7 @@ export {
   type PhaseConfig,
   resetConfigManager,
   type ServiceConfig,
-} from "./ConfigManager";
+} from './ConfigManager';
 
 // Configuration Schema and Validation
 export {
@@ -57,13 +57,10 @@ export {
   PhaseConfigBaseSchema,
   PhaseConfigSchema,
   type ValidationResult,
-} from "./config/ConfigSchema";
+} from './config/ConfigSchema';
 
 // Secrets (Docker secrets / Vault file mounts)
-export {
-  loadSecretsFromFiles,
-  type LoadSecretsOptions,
-} from "./config/loadSecrets";
+export { loadSecretsFromFiles, type LoadSecretsOptions } from './config/loadSecrets';
 
 // Hierarchical Configuration Loading
 export {
@@ -72,7 +69,7 @@ export {
   type ConfigSource,
   createConfigLoader,
   HierarchicalConfigLoader,
-} from "./config/HierarchicalConfigLoader";
+} from './config/HierarchicalConfigLoader';
 
 // Configuration Encryption
 export {
@@ -82,7 +79,7 @@ export {
   type EncryptionResult,
   getConfigEncryption,
   resetConfigEncryption,
-} from "./config/ConfigEncryption";
+} from './config/ConfigEncryption';
 
 // Hot-Reload Configuration Management
 export {
@@ -91,7 +88,7 @@ export {
   HotReloadConfigManager,
   type HotReloadEvent,
   type HotReloadOptions,
-} from "./config/HotReloadConfigManager";
+} from './config/HotReloadConfigManager';
 
 // Configuration Version History
 export {
@@ -102,7 +99,7 @@ export {
   type RollbackResult,
   type VersionComparison,
   type VersionHistoryMetadata,
-} from "./config/ConfigVersionHistory";
+} from './config/ConfigVersionHistory';
 
 // Resource Optimization
 export {
@@ -113,7 +110,7 @@ export {
   resetResourceOptimizer,
   ResourceOptimizer,
   type ResourceThresholds,
-} from "./ResourceOptimizer";
+} from './ResourceOptimizer';
 
 // Performance Monitoring
 export {
@@ -124,7 +121,7 @@ export {
   type PerformanceMonitorConfig,
   resetPerformanceMonitor,
   type ScalingRecommendation,
-} from "./PerformanceMonitor";
+} from './PerformanceMonitor';
 
 // Load Balancing
 export {
@@ -136,7 +133,7 @@ export {
   type LoadBalancingMetrics,
   type RoutingInfo,
   type ServerHealth,
-} from "./LoadBalancer";
+} from './LoadBalancer';
 
 // Service Discovery
 export {
@@ -148,7 +145,7 @@ export {
   type ServiceEvent,
   type ServiceInstance,
   type ServiceQuery,
-} from "./ServiceDiscovery";
+} from './ServiceDiscovery';
 
 // Distributed State Management
 export {
@@ -162,7 +159,7 @@ export {
   resetDistributedStateManager,
   type StateEntry,
   type StateOperation,
-} from "./DistributedStateManager";
+} from './DistributedStateManager';
 
 // High-Frequency Trading - Removed (Module Deleted)
 
@@ -180,7 +177,7 @@ export {
   type NetworkOptimizerConfig,
   type NetworkPath,
   resetNetworkOptimizer,
-} from "./NetworkOptimizer";
+} from './NetworkOptimizer';
 
 // Messaging
 export {
@@ -188,11 +185,11 @@ export {
   NatsClient,
   type NatsConfig,
   TitanSubject,
-} from "./messaging/NatsClient.js";
+} from './messaging/NatsClient.js';
 
-export { SignalClient } from "./messaging/SignalClient.js";
+export { SignalClient } from './messaging/SignalClient.js';
 
-export { ExecutionClient } from "./messaging/ExecutionClient.js";
+export { ExecutionClient } from './messaging/ExecutionClient.js';
 
 // Intent schema (NATS contract)
 export {
@@ -205,20 +202,12 @@ export {
   IntentStatusEnum,
   IntentTypeEnum,
   validateIntentPayload,
-} from "./schemas/intentSchema.js";
+} from './schemas/intentSchema.js';
 
 // Canonical Envelopes
-export {
-  createEnvelope,
-  type Envelope,
-  EnvelopeSchema,
-} from "./schemas/envelope.js";
+export { createEnvelope, type Envelope, EnvelopeSchema } from './schemas/envelope.js';
 
-export {
-  type BaseCommand,
-  BaseCommandSchema,
-  type BaseEvent,
-} from "./schemas/base.js";
+export { type BaseCommand, BaseCommandSchema, type BaseEvent } from './schemas/base.js';
 
 // IPC (Fast Path Communication)
 export {
@@ -233,7 +222,7 @@ export {
   type PrepareResponse,
   RegimeState,
   type SignalSource,
-} from "./ipc/index.js";
+} from './ipc/index.js';
 
 // Logger
 import {
@@ -243,42 +232,32 @@ import {
   LogLevel,
   PerformanceTimer,
   TradeLogEntry,
-} from "./logger/Logger";
+} from './logger/Logger';
 
-export {
-  LogEntry as SharedLogEntry,
-  Logger,
-  LoggerConfig,
-  PerformanceTimer,
-  TradeLogEntry,
-};
+export { LogEntry as SharedLogEntry, Logger, LoggerConfig, PerformanceTimer, TradeLogEntry };
 
-export { RiskState } from "./types/RiskState";
-export * from "./types/budget";
-export * from "./types/Phase";
+export { RiskState } from './types/RiskState';
+export * from './types/budget';
+export * from './types/Phase';
 
 export const SharedLogLevel = LogLevel;
 export type SharedLogLevel = LogLevel;
 
 // Time Utilities
-export * from "./utils/time/Clock";
+export * from './utils/time/Clock';
 
 // Governance
-export * from "./governance/types.js";
-export * from "./governance/crypto.js";
+export * from './governance/types.js';
+export * from './governance/crypto.js';
 export {
   DefaultRiskPolicyV1,
   RiskPolicySchemaV1,
   type RiskPolicyV1,
-} from "./schemas/RiskPolicy.js";
+} from './schemas/RiskPolicy.js';
 
-export {
-  SystemState,
-  SystemStateSchema,
-  type SystemStatus,
-} from "./schemas/SystemState.js";
+export { SystemState, SystemStateSchema, type SystemStatus } from './schemas/SystemState.js';
 
-export {
-  type ExecutionReport,
-  ExecutionReportSchema,
-} from "./schemas/ExecutionReportSchema.js";
+export { type ExecutionReport, ExecutionReportSchema } from './schemas/ExecutionReportSchema.js';
+
+// AI Provider Abstraction
+export * from './ai/index.js';
