@@ -1,0 +1,73 @@
+{
+  "$ref": "#/definitions/FeeSchedule",
+  "definitions": {
+    "FeeSchedule": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "lastUpdated": {
+          "type": "number"
+        },
+        "exchanges": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "exchange": {
+                "type": "string"
+              },
+              "defaultMakerFeeBps": {
+                "type": "number"
+              },
+              "defaultTakerFeeBps": {
+                "type": "number"
+              },
+              "tiers": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "tierName": {
+                      "type": "string"
+                    },
+                    "minVolume30d": {
+                      "type": "number"
+                    },
+                    "makerFeeBps": {
+                      "type": "number"
+                    },
+                    "takerFeeBps": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "tierName",
+                    "minVolume30d",
+                    "makerFeeBps",
+                    "takerFeeBps"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "exchange",
+              "defaultMakerFeeBps",
+              "defaultTakerFeeBps"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "version",
+        "lastUpdated",
+        "exchanges"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

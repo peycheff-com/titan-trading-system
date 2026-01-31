@@ -58,14 +58,14 @@ module.exports = {
   coverageReporters: isCI ? ['text', 'lcov'] : ['text'],
   
   transform: {
-    '^.+\\.ts$': ['ts-jest', {
+    '^.+\\.(ts|js)$': ['ts-jest', {
       tsconfig: 'tsconfig.test.json',
       useESM: true,
     }],
   },
   
   transformIgnorePatterns: [
-    'node_modules/(?!(node-fetch|chalk|fastify|@fastify)/)'
+    'node_modules/(?!(node-fetch|chalk|fastify|@fastify|uuid)/)'
   ],
   
   moduleNameMapper: {

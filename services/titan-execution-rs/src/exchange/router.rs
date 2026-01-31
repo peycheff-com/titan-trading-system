@@ -364,6 +364,7 @@ mod tests {
             position_mode: None,
             child_fills: vec![],
             filled_size: Decimal::ZERO,
+            policy_hash: None,
         }
     }
 

@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import { BrainConfigSchema, ConfigValidator, InfrastructureConfigSchema, PhaseConfigSchema, } from "../services/shared/src/config/ConfigSchema";
+import { BrainConfigSchema, ConfigValidator, InfrastructureConfigSchema, PhaseConfigSchema, } from "../packages/shared/src/config/ConfigSchema";
 const CONFIG_DIR = path.join(__dirname, "../config");
 // ANSI colors
 const RED = "\x1b[31m";

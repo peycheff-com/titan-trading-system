@@ -206,6 +206,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     // Initialize Risk Guard
     let risk_policy = RiskPolicy::default();
+    let policy_hash = RiskPolicy::get_hash();
+    info!("✅ Risk Policy Loaded. Hash: {}", policy_hash);
     let risk_guard = Arc::new(RiskGuard::new(risk_policy, shadow_state.clone()));
     info!("✅ Risk Guard initialized with default policy");
 

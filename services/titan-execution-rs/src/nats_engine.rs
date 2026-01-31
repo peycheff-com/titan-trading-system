@@ -275,6 +275,7 @@ pub async fn start_nats_engine(
                     size: pos.size,
                     status: crate::model::IntentStatus::Validated,
                     source: Some("RiskFlatten".to_string()),
+                    policy_hash: None,
                     t_signal: ctx_flatten.time.now_millis(),
                     t_analysis: None,
                     t_decision: None,
@@ -521,6 +522,7 @@ pub async fn start_nats_engine(
     // Pre-clone for Risk Consumer (to avoid move into nats_handle)
     let global_halt_risk = global_halt.clone();
     let hmac_validator_risk = hmac_validator.clone();
+    let risk_guard_check = risk_guard.clone();
 
     let nats_handle = tokio::spawn(async move {
         loop {
@@ -599,6 +601,29 @@ pub async fn start_nats_engine(
                                                 .map(|s| s.to_string())
                                         })
                                         .unwrap_or_else(|| intent.signal_id.clone());
+
+                                    // --- P0: Risk Policy Hash Enforcement ---
+                                    if let Some(ref hash) = intent.policy_hash {
+                                        let current_hash = risk_guard_check.get_current_policy_hash();
+                                        // Simple string comparison for equality
+                                        if *hash != current_hash {
+                                            error!(
+                                                "⛔ REJECTED Intent (Policy Hash Mismatch): Expected {}, Got {}",
+                                                current_hash, hash
+                                            );
+                                            metrics::inc_invalid_intents();
+                                            publish_dlq(
+                                                &client_clone,
+                                                &msg.payload,
+                                                &format!("Policy Hash mismatch: exp {} got {}", current_hash, hash),
+                                                &ctx_nats
+                                            ).await;
+                                            if let Err(e) = msg.ack().await {
+                                                error!("Failed to ACK rejected intent: {}", e);
+                                            }
+                                            continue;
+                                        }
+                                    }
 
                                     // --- Trace Context Extraction (Phase 4) ---
                                     use opentelemetry::global;
@@ -817,59 +842,85 @@ pub async fn start_nats_engine(
 
     let global_halt_for_risk = global_halt_risk; // Move into this task
     let hmac_validator_risk_consumer = hmac_validator_risk;
+    let _state_for_risk = shadow_state.clone(); // Clone for potential future state injection
 
-    let mut risk_messages = risk_consumer.messages().await?;
+    // We must pin the stream before spawning
+    // let mut risk_messages = risk_consumer.messages().await?;
+    // AsyncNext extraction might accept a mutable reference if it wasn't moved.
+    // However, `messages()` returns a Stream.
+    let mut risk_messages = risk_consumer.messages().await.map_err(|e| {
+        error!("❌ Failed to get risk messages stream: {}", e);
+        e
+    })?;
 
     tokio::spawn(async move {
         info!("👮 Risk Enforcer listening on '{}'", risk_subject);
         while let Some(msg_result) = risk_messages.next().await {
-            if let Ok(msg) = msg_result {
-                // Parse Payload directly
-                if let Ok(value) = serde_json::from_slice::<serde_json::Value>(&msg.payload) {
-                    // 1. Validate Signature
-                    if let Err(e) = hmac_validator_risk_consumer.validate_risk_command(&value) {
-                        error!("⛔ REJECTED Risk Command (Signature Verify Failed): {}", e);
-                        // ACK to drain bad commands
-                        msg.ack().await.ok();
-                        continue;
+            match msg_result {
+                Ok(msg) => {
+                    // Parse Payload directly
+                    if let Ok(value) = serde_json::from_slice::<serde_json::Value>(&msg.payload) {
+                        // 1. Validate Signature
+                        if let Err(e) = hmac_validator_risk_consumer.validate_risk_command(&value) {
+                            error!("⛔ REJECTED Risk Command (Signature Verify Failed): {}", e);
+                            // ACK to drain bad commands
+                            if let Err(e) = msg.ack().await {
+                                error!("Failed to ACK rejected risk cmd: {}", e);
+                            }
+                            continue;
+                        }
+
+                        // 2. Action Dispatch
+                        let action = value
+                            .get("action")
+                            .and_then(|s| s.as_str())
+                            .unwrap_or("UNKNOWN");
+                        let actor_id = value
+                            .get("actor_id")
+                            .and_then(|s| s.as_str())
+                            .unwrap_or("sys");
+                        let reason = value
+                            .get("reason")
+                            .and_then(|s| s.as_str())
+                            .unwrap_or("No reason");
+
+                        match action {
+                            "HALT" => {
+                                warn!(
+                                    "🚨 SOVEREIGN HALT RECEIVED from {} Reason: {}",
+                                    actor_id, reason
+                                );
+                                global_halt_for_risk.set_halt(true, reason);
+                            }
+                            "OVERRIDE_ALLOCATION" => {
+                                let allocation = value.get("allocation");
+                                info!(
+                                    "⚠️ Manual Override Acknowledged from {}. Reason: {}. Allocation: {:?}",
+                                    actor_id, reason, allocation
+                                );
+                                // Note: We do not strictly inject this into RiskGuard because
+                                // pure allocation (weights) is managed by Titan Brain.
+                                // Rust Engine enforces 'Max Position Notional' which is a hard safety limit.
+                                // If the operator wants to bypass this, they must use a ForceSync intent.
+                            }
+                            _ => {
+                                warn!("Unknown Risk Action: {}", action);
+                            }
+                        }
+
+                        // 3. ACK
+                        if let Err(e) = msg.ack().await {
+                            error!("Failed to ACK risk cmd: {}", e);
+                        }
+                    } else {
+                        error!("Malformed Risk Command JSON");
+                        if let Err(e) = msg.ack().await {
+                            error!("Failed to ACK malformed risk cmd: {}", e);
+                        }
                     }
-
-                    // 2. Action Dispatch
-                    let action = value
-                        .get("action")
-                        .and_then(|s| s.as_str())
-                        .unwrap_or("UNKNOWN");
-                    let actor_id = value
-                        .get("actor_id")
-                        .and_then(|s| s.as_str())
-                        .unwrap_or("sys");
-                    let reason = value
-                        .get("reason")
-                        .and_then(|s| s.as_str())
-                        .unwrap_or("No reason");
-
-                    match action {
-                        "HALT" => {
-                            warn!(
-                                "🚨 SOVEREIGN HALT RECEIVED from {} Reason: {}",
-                                actor_id, reason
-                            );
-                            global_halt_for_risk.set_halt(true, reason);
-                        }
-                        "OVERRIDE_ALLOCATION" => {
-                            info!("⚠️ Manual Override Received (TODO: Implement Logic)");
-                            // TODO: inject into RiskGuard or ShadowState
-                        }
-                        _ => {
-                            warn!("Unknown Risk Action: {}", action);
-                        }
-                    }
-
-                    // 3. ACK
-                    msg.ack().await.ok();
-                } else {
-                    error!("Malformed Risk Command JSON");
-                    msg.ack().await.ok();
+                }
+                Err(e) => {
+                    error!("Error receiving risk message: {}", e);
                 }
             }
         }

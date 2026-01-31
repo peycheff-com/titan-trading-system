@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import crypto from "crypto";
+import { execSync } from "child_process";
 // Configuration
 const SERVICES_DIR = "services";
 const MIGRATION_DIR_NAME = "migrations";
@@ -32,7 +32,7 @@ if (migrationFiles.length === 0) {
 // We Use git diff for this.
 console.log(`Checking ${migrationFiles.length} migration files...`);
 try {
-    const changedFiles = crypto.execSync("git diff --name-only HEAD services/*/migrations").toString();
+    const changedFiles = execSync("git diff --name-only HEAD services/*/migrations").toString();
     if (changedFiles.length > 0) {
         console.error("❌ Detected changes (mutations) to existing migrations:");
         console.error(changedFiles);

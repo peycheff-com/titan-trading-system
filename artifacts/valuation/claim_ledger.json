@@ -253,6 +253,24 @@
       "calculationLinks": ["PREMIUM-CORRECT-001"]
     },
     {
+      "id": "CLM-CORRECT-008",
+      "statement": "Titan Execution Engine (Rust) achieves 25.23% unit test line coverage",
+      "status": "VERIFIED",
+      "category": "CORRECTNESS",
+      "subcategory": "test-coverage",
+      "evidencePointers": [
+        {
+          "type": "RUN",
+          "command": "./scripts/valuation/generate_rust_coverage.sh",
+          "exitCode": 0,
+          "stdoutPath": "artifacts/valuation/coverage/rust/tarpaulin-report.html",
+          "timestamp": "2026-01-30T19:45:00+02:00"
+        }
+      ],
+      "calculationLinks": ["DISCOUNT-CORRECT-001"],
+      "notes": "Coverage is below the 80% target; identified as a debt item."
+    },
+    {
       "id": "CLM-CORRECT-004",
       "statement": "Titan AI-Quant achieves 80.0% unit test line coverage",
       "status": "VERIFIED",

@@ -8,9 +8,7 @@ module.exports = {
       transform: {
         '^.+\\.tsx?$': ['ts-jest', {
           isolatedModules: true,
-          tsconfig: {
-            module: 'commonjs'
-          }
+          tsconfig: '<rootDir>/tsconfig.json'
         }]
       },
       resolver: '<rootDir>/resolver.cjs',
@@ -23,9 +21,7 @@ module.exports = {
       transform: {
         '^.+\\.tsx?$': ['ts-jest', {
           isolatedModules: true,
-          tsconfig: {
-            module: 'commonjs'
-          }
+          tsconfig: '<rootDir>/tsconfig.json'
         }]
       },
       resolver: '<rootDir>/resolver.cjs',
@@ -38,9 +34,7 @@ module.exports = {
       transform: {
         '^.+\\.tsx?$': ['ts-jest', {
           isolatedModules: true,
-          tsconfig: {
-            module: 'commonjs'
-          }
+          tsconfig: '<rootDir>/tsconfig.json'
         }]
       },
       resolver: '<rootDir>/resolver.cjs',

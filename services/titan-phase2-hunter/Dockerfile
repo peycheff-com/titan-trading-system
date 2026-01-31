@@ -7,16 +7,16 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY tsconfig.json ./
 COPY services/titan-phase2-hunter/package.json services/titan-phase2-hunter/
-COPY services/shared services/shared/
+COPY packages/shared packages/shared/
 
 # Install dependencies
-RUN npm ci --workspace=services/titan-phase2-hunter --workspace=services/shared
+RUN npm ci --workspace=services/titan-phase2-hunter --workspace=packages/shared
 
 # Copy source code
 COPY services/titan-phase2-hunter services/titan-phase2-hunter/
 
 # Build shared package first (required for workspace imports)
-WORKDIR /app/services/shared
+WORKDIR /app/packages/shared
 RUN npm run build
 
 # Build the application
@@ -32,10 +32,10 @@ WORKDIR /app
 COPY --from=builder /app/package.json /app/package-lock.json ./
 COPY --from=builder /app/services/titan-phase2-hunter/package.json services/titan-phase2-hunter/
 COPY --from=builder /app/services/titan-phase2-hunter/dist services/titan-phase2-hunter/dist/
-COPY --from=builder /app/services/shared services/shared/
+COPY --from=builder /app/packages/shared packages/shared/
 
 # Install production dependencies only
-RUN npm ci --workspace=services/titan-phase2-hunter --workspace=services/shared --omit=dev
+RUN npm ci --workspace=services/titan-phase2-hunter --workspace=packages/shared --omit=dev
 
 WORKDIR /app/services/titan-phase2-hunter
 

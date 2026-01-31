@@ -1,49 +1,19 @@
-/**
- * Jest test setup file
- * Configures global test environment and suppresses expected console output
- */
+import { EventEmitter } from "events";
 
-import { afterEach, jest } from "@jest/globals";
+// Increase max listeners to prevent memory leak warnings during tests
+EventEmitter.defaultMaxListeners = 50;
 
-// Suppress expected console.error messages in tests
-const originalConsoleError = console.error;
-console.error = (...args: any[]) => {
-  const message = args[0];
-
-  // Suppress expected error messages from tests
-  const suppressedMessages = [
-    "Redis set error:",
-    "Redis delete error:",
-    "Redis clear error:",
-    "Redis disconnect error:",
-    "Failed to close positions during circuit breaker trigger:",
-    "Failed to send emergency notification:",
-    "Failed to persist breaker event:",
-    "Error fetching balances from",
-    "Telegram test failed:",
-  ];
-
-  // Only suppress if it's an expected test error
-  if (
-    typeof message === "string" &&
-    suppressedMessages.some((msg) => message.includes(msg))
-  ) {
-    return; // Suppress this error
+// Global test setup
+beforeAll(() => {
+  // Silence console logs during tests to keep output clean, unless debugging
+  if (process.env.debug !== "true") {
+    jest.spyOn(console, "log").mockImplementation(() => {});
+    jest.spyOn(console, "info").mockImplementation(() => {});
+    jest.spyOn(console, "warn").mockImplementation(() => {});
+    // Keep error logs visible
   }
+});
 
-  // Otherwise, log normally
-  originalConsoleError.apply(console, args);
-};
-
-// Increase max listeners for tests to prevent warnings
-process.setMaxListeners(20);
-
-// Stub uuid ESM module for Jest CJS tests
-jest.mock("uuid", () => ({
-  v4: () => "test-uuid-0000",
-}));
-
-// Clean up after each test
-afterEach(() => {
-  // Reset any global state if needed
+afterAll(() => {
+  jest.restoreAllMocks();
 });

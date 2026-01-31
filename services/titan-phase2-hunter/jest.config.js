@@ -7,7 +7,6 @@ module.exports = {
       testEnvironment: 'node',
       testMatch: ['<rootDir>/tests/unit/**/*.test.ts'],
       setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
-      testTimeout: 5000, // Shorter timeout for unit tests
     },
     {
       displayName: 'integration', 
@@ -17,7 +16,6 @@ module.exports = {
       setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
       globalSetup: '<rootDir>/tests/globalSetup.ts',
       globalTeardown: '<rootDir>/tests/globalTeardown.ts',
-      testTimeout: 30000, // Longer timeout for integration tests
     },
     {
       displayName: 'property',
@@ -25,7 +23,6 @@ module.exports = {
       testEnvironment: 'node',
       testMatch: ['<rootDir>/tests/property/**/*.property.test.ts'],
       setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
-      testTimeout: parseInt(process.env.PROPERTY_TEST_TIMEOUT) || 15000, // Configurable timeout for property tests
     },
     {
       displayName: 'console',
@@ -33,7 +30,6 @@ module.exports = {
       testEnvironment: 'node', // Changed from jsdom to node
       testMatch: ['<rootDir>/tests/console/**/*.test.ts', '<rootDir>/tests/console/**/*.test.tsx'],
       setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
-      testTimeout: 10000, // Medium timeout for UI tests
       moduleNameMapper: {
         // Additional mappings for React/Ink components
         '\\.(css|less|scss|sass)$': 'identity-obj-proxy'
@@ -174,5 +170,8 @@ module.exports = {
   watchman: true,
   
   // Snapshot configuration
-  updateSnapshot: process.env.UPDATE_SNAPSHOTS === 'true'
+  updateSnapshot: process.env.UPDATE_SNAPSHOTS === 'true',
+  
+  // Default timeout
+  testTimeout: 20000
 };

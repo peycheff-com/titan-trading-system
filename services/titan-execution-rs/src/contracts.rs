@@ -50,6 +50,41 @@ pub struct Envelope {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FeeSchedule {
+    pub exchanges: HashMap<String, Exchange>,
+
+    pub last_updated: f64,
+
+    pub version: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Exchange {
+    pub default_maker_fee_bps: f64,
+
+    pub default_taker_fee_bps: f64,
+
+    pub exchange: String,
+
+    pub tiers: Option<Vec<Tier>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Tier {
+    pub maker_fee_bps: f64,
+
+    #[serde(rename = "minVolume30d")]
+    pub min_volume30_d: f64,
+
+    pub taker_fee_bps: f64,
+
+    pub tier_name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IntentEnvelope {
     pub causation_id: Option<String>,
 
@@ -81,6 +116,8 @@ pub struct IntentEnvelope {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Payload {
+    pub child_fills: Option<Vec<String>>,
+
     pub confidence: Option<f64>,
 
     pub direction: i64,
@@ -102,6 +139,8 @@ pub struct Payload {
     pub parent_strategy: Option<String>,
 
     pub phase: Option<i64>,
+
+    pub policy_hash: Option<String>,
 
     pub position_mode: Option<String>,
 
@@ -184,6 +223,8 @@ pub enum Status {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IntentPayload {
+    pub child_fills: Option<Vec<String>>,
+
     pub confidence: Option<f64>,
 
     pub direction: i64,
@@ -205,6 +246,8 @@ pub struct IntentPayload {
     pub parent_strategy: Option<String>,
 
     pub phase: Option<i64>,
+
+    pub policy_hash: Option<String>,
 
     pub position_mode: Option<String>,
 

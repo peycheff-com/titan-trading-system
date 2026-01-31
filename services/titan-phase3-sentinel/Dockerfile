@@ -7,16 +7,16 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY tsconfig.json ./
 COPY services/titan-phase3-sentinel/package.json services/titan-phase3-sentinel/
-COPY services/shared services/shared/
+COPY packages/shared packages/shared/
 
 # Install dependencies
-RUN npm ci --workspace=services/titan-phase3-sentinel --workspace=services/shared
+RUN npm ci --workspace=services/titan-phase3-sentinel --workspace=packages/shared
 
 # Copy source code
 COPY services/titan-phase3-sentinel services/titan-phase3-sentinel/
 
 # Build shared package first (required for workspace imports)
-WORKDIR /app/services/shared
+WORKDIR /app/packages/shared
 RUN npm run build
 
 # Build the application
@@ -32,10 +32,10 @@ WORKDIR /app
 COPY --from=builder /app/package.json /app/package-lock.json ./
 COPY --from=builder /app/services/titan-phase3-sentinel/package.json services/titan-phase3-sentinel/
 COPY --from=builder /app/services/titan-phase3-sentinel/dist services/titan-phase3-sentinel/dist/
-COPY --from=builder /app/services/shared services/shared/
+COPY --from=builder /app/packages/shared packages/shared/
 
 # Install production dependencies only
-RUN npm ci --workspace=services/titan-phase3-sentinel --workspace=services/shared --omit=dev
+RUN npm ci --workspace=services/titan-phase3-sentinel --workspace=packages/shared --omit=dev
 
 WORKDIR /app/services/titan-phase3-sentinel
 

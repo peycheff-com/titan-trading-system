@@ -186,6 +186,10 @@ impl RiskGuard {
         self.policy.read().clone()
     }
 
+    pub fn get_current_policy_hash(&self) -> String {
+        self.policy.read().compute_hash()
+    }
+
     /// Validates an Intent BEFORE it enters the Order Manager.
     /// Returns Ok(()) if safe, Err(RiskRejectionReason) if unsafe.
     pub fn check_pre_trade(&self, intent: &Intent) -> Result<(), RiskRejectionReason> {
@@ -485,6 +489,7 @@ mod tests {
             position_mode: None,
             child_fills: vec![],
             filled_size: dec!(0),
+            policy_hash: None,
         }
     }
 
