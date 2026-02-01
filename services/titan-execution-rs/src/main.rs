@@ -104,6 +104,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     info!("║               High Performance Execution Engine               ║");
     info!("╚═══════════════════════════════════════════════════════════════╝");
 
+    // =========================================================================
+    // FAIL-CLOSED SECURITY CHECK: Validate HMAC_SECRET before ANY network ops
+    // =========================================================================
+    {
+        let hmac_secret = env::var("HMAC_SECRET").unwrap_or_default();
+        let allow_empty = env::var("HMAC_ALLOW_EMPTY_SECRET")
+            .map(|v| v == "true")
+            .unwrap_or(false);
+
+        if hmac_secret.is_empty() && !allow_empty {
+            error!(
+                "❌ FATAL: HMAC_SECRET environment variable is required for production. \
+                 Set HMAC_ALLOW_EMPTY_SECRET=true only for testing."
+            );
+            std::process::exit(1);
+        } else if hmac_secret.is_empty() {
+            info!("⚠️  HMAC_SECRET not set but HMAC_ALLOW_EMPTY_SECRET=true. TEST MODE ONLY.");
+        } else {
+            info!("🔐 HMAC_SECRET configured ({}  bytes)", hmac_secret.len());
+        }
+    }
+
     // Load environment variables
     dotenv::dotenv().ok();
 
