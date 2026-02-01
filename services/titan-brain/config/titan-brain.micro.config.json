@@ -1,0 +1,76 @@
+{
+  "$schema": "./config.schema.json",
+  "port": 3100,
+  "logLevel": "info",
+  "database": {
+    "host": "postgres",
+    "port": 5432,
+    "user": "postgres",
+    "password": "password",
+    "name": "titan_brain_micro",
+    "ssl": false,
+    "maxConnections": 10,
+    "idleTimeout": 30000
+  },
+  "redis": {
+    "url": "redis://redis:6379",
+    "maxRetries": 3,
+    "retryDelay": 1000
+  },
+  "brain": {
+    "signalTimeout": 100,
+    "metricUpdateInterval": 60000,
+    "dashboardCacheTTL": 5000,
+    "maxQueueSize": 50
+  },
+  "allocationEngine": {
+    "transitionPoints": {
+      "startP2": 75,
+      "fullP2": 150,
+      "startP3": 300
+    },
+    "leverageCaps": {
+      "MICRO": 10,
+      "SMALL": 5,
+      "MEDIUM": 3,
+      "LARGE": 2,
+      "INSTITUTIONAL": 1
+    }
+  },
+  "performanceTracker": {
+    "windowDays": 7,
+    "minTradeCount": 5,
+    "malusMultiplier": 0.5,
+    "bonusMultiplier": 1.2,
+    "malusThreshold": 0,
+    "bonusThreshold": 1.5
+  },
+  "riskGuardian": {
+    "maxCorrelation": 0.9,
+    "correlationPenalty": 0.3,
+    "betaUpdateInterval": 300000,
+    "correlationUpdateInterval": 300000
+  },
+  "capitalFlow": {
+    "sweepThreshold": 1.1,
+    "reserveLimit": 50,
+    "sweepSchedule": "0 0 * * *",
+    "maxRetries": 3,
+    "retryBaseDelay": 1000
+  },
+  "circuitBreaker": {
+    "maxDailyDrawdown": 0.20,
+    "minEquity": 25,
+    "consecutiveLossLimit": 2,
+    "consecutiveLossWindow": 3600000,
+    "cooldownMinutes": 60
+  },
+  "notifications": {
+    "telegram": {
+      "enabled": true
+    },
+    "email": {
+      "enabled": false
+    }
+  }
+}

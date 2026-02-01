@@ -1,0 +1,17 @@
+{
+  "maxAccountLeverage": 10.0,
+  "maxPositionNotional": 100.0,
+  "maxDailyLoss": -20.0,
+  "maxOpenOrdersPerSymbol": 2,
+  "symbolWhitelist": [
+    "BTCUSDT"
+  ],
+  "maxSlippageBps": 50,
+  "maxStalenessMs": 3000,
+  "maxCorrelation": 0.9,
+  "correlationPenalty": 0.3,
+  "minConfidenceScore": 0.6,
+  "minStopDistanceMultiplier": 2.0,
+  "version": 1,
+  "lastUpdated": 0
+}

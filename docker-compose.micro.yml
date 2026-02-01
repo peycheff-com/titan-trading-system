@@ -1,0 +1,187 @@
+# Titan Micro-Capital Docker Compose
+# Optimized for $50-$100 deployment with minimal resources
+
+services:
+  # Core Services
+  postgres:
+    image: postgres:15-alpine
+    container_name: titan-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: titan_brain_micro
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  redis:
+    image: redis:7-alpine
+    container_name: titan-redis
+    command: redis-server --appendonly yes --maxmemory 64mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  nats:
+    image: nats:2.10-alpine
+    container_name: titan-nats
+    command: ['-js', '-sd', '/data']
+    volumes:
+      - nats_data:/data
+    ports:
+      - '4222:4222'
+      - '8222:8222'
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:8222/healthz']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  # Titan Brain - Orchestration
+  titan-brain:
+    build:
+      context: ./services/titan-brain
+      dockerfile: Dockerfile
+    container_name: titan-brain
+    environment:
+      NODE_ENV: production
+      TITAN_CONFIG: /app/config/titan-brain.micro.config.json
+      NATS_URL: nats://nats:4222
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/titan_brain_micro
+      HMAC_SECRET: ${HMAC_SECRET}
+      # Posture
+      TITAN_POSTURE: micro_capital
+      TITAN_MAX_LEVERAGE: '10'
+      TITAN_DAILY_LOSS_LIMIT_USD: '20'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    ports:
+      - '3100:3100'
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3100/health']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # Rust Execution Engine
+  titan-execution:
+    build:
+      context: ./services/titan-execution-rs
+      dockerfile: Dockerfile
+    container_name: titan-execution
+    environment:
+      RUST_LOG: info
+      NATS_URL: nats://nats:4222
+      HMAC_SECRET: ${HMAC_SECRET}
+      RISK_POLICY_PATH: /app/risk_policy_micro.json
+      # Exchange API (set externally)
+      BINANCE_API_KEY: ${BINANCE_API_KEY}
+      BINANCE_API_SECRET: ${BINANCE_API_SECRET}
+      BINANCE_FUTURES: 'true'
+    depends_on:
+      nats:
+        condition: service_healthy
+    volumes:
+      - ./packages/shared/risk_policy_micro.json:/app/risk_policy_micro.json:ro
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # Phase 1 - Scavenger (Scalping)
+  titan-scavenger:
+    build:
+      context: ./services/titan-phase1-scavenger
+      dockerfile: Dockerfile
+    container_name: titan-scavenger
+    environment:
+      NODE_ENV: production
+      NATS_URL: nats://nats:4222
+      TITAN_PHASE: scavenger
+      TITAN_MAX_POSITION_USD: '50'
+    depends_on:
+      nats:
+        condition: service_healthy
+      titan-brain:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # Phase 2 - Hunter (Swing)
+  titan-hunter:
+    build:
+      context: ./services/titan-phase2-hunter
+      dockerfile: Dockerfile
+    container_name: titan-hunter
+    environment:
+      NODE_ENV: production
+      NATS_URL: nats://nats:4222
+      TITAN_PHASE: hunter
+      TITAN_MAX_POSITION_USD: '75'
+    depends_on:
+      nats:
+        condition: service_healthy
+      titan-brain:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # Phase 3 - Sentinel (Portfolio)
+  titan-sentinel:
+    build:
+      context: ./services/titan-phase3-sentinel
+      dockerfile: Dockerfile
+    container_name: titan-sentinel
+    environment:
+      NODE_ENV: production
+      NATS_URL: nats://nats:4222
+      TITAN_PHASE: sentinel
+      TITAN_MAX_POSITION_USD: '100'
+    depends_on:
+      nats:
+        condition: service_healthy
+      titan-brain:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+volumes:
+  postgres_data:
+  redis_data:
+  nats_data:
