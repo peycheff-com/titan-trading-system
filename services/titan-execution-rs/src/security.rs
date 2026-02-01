@@ -38,11 +38,9 @@ impl HmacValidator {
             let allow_empty = env::var("HMAC_ALLOW_EMPTY_SECRET")
                 .map(|v| v == "true")
                 .unwrap_or(false);
-            
+
             if allow_empty {
-                warn!(
-                    "⚠️ HMAC_SECRET not set but HMAC_ALLOW_EMPTY_SECRET=true. TEST MODE ONLY."
-                );
+                warn!("⚠️ HMAC_SECRET not set but HMAC_ALLOW_EMPTY_SECRET=true. TEST MODE ONLY.");
             } else {
                 panic!(
                     "FATAL: HMAC_SECRET environment variable is required. \

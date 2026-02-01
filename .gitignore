@@ -177,3 +177,4 @@ services/*/src/**/*.d.ts.map
 deploy-package.tar.gz
 .turbo/
 .turbo/
+.secrets.env
