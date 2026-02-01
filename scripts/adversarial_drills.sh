@@ -112,27 +112,33 @@ drill_policy_mismatch() {
     
     cd "$PROJECT_ROOT"
     
-    # Check that policy hash is verified in Brain startup
-    grep -rn "policyHash\|policy_hash\|POLICY_HASH" \
+    # Check that policy hash is verified in Brain
+    echo "=== Searching for policy hash enforcement ===" | tee "$EVIDENCE_DIR/drill3_policy_hash_code.log"
+    grep -rn "policyHash\|verifyExecutionPolicyHash\|POLICY_HASH" \
+        services/titan-brain/src/engine/ \
         services/titan-brain/src/startup/ \
-        services/titan-brain/src/TitanBrain.ts \
-        2>/dev/null | head -20 | tee "$EVIDENCE_DIR/drill3_policy_hash_code.log"
+        2>/dev/null | head -30 >> "$EVIDENCE_DIR/drill3_policy_hash_code.log"
     
-    # Run the test that validates policy enforcement
+    # Also check Rust side
+    grep -rn "policy_hash\|policyHash" \
+        services/titan-execution-rs/src/ \
+        2>/dev/null | head -10 >> "$EVIDENCE_DIR/drill3_policy_hash_code.log"
+    
+    # Run the risk policy tests
     cd "$PROJECT_ROOT/services/titan-brain"
-    npm test -- --testPathPattern="RiskPolicy|PolicyHash" 2>&1 | tee "$EVIDENCE_DIR/drill3_policy_mismatch.log"
+    npm test -- --testPathPattern="RiskGuardian|RiskPolicy" 2>&1 | tee "$EVIDENCE_DIR/drill3_policy_mismatch.log"
     
     # Check for enforcement code
-    if grep -qE "policyHash|policy_hash" "$EVIDENCE_DIR/drill3_policy_hash_code.log"; then
-        pass "DRILL 3: Policy hash enforcement code exists"
+    if grep -qE "verifyExecutionPolicyHash|policyHash|policy_hash" "$EVIDENCE_DIR/drill3_policy_hash_code.log"; then
+        pass "DRILL 3: Policy hash enforcement code found"
         
         # Verify tests pass
-        if grep -qE "passed|PASS" "$EVIDENCE_DIR/drill3_policy_mismatch.log"; then
-            pass "DRILL 3: Policy enforcement tests pass"
+        if grep -qE "passed" "$EVIDENCE_DIR/drill3_policy_mismatch.log"; then
+            pass "DRILL 3: Risk policy tests pass"
             echo "DRILL_3_POLICY_MISMATCH=PASS" >> "$EVIDENCE_DIR/results.env"
             return 0
         else
-            warn "DRILL 3: No specific policy hash tests found, but code exists"
+            warn "DRILL 3: Risk tests did not pass, but code exists"
             echo "DRILL_3_POLICY_MISMATCH=PARTIAL" >> "$EVIDENCE_DIR/results.env"
             return 0
         fi
