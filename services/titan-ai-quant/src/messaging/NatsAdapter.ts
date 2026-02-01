@@ -1,6 +1,6 @@
-import { getNatsClient, NatsClient, TitanSubject } from '@titan/shared';
-import { NightlyOptimize } from '../cron/NightlyOptimize.js';
-import crypto from 'crypto';
+import { getNatsClient, NatsClient, TitanSubject } from "@titan/shared";
+import { NightlyOptimize } from "../cron/NightlyOptimize.js";
+import crypto from "crypto";
 
 const logger = console;
 
@@ -22,15 +22,19 @@ export class NatsAdapter {
       if (this.nats.isConnected()) {
         const id = crypto.randomUUID();
 
-        await this.nats.publishEnvelope(TitanSubject.EVT_REGIME_UPDATE, snapshot, {
-          type: TitanSubject.EVT_REGIME_UPDATE,
-          version: 1,
-          producer: 'titan-ai-quant',
-          id: id,
-        });
+        await this.nats.publishEnvelope(
+          TitanSubject.EVT_REGIME_UPDATE,
+          snapshot,
+          {
+            type: TitanSubject.EVT_REGIME_UPDATE,
+            version: 1,
+            producer: "titan-ai-quant",
+            id: id,
+          },
+        );
       }
     } catch (error) {
-      logger.error('Failed to publish regime update:', error);
+      logger.error("Failed to publish regime update:", error);
     }
   }
 
@@ -43,16 +47,20 @@ export class NatsAdapter {
       if (this.nats.isConnected()) {
         const id = crypto.randomUUID();
         // Use the new subject CMD_AI_OPTIMIZE_PROPOSAL
-        await this.nats.publishEnvelope(TitanSubject.CMD_AI_OPTIMIZE_PROPOSAL, proposal, {
-          type: TitanSubject.CMD_AI_OPTIMIZE_PROPOSAL,
-          version: 1,
-          producer: 'titan-ai-quant',
-          id: id,
-        });
+        await this.nats.publishEnvelope(
+          TitanSubject.CMD_AI_OPTIMIZE_PROPOSAL,
+          proposal,
+          {
+            type: TitanSubject.CMD_AI_OPTIMIZE_PROPOSAL,
+            version: 1,
+            producer: "titan-ai-quant",
+            id: id,
+          },
+        );
         logger.log(`📤 Published AI Proposal: ${id}`);
       }
     } catch (error) {
-      logger.error('Failed to publish AI proposal:', error);
+      logger.error("Failed to publish AI proposal:", error);
     }
   }
 
@@ -61,17 +69,19 @@ export class NatsAdapter {
    */
   async init(): Promise<void> {
     try {
-      const natsUrl = process.env.NATS_URL || 'nats://localhost:4222';
+      const natsUrl = process.env.NATS_URL || "nats://localhost:4222";
       await this.nats.connect({
         servers: [natsUrl],
-        name: 'titan-ai-quant',
+        user: process.env.NATS_USER,
+        pass: process.env.NATS_PASS,
+        name: "titan-ai-quant",
       });
 
       this.subscribeToOptimizationRequests();
 
-      logger.log('✅ NatsAdapter initialized');
+      logger.log("✅ NatsAdapter initialized");
     } catch (error) {
-      logger.error('Failed to initialize NatsAdapter:', error);
+      logger.error("Failed to initialize NatsAdapter:", error);
       throw error;
     }
   }
@@ -88,7 +98,10 @@ export class NatsAdapter {
 
         // eslint-disable-next-line functional/no-let
         let payload = data;
-        if (data && typeof data === 'object' && 'payload' in data && 'type' in data) {
+        if (
+          data && typeof data === "object" && "payload" in data &&
+          "type" in data
+        ) {
           payload = data.payload;
         }
 
@@ -100,9 +113,9 @@ export class NatsAdapter {
           // but for now we run the standard nightly cycle
           await this.optimizer.runNow();
 
-          logger.log('✅ Automated optimization completed via NATS trigger');
+          logger.log("✅ Automated optimization completed via NATS trigger");
         } catch (error) {
-          logger.error('❌ Validated optimization failed:', error);
+          logger.error("❌ Validated optimization failed:", error);
         }
       },
     );

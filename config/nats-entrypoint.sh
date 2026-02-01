@@ -24,8 +24,20 @@ done
 
 echo "[NATS-ENTRYPOINT] All required variables present. Generating config..."
 
-# Generate config from template using envsubst
-envsubst < "$TEMPLATE_FILE" > "$CONFIG_FILE"
+# Generate config from template using sed (POSIX-compatible, no envsubst needed)
+# Note: Alpine NATS image doesn't have gettext-base/envsubst
+# Template uses $VAR format (not ${VAR})
+sed \
+  -e "s|\\\$NATS_SYS_PASSWORD|$NATS_SYS_PASSWORD|g" \
+  -e "s|\\\$NATS_BRAIN_PASSWORD|$NATS_BRAIN_PASSWORD|g" \
+  -e "s|\\\$NATS_EXECUTION_PASSWORD|$NATS_EXECUTION_PASSWORD|g" \
+  -e "s|\\\$NATS_SCAVENGER_PASSWORD|$NATS_SCAVENGER_PASSWORD|g" \
+  -e "s|\\\$NATS_HUNTER_PASSWORD|$NATS_HUNTER_PASSWORD|g" \
+  -e "s|\\\$NATS_SENTINEL_PASSWORD|$NATS_SENTINEL_PASSWORD|g" \
+  -e "s|\\\$NATS_POWERLAW_PASSWORD|$NATS_POWERLAW_PASSWORD|g" \
+  -e "s|\\\$NATS_QUANT_PASSWORD|$NATS_QUANT_PASSWORD|g" \
+  -e "s|\\\$NATS_CONSOLE_PASSWORD|$NATS_CONSOLE_PASSWORD|g" \
+  "$TEMPLATE_FILE" > "$CONFIG_FILE"
 
 # Verify config was generated
 if [ ! -s "$CONFIG_FILE" ]; then
