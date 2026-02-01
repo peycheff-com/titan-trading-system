@@ -21,6 +21,8 @@ mod security_tests {
         {
             // Clear any existing secret to ensure validation fails properly
             std::env::remove_var("HMAC_SECRET");
+            // Allow empty secret for this test case (test mode)
+            std::env::set_var("HMAC_ALLOW_EMPTY_SECRET", "true");
 
             // Create validator with no secret configured
             let validator = titan_execution_rs::security::HmacValidator::new();
@@ -42,6 +44,9 @@ mod security_tests {
                 "Error should indicate missing signature or no secret, got: {}",
                 err
             );
+
+            // Reset for next test
+            std::env::remove_var("HMAC_ALLOW_EMPTY_SECRET");
         }
 
         // 2. Test: Commands with invalid hex signature are rejected
@@ -181,5 +186,6 @@ mod security_tests {
         // Cleanup
         std::env::remove_var("HMAC_SECRET");
         std::env::remove_var("HMAC_TIMESTAMP_TOLERANCE");
+        std::env::remove_var("HMAC_ALLOW_EMPTY_SECRET");
     }
 }

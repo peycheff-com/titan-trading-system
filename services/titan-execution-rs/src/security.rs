@@ -32,10 +32,23 @@ impl HmacValidator {
             .parse::<i64>()
             .unwrap_or(300);
 
+        // FAIL-CLOSED INVARIANT: Empty secret is FATAL unless explicitly allowed for testing
+        // This prevents production startup with missing credentials
         if secret.is_empty() {
-            warn!(
-                "⚠️ HMAC_SECRET not set. Security validation will be disabled or fail if enforced."
-            );
+            let allow_empty = env::var("HMAC_ALLOW_EMPTY_SECRET")
+                .map(|v| v == "true")
+                .unwrap_or(false);
+            
+            if allow_empty {
+                warn!(
+                    "⚠️ HMAC_SECRET not set but HMAC_ALLOW_EMPTY_SECRET=true. TEST MODE ONLY."
+                );
+            } else {
+                panic!(
+                    "FATAL: HMAC_SECRET environment variable is required. \
+                     Set HMAC_ALLOW_EMPTY_SECRET=true only for testing."
+                );
+            }
         } else {
             info!(
                 "🔐 HMAC Validator initialized (tol: {}s)",
