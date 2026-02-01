@@ -17,6 +17,7 @@ use titan_execution_rs::exchange::binance::BinanceAdapter;
 use titan_execution_rs::exchange::bybit::BybitAdapter;
 use titan_execution_rs::exchange::mexc::MexcAdapter;
 use titan_execution_rs::exchange::router::ExecutionRouter;
+use titan_execution_rs::execution_constraints::ConstraintsStore;
 use titan_execution_rs::market_data::engine::MarketDataEngine;
 use titan_execution_rs::nats_engine;
 use titan_execution_rs::order_manager::OrderManager;
@@ -27,7 +28,6 @@ use titan_execution_rs::risk_guard::RiskGuard;
 use titan_execution_rs::risk_policy::RiskPolicy;
 use titan_execution_rs::shadow_state::ShadowState;
 use titan_execution_rs::simulation_engine::SimulationEngine;
-use titan_execution_rs::execution_constraints::ConstraintsStore;
 use titan_execution_rs::sre::SreMonitor;
 // use tracing_subscriber::FmtSubscriber;
 
@@ -264,7 +264,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     tokio::spawn(async move {
         use futures::StreamExt;
         // Listen for DISARM command
-        let mut disarm_sub = match client_for_disarm.subscribe("titan.cmd.operator.disarm.v1").await {
+        let mut disarm_sub = match client_for_disarm
+            .subscribe("titan.cmd.operator.disarm.v1")
+            .await
+        {
             Ok(s) => s,
             Err(e) => {
                 error!("Failed to subscribe to DISARM commands: {}", e);

@@ -8,6 +8,7 @@ use serde_json::Value;
 use sha2::Sha256;
 use std::sync::Arc;
 use std::time::Duration;
+use titan_execution_rs::armed_state::ArmedState;
 use titan_execution_rs::circuit_breaker::GlobalHalt;
 use titan_execution_rs::context::ExecutionContext;
 use titan_execution_rs::drift_detector::DriftDetector;
@@ -15,6 +16,7 @@ use titan_execution_rs::exchange::adapter::{
     ExchangeAdapter, ExchangeError, OrderRequest, OrderResponse,
 };
 use titan_execution_rs::exchange::router::ExecutionRouter;
+use titan_execution_rs::execution_constraints::ConstraintsStore;
 use titan_execution_rs::market_data::engine::MarketDataEngine;
 use titan_execution_rs::model::Position;
 use titan_execution_rs::nats_engine;
@@ -26,8 +28,6 @@ use titan_execution_rs::risk_guard::RiskGuard;
 use titan_execution_rs::risk_policy::RiskPolicy;
 use titan_execution_rs::shadow_state::ShadowState;
 use titan_execution_rs::simulation_engine::SimulationEngine;
-use titan_execution_rs::execution_constraints::ConstraintsStore;
-use titan_execution_rs::armed_state::ArmedState;
 
 fn create_test_persistence() -> (Arc<PersistenceStore>, String) {
     let path = format!("/tmp/test_nats_db_{}.redb", uuid::Uuid::new_v4());

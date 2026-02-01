@@ -10,6 +10,7 @@ use crate::context::ExecutionContext;
 use crate::drift_detector::DriftDetector;
 use crate::exchange::adapter::OrderRequest;
 use crate::exchange::router::ExecutionRouter;
+use crate::execution_constraints::{ConstraintsStore, ExecutionConstraints};
 use crate::intent_validation::validate_intent_payload;
 use crate::metrics;
 use crate::model::IntentType;
@@ -18,7 +19,6 @@ use crate::pipeline::ExecutionPipeline;
 use crate::risk_guard::RiskGuard;
 use crate::shadow_state::{ExecutionEvent, ShadowState};
 use crate::simulation_engine::SimulationEngine;
-use crate::execution_constraints::{ConstraintsStore, ExecutionConstraints};
 
 /// Start the NATS Engine (Consumer Loop and Halt Listener)
 /// Returns a handle to the consumer task
@@ -253,7 +253,10 @@ pub async fn start_nats_engine(
                         .await
                         .ok();
                 }
-                info!("✅ Responded to policy hash request with hash: {}", policy_hash);
+                info!(
+                    "✅ Responded to policy hash request with hash: {}",
+                    policy_hash
+                );
             }
         }
     });
@@ -608,7 +611,7 @@ pub async fn start_nats_engine(
                             // --- ARMED CHECK (Physical Interlock) ---
                             if !armed_state.is_armed() {
                                 warn!("⛔ Rejecting Intent (Execution DISARMED - physical interlock)");
-                                
+
                                 // Try to extract ID for telemetry (Best Effort)
                                 let intent_id: Option<String> = serde_json::from_slice::<serde_json::Value>(&msg.payload)
                                     .ok()
@@ -663,7 +666,7 @@ pub async fn start_nats_engine(
                                     if let Ok(envelope) = serde_json::from_value::<crate::contracts::IntentEnvelope>(value.clone()) {
                                         if let Err(e) = hmac_validator.validate(&envelope, &value["payload"]) {
                                             error!("⛔ REJECTED Intent (Signature Verify Failed): {}", e);
-                                            
+
                                             // Extract ID for telemetry
                                             let intent_id = value.get("payload")
                                                 .and_then(|p| p.get("signal_id"))

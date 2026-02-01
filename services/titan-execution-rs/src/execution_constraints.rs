@@ -5,11 +5,11 @@
 //! The Execution Engine enforces these constraints mechanically without
 //! understanding the underlying power-law logic.
 
+use parking_lot::RwLock;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicI64, Ordering};
-use parking_lot::RwLock;
 use tracing::{info, warn};
 
 // --- Enums ---
@@ -258,7 +258,7 @@ impl ConstraintsStore {
     pub fn update(&self, constraints: ExecutionConstraints) {
         let symbol = constraints.symbol.clone();
         let issued_ts = constraints.issued_ts;
-        
+
         info!(
             symbol = %symbol,
             risk_mode = ?constraints.risk_mode,
@@ -266,7 +266,7 @@ impl ConstraintsStore {
             max_order_notional = %constraints.limits.max_order_notional,
             "Constraints updated"
         );
-        
+
         self.constraints.write().insert(symbol, constraints);
         self.last_update_ts.store(issued_ts, Ordering::SeqCst);
     }
@@ -274,7 +274,7 @@ impl ConstraintsStore {
     /// Get constraints for a symbol, returns defensive fallback if missing/expired
     pub fn get(&self, venue: &str, account: &str, symbol: &str) -> ExecutionConstraints {
         let guard = self.constraints.read();
-        
+
         if let Some(constraints) = guard.get(symbol) {
             if constraints.is_valid() {
                 return constraints.clone();
@@ -284,7 +284,7 @@ impl ConstraintsStore {
                 "Constraints expired, using defensive fallback"
             );
         }
-        
+
         // Fail-closed: return defensive constraints
         ExecutionConstraints::defensive(venue, account, symbol)
     }
@@ -320,7 +320,7 @@ mod tests {
     #[test]
     fn test_defensive_constraints() {
         let c = ExecutionConstraints::defensive("bybit", "main", "BTCUSDT");
-        
+
         assert_eq!(c.symbol, "BTCUSDT");
         assert_eq!(c.risk_mode, RiskMode::Defensive);
         assert_eq!(c.mode, PolicyMode::Enforcement);
@@ -331,7 +331,7 @@ mod tests {
     #[test]
     fn test_constraints_store_fallback() {
         let store = ConstraintsStore::new();
-        
+
         // No constraints stored - should return defensive
         let c = store.get("bybit", "main", "ETHUSDT");
         assert_eq!(c.risk_mode, RiskMode::Defensive);
@@ -341,7 +341,7 @@ mod tests {
     #[test]
     fn test_constraints_store_update() {
         let store = ConstraintsStore::new();
-        
+
         let c = ExecutionConstraints {
             symbol: "BTCUSDT".to_string(),
             risk_mode: RiskMode::Normal,
@@ -356,9 +356,9 @@ mod tests {
             ttl_ms: 60000,
             ..Default::default()
         };
-        
+
         store.update(c);
-        
+
         let retrieved = store.get("bybit", "main", "BTCUSDT");
         assert_eq!(retrieved.risk_mode, RiskMode::Normal);
         assert!(!retrieved.limits.reduce_only);
@@ -367,19 +367,19 @@ mod tests {
     #[test]
     fn test_expired_constraints_fallback() {
         let store = ConstraintsStore::new();
-        
+
         // Create expired constraints
         let c = ExecutionConstraints {
             symbol: "BTCUSDT".to_string(),
             risk_mode: RiskMode::Normal,
             mode: PolicyMode::Enforcement,
             issued_ts: chrono::Utc::now().timestamp_millis() - 120000, // 2 minutes ago
-            ttl_ms: 60000, // 1 minute TTL - expired
+            ttl_ms: 60000,                                             // 1 minute TTL - expired
             ..Default::default()
         };
-        
+
         store.update(c);
-        
+
         // Should get defensive fallback
         let retrieved = store.get("bybit", "main", "BTCUSDT");
         assert_eq!(retrieved.risk_mode, RiskMode::Defensive);
