@@ -134,6 +134,8 @@ pub struct Intent {
     #[serde(default)]
     pub exchange: Option<String>,
     #[serde(default)]
+    pub policy_hash: Option<String>,
+    #[serde(default)]
     pub position_mode: Option<String>,
 }
 

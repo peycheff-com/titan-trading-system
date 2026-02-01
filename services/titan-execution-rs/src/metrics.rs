@@ -113,6 +113,14 @@ pub static RISK_REJECTIONS: Lazy<IntCounter> = Lazy::new(|| {
     .expect("risk_rejections counter")
 });
 
+pub static REJECTION_EVENTS: Lazy<IntCounter> = Lazy::new(|| {
+    register_int_counter!(
+        "titan_execution_rejection_events_total",
+        "Total rejection telemetry events published (by reason)"
+    )
+    .expect("rejection_events counter")
+});
+
 // --- NATS Telemetry ---
 pub static NATS_LAG: Lazy<IntGauge> = Lazy::new(|| {
     register_int_gauge!("nats_lag_messages", "Current consumer lag in messages")
@@ -157,6 +165,10 @@ pub fn inc_position_flips() {
 
 pub fn inc_risk_rejections() {
     RISK_REJECTIONS.inc();
+}
+
+pub fn inc_rejection_events() {
+    REJECTION_EVENTS.inc();
 }
 
 pub fn set_nats_lag(val: i64) {

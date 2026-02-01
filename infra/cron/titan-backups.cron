@@ -1,0 +1,30 @@
+# Titan Production Backup Cron Jobs
+# Install location: /etc/cron.d/titan-backups
+# 
+# Copy this file to /etc/cron.d/titan-backups on the titan-data node
+# Ensure proper permissions: chmod 644 /etc/cron.d/titan-backups
+#
+# Required environment variables must be set in /etc/environment or via systemd
+
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+MAILTO=ops@titan.trading
+
+# JetStream volume snapshot - Daily at 3 AM UTC
+# INV-02: JetStream durability requirement
+0 3 * * * root /opt/titan/scripts/ops/backup-production.sh jetstream >> /var/log/titan/backup-jetstream.log 2>&1
+
+# PostgreSQL backup - Daily at 4 AM UTC
+# Includes upload to DigitalOcean Spaces
+0 4 * * * root /opt/titan/scripts/ops/backup-production.sh postgres >> /var/log/titan/backup-postgres.log 2>&1
+
+# Redis RDB - Every 6 hours
+0 */6 * * * root /opt/titan/scripts/ops/backup-production.sh redis >> /var/log/titan/backup-redis.log 2>&1
+
+# Backup verification - Daily at 6 AM UTC
+# Checks that all backups are fresh and accessible
+0 6 * * * root /opt/titan/scripts/ops/backup-production.sh verify >> /var/log/titan/backup-verify.log 2>&1
+
+# Exchange whitelist check - Daily at 7 AM UTC
+# Verifies current IP is whitelisted on all exchanges
+0 7 * * * root /opt/titan/scripts/ops/verify-exchange-whitelist.sh >> /var/log/titan/exchange-verify.log 2>&1

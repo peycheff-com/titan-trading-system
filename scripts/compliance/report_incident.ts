@@ -5,7 +5,7 @@ import {
     DoraIncidentClassification,
     DoraIncidentSchema,
     DoraIncidentStatus,
-} from "../../services/shared/src/schemas/DoraIncident";
+} from "../../packages/shared/src/schemas/DoraIncident";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 

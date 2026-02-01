@@ -39,6 +39,7 @@ fn create_test_intent(signal_id: &str) -> Intent {
         position_mode: None,
         child_fills: vec![],
         filled_size: dec!(0),
+        policy_hash: None,
     }
 }
 
@@ -104,6 +105,7 @@ fn test_state_recovery() {
             position_mode: None,
             child_fills: vec![],
             filled_size: dec!(0),
+            policy_hash: None,
         };
         state.process_intent(close_intent);
         state.confirm_execution(

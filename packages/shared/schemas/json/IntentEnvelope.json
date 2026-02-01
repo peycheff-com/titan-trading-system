@@ -1,0 +1,200 @@
+{
+  "$ref": "#/definitions/IntentEnvelope",
+  "definitions": {
+    "IntentEnvelope": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9A-Z]{26}$",
+          "default": "00000000000000000000000000"
+        },
+        "type": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        },
+        "ts": {
+          "type": "integer",
+          "default": 0
+        },
+        "producer": {
+          "type": "string"
+        },
+        "correlation_id": {
+          "type": "string",
+          "default": "00000000000000000000000000"
+        },
+        "causation_id": {
+          "type": "string"
+        },
+        "partition_key": {
+          "type": "string"
+        },
+        "idempotency_key": {
+          "type": "string"
+        },
+        "sig": {
+          "type": "string"
+        },
+        "key_id": {
+          "type": "string"
+        },
+        "nonce": {
+          "type": "string"
+        },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "schema_version": {
+              "type": "string"
+            },
+            "signal_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "source": {
+              "type": "string"
+            },
+            "symbol": {
+              "type": "string",
+              "minLength": 1
+            },
+            "direction": {
+              "type": "integer"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "BUY_SETUP",
+                "SELL_SETUP",
+                "CLOSE_LONG",
+                "CLOSE_SHORT",
+                "CLOSE"
+              ]
+            },
+            "entry_zone": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "stop_loss": {
+              "type": "number"
+            },
+            "child_fills": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": []
+            },
+            "policy_hash": {
+              "type": "string"
+            },
+            "take_profits": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "size": {
+              "type": "number"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "VALIDATED",
+                "REJECTED",
+                "EXECUTED",
+                "EXECUTED_PARTIAL",
+                "EXPIRED",
+                "FAILED"
+              ]
+            },
+            "t_signal": {
+              "type": "integer"
+            },
+            "timestamp": {
+              "type": "integer"
+            },
+            "t_analysis": {
+              "type": "integer"
+            },
+            "t_decision": {
+              "type": "integer"
+            },
+            "t_ingress": {
+              "type": "integer"
+            },
+            "t_exchange": {
+              "type": "integer"
+            },
+            "max_slippage_bps": {
+              "type": "integer"
+            },
+            "rejection_reason": {
+              "type": "string"
+            },
+            "regime_state": {
+              "type": "integer"
+            },
+            "phase": {
+              "type": "integer"
+            },
+            "exchange": {
+              "type": "string"
+            },
+            "position_mode": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "leverage": {
+              "type": "number"
+            },
+            "expected_impact_bps": {
+              "type": "number"
+            },
+            "fill_feasibility": {
+              "type": "number"
+            },
+            "velocity": {
+              "type": "number"
+            },
+            "trap_type": {
+              "type": "string"
+            },
+            "parent_strategy": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "signal_id",
+            "symbol",
+            "direction",
+            "type",
+            "size",
+            "status"
+          ],
+          "additionalProperties": true
+        }
+      },
+      "required": [
+        "type",
+        "version",
+        "producer",
+        "payload"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

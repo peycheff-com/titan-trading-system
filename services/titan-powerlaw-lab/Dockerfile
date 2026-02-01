@@ -13,11 +13,11 @@ COPY services/titan-powerlaw-lab/package.json services/titan-powerlaw-lab/
 RUN npm ci --workspace=services/titan-powerlaw-lab
 
 # Copy shared service
-COPY services/shared/ services/shared/
+COPY packages/shared/ packages/shared/
 
 # Install dependencies for shared first (or all)
-RUN npm ci --workspace=services/shared
-RUN npm run build --workspace=services/shared
+RUN npm ci --workspace=packages/shared
+RUN npm run build --workspace=packages/shared
 
 # Copy source code
 COPY services/titan-powerlaw-lab services/titan-powerlaw-lab/
@@ -40,7 +40,7 @@ RUN addgroup -g 1001 -S titan && \
 
 # Copy built application and production dependencies
 COPY --from=builder /app/package.json /app/package-lock.json ./
-COPY --from=builder /app/services/shared services/shared/
+COPY --from=builder /app/packages/shared packages/shared/
 COPY --from=builder /app/services/titan-powerlaw-lab/package.json services/titan-powerlaw-lab/
 COPY --from=builder /app/services/titan-powerlaw-lab/dist services/titan-powerlaw-lab/dist/
 

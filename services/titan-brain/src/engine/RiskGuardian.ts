@@ -130,6 +130,17 @@ export class RiskGuardian {
       var95: 0,
     };
 
+    // --- Gate 1: Governance (Defcon check) ---
+    // This MUST be the first gate - governance lockdown takes precedence over all other checks
+    if (!this.governanceEngine.canOpenNewPosition(signal.phaseId)) {
+      return {
+        approved: false,
+        reason: "GOVERNANCE_LOCKDOWN: Trading restricted by governance policy",
+        riskMetrics,
+        adjustedSize: 0,
+      };
+    }
+
     // Check correlation
     if (positions.length > 0) {
       let maxCorr = 0;
@@ -245,7 +256,7 @@ export class RiskGuardian {
       // Regime Veto (Phase 1)
       if (
         signal.phaseId === "phase1" &&
-        this.powerLawMetrics.volatilityCluster.state === "EXPANDING"
+        this.powerLawMetrics.volatilityCluster.state === "expanding"
       ) {
         return {
           approved: false,

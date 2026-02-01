@@ -138,6 +138,7 @@ mod tests {
             position_mode: None,
             child_fills: vec![],
             filled_size: dec!(0),
+            policy_hash: None,
         };
 
         state.process_intent(intent);
@@ -207,6 +208,7 @@ mod tests {
             position_mode: None,
             child_fills: vec![],
             filled_size: dec!(0),
+            policy_hash: None,
         };
         state.process_intent(close_intent);
 
@@ -314,6 +316,7 @@ mod tests {
             position_mode: None,
             child_fills: vec![],
             filled_size: dec!(0),
+            policy_hash: None,
         };
 
         state.process_intent(long_intent);
@@ -360,6 +363,7 @@ mod tests {
             position_mode: None,
             child_fills: vec![],
             filled_size: dec!(0),
+            policy_hash: None,
         };
 
         state.process_intent(short_reduce);
@@ -414,6 +418,7 @@ mod tests {
             position_mode: None,
             child_fills: vec![],
             filled_size: dec!(0),
+            policy_hash: None,
         };
 
         state.process_intent(short_flip);

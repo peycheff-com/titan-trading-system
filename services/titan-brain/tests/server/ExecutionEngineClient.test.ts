@@ -139,19 +139,18 @@ describe("ExecutionEngineClient", () => {
   });
 
   describe("closeAllPositions", () => {
-    it("should include t_signal and required fields on emergency publish", async () => {
+    it("should publish flatten command to the correct subject", async () => {
       await client.closeAllPositions();
 
-      expect(mockPublishEnvelope).toHaveBeenCalledTimes(1);
-      const [subject, payload] = mockPublishEnvelope.mock.calls[0];
+      // The implementation uses publish (not publishEnvelope) for flatten commands
+      expect(mockPublish).toHaveBeenCalledTimes(1);
+      const [subject, payload] = mockPublish.mock.calls[0];
 
-      expect(subject).toBe("titan.cmd.exec.place.v1.auto.main.ALL");
-      expect(payload.t_signal).toEqual(expect.any(Number));
-      expect(payload.type).toBe("CLOSE");
-      expect(payload.direction).toBe(0);
-      expect(payload.entry_zone).toEqual([]);
-      expect(payload.stop_loss).toBe(0);
-      expect(payload.take_profits).toEqual([]);
+      expect(subject).toBe("titan.cmd.risk.flatten");
+      expect(payload.command).toBe("FLATTEN_ALL");
+      expect(payload.source).toBe("brain");
+      expect(payload.timestamp).toEqual(expect.any(Number));
+      expect(payload.reason).toBe("BRAIN_CIRCUIT_BREAKER");
     });
   });
 

@@ -8,6 +8,7 @@ use serde_json::Value;
 use sha2::Sha256;
 use std::sync::Arc;
 use std::time::Duration;
+use titan_execution_rs::armed_state::ArmedState;
 use titan_execution_rs::circuit_breaker::GlobalHalt;
 use titan_execution_rs::context::ExecutionContext;
 use titan_execution_rs::drift_detector::DriftDetector;
@@ -15,6 +16,7 @@ use titan_execution_rs::exchange::adapter::{
     ExchangeAdapter, ExchangeError, OrderRequest, OrderResponse,
 };
 use titan_execution_rs::exchange::router::ExecutionRouter;
+use titan_execution_rs::execution_constraints::ConstraintsStore;
 use titan_execution_rs::market_data::engine::MarketDataEngine;
 use titan_execution_rs::model::Position;
 use titan_execution_rs::nats_engine;
@@ -36,7 +38,7 @@ fn create_test_persistence() -> (Arc<PersistenceStore>, String) {
 }
 
 #[tokio::test]
-#[ignore]
+#[ignore] // Requires running NATS server with proper authentication
 async fn test_full_execution_flow() {
     // 0. Init Logging
     let _ = tracing_subscriber::fmt()
@@ -118,6 +120,8 @@ async fn test_full_execution_flow() {
 
     // 3. Start Engine
     let drift_detector = Arc::new(DriftDetector::new(50.0, 1000, 100.0));
+    let constraints_store = Arc::new(ConstraintsStore::new());
+    let armed_state = Arc::new(ArmedState::new()); // Test state, no persistence
 
     let _handle = nats_engine::start_nats_engine(
         client.clone(),
@@ -126,10 +130,12 @@ async fn test_full_execution_flow() {
         router.clone(),
         sim_engine.clone(),
         halt.clone(),
+        armed_state.clone(),
         risk_guard.clone(),
         ctx.clone(),
         5000, // freshness threshold
         drift_detector,
+        constraints_store,
     )
     .await
     .expect("Failed to start engine");

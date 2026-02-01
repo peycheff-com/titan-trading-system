@@ -4,11 +4,13 @@ use serde_json::Value;
 use std::sync::Arc;
 use tracing::{error, info, warn};
 
+use crate::armed_state::ArmedState;
 use crate::circuit_breaker::GlobalHalt;
 use crate::context::ExecutionContext;
 use crate::drift_detector::DriftDetector;
 use crate::exchange::adapter::OrderRequest;
 use crate::exchange::router::ExecutionRouter;
+use crate::execution_constraints::{ConstraintsStore, ExecutionConstraints};
 use crate::intent_validation::validate_intent_payload;
 use crate::metrics;
 use crate::model::IntentType;
@@ -28,10 +30,12 @@ pub async fn start_nats_engine(
     router: Arc<ExecutionRouter>,
     simulation_engine: Arc<SimulationEngine>,
     global_halt: Arc<GlobalHalt>,
+    armed_state: Arc<ArmedState>,
     risk_guard: Arc<RiskGuard>,
     ctx: Arc<ExecutionContext>,
     freshness_threshold: u64,
     drift_detector: Arc<DriftDetector>,
+    constraints_store: Arc<ConstraintsStore>,
 ) -> Result<tokio::task::JoinHandle<()>, Box<dyn std::error::Error + Send + Sync>> {
     // --- System Halt Listener (Core NATS) ---
     // ... (unchanged)
@@ -223,6 +227,40 @@ pub async fn start_nats_engine(
         }
     });
 
+    // --- Policy Hash Request Handler (Brain Handshake) ---
+    let mut policy_hash_sub = client
+        .subscribe("titan.req.exec.policy_hash.v1")
+        .await
+        .map_err(|e| {
+            error!("❌ Failed to subscribe to policy_hash request: {}", e);
+            e
+        })?;
+    let risk_guard_for_policy = risk_guard.clone();
+    let client_for_policy = client.clone();
+
+    tokio::spawn(async move {
+        info!("👂 Listening for policy hash requests...");
+        while let Some(msg) = policy_hash_sub.next().await {
+            if let Some(reply_to) = msg.reply {
+                let policy_hash = risk_guard_for_policy.get_current_policy_hash();
+                let response = serde_json::json!({
+                    "policy_hash": policy_hash,
+                    "timestamp": chrono::Utc::now().timestamp_millis()
+                });
+                if let Ok(payload) = serde_json::to_vec(&response) {
+                    client_for_policy
+                        .publish(reply_to, payload.into())
+                        .await
+                        .ok();
+                }
+                info!(
+                    "✅ Responded to policy hash request with hash: {}",
+                    policy_hash
+                );
+            }
+        }
+    });
+
     // --- Flatten Command Listener ---
     let mut flatten_sub = client
         .subscribe("titan.cmd.risk.flatten")
@@ -275,6 +313,7 @@ pub async fn start_nats_engine(
                     size: pos.size,
                     status: crate::model::IntentStatus::Validated,
                     source: Some("RiskFlatten".to_string()),
+                    policy_hash: None,
                     t_signal: ctx_flatten.time.now_millis(),
                     t_analysis: None,
                     t_decision: None,
@@ -413,6 +452,37 @@ pub async fn start_nats_engine(
         }
     });
 
+    // --- Execution Constraints Listener (PowerLaw) ---
+    // Subject: titan.signal.execution.constraints.v1.{venue}.{account}.{symbol}
+    let mut constraints_sub = client
+        .subscribe("titan.signal.execution.constraints.v1.>")
+        .await
+        .map_err(|e| {
+            error!("❌ Failed to subscribe to execution constraints: {}", e);
+            e
+        })?;
+    let constraints_store_for_sub = constraints_store.clone();
+
+    tokio::spawn(async move {
+        info!("👂 Listening for execution constraints (PowerLaw)...");
+        while let Some(msg) = constraints_sub.next().await {
+            match serde_json::from_slice::<ExecutionConstraints>(&msg.payload) {
+                Ok(constraints) => {
+                    info!(
+                        symbol = %constraints.symbol,
+                        risk_mode = ?constraints.risk_mode,
+                        mode = ?constraints.mode,
+                        "RECV: Execution constraints update"
+                    );
+                    constraints_store_for_sub.update(constraints);
+                }
+                Err(e) => {
+                    error!("❌ Failed to parse execution constraints: {}", e);
+                }
+            }
+        }
+    });
+
     // --- JetStream Setup (Manifest 2.0) ---
     let jetstream = async_nats::jetstream::new(client.clone());
 
@@ -521,6 +591,7 @@ pub async fn start_nats_engine(
     // Pre-clone for Risk Consumer (to avoid move into nats_handle)
     let global_halt_risk = global_halt.clone();
     let hmac_validator_risk = hmac_validator.clone();
+    let risk_guard_check = risk_guard.clone();
 
     let nats_handle = tokio::spawn(async move {
         loop {
@@ -531,6 +602,39 @@ pub async fn start_nats_engine(
                             // --- GLOBAL HALT CHECK ---
                             if global_halt.is_halted() {
                                 warn!("⛔ Rejecting Intent (System Halted)");
+                                if let Err(e) = msg.ack().await {
+                                     error!("Failed to ACK rejected intent: {}", e);
+                                }
+                                continue;
+                            }
+
+                            // --- ARMED CHECK (Physical Interlock) ---
+                            if !armed_state.is_armed() {
+                                warn!("⛔ Rejecting Intent (Execution DISARMED - physical interlock)");
+
+                                // Try to extract ID for telemetry (Best Effort)
+                                let intent_id: Option<String> = serde_json::from_slice::<serde_json::Value>(&msg.payload)
+                                    .ok()
+                                    .and_then(|v| {
+                                        // v is owned here. We must extract String before v is dropped.
+                                        let id_val = if let Some(p) = v.get("payload") {
+                                            p.get("signal_id").or(v.get("signal_id"))
+                                        } else {
+                                            v.get("signal_id")
+                                        };
+                                        id_val.and_then(|val| val.as_str().map(|s| s.to_string()))
+                                    });
+
+                                publish_rejection_event(
+                                    &client_clone,
+                                    "system_disarmed",
+                                    None,
+                                    None,
+                                    intent_id.as_deref(),
+                                    None,
+                                    &ctx_nats,
+                                ).await;
+
                                 if let Err(e) = msg.ack().await {
                                      error!("Failed to ACK rejected intent: {}", e);
                                 }
@@ -560,10 +664,24 @@ pub async fn start_nats_engine(
                                 let is_envelope = value.get("payload").is_some() && value.get("type").is_some();
                                 if is_envelope {
                                     if let Ok(envelope) = serde_json::from_value::<crate::contracts::IntentEnvelope>(value.clone()) {
-                                        // 2. Validate HMAC
-                                        // Use reusable validator
                                         if let Err(e) = hmac_validator.validate(&envelope, &value["payload"]) {
                                             error!("⛔ REJECTED Intent (Signature Verify Failed): {}", e);
+
+                                            // Extract ID for telemetry
+                                            let intent_id = value.get("payload")
+                                                .and_then(|p| p.get("signal_id"))
+                                                .and_then(|v| v.as_str());
+
+                                            publish_rejection_event(
+                                                &client_clone,
+                                                "hmac_signature_mismatch",
+                                                None,
+                                                None,
+                                                intent_id,
+                                                None,
+                                                &ctx_nats,
+                                            ).await;
+
                                             // ACK to prevent retry loops of bad messages
                                             if let Err(e) = msg.ack().await { error!("Failed to ACK rejected intent: {}", e); }
                                             continue;
@@ -599,6 +717,39 @@ pub async fn start_nats_engine(
                                                 .map(|s| s.to_string())
                                         })
                                         .unwrap_or_else(|| intent.signal_id.clone());
+
+                                    // --- P0: Risk Policy Hash Enforcement ---
+                                    if let Some(ref hash) = intent.policy_hash {
+                                        let current_hash = risk_guard_check.get_current_policy_hash();
+                                        // Simple string comparison for equality
+                                        if *hash != current_hash {
+                                            error!(
+                                                "⛔ REJECTED Intent (Policy Hash Mismatch): Expected {}, Got {}",
+                                                current_hash, hash
+                                            );
+                                            metrics::inc_invalid_intents();
+                                            // Publish rejection telemetry event (P0 item 7.4)
+                                            publish_rejection_event(
+                                                &client_clone,
+                                                "policy_hash_mismatch",
+                                                Some(&current_hash),
+                                                Some(hash),
+                                                Some(&intent.signal_id),
+                                                Some(&correlation_id),
+                                                &ctx_nats,
+                                            ).await;
+                                            publish_dlq(
+                                                &client_clone,
+                                                &msg.payload,
+                                                &format!("Policy Hash mismatch: exp {} got {}", current_hash, hash),
+                                                &ctx_nats
+                                            ).await;
+                                            if let Err(e) = msg.ack().await {
+                                                error!("Failed to ACK rejected intent: {}", e);
+                                            }
+                                            continue;
+                                        }
+                                    }
 
                                     // --- Trace Context Extraction (Phase 4) ---
                                     use opentelemetry::global;
@@ -817,59 +968,85 @@ pub async fn start_nats_engine(
 
     let global_halt_for_risk = global_halt_risk; // Move into this task
     let hmac_validator_risk_consumer = hmac_validator_risk;
+    let _state_for_risk = shadow_state.clone(); // Clone for potential future state injection
 
-    let mut risk_messages = risk_consumer.messages().await?;
+    // We must pin the stream before spawning
+    // let mut risk_messages = risk_consumer.messages().await?;
+    // AsyncNext extraction might accept a mutable reference if it wasn't moved.
+    // However, `messages()` returns a Stream.
+    let mut risk_messages = risk_consumer.messages().await.map_err(|e| {
+        error!("❌ Failed to get risk messages stream: {}", e);
+        e
+    })?;
 
     tokio::spawn(async move {
         info!("👮 Risk Enforcer listening on '{}'", risk_subject);
         while let Some(msg_result) = risk_messages.next().await {
-            if let Ok(msg) = msg_result {
-                // Parse Payload directly
-                if let Ok(value) = serde_json::from_slice::<serde_json::Value>(&msg.payload) {
-                    // 1. Validate Signature
-                    if let Err(e) = hmac_validator_risk_consumer.validate_risk_command(&value) {
-                        error!("⛔ REJECTED Risk Command (Signature Verify Failed): {}", e);
-                        // ACK to drain bad commands
-                        msg.ack().await.ok();
-                        continue;
+            match msg_result {
+                Ok(msg) => {
+                    // Parse Payload directly
+                    if let Ok(value) = serde_json::from_slice::<serde_json::Value>(&msg.payload) {
+                        // 1. Validate Signature
+                        if let Err(e) = hmac_validator_risk_consumer.validate_risk_command(&value) {
+                            error!("⛔ REJECTED Risk Command (Signature Verify Failed): {}", e);
+                            // ACK to drain bad commands
+                            if let Err(e) = msg.ack().await {
+                                error!("Failed to ACK rejected risk cmd: {}", e);
+                            }
+                            continue;
+                        }
+
+                        // 2. Action Dispatch
+                        let action = value
+                            .get("action")
+                            .and_then(|s| s.as_str())
+                            .unwrap_or("UNKNOWN");
+                        let actor_id = value
+                            .get("actor_id")
+                            .and_then(|s| s.as_str())
+                            .unwrap_or("sys");
+                        let reason = value
+                            .get("reason")
+                            .and_then(|s| s.as_str())
+                            .unwrap_or("No reason");
+
+                        match action {
+                            "HALT" => {
+                                warn!(
+                                    "🚨 SOVEREIGN HALT RECEIVED from {} Reason: {}",
+                                    actor_id, reason
+                                );
+                                global_halt_for_risk.set_halt(true, reason);
+                            }
+                            "OVERRIDE_ALLOCATION" => {
+                                let allocation = value.get("allocation");
+                                info!(
+                                    "⚠️ Manual Override Acknowledged from {}. Reason: {}. Allocation: {:?}",
+                                    actor_id, reason, allocation
+                                );
+                                // Note: We do not strictly inject this into RiskGuard because
+                                // pure allocation (weights) is managed by Titan Brain.
+                                // Rust Engine enforces 'Max Position Notional' which is a hard safety limit.
+                                // If the operator wants to bypass this, they must use a ForceSync intent.
+                            }
+                            _ => {
+                                warn!("Unknown Risk Action: {}", action);
+                            }
+                        }
+
+                        // 3. ACK
+                        if let Err(e) = msg.ack().await {
+                            error!("Failed to ACK risk cmd: {}", e);
+                        }
+                    } else {
+                        error!("Malformed Risk Command JSON");
+                        if let Err(e) = msg.ack().await {
+                            error!("Failed to ACK malformed risk cmd: {}", e);
+                        }
                     }
-
-                    // 2. Action Dispatch
-                    let action = value
-                        .get("action")
-                        .and_then(|s| s.as_str())
-                        .unwrap_or("UNKNOWN");
-                    let actor_id = value
-                        .get("actor_id")
-                        .and_then(|s| s.as_str())
-                        .unwrap_or("sys");
-                    let reason = value
-                        .get("reason")
-                        .and_then(|s| s.as_str())
-                        .unwrap_or("No reason");
-
-                    match action {
-                        "HALT" => {
-                            warn!(
-                                "🚨 SOVEREIGN HALT RECEIVED from {} Reason: {}",
-                                actor_id, reason
-                            );
-                            global_halt_for_risk.set_halt(true, reason);
-                        }
-                        "OVERRIDE_ALLOCATION" => {
-                            info!("⚠️ Manual Override Received (TODO: Implement Logic)");
-                            // TODO: inject into RiskGuard or ShadowState
-                        }
-                        _ => {
-                            warn!("Unknown Risk Action: {}", action);
-                        }
-                    }
-
-                    // 3. ACK
-                    msg.ack().await.ok();
-                } else {
-                    error!("Malformed Risk Command JSON");
-                    msg.ack().await.ok();
+                }
+                Err(e) => {
+                    error!("Error receiving risk message: {}", e);
                 }
             }
         }
@@ -899,5 +1076,34 @@ async fn publish_dlq(
             .await;
         let _ = client.publish("titan.execution.dlq", bytes.into()).await;
         metrics::inc_dlq_published();
+    }
+}
+
+/// Publish rejection telemetry event for observability and alerting
+/// Subject: titan.evt.exec.reject.v1
+async fn publish_rejection_event(
+    client: &async_nats::Client,
+    reason: &str,
+    expected_hash: Option<&str>,
+    got_hash: Option<&str>,
+    intent_id: Option<&str>,
+    brain_instance_id: Option<&str>,
+    ctx: &ExecutionContext,
+) {
+    let event_payload = serde_json::json!({
+        "reason": reason,
+        "expected_policy_hash": expected_hash.unwrap_or("N/A"),
+        "got_policy_hash": got_hash.unwrap_or("N/A"),
+        "intent_id": intent_id.unwrap_or("N/A"),
+        "brain_instance_id": brain_instance_id.unwrap_or("N/A"),
+        "timestamp": ctx.time.now_millis(),
+        "event_type": "execution.intent.rejected",
+    });
+
+    if let Ok(bytes) = serde_json::to_vec(&event_payload) {
+        let _ = client
+            .publish("titan.evt.exec.reject.v1", bytes.into())
+            .await;
+        metrics::inc_rejection_events();
     }
 }

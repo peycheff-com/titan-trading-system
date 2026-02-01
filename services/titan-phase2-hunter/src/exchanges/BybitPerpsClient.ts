@@ -132,6 +132,7 @@ export class BybitPerpsClient {
   private baseUrl = 'https://api.bybit.com';
   private apiKey: string;
   private apiSecret: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private cache = new Map<string, CacheEntry<any>>();
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
   private readonly REQUEST_TIMEOUT = 10000; // 10 seconds
@@ -284,7 +285,9 @@ export class BybitPerpsClient {
       return ohlcv;
     } catch (error) {
       throw new Error(
-        `Failed to fetch OHLCV for ${symbol}: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to fetch OHLCV for ${symbol}: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`
       );
     }
   }
@@ -313,7 +316,9 @@ export class BybitPerpsClient {
       return parseFloat(ticker.lastPrice);
     } catch (error) {
       throw new Error(
-        `Failed to get current price for ${symbol}: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to get current price for ${symbol}: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`
       );
     }
   }
@@ -357,7 +362,7 @@ export class BybitPerpsClient {
    */
   public async placeOrder(params: OrderParams): Promise<OrderResult> {
     try {
-      const orderParams: any = {
+      const orderParams: Record<string, string> = {
         category: 'linear',
         symbol: params.symbol.toUpperCase(),
         side: params.side,
@@ -428,7 +433,7 @@ export class BybitPerpsClient {
       try {
         // Set timeout for each attempt
         const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error('Order timeout after 2 seconds')), 2000);
+          setTimeout(() => reject(new Error('Order timeout after 5 seconds')), 5000);
         });
 
         const orderPromise = this.placeOrder(params);
@@ -475,7 +480,9 @@ export class BybitPerpsClient {
       return true;
     } catch (error) {
       throw new Error(
-        `Failed to set leverage for ${symbol}: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to set leverage for ${symbol}: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`
       );
     }
   }
@@ -512,7 +519,9 @@ export class BybitPerpsClient {
       return true;
     } catch (error) {
       throw new Error(
-        `Failed to set stop loss for ${symbol}: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to set stop loss for ${symbol}: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`
       );
     }
   }
@@ -549,7 +558,9 @@ export class BybitPerpsClient {
       return true;
     } catch (error) {
       throw new Error(
-        `Failed to set take profit for ${symbol}: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to set take profit for ${symbol}: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`
       );
     }
   }
@@ -662,6 +673,7 @@ export class BybitPerpsClient {
   private async makeRequest(
     method: 'GET' | 'POST',
     endpoint: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     params: any = {},
     signed: boolean = false
   ): Promise<any> {
@@ -672,7 +684,7 @@ export class BybitPerpsClient {
     let body = '';
 
     // Prepare headers
-    const headers: any = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'X-BAPI-TIMESTAMP': timestamp,
       'X-BAPI-RECV-WINDOW': '5000',

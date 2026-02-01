@@ -1,3 +1,4 @@
+use crate::execution_constraints::{ConstraintsStore, PolicyMode, RiskMode};
 use crate::model::Intent;
 use crate::risk_policy::RiskPolicy;
 use crate::risk_policy::RiskState;
@@ -36,6 +37,20 @@ pub enum RiskRejectionReason {
 
     PolicyMissing,
     MarketDataStale(String),
+
+    // Execution Constraints Violations (PowerLaw)
+    ConstraintMaxOrderNotionalExceeded {
+        symbol: String,
+        order_notional: Decimal,
+        limit: Decimal,
+    },
+    ConstraintReduceOnlyViolation {
+        symbol: String,
+    },
+    ConstraintMaxLeverageExceeded {
+        current: Decimal,
+        limit: Decimal,
+    },
 }
 
 impl std::fmt::Display for RiskRejectionReason {
@@ -82,6 +97,29 @@ impl std::fmt::Display for RiskRejectionReason {
 
             RiskRejectionReason::InvalidSize => write!(f, "Invalid size (<= 0)"),
             RiskRejectionReason::PolicyMissing => write!(f, "Risk Policy not loaded"),
+            RiskRejectionReason::ConstraintMaxOrderNotionalExceeded {
+                symbol,
+                order_notional,
+                limit,
+            } => write!(
+                f,
+                "Constraint: Order notional {} exceeds limit {} for {}",
+                order_notional, limit, symbol
+            ),
+            RiskRejectionReason::ConstraintReduceOnlyViolation { symbol } => {
+                write!(
+                    f,
+                    "Constraint: {} is reduce-only, new positions blocked",
+                    symbol
+                )
+            }
+            RiskRejectionReason::ConstraintMaxLeverageExceeded { current, limit } => {
+                write!(
+                    f,
+                    "Constraint: Leverage {:.2}x exceeds limit {:.2}x",
+                    current, limit
+                )
+            }
         }
     }
 }
@@ -95,6 +133,7 @@ pub struct RiskGuard {
     last_heartbeat: AtomicI64,
     state_manager: RwLock<RiskStateManager>,
     staleness_monitor: RwLock<StalenessMonitor>,
+    constraints_store: Option<Arc<ConstraintsStore>>,
 }
 
 impl RiskGuard {
@@ -107,7 +146,30 @@ impl RiskGuard {
             last_heartbeat: AtomicI64::new(chrono::Utc::now().timestamp_millis()),
             state_manager: RwLock::new(RiskStateManager::new()),
             staleness_monitor: RwLock::new(StalenessMonitor::new()),
+            constraints_store: None,
         }
+    }
+
+    /// Create RiskGuard with ConstraintsStore for PowerLaw enforcement
+    pub fn with_constraints(
+        policy: RiskPolicy,
+        shadow_state: Arc<RwLock<ShadowState>>,
+        constraints_store: Arc<ConstraintsStore>,
+    ) -> Self {
+        info!("🛡️ RiskGuard Initialized with PowerLaw constraints enforcement");
+        Self {
+            policy: RwLock::new(policy),
+            shadow_state,
+            last_heartbeat: AtomicI64::new(chrono::Utc::now().timestamp_millis()),
+            state_manager: RwLock::new(RiskStateManager::new()),
+            staleness_monitor: RwLock::new(StalenessMonitor::new()),
+            constraints_store: Some(constraints_store),
+        }
+    }
+
+    /// Set constraints store after construction
+    pub fn set_constraints_store(&mut self, store: Arc<ConstraintsStore>) {
+        self.constraints_store = Some(store);
     }
 
     pub fn record_market_data_update(&self, exchange: &str, symbol: &str) {
@@ -184,6 +246,10 @@ impl RiskGuard {
 
     pub fn get_policy(&self) -> RiskPolicy {
         self.policy.read().clone()
+    }
+
+    pub fn get_current_policy_hash(&self) -> String {
+        self.policy.read().compute_hash()
     }
 
     /// Validates an Intent BEFORE it enters the Order Manager.
@@ -292,6 +358,90 @@ impl RiskGuard {
         // 2. Validate Size
         if intent.size <= Decimal::ZERO {
             return Err(RiskRejectionReason::InvalidSize);
+        }
+
+        // 2.5. EXECUTION CONSTRAINTS ENFORCEMENT (PowerLaw)
+        // If we have a constraints store, check the symbol-specific constraints
+        if let Some(ref constraints_store) = self.constraints_store {
+            let venue = intent.exchange.as_deref().unwrap_or("unknown");
+            let account = "main"; // TODO: Get from intent or config
+            let constraints = constraints_store.get(venue, account, &intent.symbol);
+
+            // Only enforce if mode is ENFORCEMENT (skip for SHADOW/ADVISORY)
+            if matches!(constraints.mode, PolicyMode::Enforcement) {
+                // Check reduce_only constraint
+                if constraints.limits.reduce_only && !Self::is_reduce_only(intent) {
+                    warn!(
+                        symbol = %intent.symbol,
+                        risk_mode = ?constraints.risk_mode,
+                        "Constraint Reject: reduce_only mode active"
+                    );
+                    return Err(RiskRejectionReason::ConstraintReduceOnlyViolation {
+                        symbol: intent.symbol.clone(),
+                    });
+                }
+
+                // Check max_order_notional
+                let check_price = intent.entry_zone.first().cloned().unwrap_or(Decimal::ZERO);
+                if check_price > Decimal::ZERO {
+                    let order_notional = intent.size * check_price;
+                    if order_notional > constraints.limits.max_order_notional {
+                        warn!(
+                            symbol = %intent.symbol,
+                            order_notional = %order_notional,
+                            limit = %constraints.limits.max_order_notional,
+                            "Constraint Reject: max_order_notional exceeded"
+                        );
+                        return Err(RiskRejectionReason::ConstraintMaxOrderNotionalExceeded {
+                            symbol: intent.symbol.clone(),
+                            order_notional,
+                            limit: constraints.limits.max_order_notional,
+                        });
+                    }
+                }
+
+                // Check max_leverage against current account leverage
+                if !Self::is_reduce_only(intent) && constraints.limits.max_leverage > Decimal::ZERO
+                {
+                    let total_pos_notional: Decimal = state
+                        .get_all_positions()
+                        .values()
+                        .map(|p| p.size * p.entry_price)
+                        .sum();
+
+                    let new_notional = intent.size * check_price;
+                    let total_exposure = total_pos_notional + new_notional;
+                    let equity = state.get_equity();
+
+                    if equity > Decimal::ZERO {
+                        let current_leverage = total_exposure / equity;
+                        if current_leverage > constraints.limits.max_leverage {
+                            warn!(
+                                symbol = %intent.symbol,
+                                current_leverage = %current_leverage,
+                                limit = %constraints.limits.max_leverage,
+                                "Constraint Reject: max_leverage exceeded"
+                            );
+                            return Err(RiskRejectionReason::ConstraintMaxLeverageExceeded {
+                                current: current_leverage,
+                                limit: constraints.limits.max_leverage,
+                            });
+                        }
+                    }
+                }
+
+                // Log advisory info for other risk modes
+                if matches!(
+                    constraints.risk_mode,
+                    RiskMode::Caution | RiskMode::Defensive
+                ) {
+                    info!(
+                        symbol = %intent.symbol,
+                        risk_mode = ?constraints.risk_mode,
+                        "Constraint Advisory: elevated risk mode"
+                    );
+                }
+            }
         }
 
         // 3. Max Open Orders
@@ -485,6 +635,7 @@ mod tests {
             position_mode: None,
             child_fills: vec![],
             filled_size: dec!(0),
+            policy_hash: None,
         }
     }
 

@@ -1,0 +1,41 @@
+graph TB
+    subgraph "Operator Layer"
+        Console["titan-console<br/>React/Vite"]
+    end
+    
+    subgraph "Orchestration Layer"
+        Brain["titan-brain<br/>TypeScript"]
+        Sentinel["titan-phase3-sentinel<br/>AI Regime"]
+        Hunter["titan-phase2-hunter<br/>Holographic"]
+        Scavenger["titan-phase1-scavenger<br/>Microstructure"]
+        AIQuant["titan-ai-quant<br/>ML Optimization"]
+        PowerLaw["canonical-powerlaw-service<br/>Tail Risk"]
+    end
+    
+    subgraph "Execution Layer"
+        ExecRS["titan-execution-rs<br/>Rust"]
+    end
+    
+    subgraph "Infrastructure"
+        NATS["NATS JetStream"]
+        PG["PostgreSQL"]
+        Redis["Redis"]
+    end
+    
+    subgraph "External"
+        Exchanges["Exchanges<br/>Bybit/Binance/MEXC"]
+    end
+    
+    Console -->|HTTP/WS| Brain
+    Brain -->|titan.cmd.exec.*| NATS
+    NATS -->|titan.cmd.*| ExecRS
+    ExecRS -->|titan.evt.*| NATS
+    NATS -->|titan.evt.*| Brain
+    ExecRS -->|Orders| Exchanges
+    Exchanges -->|Fills/Status| ExecRS
+    Brain --> PG
+    Brain --> Redis
+    Sentinel --> Brain
+    Hunter --> Brain
+    PowerLaw -->|titan.signal.execution.constraints| NATS
+    NATS --> ExecRS

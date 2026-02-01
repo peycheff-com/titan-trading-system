@@ -3,6 +3,8 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
+use sha2::{Digest, Sha256};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum RiskState {
     #[default]
@@ -96,32 +98,12 @@ fn default_min_stop_distance() -> Decimal {
     dec!(1.5)
 }
 
+// Embed the canonical risk policy JSON at compile time
+const RISK_POLICY_JSON: &str = include_str!("risk_policy.json");
+
 impl Default for RiskPolicy {
     fn default() -> Self {
-        let mut whitelist = HashSet::new();
-        // Default safe list
-        whitelist.insert("BTC/USDT".to_string());
-        whitelist.insert("ETH/USDT".to_string());
-        whitelist.insert("SOL/USDT".to_string());
-
-        Self {
-            current_state: RiskState::Normal,
-            max_position_notional: dec!(50000.0),
-            max_account_leverage: dec!(10.0),
-            max_daily_loss: dec!(-1000.0),
-            max_open_orders_per_symbol: 5,
-            symbol_whitelist: whitelist,
-            max_slippage_bps: default_max_slippage(),
-            max_staleness_ms: default_max_staleness(),
-
-            // New defaults
-            max_correlation: default_max_correlation(),
-            correlation_penalty: default_correlation_penalty(),
-            min_confidence_score: default_min_confidence(),
-            min_stop_distance_multiplier: default_min_stop_distance(),
-            version: 1,
-            last_updated: 0,
-        }
+        serde_json::from_str(RISK_POLICY_JSON).expect("Failed to parse embedded risk_policy.json")
     }
 }
 
@@ -144,5 +126,20 @@ impl RiskPolicy {
             version: 1,
             last_updated: 0,
         }
+    }
+
+    /// Returns the SHA256 hash of the canonical policy JSON.
+    pub fn get_hash() -> String {
+        let mut hasher = Sha256::new();
+        hasher.update(RISK_POLICY_JSON);
+        hex::encode(hasher.finalize())
+    }
+
+    /// Computes the SHA256 hash of the current instance
+    pub fn compute_hash(&self) -> String {
+        let json = serde_json::to_string(self).unwrap_or_default();
+        let mut hasher = Sha256::new();
+        hasher.update(json);
+        hex::encode(hasher.finalize())
     }
 }

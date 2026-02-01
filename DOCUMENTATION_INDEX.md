@@ -14,10 +14,7 @@
 ## 2. Operations & Reliability
 
 Located in `docs/operations/`:
-
-| Document | Key Topics |
-| :--- | :--- |
-| [**User Manual / README**](docs/operations/README.md) | Operational responsibilities, critical alerts, disaster recovery. |
+| [**Runbook**](docs/RUNBOOK.md) | **(New)** SOTA Incident Response & Disaster Recovery. |
 | [**Execute & Routing**](docs/operations/execution-routing.md) | Exchange routing logic and execution paths. |
 | [**HA Strategy**](docs/operations/ha-strategy.md) | High Availability and multi-node setup. |
 | [**Secrets Management**](docs/operations/secrets-management.md) | Docker secrets, vault usage, and env security. |
@@ -51,7 +48,6 @@ Located in `docs/operations/`:
 
 Items documented but not fully visible in code, or code features missing docs:
 
-- **Missing Docs**: `Titan Brain`'s "Active Inference Engine" and "Accounting Service" are implemented but lack detailed architecture docs.
 - **Experimental**: `titan-powerlaw-lab` is present but marked experimental.
 - **Observability**: Tracing is implemented in Rust (OpenTelemetry) but docs mainly focus on Prometheus.
 

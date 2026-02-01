@@ -17,12 +17,17 @@ import {
 import { Config, OHLCV, RegimeSnapshot, Trade } from "../../src/types";
 
 // Mock dependencies
-jest.mock("../../../shared/src", () => ({
+jest.mock("@titan/shared", () => ({
+  __esModule: true,
   getTelemetryService: jest.fn(() => ({
     info: jest.fn(),
     warn: jest.fn(),
     error: jest.fn(),
     debug: jest.fn(),
+  })),
+  loadSecretsFromFiles: jest.fn(),
+  getConfigManager: jest.fn(() => ({
+    get: jest.fn(),
   })),
 }));
 

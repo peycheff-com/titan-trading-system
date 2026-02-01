@@ -17,12 +17,13 @@ COPY tsconfig.json ./
 
 # Copy all workspaces for npm workspaces resolution
 COPY services/ ./services/
+COPY packages/ ./packages/
 
 # Install all dependencies (monorepo)
 RUN npm ci
 
 # Build the shared package first
-WORKDIR /app/services/shared
+WORKDIR /app/packages/shared
 RUN npm run build
 
 # Copy titan-brain source code and build
@@ -35,7 +36,7 @@ WORKDIR /app
 RUN npm prune --omit=dev --workspaces
 
 # Ensure workspace node_modules exist for copy
-RUN mkdir -p /app/services/titan-brain/node_modules /app/services/shared/node_modules
+RUN mkdir -p /app/services/titan-brain/node_modules /app/packages/shared/node_modules
 
 # Stage 2: Production
 FROM node:22-alpine AS production
@@ -56,7 +57,7 @@ RUN addgroup -g 1001 -S titan && \
 COPY package*.json ./
 
 # Copy shared workspace package (built)
-COPY --from=builder /app/services/shared/ ./services/shared/
+COPY --from=builder /app/packages/shared/ ./packages/shared/
 
 # Copy titan-brain package files
 COPY services/titan-brain/package*.json ./services/titan-brain/
@@ -64,7 +65,7 @@ COPY services/titan-brain/package*.json ./services/titan-brain/
 # Copy pruned production dependencies from builder
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/services/titan-brain/node_modules ./services/titan-brain/node_modules
-COPY --from=builder /app/services/shared/node_modules ./services/shared/node_modules
+COPY --from=builder /app/packages/shared/node_modules ./packages/shared/node_modules
 
 # Copy built application from builder stage
 COPY --from=builder /app/services/titan-brain/dist ./services/titan-brain/dist

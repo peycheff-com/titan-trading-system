@@ -40,6 +40,7 @@ async function runVerification() {
   const inefficiencyMapper = new InefficiencyMapper(); // No args based on view
   const cvdValidator = new CVDValidator(); // No args based on view
   const flowClassifier = new InstitutionalFlowClassifier();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const hologramEngine = new HologramEngine(mockBybit as any, flowClassifier);
 
   const signalGenerator = new SignalGenerator(
@@ -49,12 +50,10 @@ async function runVerification() {
     cvdValidator,
     mockOracle,
     mockGlobalLiquidity
-  ); // Constructor updated earlier to accept optional mocks, but wait, did I update constructor args order?
-  // Let's check SignalGenerator constructor signature from my previous edit.
-  // It was: constructor(hologramEngine, sessionProfiler, inefficiencyMapper, cvdValidator, oracle?, globalLiquidity?, config?)
-  // Pass mocked instances.
+  );
 
   const backtestEngine = new BacktestEngine(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockBybit as any,
     hologramEngine,
     sessionProfiler,

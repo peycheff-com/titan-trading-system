@@ -53,11 +53,16 @@ describe("AI Wiring Integration", () => {
         jest.spyOn(natsClient, "isConnected").mockReturnValue(true);
 
         // Capture the callback
-        let capturedCallback: Function | undefined;
+        let capturedCallback:
+            | ((data: unknown, subject: string) => void)
+            | undefined;
         jest.spyOn(natsClient, "subscribe").mockImplementation(
             (subject, cb) => {
                 if (subject === TitanSubject.CMD_AI_OPTIMIZE_PROPOSAL) {
-                    capturedCallback = cb;
+                    capturedCallback = cb as (
+                        data: unknown,
+                        subject: string,
+                    ) => void;
                 }
                 return { unsubscribe: jest.fn() } as any;
             },

@@ -6,7 +6,7 @@ import {
     InfrastructureConfigSchema,
     PhaseConfigSchema,
     ServiceConfigSchemas,
-} from "../services/shared/src/config/ConfigSchema";
+} from "../packages/shared/src/config/ConfigSchema";
 
 const CONFIG_DIR = path.join(__dirname, "../config");
 

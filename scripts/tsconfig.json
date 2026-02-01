@@ -1,7 +1,11 @@
 {
   "extends": "../tsconfig.json",
+  "references": [
+    { "path": "../packages/shared" }
+  ],
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "noImplicitAny": false,
     "composite": true,
     "rootDir": "."

@@ -75,6 +75,7 @@ fn test_golden_replay_compliance() {
                 position_mode: None,
                 child_fills: vec![],
                 filled_size: dec!(0),
+                policy_hash: None,
             };
 
             state.process_intent(intent);

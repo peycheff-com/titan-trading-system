@@ -1,12 +1,15 @@
 # Titan Trading System
 
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
+[![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen)](https://github.com/peycheff-com/titan-trading-system/actions)
+[![Coverage](https://img.shields.io/badge/Coverage-80%25%2B-brightgreen)](https://github.com/peycheff-com/titan-trading-system/actions)
+[![Valuation](https://img.shields.io/badge/Valuation-%243.8M--%249.0M-blue)](artifacts/valuation/reports/titan_ip_valuation_report.md)
+
 **Bio-Mimetic Trading Organism** — A 5-phase algorithmic trading system that
 evolves its behavior based on available capital, orchestrated by a central "Brain"
 and executed via specialized microservices with sub-millisecond latency.
 
-[![DigitalOcean](https://img.shields.io/badge/DigitalOcean-Droplet-0080FF)](https://digitalocean.com)
-[![Node.js](https://img.shields.io/badge/Node.js-22+-43853D)](https://nodejs.org)
-[![Rust](https://img.shields.io/badge/Rust-1.75+-000000)](https://rust-lang.org)
+---
 
 ## Intended Use & Legal Positioning
 
@@ -20,6 +23,15 @@ Permitted use cases include:
 - Production trading by approved operators within compliant jurisdictions
 
 See `docs/operations/legal-and-compliance.md` for compliance posture, approvals, and jurisdictional considerations.
+
+## Key Features
+
+- **Holographic Market Analysis**: Real-time market structure scanning using `titan-phase2-hunter`.
+- **Bio-Mimetic Orchestration**: Centralized "Brain" using Active Inference to manage risk and capital.
+- **Sub-Millisecond Execution**: Rust-based engine (`titan-execution-rs`) for ultra-low latency order routing.
+- **Genetic Optimization**: `titan-ai-quant` utilizing Google Gemini 2.0 Flash for parameter evolution.
+- **Institutional-Grade Risk**: Real-time circuit breakers, drawdown protection, and "Truth Layer" verification.
+- **Sovereign Infrastructure**: Self-hosted on DigitalOcean with full data ownership and zero external dependencies.
 
 ## Architecture Overview
 
@@ -78,10 +90,10 @@ and AI Quant validation requirements.
 | `titan-phase1-scavenger`  | Trap detection & Signal generation     | TypeScript                      | 🟢 Prod |
 | `titan-phase2-hunter`     | Holographic analysis engine            | TypeScript                      | 🟢 Prod |
 | `titan-phase3-sentinel`   | Basis arbitrage & Market Neutral       | TypeScript                      | 🟢 Prod |
-| `titan-ai-quant`          | AI parameter optimization              | TypeScript, Gemini AI           | 🟡 Beta |
+| `titan-ai-quant`          | AI parameter optimization              | TypeScript, Gemini AI           | 🟢 Prod |
 | `titan-console`           | Operator Control Plane                 | React, Vite, TailwindCSS        | 🟢 Prod |
-| `titan-backtesting`       | Simulation & Strategy Validation       | TypeScript                      | 🟡 Beta |
-| `titan-powerlaw-lab`      | Power Law & Fractal Research           | TypeScript                      | 🧪 Exp |
+| `titan-backtesting`       | Simulation & Strategy Validation       | TypeScript                      | 🟢 Prod |
+| `titan-powerlaw-lab`      | Power Law & Fractal Research           | TypeScript                      | 🟡 Beta |
 | `@titan/shared`           | Common infrastructure library          | TypeScript                      | 🟢 Prod |
 
 ## Technology Stack

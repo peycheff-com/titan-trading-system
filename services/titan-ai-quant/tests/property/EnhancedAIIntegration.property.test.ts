@@ -20,7 +20,8 @@ import { RiskAdjustment } from "../../src/ai/PredictiveAnalytics";
 import { Config, OHLCV, RegimeSnapshot, Trade } from "../../src/types";
 
 // Mock dependencies
-jest.mock("../../../shared/src", () => ({
+jest.mock("@titan/shared", () => ({
+  __esModule: true,
   getWebSocketManager: jest.fn(() => ({
     on: jest.fn(),
     removeAllListeners: jest.fn(),
@@ -32,6 +33,10 @@ jest.mock("../../../shared/src", () => ({
     debug: jest.fn(),
     on: jest.fn(),
     removeAllListeners: jest.fn(),
+  })),
+  loadSecretsFromFiles: jest.fn(),
+  getConfigManager: jest.fn(() => ({
+    get: jest.fn(),
   })),
 }));
 

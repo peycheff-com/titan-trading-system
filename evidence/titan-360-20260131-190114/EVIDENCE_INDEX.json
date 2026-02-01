@@ -1,0 +1,35 @@
+{
+  "version": "1.0.0",
+  "generated": "2026-01-31T17:01:14Z",
+  "audit_id": "titan-360-20260131-190114",
+  "evidence": {
+    "code": [
+      {"id": "E-C-001", "type": "CODE", "file": "services/titan-execution-rs/src/risk_guard.rs", "lines": "1-881", "description": "Rust RiskGuard with 8 pre-trade gates"},
+      {"id": "E-C-002", "type": "CODE", "file": "services/titan-execution-rs/src/security.rs", "lines": "1-195", "description": "HMAC validation with constant-time verify"},
+      {"id": "E-C-003", "type": "CODE", "file": "services/titan-execution-rs/src/risk_policy.rs", "lines": "1-159", "description": "RiskPolicy struct with Serde aliases for GAP-01"},
+      {"id": "E-C-004", "type": "CODE", "file": "services/titan-brain/src/features/Risk/RiskGuardian.ts", "lines": "1-1200", "description": "TypeScript RiskGuardian with 8 gates"},
+      {"id": "E-C-005", "type": "CODE", "file": "services/titan-brain/src/reconciliation/ReconciliationService.ts", "lines": "1-578", "description": "4-way Truth Layer reconciliation"},
+      {"id": "E-C-006", "type": "CODE", "file": "packages/shared/src/messaging/NatsClient.ts", "lines": "1-400", "description": "NATS client with HMAC signing"},
+      {"id": "E-C-007", "type": "CODE", "file": "services/titan-execution-rs/src/nats_engine.rs", "lines": "1-988", "description": "NATS engine with JetStream consumers"}
+    ],
+    "config": [
+      {"id": "E-CF-001", "type": "CONFIG", "file": "docker-compose.prod.yml", "description": "Production deployment topology"},
+      {"id": "E-CF-002", "type": "CONFIG", "file": "monitoring/prometheus/config/prometheus.yml", "description": "Prometheus scrape config"},
+      {"id": "E-CF-003", "type": "CONFIG", "file": "monitoring/prometheus/config/alert-rules-comprehensive.yml", "description": "444-line alert ruleset"}
+    ],
+    "run": [
+      {"id": "E-R-001", "type": "RUN", "command": "npm test", "output": "test_brain_output.txt", "description": "Brain test suite 861/864 passed"},
+      {"id": "E-R-002", "type": "RUN", "command": "cargo test", "output": "test_rust_output.txt", "description": "Rust execution test suite"}
+    ]
+  },
+  "diagrams": [
+    {"id": "D-001", "file": "diagrams/system_architecture.mmd", "description": "System layer architecture"},
+    {"id": "D-002", "file": "diagrams/risk_gate_flow.mmd", "description": "Risk gate validation flow"}
+  ],
+  "inventories": [
+    {"id": "I-001", "file": "inventories/service_matrix.md", "description": "Service catalog"},
+    {"id": "I-002", "file": "inventories/nats_subjects.txt", "description": "NATS subject inventory"},
+    {"id": "I-003", "file": "inventories/http_endpoints.txt", "description": "HTTP API endpoints"},
+    {"id": "I-004", "file": "inventories/root_deps.txt", "description": "Dependency list"}
+  ]
+}

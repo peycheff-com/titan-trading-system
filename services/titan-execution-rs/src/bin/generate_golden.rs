@@ -94,6 +94,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let intent = Intent {
                 signal_id: format!("golden-sig-{}", i),
                 source: Some("golden_gen".to_string()),
+                policy_hash: None,
                 symbol: "BTC/USDT".to_string(),
                 direction: 1, // Long
                 intent_type: IntentType::BuySetup,

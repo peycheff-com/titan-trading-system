@@ -1,4 +1,9 @@
-import { BrainDecision, DashboardData, PhaseId, Position } from '../types/index.js';
+import {
+  BrainDecision,
+  DashboardData,
+  PhaseId,
+  Position,
+} from "../types/index.js";
 
 export class BrainStateManager {
   private currentEquity: number = 0;
@@ -12,7 +17,10 @@ export class BrainStateManager {
   private dashboardCacheTime: number = 0;
 
   // Signal stats
-  private readonly signalStats: Record<PhaseId | 'manual', { approved: number; total: number }> = {
+  private readonly signalStats: Record<
+    PhaseId | "manual",
+    { approved: number; total: number }
+  > = {
     phase1: { approved: 0, total: 0 },
     phase2: { approved: 0, total: 0 },
     phase3: { approved: 0, total: 0 },
@@ -32,6 +40,9 @@ export class BrainStateManager {
     proposal: any;
   } | null = null;
 
+  // System Armed State
+  private armed: boolean = false;
+
   /**
    * Get current allocation
    */
@@ -42,7 +53,9 @@ export class BrainStateManager {
   /**
    * Set current allocation
    */
-  setAllocation(allocation: { w1: number; w2: number; w3: number; timestamp: number }): void {
+  setAllocation(
+    allocation: { w1: number; w2: number; w3: number; timestamp: number },
+  ): void {
     this.currentAllocation = allocation;
     this.invalidateDashboardCache();
   }
@@ -66,7 +79,9 @@ export class BrainStateManager {
    * Update a single position in the state
    */
   updatePosition(position: Position): void {
-    const index = this.currentPositions.findIndex((p) => p.symbol === position.symbol);
+    const index = this.currentPositions.findIndex((p) =>
+      p.symbol === position.symbol
+    );
     if (index >= 0) {
       this.currentPositions[index] = position;
     } else {
@@ -120,7 +135,7 @@ export class BrainStateManager {
   /**
    * Update signal stats
    */
-  updateSignalStats(phaseId: PhaseId | 'manual', approved: boolean): void {
+  updateSignalStats(phaseId: PhaseId | "manual", approved: boolean): void {
     if (!this.signalStats[phaseId]) {
       // Fallback or init if missing
 
@@ -162,7 +177,10 @@ export class BrainStateManager {
   /**
    * Get signal stats
    */
-  getSignalStats(): Record<PhaseId | 'manual', { approved: number; total: number }> {
+  getSignalStats(): Record<
+    PhaseId | "manual",
+    { approved: number; total: number }
+  > {
     return this.signalStats;
   }
 
@@ -186,7 +204,9 @@ export class BrainStateManager {
    */
   getDashboardCache(): DashboardData | null {
     const CACHE_TTL = 1000; // 1 second
-    if (this.dashboardCache && Date.now() - this.dashboardCacheTime < CACHE_TTL) {
+    if (
+      this.dashboardCache && Date.now() - this.dashboardCacheTime < CACHE_TTL
+    ) {
       return this.dashboardCache;
     }
     return null;
@@ -200,5 +220,20 @@ export class BrainStateManager {
 
   invalidateDashboardCache(): void {
     this.dashboardCache = null;
+  }
+
+  /**
+   * Check if system is armed
+   */
+  isArmed(): boolean {
+    return this.armed;
+  }
+
+  /**
+   * Set system armed state
+   */
+  setArmed(armed: boolean): void {
+    this.armed = armed;
+    this.invalidateDashboardCache();
   }
 }

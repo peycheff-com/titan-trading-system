@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+cognee
+python-multipart
+requests
+copilotkit
+openai
+

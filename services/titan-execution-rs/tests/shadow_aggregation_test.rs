@@ -48,6 +48,7 @@ fn create_test_intent(id: &str, size: Decimal) -> Intent {
         position_mode: None,
         child_fills: vec![],
         filled_size: dec!(0),
+        policy_hash: None,
     }
 }
 

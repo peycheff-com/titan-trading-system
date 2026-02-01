@@ -5,6 +5,8 @@ Deployment scripts and configuration for running Kimi K2.5 on DigitalOcean GPU.
 ## Quick Start
 
 ```bash
+# Execute from the repository root:
+
 # Full deployment (requires doctl auth)
 ./scripts/ops/deploy-gpu.sh all
 

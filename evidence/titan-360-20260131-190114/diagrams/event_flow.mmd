@@ -1,0 +1,24 @@
+sequenceDiagram
+    participant Console
+    participant Brain
+    participant NATS
+    participant Execution
+    participant Exchange
+    
+    Note over Console,Exchange: Order Flow
+    Console->>Brain: ARM + Operator Action
+    Brain->>Brain: RiskGuardian.checkAll()
+    Brain->>NATS: titan.cmd.exec.place.v1 [HMAC signed]
+    NATS->>Execution: JetStream deliver
+    Execution->>Execution: HMAC verify + RiskGuard.check_pre_trade()
+    Execution->>Exchange: Place Order (REST/WS)
+    Exchange-->>Execution: Fill/Reject
+    Execution->>NATS: titan.evt.exec.fill.v1
+    NATS->>Brain: Event delivery
+    Brain->>Brain: Update Position + Accounting
+    
+    Note over Console,Exchange: Emergency Halt
+    Console->>NATS: titan.cmd.sys.halt [HMAC signed]
+    NATS->>Execution: Halt command
+    Execution->>Execution: Set SystemState::HARD_HALT
+    Execution->>Exchange: Cancel all orders

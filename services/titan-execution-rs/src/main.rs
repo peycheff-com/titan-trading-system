@@ -8,6 +8,7 @@ use std::env;
 use std::fs;
 use std::sync::Arc;
 use titan_execution_rs::api;
+use titan_execution_rs::armed_state::ArmedState;
 use titan_execution_rs::circuit_breaker::GlobalHalt;
 use titan_execution_rs::context::ExecutionContext;
 use titan_execution_rs::drift_detector::DriftDetector;
@@ -16,6 +17,7 @@ use titan_execution_rs::exchange::binance::BinanceAdapter;
 use titan_execution_rs::exchange::bybit::BybitAdapter;
 use titan_execution_rs::exchange::mexc::MexcAdapter;
 use titan_execution_rs::exchange::router::ExecutionRouter;
+use titan_execution_rs::execution_constraints::ConstraintsStore;
 use titan_execution_rs::market_data::engine::MarketDataEngine;
 use titan_execution_rs::nats_engine;
 use titan_execution_rs::order_manager::OrderManager;
@@ -202,12 +204,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Initialize Global Halt (Circuit Breaker)
     let global_halt = Arc::new(GlobalHalt::new());
 
+    // Initialize Armed State (Physical Interlock - defaults DISARMED)
+    let armed_state = Arc::new(ArmedState::new());
+
     let order_manager = OrderManager::new(None, market_data_engine.clone(), global_halt.clone()); // Use default config
 
     // Initialize Risk Guard
     let risk_policy = RiskPolicy::default();
+    let policy_hash = RiskPolicy::get_hash();
+    info!("✅ Risk Policy Loaded. Hash: {}", policy_hash);
     let risk_guard = Arc::new(RiskGuard::new(risk_policy, shadow_state.clone()));
     info!("✅ Risk Guard initialized with default policy");
+
+    // Initialize Constraints Store (PowerLaw Execution Constraints)
+    let constraints_store = Arc::new(ConstraintsStore::new());
+    info!("✅ Constraints Store initialized");
 
     // Initialize Drift Detector
     let drift_detector = Arc::new(DriftDetector::new(
@@ -227,6 +238,49 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         }
     });
     info!("✅ SRE Monitor active");
+
+    // --- Operator ARM/DISARM Command Listener ---
+    let armed_for_listener = armed_state.clone();
+    let client_for_arm = nats_client.clone();
+    tokio::spawn(async move {
+        use futures::StreamExt;
+        // Listen for ARM command
+        let mut arm_sub = match client_for_arm.subscribe("titan.cmd.operator.arm.v1").await {
+            Ok(s) => s,
+            Err(e) => {
+                error!("Failed to subscribe to ARM commands: {}", e);
+                return;
+            }
+        };
+        while let Some(msg) = arm_sub.next().await {
+            let reason = String::from_utf8_lossy(&msg.payload).to_string();
+            info!("🔫 Received ARM command: {}", reason);
+            armed_for_listener.set_armed(true, &reason);
+        }
+    });
+
+    let armed_for_disarm = armed_state.clone();
+    let client_for_disarm = nats_client.clone();
+    tokio::spawn(async move {
+        use futures::StreamExt;
+        // Listen for DISARM command
+        let mut disarm_sub = match client_for_disarm
+            .subscribe("titan.cmd.operator.disarm.v1")
+            .await
+        {
+            Ok(s) => s,
+            Err(e) => {
+                error!("Failed to subscribe to DISARM commands: {}", e);
+                return;
+            }
+        };
+        while let Some(msg) = disarm_sub.next().await {
+            let reason = String::from_utf8_lossy(&msg.payload).to_string();
+            info!("🔒 Received DISARM command: {}", reason);
+            armed_for_disarm.set_armed(false, &reason);
+        }
+    });
+    info!("✅ Execution ARM/DISARM listeners active");
 
     info!("✅ Core components initialized");
 
@@ -306,10 +360,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         router,
         simulation_engine,
         global_halt,
+        armed_state.clone(),
         risk_guard.clone(),
         ctx.clone(),
         execution_config.freshness_threshold_ms.unwrap_or(5000),
         drift_detector.clone(),
+        constraints_store.clone(),
     )
     .await?;
 
