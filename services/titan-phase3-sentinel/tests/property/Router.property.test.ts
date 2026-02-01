@@ -133,20 +133,26 @@ describe("Router Property Tests", () => {
                         const netA = calcNet("A");
                         const netB = calcNet("B");
 
+                        // Use epsilon for floating-point comparison
+                        const epsilon = 1e-10;
+                        const diff = netA - netB;
+
                         if (isBuy) {
                             // Should minimize cost
-                            if (netA < netB) {
+                            if (diff < -epsilon) {
                                 expect(decision!.targetExchange).toBe("A");
-                            } else if (netB < netA) {
+                            } else if (diff > epsilon) {
                                 expect(decision!.targetExchange).toBe("B");
                             }
+                            // If diff within epsilon, either choice is valid
                         } else {
                             // Should maximize proceeds
-                            if (netA > netB) {
+                            if (diff > epsilon) {
                                 expect(decision!.targetExchange).toBe("A");
-                            } else if (netB > netA) {
+                            } else if (diff < -epsilon) {
                                 expect(decision!.targetExchange).toBe("B");
                             }
+                            // If diff within epsilon, either choice is valid
                         }
                     },
                 ),
