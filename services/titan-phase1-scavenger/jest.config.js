@@ -41,7 +41,7 @@ export default {
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
     '^@/(.*)$': '<rootDir>/src/$1',  // Path alias for cleaner imports
-    '^@titan/shared$': '<rootDir>/../shared/src/index.ts',
+    '^@titan/shared$': '<rootDir>/../../packages/shared/src/index.ts',
   },
   
   // Test setup

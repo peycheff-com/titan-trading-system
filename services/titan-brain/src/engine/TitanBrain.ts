@@ -10,10 +10,15 @@ import {
   getNatsClient,
   LeaderElector,
   OperatorActionSchema,
+  POWER_LAW_SUBJECTS,
+  type PowerLawMetricsV1,
   RegimeState,
   signedProposalSchema,
   TitanSubject,
+  verifyExecutionPolicyHash,
 } from "@titan/shared";
+
+import { PowerLawPolicyModule } from "../services/powerlaw/index.js";
 
 import { TruthRepository } from "../db/repositories/TruthRepository.js";
 import {
@@ -115,6 +120,7 @@ export class TitanBrain
   private readonly hedgeIntegrityMonitor: HedgeIntegrityMonitor;
   private riskManager!: RiskManager; // Initialized in constructor
   private leaderElector?: LeaderElector;
+  private powerLawPolicyModule: PowerLawPolicyModule | null = null;
 
   /** External integrations */
   private executionEngine: ExecutionEngineClient | null = null;
@@ -286,9 +292,38 @@ export class TitanBrain
     }
   }
 
-  private handleLeadershipPromotion = () => {
+  private handleLeadershipPromotion = async () => {
     logger.info(
-      "👑 Brain promoted to LEADER. Enabling signal processing and active services.",
+      "👑 Brain promoted to LEADER. Verifying Execution policy hash...",
+    );
+
+    // P0: Policy Hash Handshake - Verify Execution has same policy before processing
+    const { hash } = getCanonicalRiskPolicy();
+    const handshakeResult = await verifyExecutionPolicyHash(
+      this.natsClient,
+      hash,
+      5000,
+      3,
+    );
+
+    if (!handshakeResult.success) {
+      logger.error(
+        `🚨 CRITICAL: Policy hash handshake FAILED. ${handshakeResult.error}`,
+      );
+      logger.error(
+        `Brain hash: ${handshakeResult.localHash}, Execution hash: ${
+          handshakeResult.remoteHash ?? "UNKNOWN"
+        }`,
+      );
+      logger.error(
+        "Brain is refusing to process signals. Execution must be redeployed with matching policy.",
+      );
+      // Do NOT start signal processing - fail closed
+      return;
+    }
+
+    logger.info(
+      `✅ Policy hash handshake OK. Enabling signal processing. Hash: ${hash}`,
     );
     if (this.signalProcessor) {
       this.signalProcessor.start();
@@ -1170,21 +1205,47 @@ export class TitanBrain
   private async subscribeToPowerLawMetrics() {
     const nats = getNatsClient();
     try {
-      nats.subscribe<PowerLawMetrics>(
-        "powerlaw.metrics.>",
+      // Initialize PowerLaw Policy Module (SHADOW mode by default)
+      this.powerLawPolicyModule = new PowerLawPolicyModule(nats, {
+        mode: "SHADOW",
+      });
+
+      // Subscribe to canonical PowerLaw metrics stream
+      nats.subscribe<PowerLawMetricsV1>(
+        POWER_LAW_SUBJECTS.METRICS_V1_ALL,
         async (data, subject) => {
           try {
-            this.riskGuardian.updatePowerLawMetrics(data);
+            // Process through policy module (generates constraints)
+            if (this.powerLawPolicyModule) {
+              await this.powerLawPolicyModule.processMetrics(data);
+            }
+
+            // Legacy: Update RiskGuardian with compatible format
+            const legacyMetrics: PowerLawMetrics = {
+              symbol: data.symbol,
+              tailExponent: data.tail?.alpha ?? 3.0,
+              tailConfidence: data.tail?.confidence ?? 0,
+              exceedanceProbability: data.exceedance?.prob ?? 0,
+              volatilityCluster: {
+                state: data.vol_cluster?.state ?? "unknown",
+                persistence: data.vol_cluster?.persistence ?? 0,
+                sigma: data.vol_cluster?.sigma ?? 0,
+              },
+              timestamp: data.window?.end_ts ?? Date.now(),
+            };
+            this.riskGuardian.updatePowerLawMetrics(legacyMetrics);
+
+            // Persist canonical metrics
             if (this.powerLawRepository) {
-              this.powerLawRepository.save(data).catch((err: any) => {
+              this.powerLawRepository.save(legacyMetrics).catch((err: any) => {
                 logger.error(
                   `Failed to persist PowerLaw metrics for ${data.symbol}:`,
                   err as any,
                 );
               });
             }
-            // RiskGuardian notifiers wired in index.ts
-            // or we can implement them here if needed to send alerts via NATS/Slack
+
+            // Correlation notifier (still relevant for multi-symbol)
             this.riskGuardian.setCorrelationNotifier({
               sendHighCorrelationWarning: async (
                 score: number,
@@ -1193,12 +1254,9 @@ export class TitanBrain
               ) => {
                 logger.warn(
                   `HIGH CORRELATION DETECTED: ${
-                    score.toFixed(
-                      2,
-                    )
+                    score.toFixed(2)
                   } > ${threshold} for positions: ${positions.join(", ")}`,
                 );
-                // We could also emit a NATS event here
                 const payload = JSON.stringify({
                   score,
                   threshold,
@@ -1219,7 +1277,7 @@ export class TitanBrain
           }
         },
       );
-      logger.info("✅ Subscribed to powerlaw.metrics.>");
+      logger.info(`✅ Subscribed to ${POWER_LAW_SUBJECTS.METRICS_V1_ALL}`);
     } catch (error: any) {
       logger.error("Failed to subscribe to PowerLaw metrics:", error);
     }

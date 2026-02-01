@@ -99,7 +99,7 @@ fn default_min_stop_distance() -> Decimal {
 }
 
 // Embed the canonical risk policy JSON at compile time
-const RISK_POLICY_JSON: &str = include_str!("../../../packages/shared/risk_policy.json");
+const RISK_POLICY_JSON: &str = include_str!("risk_policy.json");
 
 impl Default for RiskPolicy {
     fn default() -> Self {

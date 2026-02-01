@@ -1,0 +1,20 @@
+flowchart TD
+    Intent["Intent from Brain"] --> HMACVerify{"HMAC Valid?"}
+    HMACVerify -->|No| Reject1["REJECT: Unsigned"]
+    HMACVerify -->|Yes| PolicyHash{"Policy Hash Match?"}
+    PolicyHash -->|No| Reject2["REJECT: Stale Policy"]
+    PolicyHash -->|Yes| DefconCheck{"Defcon State?"}
+    DefconCheck -->|Emergency| Reject3["REJECT: System Halt"]
+    DefconCheck -->|Normal/Cautious| StalenessCheck{"Heartbeat Fresh?"}
+    StalenessCheck -->|Stale| Defensive["DEFENSIVE Mode"]
+    StalenessCheck -->|Fresh| WhitelistCheck{"Symbol Whitelisted?"}
+    WhitelistCheck -->|No| Reject4["REJECT: Symbol"]
+    WhitelistCheck -->|Yes| DailyLoss{"Daily Loss OK?"}
+    DailyLoss -->|Exceeded| Reject5["REJECT: Loss"]
+    DailyLoss -->|OK| Notional{"Position Notional OK?"}
+    Notional -->|Exceeded| Reject6["REJECT: Size"]
+    Notional -->|OK| Leverage{"Account Leverage OK?"}
+    Leverage -->|Exceeded| Reject7["REJECT: Leverage"]
+    Leverage -->|OK| PowerLaw{"PowerLaw OK?"}
+    PowerLaw -->|Violation| Reject8["REJECT: Constraint"]
+    PowerLaw -->|Pass| Execute["Execute Order"]

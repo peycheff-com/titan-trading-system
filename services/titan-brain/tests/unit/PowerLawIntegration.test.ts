@@ -274,8 +274,8 @@ describe("PowerLaw Integration", () => {
             expect(decision.approved).toBe(true);
         });
 
-        // SKIPPED: Business logic discrepancy - expanding volatility not triggering regime veto as expected
-        it.skip("should veto Phase 1 signals during expanding volatility", () => {
+        // P0 FIX: Un-skipped as per EvidencePack audit 2026-01-31
+        it("should veto Phase 1 signals during expanding volatility", () => {
             // Setup expanding volatility
             const metrics: PowerLawMetrics = {
                 symbol: "ETHUSDT",

@@ -194,6 +194,29 @@ export { SignalClient } from "./messaging/SignalClient.js";
 
 export { ExecutionClient } from "./messaging/ExecutionClient.js";
 
+// Policy Handshake (P0 Brain-Execution Verification)
+export {
+  POLICY_HASH_REQUEST_SUBJECT,
+  type PolicyHandshakeResult,
+  type PolicyHashResponse,
+  requestExecutionPolicyHash,
+  verifyExecutionPolicyHash,
+} from "./messaging/PolicyHandshake.js";
+
+// Power Law Configuration (Jan 2026 Audit Consolidation)
+export {
+  isPowerLawSymbol,
+  POWER_LAW_FALLBACK_SYMBOL,
+  POWER_LAW_SYMBOL_WHITELIST,
+  type PowerLawSymbol,
+} from "./config/powerlaw_symbols.js";
+
+export {
+  isStandardSubject,
+  POWER_LAW_SUBJECTS,
+  SUBJECT_MIGRATION_MAP,
+} from "./messaging/powerlaw_subjects.js";
+
 // Intent schema (NATS contract)
 export {
   createIntentMessage,
@@ -320,3 +343,54 @@ export {
   FeeTierSchema,
   getCanonicalFeeSchedule,
 } from "./schemas/FeeSchedule.js";
+
+// Canonical Power Law Metrics (Jan 2026)
+export {
+  type HealthStatus,
+  HealthStatusSchema,
+  type PowerLawMetricsLegacy,
+  PowerLawMetricsSchemaV1,
+  type PowerLawMetricsV1,
+  type TailMethod,
+  TailMethodSchema,
+  upgradeToV1,
+  type VolClusterState,
+  VolClusterStateSchema,
+} from "./schemas/PowerLawMetrics.js";
+
+// Execution Constraints (Jan 2026)
+export {
+  type CancelOnBurst,
+  CancelOnBurstSchema,
+  type ConstraintLimits,
+  ConstraintLimitsSchema,
+  type ConstraintOrigin,
+  ConstraintOriginSchema,
+  type ConstraintProvenance,
+  ConstraintProvenanceSchema,
+  ExecutionConstraintsSchemaV1,
+  type ExecutionConstraintsV1,
+  type ExecutionProfile,
+  ExecutionProfileSchema,
+  getDefensiveConstraints,
+  isConstraintValid,
+  type PolicyMode,
+  PolicyModeSchema,
+  type RiskMode,
+  RiskModeSchema,
+  type SlicingProfile,
+  SlicingProfileSchema,
+  type TifProfile,
+  TifProfileSchema,
+  type TifType,
+  TifTypeSchema,
+} from "./schemas/ExecutionConstraints.js";
+
+// Power Law Impact Events (Jan 2026)
+export {
+  createNoChangeImpact,
+  type ImpactAction,
+  ImpactActionSchema,
+  PowerLawImpactSchemaV1,
+  type PowerLawImpactV1,
+} from "./schemas/PowerLawImpact.js";

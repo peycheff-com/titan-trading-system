@@ -1,4 +1,5 @@
 pub mod api;
+pub mod armed_state;
 pub mod circuit_breaker;
 pub mod config;
 pub mod context;
@@ -6,6 +7,7 @@ pub mod contracts;
 pub mod drift_detector;
 pub mod engine;
 pub mod exchange;
+pub mod execution_constraints;
 pub mod exposure;
 pub mod impact_calculator;
 pub mod intent_validation;

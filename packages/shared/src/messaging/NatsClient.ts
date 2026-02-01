@@ -65,6 +65,14 @@ export enum TitanSubject {
   // --- SIGNAL FLOW (NEW 2026) ---
   // titan.signal.submit.v1 (Phases -> Brain)
   SIGNAL_SUBMIT = 'titan.signal.submit.v1',
+
+  // --- CANONICAL POWER LAW (JAN 2026) ---
+  // titan.signal.powerlaw.metrics.v1.{venue}.{symbol}.{tf}
+  SIGNAL_POWERLAW_METRICS = 'titan.signal.powerlaw.metrics.v1',
+  // titan.signal.execution.constraints.v1.{venue}.{account}.{symbol}
+  SIGNAL_EXECUTION_CONSTRAINTS = 'titan.signal.execution.constraints.v1',
+  // titan.evt.powerlaw.impact.v1.{venue}.{symbol}
+  EVT_POWERLAW_IMPACT = 'titan.evt.powerlaw.impact.v1',
 }
 
 export interface NatsConfig {
@@ -83,7 +91,7 @@ export class NatsClient extends EventEmitter {
   private sc = StringCodec();
   private static instance: NatsClient;
 
-  private readonly STREAM_PREFIXES = ['titan.cmd.', 'titan.evt.', 'titan.data.'];
+  private readonly STREAM_PREFIXES = ['titan.cmd.', 'titan.evt.', 'titan.data.', 'titan.signal.'];
 
   private constructor() {
     super();
@@ -171,6 +179,14 @@ export class NatsClient extends EventEmitter {
         storage: 'memory' as const,
         retention: 'limits' as const,
         max_age: 15 * 60 * 1000 * 1000 * 1000, // 15 Min
+      },
+      {
+        name: 'TITAN_SIGNAL',
+        subjects: ['titan.signal.>'],
+        storage: 'file' as const,
+        retention: 'limits' as const,
+        max_age: 24 * 60 * 60 * 1000 * 1000 * 1000, // 1 Day
+        max_bytes: 5 * 1024 * 1024 * 1024, // 5 GB
       },
     ];
 

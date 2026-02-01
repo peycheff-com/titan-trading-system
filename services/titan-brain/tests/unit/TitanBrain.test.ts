@@ -4,6 +4,25 @@
  * Requirements: 1.1, 1.7, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6
  */
 
+// Mock NATS client for tests that need it
+const mockNatsClient = {
+  isConnected: jest.fn().mockReturnValue(true),
+  connect: jest.fn().mockResolvedValue(undefined),
+  subscribe: jest.fn().mockReturnValue({ unsubscribe: jest.fn() }),
+  close: jest.fn().mockResolvedValue(undefined),
+  publish: jest.fn().mockResolvedValue(undefined),
+  publishEnvelope: jest.fn().mockResolvedValue(undefined),
+  request: jest.fn().mockResolvedValue({ data: {} }),
+};
+
+jest.mock("@titan/shared", () => {
+  const actual = jest.requireActual("@titan/shared");
+  return {
+    ...actual,
+    getNatsClient: jest.fn(() => mockNatsClient),
+  };
+});
+
 jest.mock("../../src/engine/ActiveInferenceEngine.js", () => ({
   ActiveInferenceEngine: jest.fn().mockImplementation(() => ({
     getCortisol: jest.fn().mockReturnValue(0),
@@ -142,6 +161,51 @@ const circuitBreakerConfig: CircuitBreakerConfig = {
   cooldownMinutes: 30,
 };
 
+// Complete TitanBrainConfig for testing
+import { TitanBrainConfig } from "../../src/types/config";
+
+const titanBrainConfig: TitanBrainConfig = {
+  brain: brainConfig,
+  allocationEngine: allocationConfig,
+  performanceTracker: performanceConfig,
+  riskGuardian: riskConfig,
+  capitalFlow: capitalFlowConfig,
+  circuitBreaker: circuitBreakerConfig,
+  reconciliation: {
+    intervalMs: 60000,
+    exchanges: ["bybit"],
+    autoResolve: false,
+  },
+  database: {
+    host: "localhost",
+    port: 5432,
+    database: "titan_test",
+    user: "test",
+    password: "test",
+  },
+  redis: {
+    url: "redis://localhost:6379",
+    maxRetries: 3,
+    retryDelay: 1000,
+  },
+  server: {
+    host: "0.0.0.0",
+    port: 3100,
+    corsOrigins: ["*"],
+  },
+  notifications: {
+    telegram: { enabled: false },
+    email: { enabled: false },
+  },
+  activeInference: activeInferenceConfig,
+  services: {},
+  leaderElection: {
+    enabled: false,
+    leaseDurationMs: 10000,
+    heartbeatIntervalMs: 3000,
+  },
+};
+
 // Helper to create TitanBrain instance
 function createTitanBrain(): TitanBrain {
   const allocationEngine = new AllocationEngine(allocationConfig);
@@ -178,7 +242,7 @@ function createTitanBrain(): TitanBrain {
   } as unknown as PositionManager;
 
   return new TitanBrain(
-    brainConfig,
+    titanBrainConfig,
     allocationEngine,
     performanceTracker,
     riskGuardian,
@@ -289,6 +353,7 @@ describe("TitanBrain", () => {
       const brain = createTitanBrain();
       brain.setEquity(1000);
       brain.setDailyStartEquity(1000);
+      brain.getStateManager().setArmed(true); // Arm system for signal processing
 
       const signal = createSignal("phase1", 100);
       const decision = await brain.processSignal(signal);
@@ -315,6 +380,7 @@ describe("TitanBrain", () => {
       const brain = createTitanBrain();
       brain.setEquity(1000);
       brain.setDailyStartEquity(1000);
+      brain.getStateManager().setArmed(true); // Arm system for signal processing
 
       // At $1000 equity, Phase 1 gets 100% allocation
       // Request more than equity
@@ -330,6 +396,7 @@ describe("TitanBrain", () => {
       const brain = createTitanBrain();
       brain.setEquity(1000);
       brain.setDailyStartEquity(1000);
+      brain.getStateManager().setArmed(true); // Arm system for signal processing
 
       const signal = createSignal("phase1", 100);
       const decision = await brain.processSignal(signal);
@@ -346,6 +413,7 @@ describe("TitanBrain", () => {
       const brain = createTitanBrain();
       brain.setEquity(1000);
       brain.setDailyStartEquity(1000);
+      brain.getStateManager().setArmed(true); // Arm system for signal processing
 
       const signal = createSignal("phase1", 100);
       const decision = await brain.processSignal(signal);
@@ -359,6 +427,7 @@ describe("TitanBrain", () => {
       const brain = createTitanBrain();
       brain.setEquity(1000);
       brain.setDailyStartEquity(1000);
+      brain.getStateManager().setArmed(true); // Arm system for signal processing
 
       const signal = createSignal("phase1", 100);
       const decision = await brain.processSignal(signal);
@@ -373,6 +442,7 @@ describe("TitanBrain", () => {
       const brain = createTitanBrain();
       brain.setEquity(50000); // High equity to enable all phases
       brain.setDailyStartEquity(50000);
+      brain.getStateManager().setArmed(true); // Arm system for signal processing
 
       const signals = [
         createSignal("phase1", 100, "BTCUSDT"),
@@ -537,6 +607,7 @@ describe("TitanBrain", () => {
       const brain = createTitanBrain();
       brain.setEquity(1000);
       brain.setDailyStartEquity(1000);
+      brain.getStateManager().setArmed(true); // Arm system for signal processing
 
       const mockEngine: ExecutionEngineClient = {
         forwardSignal: jest.fn(),
@@ -592,6 +663,7 @@ describe("TitanBrain", () => {
       const brain = createTitanBrain();
       brain.setEquity(1000);
       brain.setDailyStartEquity(1000);
+      brain.getStateManager().setArmed(true); // Arm system for signal processing
 
       await brain.processSignal(createSignal("phase1", 100));
       await brain.processSignal(createSignal("phase1", 100));

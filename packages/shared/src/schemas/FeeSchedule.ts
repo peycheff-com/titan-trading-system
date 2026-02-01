@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import { z } from "zod";
 
 /**
@@ -82,6 +83,72 @@ export const DEFAULT_FEE_SCHEDULE: FeeSchedule = {
     },
 };
 
+/**
+ * Venue-level fee overrides (P1)
+ * Allows account-specific fee agreements per venue
+ */
+export interface VenueFeeOverride {
+    venue: string;
+    makerFeeBps?: number;
+    takerFeeBps?: number;
+}
+
+/**
+ * Get the canonical fee schedule with computed hash
+ */
 export const getCanonicalFeeSchedule = (): FeeSchedule => {
     return DEFAULT_FEE_SCHEDULE;
+};
+
+/**
+ * Compute deterministic hash of fee schedule for simulation/audit parity
+ * Uses JSON.stringify with sorted keys for determinism
+ */
+export const computeFeeScheduleHash = (schedule: FeeSchedule): string => {
+    const canonical = JSON.stringify({
+        version: schedule.version,
+        exchanges: Object.keys(schedule.exchanges)
+            .sort()
+            .reduce((acc, key) => {
+                acc[key] = schedule.exchanges[key];
+                return acc;
+            }, {} as Record<string, ExchangeFeeConfig>),
+    });
+    return createHash("sha256").update(canonical).digest("hex");
+};
+
+/**
+ * Get fee schedule with venue-level overrides applied
+ * Overrides take precedence over default exchange fees
+ */
+export const getFeeScheduleWithOverrides = (
+    overrides: VenueFeeOverride[],
+): { schedule: FeeSchedule; hash: string } => {
+    const schedule = JSON.parse(
+        JSON.stringify(DEFAULT_FEE_SCHEDULE),
+    ) as FeeSchedule;
+
+    for (const override of overrides) {
+        const exchangeConfig = schedule.exchanges[override.venue];
+        if (exchangeConfig) {
+            if (override.makerFeeBps !== undefined) {
+                exchangeConfig.defaultMakerFeeBps = override.makerFeeBps;
+            }
+            if (override.takerFeeBps !== undefined) {
+                exchangeConfig.defaultTakerFeeBps = override.takerFeeBps;
+            }
+        }
+    }
+
+    return {
+        schedule,
+        hash: computeFeeScheduleHash(schedule),
+    };
+};
+
+/**
+ * Get current fee schedule hash for audit/simulation parity
+ */
+export const getCanonicalFeeScheduleHash = (): string => {
+    return computeFeeScheduleHash(DEFAULT_FEE_SCHEDULE);
 };

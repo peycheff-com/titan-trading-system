@@ -35,13 +35,28 @@ services:
   nats:
     image: nats:2.10.24-alpine
     container_name: titan-nats
-    command: ['-js', '-m', '8222']
-
-    # ... (startline is 36, so I will just replace the NATS block first)
-
+    # Use entrypoint script for secure password injection (no hardcoded secrets)
+    entrypoint: ['/entrypoint.sh']
+    volumes:
+      # JetStream on block storage (INV-02: durability)
+      - ${JETSTREAM_VOLUME_PATH:-titan-jetstream-data}:/data/jetstream
+      - ./config/nats.conf.template:/etc/nats/nats.conf.template:ro
+      - ./config/nats-entrypoint.sh:/entrypoint.sh:ro
+    environment:
+      # All passwords injected via env vars (P0 security fix)
+      - NATS_SYS_PASSWORD=${NATS_SYS_PASSWORD:?NATS_SYS_PASSWORD required}
+      - NATS_BRAIN_PASSWORD=${NATS_BRAIN_PASSWORD:?NATS_BRAIN_PASSWORD required}
+      - NATS_EXECUTION_PASSWORD=${NATS_EXECUTION_PASSWORD:?NATS_EXECUTION_PASSWORD required}
+      - NATS_SCAVENGER_PASSWORD=${NATS_SCAVENGER_PASSWORD:?NATS_SCAVENGER_PASSWORD required}
+      - NATS_HUNTER_PASSWORD=${NATS_HUNTER_PASSWORD:?NATS_HUNTER_PASSWORD required}
+      - NATS_SENTINEL_PASSWORD=${NATS_SENTINEL_PASSWORD:?NATS_SENTINEL_PASSWORD required}
+      - NATS_POWERLAW_PASSWORD=${NATS_POWERLAW_PASSWORD:?NATS_POWERLAW_PASSWORD required}
+      - NATS_QUANT_PASSWORD=${NATS_QUANT_PASSWORD:?NATS_QUANT_PASSWORD required}
+      - NATS_CONSOLE_PASSWORD=${NATS_CONSOLE_PASSWORD:?NATS_CONSOLE_PASSWORD required}
     ports:
-      - '4222:4222' # Client
-      - '8222:8222' # Monitoring
+      # VPC-only bind for production (INV-03: no public state ports)
+      - '${VPC_IP:-127.0.0.1}:4222:4222'
+      - '${VPC_IP:-127.0.0.1}:8222:8222'
     networks:
       - titan-network
     restart: unless-stopped

@@ -4,6 +4,7 @@ use serde_json::Value;
 use std::sync::Arc;
 use tracing::{error, info, warn};
 
+use crate::armed_state::ArmedState;
 use crate::circuit_breaker::GlobalHalt;
 use crate::context::ExecutionContext;
 use crate::drift_detector::DriftDetector;
@@ -17,6 +18,7 @@ use crate::pipeline::ExecutionPipeline;
 use crate::risk_guard::RiskGuard;
 use crate::shadow_state::{ExecutionEvent, ShadowState};
 use crate::simulation_engine::SimulationEngine;
+use crate::execution_constraints::{ConstraintsStore, ExecutionConstraints};
 
 /// Start the NATS Engine (Consumer Loop and Halt Listener)
 /// Returns a handle to the consumer task
@@ -28,10 +30,12 @@ pub async fn start_nats_engine(
     router: Arc<ExecutionRouter>,
     simulation_engine: Arc<SimulationEngine>,
     global_halt: Arc<GlobalHalt>,
+    armed_state: Arc<ArmedState>,
     risk_guard: Arc<RiskGuard>,
     ctx: Arc<ExecutionContext>,
     freshness_threshold: u64,
     drift_detector: Arc<DriftDetector>,
+    constraints_store: Arc<ConstraintsStore>,
 ) -> Result<tokio::task::JoinHandle<()>, Box<dyn std::error::Error + Send + Sync>> {
     // --- System Halt Listener (Core NATS) ---
     // ... (unchanged)
@@ -219,6 +223,37 @@ pub async fn start_nats_engine(
                         .await
                         .ok();
                 }
+            }
+        }
+    });
+
+    // --- Policy Hash Request Handler (Brain Handshake) ---
+    let mut policy_hash_sub = client
+        .subscribe("titan.req.exec.policy_hash.v1")
+        .await
+        .map_err(|e| {
+            error!("❌ Failed to subscribe to policy_hash request: {}", e);
+            e
+        })?;
+    let risk_guard_for_policy = risk_guard.clone();
+    let client_for_policy = client.clone();
+
+    tokio::spawn(async move {
+        info!("👂 Listening for policy hash requests...");
+        while let Some(msg) = policy_hash_sub.next().await {
+            if let Some(reply_to) = msg.reply {
+                let policy_hash = risk_guard_for_policy.get_current_policy_hash();
+                let response = serde_json::json!({
+                    "policy_hash": policy_hash,
+                    "timestamp": chrono::Utc::now().timestamp_millis()
+                });
+                if let Ok(payload) = serde_json::to_vec(&response) {
+                    client_for_policy
+                        .publish(reply_to, payload.into())
+                        .await
+                        .ok();
+                }
+                info!("✅ Responded to policy hash request with hash: {}", policy_hash);
             }
         }
     });
@@ -414,6 +449,37 @@ pub async fn start_nats_engine(
         }
     });
 
+    // --- Execution Constraints Listener (PowerLaw) ---
+    // Subject: titan.signal.execution.constraints.v1.{venue}.{account}.{symbol}
+    let mut constraints_sub = client
+        .subscribe("titan.signal.execution.constraints.v1.>")
+        .await
+        .map_err(|e| {
+            error!("❌ Failed to subscribe to execution constraints: {}", e);
+            e
+        })?;
+    let constraints_store_for_sub = constraints_store.clone();
+
+    tokio::spawn(async move {
+        info!("👂 Listening for execution constraints (PowerLaw)...");
+        while let Some(msg) = constraints_sub.next().await {
+            match serde_json::from_slice::<ExecutionConstraints>(&msg.payload) {
+                Ok(constraints) => {
+                    info!(
+                        symbol = %constraints.symbol,
+                        risk_mode = ?constraints.risk_mode,
+                        mode = ?constraints.mode,
+                        "RECV: Execution constraints update"
+                    );
+                    constraints_store_for_sub.update(constraints);
+                }
+                Err(e) => {
+                    error!("❌ Failed to parse execution constraints: {}", e);
+                }
+            }
+        }
+    });
+
     // --- JetStream Setup (Manifest 2.0) ---
     let jetstream = async_nats::jetstream::new(client.clone());
 
@@ -539,6 +605,39 @@ pub async fn start_nats_engine(
                                 continue;
                             }
 
+                            // --- ARMED CHECK (Physical Interlock) ---
+                            if !armed_state.is_armed() {
+                                warn!("⛔ Rejecting Intent (Execution DISARMED - physical interlock)");
+                                
+                                // Try to extract ID for telemetry (Best Effort)
+                                let intent_id: Option<String> = serde_json::from_slice::<serde_json::Value>(&msg.payload)
+                                    .ok()
+                                    .and_then(|v| {
+                                        // v is owned here. We must extract String before v is dropped.
+                                        let id_val = if let Some(p) = v.get("payload") {
+                                            p.get("signal_id").or(v.get("signal_id"))
+                                        } else {
+                                            v.get("signal_id")
+                                        };
+                                        id_val.and_then(|val| val.as_str().map(|s| s.to_string()))
+                                    });
+
+                                publish_rejection_event(
+                                    &client_clone,
+                                    "system_disarmed",
+                                    None,
+                                    None,
+                                    intent_id.as_deref(),
+                                    None,
+                                    &ctx_nats,
+                                ).await;
+
+                                if let Err(e) = msg.ack().await {
+                                     error!("Failed to ACK rejected intent: {}", e);
+                                }
+                                continue;
+                            }
+
                              // --- PROCESS MESSAGE ---
 
                             // DUAL READ STRATEGY: Try Generic Value first to detect Envelope
@@ -562,10 +661,24 @@ pub async fn start_nats_engine(
                                 let is_envelope = value.get("payload").is_some() && value.get("type").is_some();
                                 if is_envelope {
                                     if let Ok(envelope) = serde_json::from_value::<crate::contracts::IntentEnvelope>(value.clone()) {
-                                        // 2. Validate HMAC
-                                        // Use reusable validator
                                         if let Err(e) = hmac_validator.validate(&envelope, &value["payload"]) {
                                             error!("⛔ REJECTED Intent (Signature Verify Failed): {}", e);
+                                            
+                                            // Extract ID for telemetry
+                                            let intent_id = value.get("payload")
+                                                .and_then(|p| p.get("signal_id"))
+                                                .and_then(|v| v.as_str());
+
+                                            publish_rejection_event(
+                                                &client_clone,
+                                                "hmac_signature_mismatch",
+                                                None,
+                                                None,
+                                                intent_id,
+                                                None,
+                                                &ctx_nats,
+                                            ).await;
+
                                             // ACK to prevent retry loops of bad messages
                                             if let Err(e) = msg.ack().await { error!("Failed to ACK rejected intent: {}", e); }
                                             continue;
@@ -612,6 +725,16 @@ pub async fn start_nats_engine(
                                                 current_hash, hash
                                             );
                                             metrics::inc_invalid_intents();
+                                            // Publish rejection telemetry event (P0 item 7.4)
+                                            publish_rejection_event(
+                                                &client_clone,
+                                                "policy_hash_mismatch",
+                                                Some(&current_hash),
+                                                Some(hash),
+                                                Some(&intent.signal_id),
+                                                Some(&correlation_id),
+                                                &ctx_nats,
+                                            ).await;
                                             publish_dlq(
                                                 &client_clone,
                                                 &msg.payload,
@@ -950,5 +1073,34 @@ async fn publish_dlq(
             .await;
         let _ = client.publish("titan.execution.dlq", bytes.into()).await;
         metrics::inc_dlq_published();
+    }
+}
+
+/// Publish rejection telemetry event for observability and alerting
+/// Subject: titan.evt.exec.reject.v1
+async fn publish_rejection_event(
+    client: &async_nats::Client,
+    reason: &str,
+    expected_hash: Option<&str>,
+    got_hash: Option<&str>,
+    intent_id: Option<&str>,
+    brain_instance_id: Option<&str>,
+    ctx: &ExecutionContext,
+) {
+    let event_payload = serde_json::json!({
+        "reason": reason,
+        "expected_policy_hash": expected_hash.unwrap_or("N/A"),
+        "got_policy_hash": got_hash.unwrap_or("N/A"),
+        "intent_id": intent_id.unwrap_or("N/A"),
+        "brain_instance_id": brain_instance_id.unwrap_or("N/A"),
+        "timestamp": ctx.time.now_millis(),
+        "event_type": "execution.intent.rejected",
+    });
+
+    if let Ok(bytes) = serde_json::to_vec(&event_payload) {
+        let _ = client
+            .publish("titan.evt.exec.reject.v1", bytes.into())
+            .await;
+        metrics::inc_rejection_events();
     }
 }

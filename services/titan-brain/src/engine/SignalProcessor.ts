@@ -1,8 +1,4 @@
-import {
-  createIntentMessage,
-  getNatsClient,
-  TitanSubject,
-} from "@titan/shared";
+import { getNatsClient, TitanSubject } from "@titan/shared";
 import { canonicalRiskHash } from "../config/index.js";
 import { Subscription } from "nats";
 import { Logger } from "../logging/Logger.js";
@@ -258,25 +254,29 @@ export class SignalProcessor {
       child_fills: [],
     };
 
-    // Use shared factory to create signed envelope
-    const envelope = createIntentMessage(payload as any, "brain", signalId);
-
-    // 6. Publish to Execution
+    // 6. Publish to Execution (HMAC-signed via publishEnvelope)
     const symbolToken = symbol.replace("/", "_");
     const subject = `titan.cmd.exec.place.v1.auto.main.${symbolToken}`;
 
     this.logger.info(
-      `Approving Signal ${signalId} -> Publishing Envelope to ${subject} (Size: ${authorizedSize}, Hash: ${canonicalRiskHash})`,
+      `Approving Signal ${signalId} -> Publishing HMAC-signed Envelope to ${subject} (Size: ${authorizedSize}, Hash: ${canonicalRiskHash})`,
     );
 
     try {
-      await this.nats.publish(subject, envelope);
+      // Use publishEnvelope to ensure HMAC signing of payload (including policy_hash)
+      await this.nats.publishEnvelope(subject, payload, {
+        version: 1,
+        type: "titan.cmd.exec.place.v1",
+        producer: "brain",
+        correlation_id: signalId,
+        idempotency_key: signalId,
+      });
     } catch (error) {
       this.logger.error(
         `Failed to publish intent for ${signalId}`,
         error as Error,
       );
-      await this.publishToDLQ(envelope, (error as Error).message);
+      await this.publishToDLQ(payload, (error as Error).message);
       // Return approved but with error note? Or fail?
       // Since we couldn't execute, it's effectively a failure, but Brain "approved" it.
       // We'll return approved but maybe log the error.

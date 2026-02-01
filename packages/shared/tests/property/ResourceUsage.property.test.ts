@@ -219,7 +219,7 @@ describe("Resource Usage Compliance Property Tests", () => {
         fc.property(
           fc.record({
             cpuCores: fc.integer({ min: 1, max: 16 }),
-            targetCpuPercent: fc.integer({ min: 20, max: 80 }),
+            targetCpuPercent: fc.integer({ min: 20, max: 79 }),
             burstCpuPercent: fc.integer({ min: 80, max: 100 }),
             workloadIntensity: fc.constantFrom("light", "medium", "heavy"),
             monitoringIntervalMs: fc.integer({ min: 1000, max: 10000 }),

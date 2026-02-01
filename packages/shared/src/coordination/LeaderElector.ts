@@ -22,6 +22,8 @@ export class LeaderElector extends EventEmitter {
     private isLeaderState: boolean = false;
     private heartbeatTimer: NodeJS.Timeout | null = null;
     private running: boolean = false;
+    // P1: Monotonic leader_term (fencing token) - increments on each promotion
+    private leaderTerm: number = 0;
 
     constructor(
         private readonly config: LeaderElectorConfig,
@@ -37,6 +39,8 @@ export class LeaderElector extends EventEmitter {
 
         try {
             await this.initializeKv();
+            // P1: Subscribe to NATS connection status for hard demotion on disconnect
+            this.setupConnectionStatusHandler();
             await this.tryAcquireLease();
             this.startHeartbeatLoop();
         } catch (error) {
@@ -59,6 +63,35 @@ export class LeaderElector extends EventEmitter {
 
     public isLeader(): boolean {
         return this.isLeaderState;
+    }
+
+    /**
+     * P1: Get current leader term (fencing token)
+     * Use this to validate that messages are from the current leader epoch
+     */
+    public getLeaderTerm(): number {
+        return this.leaderTerm;
+    }
+
+    /**
+     * P1: Set up NATS connection status monitoring for hard demotion
+     */
+    private setupConnectionStatusHandler(): void {
+        // Check connection state periodically using isConnected()
+        const checkConnection = () => {
+            if (!this.running) return;
+            if (!this.natsClient.isConnected()) {
+                this.logger.error("🚨 NATS connection LOST - forcing DEMOTION");
+                this.demote();
+            }
+            if (this.running && this.isLeaderState) {
+                setTimeout(checkConnection, 1000); // Check every second while leader
+            }
+        };
+        // Start checking after initial delay
+        if (this.isLeaderState) {
+            setTimeout(checkConnection, 1000);
+        }
     }
 
     private async initializeKv(): Promise<void> {
@@ -178,7 +211,11 @@ export class LeaderElector extends EventEmitter {
     private promote() {
         if (this.isLeaderState) return;
         this.isLeaderState = true;
-        this.logger.info(`👑 Became LEADER (Node: ${this.config.nodeId})`);
+        // P1: Increment monotonic leader term (fencing token)
+        this.leaderTerm++;
+        this.logger.info(
+            `👑 Became LEADER (Node: ${this.config.nodeId}, Term: ${this.leaderTerm})`,
+        );
         this.emit("promoted");
     }
 
