@@ -259,7 +259,7 @@ jobs:
 
       - name: Start NATS
         run: |
-          docker run -d --name nats -p 4222:4222 nats:2.10.22-alpine -js -m 8222
+          docker run -d --name nats -p 4222:4222 -p 8222:8222 nats:2.10.22-alpine -js -m 8222
           echo "Waiting for NATS..."
           for i in {1..30}; do
             if wget --no-verbose --spider --tries=1 http://localhost:8222/varz; then

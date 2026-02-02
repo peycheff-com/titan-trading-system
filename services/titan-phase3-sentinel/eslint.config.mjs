@@ -1,6 +1,7 @@
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 import globals from "globals";
+import functional from "eslint-plugin-functional";
 
 export default tseslint.config(
   {
@@ -18,9 +19,14 @@ export default tseslint.config(
         tsconfigRootDir: import.meta.dirname,
       },
     },
+    plugins: {
+      functional,
+    },
     rules: {
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+      "functional/no-let": "warn",
+      "functional/immutable-data": ["warn", { ignoreAccessorPattern: ["**.current", "**.value"] }],
     },
   }
 );

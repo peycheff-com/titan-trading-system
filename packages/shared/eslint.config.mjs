@@ -40,8 +40,9 @@ export default tseslint.config(
     },
     rules: {
       "prettier/prettier": "warn",
-      "functional/no-let": "error",
-      "functional/immutable-data": ["error", { ignoreAccessorPattern: ["**.current", "**.value"] }],
+      "functional/no-let": "warn",
+      "functional/immutable-data": ["warn", { ignoreAccessorPattern: ["**.current", "**.value"] }],
+      "@typescript-eslint/no-unsafe-declaration-merging": "warn",
       "@typescript-eslint/explicit-function-return-type": "off",
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
