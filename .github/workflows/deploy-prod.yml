@@ -22,7 +22,7 @@ jobs:
   # Verify CI Pipeline passed before deploying
   ci-check:
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.skip_ci_check != 'true' }}
+    if: ${{ github.event.inputs.skip_ci_check != true }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
