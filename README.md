@@ -270,6 +270,25 @@ titan/
 └── monitoring/                # Prometheus/Grafana
 ```
 
+## Repo Hygiene
+
+This repository maintains Tier-1 production standards via automated enforcement:
+
+| Gate | Status | Description |
+|------|--------|-------------|
+| Dead Code (knip) | ✅ | Zero unused files enforced in CI |
+| Zombie Dependencies | ✅ | npm/cargo unused deps check |
+| Security Scan | ✅ | npm audit + cargo audit |
+| Contract Drift | ✅ | Schema validation gate |
+| Config Validation | ✅ | Runtime config verification |
+
+**Audit Reports:**
+- [Repo Hygiene Report](docs/repo-hygiene-report.md)
+- [Deletion Ledger](docs/deletion-ledger.md)
+- [Integration Verification](docs/integration-verification.md)
+
+*Last hygiene audit: 2026-02-02*
+
 ## License
 
 Proprietary software. All rights reserved.
