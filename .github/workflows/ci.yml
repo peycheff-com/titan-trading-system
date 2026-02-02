@@ -67,6 +67,16 @@ jobs:
       - name: Check Immutability Violations
         run: npm run sota:immutability -- --max-warnings=0
 
+      - name: Check Dead Code (knip)
+        run: |
+          UNUSED=$(npx knip --no-progress 2>&1 | grep -c "^Unused files" || true)
+          if npx knip --no-progress 2>&1 | grep -q "^Unused files"; then
+            echo "❌ Dead code detected! Run 'npx knip' locally to see details."
+            npx knip --no-progress 2>&1 | head -30
+            exit 1
+          fi
+          echo "✅ No unused files detected"
+
   # ===========================================================================
   # Security Vulnerability Scanning (P0-003)
   # ===========================================================================
