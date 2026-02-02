@@ -36,7 +36,7 @@ These are the **inviolable rules** governing the Titan system. Each invariant is
 | I-04  | Symbol whitelist is the sole source of tradeable pairs                                                          | `packages/shared/risk_policy.json` → `symbolWhitelist` field          |
 | I-05  | All phase services (Scavenger, Hunter, Sentinel) require Brain approval before execution                        | NATS ACLs in `config/nats.conf:26-97`                                 |
 | I-06  | Circuit breaker activation is final until operator ARM command with HMAC signature                              | `services/titan-execution-rs/src/nats_engine.rs:947`, `security.rs:130-184` |
-| I-07  | Execution engine only processes intents from `titan.cmd.execute.>` subjects                                     | `services/titan-execution-rs/src/nats_engine.rs:583-677`              |
+| I-07  | Execution engine only processes intents from `titan.cmd.execution.place.v1.>` subjects                          | `services/titan-execution-rs/src/nats_engine.rs:583-677`              |
 | I-08  | JetStream streams are authoritative for event persistence (`TITAN_COMMANDS`, `TITAN_EVENTS`, `TITAN_DATA`)      | `packages/shared/src/messaging/NatsClient.ts:174-207`                 |
 | I-09  | Envelope signatures require `ts`, `nonce`, and `sig` fields; missing any = rejection                            | `services/titan-execution-rs/src/security.rs:76-79`                   |
 | I-10  | Timestamp drift tolerance is 5 minutes (300,000ms) by default                                                   | `services/titan-execution-rs/src/security.rs:30-33`                   |
@@ -239,7 +239,7 @@ npm run start:prod  # Runs scripts/ops/start_production.sh
 
 | Subject Pattern                | Publisher(s)          | Subscriber(s)           | Type      | Payload Schema                |
 | ------------------------------ | --------------------- | ----------------------- | --------- | ----------------------------- |
-| `titan.cmd.execute.>`          | Brain                 | Execution               | Command   | `IntentEnvelope`              |
+| `titan.cmd.execution.place.v1.>`| Brain                 | Execution               | Command   | `IntentEnvelope`              |
 | `titan.evt.execution.fill.v1`  | Execution             | Brain, Console          | Event     | `FillEvent`                   |
 | `titan.evt.scavenger.signal.v1`| Scavenger             | Brain                   | Signal    | `PhaseDiagnostics`            |
 | `titan.evt.hunter.>`           | Hunter                | Brain                   | Signal    | `IntentSignal`                |
@@ -256,7 +256,7 @@ npm run start:prod  # Runs scripts/ops/start_production.sh
 | User        | Publish Permissions                                      | Subscribe Permissions                                   |
 | ----------- | -------------------------------------------------------- | ------------------------------------------------------- |
 | `brain`     | `>` (full)                                               | `>` (full)                                              |
-| `execution` | `titan.evt.execution.fill.v1`, `titan.evt.execution.>`, `titan.evt.>` | `titan.cmd.execution.>`, `titan.cmd.risk.>`, `titan.cmd.sys.halt.v1`|
+| `execution` | `titan.evt.execution.fill.v1`, `titan.evt.execution.>`, `titan.evt.phase.>` | `titan.cmd.execution.place.v1.>`, `titan.cmd.risk.>`, `titan.cmd.sys.halt.v1`|
 | `scavenger` | `titan.evt.scavenger.signal.v1`, `titan.evt.phase.>`     | `powerlaw.metrics.>`, `titan.evt.budget.update.v1`      |
 | `hunter`    | `titan.evt.hunter.>`, `titan.evt.phase.>`                | `titan.cmd.hunter.>`, `powerlaw.metrics.>`              |
 | `sentinel`  | `titan.evt.sentinel.>`, `titan.evt.phase.>`              | `titan.cmd.sentinel.>`, `powerlaw.metrics.>`            |
@@ -390,19 +390,19 @@ npm run start:prod  # Runs scripts/ops/start_production.sh
 
 | Channel Type      | Allowed                              | Forbidden                          |
 | ----------------- | ------------------------------------ | ---------------------------------- |
-| Trade Intent      | NATS `TITAN.CMD.EXECUTE.*`           | Direct HTTP to exchange from Brain |
-| Fill Events       | NATS `TITAN.EVT.FILL`                | Database writes from Execution     |
+| Trade Intent      | NATS `titan.cmd.execution.place.v1.>` | Direct HTTP to exchange from Brain |
+| Fill Events       | NATS `titan.evt.execution.fill.v1`   | Database writes from Execution     |
 | Risk Commands     | NATS `titan.cmd.risk.*`              | Direct gRPC/HTTP bypass            |
 
 ### 9.3 Order Lifecycle
 
 1. **Signal Generated** (Phase 1/2/3) → Published to `titan.evt.*`
 2. **Brain Approval** → Validates against policy, allocations
-3. **Command Published** → `TITAN.CMD.EXECUTE.{venue}.{account}.{symbol}`
+3. **Command Published** → `titan.cmd.execution.place.v1.{venue}.{account}.{symbol}`
 4. **HMAC Validated** (Execution) → `security.rs:64-128`
 5. **Risk Guard Check** → `risk_guard.rs:130-198`
 6. **Order Submitted** → Exchange adapter
-7. **Fill Received** → Published to `TITAN.EVT.FILL`
+7. **Fill Received** → Published to `titan.evt.execution.fill.v1`
 8. **Brain Records** → Fills table + event log
 
 ### 9.4 Idempotency Rules
@@ -717,6 +717,22 @@ npm run validate:config
 # 4. Verify NATS ACLs
 grep -c "user:" config/nats.conf  # Should return 8 users
 ```
+
+### 10.6 Reconciliation & Truth Convergence
+
+> [!IMPORTANT]
+> **Production Standard**: Truth is not just "Event Emitted", it is "Exchange Acknowledged and Verified".
+
+The system implements a rigorous **Reconciliation Loop** to survive WebSocket disconnects and state drift:
+
+1.  **Scheduled Reconcile**: Every 1 minute, Brain queries the Exchange REST API for open orders and positions.
+2.  **Snapshot Digest**: Brain creates a `PositionSnapshot` containing the authoritative state.
+3.  **Drift Detection**:
+    - If `Brain State` != `Exchange State`, it enters **Truth Degrade Mode**.
+    - **Action**: All Risk limits are frozen (no new risk).
+    - **Self-Healing**: Brain emits synthetic checks or alerts operator if manual intervention is needed.
+4.  **Hard Proof Test**:
+    - The system MUST demonstrate convergence without manual cleanup after a simulated 5-minute network partition during active trading.
 
 ---
 

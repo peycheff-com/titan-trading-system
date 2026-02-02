@@ -1,0 +1,4 @@
+{
+"titan-brain": "ghcr.io/peycheff-com/titan-trading-system/titan-brain:2cab26f8394621c4f8847de46128593825dc8993",
+"titan-execution-rs": "ghcr.io/peycheff-com/titan-trading-system/titan-execution-rs:2cab26f8394621c4f8847de46128593825dc8993"
+}
