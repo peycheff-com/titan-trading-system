@@ -1,5 +1,3 @@
-import * as numeric from 'numeric';
-
 export interface TailEstimate {
   alpha: number;
   confidence: number;

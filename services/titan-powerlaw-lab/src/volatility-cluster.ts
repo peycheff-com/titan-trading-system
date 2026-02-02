@@ -1,6 +1,4 @@
-import * as numeric from 'numeric';
-
-export type VolClusterState = 'expanding' | 'mean_revert' | 'quiet';
+export type VolClusterState = "expanding" | "mean_revert" | "quiet";
 
 export interface VolatilityState {
   state: VolClusterState;
@@ -15,7 +13,7 @@ export class VolatilityClusterDetector {
    */
   getState(returns: number[], lookback: number = 100): VolatilityState {
     if (returns.length < lookback) {
-      return { state: 'quiet', persistence: 0, sigma: 0 };
+      return { state: "quiet", persistence: 0, sigma: 0 };
     }
 
     // Take recent window
@@ -27,7 +25,7 @@ export class VolatilityClusterDetector {
     const sigma = Math.sqrt(variance);
 
     if (sigma === 0) {
-      return { state: 'quiet', persistence: 0, sigma: 0 };
+      return { state: "quiet", persistence: 0, sigma: 0 };
     }
 
     // Autocorrelation of squared returns (Volatility Clustering check)
@@ -37,15 +35,15 @@ export class VolatilityClusterDetector {
     // Average persistence of lags 1-3
     const avgPersistence = (acf[1] + acf[2] + acf[3]) / 3;
 
-    let state: VolClusterState = 'mean_revert';
+    let state: VolClusterState = "mean_revert";
 
     // Heuristics tuned for crypto
     if (avgPersistence > 0.4) {
-      state = 'expanding';
+      state = "expanding";
     } else if (avgPersistence > 0.1) {
-      state = 'quiet';
+      state = "quiet";
     } else {
-      state = 'mean_revert';
+      state = "mean_revert";
     }
 
     return {
@@ -64,7 +62,8 @@ export class VolatilityClusterDetector {
     if (n < 2) return new Array(lags).fill(0);
 
     const mean = this.mean(data);
-    const variance = data.reduce((sum, x) => sum + Math.pow(x - mean, 2), 0) / n;
+    const variance = data.reduce((sum, x) => sum + Math.pow(x - mean, 2), 0) /
+      n;
 
     if (variance === 0) return new Array(lags).fill(0);
 
