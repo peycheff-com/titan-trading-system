@@ -11,9 +11,10 @@
 | Compiled artifacts (scripts/) | 12 | ~350 |
 | Compiled artifacts (tests/) | 12 | ~360 |
 | Unused brain modules | 14 | ~2100 |
+| Hunter console (broken ink TUI) | 9 | ~4500 |
 | Empty directory | 1 | - |
 | Unused dependencies | 12 | - |
-| **Total** | **~58** | **~3000** |
+| **Total** | **~67** | **~7500** |
 
 ---
 
