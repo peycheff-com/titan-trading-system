@@ -174,6 +174,16 @@ services/*/src/**/*.js
 services/*/src/**/*.js.map
 services/*/src/**/*.d.ts
 services/*/src/**/*.d.ts.map
+
+# Compiled scripts and tests (TypeScript -> JS)
+scripts/**/*.js
+scripts/**/*.js.map
+scripts/**/*.d.ts
+scripts/**/*.d.ts.map
+tests/**/*.js
+tests/**/*.js.map
+tests/**/*.d.ts
+tests/**/*.d.ts.map
 deploy-package.tar.gz
 .turbo/
 .turbo/
