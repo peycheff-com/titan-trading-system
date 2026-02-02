@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Titan Phase 1 - Scavenger (Predestination Engine): Trap-based trading system for account building from $200 to $5,000",
   "main": "dist/index.js",
+  "type": "module",
   "scripts": {
     "build": "tsc",
     "build:all": "npm run build",
