@@ -68,38 +68,30 @@ fi
 log "Containers are up."
 
 # 3. Health Endpoints
-if [ -n "$TITAN_SIMULATION" ]; then
-    log "Simulation: Skipping health endpoints."
-else
-    # Check critical infrastructure first
-    check_url "http://localhost:8222/healthz" "NATS" || exit 1
-    check_url "http://localhost:3100/health" "Titan Brain" || exit 1
-    check_url "http://localhost:3002/health" "Titan Execution" || exit 1
-fi
+# Check critical infrastructure first
+check_url "http://localhost:8222/healthz" "NATS" || exit 1
+check_url "http://localhost:3100/health" "Titan Brain" || exit 1
+check_url "http://localhost:3002/health" "Titan Execution" || exit 1
 # Check phase services if enabled/present
-if [ -n "$TITAN_SIMULATION" ]; then
-    log "Simulation: Skipping operational checks."
-else
-    # We default to warning if they fail, unless strict mode is on. For now, strict.
-    check_url "http://localhost:8081/health" "Scavenger" || log "WARN: Scavenger health check failed"
-    check_url "http://localhost:8083/health" "Hunter" || log "WARN: Hunter health check failed"
+# We default to warning if they fail, unless strict mode is on. For now, strict.
+check_url "http://localhost:8081/health" "Scavenger" || log "WARN: Scavenger health check failed"
+check_url "http://localhost:8083/health" "Hunter" || log "WARN: Hunter health check failed"
 
-    # 4. Policy Hash Parity (P0 Invariant)
-    log "Verifying Policy Hash Parity..."
-    # We expect Brain to log "Policy hash handshake OK" or similar on startup.
-    # We grep the last 500 lines of logs.
-    if docker compose -f "$COMPOSE_FILE" -f "$OVERRIDE_FILE" logs --tail=500 titan-brain | grep -q "Policy hash handshake OK"; then
-        log "SUCCESS: Policy hash handshake confirmed."
-    elif docker compose -f "$COMPOSE_FILE" -f "$OVERRIDE_FILE" logs --tail=500 titan-brain | grep -q "Leader Election DISABLED"; then
-        log "INFO: Output indicates Leader Election Disabled / Standalone Mode. Assuming valid."
-    else
-        # Check for failure
-        if docker compose -f "$COMPOSE_FILE" -f "$OVERRIDE_FILE" logs --tail=500 titan-brain | grep -q "Policy hash handshake FAILED"; then
-            log "CRITICAL: Policy hash handshake FAILED. Immediate Rollback Required."
-            exit 1
-        fi
-        log "WARN: No explicit handshake confirmation found in logs, but no failure either. Proceeding with caution."
+# 4. Policy Hash Parity (P0 Invariant)
+log "Verifying Policy Hash Parity..."
+# We expect Brain to log "Policy hash handshake OK" or similar on startup.
+# We grep the last 500 lines of logs.
+if docker compose -f "$COMPOSE_FILE" -f "$OVERRIDE_FILE" logs --tail=500 titan-brain | grep -q "Policy hash handshake OK"; then
+    log "SUCCESS: Policy hash handshake confirmed."
+elif docker compose -f "$COMPOSE_FILE" -f "$OVERRIDE_FILE" logs --tail=500 titan-brain | grep -q "Leader Election DISABLED"; then
+    log "INFO: Output indicates Leader Election Disabled / Standalone Mode. Assuming valid."
+else
+    # Check for failure
+    if docker compose -f "$COMPOSE_FILE" -f "$OVERRIDE_FILE" logs --tail=500 titan-brain | grep -q "Policy hash handshake FAILED"; then
+        log "CRITICAL: Policy hash handshake FAILED. Immediate Rollback Required."
+        exit 1
     fi
+    log "WARN: No explicit handshake confirmation found in logs, but no failure either. Proceeding with caution."
 fi
 
 # 5. Digest Verification (Runtime)
