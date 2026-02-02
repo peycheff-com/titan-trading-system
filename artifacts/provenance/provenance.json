@@ -5,13 +5,13 @@
       "source": {
         "uri": "https://github.com/peycheff-com/titan-trading-system.git",
         "digest": {
-          "sha1": "2623e7c8c06a66d3fa34cdd167a7bded5bd8a36d"
+          "sha1": "930cc3a45592debe40b3e1ff4d3493c8ce8c8b14"
         }
       },
       "configSource": {
         "uri": "https://github.com/peycheff-com/titan-trading-system.git",
         "digest": {
-          "sha1": "2623e7c8c06a66d3fa34cdd167a7bded5bd8a36d"
+          "sha1": "930cc3a45592debe40b3e1ff4d3493c8ce8c8b14"
         },
         "entryPoint": "turbo run build"
       }
@@ -28,9 +28,9 @@
       "version": "1.0.0"
     },
     "metadata": {
-      "invocationId": "fd1cb1fe-9ef1-43d1-9d97-a50de1f2a592",
-      "startedOn": "2026-02-02T14:53:33.458Z",
-      "finishedOn": "2026-02-02T14:53:33.473Z"
+      "invocationId": "795250c9-59f7-4e5d-9fc4-9a5d85e95722",
+      "startedOn": "2026-02-02T14:54:48.490Z",
+      "finishedOn": "2026-02-02T14:54:48.506Z"
     },
     "byproducts": [
       {
