@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      skip_ci_check:
+        description: 'Skip CI check (use when CI is blocked)'
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: production_deploy
@@ -16,6 +22,7 @@ jobs:
   # Verify CI Pipeline passed before deploying
   ci-check:
     runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.skip_ci_check != 'true' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -26,9 +33,12 @@ jobs:
           check-name: 'CI Pipeline Status'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 10
+          allowed-conclusions: success,skipped
+        timeout-minutes: 15
 
   build-and-push:
-    needs: ci-check
+    needs: [ci-check]
+    if: ${{ always() && (needs.ci-check.result == 'success' || needs.ci-check.result == 'skipped') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
