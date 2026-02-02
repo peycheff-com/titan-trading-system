@@ -16,23 +16,23 @@
  * Requirements: All requirements (Integration)
  */
 
-import * as http from 'http';
-import { config } from 'dotenv';
-import { ConfigManager } from './config/ConfigManager';
-import { HologramEngine } from './engine/HologramEngine';
+import * as http from "http";
+import { config } from "dotenv";
+import { ConfigManager } from "./config/ConfigManager";
+import { HologramEngine } from "./engine/HologramEngine";
 
-import { HologramScanner } from './engine/HologramScanner';
-import { SessionProfiler } from './engine/SessionProfiler';
-import { InefficiencyMapper } from './engine/InefficiencyMapper';
-import { CVDValidator } from './engine/CVDValidator';
-import { InstitutionalFlowClassifier } from './flow/InstitutionalFlowClassifier';
-import { BybitPerpsClient } from './exchanges/BybitPerpsClient';
-import { BinanceSpotClient } from './exchanges/BinanceSpotClient';
-import { startHunterApp } from './console/HunterApp';
-import { hunterEvents } from './events';
-import { POI, SignalData } from './types';
-import { HunterStateManager } from './state/HunterState';
-import { getLogger, logError } from './logging/Logger';
+import { HologramScanner } from "./engine/HologramScanner";
+import { SessionProfiler } from "./engine/SessionProfiler";
+import { InefficiencyMapper } from "./engine/InefficiencyMapper";
+import { CVDValidator } from "./engine/CVDValidator";
+import { InstitutionalFlowClassifier } from "./flow/InstitutionalFlowClassifier";
+import { BybitPerpsClient } from "./exchanges/BybitPerpsClient";
+import { BinanceSpotClient } from "./exchanges/BinanceSpotClient";
+// Console components loaded dynamically only in non-headless mode
+import { hunterEvents } from "./events";
+import { POI, SignalData } from "./types";
+import { HunterStateManager } from "./state/HunterState";
+import { getLogger, logError } from "./logging/Logger";
 /* eslint-disable functional/immutable-data, functional/no-let, @typescript-eslint/no-explicit-any */
 import {
   getNatsClient,
@@ -42,7 +42,7 @@ import {
   type PhasePosture,
   SignalClient,
   TitanSubject,
-} from '@titan/shared';
+} from "@titan/shared";
 
 // Load environment variables
 config();
@@ -79,7 +79,8 @@ class HunterApplication {
 
   constructor() {
     // Check for headless mode
-    const headlessMode = process.env.HEADLESS_MODE === 'true' || process.env.LOG_FORMAT === 'json';
+    const headlessMode = process.env.HEADLESS_MODE === "true" ||
+      process.env.LOG_FORMAT === "json";
 
     this.stateManager = new HunterStateManager(headlessMode);
     this.configManager = new ConfigManager();
@@ -90,7 +91,10 @@ class HunterApplication {
 
     // Initialize core engines
     this.institutionalFlowClassifier = new InstitutionalFlowClassifier();
-    this.hologramEngine = new HologramEngine(this.bybitClient, this.institutionalFlowClassifier);
+    this.hologramEngine = new HologramEngine(
+      this.bybitClient,
+      this.institutionalFlowClassifier,
+    );
 
     this.hologramScanner = new HologramScanner(this.bybitClient);
     this.sessionProfiler = new SessionProfiler();
@@ -99,14 +103,18 @@ class HunterApplication {
 
     // Initialize IPC client for execution (Now SignalClient)
     this.signalClient = new SignalClient({
-      source: 'hunter',
+      source: "hunter",
     });
 
     // CRITICAL: Handle SignalClient error events to prevent Node.js crash
-    this.signalClient.on('error', (error: Error) => {
-      this.logEvent('WARN', `⚠️ [SignalClient] Client error (non-fatal): ${error.message}`, {
-        error: error.message,
-      });
+    this.signalClient.on("error", (error: Error) => {
+      this.logEvent(
+        "WARN",
+        `⚠️ [SignalClient] Client error (non-fatal): ${error.message}`,
+        {
+          error: error.message,
+        },
+      );
     });
 
     this.setupEventListeners();
@@ -116,9 +124,9 @@ class HunterApplication {
    * Helper to log events to console or JSON depending on mode
    */
   private logEvent(
-    level: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG' | 'CRITICAL',
+    level: "INFO" | "WARN" | "ERROR" | "DEBUG" | "CRITICAL",
     message: string,
-    data?: any
+    data?: any,
   ): void {
     if (this.stateManager.headlessMode) {
       console.log(
@@ -127,19 +135,19 @@ class HunterApplication {
           level,
           message,
           ...data,
-        })
+        }),
       );
     } else {
       // In interactive mode, use console methods with formatting
       switch (level) {
-        case 'ERROR':
-        case 'CRITICAL':
+        case "ERROR":
+        case "CRITICAL":
           console.error(message);
           break;
-        case 'WARN':
+        case "WARN":
           console.warn(message);
           break;
-        case 'DEBUG':
+        case "DEBUG":
           console.debug(message);
           break;
         default:
@@ -153,127 +161,129 @@ class HunterApplication {
    */
   private setupEventListeners(): void {
     // Listen to our centralized event system
-    hunterEvents.onEvent('HOLOGRAM_UPDATED', payload => {
+    hunterEvents.onEvent("HOLOGRAM_UPDATED", (payload) => {
       this.logEvent(
-        'INFO',
+        "INFO",
         `🔍 Hologram updated for ${payload.symbol}: ${payload.hologramState.status}`,
-        payload
+        payload,
       );
     });
 
-    hunterEvents.onEvent('SESSION_CHANGE', payload => {
+    hunterEvents.onEvent("SESSION_CHANGE", (payload) => {
       this.stateManager.updateSession(payload.currentSession);
       this.logEvent(
-        'INFO',
+        "INFO",
         `⏰ Session changed from ${payload.previousSession.type} to ${payload.currentSession.type}`,
-        payload
+        payload,
       );
     });
 
-    hunterEvents.onEvent('CVD_ABSORPTION', payload => {
+    hunterEvents.onEvent("CVD_ABSORPTION", (payload) => {
       this.logEvent(
-        'INFO',
+        "INFO",
         `📈 CVD Absorption detected for ${payload.symbol} at ${payload.absorption.price}`,
-        payload
+        payload,
       );
     });
 
-    hunterEvents.onEvent('CVD_DISTRIBUTION', payload => {
+    hunterEvents.onEvent("CVD_DISTRIBUTION", (payload) => {
       this.logEvent(
-        'INFO',
+        "INFO",
         `📉 CVD Distribution detected for ${payload.symbol} at ${payload.distribution.price}`,
-        payload
+        payload,
       );
     });
 
-    hunterEvents.onEvent('SIGNAL_GENERATED', async payload => {
+    hunterEvents.onEvent("SIGNAL_GENERATED", async (payload) => {
       this.logEvent(
-        'INFO',
+        "INFO",
         `🎯 Signal generated: ${payload.signal.direction} ${payload.signal.symbol} at ${payload.signal.entryPrice}`,
-        payload
+        payload,
       );
 
       // Forward signal to execution engine via IPC
       await this.forwardSignalToExecution(payload.signal);
     });
 
-    hunterEvents.onEvent('EXECUTION_COMPLETE', payload => {
-      const status = payload.success ? '✅' : '❌';
+    hunterEvents.onEvent("EXECUTION_COMPLETE", (payload) => {
+      const status = payload.success ? "✅" : "❌";
       this.logEvent(
-        'INFO',
+        "INFO",
         `${status} Execution complete: ${payload.execution.side} ${payload.execution.symbol} at ${payload.execution.fillPrice}`,
-        payload
+        payload,
       );
     });
 
-    hunterEvents.onEvent('ERROR', payload => {
+    hunterEvents.onEvent("ERROR", (payload) => {
       const severityIcon: Record<string, string> = {
-        LOW: '⚠️',
-        MEDIUM: '🟡',
-        HIGH: '🟠',
-        CRITICAL: '🔴',
+        LOW: "⚠️",
+        MEDIUM: "🟡",
+        HIGH: "🟠",
+        CRITICAL: "🔴",
       };
 
-      const icon = severityIcon[payload.severity] || '🔴';
+      const icon = severityIcon[payload.severity] || "🔴";
 
       this.logEvent(
-        'ERROR',
+        "ERROR",
         `${severityIcon} Error in ${payload.component}: ${payload.error.message}`,
         {
           severity: payload.severity,
           component: payload.component,
           stack: payload.error.stack,
-        }
+        },
       );
 
       // Log to structured logger
       this.logger.logError(
-        payload.severity === 'CRITICAL'
-          ? 'CRITICAL'
-          : payload.severity === 'HIGH'
-            ? 'ERROR'
-            : 'WARNING',
+        payload.severity === "CRITICAL"
+          ? "CRITICAL"
+          : payload.severity === "HIGH"
+          ? "ERROR"
+          : "WARNING",
         payload.error.message,
         {
           component: payload.component,
           stack: payload.error.stack,
           data: payload,
-        }
+        },
       );
     });
 
-    hunterEvents.onEvent('SCAN_COMPLETE', payload => {
+    hunterEvents.onEvent("SCAN_COMPLETE", (payload) => {
       this.logEvent(
-        'INFO',
+        "INFO",
         `🔍 Scan complete: ${payload.symbolsScanned} symbols, ${payload.aPlus} A+, ${payload.bAlignment} B, ${payload.duration}ms`,
-        payload
+        payload,
       );
     });
 
-    hunterEvents.onEvent('JUDAS_SWING_DETECTED', payload => {
+    hunterEvents.onEvent("JUDAS_SWING_DETECTED", (payload) => {
       this.logEvent(
-        'INFO',
+        "INFO",
         `🎣 Judas Swing detected: ${payload.judasSwing.type} during ${payload.sessionType} session`,
-        payload
+        payload,
       );
     });
 
-    hunterEvents.onEvent('POI_DETECTED', payload => {
+    hunterEvents.onEvent("POI_DETECTED", (payload) => {
       this.logEvent(
-        'INFO',
-        `🎯 POI detected: ${payload.poiType} for ${payload.symbol} at ${payload.price} (${payload.distance.toFixed(
-          2
-        )}% away)`,
-        payload
+        "INFO",
+        `🎯 POI detected: ${payload.poiType} for ${payload.symbol} at ${payload.price} (${
+          payload.distance.toFixed(
+            2,
+          )
+        }% away)`,
+        payload,
       );
     });
 
-    hunterEvents.onEvent('RISK_WARNING', payload => {
-      const severityIcon = payload.severity === 'CRITICAL' ? '🚨' : '⚠️';
+    hunterEvents.onEvent("RISK_WARNING", (payload) => {
+      const severityIcon = payload.severity === "CRITICAL" ? "🚨" : "⚠️";
       this.logEvent(
-        'WARN',
+        "WARN",
         `${severityIcon} Risk Warning: ${payload.message} (${payload.value}/${payload.threshold})`,
-        payload
+        payload,
       );
     });
   }
@@ -282,51 +292,68 @@ class HunterApplication {
    * Initialize all components
    */
   private async initializeComponents(): Promise<void> {
-    this.logEvent('INFO', '🔧 Initializing components...');
+    this.logEvent("INFO", "🔧 Initializing components...");
 
     try {
       // Initialize exchange clients
-      this.logEvent('INFO', '📡 Initializing exchange clients...');
+      this.logEvent("INFO", "📡 Initializing exchange clients...");
       await this.bybitClient.initialize();
       await this.binanceClient.initialize();
 
       // Initialize IPC connection to execution engine
-      this.logEvent('INFO', '🔗 Connecting to execution engine via NATS... VERIFIED UPDATE');
-      console.log('DEBUG: Env Check', {
+      this.logEvent(
+        "INFO",
+        "🔗 Connecting to execution engine via NATS... VERIFIED UPDATE",
+      );
+      console.log("DEBUG: Env Check", {
         USER: process.env.NATS_USER,
-        PASS: process.env.NATS_PASS ? 'YES' : 'NO',
+        PASS: process.env.NATS_PASS ? "YES" : "NO",
         URL: process.env.NATS_URL,
       });
       try {
         await this.signalClient.connect();
-        this.logEvent('INFO', '✅ SignalClient connection established');
+        this.logEvent("INFO", "✅ SignalClient connection established");
       } catch (error) {
-        this.logEvent('WARN', '⚠️ SignalClient connection failed, signals will be logged only:', {
-          error: (error as Error).message,
-        });
+        this.logEvent(
+          "WARN",
+          "⚠️ SignalClient connection failed, signals will be logged only:",
+          {
+            error: (error as Error).message,
+          },
+        );
       }
 
       // Initialize NATS subscription for market regime
-      this.logEvent('INFO', '🔗 Subscribing to Market Regime updates...');
+      this.logEvent("INFO", "🔗 Subscribing to Market Regime updates...");
       const nats = getNatsClient();
       if (!nats.isConnected()) {
         await nats.connect();
       }
-      nats.subscribe('titan.ai.regime.update', (data: any) => {
+      nats.subscribe("titan.ai.regime.update", (data: any) => {
         // Dual Read Strategy
-        const payload = data && typeof data === 'object' && 'payload' in data ? data.payload : data;
+        const payload = data && typeof data === "object" && "payload" in data
+          ? data.payload
+          : data;
 
-        this.logEvent('INFO', `🧠 Market Regime Update: ${payload.regime} (α=${payload.alpha})`);
+        this.logEvent(
+          "INFO",
+          `🧠 Market Regime Update: ${payload.regime} (α=${payload.alpha})`,
+        );
         this.hologramEngine.updateMarketRegime(payload.regime, payload.alpha);
       });
 
       // Initialize NATS subscription for Budget updates
-      this.logEvent('INFO', '🔗 Subscribing to Budget updates...');
-      nats.subscribe('titan.ai.budget.update', (data: any) => {
-        const payload = data && typeof data === 'object' && 'payload' in data ? data.payload : data;
+      this.logEvent("INFO", "🔗 Subscribing to Budget updates...");
+      nats.subscribe("titan.ai.budget.update", (data: any) => {
+        const payload = data && typeof data === "object" && "payload" in data
+          ? data.payload
+          : data;
 
-        if (payload.phaseId === 'phase2' && payload.allocatedEquity) {
-          this.logEvent('INFO', `💰 Budget Updated: $${payload.allocatedEquity.toFixed(2)}`);
+        if (payload.phaseId === "phase2" && payload.allocatedEquity) {
+          this.logEvent(
+            "INFO",
+            `💰 Budget Updated: $${payload.allocatedEquity.toFixed(2)}`,
+          );
           // Dynamic Sizing: Set base position size to 10% of allocated equity
           // This ensures we scale with the budget provided by the Brain
           const newBaseSize = payload.allocatedEquity * 0.1;
@@ -337,14 +364,14 @@ class HunterApplication {
       // Start configuration watching
       // await this.configManager.startWatching(); - Deprecated
       await this.configManager.initialize();
-      console.log('✅ Configuration initialized and validated');
+      console.log("✅ Configuration initialized and validated");
 
-      this.logEvent('INFO', '✅ All components initialized successfully');
+      this.logEvent("INFO", "✅ All components initialized successfully");
     } catch (error) {
-      this.logEvent('ERROR', '❌ Failed to initialize components:', { error });
-      this.logger.logError('CRITICAL', 'Failed to initialize components', {
-        component: 'HunterApplication',
-        function: 'initializeComponents',
+      this.logEvent("ERROR", "❌ Failed to initialize components:", { error });
+      this.logger.logError("CRITICAL", "Failed to initialize components", {
+        component: "HunterApplication",
+        function: "initializeComponents",
         stack: (error as Error).stack,
       });
       throw error;
@@ -356,19 +383,22 @@ class HunterApplication {
    * Requirements: 9.1-9.7 (Hologram Scanning Engine)
    */
   private startHologramScanCycle(): void {
-    this.logEvent('INFO', '🔍 Starting hologram scan cycle (5-minute interval)...');
+    this.logEvent(
+      "INFO",
+      "🔍 Starting hologram scan cycle (5-minute interval)...",
+    );
 
     // Run initial scan
     this.runHologramScan();
 
     // Setup recurring scan
     this.stateManager.setTimer(
-      'hologramScan',
+      "hologramScan",
       setInterval(() => {
         if (!this.stateManager.isPaused) {
           this.runHologramScan();
         }
-      }, this.HOLOGRAM_SCAN_INTERVAL)
+      }, this.HOLOGRAM_SCAN_INTERVAL),
     );
   }
 
@@ -377,7 +407,7 @@ class HunterApplication {
    */
   private async runHologramScan(): Promise<void> {
     try {
-      this.logEvent('INFO', '🔍 Running hologram scan...');
+      this.logEvent("INFO", "🔍 Running hologram scan...");
       const startTime = Date.now();
       const result = await this.hologramScanner.scan();
       const duration = Date.now() - startTime;
@@ -387,20 +417,26 @@ class HunterApplication {
 
       // Count alignment types
       // Mapping: A+ -> A+, A -> A (new), B -> B, C -> C (new), VETO -> VETO (was CONFLICT/NO_PLAY)
-      const aPlus = result.top20.filter(h => h.status === 'A+').length;
-      const b = result.top20.filter(h => h.status === 'B').length;
-      const conflicts = result.top20.filter(h => h.status === 'VETO').length;
+      const aPlus = result.top20.filter((h) => h.status === "A+").length;
+      const b = result.top20.filter((h) => h.status === "B").length;
+      const conflicts = result.top20.filter((h) => h.status === "VETO").length;
 
       // Emit scan complete event
-      hunterEvents.emitScanComplete(result.top20.length, aPlus, b, conflicts, duration);
+      hunterEvents.emitScanComplete(
+        result.top20.length,
+        aPlus,
+        b,
+        conflicts,
+        duration,
+      );
     } catch (error) {
-      this.logEvent('ERROR', '❌ Hologram scan failed:', { error });
-      this.logger.logError('ERROR', 'Hologram scan failed', {
-        component: 'HologramScanner',
-        function: 'runHologramScan',
+      this.logEvent("ERROR", "❌ Hologram scan failed:", { error });
+      this.logger.logError("ERROR", "Hologram scan failed", {
+        component: "HologramScanner",
+        function: "runHologramScan",
         stack: (error as Error).stack,
       });
-      hunterEvents.emitError('HologramScanner', error as Error, 'HIGH');
+      hunterEvents.emitError("HologramScanner", error as Error, "HIGH");
     }
   }
 
@@ -409,19 +445,19 @@ class HunterApplication {
    * Requirements: 2.1-2.7 (Session Profiler)
    */
   private startSessionMonitoring(): void {
-    this.logEvent('INFO', '⏰ Starting session monitoring (real-time)...');
+    this.logEvent("INFO", "⏰ Starting session monitoring (real-time)...");
 
     // Run initial session check
     this.updateSessionState();
 
     // Setup real-time monitoring
     this.stateManager.setTimer(
-      'sessionMonitor',
+      "sessionMonitor",
       setInterval(() => {
         if (!this.stateManager.isPaused) {
           this.updateSessionState();
         }
-      }, this.SESSION_MONITOR_INTERVAL)
+      }, this.SESSION_MONITOR_INTERVAL),
     );
   }
 
@@ -447,19 +483,22 @@ class HunterApplication {
    * Requirements: 3.1-3.7 (Inefficiency Mapper), 10.1-10.7 (Liquidity Pool Detection)
    */
   private startPOIDetectionCycle(): void {
-    this.logEvent('INFO', '🎯 Starting POI detection cycle (1-minute interval)...');
+    this.logEvent(
+      "INFO",
+      "🎯 Starting POI detection cycle (1-minute interval)...",
+    );
 
     // Run initial POI detection
     this.runPOIDetection();
 
     // Setup recurring detection
     this.stateManager.setTimer(
-      'poiDetection',
+      "poiDetection",
       setInterval(() => {
         if (!this.stateManager.isPaused) {
           this.runPOIDetection();
         }
-      }, this.POI_DETECTION_INTERVAL)
+      }, this.POI_DETECTION_INTERVAL),
     );
   }
 
@@ -472,7 +511,7 @@ class HunterApplication {
         return; // No symbols to analyze
       }
 
-      this.logEvent('INFO', '🎯 Running POI detection...');
+      this.logEvent("INFO", "🎯 Running POI detection...");
       const newPOIs: POI[] = [];
 
       // Analyze top 5 symbols for POIs
@@ -481,43 +520,62 @@ class HunterApplication {
       for (const hologram of topSymbols) {
         try {
           // Fetch recent candles for POI detection
-          const candles = await this.bybitClient.fetchOHLCV(hologram.symbol, '15m', 100);
+          const candles = await this.bybitClient.fetchOHLCV(
+            hologram.symbol,
+            "15m",
+            100,
+          );
 
           // Detect FVGs
           const fvgs = this.inefficiencyMapper.detectFVG(candles);
           newPOIs.push(...fvgs);
 
           // Detect Order Blocks
-          const orderBlocks = this.inefficiencyMapper.detectOrderBlock(candles, hologram.m15.bos);
+          const orderBlocks = this.inefficiencyMapper.detectOrderBlock(
+            candles,
+            hologram.m15.bos,
+          );
           newPOIs.push(...orderBlocks);
 
           // Detect Liquidity Pools
           const liquidityPools = this.inefficiencyMapper.detectLiquidityPools(
             candles,
-            hologram.m15.fractals
+            hologram.m15.fractals,
           );
           newPOIs.push(...liquidityPools);
         } catch (error) {
-          this.logEvent('ERROR', `❌ POI detection failed for ${hologram.symbol}:`, { error });
-          this.logger.logError('WARNING', `POI detection failed for ${hologram.symbol}`, {
-            symbol: hologram.symbol,
-            component: 'InefficiencyMapper',
-            function: 'runPOIDetection',
-            stack: (error as Error).stack,
-          });
+          this.logEvent(
+            "ERROR",
+            `❌ POI detection failed for ${hologram.symbol}:`,
+            { error },
+          );
+          this.logger.logError(
+            "WARNING",
+            `POI detection failed for ${hologram.symbol}`,
+            {
+              symbol: hologram.symbol,
+              component: "InefficiencyMapper",
+              function: "runPOIDetection",
+              stack: (error as Error).stack,
+            },
+          );
         }
       }
 
       // Update active POIs
       this.stateManager.updatePOIs(newPOIs);
-      this.logEvent('INFO', `🎯 POI detection complete: ${newPOIs.length} active POIs`, {
-        count: newPOIs.length,
-      });
+      this.logEvent(
+        "INFO",
+        `🎯 POI detection complete: ${newPOIs.length} active POIs`,
+        {
+          count: newPOIs.length,
+        },
+      );
     } catch (error) {
-      this.logEvent('ERROR', '❌ POI detection cycle failed:', { error });
-      this.logger.logError('ERROR', 'POI detection cycle failed', {
-        component: 'InefficiencyMapper',
-        function: 'runPOIDetection',
+      this.logEvent("ERROR", "❌ POI detection cycle failed:", { error });
+      this.logger.logError("ERROR", "POI detection cycle failed", {
+        component: "InefficiencyMapper",
+        function: "runPOIDetection",
         stack: (error as Error).stack,
       });
     }
@@ -528,13 +586,16 @@ class HunterApplication {
    * Requirements: 4.1-4.7 (Order Flow X-Ray)
    */
   private startCVDMonitoring(): void {
-    this.logEvent('INFO', '📊 Starting CVD monitoring (real-time WebSocket)...');
+    this.logEvent(
+      "INFO",
+      "📊 Starting CVD monitoring (real-time WebSocket)...",
+    );
 
     // Subscribe to trade streams for top symbols
     this.updateCVDSubscriptions();
 
     // Update subscriptions when holograms change
-    hunterEvents.onEvent('SCAN_COMPLETE', () => {
+    hunterEvents.onEvent("SCAN_COMPLETE", () => {
       this.updateCVDSubscriptions();
     });
   }
@@ -551,7 +612,7 @@ class HunterApplication {
     const topSymbols = this.stateManager.currentHolograms.slice(0, 5);
 
     // Prepare batch subscriptions
-    const subscriptions = topSymbols.map(hologram => ({
+    const subscriptions = topSymbols.map((hologram) => ({
       symbol: hologram.symbol,
       callback: (trade: any) => {
         // Record trade for CVD calculation
@@ -581,19 +642,22 @@ class HunterApplication {
   private setupKeyboardHandling(): void {
     // Disable keyboard hooks in headless mode
     if (this.stateManager.headlessMode) {
-      this.logEvent('INFO', '⌨️ Headless mode active: Keyboard interaction disabled');
+      this.logEvent(
+        "INFO",
+        "⌨️ Headless mode active: Keyboard interaction disabled",
+      );
       return;
     }
 
-    this.logEvent('INFO', '⌨️ Setting up keyboard handling...');
+    this.logEvent("INFO", "⌨️ Setting up keyboard handling...");
 
     // Enable raw mode for immediate key capture
     if (process.stdin.isTTY) {
       process.stdin.setRawMode(true);
       process.stdin.resume();
-      process.stdin.setEncoding('utf8');
+      process.stdin.setEncoding("utf8");
 
-      process.stdin.on('data', (key: string) => {
+      process.stdin.on("data", (key: string) => {
         this.handleKeyPress(key);
       });
     }
@@ -604,24 +668,24 @@ class HunterApplication {
    */
   private handleKeyPress(key: string): void {
     switch (key) {
-      case '\u0003': // Ctrl+C
-      case 'q':
-      case 'Q':
-        this.logEvent('INFO', '👋 Shutting down Hunter...');
+      case "\u0003": // Ctrl+C
+      case "q":
+      case "Q":
+        this.logEvent("INFO", "👋 Shutting down Hunter...");
         this.shutdown();
         break;
 
-      case '\u001b[11~': // F1
-        this.logEvent('INFO', '⚙️ Opening configuration panel...');
+      case "\u001b[11~": // F1
+        this.logEvent("INFO", "⚙️ Opening configuration panel...");
         // Emit config panel request (would be handled by UI)
         break;
 
-      case '\u001b[12~': // F2
-        this.logEvent('INFO', '👁️ Toggling view mode...');
+      case "\u001b[12~": // F2
+        this.logEvent("INFO", "👁️ Toggling view mode...");
         // Emit view toggle request (would be handled by UI)
         break;
 
-      case ' ': // Space
+      case " ": // Space
         this.togglePause();
         break;
 
@@ -636,8 +700,8 @@ class HunterApplication {
    */
   private togglePause(): void {
     const isPaused = this.stateManager.togglePause();
-    const status = isPaused ? 'PAUSED' : 'RUNNING';
-    this.logEvent('INFO', `⏸️ Hunter ${status}`);
+    const status = isPaused ? "PAUSED" : "RUNNING";
+    this.logEvent("INFO", `⏸️ Hunter ${status}`);
     // Pause state change would be handled by UI components listening to events
   }
 
@@ -646,15 +710,15 @@ class HunterApplication {
    */
   public async start(): Promise<void> {
     if (this.stateManager.isRunning) {
-      throw new Error('Hunter is already running');
+      throw new Error("Hunter is already running");
     }
 
-    this.logEvent('INFO', '🎯 Titan Phase 2 - The Hunter');
-    this.logEvent('INFO', '📊 Holographic Market Structure Engine');
-    this.logEvent('INFO', '💰 Capital Range: $2,500 → $50,000');
-    this.logEvent('INFO', '⚡ Leverage: 3-5x');
-    this.logEvent('INFO', '🎯 Target: 3:1 R:R (1.5% stop, 4.5% target)');
-    this.logEvent('INFO', '📈 Win Rate: 55-65%');
+    this.logEvent("INFO", "🎯 Titan Phase 2 - The Hunter");
+    this.logEvent("INFO", "📊 Holographic Market Structure Engine");
+    this.logEvent("INFO", "💰 Capital Range: $2,500 → $50,000");
+    this.logEvent("INFO", "⚡ Leverage: 3-5x");
+    this.logEvent("INFO", "🎯 Target: 3:1 R:R (1.5% stop, 4.5% target)");
+    this.logEvent("INFO", "📈 Win Rate: 55-65%");
 
     try {
       // Initialize all components
@@ -675,24 +739,24 @@ class HunterApplication {
       // Mark as running
       this.stateManager.setRunning(true);
 
-      this.logEvent('INFO', '🚀 Hunter started successfully!');
+      this.logEvent("INFO", "🚀 Hunter started successfully!");
 
       if (!this.stateManager.headlessMode) {
-        console.log('');
-        console.log('Keyboard Controls:');
-        console.log('[F1] CONFIG  [F2] VIEW  [SPACE] PAUSE  [Q] QUIT');
-        console.log('');
+        console.log("");
+        console.log("Keyboard Controls:");
+        console.log("[F1] CONFIG  [F2] VIEW  [SPACE] PAUSE  [Q] QUIT");
+        console.log("");
 
         // Start the Hunter HUD dashboard
         this.renderHunterHUD();
       } else {
-        this.logEvent('INFO', 'Running in HEADLESS MODE. HUD disabled.');
+        this.logEvent("INFO", "Running in HEADLESS MODE. HUD disabled.");
       }
     } catch (error) {
-      this.logEvent('ERROR', '❌ Failed to start Hunter:', { error });
-      this.logger.logError('CRITICAL', 'Failed to start Hunter', {
-        component: 'HunterApplication',
-        function: 'start',
+      this.logEvent("ERROR", "❌ Failed to start Hunter:", { error });
+      this.logger.logError("CRITICAL", "Failed to start Hunter", {
+        component: "HunterApplication",
+        function: "start",
         stack: (error as Error).stack,
       });
       throw error;
@@ -706,13 +770,15 @@ class HunterApplication {
   private async forwardSignalToExecution(signal: SignalData): Promise<void> {
     // Use SignalClient (NATS) instead of Webhook for lower latency and Brain mediation
     try {
-      const signalId = `hunter-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      const signalId = `hunter-${Date.now()}-${
+        Math.random().toString(36).substring(7)
+      }`;
 
       const intentSignal: IntentSignal = {
         signal_id: signalId,
-        source: 'hunter',
+        source: "hunter",
         symbol: signal.symbol,
-        direction: signal.direction as 'LONG' | 'SHORT',
+        direction: signal.direction as "LONG" | "SHORT",
         entry_zone: {
           min: signal.entryPrice * 0.999,
           max: signal.entryPrice * 1.001,
@@ -724,9 +790,13 @@ class HunterApplication {
         timestamp: Date.now(),
       };
 
-      this.logEvent('INFO', `📤 Sending Signal to Brain via NATS: ${signal.symbol}`, {
-        signalId,
-      });
+      this.logEvent(
+        "INFO",
+        `📤 Sending Signal to Brain via NATS: ${signal.symbol}`,
+        {
+          signalId,
+        },
+      );
 
       // Fire and Forget (Optimistic) or Wait for Brain Confirmation?
       // Brain will publish to EXEC subject, preventing double-execution requires Brain idemp check.
@@ -736,12 +806,18 @@ class HunterApplication {
       const confirmResponse = await this.signalClient.sendConfirm(signalId);
 
       if (confirmResponse.executed) {
-        this.logEvent('INFO', `✅ Signal submitted to Brain: ${signalId}`);
+        this.logEvent("INFO", `✅ Signal submitted to Brain: ${signalId}`);
       } else {
-        this.logEvent('ERROR', `❌ Signal submission failed: ${confirmResponse.reason}`);
+        this.logEvent(
+          "ERROR",
+          `❌ Signal submission failed: ${confirmResponse.reason}`,
+        );
       }
     } catch (error) {
-      this.logEvent('ERROR', `❌ Signal submission error: ${(error as Error).message}`);
+      this.logEvent(
+        "ERROR",
+        `❌ Signal submission error: ${(error as Error).message}`,
+      );
     }
   }
 
@@ -749,12 +825,12 @@ class HunterApplication {
    * Start state broadcast cycle
    */
   private startStateBroadcast(): void {
-    this.logEvent('INFO', '📡 Starting state broadcast cycle...');
+    this.logEvent("INFO", "📡 Starting state broadcast cycle...");
     this.stateManager.setTimer(
-      'stateBroadcast',
+      "stateBroadcast",
       setInterval(() => {
         this.broadcastState();
-      }, 5000)
+      }, 5000),
     );
   }
 
@@ -764,13 +840,13 @@ class HunterApplication {
 
     // Posture
     const posturePayload: PhasePosture = {
-      phase: 'hunter',
-      status: this.stateManager.isPaused ? 'PAUSED' : 'RUNNING',
-      regime: 'HOLOGRAPHIC',
+      phase: "hunter",
+      status: this.stateManager.isPaused ? "PAUSED" : "RUNNING",
+      regime: "HOLOGRAPHIC",
       metrics: {
         activeHolograms: this.stateManager.currentHolograms.length,
         activePOIs: this.stateManager.activePOIs.length,
-        session: this.stateManager.currentSession?.type || 'UNKNOWN',
+        session: this.stateManager.currentSession?.type || "UNKNOWN",
       },
       timestamp: Date.now(),
     };
@@ -779,8 +855,8 @@ class HunterApplication {
     // Diagnostics
     const memUsage = process.memoryUsage();
     const diagnosticsPayload: PhaseDiagnostics = {
-      phase: 'hunter',
-      health: 'HEALTHY',
+      phase: "hunter",
+      health: "HEALTHY",
       alerts: [],
       system: {
         memory: {
@@ -794,20 +870,28 @@ class HunterApplication {
       },
       timestamp: Date.now(),
     };
-    nats.publish(`${TitanSubject.EVT_PHASE_DIAGNOSTICS}.hunter`, diagnosticsPayload);
+    nats.publish(
+      `${TitanSubject.EVT_PHASE_DIAGNOSTICS}.hunter`,
+      diagnosticsPayload,
+    );
   }
 
   /**
    * Render Hunter HUD dashboard
    * Requirements: 8.1-8.7 (Hunter HUD)
    */
-  private renderHunterHUD(): void {
+  private async renderHunterHUD(): Promise<void> {
     if (this.stateManager.headlessMode) return;
 
-    console.log('🖥️ Rendering Hunter HUD dashboard...');
+    console.log("🖥️ Rendering Hunter HUD dashboard...");
 
-    // Start the React-based Hunter Application
-    startHunterApp();
+    // Dynamically load console components (ink/react) only when not headless
+    try {
+      const { startHunterApp } = await import("./console/HunterApp");
+      startHunterApp();
+    } catch (error) {
+      console.warn("⚠️ Failed to load console UI:", (error as Error).message);
+    }
   }
 
   /**
@@ -817,14 +901,14 @@ class HunterApplication {
     const port = 8083;
 
     const server = http.createServer((req: any, res: any) => {
-      if (req.url === '/health') {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
+      if (req.url === "/health") {
+        res.writeHead(200, { "Content-Type": "application/json" });
         res.end(
           JSON.stringify({
-            status: 'healthy',
+            status: "healthy",
             timestamp: new Date().toISOString(),
             uptime: process.uptime(),
-          })
+          }),
         );
       } else {
         res.writeHead(404);
@@ -832,8 +916,8 @@ class HunterApplication {
       }
     });
 
-    server.listen(port, '0.0.0.0', () => {
-      this.logEvent('INFO', `🏥 Health check server listening on port ${port}`);
+    server.listen(port, "0.0.0.0", () => {
+      this.logEvent("INFO", `🏥 Health check server listening on port ${port}`);
     });
   }
 
@@ -845,7 +929,7 @@ class HunterApplication {
       return;
     }
 
-    this.logEvent('INFO', '🛑 Shutting down Hunter...');
+    this.logEvent("INFO", "🛑 Shutting down Hunter...");
 
     try {
       // Clear all intervals
@@ -861,13 +945,13 @@ class HunterApplication {
       // Mark as stopped
       this.stateManager.setRunning(false);
 
-      this.logEvent('INFO', '✅ Hunter shutdown complete');
+      this.logEvent("INFO", "✅ Hunter shutdown complete");
       process.exit(0);
     } catch (error) {
-      this.logEvent('ERROR', '❌ Error during shutdown:', { error });
-      this.logger.logError('ERROR', 'Error during shutdown', {
-        component: 'HunterApplication',
-        function: 'shutdown',
+      this.logEvent("ERROR", "❌ Error during shutdown:", { error });
+      this.logger.logError("ERROR", "Error during shutdown", {
+        component: "HunterApplication",
+        function: "shutdown",
         stack: (error as Error).stack,
       });
       process.exit(1);
@@ -903,10 +987,10 @@ async function main(): Promise<void> {
     hunterApp = new HunterApplication();
     await hunterApp.start();
   } catch (error) {
-    console.error('❌ Failed to start Hunter:', error);
-    logError('CRITICAL', 'Failed to start Hunter in main', {
-      component: 'main',
-      function: 'main',
+    console.error("❌ Failed to start Hunter:", error);
+    logError("CRITICAL", "Failed to start Hunter in main", {
+      component: "main",
+      function: "main",
       stack: (error as Error).stack,
     });
     process.exit(1);
@@ -914,10 +998,10 @@ async function main(): Promise<void> {
 }
 
 // Handle uncaught exceptions
-process.on('uncaughtException', (error: Error) => {
-  console.error('❌ Uncaught Exception:', error);
-  logError('CRITICAL', 'Uncaught Exception', {
-    component: 'process',
+process.on("uncaughtException", (error: Error) => {
+  console.error("❌ Uncaught Exception:", error);
+  logError("CRITICAL", "Uncaught Exception", {
+    component: "process",
     stack: error.stack,
   });
   if (hunterApp) {
@@ -927,10 +1011,10 @@ process.on('uncaughtException', (error: Error) => {
   }
 });
 
-process.on('unhandledRejection', (reason: unknown) => {
-  console.error('❌ Unhandled Rejection:', reason);
-  logError('CRITICAL', 'Unhandled Rejection', {
-    component: 'process',
+process.on("unhandledRejection", (reason: unknown) => {
+  console.error("❌ Unhandled Rejection:", reason);
+  logError("CRITICAL", "Unhandled Rejection", {
+    component: "process",
     data: reason,
   });
   if (hunterApp) {
@@ -941,8 +1025,8 @@ process.on('unhandledRejection', (reason: unknown) => {
 });
 
 // Handle graceful shutdown
-process.on('SIGINT', () => {
-  console.log('\n🛑 Received SIGINT, shutting down gracefully...');
+process.on("SIGINT", () => {
+  console.log("\n🛑 Received SIGINT, shutting down gracefully...");
   if (hunterApp) {
     hunterApp.shutdown();
   } else {
@@ -950,8 +1034,8 @@ process.on('SIGINT', () => {
   }
 });
 
-process.on('SIGTERM', () => {
-  console.log('\n🛑 Received SIGTERM, shutting down gracefully...');
+process.on("SIGTERM", () => {
+  console.log("\n🛑 Received SIGTERM, shutting down gracefully...");
   if (hunterApp) {
     hunterApp.shutdown();
   } else {
