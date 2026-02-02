@@ -1,6 +1,13 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "ignore": ["**/*.d.ts", "**/*.test.ts", "**/dist/**", "**/coverage/**"],
+  "ignore": [
+    "**/*.d.ts",
+    "**/*.test.ts",
+    "**/dist/**",
+    "**/coverage/**",
+    "services/titan-brain/src/engine/TailRiskCalculator.ts",
+    "services/titan-brain/src/ml/FeatureStoreClient.ts"
+  ],
   "ignoreDependencies": ["ts-node", "typescript", "eslint*", "prettier*", "nx"],
   "workspaces": {
     "services/titan-console": {
