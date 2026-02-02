@@ -886,8 +886,15 @@ class HunterApplication {
     console.log("🖥️ Rendering Hunter HUD dashboard...");
 
     // Dynamically load console components (ink/react) only when not headless
+    // Use eval-based import to completely bypass TypeScript module resolution
+    // This allows the console components (which use ink/react) to be omitted from production builds
     try {
-      const { startHunterApp } = await import("./console/HunterApp");
+      // eslint-disable-next-line @typescript-eslint/no-implied-eval
+      const dynamicImport = new Function(
+        "specifier",
+        "return import(specifier)",
+      ) as (specifier: string) => Promise<{ startHunterApp: () => void }>;
+      const { startHunterApp } = await dynamicImport("./console/HunterApp.js");
       startHunterApp();
     } catch (error) {
       console.warn("⚠️ Failed to load console UI:", (error as Error).message);
