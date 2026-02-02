@@ -79,7 +79,7 @@ describe("AccountingService Reconciliation", () => {
         } as unknown as FillReport);
 
         expect(mockNats.publish).toHaveBeenCalledWith(
-            "titan.alert.drift",
+            "titan.evt.alert.drift.v1",
             expect.objectContaining({
                 type: "PRICE_DRIFT",
                 signalId,
@@ -110,7 +110,7 @@ describe("AccountingService Reconciliation", () => {
         } as unknown as FillReport);
 
         expect(mockNats.publish).toHaveBeenCalledWith(
-            "titan.alert.latency",
+            "titan.evt.alert.latency.v1",
             expect.objectContaining({
                 type: "HIGH_LATENCY",
                 signalId,

@@ -29,6 +29,48 @@ jest.mock("@titan/shared", () => ({
         EVT_PHASE_DIAGNOSTICS: "titan.evt.phase.diagnostics",
         CMD_AI_OPTIMIZE_PROPOSAL: "titan.cmd.ai.optimize.proposal",
     },
+    TITAN_SUBJECTS: {
+        CMD: {
+            SYS: {
+                HALT: "titan.cmd.sys.halt.v1",
+            },
+            EXECUTION: {
+                PLACE: (venue: string, account: string, symbol: string) =>
+                    `titan.cmd.execution.place.v1.${venue}.${account}.${symbol}`,
+                PREFIX: "titan.cmd.execution.place.v1",
+                ALL: "titan.cmd.execution.place.v1.>",
+            },
+            RISK: {
+                POLICY: "titan.cmd.risk.policy.v1",
+                FLATTEN: "titan.cmd.risk.flatten",
+                CONTROL: "titan.cmd.risk.control.v1",
+            },
+            AI: {
+                OPTIMIZE: "titan.cmd.ai.optimize.v1",
+            },
+        },
+        EVT: {
+            EXECUTION: {
+                FILL: "titan.evt.execution.fill.v1",
+                REPORT: "titan.evt.exec.report.v1",
+            },
+        },
+        DLQ: {
+            BRAIN: "titan.dlq.brain.processing",
+            EXECUTION: "titan.dlq.execution.core",
+        },
+        SYS: {
+            RPC: {
+                GET_POSITIONS: (venue: string) =>
+                    `titan.execution.get_positions.${venue}`,
+                GET_BALANCES: (venue: string) =>
+                    `titan.execution.get_balances.${venue}`,
+            },
+        },
+        LEGACY: {
+            DLQ_EXECUTION_V0: "titan.execution.dlq",
+        },
+    },
 }));
 
 jest.mock("../../src/monitoring/index.js", () => ({
@@ -195,7 +237,7 @@ describe("NatsConsumer", () => {
 
         it("should subscribe to system halt commands", () => {
             expect(mockNatsClient.subscribe).toHaveBeenCalledWith(
-                "titan.cmd.sys.halt",
+                "titan.cmd.sys.halt.v1",
                 expect.any(Function),
                 "BRAIN_SYS_CONTROL",
             );

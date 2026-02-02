@@ -19,6 +19,19 @@ jest.mock("@titan/shared", () => ({
     }),
     createIntentMessage: (p: any) => p,
     TitanSubject: { SIGNAL_SUBMIT: "titan.signal.submit.v1" },
+    TITAN_SUBJECTS: {
+        CMD: {
+            EXECUTION: {
+                PLACE: (venue: string, account: string, symbol: string) =>
+                    `titan.cmd.execution.place.v1.${venue}.${account}.${symbol}`,
+                PREFIX: "titan.cmd.execution.place.v1",
+                ALL: "titan.cmd.execution.place.v1.>",
+            },
+        },
+        DLQ: {
+            BRAIN: "titan.dlq.brain.processing",
+        },
+    },
     getCanonicalRiskPolicy: () => ({ policy: {}, hash: "mock-hash" }),
     Logger: class {
         constructor(config: any) {}

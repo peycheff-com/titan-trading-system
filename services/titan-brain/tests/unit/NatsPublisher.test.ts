@@ -22,6 +22,32 @@ jest.mock("@titan/shared", () => ({
     TitanSubject: {
         AI_OPTIMIZATION_REQUESTS: "titan.ai.optimize.requests",
     },
+    TITAN_SUBJECTS: {
+        CMD: {
+            EXECUTION: {
+                PLACE: (venue: string, account: string, symbol: string) =>
+                    `titan.cmd.execution.place.v1.${venue}.${account}.${symbol}`,
+                PREFIX: "titan.cmd.execution.place.v1",
+                ALL: "titan.cmd.execution.place.v1.>",
+            },
+            RISK: {
+                POLICY: "titan.cmd.risk.policy.v1",
+                FLATTEN: "titan.cmd.risk.flatten",
+                CONTROL: "titan.cmd.risk.control.v1",
+            },
+            AI: {
+                OPTIMIZE: "titan.cmd.ai.optimize.v1",
+                OPTIMIZE_PROPOSAL: "titan.cmd.ai.optimize.proposal.v1",
+            },
+            SYS: {
+                HALT: "titan.cmd.sys.halt.v1",
+            },
+        },
+        DLQ: {
+            BRAIN: "titan.dlq.brain.processing",
+            EXECUTION: "titan.dlq.execution.core",
+        },
+    },
 }));
 
 // Mock monitoring/logger
@@ -108,10 +134,10 @@ describe("NatsPublisher", () => {
             await publisher.triggerAIOptimization(request);
 
             expect(mockNatsClient.publishEnvelope).toHaveBeenCalledWith(
-                "titan.ai.optimize.requests",
+                "titan.cmd.ai.optimize.v1",
                 request,
                 expect.objectContaining({
-                    type: "titan.control.ai.optimize.v1",
+                    type: "titan.cmd.ai.optimize.v1",
                     version: 1,
                     producer: "titan-brain",
                 }),
@@ -166,16 +192,16 @@ describe("NatsPublisher", () => {
             await publisher.publishRiskCommand(riskCommand);
 
             expect(mockNatsClient.publishEnvelope).toHaveBeenCalledWith(
-                "titan.cmd.risk.halt",
+                "titan.cmd.sys.halt.v1",
                 riskCommand,
                 expect.objectContaining({
-                    type: "titan.control.risk.v1",
+                    type: "titan.cmd.sys.halt.v1",
                     version: 1,
                     producer: "titan-brain",
                 }),
             );
             expect(mockLogger.info).toHaveBeenCalledWith(
-                "Risk Command Published: titan.cmd.risk.halt",
+                "Risk Command Published: titan.cmd.sys.halt.v1",
                 expect.objectContaining({
                     action: "HALT",
                     actor: "brain",

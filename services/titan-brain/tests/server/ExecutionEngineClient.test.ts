@@ -27,6 +27,39 @@ jest.mock("@titan/shared", () => ({
     BALANCE_QUERY: "titan.query.balance.v1",
     DLQ: "titan.dlq.v1",
   },
+  TITAN_SUBJECTS: {
+    CMD: {
+      EXECUTION: {
+        PLACE: (venue: string, account: string, symbol: string) =>
+          `titan.cmd.execution.place.v1.${venue}.${account}.${symbol}`,
+        PREFIX: "titan.cmd.execution.place.v1",
+        ALL: "titan.cmd.execution.place.v1.>",
+      },
+      RISK: {
+        POLICY: "titan.cmd.risk.policy.v1",
+        FLATTEN: "titan.cmd.risk.flatten",
+        CONTROL: "titan.cmd.risk.control.v1",
+      },
+      SYS: {
+        HALT: "titan.cmd.sys.halt.v1",
+      },
+    },
+    DLQ: {
+      EXECUTION: "titan.dlq.execution.core",
+      BRAIN: "titan.dlq.brain.processing",
+    },
+    SYS: {
+      RPC: {
+        GET_POSITIONS: (venue: string) =>
+          `titan.execution.get_positions.${venue}`,
+        GET_BALANCES: (venue: string) =>
+          `titan.execution.get_balances.${venue}`,
+      },
+    },
+    LEGACY: {
+      DLQ_EXECUTION_V0: "titan.execution.dlq",
+    },
+  },
   validateIntentPayload: jest.fn(() => ({ valid: true, errors: [] })),
 }));
 
@@ -86,7 +119,7 @@ describe("ExecutionEngineClient", () => {
       expect(mockPublishEnvelope).toHaveBeenCalledTimes(1);
       const [subject, payload] = mockPublishEnvelope.mock.calls[0];
 
-      expect(subject).toBe("titan.cmd.exec.place.v1.auto.main.BTCUSDT");
+      expect(subject).toBe("titan.cmd.execution.place.v1.auto.main.BTCUSDT");
       expect(payload.t_signal).toBe(signal.timestamp);
       expect(payload.type).toBe("BUY_SETUP");
       expect(payload.direction).toBe(1);
@@ -113,7 +146,7 @@ describe("ExecutionEngineClient", () => {
       expect(mockPublishEnvelope).toHaveBeenCalledTimes(1);
       const [subject, payload] = mockPublishEnvelope.mock.calls[0];
 
-      expect(subject).toBe("titan.cmd.exec.place.v1.auto.main.ETHUSDT");
+      expect(subject).toBe("titan.cmd.execution.place.v1.auto.main.ETHUSDT");
       expect(payload.direction).toBe(-1);
       expect(payload.type).toBe("SELL_SETUP");
     });
@@ -134,7 +167,7 @@ describe("ExecutionEngineClient", () => {
 
       expect(mockPublishEnvelope).toHaveBeenCalled();
       const [subject] = mockPublishEnvelope.mock.calls[0];
-      expect(subject).toContain("titan.cmd.exec.place");
+      expect(subject).toContain("titan.cmd.execution.place");
     });
   });
 
