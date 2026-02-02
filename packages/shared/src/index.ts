@@ -164,10 +164,6 @@ export {
   type StateOperation,
 } from "./DistributedStateManager.js";
 
-// High-Frequency Trading - Removed (Module Deleted)
-
-// Advanced Order Routing
-
 // Network Optimization
 export {
   type CoLocationConfig,
@@ -216,6 +212,8 @@ export {
   POWER_LAW_SUBJECTS,
   SUBJECT_MIGRATION_MAP,
 } from "./messaging/powerlaw_subjects.js";
+
+export { TITAN_SUBJECTS } from "./messaging/titan_subjects.js";
 
 // Intent schema (NATS contract)
 export {
@@ -307,7 +305,6 @@ export {
   ExecutionReportSchema,
 } from "./schemas/ExecutionReportSchema.js";
 
-// AI Provider Abstraction
 // Regulatory Compliance
 export {
   DoraIncident,

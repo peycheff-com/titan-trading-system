@@ -2,6 +2,7 @@ import {
   ExecutionReportSchema,
   getNatsClient,
   NatsClient,
+  TITAN_SUBJECTS,
   TitanSubject,
 } from "@titan/shared";
 import { TitanBrain } from "../engine/TitanBrain.js";
@@ -47,7 +48,7 @@ export class NatsConsumer {
   private subscribeToTopics(): void {
     // Subscribe to Execution Reports (General)
     this.nats.subscribe(
-      TitanSubject.EXECUTION_REPORTS, // Uses remapped legacy key for now, pointing to titan.evt.exec.report.v1
+      TitanSubject.EXECUTION_REPORTS,
       async (data: any, subject) => {
         this.handleExecutionReport(data);
       },
@@ -178,7 +179,7 @@ export class NatsConsumer {
     // Subscribe to System Halt Commands (GAP-02)
     // Payload: { state: "OPEN" | "SOFT_HALT" | "HARD_HALT", ... }
     this.nats.subscribe(
-      "titan.cmd.sys.halt",
+      TITAN_SUBJECTS.CMD.SYS.HALT,
       async (data: any, subject) => {
         try {
           const payload = this.extractPayload(data);

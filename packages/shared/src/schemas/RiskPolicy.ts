@@ -1,6 +1,6 @@
-import { z } from "zod";
-import { createHash } from "crypto";
-import riskPolicyJson from "../../risk_policy.json";
+import { z } from 'zod';
+import { createHash } from 'crypto';
+import riskPolicyJson from '../../risk_policy.json';
 
 export const RiskPolicySchemaV1 = z.object({
   // --- Solvency Constraints (Rust Veto) ---
@@ -34,7 +34,7 @@ const validatedPolicy = RiskPolicySchemaV1.parse(riskPolicyJson);
  */
 export function getCanonicalRiskPolicy() {
   const policyString = JSON.stringify(riskPolicyJson);
-  const hash = createHash("sha256").update(policyString).digest("hex");
+  const hash = createHash('sha256').update(policyString).digest('hex');
 
   return {
     policy: validatedPolicy,

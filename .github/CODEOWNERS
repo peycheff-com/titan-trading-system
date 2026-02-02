@@ -1,0 +1,6 @@
+# Docs Ownership
+/docs/canonical/ @peycheff
+/docs/security/ @peycheff
+/docs/runbooks/ @peycheff @ops-team
+/docs/reference/openapi.yaml @api-team
+/docs/reference/asyncapi.yaml @platform-team

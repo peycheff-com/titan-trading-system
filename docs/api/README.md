@@ -12,10 +12,6 @@ docs/api/
 ├── openapi/                     # OpenAPI 3.0 specifications
 │   ├── titan-brain.yaml         # Brain orchestrator API
 │   ├── titan-execution.yaml     # Execution service API
-
-│   ├── titan-scavenger.yaml     # Phase 1 scavenger API
-│   ├── titan-ai-quant.yaml      # AI optimization API
-│   └── shared-services.yaml     # Shared infrastructure APIs
 ├── websockets/                  # WebSocket protocol documentation
 │   ├── console-protocol.md      # Console WebSocket messages
 │   ├── scavenger-protocol.md    # Scavenger WebSocket messages
@@ -23,11 +19,7 @@ docs/api/
 │   └── brain-notifications.md   # Brain notification protocol
 ├── examples/                    # Interactive examples and testing tools
 │   ├── signal-flow-example.js   # Complete signal flow demonstration
-│   ├── dashboard-client.js      # Dashboard polling example
-│   ├── webhook-tester.js        # Webhook testing utility
-│   ├── websocket-client.js      # WebSocket client example
-│   └── postman/                 # Postman collection
-│       └── titan-api.json       # Complete API collection
+│   └── webhook-tester.js        # Webhook testing utility
 ├── authentication/              # Authentication and security
 │   ├── hmac-signing.md          # HMAC signature implementation
 │   ├── api-keys.md              # API key management
@@ -43,7 +35,9 @@ docs/api/
 
 The Titan Trading System consists of 5 main services with distinct APIs:
 
-### 1. Titan Brain (Port 3100) - Master Orchestrator
+### 1. Titan Brain - Master Orchestrator
+
+**For deployment topology and ports, see [SYSTEM_SOURCE_OF_TRUTH.md](../canonical/SYSTEM_SOURCE_OF_TRUTH.md).**
 
 - **Purpose**: Capital allocation, risk management, phase coordination
 - **API Type**: REST + WebSocket notifications
@@ -63,23 +57,21 @@ The Titan Trading System consists of 5 main services with distinct APIs:
 - **Purpose**: Predestination trap system for account building ($200-$5K)
 - **API Type**: REST + WebSocket client
 - **Key Features**: Trap detection, signal generation, console integration
-- **Documentation**:
-  [openapi/titan-scavenger.yaml](openapi/titan-scavenger.yaml)
+- **Documentation**: *Coming Soon*
 
 ### 5. Titan AI Quant (Cron Job) - Offline Optimizer
 
 - **Purpose**: Parameter optimization using Gemini AI
 - **API Type**: REST (proposal submission and approval)
 - **Key Features**: Backtesting, parameter optimization, approval workflow
-- **Documentation**: [openapi/titan-ai-quant.yaml](openapi/titan-ai-quant.yaml)
+- **Documentation**: *Coming Soon*
 
 ### 6. Shared Infrastructure - Centralized Services
 
 - **Purpose**: WebSocket management, execution service, telemetry
 - **API Type**: TypeScript modules with REST endpoints
 - **Key Features**: Connection pooling, centralized logging, configuration
-- **Documentation**:
-  [openapi/shared-services.yaml](openapi/shared-services.yaml)
+- **Documentation**: *Coming Soon*
 
 ## Quick Start
 
@@ -254,12 +246,7 @@ complete demonstration of:
 
 ### Dashboard Integration
 
-See [examples/dashboard-client.js](examples/dashboard-client.js) for:
-
-1. Polling dashboard data
-2. WebSocket connection management
-3. Real-time chart updates
-4. Emergency control integration
+*Coming Soon*
 
 ### Webhook Testing
 
@@ -278,12 +265,6 @@ Each service has a complete OpenAPI 3.0 specification:
 - **Titan Execution**:
   [openapi/titan-execution.yaml](openapi/titan-execution.yaml)
 
-- **Titan Scavenger**:
-  [openapi/titan-scavenger.yaml](openapi/titan-scavenger.yaml)
-- **Titan AI Quant**: [openapi/titan-ai-quant.yaml](openapi/titan-ai-quant.yaml)
-- **Shared Services**:
-  [openapi/shared-services.yaml](openapi/shared-services.yaml)
-
 These specifications can be used with:
 
 - **Swagger UI**: Interactive API documentation
@@ -295,21 +276,11 @@ These specifications can be used with:
 
 ### Postman Collection
 
-Import [examples/postman/titan-api.json](examples/postman/titan-api.json) for:
-
-- Pre-configured requests for all endpoints
-- Environment variables for different deployments
-- Test scripts for response validation
-- Automated workflow testing
+*Coming Soon*
 
 ### WebSocket Testing
 
-Use [examples/websocket-client.js](examples/websocket-client.js) for:
-
-- WebSocket connection testing
-- Message format validation
-- Reconnection logic testing
-- Performance benchmarking
+*Coming Soon*
 
 ## Integration Patterns
 

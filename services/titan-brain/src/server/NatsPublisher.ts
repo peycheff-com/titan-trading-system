@@ -4,7 +4,7 @@
  * Used by Titan Brain to trigger AI Quant optimizations and other cross-service events.
  */
 
-import { getNatsClient, NatsClient, TitanSubject } from "@titan/shared";
+import { getNatsClient, NatsClient, TITAN_SUBJECTS } from "@titan/shared";
 import { getLogger, StructuredLogger } from "../monitoring/index.js";
 
 export interface AIOptimizationRequest {
@@ -62,10 +62,10 @@ export class NatsPublisher {
 
     try {
       await this.nats.publishEnvelope(
-        TitanSubject.AI_OPTIMIZATION_REQUESTS,
+        TITAN_SUBJECTS.CMD.AI.OPTIMIZE,
         request,
         {
-          type: "titan.control.ai.optimize.v1",
+          type: TITAN_SUBJECTS.CMD.AI.OPTIMIZE,
           version: 1,
           producer: "titan-brain",
           // Logic for correlation_id could be improved here if available
@@ -92,10 +92,35 @@ export class NatsPublisher {
       return;
     }
     try {
-      // Enforce titan.cmd.risk prefix (lowercase to match Rust/JetStream convention)
-      const subject = `titan.cmd.risk.${command.action.toLowerCase()}`; // e.g. titan.cmd.risk.halt
-      await this.nats.publishEnvelope(subject as any, command, {
-        type: "titan.control.risk.v1",
+      let subject: string;
+      const type = TITAN_SUBJECTS.CMD.RISK.CONTROL; // Default type?
+
+      // Map dynamic action to Canonical Subject
+      switch (command.action.toLowerCase()) {
+        case "halt":
+          subject = TITAN_SUBJECTS.CMD.SYS.HALT;
+          break;
+        case "flatten":
+          subject = TITAN_SUBJECTS.CMD.RISK.FLATTEN;
+          break;
+        case "arm":
+          subject = TITAN_SUBJECTS.CMD.OPERATOR.ARM;
+          break;
+        case "disarm":
+          subject = TITAN_SUBJECTS.CMD.OPERATOR.DISARM;
+          break;
+        case "control":
+        default:
+          // Fallback or explicit control
+          subject = TITAN_SUBJECTS.CMD.RISK.CONTROL;
+          this.logger.warn(
+            `Mapping unknown or default risk action to CONTROL: ${command.action}`,
+          );
+          break;
+      }
+
+      await this.nats.publishEnvelope(subject, command, {
+        type: subject, // Use specific subject as type for clarity
         version: 1,
         producer: "titan-brain",
       });

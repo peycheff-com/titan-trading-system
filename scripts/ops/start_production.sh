@@ -16,6 +16,15 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Phase 0: Pre-flight Validation
+echo -e "${GREEN}[INFO]${NC} Phase 0: Pre-flight Validation"
+# Check valid env vars
+if ! npx ts-node scripts/ops/validate_env.ts; then
+    echo -e "${RED}[FATAL] Environment validation failed. Check your .env file.${NC}"
+    exit 1
+fi
+
+
 # Configuration
 HEALTH_TIMEOUT=60  # seconds to wait for each service
 POLL_INTERVAL=2    # seconds between health checks

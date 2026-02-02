@@ -30,4 +30,5 @@ pub mod shadow_state;
 pub mod simulation_engine;
 pub mod sre;
 pub mod staleness;
+pub mod subjects;
 pub mod tests;

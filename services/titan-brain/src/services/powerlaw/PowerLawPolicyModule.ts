@@ -12,6 +12,7 @@ import {
     POWER_LAW_SUBJECTS,
     type PowerLawMetricsV1,
     type RiskMode,
+    TITAN_SUBJECTS,
 } from "@titan/shared";
 import { Logger } from "../../logging/Logger.js";
 
@@ -194,7 +195,7 @@ export class PowerLawPolicyModule {
             },
         };
 
-        await this.nats.publish("titan.evt.powerlaw.impact.v1", event);
+        await this.nats.publish(TITAN_SUBJECTS.EVT.POWERLAW.IMPACT, event);
     }
 
     private assessImpact(

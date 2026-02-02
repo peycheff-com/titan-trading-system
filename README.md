@@ -5,9 +5,15 @@
 [![Coverage](https://img.shields.io/badge/Coverage-80%25%2B-brightgreen)](https://github.com/peycheff-com/titan-trading-system/actions)
 [![Valuation](https://img.shields.io/badge/Valuation-%243.8M--%249.0M-blue)](artifacts/valuation/reports/titan_ip_valuation_report.md)
 
-**Bio-Mimetic Trading Organism** — A 5-phase algorithmic trading system that
-evolves its behavior based on available capital, orchestrated by a central "Brain"
-and executed via specialized microservices with sub-millisecond latency.
+**Bio-Mimetic Trading Organism** — A 5-phase algorithmic trading system.
+
+> [!TIP]
+> **New to Titan? Start Here:**
+> 👉 [**docs/START_HERE.md**](docs/START_HERE.md) — Navigation hub for Devs, Operators, and Researchers.
+> 
+> *   [Canonical Source of Truth](docs/canonical/SYSTEM_SOURCE_OF_TRUTH.md)
+> *   [Incident Runbook](docs/runbooks/incident_response.md)
+> *   [Deployment Standards](docs/operations/deployment-standards.md)
 
 ---
 

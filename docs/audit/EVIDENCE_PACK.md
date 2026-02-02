@@ -8,20 +8,20 @@
 ## 1. Policy Hash Injection & Enforcement
 
 ### 1.1 Canonical Risk Policy
-**File**: [RiskPolicy.ts](file:///Users/ivan/Code/trading/titan/packages/shared/src/schemas/RiskPolicy.ts)
+**File**: [RiskPolicy.ts](../../packages/shared/src/schemas/RiskPolicy.ts)
 
 - Policy loaded with strict validation (`getCanonicalRiskPolicy()`)
 - Hash computed deterministically via `computePolicyHash()`
 - Versioned with semantic versioning
 
 ### 1.2 Brain Policy Injection
-**File**: [SignalProcessor.ts](file:///Users/ivan/Code/trading/titan/services/titan-brain/src/engine/SignalProcessor.ts)
+**File**: [SignalProcessor.ts](../../services/titan-brain/src/engine/SignalProcessor.ts)
 
 - Intents published via `publishEnvelope()` with policy_hash included
 - Hash included INSIDE HMAC signature (tamper-proof)
 
 ### 1.3 Execution Policy Verification
-**File**: [nats_engine.rs](file:///Users/ivan/Code/trading/titan/services/titan-execution-rs/src/nats_engine.rs)
+**File**: [nats_engine.rs](../../services/titan-execution-rs/src/nats_engine.rs)
 
 - Policy hash verified at boot
 - Hash verified per-intent
@@ -32,14 +32,14 @@
 ## 2. Execution Armed Gate (Physical Interlock)
 
 ### 2.1 Armed State Implementation
-**File**: [armed_state.rs](file:///Users/ivan/Code/trading/titan/services/titan-execution-rs/src/armed_state.rs)
+**File**: [armed_state.rs](../../services/titan-execution-rs/src/armed_state.rs)
 
 - `ArmedState` struct with file-backed persistence
 - Defaults to DISARMED on boot
 - Requires explicit ARM command to enable trading
 
 ### 2.2 Intent Rejection Gate
-**File**: [nats_engine.rs](file:///Users/ivan/Code/trading/titan/services/titan-execution-rs/src/nats_engine.rs)
+**File**: [nats_engine.rs](../../services/titan-execution-rs/src/nats_engine.rs)
 
 - All intents rejected if `!armed_state.is_armed()`
 - Rejection event published with reason `NOT_ARMED`
@@ -49,14 +49,14 @@
 ## 3. Leader Election & Wiring
 
 ### 3.1 Leader Elector Implementation
-**File**: [LeaderElector.ts](file:///Users/ivan/Code/trading/titan/packages/shared/src/coordination/LeaderElector.ts)
+**File**: [LeaderElector.ts](../../packages/shared/src/coordination/LeaderElector.ts)
 
 - Monotonic `leaderTerm` (fencing token) increments on each promotion
 - NATS disconnect triggers hard demotion
 - `getLeaderTerm()` accessor for term queries
 
 ### 3.2 Brain Leadership Coupling
-**File**: [TitanBrain.ts](file:///Users/ivan/Code/trading/titan/services/titan-brain/src/engine/TitanBrain.ts)
+**File**: [TitanBrain.ts](../../services/titan-brain/src/engine/TitanBrain.ts)
 
 - `handleLeadershipPromotion()` verifies policy handshake
 - Brain refuses to process signals on handshake failure
@@ -67,7 +67,7 @@
 ## 4. Rejection Telemetry
 
 ### 4.1 Rejection Events
-**File**: [nats_engine.rs](file:///Users/ivan/Code/trading/titan/services/titan-execution-rs/src/nats_engine.rs)
+**File**: [nats_engine.rs](../../services/titan-execution-rs/src/nats_engine.rs)
 
 Published on: `titan.evt.exec.reject.v1`
 
@@ -78,7 +78,7 @@ Payload includes:
 - `brain_instance_id`
 
 ### 4.2 Metrics
-**File**: [metrics.rs](file:///Users/ivan/Code/trading/titan/services/titan-execution-rs/src/metrics.rs)
+**File**: [metrics.rs](../../services/titan-execution-rs/src/metrics.rs)
 
 - `titan_execution_rejection_events_total` counter with reason label
 
@@ -98,7 +98,7 @@ npm test --workspace=titan-harness
 ```
 
 ### 5.2 Integration Harness
-**File**: [GoldenPath.ts](file:///Users/ivan/Code/trading/titan/packages/titan-harness/src/GoldenPath.ts)
+**File**: [GoldenPath.ts](../../packages/titan-harness/src/GoldenPath.ts)
 
 - Full lifecycle: Signal → Brain → Execution → Fill → Accounting
 - Accept/Reject scenarios tested
@@ -126,6 +126,6 @@ docker build -t titan-execution:latest -f services/titan-execution-rs/Dockerfile
 
 | File | Purpose |
 |------|---------|
-| [risk_policy.json](file:///Users/ivan/Code/trading/titan/config/risk_policy.json) | Canonical risk policy |
-| [fee_schedule.json](file:///Users/ivan/Code/trading/titan/config/fee_schedule.json) | Fee assumptions |
-| [docker-compose.yml](file:///Users/ivan/Code/trading/titan/docker-compose.yml) | Service orchestration |
+| [risk_policy.json](../../packages/shared/risk_policy.json) | Canonical risk policy |
+| [fee_schedule.json](../../packages/shared/fee_schedule.json) | Fee assumptions |
+| [docker-compose.yml](../../docker-compose.yml) | Service orchestration |

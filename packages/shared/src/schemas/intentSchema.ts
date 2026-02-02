@@ -117,12 +117,15 @@ export function validateIntentPayload(payload: unknown): {
   };
 }
 
+import { TITAN_SUBJECTS } from "../messaging/titan_subjects.js";
+
 export function createIntentMessage(
   payload: IntentPayloadV1,
   producer: string,
   correlationId?: string,
 ): IntentMessage {
-  return createEnvelope("titan.cmd.exec.place.v1", payload, {
+  // Use Canonical Subject from standard
+  return createEnvelope(TITAN_SUBJECTS.CMD.EXECUTION.PREFIX, payload, {
     version: 1,
     producer,
     correlation_id: correlationId,

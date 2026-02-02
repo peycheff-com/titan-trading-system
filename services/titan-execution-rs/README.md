@@ -1,6 +1,19 @@
-# Titan Execution Engine (Rust)
+# Titan Execution (Rust)
 
-High-performance order execution microservice for the Titan Trading System.
+**Owner:** @peycheff
+**Lang:** Rust
+
+High-performance execution engine handling secure order routing and risk guarding.
+
+## Responsibilities
+- HMAC Verification of Commands
+- Exchange Connectivity (Bybit/Binance)
+- Latency-Critical Risk Checks
+- Rate Limiting (TokenBucket)
+
+## Key Invariants
+- **Memory Safety**: No unsafe code blocks without strict justification.
+- **Zero-Allocation Hot Path**: Optimized for <1ms internal latency.
 
 ## Features
 

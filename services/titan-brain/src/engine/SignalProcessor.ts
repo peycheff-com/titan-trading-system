@@ -1,4 +1,4 @@
-import { getNatsClient, TitanSubject } from "@titan/shared";
+import { getNatsClient, TITAN_SUBJECTS, TitanSubject } from "@titan/shared";
 import { canonicalRiskHash } from "../config/index.js";
 import { Subscription } from "nats";
 import { Logger } from "../logging/Logger.js";
@@ -256,7 +256,11 @@ export class SignalProcessor {
 
     // 6. Publish to Execution (HMAC-signed via publishEnvelope)
     const symbolToken = symbol.replace("/", "_");
-    const subject = `titan.cmd.exec.place.v1.auto.main.${symbolToken}`;
+    const subject = TITAN_SUBJECTS.CMD.EXECUTION.PLACE(
+      "auto",
+      "main",
+      symbolToken,
+    );
 
     this.logger.info(
       `Approving Signal ${signalId} -> Publishing HMAC-signed Envelope to ${subject} (Size: ${authorizedSize}, Hash: ${canonicalRiskHash})`,
@@ -266,7 +270,7 @@ export class SignalProcessor {
       // Use publishEnvelope to ensure HMAC signing of payload (including policy_hash)
       await this.nats.publishEnvelope(subject, payload, {
         version: 1,
-        type: "titan.cmd.exec.place.v1",
+        type: TITAN_SUBJECTS.CMD.EXECUTION.PREFIX,
         producer: "brain",
         correlation_id: signalId,
         idempotency_key: signalId,
@@ -301,7 +305,7 @@ export class SignalProcessor {
         payload,
         t_ingress: Date.now(),
       };
-      await this.nats.publish("titan.dlq.brain.processing", dlqPayload);
+      await this.nats.publish(TITAN_SUBJECTS.DLQ.BRAIN, dlqPayload);
     } catch (e) {
       this.logger.error("Failed to publish to DLQ", e as Error);
     }

@@ -12,68 +12,71 @@ import { EventEmitter } from "eventemitter3";
 import { createEnvelope } from "../schemas/envelope.js";
 import { createHmac, randomBytes } from "crypto";
 
-export enum TitanSubject {
+import { TITAN_SUBJECTS } from "./titan_subjects.js";
+
+export const TitanSubject = {
   // --- COMMANDS (TITAN_CMD) ---
-  /* eslint-disable @typescript-eslint/no-duplicate-enum-values */
   // titan.cmd.exec.place.v1.{venue}.{account}.{symbol}
-  CMD_EXEC_PLACE = "titan.cmd.exec.place.v1",
+  CMD_EXEC_PLACE: TITAN_SUBJECTS.CMD.EXECUTION.PREFIX,
   // titan.cmd.sys.halt.v1.{scope}
-  CMD_SYS_HALT = "titan.cmd.sys.halt.v1",
+  CMD_SYS_HALT: TITAN_SUBJECTS.CMD.SYS.HALT,
   // titan.cmd.ai.optimize.v1
-  CMD_AI_OPTIMIZE = "titan.cmd.ai.optimize.v1",
+  CMD_AI_OPTIMIZE: TITAN_SUBJECTS.CMD.AI.OPTIMIZE,
   // titan.cmd.ai.optimize.proposal.v1
-  CMD_AI_OPTIMIZE_PROPOSAL = "titan.cmd.ai.optimize.proposal.v1",
+  CMD_AI_OPTIMIZE_PROPOSAL: TITAN_SUBJECTS.CMD.AI.OPTIMIZE_PROPOSAL,
   // titan.cmd.risk.policy (Global Risk Policy)
-  CMD_RISK_POLICY = "titan.cmd.risk.policy",
+  CMD_RISK_POLICY: TITAN_SUBJECTS.CMD.RISK.POLICY,
 
   // --- EVENTS (TITAN_EVT) ---
   // titan.evt.exec.fill.v1.{venue}.{account}.{symbol}
-  EVT_EXEC_FILL = "titan.evt.exec.fill.v1",
+  EVT_EXEC_FILL: TITAN_SUBJECTS.EVT.EXECUTION.FILL,
   // titan.evt.brain.signal.v1.{strategy}
-  EVT_BRAIN_SIGNAL = "titan.evt.brain.signal.v1",
+  EVT_BRAIN_SIGNAL: TITAN_SUBJECTS.EVT.BRAIN.SIGNAL,
   // titan.evt.brain.regime.v1
-  EVT_REGIME_UPDATE = "titan.evt.brain.regime.v1",
+  EVT_REGIME_UPDATE: TITAN_SUBJECTS.EVT.BRAIN.REGIME,
   // titan.evt.analytics.powerlaw.v1
-  EVT_POWERLAW_UPDATE = "titan.evt.analytics.powerlaw.v1",
+  EVT_POWERLAW_UPDATE: TITAN_SUBJECTS.EVT.ANALYTICS.POWERLAW,
   // titan.evt.budget.update
-  EVT_BUDGET_UPDATE = "titan.evt.budget.update",
+  EVT_BUDGET_UPDATE: TITAN_SUBJECTS.EVT.BUDGET.UPDATE,
 
   // --- PHASE EVENTS ---
   // titan.evt.phase.intent.v1.{phase}.{symbol}
-  EVT_PHASE_INTENT = "titan.evt.phase.intent.v1",
+  EVT_PHASE_INTENT: TITAN_SUBJECTS.EVT.PHASE.INTENT,
   // titan.evt.phase.posture.v1.{phase}
-  EVT_PHASE_POSTURE = "titan.evt.phase.posture.v1",
+  EVT_PHASE_POSTURE: TITAN_SUBJECTS.EVT.PHASE.POSTURE,
   // titan.evt.phase.diagnostics.v1.{phase}
-  EVT_PHASE_DIAGNOSTICS = "titan.evt.phase.diagnostics.v1",
+  EVT_PHASE_DIAGNOSTICS: TITAN_SUBJECTS.EVT.PHASE.DIAGNOSTICS,
 
   // --- DATA (TITAN_DATA) ---
   // titan.data.market.ticker.{venue}.{symbol}
-  DATA_MARKET_TICKER = "titan.data.market.ticker",
+  DATA_MARKET_TICKER: TITAN_SUBJECTS.DATA.MARKET.PREFIX,
   // titan.data.dashboard.update.v1
-  DATA_DASHBOARD_UPDATE = "titan.data.dashboard.update.v1",
+  DATA_DASHBOARD_UPDATE: TITAN_SUBJECTS.DATA.DASHBOARD.UPDATE,
 
   // Legacy mappings (to be phased out or remapped)
-  SIGNALS = "titan.evt.brain.signal.v1", // Remapped
-  EXECUTION_FILL = "titan.evt.exec.fill.v1", // Remapped
-  EXECUTION_REPORTS = "titan.evt.exec.report.v1", // Remapped
-  MARKET_DATA = "titan.data.market.ticker", // Remapped
-  AI_OPTIMIZATION_REQUESTS = "titan.cmd.ai.optimize.v1", // Remapped
-  REGIME_UPDATE = "titan.evt.brain.regime.v1", // Remapped
-  DASHBOARD_UPDATES = "titan.data.dashboard.update.v1", // Remapped
-  EXECUTION_INTENT = "titan.cmd.exec.place.v1", // Remapped (Warning: Intents could be cancels too)
+  SIGNALS: TITAN_SUBJECTS.EVT.BRAIN.SIGNAL, // Remapped
+  EXECUTION_FILL: TITAN_SUBJECTS.EVT.EXECUTION.FILL, // Remapped
+  EXECUTION_REPORTS: TITAN_SUBJECTS.EVT.EXECUTION.REPORT, // Remapped
+  MARKET_DATA: TITAN_SUBJECTS.DATA.MARKET.PREFIX, // Remapped
+  AI_OPTIMIZATION_REQUESTS: TITAN_SUBJECTS.CMD.AI.OPTIMIZE, // Remapped
+  REGIME_UPDATE: TITAN_SUBJECTS.EVT.BRAIN.REGIME, // Remapped
+  DASHBOARD_UPDATES: TITAN_SUBJECTS.DATA.DASHBOARD.UPDATE, // Remapped
+  EXECUTION_INTENT: TITAN_SUBJECTS.CMD.EXECUTION.PREFIX, // Remapped (Warning: Intents could be cancels too)
 
   // --- SIGNAL FLOW (NEW 2026) ---
   // titan.signal.submit.v1 (Phases -> Brain)
-  SIGNAL_SUBMIT = "titan.signal.submit.v1",
+  SIGNAL_SUBMIT: TITAN_SUBJECTS.EVT.BRAIN.SIGNAL,
 
   // --- CANONICAL POWER LAW (JAN 2026) ---
   // titan.signal.powerlaw.metrics.v1.{venue}.{symbol}.{tf}
-  SIGNAL_POWERLAW_METRICS = "titan.signal.powerlaw.metrics.v1",
+  SIGNAL_POWERLAW_METRICS: TITAN_SUBJECTS.DATA.POWERLAW.PREFIX,
   // titan.signal.execution.constraints.v1.{venue}.{account}.{symbol}
-  SIGNAL_EXECUTION_CONSTRAINTS = "titan.signal.execution.constraints.v1",
+  SIGNAL_EXECUTION_CONSTRAINTS: TITAN_SUBJECTS.DATA.EXECUTION.PREFIX,
   // titan.evt.powerlaw.impact.v1.{venue}.{symbol}
-  EVT_POWERLAW_IMPACT = "titan.evt.powerlaw.impact.v1",
-}
+  EVT_POWERLAW_IMPACT: TITAN_SUBJECTS.EVT.POWERLAW.IMPACT,
+} as const;
+
+export type TitanSubject = (typeof TitanSubject)[keyof typeof TitanSubject];
 
 export interface NatsConfig {
   servers: string[];
@@ -242,6 +245,11 @@ export class NatsClient extends EventEmitter {
     let isJetStream = false;
     if (this.js) {
       if (typeof subject === "string") {
+        if (subject.startsWith("titan.signal.")) {
+          console.warn(
+            `[DEPRECATION] Publishing to '${subject}' is deprecated. Migration deadline: Feb 28, 2026. Use 'titan.data.*' instead.`,
+          );
+        }
         for (const prefix of this.STREAM_PREFIXES) {
           if (subject.startsWith(prefix)) {
             isJetStream = true;
@@ -346,6 +354,11 @@ export class NatsClient extends EventEmitter {
     // eslint-disable-next-line functional/no-let
     let isJetStream = false;
     if (this.js && typeof subject === "string") {
+      if (subject.startsWith("titan.signal.")) {
+        console.warn(
+          `[DEPRECATION] Subscribing to '${subject}' is deprecated. Migration deadline: Feb 28, 2026. Use 'titan.data.*' instead.`,
+        );
+      }
       for (const prefix of this.STREAM_PREFIXES) {
         if (subject.startsWith(prefix)) {
           isJetStream = true;

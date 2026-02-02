@@ -1,10 +1,10 @@
-import { connect, JetStreamClient, NatsConnection, StringCodec } from 'nats';
-import { HillEstimator } from './tail-estimators.js';
-import { POTEstimator } from './tail-estimators.js';
-import { VolatilityClusterDetector } from './volatility-cluster.js';
-import { TitanSubject } from '@titan/shared';
-import * as fs from 'fs/promises';
-import * as path from 'path';
+import { connect, JetStreamClient, NatsConnection, StringCodec } from "nats";
+import { HillEstimator } from "./tail-estimators.js";
+import { POTEstimator } from "./tail-estimators.js";
+import { VolatilityClusterDetector } from "./volatility-cluster.js";
+import { TitanSubject } from "@titan/shared";
+import * as fs from "fs/promises";
+import * as path from "path";
 
 export interface PowerLawMetrics {
   symbol: string;
@@ -30,11 +30,11 @@ export class PowerLawEstimator {
   private volCluster = new VolatilityClusterDetector();
 
   // Persistence
-  private readonly DATA_DIR = '/data';
-  private readonly STATE_FILE = 'powerlaw_state.json';
+  private readonly DATA_DIR = "/data";
+  private readonly STATE_FILE = "powerlaw_state.json";
   private saveInterval: NodeJS.Timeout | null = null;
 
-  constructor(private natsUrl: string = 'nats://localhost:4222') {}
+  constructor(private natsUrl: string = "nats://localhost:4222") {}
 
   async connect() {
     try {
@@ -58,10 +58,10 @@ export class PowerLawEstimator {
         await this.stop();
         process.exit(0);
       };
-      process.on('SIGINT', exitHandler);
-      process.on('SIGTERM', exitHandler);
+      process.on("SIGINT", exitHandler);
+      process.on("SIGTERM", exitHandler);
     } catch (error) {
-      console.error('Failed to connect to NATS:', error);
+      console.error("Failed to connect to NATS:", error);
       throw error;
     }
   }
@@ -77,16 +77,17 @@ export class PowerLawEstimator {
       await this.nats.drain();
       await this.nats.close();
     }
-    console.log('PowerLawEstimator stopped cleanly.');
+    console.log("PowerLawEstimator stopped cleanly.");
   }
 
   /**
    * Process a new trade/ticket to update rolling statistics
    */
-  async onTick(symbol: string, price: number) {
-    this.updateHistory(symbol, price);
+  async onTick(venue: string, symbol: string, price: number) {
+    const key = `${venue}:${symbol}`;
+    this.updateHistory(key, price);
 
-    const history = this.histories.get(symbol);
+    const history = this.histories.get(key);
     if (!history || history.length < 100) return; // Warmup
 
     // Calculate returns: r_t = ln(p_t / p_{t-1})
@@ -117,14 +118,14 @@ export class PowerLawEstimator {
       timestamp: Date.now(),
     };
 
-    await this.publish(metrics);
+    await this.publish(venue, symbol, metrics);
   }
 
-  private updateHistory(symbol: string, price: number) {
-    if (!this.histories.has(symbol)) {
-      this.histories.set(symbol, []);
+  private updateHistory(key: string, price: number) {
+    if (!this.histories.has(key)) {
+      this.histories.set(key, []);
     }
-    const arr = this.histories.get(symbol)!;
+    const arr = this.histories.get(key)!;
 
     arr.push(price);
     if (arr.length > 1000) {
@@ -134,15 +135,30 @@ export class PowerLawEstimator {
 
   private calculateSigma(returns: number[]): number {
     const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
-    const variance = returns.reduce((sum, x) => sum + Math.pow(x - mean, 2), 0) / returns.length;
+    const variance =
+      returns.reduce((sum, x) => sum + Math.pow(x - mean, 2), 0) /
+      returns.length;
     return Math.sqrt(variance);
   }
 
-  private async publish(metrics: PowerLawMetrics) {
+  private async publish(
+    venue: string,
+    symbol: string,
+    metrics: PowerLawMetrics,
+  ) {
     if (!this.nats) return;
-    // Broadcast to Global Regime Channel (Brain listens here)
-    this.nats.publish(TitanSubject.EVT_REGIME_UPDATE, this.sc.encode(JSON.stringify(metrics)));
-    // Also keep granular topic for analytics if needed, but EVT_REGIME_UPDATE is the contract.
+
+    // Broadcast to Canonical Data Channel
+    // Subject: titan.data.powerlaw.metrics.v1.{venue}.{symbol}
+    const subject =
+      `${TitanSubject.SIGNAL_POWERLAW_METRICS}.${venue}.${symbol}`;
+    this.nats.publish(subject, this.sc.encode(JSON.stringify(metrics)));
+
+    // Broadcast to Global Regime Channel (Legacy/Backup)
+    this.nats.publish(
+      TitanSubject.EVT_REGIME_UPDATE,
+      this.sc.encode(JSON.stringify(metrics)),
+    );
   }
 
   // --- Persistence Methods ---
@@ -158,10 +174,12 @@ export class PowerLawEstimator {
       // Ensure directory exists (recursive: true)
       await fs.mkdir(this.DATA_DIR, { recursive: true });
 
-      await fs.writeFile(filePath, JSON.stringify(data), 'utf-8');
-      console.log(`[PowerLaw] State saved to ${filePath} (${this.histories.size} symbols)`);
+      await fs.writeFile(filePath, JSON.stringify(data), "utf-8");
+      console.log(
+        `[PowerLaw] State saved to ${filePath} (${this.histories.size} symbols)`,
+      );
     } catch (error) {
-      console.error('[PowerLaw] Failed to save state:', error);
+      console.error("[PowerLaw] Failed to save state:", error);
     }
   }
 
@@ -172,11 +190,11 @@ export class PowerLawEstimator {
       try {
         await fs.access(filePath);
       } catch {
-        console.log('[PowerLaw] No existing state file found. Starting fresh.');
+        console.log("[PowerLaw] No existing state file found. Starting fresh.");
         return;
       }
 
-      const content = await fs.readFile(filePath, 'utf-8');
+      const content = await fs.readFile(filePath, "utf-8");
       const data = JSON.parse(content) as Record<string, number[]>;
 
       let loadedSymbols = 0;
@@ -186,9 +204,11 @@ export class PowerLawEstimator {
           loadedSymbols++;
         }
       }
-      console.log(`[PowerLaw] State loaded from ${filePath} (${loadedSymbols} symbols)`);
+      console.log(
+        `[PowerLaw] State loaded from ${filePath} (${loadedSymbols} symbols)`,
+      );
     } catch (error) {
-      console.error('[PowerLaw] Failed to load state:', error);
+      console.error("[PowerLaw] Failed to load state:", error);
     }
   }
 }

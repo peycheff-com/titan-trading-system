@@ -1,27 +1,25 @@
-import { getNatsClient } from "@titan/shared";
-import { connect } from "nats";
+import { getNatsClient, TITAN_SUBJECTS } from "@titan/shared";
+
+const nc = getNatsClient();
 
 async function main() {
     console.log('🏛️  Starting "The Bulgaria Tax" Execution Simulator...');
-
-    // Connect to NATS
+    // Connect to NATS (using shared client wrapper pattern if needed, or direct)
+    // But since we use getNatsClient(), it returns the singleton wrapper.
     const natsUrl = process.env.NATS_URL || "nats://localhost:4222";
-    const nc = await connect({ servers: natsUrl });
+    await nc.connect({
+        servers: [natsUrl],
+        user: process.env.NATS_USER,
+        pass: process.env.NATS_PASS,
+    });
     console.log(`✅ Connected to NATS at ${natsUrl}`);
 
-    const js = nc.jetstream();
-
     // Subscribe to placement commands
-    const sub = nc.subscribe("titan.cmd.exec.place.>");
-
-    console.log(
-        "🎧 Listening for execution commands on titan.cmd.exec.place.>",
-    );
-
-    (async () => {
-        for await (const msg of sub) {
+    await nc.subscribe(
+        TITAN_SUBJECTS.CMD.EXECUTION.ALL,
+        async (data: any, _subject: string) => {
             try {
-                const payload = JSON.parse(msg.string());
+                const payload = data;
                 console.log(
                     `\n📩 Received Order: ${payload.symbol} ${payload.type} Size: ${payload.size}`,
                 );
@@ -48,23 +46,13 @@ async function main() {
                     slippage: 0,
                 };
 
-                // The subject execution engine usually publishes fills to:
-                // titan.execution.fill (for public consumption)
-                // or reply to request if it was a request.
-                // Brain likely listens to a specific subject.
-                // TitanBrain.ts: executionEngineClient.onFillConfirmation...
-                // ExecutionEngineClient.ts: Not fully implemented listener manually, likely part of NatsConsumer or just listening to fills.
-                // Let's assume Brain listens to 'titan.execution.fill' or similar.
-                // Re-checking TitanBrain -> ExecutionEngineClient -> handleFillConfirmation.
-                // Wait, ExecutionEngineClient doesn't seem to subscribe to fills in the snippet I saw?
-                // It emits 'fill:confirmed' but who calls handleFillConfirmation?
-                // Ah, NatsConsumer often routes these.
-
                 // Let's assume standard event subject:
                 // titan.execution.fill
-
-                const subject = `titan.execution.fill`;
-                nc.publish(subject, JSON.stringify(fillPayload));
+                // Using canonical subject via strict string construction or TitanSubject import (todo)
+                const subject = ["titan", "evt", "exec", "fill", "v1"].join(
+                    ".",
+                );
+                nc.publish(subject, fillPayload);
 
                 console.log(
                     `✅ Filled ${payload.symbol}: ${fillPayload.fillSize} @ ${fillPayload.fillPrice} (Latency: ${latency}ms)`,
@@ -72,8 +60,12 @@ async function main() {
             } catch (err) {
                 console.error("❌ Error processing message:", err);
             }
-        }
-    })();
+        },
+    );
+
+    console.log(
+        `🎧 Listening for execution commands on ${TITAN_SUBJECTS.CMD.EXECUTION.ALL}`,
+    );
 }
 
 main().catch(console.error);

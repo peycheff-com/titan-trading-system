@@ -1,0 +1,172 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: production_deploy
+  cancel-in-progress: false
+
+env:
+  TITAN_REGISTRY: ghcr.io/${{ github.repository }}
+
+jobs:
+  # Verify CI Pipeline passed before deploying
+  ci-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Wait for CI
+        uses: lewagon/wait-on-check-action@v1.3.1
+        with:
+          ref: ${{ github.ref }}
+          check-name: 'CI Pipeline Status'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 10
+
+  build-and-push:
+    needs: ci-check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image_tag: ${{ steps.meta.outputs.version }}
+    
+    strategy:
+      matrix:
+        service:
+          - name: titan-brain
+            context: .
+            file: services/titan-brain/Dockerfile
+          - name: titan-execution-rs
+            context: services/titan-execution-rs
+            file: services/titan-execution-rs/Dockerfile
+          - name: titan-console
+            context: .
+            file: services/titan-console/Dockerfile
+          - name: titan-phase1-scavenger
+            context: .
+            file: services/titan-phase1-scavenger/Dockerfile
+          - name: titan-phase2-hunter
+            context: .
+            file: services/titan-phase2-hunter/Dockerfile
+          - name: titan-phase3-sentinel
+            context: .
+            file: services/titan-phase3-sentinel/Dockerfile
+          - name: titan-ai-quant
+            context: .
+            file: services/titan-ai-quant/Dockerfile
+          - name: titan-powerlaw-lab
+            context: .
+            file: services/titan-powerlaw-lab/Dockerfile
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.TITAN_REGISTRY }}/${{ matrix.service.name }}
+          tags: |
+            type=sha,prefix=,format=long
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.service.context }}
+          file: ${{ matrix.service.file }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.service.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service.name }}
+
+      - name: Record Digest
+        run: |
+          echo "${{ matrix.service.name }}: ${{ steps.meta.outputs.version }}" >> image_digests.txt
+
+      - name: Upload Digests
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.service.name }}
+          path: image_digests.txt
+
+  deploy-production:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Prepare Deployment Artifacts
+        run: |
+          mkdir -p deploy_package/scripts
+          mkdir -p deploy_package/compose
+          cp scripts/ci/*.sh deploy_package/scripts/
+          cp docker-compose.prod.yml deploy_package/compose/
+
+      - name: Copy Files to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          source: "deploy_package/*"
+          target: "/opt/titan/tmp_deploy"
+          strip_components: 1
+
+      - name: Execute Deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            # Move files to correct locations
+            mkdir -p /opt/titan/scripts /opt/titan/compose
+            cp /opt/titan/tmp_deploy/scripts/* /opt/titan/scripts/
+            cp /opt/titan/tmp_deploy/compose/* /opt/titan/compose/
+            chmod +x /opt/titan/scripts/*.sh
+            
+            # Set Deployment Environment Variables
+            echo "IMAGE_TAG=${{ github.sha }}" > /opt/titan/compose/.env.deploy
+            echo "TITAN_REGISTRY=${{ env.TITAN_REGISTRY }}" >> /opt/titan/compose/.env.deploy
+            
+            # Execute Deploy Script
+            /opt/titan/scripts/deploy.sh
+            
+            # Cleanup
+            rm -rf /opt/titan/tmp_deploy
+
+      - name: Create Evidence Log
+        if: always()
+        run: |
+          echo "Deployment SHA: ${{ github.sha }}" > evidence.log
+          echo "Timestamp: $(date -u)" >> evidence.log
+          echo "Result: ${{ job.status }}" >> evidence.log
+
+      - name: Upload Evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-evidence
+          path: evidence.log

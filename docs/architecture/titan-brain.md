@@ -7,7 +7,7 @@ Titan Brain (`services/titan-brain`) is the central nervous system of the Titan 
 
 ## 1. Core Engines
 
-The Brain is composed of specialized "Engines" that run in a unified Fastify process (Port 3100).
+The Brain is composed of specialized "Engines" that run in a unified Fastify process.
 
 ### Active Inference Engine ("Amygdala")
 **Source**: `src/engine/ActiveInferenceEngine.ts`
@@ -48,7 +48,7 @@ Titan Brain uses a **NATS-First** architecture.
 | Subject | Direction | Purpose |
 | :--- | :--- | :--- |
 | `titan.cmd.exec.place.v1.>` | Outbound | Validated Intents sent to Execution Engine. |
-| `titan.signal.submit` | Inbound | Strategies (Hunter/Sentinel) submitting proposals. |
+| `titan.data.submit` | Inbound | Strategies (Hunter/Sentinel) submitting proposals. |
 | `titan.evt.exec.fill.v1.>` | Inbound | Confirmation of trades from Execution. |
 | `titan.alert.drift` | Outbound | Critical alerts for pricing deviations. |
 

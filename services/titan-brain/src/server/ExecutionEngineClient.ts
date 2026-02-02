@@ -21,7 +21,7 @@ import { ExecutionEngineClient as IExecutionEngineClient } from "../types/execut
 import {
   getNatsClient,
   NatsClient,
-  TitanSubject,
+  TITAN_SUBJECTS,
   validateIntentPayload,
 } from "@titan/shared";
 
@@ -95,8 +95,11 @@ export class ExecutionEngineClient extends EventEmitter
     const symbolToken = signal.symbol.replace("/", "_");
     const venue = signal.exchange?.toLowerCase() ?? "auto";
     const account = "main";
-    const subject =
-      `${TitanSubject.CMD_EXEC_PLACE}.${venue}.${account}.${symbolToken}`;
+    const subject = TITAN_SUBJECTS.CMD.EXECUTION.PLACE(
+      venue,
+      account,
+      symbolToken,
+    );
 
     const payload = {
       schema_version: "1.0.0",
@@ -132,7 +135,7 @@ export class ExecutionEngineClient extends EventEmitter
       }
 
       await this.nats.publishEnvelope(subject, payload, {
-        type: "titan.cmd.exec.place.v1",
+        type: TITAN_SUBJECTS.CMD.EXECUTION.PREFIX,
         version: 1,
         producer: "titan-brain",
         correlation_id: signal.signalId,
@@ -179,21 +182,18 @@ export class ExecutionEngineClient extends EventEmitter
       // We might still want to proceed if NATS is temporarily down, but better to warn
     }
 
-    const subject = TitanSubject.CMD_RISK_POLICY; // Ensure this subject exists or use string literal
-    // If TitanSubject doesn't have CMD_RISK_POLICY, we define it here or use string
-    // Assuming titan.cmd.risk.policy based on Audit
-    const actualSubject = "titan.cmd.risk.policy";
+    const subject = TITAN_SUBJECTS.CMD.RISK.POLICY;
 
     try {
       await this.nats.publishEnvelope(
-        actualSubject,
+        subject,
         {
           timestamp: Date.now(),
           policy,
           source: "brain",
         },
         {
-          type: "titan.cmd.risk.policy.v1",
+          type: TITAN_SUBJECTS.CMD.RISK.POLICY,
           version: 1,
           producer: "titan-brain",
           idempotency_key: `risk-update-${Date.now()}`,
@@ -216,7 +216,7 @@ export class ExecutionEngineClient extends EventEmitter
     );
 
     try {
-      const subject = "titan.cmd.risk.flatten";
+      const subject = TITAN_SUBJECTS.CMD.RISK.FLATTEN;
       // Rust Engine expects a basic message to trigger flatten logic.
       // The current implementation in nats_engine.rs (flatten_sub) ignores the payload content
       // but requires a valid message. We'll send a structured payload for future compatibility.
@@ -230,7 +230,7 @@ export class ExecutionEngineClient extends EventEmitter
       await this.nats.publish(subject, payload);
 
       console.log(
-        "✅ Emergency flatten request published to titan.cmd.risk.flatten",
+        `✅ Emergency flatten request published to ${subject}`,
       );
 
       this.emit("positions:flattened", {
@@ -298,8 +298,11 @@ export class ExecutionEngineClient extends EventEmitter
     };
 
     try {
-      await this.nats.publish("titan.dlq.execution.core", dlqPayload);
-      await this.nats.publish("titan.execution.dlq", dlqPayload);
+      await this.nats.publish(TITAN_SUBJECTS.DLQ.EXECUTION, dlqPayload);
+      await this.nats.publish(
+        TITAN_SUBJECTS.LEGACY.DLQ_EXECUTION_V0,
+        dlqPayload,
+      ); // Legacy
     } catch (error) {
       console.error("❌ Failed to publish to DLQ:", error);
     }
@@ -337,7 +340,7 @@ export class ExecutionEngineClient extends EventEmitter
       throw new Error("Execution Engine not connected");
     }
 
-    const subject = `titan.execution.get_balances.${exchange.toLowerCase()}`;
+    const subject = TITAN_SUBJECTS.SYS.RPC.GET_BALANCES(exchange.toLowerCase());
     try {
       // Request with 5s timeout
 
@@ -361,7 +364,9 @@ export class ExecutionEngineClient extends EventEmitter
       throw new Error("Execution Engine not connected");
     }
 
-    const subject = `titan.execution.get_positions.${exchange.toLowerCase()}`;
+    const subject = TITAN_SUBJECTS.SYS.RPC.GET_POSITIONS(
+      exchange.toLowerCase(),
+    );
     try {
       // Request with 5s timeout
 

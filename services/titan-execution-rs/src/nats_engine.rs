@@ -19,6 +19,7 @@ use crate::pipeline::ExecutionPipeline;
 use crate::risk_guard::RiskGuard;
 use crate::shadow_state::{ExecutionEvent, ShadowState};
 use crate::simulation_engine::SimulationEngine;
+use crate::subjects; // Canonical Subjects
 
 /// Start the NATS Engine (Consumer Loop and Halt Listener)
 /// Returns a handle to the consumer task
@@ -61,7 +62,7 @@ pub async fn start_nats_engine(
 
     // --- Market Data Listener (Staleness) ---
     let mut ticker_sub = client
-        .subscribe("titan.market.ticker.>")
+        .subscribe("titan.data.market.ticker.v1.>")
         .await
         .map_err(|e| {
             error!("❌ Failed to subscribe to tickers: {}", e);
@@ -86,7 +87,7 @@ pub async fn start_nats_engine(
 
     // --- System Halt Listener (Unified SystemState) ---
     // Payload: { "state": "OPEN" | "SOFT_HALT" | "HARD_HALT", "reason": "...", "timestamp": ... }
-    let mut halt_sub = client.subscribe("titan.cmd.sys.halt").await.map_err(|e| {
+    let mut halt_sub = client.subscribe(subjects::CMD_SYS_HALT).await.map_err(|e| {
         error!("❌ Failed to subscribe to titan.cmd.sys.halt: {}", e);
         e
     })?;
@@ -139,7 +140,7 @@ pub async fn start_nats_engine(
 
     // --- Get Positions Request-Reply Handler ---
     let mut positions_sub = client
-        .subscribe("titan.execution.get_positions.>")
+        .subscribe("titan.rpc.execution.get_positions.v1.>")
         .await
         .map_err(|e| {
             error!("❌ Failed to subscribe to get_positions: {}", e);
@@ -189,7 +190,7 @@ pub async fn start_nats_engine(
 
     // --- Get Balances Stub ---
     let mut balances_sub = client
-        .subscribe("titan.execution.get_balances.>")
+        .subscribe("titan.rpc.execution.get_balances.v1.>")
         .await
         .map_err(|e| {
             error!("❌ Failed to subscribe to get_balances: {}", e);
@@ -263,7 +264,7 @@ pub async fn start_nats_engine(
 
     // --- Flatten Command Listener ---
     let mut flatten_sub = client
-        .subscribe("titan.cmd.risk.flatten")
+        .subscribe(subjects::CMD_RISK_FLATTEN)
         .await
         .map_err(|e| {
             error!("❌ Failed to subscribe to flatten: {}", e);
@@ -349,7 +350,7 @@ pub async fn start_nats_engine(
     });
 
     // --- Market Price Subscription (Valuation) ---
-    let mut price_sub = client.subscribe("market.price.>").await.map_err(|e| {
+    let mut price_sub = client.subscribe("titan.data.market.ticker.v1.>").await.map_err(|e| {
         error!("❌ Failed to subscribe to market.price: {}", e);
         e
     })?;
@@ -383,7 +384,7 @@ pub async fn start_nats_engine(
 
     // --- Risk Policy Update Listener ---
     let mut policy_sub = client
-        .subscribe("titan.cmd.risk.policy")
+        .subscribe(subjects::CMD_RISK_POLICY)
         .await
         .map_err(|e| {
             error!("❌ Failed to subscribe to risk policy updates: {}", e);
@@ -488,7 +489,7 @@ pub async fn start_nats_engine(
 
     // 1. Ensure TITAN_CMD Stream (WorkQueue for Commands)
     let cmd_stream_name = "TITAN_CMD";
-    let cmd_subjects = vec!["titan.cmd.>".to_string()];
+    let cmd_subjects = vec![subjects::CMD_WILDCARD.to_string()];
 
     let _cmd_stream = match jetstream.get_stream(cmd_stream_name).await {
         Ok(s) => s,
@@ -517,7 +518,7 @@ pub async fn start_nats_engine(
 
     // 2. Ensure TITAN_EVT Stream (Interest for Events)
     let evt_stream_name = "TITAN_EVT";
-    let evt_subjects = vec!["titan.evt.>".to_string()];
+    let evt_subjects = vec!["titan.evt.>".to_string()]; // Keep generic or add EVT_WILDCARD to subjects? I'll keep generic for now or add to subjects.rs
 
     let _evt_stream = match jetstream.get_stream(evt_stream_name).await {
         Ok(s) => s,
@@ -552,7 +553,7 @@ pub async fn start_nats_engine(
 
     // Create Durable Consumer on TITAN_CMD
     let consumer_name = "EXECUTION_CORE";
-    let intent_subject = "titan.cmd.exec.>";
+    let intent_subject = subjects::CMD_EXEC_WILDCARD;
 
     // We bind to the stream that captures the subject.
     // Since TITAN_CMD captures titan.cmd.>, we use that stream.
@@ -798,7 +799,7 @@ pub async fn start_nats_engine(
                                         Ok(pipeline_result) => {
                                             // 1. Shadow Fill
                                             if let Some(shadow_fill) = pipeline_result.shadow_fill {
-                                                let subject = format!("titan.execution.shadow_fill.{}", intent.symbol);
+                                                let subject = format!("titan.evt.execution.shadow_fill.v1.{}", intent.symbol);
                                                 if let Ok(payload) = serde_json::to_vec(&shadow_fill) {
                                                     client_shadow.publish(subject, payload.into()).await.ok();
                                                 }
@@ -819,7 +820,7 @@ pub async fn start_nats_engine(
                                                     ExecutionEvent::Opened(pos) => info!("Pos Open: {} {}", pos.symbol, pos.size),
                                                     ExecutionEvent::Updated(pos) => info!("Pos Upd: {} {}", pos.symbol, pos.size),
                                                     ExecutionEvent::Closed(trade) => {
-                                                        let subject = "titan.evt.exec.trade.closed";
+                                                        let subject = "titan.evt.execution.trade.closed.v1";
                                                         // Envelope
                                                         let envelope = serde_json::json!({
                                                             "id": ctx_nats.id.new_id(),
@@ -835,7 +836,7 @@ pub async fn start_nats_engine(
                                                         }
                                                     },
                                                     ExecutionEvent::FundingPaid(symbol, amount, asset) => {
-                                                        let subject = "titan.evt.exec.funding";
+                                                        let subject = "titan.evt.execution.funding.v1";
                                                           let envelope = serde_json::json!({
                                                             "id": ctx_nats.id.new_id(),
                                                             "type": "titan.event.execution.funding.v1",
@@ -854,7 +855,7 @@ pub async fn start_nats_engine(
                                                     },
 
                                                     ExecutionEvent::BalanceUpdated(equity, cash) => {
-                                                        let subject = "titan.evt.exec.balance";
+                                                        let subject = "titan.evt.execution.balance";
                                                         // Simple payload
                                                         let payload = serde_json::json!({
                                                             "asset": "USDT",
@@ -874,7 +875,7 @@ pub async fn start_nats_engine(
                                             // 4. Fill Reports
                                             for (exchange_name, fill_report) in pipeline_result.fill_reports {
                                                 let subject = format!(
-                                                    "titan.evt.exec.fill.v1.{}.main.{}",
+                                                    "titan.evt.execution.fill.v1.{}.main.{}",
                                                     exchange_name,
                                                     fill_report.symbol.replace("/", "_")
                                                 );
@@ -1102,7 +1103,7 @@ async fn publish_rejection_event(
 
     if let Ok(bytes) = serde_json::to_vec(&event_payload) {
         let _ = client
-            .publish("titan.evt.exec.reject.v1", bytes.into())
+            .publish("titan.evt.execution.reject.v1", bytes.into())
             .await;
         metrics::inc_rejection_events();
     }

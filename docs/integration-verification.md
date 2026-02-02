@@ -107,7 +107,7 @@ Unused exports (some - types only, acceptable)
 
 Canonical subject definitions in `packages/shared/src/messaging/NatsClient.ts`:
 - `TitanSubject` enum defines all NATS subjects
-- Used by: titan-brain, titan-execution-rs, canonical-powerlaw-service
+- Used by: titan-brain, titan-execution
 
 ## Config Validation
 

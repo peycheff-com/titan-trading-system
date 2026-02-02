@@ -14,6 +14,7 @@ import {
   type PowerLawMetricsV1,
   RegimeState,
   signedProposalSchema,
+  TITAN_SUBJECTS,
   TitanSubject,
   verifyExecutionPolicyHash,
 } from "@titan/shared";
@@ -391,9 +392,12 @@ export class TitanBrain
     }
 
     // 3. Subscribe to Operator Actions (P2: Unified Control Plane)
-    this.natsClient.subscribe("titan.cmd.operator.v1", async (msg: any) => {
-      await this.handleOperatorAction(msg.payload || msg);
-    });
+    this.natsClient.subscribe(
+      TITAN_SUBJECTS.CMD.OPERATOR.ALL,
+      async (msg: any) => {
+        await this.handleOperatorAction(msg.payload || msg);
+      },
+    );
 
     // 4. Start metric updates (Runs on both Leader and Follower)
     this.startMetricUpdates();
@@ -756,7 +760,7 @@ export class TitanBrain
       );
 
       // Audit Log
-      await this.natsClient.publish("titan.evt.audit.operator", action);
+      await this.natsClient.publish(TITAN_SUBJECTS.EVT.AUDIT.OPERATOR, action);
 
       switch (action.type) {
         case "ARM_SYSTEM":
@@ -1264,7 +1268,7 @@ export class TitanBrain
                   timestamp: Date.now(),
                 });
                 await this.natsClient.publish(
-                  "titan.evt.risk.correlation_warning",
+                  TITAN_SUBJECTS.EVT.RISK.CORRELATION_WARNING,
                   Buffer.from(payload),
                 );
               },
@@ -1294,7 +1298,7 @@ export class TitanBrain
     // 3. Update service discovery
     // For now, we'll just log it and maybe emit an event
     await this.natsClient.publish(
-      "titan.evt.sys.failover_initiated",
+      TITAN_SUBJECTS.EVT.SYS.FAILOVER_INITIATED,
       Buffer.from(JSON.stringify({ operatorId, timestamp: Date.now() })),
     );
   }
@@ -1313,7 +1317,7 @@ export class TitanBrain
       logger.warn("StateRecoveryService not initialized, skipping restore.");
     }
     await this.natsClient.publish(
-      "titan.evt.sys.restore_initiated",
+      TITAN_SUBJECTS.EVT.SYS.RESTORE_INITIATED,
       Buffer.from(
         JSON.stringify({ operatorId, backupId, timestamp: Date.now() }),
       ),

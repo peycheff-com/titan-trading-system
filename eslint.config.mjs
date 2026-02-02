@@ -49,7 +49,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['ecosystem.config.js'],
+    files: ['ecosystem.config.js', '**/*.mjs', '**/scripts/*.js', '**/scripts/**/*.ts'],
     languageOptions: {
       globals: {
         module: 'readonly',

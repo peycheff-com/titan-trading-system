@@ -14,27 +14,27 @@
  * Add new symbols here - they will propagate to all consumers.
  */
 export const POWER_LAW_SYMBOL_WHITELIST = [
-    // Major pairs
-    "BTCUSDT",
-    "ETHUSDT",
-    "BNBUSDT",
-    "SOLUSDT",
-    "XRPUSDT",
-    "DOGEUSDT",
-    "ADAUSDT",
-    "AVAXUSDT",
-    "DOTUSDT",
-    "LINKUSDT",
-    "MATICUSDT",
-    "UNIUSDT",
-    "LTCUSDT",
-    "ATOMUSDT",
-    "NEARUSDT",
-    "ARBUSDT",
-    "OPUSDT",
-    "APTUSDT",
-    "SUIUSDT",
-    "INJUSDT",
+  // Major pairs
+  'BTCUSDT',
+  'ETHUSDT',
+  'BNBUSDT',
+  'SOLUSDT',
+  'XRPUSDT',
+  'DOGEUSDT',
+  'ADAUSDT',
+  'AVAXUSDT',
+  'DOTUSDT',
+  'LINKUSDT',
+  'MATICUSDT',
+  'UNIUSDT',
+  'LTCUSDT',
+  'ATOMUSDT',
+  'NEARUSDT',
+  'ARBUSDT',
+  'OPUSDT',
+  'APTUSDT',
+  'SUIUSDT',
+  'INJUSDT',
 ] as const;
 
 /**
@@ -46,10 +46,10 @@ export type PowerLawSymbol = (typeof POWER_LAW_SYMBOL_WHITELIST)[number];
  * Check if a symbol is in the Power Law whitelist
  */
 export function isPowerLawSymbol(symbol: string): symbol is PowerLawSymbol {
-    return POWER_LAW_SYMBOL_WHITELIST.includes(symbol as PowerLawSymbol);
+  return POWER_LAW_SYMBOL_WHITELIST.includes(symbol as PowerLawSymbol);
 }
 
 /**
  * Default symbol for fallback metrics (used when symbol-specific metrics missing)
  */
-export const POWER_LAW_FALLBACK_SYMBOL: PowerLawSymbol = "BTCUSDT";
+export const POWER_LAW_FALLBACK_SYMBOL: PowerLawSymbol = 'BTCUSDT';

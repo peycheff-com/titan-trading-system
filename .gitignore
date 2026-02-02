@@ -188,3 +188,7 @@ deploy-package.tar.gz
 .turbo/
 .turbo/
 .secrets.env
+
+# Generated artifacts in Titan Execution
+services/titan-execution-rs/src/risk_policy.json
+site/

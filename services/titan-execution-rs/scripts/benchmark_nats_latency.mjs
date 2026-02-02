@@ -24,8 +24,8 @@ if (!Number.isFinite(count) || count <= 0) {
 const venue = args.get("venue") || "auto";
 const account = args.get("account") || "main";
 const symbolToken = symbol.replace("/", "_");
-const subject = `titan.cmd.exec.place.v1.${venue}.${account}.${symbolToken}`;
-const shadowSubject = `titan.execution.shadow_fill.${symbol}`;
+const subject = `titan.cmd.execution.place.v1.${venue}.${account}.${symbolToken}`;
+const shadowSubject = `titan.evt.execution.shadow_fill.v1.${symbol}`;
 
 const sc = StringCodec();
 const pending = new Map();

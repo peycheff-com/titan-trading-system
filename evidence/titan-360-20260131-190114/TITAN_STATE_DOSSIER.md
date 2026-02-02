@@ -49,7 +49,7 @@ Titan is a **production-grade algorithmic trading system** comprising 9 TypeScri
 ### NATS Subjects (70 discovered)
 | Category | Pattern | Examples |
 |----------|---------|----------|
-| Commands | titan.cmd.* | exec.place.v1, sys.halt, risk.flatten |
+| Commands | titan.cmd.* | execution.place.v1, sys.halt.v1, risk.flatten |
 | Events | titan.evt.* | exec.fill.v1, brain.signal.v1, powerlaw.impact.v1 |
 | Data | titan.data.* | market.ticker, dashboard.update |
 | Signals | titan.signal.* | execution.constraints.v1, powerlaw.metrics.v1 |
@@ -72,7 +72,7 @@ Titan is a **production-grade algorithmic trading system** comprising 9 TypeScri
 |--------|----------|--------------|---------------|
 | ARM | POST /auth/arm | HIGH | Yes (PIN + reason) |
 | DISARM | POST /auth/disarm | MEDIUM | Yes |
-| HALT | titan.cmd.sys.halt | CRITICAL | Yes |
+| HALT | titan.cmd.sys.halt.v1 | CRITICAL | Yes |
 | FLATTEN | titan.cmd.risk.flatten | CRITICAL | Yes |
 
 ## Deployment Topology

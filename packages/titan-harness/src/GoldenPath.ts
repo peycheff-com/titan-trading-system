@@ -1,4 +1,4 @@
-import { getNatsClient, TitanSubject } from "@titan/shared";
+import { getNatsClient, TITAN_SUBJECTS } from "@titan/shared";
 import { v4 as uuidv4 } from "uuid";
 
 export interface HarnessConfig {
@@ -54,7 +54,7 @@ export class GoldenPath {
 
         // Listen for Brain -> Execution Intent
         this.nats.subscribe(
-            "titan.cmd.exec.place.v1.>",
+            TITAN_SUBJECTS.CMD.EXECUTION.ALL,
             (data: any, subject: string) => {
                 this.handleExecutionIntent(data, subject);
             },
@@ -62,7 +62,7 @@ export class GoldenPath {
 
         // P0 item 7.5: Listen for Execution Rejection Events
         this.nats.subscribe(
-            "titan.evt.exec.reject.v1",
+            TITAN_SUBJECTS.EVT.EXECUTION.REJECT,
             (data: any) => {
                 this.handleRejectionEvent(data as RejectionEvent);
             },
@@ -126,7 +126,7 @@ export class GoldenPath {
             });
 
             try {
-                await this.nats.publish(TitanSubject.SIGNAL_SUBMIT, signal);
+                await this.nats.publish(TITAN_SUBJECTS.SIGNAL.SUBMIT, signal);
             } catch (err) {
                 clearTimeout(timeout);
                 this.pendingSignals.delete(signalId);
@@ -171,7 +171,7 @@ export class GoldenPath {
 
         // Publish directly to execution (bypassing Brain) with unsigned envelope
         // This should be rejected by Execution
-        const subject = `titan.cmd.exec.place.v1.auto.main.${
+        const subject = `${TITAN_SUBJECTS.CMD.EXECUTION.PREFIX}.auto.main.${
             symbol.replace("/", "_")
         }`;
         await this.nats.publish(subject, intentPayload);

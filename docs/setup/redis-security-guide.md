@@ -390,4 +390,4 @@ If Redis password is lost or compromised:
 - [Redis Security Documentation](https://redis.io/topics/security)
 - [Redis Configuration Guide](https://redis.io/topics/config)
 - [Redis Best Practices](https://redis.io/topics/memory-optimization)
-- [Titan System Architecture](./titan-architecture.md)
+- [Titan System Architecture](../explanation/architecture_overview.md)

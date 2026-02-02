@@ -1,0 +1,74 @@
+site_name: Titan Trading System
+site_url: https://titan.internal
+repo_url: https://github.com/peycheff-com/titan-trading-system
+repo_name: peycheff-com/titan-trading-system
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+  palette: 
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - attr_list
+
+plugins:
+  - search
+  - minify:
+      minify_html: true
+
+nav:
+  - Start Here: START_HERE.md
+  - Tutorials:
+    - tutorials/index.md
+  - How-To Guides:
+    - how-to/index.md
+    - Deployment: how-to/deploy-production.md
+    - Secrets: security/secrets-management.md
+    - Runbooks:
+      - runbooks/incident_response.md
+  - Reference:
+    - reference/index.md
+    - Canonical Truth: canonical/SYSTEM_SOURCE_OF_TRUTH.md
+    - API Reference: api/README.md
+  - Explanation:
+    - explanation/index.md
+    - Architecture: explanation/architecture_overview.md
+    - HA Strategy: explanation/ha-strategy.md
+    - Execution Routing: explanation/execution-routing.md
+    - CI Gates: explanation/ci-quality-gates.md
+  - Security:
+    - security/secrets-management.md
+
+  - Audit Reports:
+    - DOCS_AUDIT_REPORT.md

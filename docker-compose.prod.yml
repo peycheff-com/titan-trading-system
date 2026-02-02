@@ -1,5 +1,6 @@
 # Titan Trading System - Production Docker Compose
 # Deploy all services on a single VPS with IPC support
+# CANONICAL VERSION for CI/CD
 
 services:
   # =============================================================================
@@ -35,15 +36,12 @@ services:
   nats:
     image: nats:2.10.24-alpine
     container_name: titan-nats
-    # Use entrypoint script for secure password injection (no hardcoded secrets)
     entrypoint: ['/entrypoint.sh']
     volumes:
-      # JetStream on block storage (INV-02: durability)
       - ${JETSTREAM_VOLUME_PATH:-titan-jetstream-data}:/data/jetstream
       - ./config/nats.conf.template:/etc/nats/nats.conf.template:ro
       - ./config/nats-entrypoint.sh:/entrypoint.sh:ro
     environment:
-      # All passwords injected via env vars (P0 security fix)
       - NATS_SYS_PASSWORD=${NATS_SYS_PASSWORD:?NATS_SYS_PASSWORD required}
       - NATS_BRAIN_PASSWORD=${NATS_BRAIN_PASSWORD:?NATS_BRAIN_PASSWORD required}
       - NATS_EXECUTION_PASSWORD=${NATS_EXECUTION_PASSWORD:?NATS_EXECUTION_PASSWORD required}
@@ -54,7 +52,6 @@ services:
       - NATS_QUANT_PASSWORD=${NATS_QUANT_PASSWORD:?NATS_QUANT_PASSWORD required}
       - NATS_CONSOLE_PASSWORD=${NATS_CONSOLE_PASSWORD:?NATS_CONSOLE_PASSWORD required}
     ports:
-      # VPC-only bind for production (INV-03: no public state ports)
       - '${VPC_IP:-127.0.0.1}:4222:4222'
       - '${VPC_IP:-127.0.0.1}:8222:8222'
     networks:
@@ -124,7 +121,6 @@ services:
         reservations:
           cpus: '0.5'
           memory: 512M
-
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U ${TITAN_DB_USER:-titan}']
       interval: 10s
@@ -176,10 +172,10 @@ services:
       - ./monitoring/tempo/tempo.yaml:/etc/tempo.yaml
       - titan-tempo-data:/tmp/tempo
     ports:
-      - '14268:14268' # jeager ingest
-      - '3200:3200' # tempo
-      - '4317:4317' # otlp grpc
-      - '4318:4318' # otlp http
+      - '14268:14268'
+      - '3200:3200'
+      - '4317:4317'
+      - '4318:4318'
     networks:
       - titan-network
     restart: unless-stopped
@@ -188,9 +184,7 @@ services:
   # TITAN BRAIN - Master Orchestrator
   # =============================================================================
   titan-brain:
-    build:
-      context: .
-      dockerfile: services/titan-brain/Dockerfile
+    image: ${TITAN_REGISTRY:-ghcr.io/peycheff-com/titan-trading-system}/titan-brain:${IMAGE_TAG:-latest}
     container_name: titan-brain
     env_file:
       - .env.prod
@@ -245,12 +239,10 @@ services:
           memory: 256M
 
   # =============================================================================
-  # TITAN EXECUTION (Rust) - High-Performance Order Execution
+  # TITAN EXECUTION (Rust)
   # =============================================================================
   titan-execution:
-    build:
-      context: services/titan-execution-rs
-      dockerfile: Dockerfile
+    image: ${TITAN_REGISTRY:-ghcr.io/peycheff-com/titan-trading-system}/titan-execution-rs:${IMAGE_TAG:-latest}
     container_name: titan-execution
     env_file:
       - .env.prod
@@ -286,14 +278,10 @@ services:
           memory: 128M
 
   # =============================================================================
-  # TITAN CONSOLE - Web Dashboard
+  # TITAN CONSOLE
   # =============================================================================
   titan-console:
-    build:
-      context: .
-      dockerfile: services/titan-console/Dockerfile
-      args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:3100}
+    image: ${TITAN_REGISTRY:-ghcr.io/peycheff-com/titan-trading-system}/titan-console:${IMAGE_TAG:-latest}
     container_name: titan-console
     environment:
       - NODE_ENV=production
@@ -318,12 +306,10 @@ services:
       retries: 3
 
   # =============================================================================
-  # PHASE 1: SCAVENGER - Trap Detection
+  # PHASE 1: SCAVENGER
   # =============================================================================
   titan-scavenger:
-    build:
-      context: .
-      dockerfile: services/titan-phase1-scavenger/Dockerfile
+    image: ${TITAN_REGISTRY:-ghcr.io/peycheff-com/titan-trading-system}/titan-phase1-scavenger:${IMAGE_TAG:-latest}
     container_name: titan-scavenger
     environment:
       - NODE_ENV=production
@@ -346,12 +332,10 @@ services:
       retries: 3
 
   # =============================================================================
-  # PHASE 2: HUNTER - Market Structure Analysis
+  # PHASE 2: HUNTER
   # =============================================================================
   titan-hunter:
-    build:
-      context: .
-      dockerfile: services/titan-phase2-hunter/Dockerfile
+    image: ${TITAN_REGISTRY:-ghcr.io/peycheff-com/titan-trading-system}/titan-phase2-hunter:${IMAGE_TAG:-latest}
     container_name: titan-hunter
     environment:
       - NODE_ENV=production
@@ -377,12 +361,10 @@ services:
       retries: 3
 
   # =============================================================================
-  # PHASE 3: SENTINEL - Basis Arbitrage
+  # PHASE 3: SENTINEL
   # =============================================================================
   titan-sentinel:
-    build:
-      context: .
-      dockerfile: services/titan-phase3-sentinel/Dockerfile
+    image: ${TITAN_REGISTRY:-ghcr.io/peycheff-com/titan-trading-system}/titan-phase3-sentinel:${IMAGE_TAG:-latest}
     container_name: titan-sentinel
     environment:
       - NODE_ENV=production
@@ -405,12 +387,10 @@ services:
       retries: 3
 
   # =============================================================================
-  # PHASE 4: AI QUANT - Parameter Optimization
+  # PHASE 4: AI QUANT
   # =============================================================================
   titan-ai-quant:
-    build:
-      context: .
-      dockerfile: services/titan-ai-quant/Dockerfile
+    image: ${TITAN_REGISTRY:-ghcr.io/peycheff-com/titan-trading-system}/titan-ai-quant:${IMAGE_TAG:-latest}
     container_name: titan-ai-quant
     environment:
       - NODE_ENV=production
@@ -440,12 +420,10 @@ services:
       retries: 3
 
   # =============================================================================
-  # POWERLAW LAB - Tail Estimation
+  # POWERLAW LAB
   # =============================================================================
   titan-powerlaw-lab:
-    build:
-      context: .
-      dockerfile: services/titan-powerlaw-lab/Dockerfile
+    image: ${TITAN_REGISTRY:-ghcr.io/peycheff-com/titan-trading-system}/titan-powerlaw-lab:${IMAGE_TAG:-latest}
     container_name: titan-powerlaw-lab
     environment:
       - NODE_ENV=production

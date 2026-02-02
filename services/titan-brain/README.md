@@ -1,4 +1,20 @@
-# Titan Brain - Phase 5 Orchestrator
+# Titan Brain
+
+**Owner:** @peycheff
+**Lang:** TypeScript (Node.js)
+
+The Orchestration Layer of the Titan Trading System. It manages the event loop, risk state, and strategy coordination.
+
+## Responsibilities
+- Central Event Bus Interface (NATS)
+- Risk Policy Enforcement (Pre-Execution)
+- Signal Aggregation & Scoring
+- Persistent State Management (PostgreSQL)
+
+## Key Invariants
+- **Stateless Logic**: All state is in DB or Redis.
+- **Fail-Closed**: Risk violation => Halt.
+ - Phase 5 Orchestrator
 
 The Brain is the master control system that orchestrates capital allocation, risk management, and strategy coordination across all Titan phases. It transforms Titan from a set of disjointed trading strategies into a coherent quantitative fund.
 

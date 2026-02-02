@@ -61,6 +61,8 @@ pub struct ExecutionConfig {
     pub initial_balance: Option<f64>,
     pub freshness_threshold_ms: Option<u64>,
     pub risk_guard: RiskGuardConfig,
+    #[serde(default)]
+    pub active_standby: bool,
 }
 
 #[derive(Debug, Deserialize, Clone, Default)]

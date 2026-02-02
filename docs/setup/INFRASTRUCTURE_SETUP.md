@@ -286,9 +286,9 @@ After successful infrastructure provisioning:
 
 ## Support and Documentation
 
-- [Deployment Guide](../operations/deployment/getting-started.md)
-- [Security Hardening](../operations/security/hardening-guide.md)
-- [Monitoring Setup](../operations/monitoring/setup-guide.md)
+- [Deployment Guide](../how-to/deploy-production.md)
+- [Security Guide](../security/secrets-management.md)
+- [Monitoring](../how-to/index.md)
 - [Troubleshooting Guide](../operations/troubleshooting/incident-response.md)
 
 For additional support, refer to the operational runbooks in `docs/operations/runbooks/`.

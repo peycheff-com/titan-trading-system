@@ -1,0 +1,6 @@
+# Explanation
+
+Understanding-oriented documentation explaining the "Why".
+
+- [Architecture Overview](architecture_overview.md)
+

@@ -1,6 +1,6 @@
-import { Logger } from '../../logging/Logger.js';
-import { getNatsClient, NatsClient } from '@titan/shared';
-import { DynamicConfigService } from '../config/DynamicConfigService.js';
+import { Logger } from "../../logging/Logger.js";
+import { getNatsClient, NatsClient, TITAN_SUBJECTS } from "@titan/shared";
+import { DynamicConfigService } from "../config/DynamicConfigService.js";
 
 interface ResultMetric {
   versionId: number;
@@ -33,27 +33,30 @@ export class CanaryMonitor {
     private readonly metricsCollector?: any, // Optional
     natsClient?: NatsClient,
   ) {
-    this.logger = Logger.getInstance('canary-monitor');
+    this.logger = Logger.getInstance("canary-monitor");
     this.nats = natsClient || getNatsClient();
     this.configService = configService;
   }
 
   async startMonitoring(intervalMs: number = 60000): Promise<void> {
-    this.logger.info('Starting Canary Monitor...');
+    this.logger.info("Starting Canary Monitor...");
 
     // Listen for trade completion events
-    await this.nats.subscribe('titan.analysis.trade_completed', (msg: any) => {
-      const data = msg.payload || msg;
-      if (data.configVersionId) {
-        this.recordMetric({
-          versionId: data.configVersionId,
-          isCanary: data.isCanary,
-          pnl: data.pnl,
-          slippage: data.slippage,
-          success: data.pnl >= 0,
-        });
-      }
-    });
+    await this.nats.subscribe(
+      TITAN_SUBJECTS.EVT.ANALYSIS.TRADE_COMPLETED,
+      (msg: any) => {
+        const data = msg.payload || msg;
+        if (data.configVersionId) {
+          this.recordMetric({
+            versionId: data.configVersionId,
+            isCanary: data.isCanary,
+            pnl: data.pnl,
+            slippage: data.slippage,
+            success: data.pnl >= 0,
+          });
+        }
+      },
+    );
 
     // Periodic Health Check
     // eslint-disable-next-line functional/immutable-data
@@ -66,7 +69,7 @@ export class CanaryMonitor {
       // eslint-disable-next-line functional/immutable-data
       this.intervalId = null;
     }
-    this.logger.info('Canary Monitor stopped');
+    this.logger.info("Canary Monitor stopped");
   }
 
   private recordMetric(metric: ResultMetric) {
@@ -99,7 +102,9 @@ export class CanaryMonitor {
 
       // Example Threshold: > 60% failure
       if (failureRate > 0.6) {
-        this.logger.error(`🚨 Canary Version ${versionId} is failing! Rate: ${failureRate}`);
+        this.logger.error(
+          `🚨 Canary Version ${versionId} is failing! Rate: ${failureRate}`,
+        );
         this.triggerRollback(versionId);
       }
     }
@@ -108,7 +113,7 @@ export class CanaryMonitor {
   private triggerRollback(versionId: number) {
     this.logger.warn(`Initiating rollback for version ${versionId}`);
     // Publish event for distributed systems
-    this.nats.publish('titan.cmd.config.rollback', { versionId });
+    this.nats.publish(TITAN_SUBJECTS.CMD.CONFIG.ROLLBACK, { versionId });
 
     // Also could call configService directly if needed, e.g.
     // this.configService.disableRollout(versionId);

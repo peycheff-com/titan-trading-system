@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { CommandPalette } from '@/components/titan/CommandPalette';
+import { TruthStatusBar } from '@/components/titan/TruthStatusBar';
 import { Lock, Unlock, Wifi, WifiOff, Clock } from 'lucide-react';
 
 type Environment = 'local' | 'testnet' | 'prod';
@@ -82,8 +83,9 @@ export function TopBar({ safetyLocked, onSafetyToggle }: TopBarProps) {
       </div>
 
       {/* Center - Command Palette */}
-      <div className="flex-1 flex justify-center max-w-md mx-4">
+      <div className="flex-1 flex justify-center max-w-lg mx-4 items-center gap-4">
         <CommandPalette />
+        <TruthStatusBar />
       </div>
 
       {/* Right section */}

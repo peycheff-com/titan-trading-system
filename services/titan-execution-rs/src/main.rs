@@ -29,6 +29,7 @@ use titan_execution_rs::risk_policy::RiskPolicy;
 use titan_execution_rs::shadow_state::ShadowState;
 use titan_execution_rs::simulation_engine::SimulationEngine;
 use titan_execution_rs::sre::SreMonitor;
+use titan_execution_rs::subjects; // Canonical Subjects
 // use tracing_subscriber::FmtSubscriber;
 
 fn load_secrets_from_files() {
@@ -267,7 +268,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     tokio::spawn(async move {
         use futures::StreamExt;
         // Listen for ARM command
-        let mut arm_sub = match client_for_arm.subscribe("titan.cmd.operator.arm.v1").await {
+        let mut arm_sub = match client_for_arm.subscribe(subjects::CMD_OPERATOR_ARM).await {
             Ok(s) => s,
             Err(e) => {
                 error!("Failed to subscribe to ARM commands: {}", e);
@@ -287,7 +288,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         use futures::StreamExt;
         // Listen for DISARM command
         let mut disarm_sub = match client_for_disarm
-            .subscribe("titan.cmd.operator.disarm.v1")
+            .subscribe(subjects::CMD_OPERATOR_DISARM)
             .await
         {
             Ok(s) => s,
