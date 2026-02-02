@@ -3,13 +3,9 @@
  */
 
 export {
-  CacheManager,
   CacheConfig,
-  CacheStats,
+  CacheManager,
   CacheNamespace,
+  CacheStats,
   DEFAULT_CACHE_CONFIG,
-} from './CacheManager.js';
-
-export { CachedAllocationEngine } from './CachedAllocationEngine.js';
-export { CachedPerformanceTracker } from './CachedPerformanceTracker.js';
-export { CachedRiskGuardian } from './CachedRiskGuardian.js';
+} from "./CacheManager.js";
