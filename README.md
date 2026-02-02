@@ -249,6 +249,8 @@ docker compose -f docker-compose.prod.yml -f docker-compose.secrets.yml up -d
 
 ```
 titan/
+├── apps/
+│   └── titan-console/         # React dashboard
 ├── services/
 │   ├── titan-brain/           # Central orchestrator
 │   ├── titan-execution-rs/    # Rust execution engine
@@ -256,9 +258,12 @@ titan/
 │   ├── titan-phase2-hunter/
 │   ├── titan-phase3-sentinel/
 │   ├── titan-ai-quant/
-│   ├── titan-powerlaw-lab/    # Power Law Research & Experiments
-│   ├── titan-console/         # React dashboard
-│   └── shared/                # Common library
+│   ├── titan-powerlaw-lab/    # Power Law Research
+│   └── canonical-powerlaw-service/
+├── packages/
+│   ├── shared/                # Common library (@titan/shared)
+│   ├── titan-backtesting/     # Simulation engine
+│   └── titan-harness/         # Test harness
 ├── config/                    # Configuration files
 ├── scripts/                   # Operational scripts
 ├── docs/                      # Documentation

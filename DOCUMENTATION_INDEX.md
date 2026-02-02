@@ -42,7 +42,7 @@ Located in `docs/operations/`:
 | **AI Quant** | `services/titan-ai-quant` | Node.js | Gemini AI optimization. |
 | **Backtesting** | `services/titan-backtesting` | Node.js | **(New)** Simulation infrastructure. |
 | **PowerLaw Lab** | `services/titan-powerlaw-lab` | Node.js | **(Experimental)** Fractal analysis. |
-| **Shared** | `services/shared` | TypeScript | Common types, NATS clients, Logger. |
+| **Shared** | `packages/shared` | TypeScript | Common types, NATS clients, Logger. |
 
 ## 5. Truth Gaps & Implementation Status
 
