@@ -2,6 +2,7 @@
   "name": "titan-phase2-hunter",
   "version": "1.0.0",
   "description": "Titan Phase 2 - The Hunter: Holographic Market Structure Engine for institutional-grade swing trading",
+  "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
