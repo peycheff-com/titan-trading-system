@@ -12,7 +12,7 @@
     "start": "echo 'Use npm run start:<service> to start a specific service'",
     "start:brain": "npm start -w services/titan-brain",
     "start:execution": "cd services/titan-execution-rs && cargo run --release",
-    "start:console": "npm start -w services/titan-console",
+    "start:console": "npm start -w apps/titan-console",
     "start:scavenger": "npm start -w services/titan-phase1-scavenger",
     "start:hunter": "npm start -w services/titan-phase2-hunter",
     "start:sentinel": "npm start -w services/titan-phase3-sentinel",
@@ -67,20 +67,14 @@
   "dependencies": {
     "nats": "^2.29.3",
     "uuid": "^13.0.0",
-    "vite": "^6.0.7",
-    "weaviate-client": "^3.2.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@stryker-mutator/core": "^9.4.0",
     "@stryker-mutator/jest-runner": "^9.4.0",
-    "@stryker-mutator/typescript-checker": "^9.4.0",
     "@types/jest": "^30.0.0",
-    "axios": "^1.13.3",
     "commander": "^14.0.2",
-    "cross-env": "^10.1.0",
     "depcheck": "^1.4.7",
-    "dependency-cruiser": "^17.3.6",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-functional": "^9.0.2",
@@ -88,15 +82,11 @@
     "eslint-plugin-sonarjs": "^3.0.5",
     "jest": "^30.2.0",
     "knip": "^5.82.1",
-    "license-checker": "^25.0.1",
-    "madge": "^8.0.0",
     "prettier": "^3.8.0",
-    "tinybench": "^6.0.0",
     "ts-jest": "^29.4.6",
     "turbo": "^2.3.3",
     "typescript-eslint": "^8.53.0",
-    "undici": "^7.19.1",
-    "ws": "^8.19.0"
+    "undici": "^7.19.1"
   },
   "overrides": {
     "d3-color": "^3.1.0"
