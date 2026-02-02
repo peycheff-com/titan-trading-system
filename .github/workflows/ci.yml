@@ -34,18 +34,18 @@ jobs:
         run: npx ts-node scripts/ops/validate_env.ts
         env:
           # Mock secrets for CI validation pass (we only check existence/format)
-          HMAC_SECRET: "ci_secret"
-          TITAN_MASTER_PASSWORD: "ci_password"
-          DATABASE_URL: "postgres://user:pass@localhost:5432/db"
-          NATS_SYS_PASSWORD: "ci_sys_pass"
-          NATS_BRAIN_PASSWORD: "ci_brain_pass"
-          NATS_EXECUTION_PASSWORD: "ci_exec_pass"
-          NATS_SCAVENGER_PASSWORD: "ci_scav_pass"
-          NATS_HUNTER_PASSWORD: "ci_hunter_pass"
-          NATS_SENTINEL_PASSWORD: "ci_sentinel_pass"
-          NATS_POWERLAW_PASSWORD: "ci_powerlaw_pass"
-          NATS_QUANT_PASSWORD: "ci_quant_pass"
-          NATS_CONSOLE_PASSWORD: "ci_console_pass"
+          HMAC_SECRET: 'ci_secret'
+          TITAN_MASTER_PASSWORD: 'ci_password'
+          DATABASE_URL: 'postgres://user:pass@localhost:5432/db'
+          NATS_SYS_PASSWORD: 'ci_sys_pass'
+          NATS_BRAIN_PASSWORD: 'ci_brain_pass'
+          NATS_EXECUTION_PASSWORD: 'ci_exec_pass'
+          NATS_SCAVENGER_PASSWORD: 'ci_scav_pass'
+          NATS_HUNTER_PASSWORD: 'ci_hunter_pass'
+          NATS_SENTINEL_PASSWORD: 'ci_sentinel_pass'
+          NATS_POWERLAW_PASSWORD: 'ci_powerlaw_pass'
+          NATS_QUANT_PASSWORD: 'ci_quant_pass'
+          NATS_CONSOLE_PASSWORD: 'ci_console_pass'
 
   # ===========================================================================
   # SOTA Standards Check (Architecture & Hygiene)
@@ -188,8 +188,8 @@ jobs:
           - services/titan-phase2-hunter
           - services/titan-phase3-sentinel
           - services/titan-ai-quant
-          - services/shared
-          - services/titan-console
+          - packages/shared
+          - apps/titan-console
 
     steps:
       - name: Checkout code
@@ -287,7 +287,8 @@ jobs:
   status-check:
     name: CI Pipeline Status
     runs-on: ubuntu-latest
-    needs: [config-validation, sota-checks, security-scan, contract-check, node-services, rust-services]
+    needs:
+      [config-validation, sota-checks, security-scan, contract-check, node-services, rust-services]
     if: always()
     steps:
       - name: Check Results
@@ -304,4 +305,3 @@ jobs:
             echo "✅ CI Pipeline Passed"
             exit 0
           fi
-
