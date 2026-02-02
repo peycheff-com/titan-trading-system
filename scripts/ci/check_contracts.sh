@@ -4,7 +4,7 @@ set -e
 echo "📜 Checking Contract Compliance..."
 
 # 1. Shared Service (TypeScript & Schemas)
-cd services/shared
+cd packages/shared
 echo "  ↳ Installing dependencies..."
 npm ci > /dev/null 2>&1
 

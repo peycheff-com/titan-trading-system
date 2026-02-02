@@ -87,10 +87,13 @@ pub async fn start_nats_engine(
 
     // --- System Halt Listener (Unified SystemState) ---
     // Payload: { "state": "OPEN" | "SOFT_HALT" | "HARD_HALT", "reason": "...", "timestamp": ... }
-    let mut halt_sub = client.subscribe(subjects::CMD_SYS_HALT).await.map_err(|e| {
-        error!("❌ Failed to subscribe to system halt command: {}", e);
-        e
-    })?;
+    let mut halt_sub = client
+        .subscribe(subjects::CMD_SYS_HALT)
+        .await
+        .map_err(|e| {
+            error!("❌ Failed to subscribe to system halt command: {}", e);
+            e
+        })?;
     let halt_state_clone = global_halt.clone();
 
     tokio::spawn(async move {
@@ -353,9 +356,9 @@ pub async fn start_nats_engine(
         .subscribe(subjects::DATA_MARKET_TICKER_PREFIX)
         .await
         .map_err(|e| {
-        error!("❌ Failed to subscribe to market.price: {}", e);
-        e
-    })?;
+            error!("❌ Failed to subscribe to market.price: {}", e);
+            e
+        })?;
     let state_for_valuation = shadow_state.clone();
     let client_for_valuation = client.clone();
 
@@ -1078,7 +1081,9 @@ async fn publish_dlq(
         let _ = client
             .publish(subjects::DLQ_EXECUTION_CORE, bytes.clone().into())
             .await;
-        let _ = client.publish(subjects::LEGACY_DLQ_EXECUTION, bytes.into()).await;
+        let _ = client
+            .publish(subjects::LEGACY_DLQ_EXECUTION, bytes.into())
+            .await;
         metrics::inc_dlq_published();
     }
 }
