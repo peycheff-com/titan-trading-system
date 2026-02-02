@@ -89,6 +89,20 @@
     "undici": "^7.19.1"
   },
   "overrides": {
-    "d3-color": "^3.1.0"
+    "d3-color": "^3.1.0",
+    "prismjs": ">=1.30.0",
+    "lodash-es": ">=4.17.22",
+    "refractor": {
+      "prismjs": ">=1.30.0"
+    },
+    "@chevrotain/cst-dts-gen": {
+      "lodash-es": ">=4.17.22"
+    },
+    "@chevrotain/gast": {
+      "lodash-es": ">=4.17.22"
+    },
+    "chevrotain": {
+      "lodash-es": ">=4.17.22"
+    }
   }
 }
