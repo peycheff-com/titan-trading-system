@@ -21,6 +21,10 @@ RUN npm run build
 
 # Build the application
 WORKDIR /app/services/titan-phase2-hunter
+
+# Remove console directory (ink/react CLI components are dev-only)
+RUN rm -rf src/console
+
 RUN npm run build
 
 # Production stage
