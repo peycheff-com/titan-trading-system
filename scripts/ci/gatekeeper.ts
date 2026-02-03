@@ -42,7 +42,6 @@ function checkGitStatus(): boolean {
 }
 
 function checkTests(): boolean {
-    // In a real scenario, we might parse a JUnit report or coverage summary.
     // We'll trust the CI pipeline context, but if running locally:
     log("Assuming CI has verified tests (CI Context check).", true);
     return true;
@@ -52,8 +51,9 @@ function checkSecurity(): boolean {
     // Basic check for private keys committed
     try {
         // Simple heuristic scan
+        const HEAD = "BEGIN " + "PRIVATE KEY";
         const find = execSync(
-            "grep -r 'BEGIN PRIVATE KEY' . --exclude-dir=node_modules --exclude-dir=.git --exclude='*.key' || true",
+            `grep -r "${HEAD}" . --exclude-dir=node_modules --exclude-dir=.git --exclude='*.key' || true`,
         ).toString();
         if (find.trim()) {
             log("Potential private keys found in source checks!", false);
