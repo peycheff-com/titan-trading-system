@@ -3,12 +3,12 @@
  * Defines the complete configuration schema
  */
 
-import { AllocationEngineConfig } from "./allocation.js";
-import { PerformanceTrackerConfig } from "./performance.js";
-import { RiskGuardianConfig } from "./risk.js";
-import { CapitalFlowConfig } from "./capital.js";
-import { CircuitBreakerConfig } from "./breaker.js";
-import { ActiveInferenceConfig, BrainConfig } from "./brain.js";
+import { AllocationEngineConfig } from './allocation.js';
+import { PerformanceTrackerConfig } from './performance.js';
+import { RiskGuardianConfig } from './risk.js';
+import { CapitalFlowConfig } from './capital.js';
+import { CircuitBreakerConfig } from './breaker.js';
+import { ActiveInferenceConfig, BrainConfig } from './brain.js';
 
 /**
  * Database configuration
@@ -117,7 +117,7 @@ export interface ServicesConfig {
  * Environment variables schema
  */
 export interface EnvConfig {
-  NODE_ENV: "development" | "production" | "test";
+  NODE_ENV: 'development' | 'production' | 'test';
   DB_HOST: string;
   DB_PORT: string;
   DB_NAME: string;

@@ -5,9 +5,9 @@ import {
   RiskDecision,
   RiskGuardianConfig,
   RiskMetrics,
-} from "../types/index.js";
-import { AllocationEngine } from "./AllocationEngine.js";
-import { GovernanceEngine } from "./GovernanceEngine.js";
+} from '../types/index.js';
+import { AllocationEngine } from './AllocationEngine.js';
+import { GovernanceEngine } from './GovernanceEngine.js';
 
 export interface HighCorrelationNotifier {
   sendHighCorrelationWarning(
@@ -22,8 +22,7 @@ export class RiskGuardian {
   private allocationEngine: AllocationEngine;
   private governanceEngine: GovernanceEngine;
   private currentEquity: number = 0;
-  private priceHistory: Map<string, { price: number; timestamp: number }[]> =
-    new Map();
+  private priceHistory: Map<string, { price: number; timestamp: number }[]> = new Map();
   private correlationNotifier: any = null;
   private powerLawMetrics: PowerLawMetrics | null = null;
   private natsClient: any = null;
@@ -106,20 +105,14 @@ export class RiskGuardian {
   }
 
   calculatePortfolioDelta(positions: Position[]): number {
-    return positions.reduce(
-      (sum, p) => sum + (p.side === "LONG" ? p.size : -p.size),
-      0,
-    );
+    return positions.reduce((sum, p) => sum + (p.side === 'LONG' ? p.size : -p.size), 0);
   }
 
   checkSignal(signal: IntentSignal, positions: Position[]): RiskDecision {
     const currentLeverage = this.calculateCombinedLeverage(positions);
     const signalSize = signal.requestedSize;
-    const projectedNotional = positions.reduce((sum, p) => sum + p.size, 0) +
-      signalSize;
-    const projectedLeverage = this.currentEquity > 0
-      ? projectedNotional / this.currentEquity
-      : 0;
+    const projectedNotional = positions.reduce((sum, p) => sum + p.size, 0) + signalSize;
+    const projectedLeverage = this.currentEquity > 0 ? projectedNotional / this.currentEquity : 0;
 
     const riskMetrics: RiskMetrics = {
       currentLeverage,
@@ -135,7 +128,7 @@ export class RiskGuardian {
     if (!this.governanceEngine.canOpenNewPosition(signal.phaseId)) {
       return {
         approved: false,
-        reason: "GOVERNANCE_LOCKDOWN: Trading restricted by governance policy",
+        reason: 'GOVERNANCE_LOCKDOWN: Trading restricted by governance policy',
         riskMetrics,
         adjustedSize: 0,
       };
@@ -153,11 +146,7 @@ export class RiskGuardian {
       riskMetrics.correlation = maxCorr;
 
       if (Math.abs(maxCorr) > 0.8 && this.correlationNotifier) {
-        this.correlationNotifier.sendHighCorrelationWarning(
-          maxCorr,
-          0.8,
-          affected,
-        );
+        this.correlationNotifier.sendHighCorrelationWarning(maxCorr, 0.8, affected);
       }
     }
 
@@ -170,11 +159,9 @@ export class RiskGuardian {
     if (projectedNotional > this.config.maxPositionNotional) {
       return {
         approved: false,
-        reason: `Policy Veto: Max Position Notional Exceeded (${
-          projectedNotional.toFixed(
-            0,
-          )
-        } > ${this.config.maxPositionNotional})`,
+        reason: `Policy Veto: Max Position Notional Exceeded (${projectedNotional.toFixed(
+          0,
+        )} > ${this.config.maxPositionNotional})`,
         riskMetrics,
         adjustedSize: 0,
       };
@@ -182,7 +169,8 @@ export class RiskGuardian {
 
     // --- Policy Veto 2: Symbol Whitelist (empty = allow all) ---
     if (
-      this.config.symbolWhitelist && this.config.symbolWhitelist.length > 0 &&
+      this.config.symbolWhitelist &&
+      this.config.symbolWhitelist.length > 0 &&
       !this.config.symbolWhitelist.includes(signal.symbol)
     ) {
       return {
@@ -205,26 +193,23 @@ export class RiskGuardian {
       const confidence = (signal.confidence || 50) / 100;
       const ev = confidence * profit - (1 - confidence) * loss;
 
-      const cost = signal.entryPrice *
-        (this.config.costVeto.baseFeeBps / 10000);
+      const cost = signal.entryPrice * (this.config.costVeto.baseFeeBps / 10000);
       const required = cost * this.config.costVeto.minExpectancyRatio;
 
       if (ev < required) {
         return {
           approved: false,
-          reason: "Expectancy too low",
+          reason: 'Expectancy too low',
           riskMetrics,
           adjustedSize: 0,
         };
       }
     }
 
-    if (
-      signal.latencyProfile?.endToEnd && signal.latencyProfile.endToEnd > 500
-    ) {
+    if (signal.latencyProfile?.endToEnd && signal.latencyProfile.endToEnd > 500) {
       return {
         approved: false,
-        reason: "LATENCY_VETO",
+        reason: 'LATENCY_VETO',
         riskMetrics,
         adjustedSize: 0,
       };
@@ -232,18 +217,16 @@ export class RiskGuardian {
 
     if (signal.stopLossPrice && signal.volatility) {
       const history = this.priceHistory.get(signal.symbol);
-      const currentPrice = history && history.length > 0
-        ? history[history.length - 1].price
-        : signal.entryPrice;
+      const currentPrice =
+        history && history.length > 0 ? history[history.length - 1].price : signal.entryPrice;
 
       if (currentPrice) {
         const dist = Math.abs(currentPrice - signal.stopLossPrice);
-        const minDist = signal.volatility *
-          this.config.minStopDistanceMultiplier;
+        const minDist = signal.volatility * this.config.minStopDistanceMultiplier;
         if (dist < minDist) {
           return {
             approved: false,
-            reason: "Stop distance too tight",
+            reason: 'Stop distance too tight',
             riskMetrics,
             adjustedSize: 0,
           };
@@ -255,12 +238,12 @@ export class RiskGuardian {
     if (this.powerLawMetrics) {
       // Regime Veto (Phase 1)
       if (
-        signal.phaseId === "phase1" &&
-        this.powerLawMetrics.volatilityCluster.state === "expanding"
+        signal.phaseId === 'phase1' &&
+        this.powerLawMetrics.volatilityCluster.state === 'expanding'
       ) {
         return {
           approved: false,
-          reason: "REGIME_VETO: Expanding volatility",
+          reason: 'REGIME_VETO: Expanding volatility',
           riskMetrics,
           adjustedSize: 0,
         };
@@ -271,7 +254,7 @@ export class RiskGuardian {
         // Threshold assumed 5 based on test feedback (6 > 5)
         return {
           approved: false,
-          reason: "TAIL_RISK_VETO: Extreme tail risk",
+          reason: 'TAIL_RISK_VETO: Extreme tail risk',
           riskMetrics,
           adjustedSize: 0,
         };
@@ -279,13 +262,13 @@ export class RiskGuardian {
       // Actually verify leverage limit for veto: test used 6 > 5. Config logic usually varies.
     }
 
-    if (signal.phaseId === "phase3") {
+    if (signal.phaseId === 'phase3') {
       const currentDelta = riskMetrics.portfolioDelta;
-      const signalDelta = signal.side === "BUY" ? signalSize : -signalSize;
+      const signalDelta = signal.side === 'BUY' ? signalSize : -signalSize;
       if (Math.abs(currentDelta + signalDelta) < Math.abs(currentDelta)) {
         return {
           approved: true,
-          reason: "Phase 3 hedge approved",
+          reason: 'Phase 3 hedge approved',
           riskMetrics,
           adjustedSize: signalSize,
         };
@@ -293,14 +276,12 @@ export class RiskGuardian {
     }
 
     let adjustedSize = signalSize;
-    let reason = "Signal approved";
+    let reason = 'Signal approved';
 
     // Latency Penalty
-    if (
-      signal.latencyProfile?.endToEnd && signal.latencyProfile.endToEnd > 200
-    ) {
+    if (signal.latencyProfile?.endToEnd && signal.latencyProfile.endToEnd > 200) {
       adjustedSize *= 0.75;
-      reason = "Size reduced due to latency";
+      reason = 'Size reduced due to latency';
     }
 
     // Power Law Size Reduction
@@ -319,16 +300,14 @@ export class RiskGuardian {
     // Correlation veto/penalty
     if (Math.abs(riskMetrics.correlation) > 0.8 && positions.length > 0) {
       for (const pos of positions) {
-        if (
-          Math.abs(this.calculateCorrelation(signal.symbol, pos.symbol)) > 0.8
-        ) {
+        if (Math.abs(this.calculateCorrelation(signal.symbol, pos.symbol)) > 0.8) {
           const isSameDirection =
-            (pos.side === "LONG" && signal.side === "BUY") ||
-            (pos.side === "SHORT" && signal.side === "SELL");
+            (pos.side === 'LONG' && signal.side === 'BUY') ||
+            (pos.side === 'SHORT' && signal.side === 'SELL');
 
           if (isSameDirection) {
             adjustedSize = Math.min(adjustedSize, signalSize * 0.5);
-            reason = "High correlation penalty applied";
+            reason = 'High correlation penalty applied';
           }
         }
       }
@@ -337,11 +316,9 @@ export class RiskGuardian {
     if (projectedLeverage > maxLeverage + 0.001) {
       return {
         approved: false,
-        reason: `Leverage cap exceeded. Projected: ${
-          projectedLeverage.toFixed(
-            2,
-          )
-        }, Max: ${maxLeverage}`,
+        reason: `Leverage cap exceeded. Projected: ${projectedLeverage.toFixed(
+          2,
+        )}, Max: ${maxLeverage}`,
         riskMetrics,
         adjustedSize: 0,
       };

@@ -11,21 +11,21 @@ import {
   PhasePerformance,
   Position,
   RiskMetrics,
-} from "../types/index.js";
-import { AllocationRepository } from "../db/repositories/AllocationRepository.js";
-import { PerformanceRepository } from "../db/repositories/PerformanceRepository.js";
-import { TreasuryRepository } from "../db/repositories/TreasuryRepository.js";
-import { RiskRepository } from "../db/repositories/RiskRepository.js";
-import { DatabaseManager } from "../db/DatabaseManager.js";
-import { NatsClient, TitanSubject } from "@titan/shared";
-import { consumerOpts, JSONCodec } from "nats";
-import { FillConfirmation } from "../types/execution.js";
-import { FileSystemBackupService } from "../services/backup/FileSystemBackupService.js";
-import { RiskGuardian } from "../features/Risk/RiskGuardian.js";
-import { RecoveredState, RecoveryConfig } from "./stateRecoveryTypes.js";
+} from '../types/index.js';
+import { AllocationRepository } from '../db/repositories/AllocationRepository.js';
+import { PerformanceRepository } from '../db/repositories/PerformanceRepository.js';
+import { TreasuryRepository } from '../db/repositories/TreasuryRepository.js';
+import { RiskRepository } from '../db/repositories/RiskRepository.js';
+import { DatabaseManager } from '../db/DatabaseManager.js';
+import { NatsClient, TitanSubject } from '@titan/shared';
+import { consumerOpts, JSONCodec } from 'nats';
+import { FillConfirmation } from '../types/execution.js';
+import { FileSystemBackupService } from '../services/backup/FileSystemBackupService.js';
+import { RiskGuardian } from '../features/Risk/RiskGuardian.js';
+import { RecoveredState, RecoveryConfig } from './stateRecoveryTypes.js';
 
 // Re-export for backward compatibility
-export type { RecoveredState, RecoveryConfig } from "./stateRecoveryTypes.js";
+export type { RecoveredState, RecoveryConfig } from './stateRecoveryTypes.js';
 
 /**
  * Service for recovering system state on startup
@@ -71,21 +71,16 @@ export class StateRecoveryService {
 
       // Validate the loaded state
       if (!this.validateRecoveredState(state)) {
-        throw new Error("Restored state failed validation");
+        throw new Error('Restored state failed validation');
       }
 
       // Persist the restored state to DB to make it current
       await this.persistState(state);
 
-      console.log(
-        `[StateRecoveryService] Backup ${backupId} restored successfully.`,
-      );
+      console.log(`[StateRecoveryService] Backup ${backupId} restored successfully.`);
       return state;
     } catch (error) {
-      console.error(
-        `[StateRecoveryService] Failed to restore backup ${backupId}:`,
-        error,
-      );
+      console.error(`[StateRecoveryService] Failed to restore backup ${backupId}:`, error);
       throw error;
     }
   }
@@ -101,26 +96,23 @@ export class StateRecoveryService {
    * @returns RecoveredState with all loaded data
    */
   async recoverState(): Promise<RecoveredState> {
-    console.log("Starting state recovery...");
+    console.log('Starting state recovery...');
 
     // Load allocation vector
     const allocation = await this.loadAllocationVector();
-    console.log("Loaded allocation vector:", allocation);
+    console.log('Loaded allocation vector:', allocation);
 
     // Load performance metrics for all phases
     const performance = await this.loadPerformanceMetrics();
-    console.log(
-      "Loaded performance metrics for phases:",
-      Object.keys(performance),
-    );
+    console.log('Loaded performance metrics for phases:', Object.keys(performance));
 
     // Load high watermark
     const highWatermark = await this.loadHighWatermark();
-    console.log("Loaded high watermark:", highWatermark);
+    console.log('Loaded high watermark:', highWatermark);
 
     // Load latest risk metrics (will be recalculated with current positions)
     const riskMetrics = await this.loadRiskMetrics();
-    console.log("Loaded risk metrics:", riskMetrics ? "available" : "none");
+    console.log('Loaded risk metrics:', riskMetrics ? 'available' : 'none');
 
     // Recover positions from stream if possible
     let positions: Position[] = [];
@@ -129,11 +121,11 @@ export class StateRecoveryService {
         positions = await this.recoverPositionsFromStream();
         console.log(`Recovered ${positions.length} positions from stream`);
       } catch (err) {
-        console.error("Failed to recover positions from stream", err);
+        console.error('Failed to recover positions from stream', err);
       }
     }
 
-    console.log("State recovery completed successfully");
+    console.log('State recovery completed successfully');
 
     return {
       allocation,
@@ -150,7 +142,7 @@ export class StateRecoveryService {
    * Persist current system state
    */
   async persistState(state: RecoveredState): Promise<void> {
-    console.log("Persisting system state...");
+    console.log('Persisting system state...');
 
     try {
       // 1. Create a filesystem snapshot for disaster recovery
@@ -159,7 +151,7 @@ export class StateRecoveryService {
       // 2. Persist to Relational DB (Postgres/SQLite)
 
       // Save allocation if it's a full record
-      if (state.allocation && "tier" in state.allocation) {
+      if (state.allocation && 'tier' in state.allocation) {
         // Safe cast as we checked 'tier' property presence
         // @ts-expect-error - Ignoring type check for partial allocation update
         await this.allocationRepo.save(state.allocation);
@@ -184,9 +176,9 @@ export class StateRecoveryService {
         });
       }
 
-      console.log("State persisted successfully");
+      console.log('State persisted successfully');
     } catch (err) {
-      console.error("Failed to persist state:", err);
+      console.error('Failed to persist state:', err);
     }
   }
 
@@ -202,8 +194,7 @@ export class StateRecoveryService {
 
       if (latestAllocation) {
         // Validate allocation vector (weights should sum to 1.0)
-        const sum = latestAllocation.w1 + latestAllocation.w2 +
-          latestAllocation.w3;
+        const sum = latestAllocation.w1 + latestAllocation.w2 + latestAllocation.w3;
         if (Math.abs(sum - 1.0) > 0.001) {
           console.warn(`Invalid allocation vector sum: ${sum}, using default`);
           return this.config.defaultAllocation;
@@ -212,10 +203,10 @@ export class StateRecoveryService {
         return latestAllocation;
       }
 
-      console.log("No allocation vector found in database, using default");
+      console.log('No allocation vector found in database, using default');
       return this.config.defaultAllocation;
     } catch (error) {
-      console.error("Error loading allocation vector:", error);
+      console.error('Error loading allocation vector:', error);
       return this.config.defaultAllocation;
     }
   }
@@ -228,21 +219,18 @@ export class StateRecoveryService {
    */
   async loadPerformanceMetrics(): Promise<Record<PhaseId, PhasePerformance>> {
     const performance: Record<PhaseId, PhasePerformance> = {
-      phase1: this.createDefaultPerformance("phase1"),
-      phase2: this.createDefaultPerformance("phase2"),
-      phase3: this.createDefaultPerformance("phase3"),
-      manual: this.createDefaultPerformance("manual"),
+      phase1: this.createDefaultPerformance('phase1'),
+      phase2: this.createDefaultPerformance('phase2'),
+      phase3: this.createDefaultPerformance('phase3'),
+      manual: this.createDefaultPerformance('manual'),
     };
 
     const windowMs = this.config.performanceWindowDays * 24 * 60 * 60 * 1000;
 
-    for (const phaseId of ["phase1", "phase2", "phase3"] as PhaseId[]) {
+    for (const phaseId of ['phase1', 'phase2', 'phase3'] as PhaseId[]) {
       try {
         // Get recent trades for the phase
-        const trades = await this.performanceRepo.getTradesInWindow(
-          phaseId,
-          windowMs,
-        );
+        const trades = await this.performanceRepo.getTradesInWindow(phaseId, windowMs);
 
         if (trades.length === 0) {
           console.log(`No recent trades found for ${phaseId}, using defaults`);
@@ -254,27 +242,22 @@ export class StateRecoveryService {
         const winningTrades = trades.filter((trade) => trade.pnl > 0);
         const losingTrades = trades.filter((trade) => trade.pnl < 0);
 
-        const winRate = trades.length > 0
-          ? winningTrades.length / trades.length
-          : 0;
-        const avgWin = winningTrades.length > 0
-          ? winningTrades.reduce((sum, trade) => sum + trade.pnl, 0) /
-            winningTrades.length
-          : 0;
-        const avgLoss = losingTrades.length > 0
-          ? losingTrades.reduce((sum, trade) => sum + trade.pnl, 0) /
-            losingTrades.length
-          : 0;
+        const winRate = trades.length > 0 ? winningTrades.length / trades.length : 0;
+        const avgWin =
+          winningTrades.length > 0
+            ? winningTrades.reduce((sum, trade) => sum + trade.pnl, 0) / winningTrades.length
+            : 0;
+        const avgLoss =
+          losingTrades.length > 0
+            ? losingTrades.reduce((sum, trade) => sum + trade.pnl, 0) / losingTrades.length
+            : 0;
 
         // Calculate Sharpe ratio (simplified)
         const returns = trades.map((trade) => trade.pnl);
         const sharpeRatio = this.calculateSharpeRatio(returns);
 
         // Calculate performance modifier
-        const modifier = this.calculatePerformanceModifier(
-          sharpeRatio,
-          trades.length,
-        );
+        const modifier = this.calculatePerformanceModifier(sharpeRatio, trades.length);
 
         performance[phaseId] = {
           phaseId,
@@ -288,11 +271,9 @@ export class StateRecoveryService {
         };
 
         console.log(
-          `Loaded performance for ${phaseId}: Sharpe=${
-            sharpeRatio.toFixed(
-              2,
-            )
-          }, Trades=${trades.length}, Modifier=${modifier.toFixed(2)}`,
+          `Loaded performance for ${phaseId}: Sharpe=${sharpeRatio.toFixed(
+            2,
+          )}, Trades=${trades.length}, Modifier=${modifier.toFixed(2)}`,
         );
       } catch (error) {
         console.error(`Error loading performance for ${phaseId}:`, error);
@@ -321,7 +302,7 @@ export class StateRecoveryService {
 
       return highWatermark;
     } catch (error) {
-      console.error("Error loading high watermark:", error);
+      console.error('Error loading high watermark:', error);
       return this.config.defaultHighWatermark;
     }
   }
@@ -337,15 +318,15 @@ export class StateRecoveryService {
       const latestSnapshot = await this.riskRepo.getLatest();
       return latestSnapshot
         ? {
-          currentLeverage: latestSnapshot.globalLeverage,
-          projectedLeverage: latestSnapshot.globalLeverage,
-          correlation: latestSnapshot.correlationScore,
-          portfolioDelta: latestSnapshot.netDelta,
-          portfolioBeta: latestSnapshot.portfolioBeta,
-        }
+            currentLeverage: latestSnapshot.globalLeverage,
+            projectedLeverage: latestSnapshot.globalLeverage,
+            correlation: latestSnapshot.correlationScore,
+            portfolioDelta: latestSnapshot.netDelta,
+            portfolioBeta: latestSnapshot.portfolioBeta,
+          }
         : null;
     } catch (error) {
-      console.error("Error loading risk metrics:", error);
+      console.error('Error loading risk metrics:', error);
       return null;
     }
   }
@@ -365,10 +346,7 @@ export class StateRecoveryService {
 
     // Fallback if RiskGuardian not available (should not happen in prod)
     // Calculate combined leverage
-    const totalNotional = positions.reduce(
-      (sum, pos) => sum + Math.abs(pos.size),
-      0,
-    );
+    const totalNotional = positions.reduce((sum, pos) => sum + Math.abs(pos.size), 0);
     const currentLeverage = equity > 0 ? totalNotional / equity : 0;
 
     const riskMetrics: RiskMetrics = {
@@ -376,13 +354,13 @@ export class StateRecoveryService {
       projectedLeverage: currentLeverage,
       correlation: 0, // Fallback to safe 0
       portfolioDelta: positions.reduce(
-        (sum, pos) => sum + (pos.side === "LONG" ? pos.size : -pos.size),
+        (sum, pos) => sum + (pos.side === 'LONG' ? pos.size : -pos.size),
         0,
       ),
       portfolioBeta: 0, // Fallback to safe 0
     };
 
-    console.log("Recalculated risk metrics (Fallback):", riskMetrics);
+    console.log('Recalculated risk metrics (Fallback):', riskMetrics);
     return riskMetrics;
   }
 
@@ -395,27 +373,23 @@ export class StateRecoveryService {
   validateRecoveredState(state: RecoveredState): boolean {
     // Validate allocation vector
     if (state.allocation) {
-      const sum = state.allocation.w1 + state.allocation.w2 +
-        state.allocation.w3;
+      const sum = state.allocation.w1 + state.allocation.w2 + state.allocation.w3;
       if (Math.abs(sum - 1.0) > 0.001) {
-        console.error("Invalid allocation vector sum:", sum);
+        console.error('Invalid allocation vector sum:', sum);
         return false;
       }
     }
 
     // Validate high watermark
     if (state.highWatermark <= 0) {
-      console.error("Invalid high watermark:", state.highWatermark);
+      console.error('Invalid high watermark:', state.highWatermark);
       return false;
     }
 
     // Validate performance metrics
     for (const [phaseId, perf] of Object.entries(state.performance)) {
       if (perf.modifier < 0.5 || perf.modifier > 1.2) {
-        console.error(
-          `Invalid performance modifier for ${phaseId}:`,
-          perf.modifier,
-        );
+        console.error(`Invalid performance modifier for ${phaseId}:`, perf.modifier);
         return false;
       }
     }
@@ -447,8 +421,7 @@ export class StateRecoveryService {
 
     const mean = returns.reduce((sum, ret) => sum + ret, 0) / returns.length;
     const variance =
-      returns.reduce((sum, ret) => sum + Math.pow(ret - mean, 2), 0) /
-      (returns.length - 1);
+      returns.reduce((sum, ret) => sum + Math.pow(ret - mean, 2), 0) / (returns.length - 1);
     const stdDev = Math.sqrt(variance);
 
     return stdDev > 0 ? mean / stdDev : 0;
@@ -457,10 +430,7 @@ export class StateRecoveryService {
   /**
    * Calculate performance modifier based on Sharpe ratio and trade count
    */
-  private calculatePerformanceModifier(
-    sharpeRatio: number,
-    tradeCount: number,
-  ): number {
+  private calculatePerformanceModifier(sharpeRatio: number, tradeCount: number): number {
     // Requirement 2.8: Use base weight if insufficient trade history
     if (tradeCount < 10) {
       return 1.0;
@@ -485,11 +455,11 @@ export class StateRecoveryService {
    * Requirement 9.4: Rebuild state from event log
    */
   async recoverPositionsFromStream(): Promise<Position[]> {
-    console.log("🔄 Replaying execution history to rebuild positions...");
+    console.log('🔄 Replaying execution history to rebuild positions...');
 
     if (!this.natsClient) {
       console.warn(
-        "⚠️ NATS Client not provided to StateRecoveryService, skipping JetStream replay.",
+        '⚠️ NATS Client not provided to StateRecoveryService, skipping JetStream replay.',
       );
       return [];
     }
@@ -498,7 +468,7 @@ export class StateRecoveryService {
     const jsm = this.natsClient.getJetStreamManager();
 
     if (!js || !jsm) {
-      console.warn("⚠️ JetStream context not available.");
+      console.warn('⚠️ JetStream context not available.');
       return [];
     }
 
@@ -506,11 +476,11 @@ export class StateRecoveryService {
 
     let lastSeq = 0;
     try {
-      const si = await jsm.streams.info("TITAN_EVT");
+      const si = await jsm.streams.info('TITAN_EVT');
       lastSeq = si.state.last_seq;
       console.log(`Stream TITAN_TRADING last sequence: ${lastSeq}`);
     } catch (e) {
-      console.error("Failed to get stream info:", e);
+      console.error('Failed to get stream info:', e);
       return [];
     }
 
@@ -524,31 +494,29 @@ export class StateRecoveryService {
       opts.deliverAll();
       opts.orderedConsumer();
 
-      const sub = await js.subscribe(TitanSubject.EVT_EXEC_FILL + ".>", opts);
-      console.log("Started replaying fills...");
+      const sub = await js.subscribe(TitanSubject.EVT_EXEC_FILL + '.>', opts);
+      console.log('Started replaying fills...');
 
       for await (const m of sub) {
         try {
           const fill = jc.decode(m.data) as FillConfirmation;
           const notional = fill.fillSize * fill.fillPrice;
-          const signedChange = fill.side === "BUY" ? notional : -notional;
+          const signedChange = fill.side === 'BUY' ? notional : -notional;
 
           let pos = positions.get(fill.symbol);
 
           if (!pos) {
             pos = {
               symbol: fill.symbol,
-              side: signedChange > 0 ? "LONG" : "SHORT",
+              side: signedChange > 0 ? 'LONG' : 'SHORT',
               size: Math.abs(signedChange),
               entryPrice: fill.fillPrice,
               unrealizedPnL: 0,
               leverage: 1, // Defaulting leverage
-              phaseId: "phase1", // Defaulting phase as it's not in FillConfirmation
+              phaseId: 'phase1', // Defaulting phase as it's not in FillConfirmation
             };
           } else {
-            const currentSignedSize = pos.side === "LONG"
-              ? pos.size
-              : -pos.size;
+            const currentSignedSize = pos.side === 'LONG' ? pos.size : -pos.size;
             const newSignedSize = currentSignedSize + signedChange;
 
             if (Math.abs(newSignedSize) < 0.0001) {
@@ -566,10 +534,10 @@ export class StateRecoveryService {
               (currentSignedSize < 0 && signedChange < 0)
             ) {
               // Increasing position
-              const totalSize = Math.abs(currentSignedSize) +
-                Math.abs(signedChange);
-              const newEntry = (pos.entryPrice * Math.abs(currentSignedSize) +
-                fill.fillPrice * Math.abs(signedChange)) /
+              const totalSize = Math.abs(currentSignedSize) + Math.abs(signedChange);
+              const newEntry =
+                (pos.entryPrice * Math.abs(currentSignedSize) +
+                  fill.fillPrice * Math.abs(signedChange)) /
                 totalSize;
 
               pos.entryPrice = newEntry;
@@ -583,14 +551,14 @@ export class StateRecoveryService {
             }
             // If decreasing without flip, entry price remains same
 
-            pos.side = isLong ? "LONG" : "SHORT";
+            pos.side = isLong ? 'LONG' : 'SHORT';
 
             pos.size = Math.abs(newSignedSize);
           }
 
           positions.set(fill.symbol, pos);
         } catch (err) {
-          console.error("Error processing message:", err);
+          console.error('Error processing message:', err);
         }
 
         if (m.info.streamSequence >= lastSeq) {
@@ -599,7 +567,7 @@ export class StateRecoveryService {
         }
       }
     } catch (error) {
-      console.error("Failed to replay from JetStream", error);
+      console.error('Failed to replay from JetStream', error);
     }
 
     return Array.from(positions.values());

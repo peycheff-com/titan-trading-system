@@ -1,11 +1,11 @@
-import { DatabaseManager } from "../db/index.js";
-import { Logger } from "@titan/shared";
-import { AllocationEngine } from "../features/Allocation/AllocationEngine.js";
-import { RiskGuardian } from "../features/Risk/RiskGuardian.js";
-import { GovernanceEngine } from "../features/Governance/GovernanceEngine.js";
-import { PerformanceTracker } from "./PerformanceTracker.js";
-import { NatsClient, TITAN_SUBJECTS } from "@titan/shared"; // Mock or Null for replay
-import { EquityTier } from "../types/index.js";
+import { DatabaseManager } from '../db/index.js';
+import { Logger } from '@titan/shared';
+import { AllocationEngine } from '../features/Allocation/AllocationEngine.js';
+import { RiskGuardian } from '../features/Risk/RiskGuardian.js';
+import { GovernanceEngine } from '../features/Governance/GovernanceEngine.js';
+import { PerformanceTracker } from './PerformanceTracker.js';
+import { NatsClient, TITAN_SUBJECTS } from '@titan/shared'; // Mock or Null for replay
+import { EquityTier } from '../types/index.js';
 
 /**
  * EventReplayService (GAP-01)
@@ -28,15 +28,11 @@ export class EventReplayService {
    * WARN: This might truncate existing history tables if specified.
    */
   async replayAll(reset: boolean = false): Promise<void> {
-    this.logger.info("🎬 Starting Event Replay...");
+    this.logger.info('🎬 Starting Event Replay...');
 
     if (reset) {
-      this.logger.warn(
-        "⚠️  Resetting read models (allocation_history, risk_snapshots)...",
-      );
-      await this.db.query(
-        "TRUNCATE TABLE allocation_history, risk_snapshots CASCADE",
-      );
+      this.logger.warn('⚠️  Resetting read models (allocation_history, risk_snapshots)...');
+      await this.db.query('TRUNCATE TABLE allocation_history, risk_snapshots CASCADE');
     }
 
     let lastId = 0;
@@ -82,7 +78,7 @@ export class EventReplayService {
       this.logger.info(`   Replayed ${count} events...`);
     }
 
-    this.logger.info("✅ Event Replay Complete.");
+    this.logger.info('✅ Event Replay Complete.');
   }
 
   /**

@@ -17,11 +17,11 @@ import {
   TITAN_SUBJECTS,
   TitanSubject,
   verifyExecutionPolicyHash,
-} from "@titan/shared";
+} from '@titan/shared';
 
-import { PowerLawPolicyModule } from "../services/powerlaw/index.js";
+import { PowerLawPolicyModule } from '../services/powerlaw/index.js';
 
-import { TruthRepository } from "../db/repositories/TruthRepository.js";
+import { TruthRepository } from '../db/repositories/TruthRepository.js';
 import {
   AllocationVector,
   BrainDecision,
@@ -40,47 +40,47 @@ import {
   RiskMetrics,
   TitanBrainConfig,
   TreasuryStatus,
-} from "../types/index.js";
-import { AllocationEngine } from "../features/Allocation/AllocationEngine.js";
-import { PerformanceTracker } from "./PerformanceTracker.js";
-import { RiskGuardian } from "../features/Risk/RiskGuardian.js";
-import { CapitalFlowManager } from "./CapitalFlowManager.js";
+} from '../types/index.js';
+import { AllocationEngine } from '../features/Allocation/AllocationEngine.js';
+import { PerformanceTracker } from './PerformanceTracker.js';
+import { RiskGuardian } from '../features/Risk/RiskGuardian.js';
+import { CapitalFlowManager } from './CapitalFlowManager.js';
 import {
   BreakerEventPersistence,
   CircuitBreaker,
   NotificationHandler,
   PositionClosureHandler,
-} from "./CircuitBreaker.js";
-import { GovernanceEngine } from "../features/Governance/GovernanceEngine.js";
-import { StateRecoveryService } from "./StateRecoveryService.js";
-import { ProposalGateway } from "../governance/ProposalGateway.js";
+} from './CircuitBreaker.js';
+import { GovernanceEngine } from '../features/Governance/GovernanceEngine.js';
+import { StateRecoveryService } from './StateRecoveryService.js';
+import { ProposalGateway } from '../governance/ProposalGateway.js';
 
-import { ManualOverrideService } from "./ManualOverrideService.js";
-import { ManualTradeService } from "./ManualTradeService.js";
-import { DatabaseManager } from "../db/DatabaseManager.js";
+import { ManualOverrideService } from './ManualOverrideService.js';
+import { ManualTradeService } from './ManualTradeService.js';
+import { DatabaseManager } from '../db/DatabaseManager.js';
 
-import { PowerLawRepository } from "../db/repositories/PowerLawRepository.js";
-import { ActiveInferenceEngine } from "./ActiveInferenceEngine.js";
-import { FillsRepository } from "../db/repositories/FillsRepository.js";
-import { logger } from "../utils/Logger.js";
-import { IngestionQueue } from "../queue/IngestionQueue.js";
-import { TradeGate } from "./TradeGate.js";
-import { PositionManager } from "./PositionManager.js";
-import { EventStore } from "../persistence/EventStore.js";
+import { PowerLawRepository } from '../db/repositories/PowerLawRepository.js';
+import { ActiveInferenceEngine } from './ActiveInferenceEngine.js';
+import { FillsRepository } from '../db/repositories/FillsRepository.js';
+import { logger } from '../utils/Logger.js';
+import { IngestionQueue } from '../queue/IngestionQueue.js';
+import { TradeGate } from './TradeGate.js';
+import { PositionManager } from './PositionManager.js';
+import { EventStore } from '../persistence/EventStore.js';
 
-import { ReconciliationService } from "../reconciliation/ReconciliationService.js";
-import { PositionRepository } from "../db/repositories/PositionRepository.js";
-import { EventType } from "../events/EventTypes.js";
-import { BudgetService } from "./BudgetService.js";
-import { HedgeIntegrityMonitor } from "./HedgeIntegrityMonitor.js";
+import { ReconciliationService } from '../reconciliation/ReconciliationService.js';
+import { PositionRepository } from '../db/repositories/PositionRepository.js';
+import { EventType } from '../events/EventTypes.js';
+import { BudgetService } from './BudgetService.js';
+import { HedgeIntegrityMonitor } from './HedgeIntegrityMonitor.js';
 
 // New Components
-import { BrainStateManager } from "./BrainStateManager.js";
-import { SignalProcessor } from "./SignalProcessor.js";
-import { RecoveryManager } from "./RecoveryManager.js";
-import { SignalRouter } from "./SignalRouter.js";
-import { RiskManager } from "../services/RiskManager.js";
-import { getNatsPublisher } from "../server/NatsPublisher.js";
+import { BrainStateManager } from './BrainStateManager.js';
+import { SignalProcessor } from './SignalProcessor.js';
+import { RecoveryManager } from './RecoveryManager.js';
+import { SignalRouter } from './SignalRouter.js';
+import { RiskManager } from '../services/RiskManager.js';
+import { getNatsPublisher } from '../server/NatsPublisher.js';
 
 /**
  * Interface for phase notification
@@ -92,8 +92,7 @@ export interface PhaseNotifier {
 /**
  * TitanBrain orchestrates all components and processes signals
  */
-export class TitanBrain
-  implements PositionClosureHandler, BreakerEventPersistence {
+export class TitanBrain implements PositionClosureHandler, BreakerEventPersistence {
   private readonly config: TitanBrainConfig;
   private readonly allocationEngine: AllocationEngine;
   private readonly performanceTracker: PerformanceTracker;
@@ -239,15 +238,13 @@ export class TitanBrain
     );
 
     // Initialize Proposal Gateway (Sovereign Trust Layer)
-    const authorizedKeys = (process.env.GOVERNANCE_KEYS || "")
-      .split(",")
+    const authorizedKeys = (process.env.GOVERNANCE_KEYS || '')
+      .split(',')
       .filter((k) => k.length > 0);
     this.proposalGateway = new ProposalGateway(logger, authorizedKeys);
 
     // Initialize Manual Trade Service
-    this.manualTradeService = new ManualTradeService(() =>
-      this.executionEngine
-    );
+    this.manualTradeService = new ManualTradeService(() => this.executionEngine);
 
     // Wire up circuit breaker handlers
     this.circuitBreaker.setPositionHandler(this);
@@ -264,22 +261,19 @@ export class TitanBrain
     // Sweep Notifier wired in index.ts
 
     // Initialize RiskManager (Sovereign Command Emitter)
-    this.riskManager = new RiskManager(
-      this.config.brain as any,
-      getNatsPublisher(),
-    );
+    this.riskManager = new RiskManager(this.config.brain as any, getNatsPublisher());
 
     // Subscribe to PowerLaw Metrics
     this.subscribeToPowerLawMetrics().catch((err) => {
-      logger.error("Failed to subscribe to PowerLaw Metrics", err);
+      logger.error('Failed to subscribe to PowerLaw Metrics', err);
     });
 
     // Initialize Leader Elector
     if (this.config.leaderElection?.enabled) {
       this.leaderElector = new LeaderElector(
         {
-          bucket: "titan_coordination",
-          key: "leader.brain.v1",
+          bucket: 'titan_coordination',
+          key: 'leader.brain.v1',
           leaseDurationMs: this.config.leaderElection.leaseDurationMs,
           heartbeatIntervalMs: this.config.leaderElection.heartbeatIntervalMs,
           nodeId: process.env.HOSTNAME || `brain-${Date.now()}`,
@@ -288,44 +282,33 @@ export class TitanBrain
         logger,
       );
 
-      this.leaderElector.on("promoted", this.handleLeadershipPromotion);
-      this.leaderElector.on("demoted", this.handleLeadershipDemotion);
+      this.leaderElector.on('promoted', this.handleLeadershipPromotion);
+      this.leaderElector.on('demoted', this.handleLeadershipDemotion);
     }
   }
 
   private handleLeadershipPromotion = async () => {
-    logger.info(
-      "👑 Brain promoted to LEADER. Verifying Execution policy hash...",
-    );
+    logger.info('👑 Brain promoted to LEADER. Verifying Execution policy hash...');
 
     // P0: Policy Hash Handshake - Verify Execution has same policy before processing
     const { hash } = getCanonicalRiskPolicy();
-    const handshakeResult = await verifyExecutionPolicyHash(
-      this.natsClient,
-      hash,
-      5000,
-      3,
-    );
+    const handshakeResult = await verifyExecutionPolicyHash(this.natsClient, hash, 5000, 3);
 
     if (!handshakeResult.success) {
-      logger.error(
-        `🚨 CRITICAL: Policy hash handshake FAILED. ${handshakeResult.error}`,
-      );
+      logger.error(`🚨 CRITICAL: Policy hash handshake FAILED. ${handshakeResult.error}`);
       logger.error(
         `Brain hash: ${handshakeResult.localHash}, Execution hash: ${
-          handshakeResult.remoteHash ?? "UNKNOWN"
+          handshakeResult.remoteHash ?? 'UNKNOWN'
         }`,
       );
       logger.error(
-        "Brain is refusing to process signals. Execution must be redeployed with matching policy.",
+        'Brain is refusing to process signals. Execution must be redeployed with matching policy.',
       );
       // Do NOT start signal processing - fail closed
       return;
     }
 
-    logger.info(
-      `✅ Policy hash handshake OK. Enabling signal processing. Hash: ${hash}`,
-    );
+    logger.info(`✅ Policy hash handshake OK. Enabling signal processing. Hash: ${hash}`);
     if (this.signalProcessor) {
       this.signalProcessor.start();
     }
@@ -334,9 +317,7 @@ export class TitanBrain
   };
 
   private handleLeadershipDemotion = () => {
-    logger.info(
-      "🙇 Brain demoted to FOLLOWER. Disabling signal processing and active services.",
-    );
+    logger.info('🙇 Brain demoted to FOLLOWER. Disabling signal processing and active services.');
     if (this.signalProcessor) {
       this.signalProcessor.stop();
     }
@@ -353,18 +334,16 @@ export class TitanBrain
     try {
       await this.initialize();
       const { hash, version } = getCanonicalRiskPolicy();
-      logger.info(
-        `Titan Brain started successfully. Risk Policy v${version} Hash: ${hash}`,
-      );
+      logger.info(`Titan Brain started successfully. Risk Policy v${version} Hash: ${hash}`);
 
       if (this.leaderElector) {
         await this.leaderElector.start();
       } else {
-        logger.info("Leader Election DISABLED. Starting as standalone LEADER.");
+        logger.info('Leader Election DISABLED. Starting as standalone LEADER.');
         this.handleLeadershipPromotion();
       }
     } catch (error) {
-      logger.error("Failed to start Titan Brain", error as Error);
+      logger.error('Failed to start Titan Brain', error as Error);
       throw error;
     }
   }
@@ -392,12 +371,9 @@ export class TitanBrain
     }
 
     // 3. Subscribe to Operator Actions (P2: Unified Control Plane)
-    this.natsClient.subscribe(
-      TITAN_SUBJECTS.CMD.OPERATOR.ALL,
-      async (msg: any) => {
-        await this.handleOperatorAction(msg.payload || msg);
-      },
-    );
+    this.natsClient.subscribe(TITAN_SUBJECTS.CMD.OPERATOR.ALL, async (msg: any) => {
+      await this.handleOperatorAction(msg.payload || msg);
+    });
 
     // 4. Start metric updates (Runs on both Leader and Follower)
     this.startMetricUpdates();
@@ -428,7 +404,7 @@ export class TitanBrain
     // Persist final state
     await this.saveStateSnapshot();
 
-    logger.info("Titan Brain shutdown complete");
+    logger.info('Titan Brain shutdown complete');
   }
 
   // Setters
@@ -506,32 +482,20 @@ export class TitanBrain
       // Forward to execution engine
       if (this.executionEngine) {
         try {
-          await this.executionEngine.forwardSignal(
-            signal,
-            decision.authorizedSize,
-          );
+          await this.executionEngine.forwardSignal(signal, decision.authorizedSize);
           this.pendingSignals.set(signal.signalId, Date.now()); // Track start time
           logger.info(`Signal executed: ${signal.signalId}`);
         } catch (err) {
-          logger.error(
-            `Failed to execute signal ${signal.signalId}`,
-            err as Error,
-          );
+          logger.error(`Failed to execute signal ${signal.signalId}`, err as Error);
           // Should we create a "Failed Execution" event?
         }
       } else {
-        logger.warn(
-          "Execution engine not connected, signal approved but not executed",
-        );
+        logger.warn('Execution engine not connected, signal approved but not executed');
       }
     } else {
       // Notify veto if needed
       if (this.phaseNotifier) {
-        await this.phaseNotifier.notifyVeto(
-          signal.phaseId,
-          signal.signalId,
-          decision.reason,
-        );
+        await this.phaseNotifier.notifyVeto(signal.phaseId, signal.signalId, decision.reason);
       }
     }
   }
@@ -570,11 +534,7 @@ export class TitanBrain
   }
 
   async handleExecutionReport(report: any): Promise<void> {
-    logger.info(
-      `Execution Report received for ${report.symbol}: ${
-        JSON.stringify(report)
-      }`,
-    );
+    logger.info(`Execution Report received for ${report.symbol}: ${JSON.stringify(report)}`);
     // Trigger position refresh (async)
     if (this.executionEngine) {
       this.executionEngine
@@ -591,7 +551,7 @@ export class TitanBrain
             this.stateManager.setAllocation(report.allocation);
           }
         })
-        .catch((err) => logger.error("Failed to sync positions", err as Error));
+        .catch((err) => logger.error('Failed to sync positions', err as Error));
     }
   }
 
@@ -618,13 +578,11 @@ export class TitanBrain
   }
 
   async handleAIProposal(proposal: any): Promise<void> {
-    logger.info(
-      `🧠 AI Optimization Proposal Received: ${JSON.stringify(proposal)}`,
-    );
+    logger.info(`🧠 AI Optimization Proposal Received: ${JSON.stringify(proposal)}`);
 
     // 1. Validate Proposal Structure
     if (!proposal || !proposal.target || !proposal.changes) {
-      logger.warn("Invalid AI Proposal structure");
+      logger.warn('Invalid AI Proposal structure');
       return;
     }
 
@@ -647,11 +605,11 @@ export class TitanBrain
    * Handle a Signed Proposal via the Governance Gateway
    */
   async handleProposal(payload: unknown) {
-    logger.info("Received Signed Governance Proposal");
+    logger.info('Received Signed Governance Proposal');
     const decision = await this.proposalGateway.submit(payload);
 
-    if (decision.verdict === "ACCEPTED") {
-      logger.info("Proposal Accepted by Sovereign Gateway", undefined, {
+    if (decision.verdict === 'ACCEPTED') {
+      logger.info('Proposal Accepted by Sovereign Gateway', undefined, {
         id: decision.proposalId,
         reason: decision.reason,
       });
@@ -661,12 +619,12 @@ export class TitanBrain
         const parsed = signedProposalSchema.parse(payload);
         await this.executeProposal(parsed.payload);
       } catch (error) {
-        logger.error("Failed to execute accepted proposal", error as Error);
+        logger.error('Failed to execute accepted proposal', error as Error);
         // We technically accepted it but failed to run.
         // Should we update decision status? The gateway returned a decision value object, not a DB record we can update here easily.
       }
     } else {
-      logger.warn("Proposal Rejected by Sovereign Gateway", undefined, {
+      logger.warn('Proposal Rejected by Sovereign Gateway', undefined, {
         id: decision.proposalId,
         reason: decision.reason,
       });
@@ -682,15 +640,12 @@ export class TitanBrain
     logger.info(`Executing Proposal Type: ${payload.type}`);
 
     switch (payload.type) {
-      case "UPDATE_PARAM":
+      case 'UPDATE_PARAM':
         await this.handleUpdateParamProposal(payload);
         break;
 
-      case "EMERGENCY_HALT":
-        await this.triggerEmergencyHalt(
-          "GOVERNANCE",
-          payload.data?.reason || "Governance Decree",
-        );
+      case 'EMERGENCY_HALT':
+        await this.triggerEmergencyHalt('GOVERNANCE', payload.data?.reason || 'Governance Decree');
         break;
 
       default:
@@ -702,13 +657,11 @@ export class TitanBrain
     const { target, value } = payload.data || {};
     if (!target) return;
 
-    logger.info(
-      `Applying Parameter Update: ${target} => ${JSON.stringify(value)}`,
-    );
+    logger.info(`Applying Parameter Update: ${target} => ${JSON.stringify(value)}`);
 
-    if (target === "risk_config") {
+    if (target === 'risk_config') {
       await this.updateRiskConfig(value);
-    } else if (target === "allocation") {
+    } else if (target === 'allocation') {
       // TODO: Handle allocation updates via AllocationEngine or StateManager
       // this.stateManager.setAllocation(value);
     }
@@ -721,27 +674,23 @@ export class TitanBrain
     logger.info(`[SystemState] Received update: ${state} (${reason})`);
 
     switch (state) {
-      case "OPEN":
+      case 'OPEN':
         if (this.circuitBreaker.isActive()) {
-          logger.info(
-            "[SystemState] Resetting Circuit Breaker via remote command",
-          );
-          await this.circuitBreaker.reset("REMOTE_COMMAND");
+          logger.info('[SystemState] Resetting Circuit Breaker via remote command');
+          await this.circuitBreaker.reset('REMOTE_COMMAND');
         }
         break;
 
-      case "SOFT_HALT":
-        logger.warn("[SystemState] Remote SOFT HALT triggered");
+      case 'SOFT_HALT':
+        logger.warn('[SystemState] Remote SOFT HALT triggered');
         // Soft pause triggers a cooldown breaker
         // We use a generic cooldown if not specified, or just trigger soft pause logic
-        await this.circuitBreaker.triggerSoftPause(
-          reason || "Remote Soft Halt",
-        );
+        await this.circuitBreaker.triggerSoftPause(reason || 'Remote Soft Halt');
         break;
 
-      case "HARD_HALT":
-        logger.error("[SystemState] Remote HARD HALT triggered");
-        await this.circuitBreaker.trigger(reason || "Remote Hard Halt");
+      case 'HARD_HALT':
+        logger.error('[SystemState] Remote HARD HALT triggered');
+        await this.circuitBreaker.trigger(reason || 'Remote Hard Halt');
         break;
 
       default:
@@ -755,37 +704,33 @@ export class TitanBrain
   async handleOperatorAction(payload: any): Promise<void> {
     try {
       const action = OperatorActionSchema.parse(payload);
-      logger.info(
-        `👨‍💻 Operator Action Received: ${action.type} (${action.reason})`,
-      );
+      logger.info(`👨‍💻 Operator Action Received: ${action.type} (${action.reason})`);
 
       // Audit Log
       await this.natsClient.publish(TITAN_SUBJECTS.EVT.AUDIT.OPERATOR, action);
 
       switch (action.type) {
-        case "ARM_SYSTEM":
+        case 'ARM_SYSTEM':
           if (!this.stateManager.isArmed()) {
             this.stateManager.setArmed(true);
-            logger.info("🚨 SYSTEM ARMED BY OPERATOR - TRADING ENABLED 🚨");
+            logger.info('🚨 SYSTEM ARMED BY OPERATOR - TRADING ENABLED 🚨');
           }
           break;
-        case "DISARM_SYSTEM":
+        case 'DISARM_SYSTEM':
           if (this.stateManager.isArmed()) {
             this.stateManager.setArmed(false);
-            logger.info("🛑 SYSTEM DISARMED BY OPERATOR - TRADING DISABLED 🛑");
+            logger.info('🛑 SYSTEM DISARMED BY OPERATOR - TRADING DISABLED 🛑');
           }
           break;
-        case "FLATTEN_ALL":
-          logger.warn(
-            "⚠️ FLATTEN ALL COMMAND RECEIVED - Closing all positions",
-          );
+        case 'FLATTEN_ALL':
+          logger.warn('⚠️ FLATTEN ALL COMMAND RECEIVED - Closing all positions');
           await this.closeAllPositions();
           break;
         default:
           logger.warn(`Unknown Operator Action: ${action.type}`);
       }
     } catch (error) {
-      logger.error("Failed to process Operator Action", error as Error);
+      logger.error('Failed to process Operator Action', error as Error);
     }
   }
 
@@ -797,9 +742,7 @@ export class TitanBrain
     if (cached) return cached;
 
     // Get raw metrics from RiskGuardian
-    const riskMetricsRaw = this.riskGuardian.getRiskMetrics(
-      this.stateManager.getPositions(),
-    );
+    const riskMetricsRaw = this.riskGuardian.getRiskMetrics(this.stateManager.getPositions());
 
     const equity = this.stateManager.getEquity();
     const positions = this.stateManager.getPositions();
@@ -830,21 +773,18 @@ export class TitanBrain
       lastUpdated: Date.now(),
       manualOverride: this.manualOverrideService?.getCurrentOverride()
         ? {
-          active: true,
-          operatorId:
-            this.manualOverrideService.getCurrentOverride()!.operatorId,
-          reason: this.manualOverrideService.getCurrentOverride()!.reason,
-          allocation:
-            this.manualOverrideService.getCurrentOverride()!.overrideAllocation,
-          expiresAt: this.manualOverrideService.getCurrentOverride()!.expiresAt,
-        }
+            active: true,
+            operatorId: this.manualOverrideService.getCurrentOverride()!.operatorId,
+            reason: this.manualOverrideService.getCurrentOverride()!.reason,
+            allocation: this.manualOverrideService.getCurrentOverride()!.overrideAllocation,
+            expiresAt: this.manualOverrideService.getCurrentOverride()!.expiresAt,
+          }
         : null,
       warningBannerActive: this.circuitBreaker.isActive(),
       aiState: {
         cortisol: this.activeInferenceEngine.getCortisol(),
-        regime: "ACTIVE_INFERENCE", // TODO: Get actual regime from ActiveInferenceEngine
-        lastOptimizationProposal: this.stateManager.getLastAIProposal() ||
-          undefined,
+        regime: 'ACTIVE_INFERENCE', // TODO: Get actual regime from ActiveInferenceEngine
+        lastOptimizationProposal: this.stateManager.getLastAIProposal() || undefined,
       },
       truthConfidence: this.reconciliationService?.getTrustScore() ?? 1.0,
     };
@@ -882,18 +822,13 @@ export class TitanBrain
   getAllApprovalRates(): Record<PhaseId, number> {
     const stats = this.stateManager.getSignalStats();
     return {
-      phase1: stats.phase1.total > 0
-        ? stats.phase1.approved / stats.phase1.total
-        : 1.0,
-      phase2: stats.phase2.total > 0
-        ? stats.phase2.approved / stats.phase2.total
-        : 1.0,
-      phase3: stats.phase3.total > 0
-        ? stats.phase3.approved / stats.phase3.total
-        : 1.0,
-      manual: (stats as any).manual && (stats as any).manual.total > 0
-        ? (stats as any).manual.approved / (stats as any).manual.total
-        : 1.0,
+      phase1: stats.phase1.total > 0 ? stats.phase1.approved / stats.phase1.total : 1.0,
+      phase2: stats.phase2.total > 0 ? stats.phase2.approved / stats.phase2.total : 1.0,
+      phase3: stats.phase3.total > 0 ? stats.phase3.approved / stats.phase3.total : 1.0,
+      manual:
+        (stats as any).manual && (stats as any).manual.total > 0
+          ? (stats as any).manual.approved / (stats as any).manual.total
+          : 1.0,
     };
   }
 
@@ -910,14 +845,12 @@ export class TitanBrain
    */
   async updateRiskConfig(config: any): Promise<void> {
     this.riskGuardian.updateConfig(config);
-    logger.info("Risk configuration updated in Brain");
+    logger.info('Risk configuration updated in Brain');
 
     if (this.executionEngine) {
       await this.executionEngine.publishRiskPolicy(config);
     } else {
-      logger.warn(
-        "Execution Engine not connected, risk policy update not broadcast",
-      );
+      logger.warn('Execution Engine not connected, risk policy update not broadcast');
     }
   }
 
@@ -958,26 +891,19 @@ export class TitanBrain
   }
 
   async getManualOverrideHistory(operatorId?: string, limit: number = 50) {
-    return this.manualOverrideService?.getOverrideHistory(operatorId, limit) ??
-      [];
+    return this.manualOverrideService?.getOverrideHistory(operatorId, limit) ?? [];
   }
 
   getEventStore(): EventStore | null {
     return this.eventStore;
   }
 
-  async createOperator(
-    id: string,
-    pass: string,
-    perms: string[],
-  ): Promise<boolean> {
+  async createOperator(id: string, pass: string, perms: string[]): Promise<boolean> {
     return this.manualOverrideService?.createOperator(id, pass, perms) ?? false;
   }
 
   async triggerEmergencyHalt(actorId: string, reason: string): Promise<void> {
-    logger.warn(
-      `[SOVEREIGN] EMERGENCY HALT TRIGGERED by ${actorId}: ${reason}`,
-    );
+    logger.warn(`[SOVEREIGN] EMERGENCY HALT TRIGGERED by ${actorId}: ${reason}`);
     // 1. Internal Circuit Breaker Trip
     this.circuitBreaker.trigger(reason);
 
@@ -994,10 +920,7 @@ export class TitanBrain
   ): Promise<boolean> {
     if (!this.manualOverrideService) return false;
 
-    const authenticated = await this.manualOverrideService.authenticateOperator(
-      id,
-      pass,
-    );
+    const authenticated = await this.manualOverrideService.authenticateOperator(id, pass);
 
     if (!authenticated) {
       logger.warn(`Manual override auth failed for ${id}`);
@@ -1013,12 +936,7 @@ export class TitanBrain
     });
 
     if (result) {
-      await this.riskManager.emitManualOverride(
-        id,
-        alloc,
-        reason,
-        duration || 1,
-      );
+      await this.riskManager.emitManualOverride(id, alloc, reason, duration || 1);
     }
 
     return !!result;
@@ -1030,9 +948,7 @@ export class TitanBrain
 
   async deactivateManualOverride(actorId: string): Promise<boolean> {
     if (!this.manualOverrideService) return false;
-    const success = await this.manualOverrideService.deactivateOverride(
-      actorId,
-    );
+    const success = await this.manualOverrideService.deactivateOverride(actorId);
     if (success) {
       logger.info(`Manual override deactivated by ${actorId}`);
     }
@@ -1044,8 +960,8 @@ export class TitanBrain
     // Log event
     await this.persistEvent({
       timestamp: Date.now(),
-      eventType: "RESET",
-      reason: "Manual Reset",
+      eventType: 'RESET',
+      reason: 'Manual Reset',
       equity: this.stateManager.getEquity(),
       operatorId,
     });
@@ -1068,7 +984,7 @@ export class TitanBrain
             event.metadata ? JSON.stringify(event.metadata) : null,
           ],
         )
-        .catch((err) => logger.error("Failed to persist breaker event", err));
+        .catch((err) => logger.error('Failed to persist breaker event', err));
     }
   }
 
@@ -1090,7 +1006,7 @@ export class TitanBrain
   private getSystemHealth(): HealthStatus {
     // Aggregate health
     return {
-      status: "healthy",
+      status: 'healthy',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       // ... other fields
@@ -1113,17 +1029,12 @@ export class TitanBrain
       const cortisol = this.activeInferenceEngine.getCortisol();
       if (cortisol >= 0.95 && !this.circuitBreaker.getStatus().active) {
         logger.warn(
-          `🧠 CORTISOL OVERLOAD (${
-            cortisol.toFixed(2)
-          }): Triggering Self-Preservation Halt`,
+          `🧠 CORTISOL OVERLOAD (${cortisol.toFixed(2)}): Triggering Self-Preservation Halt`,
         );
-        await this.triggerEmergencyHalt(
-          "BRAIN",
-          `High Cortisol Level: ${cortisol.toFixed(2)}`,
-        );
+        await this.triggerEmergencyHalt('BRAIN', `High Cortisol Level: ${cortisol.toFixed(2)}`);
       }
     } catch (e) {
-      logger.error("Error updating metrics", e as Error);
+      logger.error('Error updating metrics', e as Error);
     }
   }
 
@@ -1138,7 +1049,7 @@ export class TitanBrain
     if (this.snapshotTimer) return;
     this.snapshotTimer = setInterval(() => {
       this.saveStateSnapshot().catch((err) =>
-        logger.error("Failed to save periodic snapshot", err)
+        logger.error('Failed to save periodic snapshot', err),
       );
     }, this.SNAPSHOT_INTERVAL_MS);
   }
@@ -1154,27 +1065,24 @@ export class TitanBrain
 
     try {
       await this.stateRecoveryService.persistState({
-        allocation: this.allocationEngine.getWeights(
-          this.stateManager.getEquity(),
-        ),
-        performance: await this.performanceTracker.getAllPhasePerformance()
-          .then((phases) => {
-            return {
-              phase1: phases.find((p) => p.phaseId === "phase1")!,
-              phase2: phases.find((p) => p.phaseId === "phase2")!,
-              phase3: phases.find((p) => p.phaseId === "phase3")!,
-              manual: phases.find((p) => p.phaseId === "manual") || {
-                phaseId: "manual",
-                sharpeRatio: 0,
-                totalPnL: 0,
-                tradeCount: 0,
-                winRate: 0,
-                avgWin: 0,
-                avgLoss: 0,
-                modifier: 1,
-              },
-            };
-          }),
+        allocation: this.allocationEngine.getWeights(this.stateManager.getEquity()),
+        performance: await this.performanceTracker.getAllPhasePerformance().then((phases) => {
+          return {
+            phase1: phases.find((p) => p.phaseId === 'phase1')!,
+            phase2: phases.find((p) => p.phaseId === 'phase2')!,
+            phase3: phases.find((p) => p.phaseId === 'phase3')!,
+            manual: phases.find((p) => p.phaseId === 'manual') || {
+              phaseId: 'manual',
+              sharpeRatio: 0,
+              totalPnL: 0,
+              tradeCount: 0,
+              winRate: 0,
+              avgWin: 0,
+              avgLoss: 0,
+              modifier: 1,
+            },
+          };
+        }),
         highWatermark: this.capitalFlowManager.getHighWatermark(),
         riskMetrics: null, // this.riskGuardian.getMetrics(),
         equity: this.stateManager.getEquity(),
@@ -1184,13 +1092,11 @@ export class TitanBrain
       });
       // logger.debug("State snapshot saved");
     } catch (error) {
-      logger.error("Error saving state snapshot", error as Error);
+      logger.error('Error saving state snapshot', error as Error);
     }
   }
 
-  handleMarketData(
-    tick: { symbol: string; price: number; timestamp?: number },
-  ): void {
+  handleMarketData(tick: { symbol: string; price: number; timestamp?: number }): void {
     this.riskGuardian.handlePriceUpdate({
       symbol: tick.symbol,
       price: tick.price,
@@ -1211,7 +1117,7 @@ export class TitanBrain
     try {
       // Initialize PowerLaw Policy Module (SHADOW mode by default)
       this.powerLawPolicyModule = new PowerLawPolicyModule(nats, {
-        mode: "SHADOW",
+        mode: 'SHADOW',
       });
 
       // Subscribe to canonical PowerLaw metrics stream
@@ -1231,7 +1137,7 @@ export class TitanBrain
               tailConfidence: data.tail?.confidence ?? 0,
               exceedanceProbability: data.exceedance?.prob ?? 0,
               volatilityCluster: {
-                state: data.vol_cluster?.state ?? "unknown",
+                state: data.vol_cluster?.state ?? 'unknown',
                 persistence: data.vol_cluster?.persistence ?? 0,
                 sigma: data.vol_cluster?.sigma ?? 0,
               },
@@ -1242,10 +1148,7 @@ export class TitanBrain
             // Persist canonical metrics
             if (this.powerLawRepository) {
               this.powerLawRepository.save(legacyMetrics).catch((err: any) => {
-                logger.error(
-                  `Failed to persist PowerLaw metrics for ${data.symbol}:`,
-                  err as any,
-                );
+                logger.error(`Failed to persist PowerLaw metrics for ${data.symbol}:`, err as any);
               });
             }
 
@@ -1257,9 +1160,9 @@ export class TitanBrain
                 positions: string[],
               ) => {
                 logger.warn(
-                  `HIGH CORRELATION DETECTED: ${
-                    score.toFixed(2)
-                  } > ${threshold} for positions: ${positions.join(", ")}`,
+                  `HIGH CORRELATION DETECTED: ${score.toFixed(
+                    2,
+                  )} > ${threshold} for positions: ${positions.join(', ')}`,
                 );
                 const payload = JSON.stringify({
                   score,
@@ -1274,16 +1177,13 @@ export class TitanBrain
               },
             });
           } catch (err: any) {
-            logger.error(
-              `Error processing PowerLaw metric from ${subject}:`,
-              err as any,
-            );
+            logger.error(`Error processing PowerLaw metric from ${subject}:`, err as any);
           }
         },
       );
       logger.info(`✅ Subscribed to ${POWER_LAW_SUBJECTS.METRICS_V1_ALL}`);
     } catch (error: any) {
-      logger.error("Failed to subscribe to PowerLaw metrics:", error);
+      logger.error('Failed to subscribe to PowerLaw metrics:', error);
     }
   }
 
@@ -1307,20 +1207,16 @@ export class TitanBrain
    * Trigger System Restore/Fallback
    */
   async triggerRestore(backupId: string, operatorId: string): Promise<void> {
-    logger.warn(
-      `SYSTEM RESTORE TRIGGERED by ${operatorId} using backup ${backupId}`,
-    );
+    logger.warn(`SYSTEM RESTORE TRIGGERED by ${operatorId} using backup ${backupId}`);
     // Real implementation would restore state from backup
     if (this.stateRecoveryService) {
       await this.stateRecoveryService.restoreFromBackup(backupId);
     } else {
-      logger.warn("StateRecoveryService not initialized, skipping restore.");
+      logger.warn('StateRecoveryService not initialized, skipping restore.');
     }
     await this.natsClient.publish(
       TITAN_SUBJECTS.EVT.SYS.RESTORE_INITIATED,
-      Buffer.from(
-        JSON.stringify({ operatorId, backupId, timestamp: Date.now() }),
-      ),
+      Buffer.from(JSON.stringify({ operatorId, backupId, timestamp: Date.now() })),
     );
   }
 
@@ -1330,9 +1226,9 @@ export class TitanBrain
   getInfraStatus(): any {
     return {
       healthy: true, // Placeholder
-      database: "connected",
-      nats: "connected",
-      mode: "primary", // or "dr"
+      database: 'connected',
+      nats: 'connected',
+      mode: 'primary', // or "dr"
       lastBackup: Date.now() - 3600000,
       activeNodes: 1,
     };

@@ -1,7 +1,7 @@
-import * as fs from "fs";
-import * as path from "path";
-import { RecoveredState } from "../../engine/stateRecoveryTypes.js";
-import { Logger } from "../../logging/Logger.js";
+import * as fs from 'fs';
+import * as path from 'path';
+import { RecoveredState } from '../../engine/stateRecoveryTypes.js';
+import { Logger } from '../../logging/Logger.js';
 
 export interface BackupMetadata {
   id: string;
@@ -14,9 +14,9 @@ export class FileSystemBackupService {
   private readonly backupDir: string;
   private readonly logger: Logger;
 
-  constructor(backupDir: string = "data/backups") {
+  constructor(backupDir: string = 'data/backups') {
     this.backupDir = path.resolve(process.cwd(), backupDir);
-    this.logger = Logger.getInstance("backup-service");
+    this.logger = Logger.getInstance('backup-service');
     this.ensureBackupDir();
   }
 
@@ -26,9 +26,7 @@ export class FileSystemBackupService {
         fs.mkdirSync(this.backupDir, { recursive: true });
         this.logger.info(`Created backup directory at ${this.backupDir}`);
       } catch (error) {
-        this.logger.error(
-          `Failed to create backup directory: ${(error as Error).message}`,
-        );
+        this.logger.error(`Failed to create backup directory: ${(error as Error).message}`);
       }
     }
   }
@@ -43,16 +41,13 @@ export class FileSystemBackupService {
       metadata: {
         id: backupId,
         timestamp,
-        version: "1.0.0",
+        version: '1.0.0',
       },
       state,
     };
 
     try {
-      await fs.promises.writeFile(
-        filePath,
-        JSON.stringify(backupData, null, 2),
-      );
+      await fs.promises.writeFile(filePath, JSON.stringify(backupData, null, 2));
       this.logger.info(`Backup created successfully: ${backupId}`);
       return backupId;
     } catch (error) {
@@ -65,8 +60,8 @@ export class FileSystemBackupService {
     // Sanitize backupId to prevent directory traversal
     const safeId = path.basename(backupId);
     let filename = safeId;
-    if (!filename.endsWith(".json")) {
-      filename += ".json";
+    if (!filename.endsWith('.json')) {
+      filename += '.json';
     }
 
     const filePath = path.join(this.backupDir, filename);
@@ -76,19 +71,17 @@ export class FileSystemBackupService {
     }
 
     try {
-      const data = await fs.promises.readFile(filePath, "utf-8");
+      const data = await fs.promises.readFile(filePath, 'utf-8');
       const parsed = JSON.parse(data);
 
       if (!parsed.state) {
-        throw new Error("Invalid backup format: missing state object");
+        throw new Error('Invalid backup format: missing state object');
       }
 
       this.logger.info(`Backup loaded successfully: ${backupId}`);
       return parsed.state as RecoveredState;
     } catch (error) {
-      this.logger.error(
-        `Failed to load backup ${backupId}: ${(error as Error).message}`,
-      );
+      this.logger.error(`Failed to load backup ${backupId}: ${(error as Error).message}`);
       throw error;
     }
   }
@@ -99,18 +92,18 @@ export class FileSystemBackupService {
       const backups: BackupMetadata[] = [];
 
       for (const file of files) {
-        if (!file.endsWith(".json")) continue;
+        if (!file.endsWith('.json')) continue;
 
         try {
           const filePath = path.join(this.backupDir, file);
           const stats = await fs.promises.stat(filePath);
-          const id = path.basename(file, ".json");
+          const id = path.basename(file, '.json');
 
           backups.push({
             id,
             timestamp: stats.mtimeMs, // Using file modification time as fallback
             size: stats.size,
-            version: "1.0.0",
+            version: '1.0.0',
           });
         } catch (err) {
           // Skip unreadable files

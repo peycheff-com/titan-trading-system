@@ -1,14 +1,8 @@
-import { Logger } from "../../logging/Logger.js";
-import {
-  FillReport,
-  getNatsClient,
-  IntentSignal,
-  NatsClient,
-  TITAN_SUBJECTS,
-} from "@titan/shared";
-import { FillsRepository } from "../../db/repositories/FillsRepository.js";
-import { LedgerRepository } from "../../db/repositories/LedgerRepository.js";
-import { PostingEngine } from "./PostingEngine.js";
+import { Logger } from '../../logging/Logger.js';
+import { FillReport, getNatsClient, IntentSignal, NatsClient, TITAN_SUBJECTS } from '@titan/shared';
+import { FillsRepository } from '../../db/repositories/FillsRepository.js';
+import { LedgerRepository } from '../../db/repositories/LedgerRepository.js';
+import { PostingEngine } from './PostingEngine.js';
 
 interface ReconciliationMetrics {
   latency_signal_to_ingress: number;
@@ -36,14 +30,14 @@ export class AccountingService {
     ledgerRepository: LedgerRepository,
     natsClient?: NatsClient,
   ) {
-    this.logger = Logger.getInstance("accounting-service");
+    this.logger = Logger.getInstance('accounting-service');
     this.nats = natsClient || getNatsClient();
     this.fillsRepository = fillsRepository;
     this.ledgerRepository = ledgerRepository;
   }
 
   async start(): Promise<void> {
-    this.logger.info("Starting Titan Accountant (Phase 4)...");
+    this.logger.info('Starting Titan Accountant (Phase 4)...');
 
     // Subscribe to Intents (to track ingress)
     await this.nats.subscribe<any>(
@@ -60,7 +54,7 @@ export class AccountingService {
           // Execution publishes `titan.execution.status` or similar.
           this.trackIntent(intent);
         } catch (e) {
-          this.logger.error("Failed to parse intent", e as Error);
+          this.logger.error('Failed to parse intent', e as Error);
         }
       },
     );
@@ -73,7 +67,7 @@ export class AccountingService {
         try {
           await this.processFill(fill);
         } catch (e) {
-          this.logger.error("Failed to process fill", e as Error);
+          this.logger.error('Failed to process fill', e as Error);
         }
       },
     );
@@ -86,32 +80,29 @@ export class AccountingService {
         try {
           this.processShadowFill(fill);
         } catch (e) {
-          this.logger.error("Failed to process shadow fill", e as Error);
+          this.logger.error('Failed to process shadow fill', e as Error);
         }
       },
     );
 
     // Subscribe to Balance Updates
-    await this.nats.subscribe<any>(
-      TITAN_SUBJECTS.EVT.EXECUTION.BALANCE,
-      async (msg: any) => {
-        try {
-          const balance = msg.payload || msg;
-          this.logger.info("💰 Balance Update", undefined, {
-            ...balance,
-          });
-          // TODO: Update shared state or database if needed
-        } catch (e) {
-          this.logger.error("Failed to process balance update", e as Error);
-        }
-      },
-    );
+    await this.nats.subscribe<any>(TITAN_SUBJECTS.EVT.EXECUTION.BALANCE, async (msg: any) => {
+      try {
+        const balance = msg.payload || msg;
+        this.logger.info('💰 Balance Update', undefined, {
+          ...balance,
+        });
+        // TODO: Update shared state or database if needed
+      } catch (e) {
+        this.logger.error('Failed to process balance update', e as Error);
+      }
+    });
 
-    this.logger.info("Titan Accountant started.");
+    this.logger.info('Titan Accountant started.');
   }
 
   async stop(): Promise<void> {
-    this.logger.info("Stopping Titan Accountant...");
+    this.logger.info('Stopping Titan Accountant...');
     // TODO: Unsubscribe from NATS subjects if client supports it
   }
 
@@ -134,7 +125,7 @@ export class AccountingService {
       shadowFill: fill,
     });
 
-    this.logger.info("👻 Shadow Fill Recorded", undefined, {
+    this.logger.info('👻 Shadow Fill Recorded', undefined, {
       signalId: fill.signal_id,
       price: fill.price,
     });
@@ -152,7 +143,7 @@ export class AccountingService {
       total_rtt: t_now - fill.t_signal,
     };
 
-    this.logger.info("Trade Reconciled", undefined, {
+    this.logger.info('Trade Reconciled', undefined, {
       ...fill,
       metrics,
       reconciled: !!tracked,
@@ -165,7 +156,7 @@ export class AccountingService {
 
       if (driftPct > 0.001) {
         // > 0.1% deviation
-        this.logger.warn("⚠️ Price Drift Detected", undefined, {
+        this.logger.warn('⚠️ Price Drift Detected', undefined, {
           signalId: fill.signal_id,
           realPrice: fill.price,
           shadowPrice: tracked.shadowFill.price,
@@ -174,7 +165,7 @@ export class AccountingService {
 
         // Publish Alert
         this.nats.publish(TITAN_SUBJECTS.EVT.ALERT.DRIFT, {
-          type: "PRICE_DRIFT",
+          type: 'PRICE_DRIFT',
           signalId: fill.signal_id,
           symbol: fill.symbol,
           driftPct,
@@ -193,7 +184,8 @@ export class AccountingService {
 
     // General Ledger Posting
     try {
-      const fillId = fill.fill_id ||
+      const fillId =
+        fill.fill_id ||
         (fill as any).fillId ||
         fill.execution_id ||
         (fill as any).executionId ||
@@ -206,29 +198,22 @@ export class AccountingService {
             fillId, // Ensure ID is passed normalized
           } as FillReport);
           await this.ledgerRepository.createTransaction(txParams);
-          this.logger.info("Ledger Transaction Posted", undefined, {
+          this.logger.info('Ledger Transaction Posted', undefined, {
             correlationId: fillId,
           });
         } else {
-          this.logger.debug(
-            "Ledger Transaction skipped (Idempotent)",
-            undefined,
-            {
-              correlationId: fillId,
-            },
-          );
+          this.logger.debug('Ledger Transaction skipped (Idempotent)', undefined, {
+            correlationId: fillId,
+          });
         }
       }
     } catch (err) {
-      this.logger.error(
-        "CRITICAL: Failed to post to Ledger - Data Integrity Risk",
-        err as Error,
-      );
+      this.logger.error('CRITICAL: Failed to post to Ledger - Data Integrity Risk', err as Error);
 
       // Alert explicit data integrity violation
       const fillId = fill.fill_id || fill.execution_id || (fill as any).id;
       this.nats.publish(TITAN_SUBJECTS.EVT.ALERT.INTEGRITY, {
-        type: "LEDGER_FAILURE",
+        type: 'LEDGER_FAILURE',
         fillId,
         error: err instanceof Error ? err.message : String(err),
       });
@@ -240,10 +225,10 @@ export class AccountingService {
     // In verify phase, we will check if "latency_exchange_to_ack" > 50ms and flag it.
     if (metrics.total_rtt > 200) {
       // > 200ms
-      this.logger.warn("High Latency Detected", undefined, { metrics });
+      this.logger.warn('High Latency Detected', undefined, { metrics });
 
       this.nats.publish(TITAN_SUBJECTS.EVT.ALERT.LATENCY, {
-        type: "HIGH_LATENCY",
+        type: 'HIGH_LATENCY',
         signalId: fill.signal_id,
         metrics,
         threshold: 200,
