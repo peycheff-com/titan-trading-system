@@ -26,14 +26,24 @@ function checkGitStatus(): boolean {
 
         const branch = execSync("git rev-parse --abbrev-ref HEAD").toString()
             .trim();
-        if (branch !== "main") {
+        const targetBranch = process.env.CI
+            ? (process.env.GITHUB_REF_NAME || "main")
+            : branch;
+
+        if (process.env.CI && targetBranch !== "main") {
+            log(
+                `CI detected. Ref '${targetBranch}' is not 'main'. Blocking production build.`,
+                false,
+            );
+            return false;
+        } else if (!process.env.CI && branch !== "main") {
             log(
                 `Current branch is '${branch}'. Production builds must be from 'main'.`,
                 false,
             );
             return false;
         }
-        log("On main branch.", true);
+        log(`Branch verified: ${process.env.CI ? targetBranch : branch}`, true);
         return true;
     } catch (e) {
         log(`Git check failed: ${e}`, false);
