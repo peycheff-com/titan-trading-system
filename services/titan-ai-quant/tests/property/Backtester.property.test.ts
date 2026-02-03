@@ -257,12 +257,15 @@ describe("Backtester Property Tests", () => {
             endTime,
           );
 
-          // Should have data for all requested symbols (even if empty)
-          expect(result.ohlcvData.size).toBe(symbols.length);
-          expect(result.regimeData.size).toBe(symbols.length);
+          // The implementation deduplicates symbols, so compare against unique count
+          const uniqueSymbols = [...new Set(symbols)];
 
-          // Each symbol should have data (may be empty for invalid symbols)
-          symbols.forEach((symbol) => {
+          // Should have data for all unique symbols (even if empty)
+          expect(result.ohlcvData.size).toBe(uniqueSymbols.length);
+          expect(result.regimeData.size).toBe(uniqueSymbols.length);
+
+          // Each unique symbol should have data (may be empty for invalid symbols)
+          uniqueSymbols.forEach((symbol) => {
             const ohlcv = result.ohlcvData.get(symbol);
             const regime = result.regimeData.get(symbol);
 
