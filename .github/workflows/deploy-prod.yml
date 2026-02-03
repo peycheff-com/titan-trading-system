@@ -1,7 +1,9 @@
 name: Deploy to Production
 
 on:
-  push:
+  workflow_run:
+    workflows: ['Titan Monorepo CI']
+    types: [completed]
     branches: [main]
   workflow_dispatch:
     inputs:
@@ -22,19 +24,27 @@ jobs:
   # Verify CI Pipeline passed before deploying
   ci-check:
     runs-on: ubuntu-latest
-    if: ${{ inputs.skip_ci_check == false }}
+    if: |
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      (github.event_name == 'workflow_dispatch' && inputs.skip_ci_check == true)
+    outputs:
+      should_deploy: ${{ steps.check.outputs.deploy }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Wait for CI
-        uses: lewagon/wait-on-check-action@v1.3.1
-        with:
-          ref: ${{ github.ref }}
-          check-name: 'CI Pipeline Status'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 10
-          allowed-conclusions: success,skipped
-        timeout-minutes: 15
+      - name: Check CI Status
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "CI workflow completed with: ${{ github.event.workflow_run.conclusion }}"
+            if [ "${{ github.event.workflow_run.conclusion }}" = "success" ]; then
+              echo "deploy=true" >> $GITHUB_OUTPUT
+            else
+              echo "deploy=false" >> $GITHUB_OUTPUT
+              exit 1
+            fi
+          else
+            echo "Manual dispatch with skip_ci_check=${{ inputs.skip_ci_check }}"
+            echo "deploy=true" >> $GITHUB_OUTPUT
+          fi
 
   build-and-push:
     needs: [ci-check]
