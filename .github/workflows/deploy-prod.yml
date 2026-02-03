@@ -59,6 +59,7 @@ jobs:
           # We assume npx is available
           # Check if ts-node is installed or just run with npx
           chmod +x scripts/ci/gatekeeper.ts
+          npm install --no-save typescript ts-node @types/node
           npx ts-node --transpile-only scripts/ci/gatekeeper.ts
 
   build-and-push:
@@ -201,6 +202,7 @@ jobs:
         run: |
           echo "$TITAN_RELEASE_KEY" > titan_release.key
           # Ensure key has correct permissions if needed, generally fine in runner
+          npm install --no-save typescript ts-node @types/node
           npx ts-node --transpile-only scripts/security/provenance.ts sign digests.json titan_release.key
           rm titan_release.key # Cleanup private key
 
