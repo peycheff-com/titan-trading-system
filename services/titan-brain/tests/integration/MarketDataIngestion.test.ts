@@ -1,7 +1,7 @@
 import { getNatsClient, TitanSubject } from "@titan/shared";
 import { TitanBrain } from "../../src/engine/TitanBrain";
 import { NatsConsumer } from "../../src/server/NatsConsumer";
-import { RiskGuardian } from "../../src/engine/RiskGuardian";
+import { RiskGuardian } from "../../src/features/Risk/RiskGuardian";
 import { Logger } from "../../src/logging/Logger";
 
 // Mock dependencies

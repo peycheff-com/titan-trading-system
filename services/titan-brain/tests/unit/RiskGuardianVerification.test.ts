@@ -1,12 +1,9 @@
-import {
-    HighCorrelationNotifier,
-    RiskGuardian,
-} from "../../src/engine/RiskGuardian";
+import { RiskGuardian } from "../../src/features/Risk/RiskGuardian";
 import {
     DefconLevel,
     GovernanceEngine,
 } from "../../src/engine/GovernanceEngine";
-import { AllocationEngine } from "../../src/engine/AllocationEngine";
+import { AllocationEngine } from "../../src/features/Allocation/AllocationEngine";
 import {
     IntentSignal,
     PowerLawMetrics,

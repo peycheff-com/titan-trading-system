@@ -67,6 +67,7 @@ describe("operator_actions_enforcement", () => {
     const mockRiskGuardian = {
         checkSignal: jest.fn(),
         getRiskMetrics: jest.fn(),
+        getRegimeState: jest.fn().mockReturnValue("STABLE"),
     } as unknown as RiskGuardian;
 
     const mockAllocationEngine = {

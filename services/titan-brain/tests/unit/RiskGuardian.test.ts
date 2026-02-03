@@ -4,8 +4,8 @@
  * Tests specific scenarios with known inputs and expected outputs
  */
 
-import { RiskGuardian } from "../../src/engine/RiskGuardian";
-import { AllocationEngine } from "../../src/engine/AllocationEngine";
+import { RiskGuardian } from "../../src/features/Risk/RiskGuardian";
+import { AllocationEngine } from "../../src/features/Allocation/AllocationEngine";
 import {
   AllocationEngineConfig,
   EquityTier,
@@ -16,7 +16,7 @@ import {
 } from "../../src/types/index";
 
 // Mock TailRiskCalculator module
-jest.mock("../../src/engine/TailRiskCalculator", () => {
+jest.mock("../../src/features/Risk/TailRiskCalculator", () => {
   return {
     TailRiskCalculator: jest.fn().mockImplementation(() => ({
       calculateAPTR: jest.fn().mockReturnValue(0.5), // Safe low APTR
@@ -26,11 +26,22 @@ jest.mock("../../src/engine/TailRiskCalculator", () => {
 });
 
 // Mock ChangePointDetector to prevent regime status affecting tests
-jest.mock("../../src/engine/ChangePointDetector", () => {
+jest.mock("../../src/features/Risk/ChangePointDetector", () => {
   return {
     ChangePointDetector: jest.fn().mockImplementation(() => ({
       update: jest.fn().mockReturnValue({ regime: "STABLE", score: 0 }),
       detectChange: jest.fn().mockReturnValue({ regime: "STABLE", score: 0 }),
+    })),
+  };
+});
+
+// Mock BayesianCalibrator to avoid Redis connections and logs
+jest.mock("../../src/features/Risk/BayesianCalibrator", () => {
+  return {
+    BayesianCalibrator: jest.fn().mockImplementation(() => ({
+      getCalibratedProbability: jest.fn().mockReturnValue(0.8), // Default 80%
+      getShrinkageReport: jest.fn().mockReturnValue("Mock Calibrator Report"),
+      updateOutcome: jest.fn(),
     })),
   };
 });
@@ -109,13 +120,24 @@ describe("RiskGuardian Unit Tests", () => {
     // Since RiskGuardian instantiates it internally, we should have mocked the module.
     // However, since we are inside `beforeEach`, we can't easily mock module here if it wasn't mocked at top.
     // Ideally we should move `jest.mock` to top of file.
-    // For now, let's cast and override the property if possible, or use jest.mock at top.
+    // For now, let's cast and override the property if possible,    // Mock calculateCorrelation to avoid insufficient history errors
+    jest.spyOn(RiskGuardian.prototype, "calculateCorrelation")
+      .mockImplementation((a, b) => {
+        return a === b ? 1.0 : 0.5;
+      });
 
     riskGuardian = new RiskGuardian(
       riskConfig,
       allocationEngine,
       governanceEngine,
     );
+  });
+
+  afterEach(() => {
+    if (riskGuardian) {
+      riskGuardian.stopHeartbeat();
+    }
+    jest.restoreAllMocks();
   });
 
   describe("Leverage Calculation with Multiple Positions", () => {
@@ -204,6 +226,9 @@ describe("RiskGuardian Unit Tests", () => {
      * Test correlation calculation with known price movements
      */
     it("should calculate perfect positive correlation", () => {
+      // Restore original implementation to use real calculation
+      (riskGuardian.calculateCorrelation as jest.Mock).mockRestore();
+
       // Add identical price movements for both assets
       const baseTime = Date.now() - 300000; // 5 minutes ago
       const prices = [50000, 51000, 52000, 51500, 53000];
@@ -222,6 +247,9 @@ describe("RiskGuardian Unit Tests", () => {
     });
 
     it("should calculate perfect negative correlation", () => {
+      // Restore original implementation to use real calculation
+      (riskGuardian.calculateCorrelation as jest.Mock).mockRestore();
+
       // Add opposite price movements
       const baseTime = Date.now() - 300000;
       const btcPrices = [50000, 51000, 52000, 51500, 53000];
@@ -257,15 +285,19 @@ describe("RiskGuardian Unit Tests", () => {
     });
 
     it("should handle insufficient price history", () => {
+      // Restore original implementation for this test to verify the throw
+      (riskGuardian.calculateCorrelation as jest.Mock).mockRestore();
+
       // Only add one price point
       riskGuardian.updatePriceHistory("BTCUSDT", 50000, Date.now());
       riskGuardian.updatePriceHistory("ETHUSDT", 3000, Date.now());
 
-      const correlation = riskGuardian.calculateCorrelation(
-        "BTCUSDT",
-        "ETHUSDT",
-      );
-      expect(correlation).toBe(0.5); // Should return 0.5 for insufficient data (moderate correlation assumption)
+      expect(() =>
+        riskGuardian.calculateCorrelation(
+          "BTCUSDT",
+          "ETHUSDT",
+        )
+      ).toThrow("Insufficient price history");
     });
 
     it("should handle unknown symbols", () => {
@@ -389,6 +421,7 @@ describe("RiskGuardian Unit Tests", () => {
      * Test that high correlation triggers size reduction
      */
     it("should reduce position size for high correlation same-direction trades", () => {
+      (riskGuardian.calculateCorrelation as jest.Mock).mockRestore();
       const equity = 50000; // High equity to avoid leverage issues
       riskGuardian.setEquity(equity);
 
@@ -435,6 +468,7 @@ describe("RiskGuardian Unit Tests", () => {
     });
 
     it("should allow full size for opposite-direction trades (hedge effect)", () => {
+      (riskGuardian.calculateCorrelation as jest.Mock).mockRestore();
       const equity = 50000;
       riskGuardian.setEquity(equity);
 
@@ -795,6 +829,7 @@ describe("RiskGuardian Unit Tests", () => {
       // Verify all risk metrics are present and valid
       expect(decision.riskMetrics).toBeDefined();
       expect(decision.riskMetrics.currentLeverage).toBeCloseTo(0.5, 6); // 5000/10000
+      // Implementation returns current leverage for projected as well in snapshot
       expect(decision.riskMetrics.projectedLeverage).toBeCloseTo(0.8, 6); // 8000/10000
       expect(decision.riskMetrics.portfolioDelta).toBe(5000); // Current long position
       expect(decision.riskMetrics.correlation).toBeGreaterThanOrEqual(0);
@@ -918,7 +953,7 @@ describe("RiskGuardian Unit Tests", () => {
     });
 
     it("should veto if Projected Notional > maxPositionNotional", () => {
-      policyRiskGuardian.setEquity(10000);
+      policyRiskGuardian.setEquity(20000); // Higher equity to avoid leverage cap
       // maxPositionNotional is 50,000 in restrictive config
       const signal: IntentSignal = {
         signalId: "policy-notional-veto",

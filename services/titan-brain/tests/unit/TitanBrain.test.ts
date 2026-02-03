@@ -136,7 +136,7 @@ import {
 } from "../../src/engine/GovernanceEngine";
 
 // Mock TailRiskCalculator module to prevent SURVIVAL_MODE triggers in tests
-jest.mock("../../src/engine/TailRiskCalculator.js", () => {
+jest.mock("../../src/features/Risk/TailRiskCalculator", () => {
   return {
     TailRiskCalculator: jest.fn().mockImplementation(() => ({
       calculateAPTR: jest.fn().mockReturnValue(0.5), // Safe low APTR

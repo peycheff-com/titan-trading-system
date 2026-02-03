@@ -3,7 +3,7 @@
  * Defines types for risk management and correlation guards
  */
 
-import { PhaseId } from './performance.js';
+import { PhaseId } from "./performance.js";
 
 /**
  * Intent signal from a phase requesting execution
@@ -12,7 +12,7 @@ export interface IntentSignal {
   signalId: string;
   phaseId: PhaseId;
   symbol: string;
-  side: 'BUY' | 'SELL';
+  side: "BUY" | "SELL";
   /** Requested position size in USD notional */
   requestedSize: number;
   timestamp: number;
@@ -40,11 +40,13 @@ export interface IntentSignal {
   /** Exchange where this signal should be executed */
   exchange?: string;
   /** Position mode (One-Way vs Hedge) */
-  positionMode?: 'ONE_WAY' | 'HEDGE';
+  positionMode?: "ONE_WAY" | "HEDGE";
   /** Intent Type */
-  type?: 'MANUAL' | 'STRATEGY' | 'RECONCILIATION' | 'LIQUIDATION';
+  type?: "MANUAL" | "STRATEGY" | "RECONCILIATION" | "LIQUIDATION";
   /** Trap Type for Bayesian Calibration (Phase 1) */
   trap_type?: string;
+  /** Policy Hash for Truth Verification (Risk Immune System) */
+  policy_hash?: string;
   /** Additional metadata (source, velocity, orderType, etc.) */
   metadata?: Record<string, unknown>;
 }
@@ -62,10 +64,10 @@ export interface RiskPolicy {
 }
 
 export enum RiskPolicyState {
-  Normal = 'Normal',
-  Cautious = 'Cautious',
-  Defensive = 'Defensive',
-  Emergency = 'Emergency',
+  Normal = "Normal",
+  Cautious = "Cautious",
+  Defensive = "Defensive",
+  Emergency = "Emergency",
 }
 
 /**
@@ -73,7 +75,7 @@ export enum RiskPolicyState {
  */
 export interface Position {
   symbol: string;
-  side: 'LONG' | 'SHORT';
+  side: "LONG" | "SHORT";
   /** Position size in USD notional */
   size: number;
   /** Entry price */
@@ -87,7 +89,7 @@ export interface Position {
   /** Exchange where position is held */
   exchange?: string;
   /** Position mode (One-Way vs Hedge) */
-  positionMode?: 'ONE_WAY' | 'HEDGE';
+  positionMode?: "ONE_WAY" | "HEDGE";
 }
 
 /**
@@ -129,7 +131,7 @@ export interface RiskSnapshot {
 /**
  * Risk guardian configuration
  */
-import { RiskPolicyV1 } from '@titan/shared';
+import { RiskPolicyV1 } from "@titan/shared";
 
 /**
  * Risk guardian configuration
@@ -146,12 +148,17 @@ export interface RiskGuardianConfig extends RiskPolicyV1 {
   fractal: {
     [key: string]: PhaseRiskConstraints;
   };
-  riskAversionLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
+  riskAversionLevel?: "LOW" | "MEDIUM" | "HIGH";
   /** Cost-Ensure Veto Configuration */
   costVeto?: {
     enabled: boolean;
     minExpectancyRatio: number; // e.g. 5.0 (Expected Profit must be > 5x Cost)
     baseFeeBps: number; // e.g. 6 bps (Taker + Spread)
+  };
+  /** Feature Flags */
+  features?: {
+    disableTruthGating?: boolean;
+    [key: string]: boolean | undefined;
   };
 }
 

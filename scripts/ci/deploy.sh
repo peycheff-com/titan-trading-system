@@ -71,7 +71,29 @@ cp "$TEMP_DEPLOY/evidence/digests.json" "$NEW_RELEASE/evidence/digests.json"
 cp "$TEMP_DEPLOY/scripts/"* "$NEW_RELEASE/scripts/"
 chmod +x "$NEW_RELEASE/scripts/"*.sh
 
-# 4. Generate Digest Override
+# 4. Verify Provenance
+log "Verifying artifact provenance..."
+cp "$TITAN_ROOT/scripts/security/provenance.ts" "$NEW_RELEASE/scripts/provenance.ts"
+cp "$TITAN_ROOT/scripts/security/titan_release.pub" "$NEW_RELEASE/scripts/titan_release.pub"
+
+# Ensure npx/node is available. If not, this fails.
+# We verification requires the signature file.
+if [ -f "$NEW_RELEASE/evidence/digests.json.sig" ]; then
+    if npx ts-node "$NEW_RELEASE/scripts/provenance.ts" verify \
+        "$NEW_RELEASE/evidence/digests.json" \
+        "$NEW_RELEASE/evidence/digests.json.sig" \
+        "$NEW_RELEASE/scripts/titan_release.pub"; then
+        log "Provenance Verified: Signature matches Release Key."
+    else
+        error "PROVENANCE CHECK FAILED: Signature Invalid!"
+        exit 1
+    fi
+else
+    error "PROVENANCE CHECK FAILED: Missing signature file (digests.json.sig)!"
+    exit 1
+fi
+
+# 5. Generate Digest Override
 log "Generating digest override from evidence/digests.json..."
 python3 "$NEW_RELEASE/scripts/generate_digest_override.py" \
     "$NEW_RELEASE/evidence/digests.json" \

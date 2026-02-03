@@ -1,0 +1,1859 @@
+
+> titan-brain@1.0.0 test:unit
+> jest --config jest.config.cjs
+
+FAIL tests/server/ExecutionEngineClient.test.ts
+  ● ExecutionEngineClient › forwardSignal › should include required fields on forwardSignal
+
+    TypeError: (0 , shared_1.getCanonicalRiskPolicy) is not a function
+
+      102 |       symbolToken,
+      103 |     );
+    > 104 |     const policyHash = getCanonicalRiskPolicy().hash;
+          |                                              ^
+      105 |
+      106 |     const payload = {
+      107 |       schema_version: "1.0.0",
+
+      at ExecutionEngineClient.forwardSignal (src/server/ExecutionEngineClient.ts:104:46)
+      at Object.<anonymous> (tests/server/ExecutionEngineClient.test.ts:117:20)
+
+  ● ExecutionEngineClient › forwardSignal › should handle SELL signals correctly
+
+    TypeError: (0 , shared_1.getCanonicalRiskPolicy) is not a function
+
+      102 |       symbolToken,
+      103 |     );
+    > 104 |     const policyHash = getCanonicalRiskPolicy().hash;
+          |                                              ^
+      105 |
+      106 |     const payload = {
+      107 |       schema_version: "1.0.0",
+
+      at ExecutionEngineClient.forwardSignal (src/server/ExecutionEngineClient.ts:104:46)
+      at Object.<anonymous> (tests/server/ExecutionEngineClient.test.ts:144:20)
+
+  ● ExecutionEngineClient › forwardSignal › should handle phase2 signal source mapping
+
+    TypeError: (0 , shared_1.getCanonicalRiskPolicy) is not a function
+
+      102 |       symbolToken,
+      103 |     );
+    > 104 |     const policyHash = getCanonicalRiskPolicy().hash;
+          |                                              ^
+      105 |
+      106 |     const payload = {
+      107 |       schema_version: "1.0.0",
+
+      at ExecutionEngineClient.forwardSignal (src/server/ExecutionEngineClient.ts:104:46)
+      at Object.<anonymous> (tests/server/ExecutionEngineClient.test.ts:166:20)
+
+FAIL tests/unit/engine/OperatorActions.test.ts
+  ● operator_actions_enforcement › should allow processing when ARMED
+
+    TypeError: this.riskGuardian.getRegimeState is not a function
+
+      192 |
+      193 |     // 2. Allocation
+    > 194 |     const currentRegime = this.riskGuardian.getRegimeState();
+          |                                             ^
+      195 |     const allocation = this.allocationEngine.getRegimeAdjustedWeights(
+      196 |       equity,
+      197 |       currentRegime,
+
+      at SignalProcessor.processSignal (src/engine/SignalProcessor.ts:194:45)
+      at Object.<anonymous> (tests/unit/engine/OperatorActions.test.ts:152:40)
+
+FAIL tests/unit/GateOrdering.invariant.test.ts
+  ● Console
+
+    console.error
+      [RiskGuardian] Risk check failed: TypeError: this.bayesianCalibrator.getShrinkageReport is not a function
+          at RiskGuardian.checkSignal (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:599:37)
+          at Object.<anonymous> (/Users/ivan/Code/trading/titan/services/titan-brain/tests/unit/GateOrdering.invariant.test.ts:198:43)
+          at Promise.then.completed (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:316:40)
+          at processTicksAndRejections (node:internal/process/task_queues:105:5)
+          at _runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:126:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at run (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:444:34)
+          at Object.worker (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/testWorker.js:106:12)
+
+      863 |       };
+      864 |     } catch (err: any) {
+    > 865 |       console.error("[RiskGuardian] Risk check failed:", err);
+          |               ^
+      866 |       return {
+      867 |         approved: false,
+      868 |         reason: `RISK_CHECK_ERROR: ${err.message}`,
+
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:865:15)
+      at Object.<anonymous> (tests/unit/GateOrdering.invariant.test.ts:198:43)
+
+  ● Gate Ordering Invariant › PowerLaw gates fire after Confidence/Fractal › should allow signal to reach PowerLaw gate when earlier gates pass
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected substring: "TAIL_RISK_VETO"
+    Received string:    "RISK_CHECK_ERROR: this.bayesianCalibrator.getShrinkageReport is not a function"
+
+      200 |             // Should reach PowerLaw gate (earlier gates passed)
+      201 |             expect(decision.approved).toBe(false);
+    > 202 |             expect(decision.reason).toContain("TAIL_RISK_VETO");
+          |                                     ^
+      203 |         });
+      204 |     });
+      205 | });
+
+      at Object.<anonymous> (tests/unit/GateOrdering.invariant.test.ts:202:37)
+
+FAIL tests/unit/RiskGuardian.test.ts
+  ● Console
+
+    console.error
+      [RiskGuardian] Risk check failed: Error: Insufficient price history for correlation check: BTCUSDT or BTCUSDT
+          at RiskGuardian.calculateCorrelation (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1054:13)
+          at RiskGuardian.getPortfolioBeta (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1116:30)
+          at RiskGuardian.checkSignal (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:662:34)
+          at Object.<anonymous> (/Users/ivan/Code/trading/titan/services/titan-brain/tests/unit/RiskGuardian.test.ts:311:37)
+          at Promise.then.completed (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:316:40)
+          at processTicksAndRejections (node:internal/process/task_queues:105:5)
+          at _runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:126:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at run (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:444:34)
+          at Object.worker (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/testWorker.js:106:12)
+
+      863 |       };
+      864 |     } catch (err: any) {
+    > 865 |       console.error("[RiskGuardian] Risk check failed:", err);
+          |               ^
+      866 |       return {
+      867 |         approved: false,
+      868 |         reason: `RISK_CHECK_ERROR: ${err.message}`,
+
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:865:15)
+      at Object.<anonymous> (tests/unit/RiskGuardian.test.ts:311:37)
+
+    console.error
+      [RiskGuardian] Risk check failed: Error: Insufficient price history for correlation check: ETHUSDT or BTCUSDT
+          at RiskGuardian.calculateCorrelation (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1054:13)
+          at RiskGuardian.getPortfolioBeta (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1116:30)
+          at RiskGuardian.checkSignal (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:662:34)
+          at Object.<anonymous> (/Users/ivan/Code/trading/titan/services/titan-brain/tests/unit/RiskGuardian.test.ts:344:37)
+          at Promise.then.completed (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:316:40)
+          at processTicksAndRejections (node:internal/process/task_queues:105:5)
+          at _runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:126:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at run (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:444:34)
+          at Object.worker (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/testWorker.js:106:12)
+
+      863 |       };
+      864 |     } catch (err: any) {
+    > 865 |       console.error("[RiskGuardian] Risk check failed:", err);
+          |               ^
+      866 |       return {
+      867 |         approved: false,
+      868 |         reason: `RISK_CHECK_ERROR: ${err.message}`,
+
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:865:15)
+      at Object.<anonymous> (tests/unit/RiskGuardian.test.ts:344:37)
+
+    console.error
+      [RiskGuardian] Risk check failed: Error: Insufficient price history for correlation check: BTCUSDT or BTCUSDT
+          at RiskGuardian.calculateCorrelation (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1054:13)
+          at RiskGuardian.getPortfolioBeta (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1116:30)
+          at RiskGuardian.checkSignal (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:662:34)
+          at Object.<anonymous> (/Users/ivan/Code/trading/titan/services/titan-brain/tests/unit/RiskGuardian.test.ts:377:37)
+          at Promise.then.completed (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:316:40)
+          at processTicksAndRejections (node:internal/process/task_queues:105:5)
+          at _runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:126:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at run (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:444:34)
+          at Object.worker (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/testWorker.js:106:12)
+
+      863 |       };
+      864 |     } catch (err: any) {
+    > 865 |       console.error("[RiskGuardian] Risk check failed:", err);
+          |               ^
+      866 |       return {
+      867 |         approved: false,
+      868 |         reason: `RISK_CHECK_ERROR: ${err.message}`,
+
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:865:15)
+      at Object.<anonymous> (tests/unit/RiskGuardian.test.ts:377:37)
+
+  ● RiskGuardian Unit Tests › Correlation Calculation Between Assets › should handle insufficient price history
+
+    Insufficient price history for correlation check: BTCUSDT or ETHUSDT
+
+      1052 |     if (historyA.length < 2 || historyB.length < 2) {
+      1053 |       // Insufficient data for strict correlation check - Fail Closed
+    > 1054 |       throw new Error(
+           |             ^
+      1055 |         `Insufficient price history for correlation check: ${assetA} or ${assetB}`,
+      1056 |       );
+      1057 |     }
+
+      at RiskGuardian.calculateCorrelation (src/features/Risk/RiskGuardian.ts:1054:13)
+      at Object.<anonymous> (tests/unit/RiskGuardian.test.ts:264:40)
+
+  ● RiskGuardian Unit Tests › Correlation Calculation Between Assets › should handle unknown symbols
+
+    Insufficient price history for correlation check: UNKNOWN1 or UNKNOWN2
+
+      1052 |     if (historyA.length < 2 || historyB.length < 2) {
+      1053 |       // Insufficient data for strict correlation check - Fail Closed
+    > 1054 |       throw new Error(
+           |             ^
+      1055 |         `Insufficient price history for correlation check: ${assetA} or ${assetB}`,
+      1056 |       );
+      1057 |     }
+
+      at RiskGuardian.calculateCorrelation (src/features/Risk/RiskGuardian.ts:1054:13)
+      at Object.<anonymous> (tests/unit/RiskGuardian.test.ts:272:40)
+
+  ● RiskGuardian Unit Tests › Phase 3 Hedge Auto-Approval › should auto-approve Phase 3 hedge that reduces long delta
+
+    Insufficient price history for correlation check: BTCUSDT or BTCUSDT
+
+      1052 |     if (historyA.length < 2 || historyB.length < 2) {
+      1053 |       // Insufficient data for strict correlation check - Fail Closed
+    > 1054 |       throw new Error(
+           |             ^
+      1055 |         `Insufficient price history for correlation check: ${assetA} or ${assetB}`,
+      1056 |       );
+      1057 |     }
+
+      at RiskGuardian.calculateCorrelation (src/features/Risk/RiskGuardian.ts:1054:13)
+      at RiskGuardian.getPortfolioBeta (src/features/Risk/RiskGuardian.ts:1116:30)
+      at RiskGuardian.getRiskMetrics (src/features/Risk/RiskGuardian.ts:1197:27)
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:869:27)
+      at Object.<anonymous> (tests/unit/RiskGuardian.test.ts:311:37)
+
+  ● RiskGuardian Unit Tests › Phase 3 Hedge Auto-Approval › should auto-approve Phase 3 hedge that reduces short delta
+
+    Insufficient price history for correlation check: ETHUSDT or BTCUSDT
+
+      1052 |     if (historyA.length < 2 || historyB.length < 2) {
+      1053 |       // Insufficient data for strict correlation check - Fail Closed
+    > 1054 |       throw new Error(
+           |             ^
+      1055 |         `Insufficient price history for correlation check: ${assetA} or ${assetB}`,
+      1056 |       );
+      1057 |     }
+
+      at RiskGuardian.calculateCorrelation (src/features/Risk/RiskGuardian.ts:1054:13)
+      at RiskGuardian.getPortfolioBeta (src/features/Risk/RiskGuardian.ts:1116:30)
+      at RiskGuardian.getRiskMetrics (src/features/Risk/RiskGuardian.ts:1197:27)
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:869:27)
+      at Object.<anonymous> (tests/unit/RiskGuardian.test.ts:344:37)
+
+  ● RiskGuardian Unit Tests › Phase 3 Hedge Auto-Approval › should not auto-approve Phase 3 signal that increases delta
+
+    Insufficient price history for correlation check: BTCUSDT or BTCUSDT
+
+      1052 |     if (historyA.length < 2 || historyB.length < 2) {
+      1053 |       // Insufficient data for strict correlation check - Fail Closed
+    > 1054 |       throw new Error(
+           |             ^
+      1055 |         `Insufficient price history for correlation check: ${assetA} or ${assetB}`,
+      1056 |       );
+      1057 |     }
+
+      at RiskGuardian.calculateCorrelation (src/features/Risk/RiskGuardian.ts:1054:13)
+      at RiskGuardian.getPortfolioBeta (src/features/Risk/RiskGuardian.ts:1116:30)
+      at RiskGuardian.getRiskMetrics (src/features/Risk/RiskGuardian.ts:1197:27)
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:869:27)
+      at Object.<anonymous> (tests/unit/RiskGuardian.test.ts:377:37)
+
+  ● RiskGuardian Unit Tests › High Correlation Size Reduction › should allow full size for opposite-direction trades (hedge effect)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      476 |
+      477 |       // Should be approved with full size (hedge effect)
+    > 478 |       expect(decision.approved).toBe(true);
+          |                                 ^
+      479 |       if (decision.adjustedSize) {
+      480 |         expect(decision.adjustedSize).toBe(signal.requestedSize);
+      481 |       }
+
+      at Object.<anonymous> (tests/unit/RiskGuardian.test.ts:478:33)
+
+  ● RiskGuardian Unit Tests › Risk Metrics Calculation › should calculate all risk metrics correctly
+
+    expect(received).toBeCloseTo(expected, precision)
+
+    Expected: 0.8
+    Received: 0.5
+
+    Expected precision:    6
+    Expected difference: < 0.0000005
+    Received difference:   0.30000000000000004
+
+      796 |       expect(decision.riskMetrics).toBeDefined();
+      797 |       expect(decision.riskMetrics.currentLeverage).toBeCloseTo(0.5, 6); // 5000/10000
+    > 798 |       expect(decision.riskMetrics.projectedLeverage).toBeCloseTo(0.8, 6); // 8000/10000
+          |                                                      ^
+      799 |       expect(decision.riskMetrics.portfolioDelta).toBe(5000); // Current long position
+      800 |       expect(decision.riskMetrics.correlation).toBeGreaterThanOrEqual(0);
+      801 |       expect(decision.riskMetrics.correlation).toBeLessThanOrEqual(1);
+
+      at Object.<anonymous> (tests/unit/RiskGuardian.test.ts:798:54)
+
+  ● RiskGuardian Unit Tests › Policy Enforcement › should veto if Projected Notional > maxPositionNotional
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected substring: "Max Position Notional Exceeded"
+    Received string:    "Leverage cap exceeded: projected 5.00x > max 5x"
+
+      932 |       const decision = policyRiskGuardian.checkSignal(signal, []);
+      933 |       expect(decision.approved).toBe(false);
+    > 934 |       expect(decision.reason).toContain("Max Position Notional Exceeded");
+          |                               ^
+      935 |     });
+      936 |
+      937 |     it("should veto if Symbol is not in Whitelist", () => {
+
+      at Object.<anonymous> (tests/unit/RiskGuardian.test.ts:934:31)
+
+  ● RiskGuardian Unit Tests › Policy Enforcement › should veto if Symbol is not in Whitelist
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      948 |
+      949 |       const decision = policyRiskGuardian.checkSignal(signal, []);
+    > 950 |       expect(decision.approved).toBe(false);
+          |                                 ^
+      951 |       expect(decision.reason).toContain("not whitelisted");
+      952 |     });
+      953 |
+
+      at Object.<anonymous> (tests/unit/RiskGuardian.test.ts:950:33)
+
+FAIL tests/unit/PowerLawIntegration.test.ts
+  ● PowerLaw Integration › RiskGuardian PowerLaw Gates › should reduce effective size for Phase 1 based on dynamic leverage scaling
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected substring: "Size reduced due to alpha"
+    Received string:    "Signal approved with size adjustment: Risk/Latency/Alpha"
+
+      389 |             // 15000 * 0.52 = 7800
+      390 |             expect(decision.adjustedSize).toBeCloseTo(7800, -2);
+    > 391 |             expect(decision.reason).toContain("Size reduced due to alpha"); // Matches actual output
+          |                                     ^
+      392 |             // "Signal approved with size adjustment: Risk/Latency/Alpha" is what code usually says if adjusted.
+      393 |             // Check code: 'Signal approved with size adjustment: Risk/Latency/Alpha'
+      394 |             expect(decision.reason).toMatch(
+
+      at Object.<anonymous> (tests/unit/PowerLawIntegration.test.ts:391:37)
+
+PASS tests/unit/services/Reconciliation.test.ts
+FAIL tests/property/RiskGuardian.property.test.ts
+  ● Console
+
+    console.error
+      [RiskGuardian] Risk check failed: Error: Insufficient price history for correlation check: SOLUSDT or BTCUSDT
+          at RiskGuardian.calculateCorrelation (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1054:13)
+          at RiskGuardian.getPortfolioBeta (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1116:30)
+          at RiskGuardian.checkSignal (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:662:34)
+          at /Users/ivan/Code/trading/titan/services/titan-brain/tests/property/RiskGuardian.property.test.ts:174:43
+          at Property.predicate (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+          at Property.run (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+          at runIt (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+          at check (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+          at Object.assert (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+          at Object.<anonymous> (/Users/ivan/Code/trading/titan/services/titan-brain/tests/property/RiskGuardian.property.test.ts:116:10)
+          at Promise.then.completed (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:316:40)
+          at processTicksAndRejections (node:internal/process/task_queues:105:5)
+          at _runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:126:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at run (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:444:34)
+          at Object.worker (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/testWorker.js:106:12)
+
+      863 |       };
+      864 |     } catch (err: any) {
+    > 865 |       console.error("[RiskGuardian] Risk check failed:", err);
+          |               ^
+      866 |       return {
+      867 |         approved: false,
+      868 |         reason: `RISK_CHECK_ERROR: ${err.message}`,
+
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:865:15)
+      at tests/property/RiskGuardian.property.test.ts:174:43
+      at Property.predicate (../../node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+      at Property.run (../../node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+      at runIt (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+      at check (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+      at Object.assert (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+      at Object.<anonymous> (tests/property/RiskGuardian.property.test.ts:116:10)
+
+    console.error
+      [RiskGuardian] Risk check failed: Error: Insufficient price history for correlation check: SOLUSDT or BTCUSDT
+          at RiskGuardian.calculateCorrelation (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1054:13)
+          at RiskGuardian.getPortfolioBeta (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1116:30)
+          at RiskGuardian.checkSignal (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:662:34)
+          at /Users/ivan/Code/trading/titan/services/titan-brain/tests/property/RiskGuardian.property.test.ts:174:43
+          at Property.predicate (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+          at Property.run (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+          at runIt (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+          at check (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+          at Object.assert (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+          at Object.<anonymous> (/Users/ivan/Code/trading/titan/services/titan-brain/tests/property/RiskGuardian.property.test.ts:116:10)
+          at Promise.then.completed (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:316:40)
+          at processTicksAndRejections (node:internal/process/task_queues:105:5)
+          at _runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:126:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at run (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:444:34)
+          at Object.worker (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/testWorker.js:106:12)
+
+      863 |       };
+      864 |     } catch (err: any) {
+    > 865 |       console.error("[RiskGuardian] Risk check failed:", err);
+          |               ^
+      866 |       return {
+      867 |         approved: false,
+      868 |         reason: `RISK_CHECK_ERROR: ${err.message}`,
+
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:865:15)
+      at tests/property/RiskGuardian.property.test.ts:174:43
+      at Property.predicate (../../node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+      at Property.run (../../node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+      at runIt (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+      at check (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+      at Object.assert (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+      at Object.<anonymous> (tests/property/RiskGuardian.property.test.ts:116:10)
+
+    console.error
+      [RiskGuardian] Risk check failed: Error: Insufficient price history for correlation check: SOLUSDT or BTCUSDT
+          at RiskGuardian.calculateCorrelation (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1054:13)
+          at RiskGuardian.getPortfolioBeta (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1116:30)
+          at RiskGuardian.checkSignal (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:662:34)
+          at /Users/ivan/Code/trading/titan/services/titan-brain/tests/property/RiskGuardian.property.test.ts:174:43
+          at Property.predicate (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+          at Property.run (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+          at runIt (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+          at check (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+          at Object.assert (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+          at Object.<anonymous> (/Users/ivan/Code/trading/titan/services/titan-brain/tests/property/RiskGuardian.property.test.ts:116:10)
+          at Promise.then.completed (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:316:40)
+          at processTicksAndRejections (node:internal/process/task_queues:105:5)
+          at _runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:126:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at run (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:444:34)
+          at Object.worker (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/testWorker.js:106:12)
+
+      863 |       };
+      864 |     } catch (err: any) {
+    > 865 |       console.error("[RiskGuardian] Risk check failed:", err);
+          |               ^
+      866 |       return {
+      867 |         approved: false,
+      868 |         reason: `RISK_CHECK_ERROR: ${err.message}`,
+
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:865:15)
+      at tests/property/RiskGuardian.property.test.ts:174:43
+      at Property.predicate (../../node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+      at Property.run (../../node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+      at runIt (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+      at check (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+      at Object.assert (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+      at Object.<anonymous> (tests/property/RiskGuardian.property.test.ts:116:10)
+
+    console.error
+      [RiskGuardian] Risk check failed: Error: Insufficient price history for correlation check: ADAUSDT or BTCUSDT
+          at RiskGuardian.calculateCorrelation (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1054:13)
+          at RiskGuardian.getPortfolioBeta (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1116:30)
+          at RiskGuardian.checkSignal (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:662:34)
+          at /Users/ivan/Code/trading/titan/services/titan-brain/tests/property/RiskGuardian.property.test.ts:174:43
+          at Property.predicate (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+          at Property.run (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+          at runIt (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+          at check (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+          at Object.assert (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+          at Object.<anonymous> (/Users/ivan/Code/trading/titan/services/titan-brain/tests/property/RiskGuardian.property.test.ts:116:10)
+          at Promise.then.completed (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:316:40)
+          at processTicksAndRejections (node:internal/process/task_queues:105:5)
+          at _runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:126:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at run (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:444:34)
+          at Object.worker (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/testWorker.js:106:12)
+
+      863 |       };
+      864 |     } catch (err: any) {
+    > 865 |       console.error("[RiskGuardian] Risk check failed:", err);
+          |               ^
+      866 |       return {
+      867 |         approved: false,
+      868 |         reason: `RISK_CHECK_ERROR: ${err.message}`,
+
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:865:15)
+      at tests/property/RiskGuardian.property.test.ts:174:43
+      at Property.predicate (../../node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+      at Property.run (../../node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+      at runIt (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+      at check (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+      at Object.assert (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+      at Object.<anonymous> (tests/property/RiskGuardian.property.test.ts:116:10)
+
+    console.error
+      [RiskGuardian] Risk check failed: Error: Insufficient price history for correlation check: BTCUSDT or BTCUSDT
+          at RiskGuardian.calculateCorrelation (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1054:13)
+          at RiskGuardian.getPortfolioBeta (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1116:30)
+          at RiskGuardian.checkSignal (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:662:34)
+          at /Users/ivan/Code/trading/titan/services/titan-brain/tests/property/RiskGuardian.property.test.ts:174:43
+          at Property.predicate (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+          at Property.run (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+          at runIt (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+          at check (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+          at Object.assert (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+          at Object.<anonymous> (/Users/ivan/Code/trading/titan/services/titan-brain/tests/property/RiskGuardian.property.test.ts:116:10)
+          at Promise.then.completed (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:316:40)
+          at processTicksAndRejections (node:internal/process/task_queues:105:5)
+          at _runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:126:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at run (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:444:34)
+          at Object.worker (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/testWorker.js:106:12)
+
+      863 |       };
+      864 |     } catch (err: any) {
+    > 865 |       console.error("[RiskGuardian] Risk check failed:", err);
+          |               ^
+      866 |       return {
+      867 |         approved: false,
+      868 |         reason: `RISK_CHECK_ERROR: ${err.message}`,
+
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:865:15)
+      at tests/property/RiskGuardian.property.test.ts:174:43
+      at Property.predicate (../../node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+      at Property.run (../../node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+      at runIt (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+      at check (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+      at Object.assert (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+      at Object.<anonymous> (tests/property/RiskGuardian.property.test.ts:116:10)
+
+    console.error
+      [RiskGuardian] Risk check failed: Error: Insufficient price history for correlation check: BTCUSDT or BTCUSDT
+          at RiskGuardian.calculateCorrelation (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1054:13)
+          at RiskGuardian.getPortfolioBeta (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1116:30)
+          at RiskGuardian.checkSignal (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:662:34)
+          at /Users/ivan/Code/trading/titan/services/titan-brain/tests/property/RiskGuardian.property.test.ts:174:43
+          at Property.predicate (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+          at Property.run (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+          at runIt (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+          at check (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+          at Object.assert (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+          at Object.<anonymous> (/Users/ivan/Code/trading/titan/services/titan-brain/tests/property/RiskGuardian.property.test.ts:116:10)
+          at Promise.then.completed (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:316:40)
+          at processTicksAndRejections (node:internal/process/task_queues:105:5)
+          at _runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:126:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at run (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:444:34)
+          at Object.worker (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/testWorker.js:106:12)
+
+      863 |       };
+      864 |     } catch (err: any) {
+    > 865 |       console.error("[RiskGuardian] Risk check failed:", err);
+          |               ^
+      866 |       return {
+      867 |         approved: false,
+      868 |         reason: `RISK_CHECK_ERROR: ${err.message}`,
+
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:865:15)
+      at tests/property/RiskGuardian.property.test.ts:174:43
+      at Property.predicate (../../node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+      at Property.run (../../node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+      at runIt (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+      at check (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+      at Object.assert (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+      at Object.<anonymous> (tests/property/RiskGuardian.property.test.ts:116:10)
+
+    console.error
+      [RiskGuardian] Risk check failed: Error: Insufficient price history for correlation check: BTCUSDT or BTCUSDT
+          at RiskGuardian.calculateCorrelation (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1054:13)
+          at RiskGuardian.getPortfolioBeta (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1116:30)
+          at RiskGuardian.checkSignal (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:662:34)
+          at /Users/ivan/Code/trading/titan/services/titan-brain/tests/property/RiskGuardian.property.test.ts:174:43
+          at Property.predicate (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+          at Property.run (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+          at runIt (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+          at check (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+          at Object.assert (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+          at Object.<anonymous> (/Users/ivan/Code/trading/titan/services/titan-brain/tests/property/RiskGuardian.property.test.ts:116:10)
+          at Promise.then.completed (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:316:40)
+          at processTicksAndRejections (node:internal/process/task_queues:105:5)
+          at _runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:126:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at run (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:444:34)
+          at Object.worker (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/testWorker.js:106:12)
+
+      863 |       };
+      864 |     } catch (err: any) {
+    > 865 |       console.error("[RiskGuardian] Risk check failed:", err);
+          |               ^
+      866 |       return {
+      867 |         approved: false,
+      868 |         reason: `RISK_CHECK_ERROR: ${err.message}`,
+
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:865:15)
+      at tests/property/RiskGuardian.property.test.ts:174:43
+      at Property.predicate (../../node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+      at Property.run (../../node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+      at runIt (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+      at check (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+      at Object.assert (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+      at Object.<anonymous> (tests/property/RiskGuardian.property.test.ts:116:10)
+
+    console.error
+      [RiskGuardian] Risk check failed: Error: Insufficient price history for correlation check: BTCUSDT or BTCUSDT
+          at RiskGuardian.calculateCorrelation (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1054:13)
+          at RiskGuardian.getPortfolioBeta (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1116:30)
+          at RiskGuardian.checkSignal (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:662:34)
+          at /Users/ivan/Code/trading/titan/services/titan-brain/tests/property/RiskGuardian.property.test.ts:174:43
+          at Property.predicate (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+          at Property.run (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+          at runIt (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+          at check (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+          at Object.assert (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+          at Object.<anonymous> (/Users/ivan/Code/trading/titan/services/titan-brain/tests/property/RiskGuardian.property.test.ts:116:10)
+          at Promise.then.completed (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:316:40)
+          at processTicksAndRejections (node:internal/process/task_queues:105:5)
+          at _runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:126:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at run (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:444:34)
+          at Object.worker (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/testWorker.js:106:12)
+
+      863 |       };
+      864 |     } catch (err: any) {
+    > 865 |       console.error("[RiskGuardian] Risk check failed:", err);
+          |               ^
+      866 |       return {
+      867 |         approved: false,
+      868 |         reason: `RISK_CHECK_ERROR: ${err.message}`,
+
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:865:15)
+      at tests/property/RiskGuardian.property.test.ts:174:43
+      at Property.predicate (../../node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+      at Property.run (../../node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+      at runIt (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+      at check (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+      at Object.assert (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+      at Object.<anonymous> (tests/property/RiskGuardian.property.test.ts:116:10)
+
+    console.error
+      [RiskGuardian] Risk check failed: Error: Insufficient price history for correlation check: BTCUSDT or BTCUSDT
+          at RiskGuardian.calculateCorrelation (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1054:13)
+          at RiskGuardian.getPortfolioBeta (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1116:30)
+          at RiskGuardian.checkSignal (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:662:34)
+          at /Users/ivan/Code/trading/titan/services/titan-brain/tests/property/RiskGuardian.property.test.ts:320:43
+          at Property.predicate (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+          at Property.run (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+          at runIt (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+          at check (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+          at Object.assert (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+          at Object.<anonymous> (/Users/ivan/Code/trading/titan/services/titan-brain/tests/property/RiskGuardian.property.test.ts:283:10)
+          at Promise.then.completed (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:316:40)
+          at processTicksAndRejections (node:internal/process/task_queues:105:5)
+          at _runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:126:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at run (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:444:34)
+          at Object.worker (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/testWorker.js:106:12)
+
+      863 |       };
+      864 |     } catch (err: any) {
+    > 865 |       console.error("[RiskGuardian] Risk check failed:", err);
+          |               ^
+      866 |       return {
+      867 |         approved: false,
+      868 |         reason: `RISK_CHECK_ERROR: ${err.message}`,
+
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:865:15)
+      at tests/property/RiskGuardian.property.test.ts:320:43
+      at Property.predicate (../../node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+      at Property.run (../../node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+      at runIt (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+      at check (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+      at Object.assert (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+      at Object.<anonymous> (tests/property/RiskGuardian.property.test.ts:283:10)
+
+    console.error
+      [RiskGuardian] Risk check failed: Error: Insufficient price history for correlation check: BTCUSDT or BTCUSDT
+          at RiskGuardian.calculateCorrelation (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1054:13)
+          at RiskGuardian.getPortfolioBeta (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1116:30)
+          at RiskGuardian.checkSignal (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:662:34)
+          at /Users/ivan/Code/trading/titan/services/titan-brain/tests/property/RiskGuardian.property.test.ts:320:43
+          at Property.predicate (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+          at Property.run (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+          at runIt (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+          at check (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+          at Object.assert (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+          at Object.<anonymous> (/Users/ivan/Code/trading/titan/services/titan-brain/tests/property/RiskGuardian.property.test.ts:283:10)
+          at Promise.then.completed (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:316:40)
+          at processTicksAndRejections (node:internal/process/task_queues:105:5)
+          at _runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:126:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at run (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:444:34)
+          at Object.worker (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/testWorker.js:106:12)
+
+      863 |       };
+      864 |     } catch (err: any) {
+    > 865 |       console.error("[RiskGuardian] Risk check failed:", err);
+          |               ^
+      866 |       return {
+      867 |         approved: false,
+      868 |         reason: `RISK_CHECK_ERROR: ${err.message}`,
+
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:865:15)
+      at tests/property/RiskGuardian.property.test.ts:320:43
+      at Property.predicate (../../node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+      at Property.run (../../node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+      at runIt (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+      at check (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+      at Object.assert (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+      at Object.<anonymous> (tests/property/RiskGuardian.property.test.ts:283:10)
+
+    console.error
+      [RiskGuardian] Risk check failed: Error: Insufficient price history for correlation check: BTCUSDT or BTCUSDT
+          at RiskGuardian.calculateCorrelation (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1054:13)
+          at RiskGuardian.getPortfolioBeta (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1116:30)
+          at RiskGuardian.checkSignal (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:662:34)
+          at /Users/ivan/Code/trading/titan/services/titan-brain/tests/property/RiskGuardian.property.test.ts:320:43
+          at Property.predicate (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+          at Property.run (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+          at runIt (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+          at check (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+          at Object.assert (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+          at Object.<anonymous> (/Users/ivan/Code/trading/titan/services/titan-brain/tests/property/RiskGuardian.property.test.ts:283:10)
+          at Promise.then.completed (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:316:40)
+          at processTicksAndRejections (node:internal/process/task_queues:105:5)
+          at _runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:126:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at run (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:444:34)
+          at Object.worker (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/testWorker.js:106:12)
+
+      863 |       };
+      864 |     } catch (err: any) {
+    > 865 |       console.error("[RiskGuardian] Risk check failed:", err);
+          |               ^
+      866 |       return {
+      867 |         approved: false,
+      868 |         reason: `RISK_CHECK_ERROR: ${err.message}`,
+
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:865:15)
+      at tests/property/RiskGuardian.property.test.ts:320:43
+      at Property.predicate (../../node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+      at Property.run (../../node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+      at runIt (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+      at check (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+      at Object.assert (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+      at Object.<anonymous> (tests/property/RiskGuardian.property.test.ts:283:10)
+
+    console.error
+      [RiskGuardian] Risk check failed: Error: Insufficient price history for correlation check: ADAUSDT or BTCUSDT
+          at RiskGuardian.calculateCorrelation (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1054:13)
+          at RiskGuardian.getPortfolioBeta (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:1116:30)
+          at RiskGuardian.checkSignal (/Users/ivan/Code/trading/titan/services/titan-brain/src/features/Risk/RiskGuardian.ts:662:34)
+          at /Users/ivan/Code/trading/titan/services/titan-brain/tests/property/RiskGuardian.property.test.ts:594:43
+          at Property.predicate (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+          at Property.run (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+          at runIt (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+          at check (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+          at Object.assert (/Users/ivan/Code/trading/titan/node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+          at Object.<anonymous> (/Users/ivan/Code/trading/titan/services/titan-brain/tests/property/RiskGuardian.property.test.ts:511:10)
+          at Promise.then.completed (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:316:40)
+          at processTicksAndRejections (node:internal/process/task_queues:105:5)
+          at _runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:126:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at run (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:444:34)
+          at Object.worker (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/testWorker.js:106:12)
+
+      863 |       };
+      864 |     } catch (err: any) {
+    > 865 |       console.error("[RiskGuardian] Risk check failed:", err);
+          |               ^
+      866 |       return {
+      867 |         approved: false,
+      868 |         reason: `RISK_CHECK_ERROR: ${err.message}`,
+
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:865:15)
+      at tests/property/RiskGuardian.property.test.ts:594:43
+      at Property.predicate (../../node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+      at Property.run (../../node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+      at runIt (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+      at check (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+      at Object.assert (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+      at Object.<anonymous> (tests/property/RiskGuardian.property.test.ts:511:10)
+
+  ● RiskGuardian Property Tests › Property 2: Leverage Cap Enforcement › should never approve signals that exceed leverage caps
+
+    Property failed after 1 tests
+    { seed: -2049599493, path: "0:0:0:1:1:1:1:1", endOnFailure: true }
+    Counterexample: [200,100,[{"symbol":"BTCUSDT","side":"LONG","size":100}]]
+    Shrunk 7 time(s)
+
+    Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+
+      114 |      */
+      115 |     it("should never approve signals that exceed leverage caps", () => {
+    > 116 |       fc.assert(
+          |          ^
+      117 |         fc.property(
+      118 |           // Generate random equity values across all tiers
+      119 |           fc.float({
+
+      at buildError (../../node_modules/fast-check/lib/cjs/check/runner/utils/RunDetailsFormatter.js:162:19)
+      at throwIfFailed (../../node_modules/fast-check/lib/cjs/check/runner/utils/RunDetailsFormatter.js:171:11)
+      at reportRunDetails (../../node_modules/fast-check/lib/cjs/check/runner/utils/RunDetailsFormatter.js:184:16)
+      at Object.assert (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:65:55)
+      at Object.<anonymous> (tests/property/RiskGuardian.property.test.ts:116:10)
+
+    Cause:
+    Insufficient price history for correlation check: BTCUSDT or BTCUSDT
+
+      1052 |     if (historyA.length < 2 || historyB.length < 2) {
+      1053 |       // Insufficient data for strict correlation check - Fail Closed
+    > 1054 |       throw new Error(
+           |             ^
+      1055 |         `Insufficient price history for correlation check: ${assetA} or ${assetB}`,
+      1056 |       );
+      1057 |     }
+
+      at RiskGuardian.calculateCorrelation (src/features/Risk/RiskGuardian.ts:1054:13)
+      at RiskGuardian.getPortfolioBeta (src/features/Risk/RiskGuardian.ts:1116:30)
+      at RiskGuardian.getRiskMetrics (src/features/Risk/RiskGuardian.ts:1197:27)
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:869:27)
+      at tests/property/RiskGuardian.property.test.ts:174:43
+      at Property.predicate (../../node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+      at Property.run (../../node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+      at runIt (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+      at check (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+      at Object.assert (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+      at Object.<anonymous> (tests/property/RiskGuardian.property.test.ts:116:10)
+
+  ● RiskGuardian Property Tests › Property 2: Leverage Cap Enforcement › should always approve Phase 3 hedges that reduce delta regardless of leverage
+
+    Property failed after 1 tests
+    { seed: -1592853436, path: "0:0:0", endOnFailure: true }
+    Counterexample: [200,1000,"LONG"]
+    Shrunk 2 time(s)
+
+    Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+
+      281 |      */
+      282 |     it("should always approve Phase 3 hedges that reduce delta regardless of leverage", () => {
+    > 283 |       fc.assert(
+          |          ^
+      284 |         fc.property(
+      285 |           fc.float({
+      286 |             min: Math.fround(200),
+
+      at buildError (../../node_modules/fast-check/lib/cjs/check/runner/utils/RunDetailsFormatter.js:162:19)
+      at throwIfFailed (../../node_modules/fast-check/lib/cjs/check/runner/utils/RunDetailsFormatter.js:171:11)
+      at reportRunDetails (../../node_modules/fast-check/lib/cjs/check/runner/utils/RunDetailsFormatter.js:184:16)
+      at Object.assert (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:65:55)
+      at Object.<anonymous> (tests/property/RiskGuardian.property.test.ts:283:10)
+
+    Cause:
+    Insufficient price history for correlation check: BTCUSDT or BTCUSDT
+
+      1052 |     if (historyA.length < 2 || historyB.length < 2) {
+      1053 |       // Insufficient data for strict correlation check - Fail Closed
+    > 1054 |       throw new Error(
+           |             ^
+      1055 |         `Insufficient price history for correlation check: ${assetA} or ${assetB}`,
+      1056 |       );
+      1057 |     }
+
+      at RiskGuardian.calculateCorrelation (src/features/Risk/RiskGuardian.ts:1054:13)
+      at RiskGuardian.getPortfolioBeta (src/features/Risk/RiskGuardian.ts:1116:30)
+      at RiskGuardian.getRiskMetrics (src/features/Risk/RiskGuardian.ts:1197:27)
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:869:27)
+      at tests/property/RiskGuardian.property.test.ts:320:43
+      at Property.predicate (../../node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+      at Property.run (../../node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+      at runIt (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+      at check (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+      at Object.assert (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+      at Object.<anonymous> (tests/property/RiskGuardian.property.test.ts:283:10)
+
+  ● RiskGuardian Property Tests › Property 9: Correlation Veto Consistency › should consistently apply correlation veto logic
+
+    Property failed after 1 tests
+    { seed: -19904857, path: "0", endOnFailure: true }
+    Counterexample: [{__proto__:null,"symbol":"ADAUSDT","side":"LONG","size":9999.978515625},{__proto__:null,"symbol":"ADAUSDT","side":"SELL","size":655.7997436523438},0.8500001430511475]
+    Shrunk 0 time(s)
+
+    Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+
+      509 |      */
+      510 |     it("should consistently apply correlation veto logic", () => {
+    > 511 |       fc.assert(
+          |          ^
+      512 |         fc.property(
+      513 |           // Generate existing position
+      514 |           fc.record({
+
+      at buildError (../../node_modules/fast-check/lib/cjs/check/runner/utils/RunDetailsFormatter.js:162:19)
+      at throwIfFailed (../../node_modules/fast-check/lib/cjs/check/runner/utils/RunDetailsFormatter.js:171:11)
+      at reportRunDetails (../../node_modules/fast-check/lib/cjs/check/runner/utils/RunDetailsFormatter.js:184:16)
+      at Object.assert (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:65:55)
+      at Object.<anonymous> (tests/property/RiskGuardian.property.test.ts:511:10)
+
+    Cause:
+    Insufficient price history for correlation check: ADAUSDT or BTCUSDT
+
+      1052 |     if (historyA.length < 2 || historyB.length < 2) {
+      1053 |       // Insufficient data for strict correlation check - Fail Closed
+    > 1054 |       throw new Error(
+           |             ^
+      1055 |         `Insufficient price history for correlation check: ${assetA} or ${assetB}`,
+      1056 |       );
+      1057 |     }
+
+      at RiskGuardian.calculateCorrelation (src/features/Risk/RiskGuardian.ts:1054:13)
+      at RiskGuardian.getPortfolioBeta (src/features/Risk/RiskGuardian.ts:1116:30)
+      at RiskGuardian.getRiskMetrics (src/features/Risk/RiskGuardian.ts:1197:27)
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:869:27)
+      at tests/property/RiskGuardian.property.test.ts:594:43
+      at Property.predicate (../../node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+      at Property.run (../../node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+      at runIt (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+      at check (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+      at Object.assert (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+      at Object.<anonymous> (tests/property/RiskGuardian.property.test.ts:511:10)
+
+  ● RiskGuardian Property Tests › Property 9: Correlation Veto Consistency › should trigger high correlation warnings consistently
+
+    Property failed after 1 tests
+    { seed: -156748533, path: "0", endOnFailure: true }
+    Counterexample: [[{"symbol":"ETHUSDT","side":"LONG","size":1838.8118896484375},{"symbol":"ETHUSDT","side":"SHORT","size":2464.92333984375}]]
+    Shrunk 0 time(s)
+
+    Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+
+      711 |      */
+      712 |     it("should trigger high correlation warnings consistently", () => {
+    > 713 |       fc.assert(
+          |          ^
+      714 |         fc.property(
+      715 |           fc.array(
+      716 |             fc.record({
+
+      at buildError (../../node_modules/fast-check/lib/cjs/check/runner/utils/RunDetailsFormatter.js:162:19)
+      at throwIfFailed (../../node_modules/fast-check/lib/cjs/check/runner/utils/RunDetailsFormatter.js:171:11)
+      at reportRunDetails (../../node_modules/fast-check/lib/cjs/check/runner/utils/RunDetailsFormatter.js:184:16)
+      at Object.assert (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:65:55)
+      at Object.<anonymous> (tests/property/RiskGuardian.property.test.ts:713:10)
+
+    Cause:
+    Insufficient price history for correlation check: ETHUSDT or BTCUSDT
+
+      1052 |     if (historyA.length < 2 || historyB.length < 2) {
+      1053 |       // Insufficient data for strict correlation check - Fail Closed
+    > 1054 |       throw new Error(
+           |             ^
+      1055 |         `Insufficient price history for correlation check: ${assetA} or ${assetB}`,
+      1056 |       );
+      1057 |     }
+
+      at RiskGuardian.calculateCorrelation (src/features/Risk/RiskGuardian.ts:1054:13)
+      at RiskGuardian.getPortfolioBeta (src/features/Risk/RiskGuardian.ts:1116:30)
+      at RiskGuardian.getRiskMetrics (src/features/Risk/RiskGuardian.ts:1197:27)
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:537:27)
+      at tests/property/RiskGuardian.property.test.ts:781:43
+      at Property.predicate (../../node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+      at Property.run (../../node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+      at runIt (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+      at check (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+      at Object.assert (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+      at Object.<anonymous> (tests/property/RiskGuardian.property.test.ts:713:10)
+
+PASS tests/unit/TitanBrain.test.ts
+PASS tests/unit/ChangePointDetector.test.ts
+PASS tests/property/SecurityAuditLogger.property.test.ts
+PASS tests/cache/InMemoryCache.test.ts
+PASS tests/services/ServiceClient.test.ts
+PASS tests/unit/CircuitBreaker.test.ts
+  ● Console
+
+    console.error
+      Failed to close positions during circuit breaker trigger: Error: API error
+          at Object.<anonymous> (/Users/ivan/Code/trading/titan/services/titan-brain/tests/unit/CircuitBreaker.test.ts:233:9)
+          at Promise.then.completed (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:316:40)
+          at processTicksAndRejections (node:internal/process/task_queues:105:5)
+          at _runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:126:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at run (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:444:34)
+          at Object.worker (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/testWorker.js:106:12)
+
+      306 |       } catch (error) {
+      307 |         // Log error but don't prevent breaker activation
+    > 308 |         console.error('Failed to close positions during circuit breaker trigger:', error);
+          |                 ^
+      309 |       }
+      310 |     }
+      311 |
+
+      at CircuitBreaker.trigger (src/engine/CircuitBreaker.ts:308:17)
+      at Object.<anonymous> (tests/unit/CircuitBreaker.test.ts:236:7)
+
+    console.error
+      Failed to send emergency notification: Error: Network error
+          at Object.<anonymous> (/Users/ivan/Code/trading/titan/services/titan-brain/tests/unit/CircuitBreaker.test.ts:298:9)
+          at Promise.then.completed (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:316:40)
+          at processTicksAndRejections (node:internal/process/task_queues:105:5)
+          at _runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:126:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at run (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:444:34)
+          at Object.worker (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/testWorker.js:106:12)
+
+      315 |         await this.notificationHandler.sendEmergencyNotification(reason, this.dailyStartEquity);
+      316 |       } catch (error) {
+    > 317 |         console.error('Failed to send emergency notification:', error);
+          |                 ^
+      318 |       }
+      319 |     }
+      320 |
+
+      at CircuitBreaker.trigger (src/engine/CircuitBreaker.ts:317:17)
+      at Object.<anonymous> (tests/unit/CircuitBreaker.test.ts:301:7)
+
+    console.error
+      Failed to persist breaker event: Error: DB error
+          at Object.<anonymous> (/Users/ivan/Code/trading/titan/services/titan-brain/tests/unit/CircuitBreaker.test.ts:530:9)
+          at Promise.then.completed (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:316:40)
+          at _runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:126:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at run (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:444:34)
+          at Object.worker (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/testWorker.js:106:12)
+
+      335 |         await this.eventPersistence.persistEvent(event);
+      336 |       } catch (error) {
+    > 337 |         console.error('Failed to persist breaker event:', error);
+          |                 ^
+      338 |       }
+      339 |     }
+      340 |
+
+      at CircuitBreaker.trigger (src/engine/CircuitBreaker.ts:337:17)
+      at Object.<anonymous> (tests/unit/CircuitBreaker.test.ts:533:7)
+
+PASS tests/server/WebhookServer.hmac.test.ts
+  ● Console
+
+    console.error
+      {"timestamp":"2026-02-03T15:24:52.334Z","level":"ERROR","message":"Security event: HMAC validation failed","component":"webhook-server","operation":"security_event","metadata":{"event":"HMAC validation failed","severity":"high","ip":"127.0.0.1","endpoint":"/webhook/phase3","error":"Invalid signature","userAgent":"lightMyRequest"}}
+
+      283 |         case 'ERROR':
+      284 |         case 'FATAL':
+    > 285 |           console.error(logString);
+          |                   ^
+      286 |           break;
+      287 |         default:
+      288 |           console.log(logString);
+
+      at Logger.writeLog (../../packages/shared/src/logger/Logger.ts:285:19)
+      at Logger.logSecurityEvent (../../packages/shared/src/logger/Logger.ts:500:10)
+      at Object.<anonymous> (src/server/WebhookServer.ts:360:21)
+      at hookIterator (../../node_modules/fastify/lib/hooks.js:408:10)
+      at next (../../node_modules/fastify/lib/hooks.js:242:18)
+      at hookRunner (../../node_modules/fastify/lib/hooks.js:264:5)
+      at validationCompleted (../../node_modules/fastify/lib/handle-request.js:117:5)
+      at preValidationCallback (../../node_modules/fastify/lib/handle-request.js:101:5)
+      at handler (../../node_modules/fastify/lib/handle-request.js:78:7)
+      at onDone (../../node_modules/fastify/lib/content-type-parser.js:229:5)
+      at Parser.defaultJsonParser [as fn] (../../node_modules/fastify/lib/content-type-parser.js:317:7)
+      at Request.onEnd (../../node_modules/fastify/lib/content-type-parser.js:299:27)
+
+PASS tests/integration/controllers/SignalController.test.ts
+PASS tests/property/PerformanceTracker.property.test.ts
+PASS tests/health/HealthManager.test.ts
+PASS tests/property/CapitalFlowManager.property.test.ts
+PASS tests/unit/controllers/AuditController.test.ts
+PASS tests/unit/RiskGuardianVerification.test.ts
+PASS tests/property/AllocationEngine.property.test.ts
+PASS tests/unit/FeatureStoreClient.test.ts
+PASS tests/security/SecurityEnforcement.test.ts
+PASS tests/logging/Logger.test.ts
+PASS tests/unit/DashboardService.test.ts
+  ● Console
+
+    console.error
+      Error fetching balances: Error: API Error
+          at Object.<anonymous> (/Users/ivan/Code/trading/titan/services/titan-brain/tests/unit/DashboardService.test.ts:119:56)
+          at Promise.then.completed (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:316:40)
+          at processTicksAndRejections (node:internal/process/task_queues:105:5)
+          at _runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:126:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at run (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:444:34)
+          at Object.worker (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/testWorker.js:106:12)
+
+      175 |     const providerPromises = Array.from(this.walletProviders.values()).map((p) =>
+      176 |       p().catch((err) => {
+    > 177 |         console.error('Error fetching balances:', err);
+          |                 ^
+      178 |         return [] as WalletBalance[];
+      179 |       }),
+      180 |     );
+
+      at src/server/DashboardService.ts:177:17
+          at async Promise.all (index 0)
+      at DashboardService.calculateNAV (src/server/DashboardService.ts:182:26)
+      at Object.<anonymous> (tests/unit/DashboardService.test.ts:124:22)
+
+PASS tests/metrics/MetricsCollector.test.ts
+PASS tests/unit/AllocationEngine.test.ts
+PASS tests/security/HMACValidator.test.ts
+PASS tests/unit/PrometheusMetrics.test.ts
+PASS tests/unit/ConfigLoader.test.ts
+PASS tests/unit/ReconciliationService.test.ts
+PASS tests/unit/ServiceDiscovery.test.ts
+PASS tests/verification/SystemVerification.test.ts
+PASS tests/unit/HunterPredicates.test.ts
+PASS tests/unit/PowerLawPolicyModule.test.ts
+PASS tests/unit/RegimeInferenceService.test.ts
+PASS tests/unit/SignalRouter.test.ts
+PASS tests/performance/performance.test.ts
+PASS tests/unit/PerformanceTracker.test.ts
+PASS tests/integration/controllers/SafetyController.test.ts
+PASS tests/unit/ManualTradeService.test.ts
+  ● Console
+
+    console.error
+      [ManualTradeService] Failed to execute trade: Error: Execution failed
+          at Object.<anonymous> (/Users/ivan/Code/trading/titan/services/titan-brain/tests/unit/ManualTradeService.test.ts:67:27)
+          at Promise.then.completed (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:316:40)
+          at processTicksAndRejections (node:internal/process/task_queues:105:5)
+          at _runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:126:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at run (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:444:34)
+          at Object.worker (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/testWorker.js:106:12)
+
+      49 |       return signalId;
+      50 |     } catch (error) {
+    > 51 |       console.error(`[ManualTradeService] Failed to execute trade:`, error);
+         |               ^
+      52 |       throw error;
+      53 |     }
+      54 |   }
+
+      at ManualTradeService.executeManualTrade (src/engine/ManualTradeService.ts:51:15)
+      at Object.<anonymous> (tests/unit/ManualTradeService.test.ts:70:13)
+
+PASS tests/cache/CacheManager.test.ts
+PASS tests/database/DatabaseManager.test.ts
+PASS tests/middleware/RateLimiter.test.ts
+PASS tests/unit/controllers/DashboardController.test.ts
+PASS tests/unit/NatsConsumer.test.ts
+PASS tests/unit/EventStore.test.ts
+PASS tests/unit/controllers/LedgerController.test.ts
+PASS tests/unit/NatsPublisher.test.ts
+PASS tests/unit/InputValidator.test.ts
+PASS tests/unit/accounting/PostingEngine.test.ts
+PASS tests/unit/BanditAllocator.test.ts
+PASS tests/unit/ProposalGateway.test.ts
+PASS tests/services/accounting/PostingEngine.test.ts
+PASS tests/unit/TitanNotificationHandler.test.ts
+PASS tests/unit/db/FillsRepository.test.ts
+PASS tests/unit/StructuredLogger.test.ts
+PASS tests/unit/CanaryLogic.test.ts
+PASS tests/services/RiskManager.test.ts
+PASS tests/unit/types.test.ts
+FAIL tests/integration/MarketDataIngestion.test.ts
+  ● Test suite failed to run
+
+    [96mtests/integration/MarketDataIngestion.test.ts[0m:[93m4[0m:[93m30[0m - [91merror[0m[90m TS2307: [0mCannot find module '../../src/engine/RiskGuardian' or its corresponding type declarations.
+
+    [7m4[0m import { RiskGuardian } from "../../src/engine/RiskGuardian";
+    [7m [0m [91m                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+PASS tests/unit/CapitalFlowManager.test.ts (6.134 s)
+PASS tests/services/CircuitBreaker.test.ts (6.136 s)
+PASS tests/unit/NotificationService.test.ts (8.244 s)
+  ● Console
+
+    console.error
+      Telegram test failed: Error: Notification failed after 3 attempts: API error
+          at NotificationService.retryRequest (/Users/ivan/Code/trading/titan/services/titan-brain/src/server/NotificationService.ts:336:11)
+          at NotificationService.sendTelegramNotification (/Users/ivan/Code/trading/titan/services/titan-brain/src/server/NotificationService.ts:208:5)
+          at NotificationService.testNotifications (/Users/ivan/Code/trading/titan/services/titan-brain/src/server/NotificationService.ts:364:9)
+          at Object.<anonymous> (/Users/ivan/Code/trading/titan/services/titan-brain/tests/unit/NotificationService.test.ts:178:23)
+
+      366 |         results.telegram = true;
+      367 |       } catch (error) {
+    > 368 |         console.error('Telegram test failed:', error);
+          |                 ^
+      369 |       }
+      370 |     }
+      371 |
+
+      at NotificationService.testNotifications (src/server/NotificationService.ts:368:17)
+      at Object.<anonymous> (tests/unit/NotificationService.test.ts:178:23)
+
+(node:57834) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 21 SIGTERM listeners added to [process]. MaxListeners is 20. Use emitter.setMaxListeners() to increase limit
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:57834) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 21 SIGINT listeners added to [process]. MaxListeners is 20. Use emitter.setMaxListeners() to increase limit
+(node:57834) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 21 SIGUSR2 listeners added to [process]. MaxListeners is 20. Use emitter.setMaxListeners() to increase limit
+(node:57834) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 21 uncaughtException listeners added to [process]. MaxListeners is 20. Use emitter.setMaxListeners() to increase limit
+(node:57834) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 21 unhandledRejection listeners added to [process]. MaxListeners is 20. Use emitter.setMaxListeners() to increase limit
+PASS tests/startup/StartupManager.test.ts (19.275 s)
+A worker process has failed to exit gracefully and has been force exited. This is likely caused by tests leaking due to improper teardown. Try running with --detectOpenHandles to find leaks. Active timers can also cause this, ensure that .unref() was called on them.
+
+Summary of all failing tests
+FAIL tests/server/ExecutionEngineClient.test.ts
+  ● ExecutionEngineClient › forwardSignal › should include required fields on forwardSignal
+
+    TypeError: (0 , shared_1.getCanonicalRiskPolicy) is not a function
+
+      102 |       symbolToken,
+      103 |     );
+    > 104 |     const policyHash = getCanonicalRiskPolicy().hash;
+          |                                              ^
+      105 |
+      106 |     const payload = {
+      107 |       schema_version: "1.0.0",
+
+      at ExecutionEngineClient.forwardSignal (src/server/ExecutionEngineClient.ts:104:46)
+      at Object.<anonymous> (tests/server/ExecutionEngineClient.test.ts:117:20)
+
+  ● ExecutionEngineClient › forwardSignal › should handle SELL signals correctly
+
+    TypeError: (0 , shared_1.getCanonicalRiskPolicy) is not a function
+
+      102 |       symbolToken,
+      103 |     );
+    > 104 |     const policyHash = getCanonicalRiskPolicy().hash;
+          |                                              ^
+      105 |
+      106 |     const payload = {
+      107 |       schema_version: "1.0.0",
+
+      at ExecutionEngineClient.forwardSignal (src/server/ExecutionEngineClient.ts:104:46)
+      at Object.<anonymous> (tests/server/ExecutionEngineClient.test.ts:144:20)
+
+  ● ExecutionEngineClient › forwardSignal › should handle phase2 signal source mapping
+
+    TypeError: (0 , shared_1.getCanonicalRiskPolicy) is not a function
+
+      102 |       symbolToken,
+      103 |     );
+    > 104 |     const policyHash = getCanonicalRiskPolicy().hash;
+          |                                              ^
+      105 |
+      106 |     const payload = {
+      107 |       schema_version: "1.0.0",
+
+      at ExecutionEngineClient.forwardSignal (src/server/ExecutionEngineClient.ts:104:46)
+      at Object.<anonymous> (tests/server/ExecutionEngineClient.test.ts:166:20)
+
+FAIL tests/unit/engine/OperatorActions.test.ts
+  ● operator_actions_enforcement › should allow processing when ARMED
+
+    TypeError: this.riskGuardian.getRegimeState is not a function
+
+      192 |
+      193 |     // 2. Allocation
+    > 194 |     const currentRegime = this.riskGuardian.getRegimeState();
+          |                                             ^
+      195 |     const allocation = this.allocationEngine.getRegimeAdjustedWeights(
+      196 |       equity,
+      197 |       currentRegime,
+
+      at SignalProcessor.processSignal (src/engine/SignalProcessor.ts:194:45)
+      at Object.<anonymous> (tests/unit/engine/OperatorActions.test.ts:152:40)
+
+FAIL tests/unit/GateOrdering.invariant.test.ts
+  ● Gate Ordering Invariant › PowerLaw gates fire after Confidence/Fractal › should allow signal to reach PowerLaw gate when earlier gates pass
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected substring: "TAIL_RISK_VETO"
+    Received string:    "RISK_CHECK_ERROR: this.bayesianCalibrator.getShrinkageReport is not a function"
+
+      200 |             // Should reach PowerLaw gate (earlier gates passed)
+      201 |             expect(decision.approved).toBe(false);
+    > 202 |             expect(decision.reason).toContain("TAIL_RISK_VETO");
+          |                                     ^
+      203 |         });
+      204 |     });
+      205 | });
+
+      at Object.<anonymous> (tests/unit/GateOrdering.invariant.test.ts:202:37)
+
+FAIL tests/unit/RiskGuardian.test.ts
+  ● RiskGuardian Unit Tests › Correlation Calculation Between Assets › should handle insufficient price history
+
+    Insufficient price history for correlation check: BTCUSDT or ETHUSDT
+
+      1052 |     if (historyA.length < 2 || historyB.length < 2) {
+      1053 |       // Insufficient data for strict correlation check - Fail Closed
+    > 1054 |       throw new Error(
+           |             ^
+      1055 |         `Insufficient price history for correlation check: ${assetA} or ${assetB}`,
+      1056 |       );
+      1057 |     }
+
+      at RiskGuardian.calculateCorrelation (src/features/Risk/RiskGuardian.ts:1054:13)
+      at Object.<anonymous> (tests/unit/RiskGuardian.test.ts:264:40)
+
+  ● RiskGuardian Unit Tests › Correlation Calculation Between Assets › should handle unknown symbols
+
+    Insufficient price history for correlation check: UNKNOWN1 or UNKNOWN2
+
+      1052 |     if (historyA.length < 2 || historyB.length < 2) {
+      1053 |       // Insufficient data for strict correlation check - Fail Closed
+    > 1054 |       throw new Error(
+           |             ^
+      1055 |         `Insufficient price history for correlation check: ${assetA} or ${assetB}`,
+      1056 |       );
+      1057 |     }
+
+      at RiskGuardian.calculateCorrelation (src/features/Risk/RiskGuardian.ts:1054:13)
+      at Object.<anonymous> (tests/unit/RiskGuardian.test.ts:272:40)
+
+  ● RiskGuardian Unit Tests › Phase 3 Hedge Auto-Approval › should auto-approve Phase 3 hedge that reduces long delta
+
+    Insufficient price history for correlation check: BTCUSDT or BTCUSDT
+
+      1052 |     if (historyA.length < 2 || historyB.length < 2) {
+      1053 |       // Insufficient data for strict correlation check - Fail Closed
+    > 1054 |       throw new Error(
+           |             ^
+      1055 |         `Insufficient price history for correlation check: ${assetA} or ${assetB}`,
+      1056 |       );
+      1057 |     }
+
+      at RiskGuardian.calculateCorrelation (src/features/Risk/RiskGuardian.ts:1054:13)
+      at RiskGuardian.getPortfolioBeta (src/features/Risk/RiskGuardian.ts:1116:30)
+      at RiskGuardian.getRiskMetrics (src/features/Risk/RiskGuardian.ts:1197:27)
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:869:27)
+      at Object.<anonymous> (tests/unit/RiskGuardian.test.ts:311:37)
+
+  ● RiskGuardian Unit Tests › Phase 3 Hedge Auto-Approval › should auto-approve Phase 3 hedge that reduces short delta
+
+    Insufficient price history for correlation check: ETHUSDT or BTCUSDT
+
+      1052 |     if (historyA.length < 2 || historyB.length < 2) {
+      1053 |       // Insufficient data for strict correlation check - Fail Closed
+    > 1054 |       throw new Error(
+           |             ^
+      1055 |         `Insufficient price history for correlation check: ${assetA} or ${assetB}`,
+      1056 |       );
+      1057 |     }
+
+      at RiskGuardian.calculateCorrelation (src/features/Risk/RiskGuardian.ts:1054:13)
+      at RiskGuardian.getPortfolioBeta (src/features/Risk/RiskGuardian.ts:1116:30)
+      at RiskGuardian.getRiskMetrics (src/features/Risk/RiskGuardian.ts:1197:27)
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:869:27)
+      at Object.<anonymous> (tests/unit/RiskGuardian.test.ts:344:37)
+
+  ● RiskGuardian Unit Tests › Phase 3 Hedge Auto-Approval › should not auto-approve Phase 3 signal that increases delta
+
+    Insufficient price history for correlation check: BTCUSDT or BTCUSDT
+
+      1052 |     if (historyA.length < 2 || historyB.length < 2) {
+      1053 |       // Insufficient data for strict correlation check - Fail Closed
+    > 1054 |       throw new Error(
+           |             ^
+      1055 |         `Insufficient price history for correlation check: ${assetA} or ${assetB}`,
+      1056 |       );
+      1057 |     }
+
+      at RiskGuardian.calculateCorrelation (src/features/Risk/RiskGuardian.ts:1054:13)
+      at RiskGuardian.getPortfolioBeta (src/features/Risk/RiskGuardian.ts:1116:30)
+      at RiskGuardian.getRiskMetrics (src/features/Risk/RiskGuardian.ts:1197:27)
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:869:27)
+      at Object.<anonymous> (tests/unit/RiskGuardian.test.ts:377:37)
+
+  ● RiskGuardian Unit Tests › High Correlation Size Reduction › should allow full size for opposite-direction trades (hedge effect)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      476 |
+      477 |       // Should be approved with full size (hedge effect)
+    > 478 |       expect(decision.approved).toBe(true);
+          |                                 ^
+      479 |       if (decision.adjustedSize) {
+      480 |         expect(decision.adjustedSize).toBe(signal.requestedSize);
+      481 |       }
+
+      at Object.<anonymous> (tests/unit/RiskGuardian.test.ts:478:33)
+
+  ● RiskGuardian Unit Tests › Risk Metrics Calculation › should calculate all risk metrics correctly
+
+    expect(received).toBeCloseTo(expected, precision)
+
+    Expected: 0.8
+    Received: 0.5
+
+    Expected precision:    6
+    Expected difference: < 0.0000005
+    Received difference:   0.30000000000000004
+
+      796 |       expect(decision.riskMetrics).toBeDefined();
+      797 |       expect(decision.riskMetrics.currentLeverage).toBeCloseTo(0.5, 6); // 5000/10000
+    > 798 |       expect(decision.riskMetrics.projectedLeverage).toBeCloseTo(0.8, 6); // 8000/10000
+          |                                                      ^
+      799 |       expect(decision.riskMetrics.portfolioDelta).toBe(5000); // Current long position
+      800 |       expect(decision.riskMetrics.correlation).toBeGreaterThanOrEqual(0);
+      801 |       expect(decision.riskMetrics.correlation).toBeLessThanOrEqual(1);
+
+      at Object.<anonymous> (tests/unit/RiskGuardian.test.ts:798:54)
+
+  ● RiskGuardian Unit Tests › Policy Enforcement › should veto if Projected Notional > maxPositionNotional
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected substring: "Max Position Notional Exceeded"
+    Received string:    "Leverage cap exceeded: projected 5.00x > max 5x"
+
+      932 |       const decision = policyRiskGuardian.checkSignal(signal, []);
+      933 |       expect(decision.approved).toBe(false);
+    > 934 |       expect(decision.reason).toContain("Max Position Notional Exceeded");
+          |                               ^
+      935 |     });
+      936 |
+      937 |     it("should veto if Symbol is not in Whitelist", () => {
+
+      at Object.<anonymous> (tests/unit/RiskGuardian.test.ts:934:31)
+
+  ● RiskGuardian Unit Tests › Policy Enforcement › should veto if Symbol is not in Whitelist
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      948 |
+      949 |       const decision = policyRiskGuardian.checkSignal(signal, []);
+    > 950 |       expect(decision.approved).toBe(false);
+          |                                 ^
+      951 |       expect(decision.reason).toContain("not whitelisted");
+      952 |     });
+      953 |
+
+      at Object.<anonymous> (tests/unit/RiskGuardian.test.ts:950:33)
+
+FAIL tests/unit/PowerLawIntegration.test.ts
+  ● PowerLaw Integration › RiskGuardian PowerLaw Gates › should reduce effective size for Phase 1 based on dynamic leverage scaling
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected substring: "Size reduced due to alpha"
+    Received string:    "Signal approved with size adjustment: Risk/Latency/Alpha"
+
+      389 |             // 15000 * 0.52 = 7800
+      390 |             expect(decision.adjustedSize).toBeCloseTo(7800, -2);
+    > 391 |             expect(decision.reason).toContain("Size reduced due to alpha"); // Matches actual output
+          |                                     ^
+      392 |             // "Signal approved with size adjustment: Risk/Latency/Alpha" is what code usually says if adjusted.
+      393 |             // Check code: 'Signal approved with size adjustment: Risk/Latency/Alpha'
+      394 |             expect(decision.reason).toMatch(
+
+      at Object.<anonymous> (tests/unit/PowerLawIntegration.test.ts:391:37)
+
+FAIL tests/property/RiskGuardian.property.test.ts
+  ● RiskGuardian Property Tests › Property 2: Leverage Cap Enforcement › should never approve signals that exceed leverage caps
+
+    Property failed after 1 tests
+    { seed: -2049599493, path: "0:0:0:1:1:1:1:1", endOnFailure: true }
+    Counterexample: [200,100,[{"symbol":"BTCUSDT","side":"LONG","size":100}]]
+    Shrunk 7 time(s)
+
+    Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+
+      114 |      */
+      115 |     it("should never approve signals that exceed leverage caps", () => {
+    > 116 |       fc.assert(
+          |          ^
+      117 |         fc.property(
+      118 |           // Generate random equity values across all tiers
+      119 |           fc.float({
+
+      at buildError (../../node_modules/fast-check/lib/cjs/check/runner/utils/RunDetailsFormatter.js:162:19)
+      at throwIfFailed (../../node_modules/fast-check/lib/cjs/check/runner/utils/RunDetailsFormatter.js:171:11)
+      at reportRunDetails (../../node_modules/fast-check/lib/cjs/check/runner/utils/RunDetailsFormatter.js:184:16)
+      at Object.assert (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:65:55)
+      at Object.<anonymous> (tests/property/RiskGuardian.property.test.ts:116:10)
+
+    Cause:
+    Insufficient price history for correlation check: BTCUSDT or BTCUSDT
+
+      1052 |     if (historyA.length < 2 || historyB.length < 2) {
+      1053 |       // Insufficient data for strict correlation check - Fail Closed
+    > 1054 |       throw new Error(
+           |             ^
+      1055 |         `Insufficient price history for correlation check: ${assetA} or ${assetB}`,
+      1056 |       );
+      1057 |     }
+
+      at RiskGuardian.calculateCorrelation (src/features/Risk/RiskGuardian.ts:1054:13)
+      at RiskGuardian.getPortfolioBeta (src/features/Risk/RiskGuardian.ts:1116:30)
+      at RiskGuardian.getRiskMetrics (src/features/Risk/RiskGuardian.ts:1197:27)
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:869:27)
+      at tests/property/RiskGuardian.property.test.ts:174:43
+      at Property.predicate (../../node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+      at Property.run (../../node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+      at runIt (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+      at check (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+      at Object.assert (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+      at Object.<anonymous> (tests/property/RiskGuardian.property.test.ts:116:10)
+
+  ● RiskGuardian Property Tests › Property 2: Leverage Cap Enforcement › should always approve Phase 3 hedges that reduce delta regardless of leverage
+
+    Property failed after 1 tests
+    { seed: -1592853436, path: "0:0:0", endOnFailure: true }
+    Counterexample: [200,1000,"LONG"]
+    Shrunk 2 time(s)
+
+    Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+
+      281 |      */
+      282 |     it("should always approve Phase 3 hedges that reduce delta regardless of leverage", () => {
+    > 283 |       fc.assert(
+          |          ^
+      284 |         fc.property(
+      285 |           fc.float({
+      286 |             min: Math.fround(200),
+
+      at buildError (../../node_modules/fast-check/lib/cjs/check/runner/utils/RunDetailsFormatter.js:162:19)
+      at throwIfFailed (../../node_modules/fast-check/lib/cjs/check/runner/utils/RunDetailsFormatter.js:171:11)
+      at reportRunDetails (../../node_modules/fast-check/lib/cjs/check/runner/utils/RunDetailsFormatter.js:184:16)
+      at Object.assert (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:65:55)
+      at Object.<anonymous> (tests/property/RiskGuardian.property.test.ts:283:10)
+
+    Cause:
+    Insufficient price history for correlation check: BTCUSDT or BTCUSDT
+
+      1052 |     if (historyA.length < 2 || historyB.length < 2) {
+      1053 |       // Insufficient data for strict correlation check - Fail Closed
+    > 1054 |       throw new Error(
+           |             ^
+      1055 |         `Insufficient price history for correlation check: ${assetA} or ${assetB}`,
+      1056 |       );
+      1057 |     }
+
+      at RiskGuardian.calculateCorrelation (src/features/Risk/RiskGuardian.ts:1054:13)
+      at RiskGuardian.getPortfolioBeta (src/features/Risk/RiskGuardian.ts:1116:30)
+      at RiskGuardian.getRiskMetrics (src/features/Risk/RiskGuardian.ts:1197:27)
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:869:27)
+      at tests/property/RiskGuardian.property.test.ts:320:43
+      at Property.predicate (../../node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+      at Property.run (../../node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+      at runIt (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+      at check (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+      at Object.assert (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+      at Object.<anonymous> (tests/property/RiskGuardian.property.test.ts:283:10)
+
+  ● RiskGuardian Property Tests › Property 9: Correlation Veto Consistency › should consistently apply correlation veto logic
+
+    Property failed after 1 tests
+    { seed: -19904857, path: "0", endOnFailure: true }
+    Counterexample: [{__proto__:null,"symbol":"ADAUSDT","side":"LONG","size":9999.978515625},{__proto__:null,"symbol":"ADAUSDT","side":"SELL","size":655.7997436523438},0.8500001430511475]
+    Shrunk 0 time(s)
+
+    Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+
+      509 |      */
+      510 |     it("should consistently apply correlation veto logic", () => {
+    > 511 |       fc.assert(
+          |          ^
+      512 |         fc.property(
+      513 |           // Generate existing position
+      514 |           fc.record({
+
+      at buildError (../../node_modules/fast-check/lib/cjs/check/runner/utils/RunDetailsFormatter.js:162:19)
+      at throwIfFailed (../../node_modules/fast-check/lib/cjs/check/runner/utils/RunDetailsFormatter.js:171:11)
+      at reportRunDetails (../../node_modules/fast-check/lib/cjs/check/runner/utils/RunDetailsFormatter.js:184:16)
+      at Object.assert (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:65:55)
+      at Object.<anonymous> (tests/property/RiskGuardian.property.test.ts:511:10)
+
+    Cause:
+    Insufficient price history for correlation check: ADAUSDT or BTCUSDT
+
+      1052 |     if (historyA.length < 2 || historyB.length < 2) {
+      1053 |       // Insufficient data for strict correlation check - Fail Closed
+    > 1054 |       throw new Error(
+           |             ^
+      1055 |         `Insufficient price history for correlation check: ${assetA} or ${assetB}`,
+      1056 |       );
+      1057 |     }
+
+      at RiskGuardian.calculateCorrelation (src/features/Risk/RiskGuardian.ts:1054:13)
+      at RiskGuardian.getPortfolioBeta (src/features/Risk/RiskGuardian.ts:1116:30)
+      at RiskGuardian.getRiskMetrics (src/features/Risk/RiskGuardian.ts:1197:27)
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:869:27)
+      at tests/property/RiskGuardian.property.test.ts:594:43
+      at Property.predicate (../../node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+      at Property.run (../../node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+      at runIt (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+      at check (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+      at Object.assert (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+      at Object.<anonymous> (tests/property/RiskGuardian.property.test.ts:511:10)
+
+  ● RiskGuardian Property Tests › Property 9: Correlation Veto Consistency › should trigger high correlation warnings consistently
+
+    Property failed after 1 tests
+    { seed: -156748533, path: "0", endOnFailure: true }
+    Counterexample: [[{"symbol":"ETHUSDT","side":"LONG","size":1838.8118896484375},{"symbol":"ETHUSDT","side":"SHORT","size":2464.92333984375}]]
+    Shrunk 0 time(s)
+
+    Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+
+      711 |      */
+      712 |     it("should trigger high correlation warnings consistently", () => {
+    > 713 |       fc.assert(
+          |          ^
+      714 |         fc.property(
+      715 |           fc.array(
+      716 |             fc.record({
+
+      at buildError (../../node_modules/fast-check/lib/cjs/check/runner/utils/RunDetailsFormatter.js:162:19)
+      at throwIfFailed (../../node_modules/fast-check/lib/cjs/check/runner/utils/RunDetailsFormatter.js:171:11)
+      at reportRunDetails (../../node_modules/fast-check/lib/cjs/check/runner/utils/RunDetailsFormatter.js:184:16)
+      at Object.assert (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:65:55)
+      at Object.<anonymous> (tests/property/RiskGuardian.property.test.ts:713:10)
+
+    Cause:
+    Insufficient price history for correlation check: ETHUSDT or BTCUSDT
+
+      1052 |     if (historyA.length < 2 || historyB.length < 2) {
+      1053 |       // Insufficient data for strict correlation check - Fail Closed
+    > 1054 |       throw new Error(
+           |             ^
+      1055 |         `Insufficient price history for correlation check: ${assetA} or ${assetB}`,
+      1056 |       );
+      1057 |     }
+
+      at RiskGuardian.calculateCorrelation (src/features/Risk/RiskGuardian.ts:1054:13)
+      at RiskGuardian.getPortfolioBeta (src/features/Risk/RiskGuardian.ts:1116:30)
+      at RiskGuardian.getRiskMetrics (src/features/Risk/RiskGuardian.ts:1197:27)
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:537:27)
+      at tests/property/RiskGuardian.property.test.ts:781:43
+      at Property.predicate (../../node_modules/fast-check/lib/cjs/check/property/Property.js:17:92)
+      at Property.run (../../node_modules/fast-check/lib/cjs/check/property/Property.generic.js:46:33)
+      at runIt (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:18:30)
+      at check (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:58:11)
+      at Object.assert (../../node_modules/fast-check/lib/cjs/check/runner/Runner.js:61:17)
+      at Object.<anonymous> (tests/property/RiskGuardian.property.test.ts:713:10)
+
+FAIL tests/integration/MarketDataIngestion.test.ts
+  ● Test suite failed to run
+
+    [96mtests/integration/MarketDataIngestion.test.ts[0m:[93m4[0m:[93m30[0m - [91merror[0m[90m TS2307: [0mCannot find module '../../src/engine/RiskGuardian' or its corresponding type declarations.
+
+    [7m4[0m import { RiskGuardian } from "../../src/engine/RiskGuardian";
+    [7m [0m [91m                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+Test Suites: 7 failed, 58 passed, 65 total
+Tests:       19 failed, 2 skipped, 898 passed, 919 total
+Snapshots:   0 total
+Time:        20.077 s
+Ran all test suites.
+npm error Lifecycle script `test:unit` failed with error:
+npm error code 1
+npm error path /Users/ivan/Code/trading/titan/services/titan-brain
+npm error workspace titan-brain@1.0.0
+npm error location /Users/ivan/Code/trading/titan/services/titan-brain
+npm error command failed
+npm error command sh -c jest --config jest.config.cjs

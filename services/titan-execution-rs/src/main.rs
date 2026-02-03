@@ -398,6 +398,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     info!("🚀 Starting API Server on {}", bind_address);
 
     let state_for_api = shadow_state.clone();
+    let state_for_truth = shadow_state.clone();
+    let risk_guard_for_truth = risk_guard.clone();
+    let nats_for_truth = nats_client.clone();
+
+    // --- Truth Snapshot Task ---
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(5));
+        loop {
+            interval.tick().await;
+
+            let timestamp = chrono::Utc::now().timestamp_millis();
+            let positions = state_for_truth.read().get_all_positions();
+            let policy_hash = risk_guard_for_truth.get_current_policy_hash();
+            
+            // Construct Snapshot
+            let snapshot = serde_json::json!({
+                "timestamp": timestamp,
+                "service": "titan-execution-rs",
+                "positions": positions,
+                "policy_hash": policy_hash,
+                "meta": {
+                    "version": env!("CARGO_PKG_VERSION"),
+                }
+            });
+
+            if let Ok(payload) = serde_json::to_vec(&snapshot) {
+                 if let Err(e) = nats_for_truth.publish(subjects::EVT_EXECUTION_TRUTH, payload.into()).await {
+                    tracing::error!("Failed to publish truth snapshot: {}", e);
+                 }
+            }
+        }
+    });
 
     HttpServer::new(move || {
         let cors = actix_cors::Cors::default()

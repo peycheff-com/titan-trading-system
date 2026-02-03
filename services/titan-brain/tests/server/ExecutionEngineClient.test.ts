@@ -61,6 +61,7 @@ jest.mock("@titan/shared", () => ({
     },
   },
   validateIntentPayload: jest.fn(() => ({ valid: true, errors: [] })),
+  getCanonicalRiskPolicy: jest.fn(() => ({})),
 }));
 
 describe("ExecutionEngineClient", () => {

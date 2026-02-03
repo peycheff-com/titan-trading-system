@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldAlert, AlertTriangle, Zap, CheckCircle2 } from 'lucide-react';
+import { ShieldAlert, AlertTriangle, Zap, CheckCircle2, Power, PowerOff } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -26,11 +26,31 @@ import { useAuth } from '@/context/AuthContext';
 import { getApiBaseUrl } from '@/lib/api-config';
 import { KpiTile } from '@/components/titan/KpiTile';
 import { toast } from 'sonner';
+import { DecisionLog } from '@/components/titan/DecisionLog';
+import { IncidentCockpit } from '@/components/titan/IncidentCockpit';
 
 export default function RiskPage() {
   const { isArmed } = useSafety();
   const { operatorId, token } = useAuth();
   const [overrideDuration, setOverrideDuration] = useState('1');
+
+  // Helper for generic command dispatch
+  const dispatchCommand = async (endpoint: string, actionDesc: string) => {
+      try {
+          const res = await fetch(`${getApiBaseUrl()}${endpoint}`, {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ operatorId })
+          });
+          if (!res.ok) throw new Error(`${actionDesc} failed`);
+          toast.success(`${actionDesc} Executed`);
+      } catch (e) {
+          toast.error(`Failed: ${(e as Error).message}`);
+      }
+  };
 
   // Real API call for manual override
   const handleManualOverride = async (reason: string) => {
@@ -45,13 +65,6 @@ export default function RiskPage() {
           operatorId,
           password: 'placeholder-password', // Simplified for demo/MVP
           allocation: { w1: 0, w2: 0, w3: 0 }, // Placeholder: Override UI needs inputs for w1/w2/w3. Assuming 0 for safety or from inputs if we added them.
-          // Wait, UI has inputs (lines 76,80,84).
-          // I need to read state from inputs.
-          // But inputs are uncontrolled <Input> in existing code (lines 76 etc).
-          // I should assume this part needs state binding.
-          // For this task (Halt focus), I will stick to Halt but fix Override if possible.
-          // But task says "Wire Panic Button".
-          // I'll wire Halt + Reset purely.
           reason,
           durationHours: parseInt(overrideDuration),
         }),
@@ -64,22 +77,11 @@ export default function RiskPage() {
   };
 
   // Real API call for Circuit Breaker Reset
-  const handleResetBreaker = async (_reason: string) => {
-    try {
-      const res = await fetch(`${getApiBaseUrl()}/breaker/reset`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ operatorId }),
-      });
-      if (!res.ok) throw new Error('Reset failed');
-      toast.success('Circuit Breaker Reset Command Sent');
-    } catch (e) {
-      toast.error('Failed to reset breaker');
-    }
-  };
+  const handleResetBreaker = () => dispatchCommand('/breaker/reset', 'Circuit Breaker Reset');
+  
+  // Real API calls for Arm/Disarm
+  const handleArmForReal = () => dispatchCommand('/operator/arm', 'System Armed');
+  const handleDisarmForReal = () => dispatchCommand('/operator/disarm', 'System Disarmed');
 
   return (
     <div className="space-y-6 animate-fade-in pb-12">
@@ -90,6 +92,27 @@ export default function RiskPage() {
             Manage global risk budgets, circuit breakers, and manual overrides.
           </p>
         </div>
+        <div className="flex items-center gap-4">
+             {isArmed ? (
+                 <ActionDialog 
+                     trigger={<Button variant="destructive" className="flex items-center gap-2"><PowerOff className="w-4 h-4"/> DISARM SYSTEM</Button>}
+                     title="Disarm Protocol"
+                     description="This will gracefully stop new signal generation. Existing positions will be managed by safety nets."
+                     actionName="DISARM"
+                     dangerLevel="high"
+                     onConfirm={handleDisarmForReal}
+                 />
+             ) : (
+                 <ActionDialog 
+                     trigger={<Button className="bg-green-600 hover:bg-green-700 flex items-center gap-2"><Power className="w-4 h-4"/> ARM SYSTEM</Button>}
+                     title="Arm Protocol"
+                     description="This will enable live signal generation and execution. Ensure all safety checks are green."
+                     actionName="ARM"
+                     dangerLevel="medium"
+                     onConfirm={handleArmForReal}
+                 />
+             )}
+        </div>
       </div>
 
       {/* Top Level KPIs */}
@@ -97,7 +120,11 @@ export default function RiskPage() {
         <KpiTile label="Global Risk Budget" value="$15,000" subValue="Used: 45%" />
         <KpiTile label="Max Drawdown (Daily)" value="1.2%" subValue="Limit: 3.0%" />
         <KpiTile label="Open Exposure" value="$124,500" />
-        <KpiTile label="Circuit Breaker" value="ARMED" variant="positive" />
+        <KpiTile 
+            label="System Status" 
+            value={isArmed ? "ARMED" : "DISARMED"} 
+            variant={isArmed ? "positive" : "default"} 
+        />
       </div>
 
       {/* Main Risk Dashboard */}
@@ -110,6 +137,9 @@ export default function RiskPage() {
           exposureRaw: { btc: 65, eth: 25, others: 10 },
         }}
       />
+      
+      {/* Incident Cockpit */}
+      <IncidentCockpit />
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Manual Override Controls */}
@@ -237,6 +267,9 @@ export default function RiskPage() {
           </CardContent>
         </Card>
       </div>
+      
+      {/* Real-time Decision Log */}
+      <DecisionLog />
     </div>
   );
 }

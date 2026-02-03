@@ -1,4 +1,4 @@
-import { AllocationEngine } from "../../src/engine/AllocationEngine.js";
+import { AllocationEngine } from "../../src/features/Allocation/AllocationEngine";
 import { AllocationEngineConfig, EquityTier } from "../../src/types/index.js";
 
 describe("Multi-Armed Bandit Allocator", () => {

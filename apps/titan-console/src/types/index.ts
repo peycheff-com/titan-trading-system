@@ -1,10 +1,10 @@
-export type SystemStatus = 'healthy' | 'degraded' | 'critical' | 'offline';
-export type Severity = 'info' | 'warning' | 'critical';
-export type Phase = 'scavenger' | 'hunter' | 'sentinel';
+export type SystemStatus = "healthy" | "degraded" | "critical" | "offline";
+export type Severity = "info" | "warning" | "critical";
+export type Phase = "scavenger" | "hunter" | "sentinel";
 
 export interface TimelineEvent {
   id: string;
-  type: 'trade' | 'alert' | 'system' | 'risk';
+  type: "trade" | "alert" | "system" | "risk";
   severity: Severity;
   message: string;
   symbol: string | null;
@@ -25,9 +25,9 @@ export function formatTimeAgo(timestamp: number): string {
 }
 
 export function formatCurrency(amount: number, decimals = 2): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   }).format(amount);
@@ -38,7 +38,7 @@ export function formatPercent(value: number, decimals = 2): string {
 }
 
 export function formatNumber(value: number, decimals = 2): string {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat("en-US", {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   }).format(value);
@@ -68,4 +68,73 @@ export interface DashboardData {
       proposal: any;
     };
   };
+}
+
+// Brain Types (Mirrored from titan-brain service)
+
+export interface AllocationVector {
+  scavenger: number;
+  hunter: number;
+  sentinel: number;
+  cash: number;
+}
+
+export interface RiskMetrics {
+  currentLeverage: number;
+  projectedLeverage: number;
+  portfolioDelta: number;
+  portfolioBeta: number;
+  correlation: number;
+  concentration: number;
+  dailyDrawdown: number;
+}
+
+export interface RiskDecision {
+  approved: boolean;
+  reason: string;
+  adjustedSize?: number;
+  riskMetrics: RiskMetrics;
+}
+
+export interface IntentSignal {
+  signalId: string;
+  phaseId: string;
+  symbol: string;
+  side: "BUY" | "SELL" | "LONG" | "SHORT";
+  requestedSize: number;
+  limitPrice?: number;
+  stopLossPrice?: number;
+  takeProfitPrice?: number;
+  timeHorizon?: number;
+  confidence?: number;
+  volatility?: number;
+  timestamp: number;
+  latencyProfile?: {
+    transit: number;
+    processing: number;
+    endToEnd: number;
+  };
+}
+
+export interface BrainDecision {
+  signalId: string;
+  approved: boolean;
+  authorizedSize: number;
+  reason: string;
+  allocation: AllocationVector;
+  performance: any; // Simplified for console
+  risk: RiskDecision;
+  context?: {
+    signal: IntentSignal;
+    marketState: {
+      price?: number;
+      volatility?: number;
+      regime: string;
+    };
+    riskState: RiskMetrics;
+    governance: {
+      defcon: string;
+    };
+  };
+  timestamp: number;
 }

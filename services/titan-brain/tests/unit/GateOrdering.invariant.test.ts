@@ -16,8 +16,8 @@
  * 9. Correlation Gate
  */
 
-import { RiskGuardian } from "../../src/engine/RiskGuardian";
-import { AllocationEngine } from "../../src/engine/AllocationEngine";
+import { RiskGuardian } from "../../src/features/Risk/RiskGuardian";
+import { AllocationEngine } from "../../src/features/Allocation/AllocationEngine";
 import {
     AllocationEngineConfig,
     EquityTier,
@@ -30,7 +30,7 @@ import {
 } from "../../src/engine/GovernanceEngine";
 
 // Mock TailRiskCalculator
-jest.mock("../../src/engine/TailRiskCalculator", () => ({
+jest.mock("../../src/features/Risk/TailRiskCalculator", () => ({
     TailRiskCalculator: jest.fn().mockImplementation(() => ({
         calculateAPTR: jest.fn().mockReturnValue(0.1),
         isRiskCritical: jest.fn().mockReturnValue(false),
@@ -38,7 +38,7 @@ jest.mock("../../src/engine/TailRiskCalculator", () => ({
 }));
 
 // Mock ChangePointDetector
-jest.mock("../../src/engine/ChangePointDetector", () => ({
+jest.mock("../../src/features/Risk/ChangePointDetector", () => ({
     ChangePointDetector: jest.fn().mockImplementation(() => ({
         update: jest.fn().mockReturnValue({ regime: "STABLE", score: 0 }),
         detectChange: jest.fn().mockReturnValue({ regime: "STABLE", score: 0 }),
@@ -51,6 +51,7 @@ jest.mock("../../src/features/Risk/BayesianCalibrator", () => ({
     BayesianCalibrator: jest.fn().mockImplementation(() => ({
         getCalibratedProbability: jest.fn().mockReturnValue(0.8),
         recordOutcome: jest.fn(),
+        getShrinkageReport: jest.fn().mockReturnValue({}),
     })),
 }));
 

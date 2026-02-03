@@ -1,6 +1,6 @@
 import { BudgetService } from "../../src/engine/BudgetService";
-import { AllocationEngine } from "../../src/engine/AllocationEngine";
-import { RiskGuardian } from "../../src/engine/RiskGuardian";
+import { AllocationEngine } from "../../src/features/Allocation/AllocationEngine";
+import { RiskGuardian } from "../../src/features/Risk/RiskGuardian";
 import { NatsClient, RegimeState } from "@titan/shared";
 import { logger } from "../../src/utils/Logger";
 

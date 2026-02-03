@@ -214,6 +214,7 @@ export {
 } from "./messaging/powerlaw_subjects.js";
 
 export { TITAN_SUBJECTS } from "./messaging/titan_subjects.js";
+export { TITAN_STREAMS } from "./messaging/titan_streams.js";
 
 // Intent schema (NATS contract)
 export {
@@ -274,8 +275,10 @@ export {
   TradeLogEntry,
 };
 
+// Risk and Truth Types
 export { RiskState } from "./types/RiskState.js";
 export * from "./types/budget.js";
+export * from "./types/truth.js";
 export * from "./types/Phase.js";
 
 export const SharedLogLevel = LogLevel;
@@ -314,6 +317,8 @@ export {
 } from "./schemas/DoraIncident.js";
 
 export * from "./ai/index.js";
+
+export { type DliMessage, DliSchema } from "./schemas/dlq.js";
 
 // Coordination
 export {
@@ -391,3 +396,27 @@ export {
   PowerLawImpactSchemaV1,
   type PowerLawImpactV1,
 } from "./schemas/PowerLawImpact.js";
+
+// Observability
+export { TITAN_SEMANTICS } from "./observability/SemanticConventions.js";
+export {
+  type ComponentHealth,
+  type HealthCheckResult,
+  HealthMonitor,
+  type HealthStatus as MonitorHealthStatus,
+} from "./observability/Health.js";
+export {
+  metrics,
+  MetricsCollector,
+  type MetricTag,
+  type MetricValue,
+} from "./observability/Metrics.js";
+
+// Execution Quality
+export {
+  type ExecutionQualityEvent,
+  ExecutionQualityEventSchema,
+  type ExecutionQualityScore,
+  ExecutionQualityScoreSchema,
+  TITAN_QUALITY_TOPIC,
+} from "./schemas/ExecutionQuality.js";

@@ -5,8 +5,8 @@
  */
 
 import * as fc from "fast-check";
-import { RiskGuardian } from "../../src/engine/RiskGuardian";
-import { AllocationEngine } from "../../src/engine/AllocationEngine";
+import { RiskGuardian } from "../../src/features/Risk/RiskGuardian";
+import { AllocationEngine } from "../../src/features/Allocation/AllocationEngine";
 import {
   AllocationEngineConfig,
   EquityTier,
@@ -17,11 +17,22 @@ import {
 } from "../../src/types/index";
 
 // Mock TailRiskCalculator module
-jest.mock("../../src/engine/TailRiskCalculator", () => {
+jest.mock("../../src/features/Risk/TailRiskCalculator", () => {
   return {
     TailRiskCalculator: jest.fn().mockImplementation(() => ({
       calculateAPTR: jest.fn().mockReturnValue(0.5), // Safe low APTR
       isRiskCritical: jest.fn().mockReturnValue(false),
+    })),
+  };
+});
+
+// Mock BayesianCalibrator
+jest.mock("../../src/features/Risk/BayesianCalibrator", () => {
+  return {
+    BayesianCalibrator: jest.fn().mockImplementation(() => ({
+      getCalibratedProbability: jest.fn().mockReturnValue(0.8),
+      recordOutcome: jest.fn(),
+      getShrinkageReport: jest.fn().mockReturnValue("Mock Report"),
     })),
   };
 });
@@ -85,15 +96,28 @@ describe("RiskGuardian Property Tests", () => {
   let governanceEngine: GovernanceEngine;
 
   beforeEach(() => {
+    // Clear mocks
+    jest.clearAllMocks();
+
     allocationEngine = new AllocationEngine(allocationConfig);
 
     // Mock GovernanceEngine
     governanceEngine = {
       getDefconLevel: jest.fn().mockReturnValue(DefconLevel.NORMAL),
       getLeverageMultiplier: jest.fn().mockReturnValue(1.0),
+      getCalibratedProbability: jest.fn().mockReturnValue(0.8),
+      recordOutcome: jest.fn(),
+      getShrinkageReport: jest.fn().mockReturnValue({}),
       canOpenNewPosition: jest.fn().mockReturnValue(true),
       setOverride: jest.fn(),
     } as unknown as GovernanceEngine;
+
+    // Spy on RiskGuardian prototype to bypass correlation checks requiring history
+    // Smart mock: Self-correlation = 1, others = 0.5
+    jest.spyOn(RiskGuardian.prototype, "calculateCorrelation")
+      .mockImplementation((a, b) => {
+        return a === b ? 1.0 : 0.5;
+      });
 
     riskGuardian = new RiskGuardian(
       riskConfig,

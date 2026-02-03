@@ -3,22 +3,24 @@
  * Tests the dashboard data aggregation functionality
  */
 
-import { DashboardService, WalletBalance } from '../../src/server/DashboardService.js';
-import { TitanBrain } from '../../src/engine/TitanBrain.js';
-import { AllocationEngine } from '../../src/engine/AllocationEngine.js';
-import { PerformanceTracker } from '../../src/engine/PerformanceTracker.js';
-import { RiskGuardian } from '../../src/engine/RiskGuardian.js';
-import { CapitalFlowManager } from '../../src/engine/CapitalFlowManager.js';
-import { CircuitBreaker } from '../../src/engine/CircuitBreaker.js';
+import {
+  DashboardService,
+  WalletBalance,
+} from "../../src/server/DashboardService.js";
+import { TitanBrain } from "../../src/engine/TitanBrain.js";
+import { AllocationEngine } from "../../src/features/Allocation/AllocationEngine.js";
+import { PerformanceTracker } from "../../src/engine/PerformanceTracker.js";
+import { RiskGuardian } from "../../src/features/Risk/RiskGuardian";
+import { CapitalFlowManager } from "../../src/engine/CapitalFlowManager.js";
+import { CircuitBreaker } from "../../src/engine/CircuitBreaker.js";
 import {
   AllocationVector,
-  PhasePerformance,
-  TreasuryStatus,
-  BreakerStatus,
   BrainDecision,
+  BreakerStatus,
+  PhasePerformance,
   Position,
-} from '../../src/types/index.js';
-
+  TreasuryStatus,
+} from "../../src/types/index.js";
 
 // Mock implementations
 const mockAllocationEngine = {
@@ -60,7 +62,7 @@ const mockBrain = {
   getAllocation: jest.fn(),
 } as unknown as TitanBrain;
 
-describe('DashboardService', () => {
+describe("DashboardService", () => {
   let dashboardService: DashboardService;
 
   beforeEach(() => {
@@ -68,39 +70,39 @@ describe('DashboardService', () => {
     dashboardService = new DashboardService(mockBrain);
   });
 
-  describe('calculateNAV', () => {
-    it('should calculate NAV from wallet providers', async () => {
+  describe("calculateNAV", () => {
+    it("should calculate NAV from wallet providers", async () => {
       // Mock wallet provider
       const mockWalletBalances: WalletBalance[] = [
         {
-          exchange: 'bybit',
-          walletType: 'futures',
-          asset: 'USDT',
+          exchange: "bybit",
+          walletType: "futures",
+          asset: "USDT",
           balance: 1000,
           usdValue: 1000,
         },
         {
-          exchange: 'binance',
-          walletType: 'spot',
-          asset: 'USDT',
+          exchange: "binance",
+          walletType: "spot",
+          asset: "USDT",
           balance: 500,
           usdValue: 500,
         },
       ];
 
       const mockProvider = jest.fn().mockResolvedValue(mockWalletBalances);
-      dashboardService.registerWalletProvider('test', mockProvider);
+      dashboardService.registerWalletProvider("test", mockProvider);
 
       // Mock positions with unrealized PnL
       const mockPositions: Position[] = [
         {
-          symbol: 'BTCUSDT',
-          side: 'LONG',
+          symbol: "BTCUSDT",
+          side: "LONG",
           size: 100,
           entryPrice: 50000,
           unrealizedPnL: 50,
           leverage: 10,
-          phaseId: 'phase1',
+          phaseId: "phase1",
         },
       ];
       (mockBrain.getPositions as jest.Mock).mockReturnValue(mockPositions);
@@ -113,9 +115,9 @@ describe('DashboardService', () => {
       expect(mockProvider).toHaveBeenCalled();
     });
 
-    it('should handle wallet provider errors gracefully', async () => {
-      const mockProvider = jest.fn().mockRejectedValue(new Error('API Error'));
-      dashboardService.registerWalletProvider('test', mockProvider);
+    it("should handle wallet provider errors gracefully", async () => {
+      const mockProvider = jest.fn().mockRejectedValue(new Error("API Error"));
+      dashboardService.registerWalletProvider("test", mockProvider);
 
       (mockBrain.getPositions as jest.Mock).mockReturnValue([]);
 
@@ -126,9 +128,9 @@ describe('DashboardService', () => {
       expect(result.unrealizedPnL).toBe(0);
     });
 
-    it('should cache NAV calculation results', async () => {
+    it("should cache NAV calculation results", async () => {
       const mockProvider = jest.fn().mockResolvedValue([]);
-      dashboardService.registerWalletProvider('test', mockProvider);
+      dashboardService.registerWalletProvider("test", mockProvider);
       (mockBrain.getPositions as jest.Mock).mockReturnValue([]);
 
       // First call
@@ -141,8 +143,8 @@ describe('DashboardService', () => {
     });
   });
 
-  describe('formatAllocation', () => {
-    it('should format allocation vector correctly', () => {
+  describe("formatAllocation", () => {
+    it("should format allocation vector correctly", () => {
       const allocation: AllocationVector = {
         w1: 0.6,
         w2: 0.3,
@@ -155,15 +157,15 @@ describe('DashboardService', () => {
 
       expect(result.phaseEquity.phase1.weight).toBe(0.6);
       expect(result.phaseEquity.phase1.equity).toBe(600);
-      expect(result.phaseEquity.phase1.percentage).toBe('60.00%');
+      expect(result.phaseEquity.phase1.percentage).toBe("60.00%");
       expect(result.phaseEquity.phase2.equity).toBe(300);
       expect(result.phaseEquity.phase3.equity).toBe(100);
       expect(result.totalEquity).toBe(1000);
     });
   });
 
-  describe('calculatePhaseEquity', () => {
-    it('should calculate phase equity correctly', () => {
+  describe("calculatePhaseEquity", () => {
+    it("should calculate phase equity correctly", () => {
       const allocation: AllocationVector = {
         w1: 0.5,
         w2: 0.3,
@@ -180,46 +182,48 @@ describe('DashboardService', () => {
     });
   });
 
-  describe('exportDashboardJSON', () => {
-    it('should export dashboard data as JSON with metadata', async () => {
+  describe("exportDashboardJSON", () => {
+    it("should export dashboard data as JSON with metadata", async () => {
       // Mock dashboard data
       const mockDashboardData = {
         nav: 1000,
         allocation: { w1: 0.6, w2: 0.3, w3: 0.1, timestamp: Date.now() },
-        version: '1.0.0',
+        version: "1.0.0",
         uptime: 60000,
       };
 
       // Mock the getDashboardData method
-      jest.spyOn(dashboardService, 'getDashboardData').mockResolvedValue(mockDashboardData as any);
+      jest.spyOn(dashboardService, "getDashboardData").mockResolvedValue(
+        mockDashboardData as any,
+      );
 
       const result = await dashboardService.exportDashboardJSON();
       const parsed = JSON.parse(result);
 
       expect(parsed.metadata).toBeDefined();
-      expect(parsed.metadata.version).toBe('1.0.0');
-      expect(parsed.metadata.source).toBe('titan-brain-dashboard-service');
+      expect(parsed.metadata.version).toBe("1.0.0");
+      expect(parsed.metadata.source).toBe("titan-brain-dashboard-service");
       expect(parsed.data).toEqual(mockDashboardData);
     });
   });
 
-  describe('cache management', () => {
-    it('should clear cache correctly', () => {
+  describe("cache management", () => {
+    it("should clear cache correctly", () => {
       dashboardService.clearCache();
-      
+
       const cacheStatus = dashboardService.getCacheStatus();
       expect(cacheStatus.dashboard.cached).toBe(false);
       expect(cacheStatus.nav.cached).toBe(false);
     });
 
-    it('should report cache status correctly', async () => {
+    it("should report cache status correctly", async () => {
       // Trigger cache population
       const mockProvider = jest.fn().mockResolvedValue([]);
-      dashboardService.registerWalletProvider('test', mockProvider);
+      dashboardService.registerWalletProvider("test", mockProvider);
       (mockBrain.getPositions as jest.Mock).mockReturnValue([]);
-      
+
       await dashboardService.calculateNAV();
-      
+
       const cacheStatus = dashboardService.getCacheStatus();
       expect(cacheStatus.nav.cached).toBe(true);
       expect(cacheStatus.nav.age).toBeGreaterThanOrEqual(0);

@@ -15,9 +15,9 @@ import { Logger } from "../../src/logging/Logger";
 // Mock dependencies to avoid complex setup
 import { InMemorySignalQueue } from "../../src/server/InMemorySignalQueue";
 import { DashboardService } from "../../src/server/DashboardService";
-import { AllocationEngine } from "../../src/engine/AllocationEngine";
+import { AllocationEngine } from "../../src/features/Allocation/AllocationEngine";
 import { PerformanceTracker } from "../../src/engine/PerformanceTracker";
-import { RiskGuardian } from "../../src/engine/RiskGuardian";
+import { RiskGuardian } from "../../src/features/Risk/RiskGuardian";
 import { CapitalFlowManager } from "../../src/engine/CapitalFlowManager";
 import { CircuitBreaker } from "../../src/engine/CircuitBreaker";
 import { ActiveInferenceEngine } from "../../src/engine/ActiveInferenceEngine";

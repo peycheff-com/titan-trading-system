@@ -46,9 +46,24 @@ jobs:
             echo "deploy=true" >> $GITHUB_OUTPUT
           fi
 
+  readiness-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Need full history for some checks if needed, but shallow is ok for status
+
+      - name: Run Gatekeeper
+        run: |
+          # We assume npx is available
+          # Check if ts-node is installed or just run with npx
+          chmod +x scripts/ci/gatekeeper.ts
+          npx ts-node scripts/ci/gatekeeper.ts
+
   build-and-push:
-    needs: [ci-check]
-    if: ${{ always() && (needs.ci-check.result == 'success' || needs.ci-check.result == 'skipped') }}
+    needs: [ci-check, readiness-gate]
+    if: ${{ always() && (needs.ci-check.result == 'success' || needs.ci-check.result == 'skipped') && needs.readiness-gate.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -142,7 +157,7 @@ jobs:
   deploy-production:
     needs: build-and-push
     runs-on: ubuntu-latest
-    environment: 
+    environment:
       name: production
     steps:
       - name: Checkout code
@@ -169,16 +184,9 @@ jobs:
                echo "," >> digests.json
              fi
              cat "$f" >> digests.json
-             # Note: the loop runs in a subshell, so 'first' variable update might be lost.
-             # Correct approach: process all files at once or building line by line.
           done
-          # The loop variable issue is tricky in bash. Let's use jq or python if available, or just simple concatenation.
-          # Better simple approach for GitHub Actions runners:
-
-          # 1. Concatenate all files into a temporary file, with commas newline-separated
+          # Re-consolidate properly to ensure valid JSON (Hack for loop scope issue)
           cat /tmp/digests/*.json | paste -sd "," - > body.json
-
-          # 2. Wrap in curly braces
           echo "{" > digests.json
           cat body.json >> digests.json
           echo "}" >> digests.json
@@ -186,6 +194,15 @@ jobs:
           # Validate
           cat digests.json
           python3 -c "import json, sys; json.load(sys.stdin)" < digests.json
+
+      - name: Sign Release Manifest
+        env:
+          TITAN_RELEASE_KEY: ${{ secrets.TITAN_RELEASE_KEY }}
+        run: |
+          echo "$TITAN_RELEASE_KEY" > titan_release.key
+          # Ensure key has correct permissions if needed, generally fine in runner
+          npx ts-node scripts/security/provenance.ts sign digests.json titan_release.key
+          rm titan_release.key # Cleanup private key
 
       - name: Prepare Deployment Package
         run: |
@@ -203,6 +220,7 @@ jobs:
 
           # Evidence
           cp digests.json deploy_package/evidence/
+          cp digests.json.sig deploy_package/evidence/
 
       - name: Copy Files to Droplet
         uses: appleboy/scp-action@v0.1.7

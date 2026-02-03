@@ -1,22 +1,25 @@
-import { logger } from '../utils/Logger.js';
-import { PositionManager } from '../engine/PositionManager.js';
-import { EventStore } from '../persistence/EventStore.js';
-import { PositionRepository } from '../db/repositories/PositionRepository.js';
-import { TruthRepository } from '../db/repositories/TruthRepository.js';
+import { logger } from "../utils/Logger.js";
+import { PositionManager } from "../engine/PositionManager.js";
+import { EventStore } from "../persistence/EventStore.js";
+import { PositionRepository } from "../db/repositories/PositionRepository.js";
+import { TruthRepository } from "../db/repositories/TruthRepository.js";
 import {
   ExecutionEngineClient,
   ExecutionPosition,
   MismatchDetail,
+  MismatchSeverity,
   Position,
   ReconciliationConfig,
   ReconciliationReport,
   ReconciliationRun,
+  ReconciliationStats,
   ReconciliationType,
   TruthConfidence,
-} from '../types/index.js';
-import { EventType } from '../events/EventTypes.js';
-import { v4 as uuidv4 } from 'uuid';
-import { createHash } from 'crypto';
+} from "../types/index.js";
+import { getCanonicalRiskPolicy } from "@titan/shared";
+import { EventType } from "../events/EventTypes.js";
+import { v4 as uuidv4 } from "uuid";
+import { createHash } from "crypto";
 
 export class ReconciliationService {
   private intervalId: NodeJS.Timeout | null = null;
@@ -26,7 +29,9 @@ export class ReconciliationService {
   private readonly positionRepository?: PositionRepository;
   private readonly eventStore?: EventStore;
   private readonly truthRepository?: TruthRepository;
-  private driftListener: ((hasDrift: boolean) => void) | null = null;
+  private driftListener:
+    | ((hasDrift: boolean, severity?: string, reason?: string) => void)
+    | null = null;
 
   // Confidence tracking
   private currentConfidence: number = 1.0;
@@ -51,7 +56,9 @@ export class ReconciliationService {
     this.executionClient = client;
   }
 
-  setDriftListener(listener: (hasDrift: boolean) => void): void {
+  setDriftListener(
+    listener: (hasDrift: boolean, severity?: string, reason?: string) => void,
+  ): void {
     this.driftListener = listener;
   }
 
@@ -61,7 +68,7 @@ export class ReconciliationService {
 
   start(): void {
     if (this.intervalId) return;
-    logger.info('🔄 Starting Reconciliation Service...');
+    logger.info("🔄 Starting Reconciliation Service...");
 
     this.intervalId = setInterval(
       () => this.runScheduledReconciliation(),
@@ -74,7 +81,7 @@ export class ReconciliationService {
       clearInterval(this.intervalId);
 
       this.intervalId = null;
-      logger.info('🛑 Reconciliation Service stopped');
+      logger.info("🛑 Reconciliation Service stopped");
     }
   }
 
@@ -82,30 +89,28 @@ export class ReconciliationService {
     try {
       await this.reconcileAll();
     } catch (error) {
-      logger.error('Scheduled reconciliation failed', error as Error);
+      logger.error("Scheduled reconciliation failed", error as Error);
     }
   }
 
   async reconcileAll(): Promise<ReconciliationReport[]> {
-    logger.info('🔎 Running multi-exchange reconciliation...');
+    logger.info("🔎 Running multi-exchange reconciliation...");
     const reports: ReconciliationReport[] = [];
     for (const exchange of this.config.exchanges) {
       const report = await this.reconcile(exchange);
-
       reports.push(report);
     }
 
     // Reconcile Brain vs Database
     if (this.positionRepository) {
       const dbReport = await this.reconcileBrainVsDb();
-
       reports.push(dbReport);
     }
 
     // Notify listener regardless of result (true for drift, false for clean)
     if (this.driftListener) {
-      const hasMismatch = reports.some((r) => r.status === 'MISMATCH');
-      const hasError = reports.some((r) => r.status === 'ERROR');
+      const hasMismatch = reports.some((r) => r.status === "MISMATCH");
+      const hasError = reports.some((r) => r.status === "ERROR");
 
       if (hasMismatch) {
         this.driftListener(true);
@@ -118,7 +123,113 @@ export class ReconciliationService {
     return reports;
   }
 
-  private async persistRun(run: ReconciliationRun, type: 'START' | 'END'): Promise<void> {
+  /**
+   * Handle incoming Truth Snapshot from Execution Engine (Push Model)
+   * Subject: titan.evt.execution.truth.v1
+   */
+  async handleTruthSnapshot(payload: any): Promise<void> {
+    try {
+      // Basic validation
+      if (!payload || !payload.positions || !payload.timestamp) {
+        logger.warn("Received invalid Truth Snapshot", undefined, { payload });
+        return;
+      }
+
+      const { hasDrift, severity, reason } = await this.checkSnapshotDrift(
+        payload,
+      );
+      const driftDetected = hasDrift; // Alias for legacy logic compatibility
+
+      // Update Confidence Score based on drift
+      if (this.currentConfidence < 1.0 && !driftDetected) {
+        // Recovery
+        this.currentConfidence = Math.min(1.0, this.currentConfidence + 0.05);
+        if (this.truthRepository) {
+          await this.truthRepository.updateConfidence({
+            scope: "BRAIN_EXECUTION",
+            score: this.currentConfidence,
+            state: "HIGH",
+            reasons: [],
+            lastUpdateTs: Date.now(),
+          });
+        }
+      } else if (driftDetected) {
+        // Penalty
+        this.currentConfidence = Math.max(0.0, this.currentConfidence - 0.2);
+
+        // Persist Incident
+        if (this.truthRepository) {
+          const stats: ReconciliationStats = {
+            totalPositions: Object.keys(payload.positions || {}).length,
+            matchedPositions: 0,
+            mismatchedPositions: 0,
+            ghostPositions: 0,
+            untrackedPositions: 0,
+          };
+
+          const runId = await this.truthRepository.recordRun({
+            scope: "EXECUTION_SNAPSHOT",
+            startedAt: Date.now(),
+            finishedAt: Date.now(),
+            success: false,
+            stats,
+          });
+
+          await this.truthRepository.recordDrift({
+            id: uuidv4(),
+            runId: runId,
+            scope: "EXECUTION_SNAPSHOT",
+            driftType: "POLICY_HASH_MISMATCH",
+            severity: severity || "CRITICAL",
+            detectedAt: Date.now(),
+            details: {
+              expected: getCanonicalRiskPolicy().hash,
+              actual: payload.policy_hash,
+            },
+            recommendedAction: "HALT",
+            resolutionMethod: "MANUAL",
+          });
+
+          // Update persisted confidence
+          await this.truthRepository.updateConfidence({
+            scope: "BRAIN_EXECUTION",
+            score: this.currentConfidence,
+            state: "LOW",
+            reasons: ["Snapshot Drift Detected"],
+            lastUpdateTs: Date.now(),
+          });
+        }
+      }
+
+      // Notify drift listener (RiskGuardian)
+      if (this.driftListener) {
+        this.driftListener(driftDetected, severity, reason);
+      }
+    } catch (error) {
+      logger.error("Failed to process Truth Snapshot", error as Error);
+    }
+  }
+
+  private async checkSnapshotDrift(
+    snapshot: any,
+  ): Promise<
+    { hasDrift: boolean; severity?: MismatchSeverity; reason?: string }
+  > {
+    // 1. Policy Hash Check (P0)
+    const { hash } = getCanonicalRiskPolicy();
+    if (snapshot.policy_hash && snapshot.policy_hash !== hash) {
+      const reason =
+        `Execution Policy Hash Mismatch! Brain: ${hash}, Execution: ${snapshot.policy_hash}`;
+      logger.warn(`🚨 Drift Detected: ${reason}`);
+      return { hasDrift: true, severity: "CRITICAL", reason };
+    }
+    return { hasDrift: false };
+  }
+
+  private async persistRun(
+    run: ReconciliationRun,
+    type: "START" | "END",
+  ): Promise<void> {
     if (!this.truthRepository) return;
     try {
       await this.truthRepository.recordRun(run);
@@ -136,7 +247,7 @@ export class ReconciliationService {
     if (!this.truthRepository || !runId) return;
     try {
       const json = JSON.stringify(data);
-      const hash = createHash('sha256').update(json).digest('hex');
+      const hash = createHash("sha256").update(json).digest("hex");
       await this.truthRepository.persistEvidence({
         runId,
         scope,
@@ -146,11 +257,14 @@ export class ReconciliationService {
         timestamp: Date.now(),
       });
     } catch (err) {
-      logger.error('Failed to persist evidence', err as Error);
+      logger.error("Failed to persist evidence", err as Error);
     }
   }
 
-  private async computeConfidence(scope: string, hasMismatch: boolean): Promise<void> {
+  private async computeConfidence(
+    scope: string,
+    hasMismatch: boolean,
+  ): Promise<void> {
     if (!this.truthRepository) {
       // Fallback to local confidence if no repo
       if (hasMismatch) {
@@ -169,7 +283,7 @@ export class ReconciliationService {
         confidence = {
           scope,
           score: 1.0,
-          state: 'HIGH', // Default high
+          state: "HIGH", // Default high
           reasons: [],
           lastUpdateTs: Date.now(),
         };
@@ -179,17 +293,17 @@ export class ReconciliationService {
       if (hasMismatch) {
         confidence.score = Math.max(0, confidence.score - 0.2); // Decay fast
 
-        if (confidence.score < 0.8) confidence.state = 'DEGRADED';
+        if (confidence.score < 0.8) confidence.state = "DEGRADED";
 
-        if (confidence.score < 0.5) confidence.state = 'LOW'; // Changed from UNTRUSTED to match type
-        if (!confidence.reasons.includes('Recent mismatch')) {
-          confidence.reasons.push('Recent mismatch');
+        if (confidence.score < 0.5) confidence.state = "LOW"; // Changed from UNTRUSTED to match type
+        if (!confidence.reasons.includes("Recent mismatch")) {
+          confidence.reasons.push("Recent mismatch");
         }
       } else {
         confidence.score = Math.min(1.0, confidence.score + 0.01); // Recover slow
 
-        if (confidence.score >= 0.8) confidence.state = 'HIGH';
-        else if (confidence.score >= 0.5) confidence.state = 'DEGRADED';
+        if (confidence.score >= 0.8) confidence.state = "HIGH";
+        else if (confidence.score >= 0.5) confidence.state = "DEGRADED";
 
         // Clear old reasons if healthy
         if (confidence.score === 1.0) {
@@ -204,7 +318,7 @@ export class ReconciliationService {
 
       this.currentConfidence = confidence.score;
     } catch (err) {
-      logger.error('Failed to compute confidence', err as Error);
+      logger.error("Failed to compute confidence", err as Error);
     }
   }
 
@@ -224,35 +338,37 @@ export class ReconciliationService {
           success: false, // pending
         });
       } catch (e) {
-        logger.error('Failed to start run record', e as Error);
+        logger.error("Failed to start run record", e as Error);
       }
     }
 
     try {
       if (!this.executionClient || !this.executionClient.isConnected()) {
-        throw new Error('Execution Client not connected');
+        throw new Error("Execution Client not connected");
       }
 
-      const externalState = await this.executionClient.fetchExchangePositions(exchange);
+      const externalState = await this.executionClient.fetchExchangePositions(
+        exchange,
+      );
 
       // Persist External Evidence
-      await this.persistEvidence(exchange, 'EXCHANGE', externalState, runId);
+      await this.persistEvidence(exchange, "EXCHANGE", externalState, runId);
 
       // Filter internal positions for this exchange
       const allPositions = this.positionManager.getPositions();
       const internalState = allPositions.filter((p) => p.exchange === exchange);
 
       // Persist Internal Evidence
-      await this.persistEvidence(exchange, 'BRAIN', internalState, runId);
+      await this.persistEvidence(exchange, "BRAIN", internalState, runId);
 
       // Compare logic
       this.compare(exchange, internalState, externalState, mismatches);
 
-      const status = mismatches.length > 0 ? 'MISMATCH' : 'MATCH';
+      const status = mismatches.length > 0 ? "MISMATCH" : "MATCH";
 
       const report: ReconciliationReport = {
         reconciliationId,
-        type: 'BRAIN_VS_EXCHANGE',
+        type: "BRAIN_VS_EXCHANGE",
         timestamp: startTime,
         exchange,
         status,
@@ -260,10 +376,10 @@ export class ReconciliationService {
       };
 
       // Update Confidence
-      await this.computeConfidence(exchange, status === 'MISMATCH');
+      await this.computeConfidence(exchange, status === "MISMATCH");
 
       // Persist event if mismatch
-      if (status === 'MISMATCH') {
+      if (status === "MISMATCH") {
         this.handleDiscrepancy(exchange, report, runId);
 
         if (this.config.autoResolve) {
@@ -271,7 +387,9 @@ export class ReconciliationService {
         }
       }
 
-      logger.info(`[Reconciliation] ${exchange}: ${status} (${mismatches.length} mismatches)`);
+      logger.info(
+        `[Reconciliation] ${exchange}: ${status} (${mismatches.length} mismatches)`,
+      );
 
       // 2. End Run
       if (this.truthRepository && runId) {
@@ -281,17 +399,21 @@ export class ReconciliationService {
             scope: exchange,
             startedAt: startTime,
             finishedAt: Date.now(),
-            success: status === 'MATCH',
+            success: status === "MATCH",
             stats: {
               totalPositions: internalState.length,
               matchedPositions: internalState.length - mismatches.length,
               mismatchedPositions: mismatches.length,
-              ghostPositions: mismatches.filter((m) => m.reason === 'GHOST_POSITION').length,
-              untrackedPositions: mismatches.filter((m) => m.reason === 'UNTRACKED_POSITION')
+              ghostPositions: mismatches.filter((m) =>
+                m.reason === "GHOST_POSITION"
+              ).length,
+              untrackedPositions: mismatches.filter((m) =>
+                m.reason === "UNTRACKED_POSITION"
+              )
                 .length,
             },
           },
-          'END',
+          "END",
         );
       }
 
@@ -309,16 +431,16 @@ export class ReconciliationService {
             finishedAt: Date.now(),
             success: false,
           },
-          'END',
+          "END",
         );
       }
 
       const errorReport: ReconciliationReport = {
         reconciliationId,
-        type: 'BRAIN_VS_EXCHANGE',
+        type: "BRAIN_VS_EXCHANGE",
         timestamp: startTime,
         exchange,
-        status: 'ERROR',
+        status: "ERROR",
         mismatches: [],
       };
       return errorReport;
@@ -331,8 +453,12 @@ export class ReconciliationService {
     external: ExecutionPosition[],
     mismatches: MismatchDetail[],
   ): void {
-    const internalMap = new Map(internal.map((p) => [`${p.symbol}:${p.side}`, p]));
-    const externalMap = new Map(external.map((p) => [`${p.symbol}:${p.side}`, p]));
+    const internalMap = new Map(
+      internal.map((p) => [`${p.symbol}:${p.side}`, p]),
+    );
+    const externalMap = new Map(
+      external.map((p) => [`${p.symbol}:${p.side}`, p]),
+    );
 
     // Check for Internal positions missing on Exchange (Ghost positions)
     for (const [key, internalPos] of internalMap) {
@@ -342,10 +468,10 @@ export class ReconciliationService {
 
         mismatches.push({
           symbol: internalPos.symbol,
-          reason: 'GHOST_POSITION',
+          reason: "GHOST_POSITION",
           brainParam: internalPos.size,
           exchangeParam: 0,
-          severity: 'CRITICAL',
+          severity: "CRITICAL",
         });
       } else {
         // Compare sizes
@@ -354,16 +480,17 @@ export class ReconciliationService {
 
         // Check for deviation > 0.1% (0.001)
         // For very small positions, we fall back to absolute check to avoid noise
-        const isSignificantDrift =
-          externalPos.size > 0.0001 ? diff / externalPos.size > 0.001 : diff > 0.0001;
+        const isSignificantDrift = externalPos.size > 0.0001
+          ? diff / externalPos.size > 0.001
+          : diff > 0.0001;
 
         if (isSignificantDrift) {
           mismatches.push({
             symbol: internalPos.symbol,
-            reason: 'SIZE_MISMATCH',
+            reason: "SIZE_MISMATCH",
             brainParam: internalPos.size,
             exchangeParam: externalPos.size,
-            severity: 'WARNING',
+            severity: "WARNING",
           });
         }
       }
@@ -377,53 +504,64 @@ export class ReconciliationService {
       if (!internalMap.has(key)) {
         mismatches.push({
           symbol: externalPos.symbol,
-          reason: 'UNTRACKED_POSITION',
+          reason: "UNTRACKED_POSITION",
           brainParam: 0,
           exchangeParam: externalPos.size,
-          severity: 'CRITICAL',
+          severity: "CRITICAL",
         });
       }
     }
   }
 
-  private async resolveMismatches(exchange: string, mismatches: MismatchDetail[]): Promise<void> {
-    logger.info(`🤖 Auto-resolving ${mismatches.length} mismatches on ${exchange}...`);
+  private async resolveMismatches(
+    exchange: string,
+    mismatches: MismatchDetail[],
+  ): Promise<void> {
+    logger.info(
+      `🤖 Auto-resolving ${mismatches.length} mismatches on ${exchange}...`,
+    );
 
     for (const mismatch of mismatches) {
       try {
         if (!this.executionClient) {
-          logger.warn('Cannot auto-resolve mismatch: Execution Client not connected');
+          logger.warn(
+            "Cannot auto-resolve mismatch: Execution Client not connected",
+          );
           break;
         }
 
-        if (mismatch.reason === 'GHOST_POSITION') {
+        if (mismatch.reason === "GHOST_POSITION") {
           const size = Number(mismatch.brainParam);
           if (Math.abs(size) <= 0.0001) continue;
 
-          logger.info(`Testing auto-resolution for GHOST_POSITION ${mismatch.symbol}`);
+          logger.info(
+            `Testing auto-resolution for GHOST_POSITION ${mismatch.symbol}`,
+          );
 
           // Create Intent to close the ghost position
-          const side = size > 0 ? 'SELL' : 'BUY';
+          const side = size > 0 ? "SELL" : "BUY";
 
           // We send a RECONCILIATION intent.
           // This tells Execution Engine: "I think I have this position, but you say I don't. Please confirm size=0".
           const intent: any = {
             // Using any cast due to IntentSignal not updated in all files yet or circular dep
             signalId: uuidv4(),
-            phaseId: 'phase1', // Defaulting to phase1 for admin actions
+            phaseId: "phase1", // Defaulting to phase1 for admin actions
             symbol: mismatch.symbol,
             side,
             requestedSize: Math.abs(size),
             timestamp: Date.now(),
             exchange,
-            type: 'RECONCILIATION',
-            positionMode: 'ONE_WAY',
+            type: "RECONCILIATION",
+            positionMode: "ONE_WAY",
           };
 
           await this.executionClient.forwardSignal(intent, Math.abs(size));
           logger.info(`✅ Sent RECONCILIATION signal for ${mismatch.symbol}`);
-        } else if (mismatch.reason === 'UNTRACKED_POSITION') {
-          logger.warn(`⚠️ Skipping auto-close of UNTRACKED_POSITION ${mismatch.symbol} (safety)`);
+        } else if (mismatch.reason === "UNTRACKED_POSITION") {
+          logger.warn(
+            `⚠️ Skipping auto-close of UNTRACKED_POSITION ${mismatch.symbol} (safety)`,
+          );
         }
       } catch (err) {
         logger.error(`Failed to auto-resolve ${mismatch.symbol}`, err as Error);
@@ -431,8 +569,14 @@ export class ReconciliationService {
     }
   }
 
-  private handleDiscrepancy(exchange: string, report: ReconciliationReport, runId?: number): void {
-    logger.warn(`⚠️ RECONCILIATION DRIFT [${exchange}]: ${report.mismatches.length} issues found`);
+  private handleDiscrepancy(
+    exchange: string,
+    report: ReconciliationReport,
+    runId?: number,
+  ): void {
+    logger.warn(
+      `⚠️ RECONCILIATION DRIFT [${exchange}]: ${report.mismatches.length} issues found`,
+    );
 
     // Truth Layer Drift Record
     if (this.truthRepository && runId) {
@@ -450,9 +594,9 @@ export class ReconciliationService {
               brainParam: mismatch.brainParam,
               exchangeParam: mismatch.exchangeParam,
             },
-            recommendedAction: 'RESYNC',
+            recommendedAction: "RESYNC",
           })
-          .catch((err) => logger.error('Failed to record drift', err as Error));
+          .catch((err) => logger.error("Failed to record drift", err as Error));
       }
     }
 
@@ -474,14 +618,14 @@ export class ReconciliationService {
 
       this.eventStore
         .append(event)
-        .catch((err: Error) => logger.error('Failed to emit drift event', err));
+        .catch((err: Error) => logger.error("Failed to emit drift event", err));
     }
   }
   private async reconcileBrainVsDb(): Promise<ReconciliationReport> {
     const reconciliationId = uuidv4();
     const startTime = Date.now();
     const mismatches: MismatchDetail[] = [];
-    const exchange = 'DATABASE';
+    const exchange = "DATABASE";
 
     try {
       // Get latest snapshot from DB
@@ -496,8 +640,12 @@ export class ReconciliationService {
       // Note: DB snapshot might be slightly lagging (up to 1 min), so we should be lenient or expect matches
 
       // Map by symbol:side
-      const internalMap = new Map(internalPositions.map((p) => [`${p.symbol}:${p.side}`, p]));
-      const dbMap = new Map(dbPositions.map((p) => [`${p.symbol}:${p.side}`, p]));
+      const internalMap = new Map(
+        internalPositions.map((p) => [`${p.symbol}:${p.side}`, p]),
+      );
+      const dbMap = new Map(
+        dbPositions.map((p) => [`${p.symbol}:${p.side}`, p]),
+      );
 
       // 1. Check positions in Brain but missing in DB (New positions since last snapshot)
       // This is expected if trading is active. We might log INFO but not CRITICAL unless large divergence.
@@ -509,20 +657,20 @@ export class ReconciliationService {
 
           mismatches.push({
             symbol: internalPos.symbol,
-            reason: 'MISSING_IN_DB_SNAPSHOT',
+            reason: "MISSING_IN_DB_SNAPSHOT",
             brainParam: internalPos.size,
             exchangeParam: 0,
-            severity: 'INFO',
+            severity: "INFO",
           });
         } else {
           const dbPos = dbMap.get(key)!;
           if (Math.abs((internalPos.size || 0) - dbPos.size) > 0.0001) {
             mismatches.push({
               symbol: internalPos.symbol,
-              reason: 'DB_SIZE_MISMATCH',
+              reason: "DB_SIZE_MISMATCH",
               brainParam: internalPos.size,
               exchangeParam: dbPos.size,
-              severity: 'INFO', // Likely due to recent fills
+              severity: "INFO", // Likely due to recent fills
             });
           }
         }
@@ -536,39 +684,43 @@ export class ReconciliationService {
         if (!internalMap.has(key)) {
           mismatches.push({
             symbol: dbPos.symbol,
-            reason: 'BRAIN_STATE_LOSS',
+            reason: "BRAIN_STATE_LOSS",
             brainParam: 0,
             exchangeParam: dbPos.size, // DB size
-            severity: 'CRITICAL',
+            severity: "CRITICAL",
           });
         }
       }
 
-      const status = mismatches.some((m) => m.severity === 'CRITICAL') ? 'MISMATCH' : 'MATCH'; // INFO warnings don't trigger MISMATCH status effectively
+      const status = mismatches.some((m) => m.severity === "CRITICAL")
+        ? "MISMATCH"
+        : "MATCH"; // INFO warnings don't trigger MISMATCH status effectively
 
       const report: ReconciliationReport = {
         reconciliationId,
-        type: 'BRAIN_VS_DB',
+        type: "BRAIN_VS_DB",
         timestamp: startTime,
         exchange,
-        status: status as 'MATCH' | 'MISMATCH', // Cast to match type
+        status: status as "MATCH" | "MISMATCH", // Cast to match type
         mismatches,
       };
 
-      if (status === 'MISMATCH') {
+      if (status === "MISMATCH") {
         this.handleDiscrepancy(exchange, report);
       }
 
-      logger.info(`[Reconciliation] ${exchange}: ${status} (${mismatches.length} items)`);
+      logger.info(
+        `[Reconciliation] ${exchange}: ${status} (${mismatches.length} items)`,
+      );
       return report;
     } catch (error) {
       logger.error(`❌ Reconciliation failed for ${exchange}`, error as Error);
       const errorReport: ReconciliationReport = {
         reconciliationId,
-        type: 'BRAIN_VS_DB',
+        type: "BRAIN_VS_DB",
         timestamp: startTime,
         exchange,
-        status: 'ERROR',
+        status: "ERROR",
         mismatches: [],
       };
       return errorReport;

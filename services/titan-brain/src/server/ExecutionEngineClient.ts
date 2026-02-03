@@ -7,7 +7,7 @@
  * Requirements: 1.7, 7.5
  */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from "events";
 import {
   ExchangeBalance,
   ExecutionEngineConfig,
@@ -16,14 +16,21 @@ import {
   IntentSignal,
   PhaseId,
   Position,
-} from '../types/index.js';
-import { ExecutionEngineClient as IExecutionEngineClient } from '../types/execution.js';
-import { getNatsClient, NatsClient, TITAN_SUBJECTS, validateIntentPayload } from '@titan/shared';
+} from "../types/index.js";
+import { ExecutionEngineClient as IExecutionEngineClient } from "../types/execution.js";
+import {
+  getCanonicalRiskPolicy,
+  getNatsClient,
+  NatsClient,
+  TITAN_SUBJECTS,
+  validateIntentPayload,
+} from "@titan/shared";
 
 /**
  * ExecutionEngineClient handles communication with the Titan Execution Engine via NATS
  */
-export class ExecutionEngineClient extends EventEmitter implements IExecutionEngineClient {
+export class ExecutionEngineClient extends EventEmitter
+  implements IExecutionEngineClient {
   private readonly config: ExecutionEngineConfig;
   private nats: NatsClient;
   private connected: boolean = false;
@@ -38,19 +45,19 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
    * Initialize the client
    */
   async initialize(): Promise<void> {
-    console.log('🔗 Connecting to Execution Engine (NATS)...');
+    console.log("🔗 Connecting to Execution Engine (NATS)...");
 
     // We assume NATS is already connected by shared lib or we wait for it
     // The shared getNatsClient() returns a singleton that should be connected by Brain's startup
     try {
       this.connected = this.nats.isConnected();
       if (this.connected) {
-        console.log('✅ Execution Engine NATS client ready');
+        console.log("✅ Execution Engine NATS client ready");
       } else {
-        console.warn('⚠️ NATS not connected yet, will retry on use');
+        console.warn("⚠️ NATS not connected yet, will retry on use");
       }
     } catch (error) {
-      console.error('❌ Failed to initialize NATS client:', error);
+      console.error("❌ Failed to initialize NATS client:", error);
     }
   }
 
@@ -59,7 +66,7 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
    */
   async shutdown(): Promise<void> {
     this.connected = false;
-    console.log('🔌 Execution Engine client disconnected');
+    console.log("🔌 Execution Engine client disconnected");
   }
 
   /**
@@ -69,44 +76,57 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
    * @param signal - Intent signal to forward
    * @param authorizedSize - Size authorized by the Brain
    */
-  async forwardSignal(signal: IntentSignal, authorizedSize: number): Promise<void> {
+  async forwardSignal(
+    signal: IntentSignal,
+    authorizedSize: number,
+  ): Promise<void> {
     const startTime = Date.now();
     const tSignal = signal.timestamp ?? Date.now();
-    const entryZone = signal.entryPrice !== undefined ? [signal.entryPrice] : [];
-    const stopLoss = signal.stopLossPrice ?? 0;
-    const takeProfits = Array.isArray((signal as { takeProfits?: number[] }).takeProfits)
-      ? (signal as { takeProfits?: number[] }).takeProfits!
+    const entryZone = signal.entryPrice !== undefined
+      ? [signal.entryPrice]
       : [];
+    const stopLoss = signal.stopLossPrice ?? 0;
+    const takeProfits =
+      Array.isArray((signal as { takeProfits?: number[] }).takeProfits)
+        ? (signal as { takeProfits?: number[] }).takeProfits!
+        : [];
 
     // Map to Rust Intent structure
     const source = this.mapPhaseIdToSource(signal.phaseId);
-    const symbolToken = signal.symbol.replace('/', '_');
-    const venue = signal.exchange?.toLowerCase() ?? 'auto';
-    const account = 'main';
-    const subject = TITAN_SUBJECTS.CMD.EXECUTION.PLACE(venue, account, symbolToken);
+    const symbolToken = signal.symbol.replace("/", "_");
+    const venue = signal.exchange?.toLowerCase() ?? "auto";
+    const account = "main";
+    const subject = TITAN_SUBJECTS.CMD.EXECUTION.PLACE(
+      venue,
+      account,
+      symbolToken,
+    );
+    const policyHash = getCanonicalRiskPolicy().hash;
 
     const payload = {
-      schema_version: '1.0.0',
+      schema_version: "1.0.0",
       signal_id: signal.signalId,
       source,
       symbol: signal.symbol,
       t_signal: tSignal,
       timestamp: tSignal,
-      direction: signal.side === 'BUY' ? 1 : -1,
-      type: signal.side === 'BUY' ? 'BUY_SETUP' : 'SELL_SETUP',
+      direction: signal.side === "BUY" ? 1 : -1,
+      type: signal.side === "BUY" ? "BUY_SETUP" : "SELL_SETUP",
       entry_zone: entryZone,
       stop_loss: stopLoss,
       take_profits: takeProfits,
       size: authorizedSize,
-      status: 'VALIDATED' as const,
+      status: "VALIDATED" as const,
       exchange: signal.exchange,
       position_mode: signal.positionMode,
+      policy_hash: policyHash,
       metadata: {
         source,
         brain_authorized: true,
         correlation_id: signal.signalId,
-        intent_schema_version: '1.0.0',
+        intent_schema_version: "1.0.0",
         original_timestamp: tSignal,
+        policy_hash: policyHash,
       },
     };
 
@@ -114,14 +134,14 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
       // Validate payload before sending (using the shared schema which wraps validation)
       const validation = validateIntentPayload(payload);
       if (!validation.valid) {
-        await this.publishDlq(payload, validation.errors.join('; '));
-        throw new Error('Invalid intent payload');
+        await this.publishDlq(payload, validation.errors.join("; "));
+        throw new Error("Invalid intent payload");
       }
 
       await this.nats.publishEnvelope(subject, payload, {
         type: TITAN_SUBJECTS.CMD.EXECUTION.PREFIX,
         version: 1,
-        producer: 'titan-brain',
+        producer: "titan-brain",
         correlation_id: signal.signalId,
         idempotency_key: signal.signalId, // Using signal_id as idempotency key
       });
@@ -132,19 +152,22 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
       );
 
       // Emit forwarded event
-      this.emit('signal:forwarded', {
+      this.emit("signal:forwarded", {
         signalId: signal.signalId,
         symbol: signal.symbol,
         authorizedSize,
         latency,
       });
     } catch (error) {
-      console.error(`❌ Failed to forward signal ${signal.signalId} to NATS:`, error);
+      console.error(
+        `❌ Failed to forward signal ${signal.signalId} to NATS:`,
+        error,
+      );
 
-      this.emit('signal:forward_failed', {
+      this.emit("signal:forward_failed", {
         signalId: signal.signalId,
         symbol: signal.symbol,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       });
 
       throw error;
@@ -157,7 +180,9 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
    */
   async publishRiskPolicy(policy: any): Promise<void> {
     if (!this.connected) {
-      console.warn('⚠️ Execution Engine not connected, cannot push risk policy');
+      console.warn(
+        "⚠️ Execution Engine not connected, cannot push risk policy",
+      );
       // We might still want to proceed if NATS is temporarily down, but better to warn
     }
 
@@ -169,18 +194,18 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
         {
           timestamp: Date.now(),
           policy,
-          source: 'brain',
+          source: "brain",
         },
         {
           type: TITAN_SUBJECTS.CMD.RISK.POLICY,
           version: 1,
-          producer: 'titan-brain',
+          producer: "titan-brain",
           idempotency_key: `risk-update-${Date.now()}`,
         },
       );
-      console.log('✅ Risk policy update published to NATS');
+      console.log("✅ Risk policy update published to NATS");
     } catch (error) {
-      console.error('❌ Failed to publish risk policy:', error);
+      console.error("❌ Failed to publish risk policy:", error);
       throw error;
     }
   }
@@ -190,7 +215,9 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
    * Called by Circuit Breaker for emergency flatten
    */
   async closeAllPositions(): Promise<void> {
-    console.log('🚨 Requesting emergency position closure from Execution Engine...');
+    console.log(
+      "🚨 Requesting emergency position closure from Execution Engine...",
+    );
 
     try {
       const subject = TITAN_SUBJECTS.CMD.RISK.FLATTEN;
@@ -198,23 +225,46 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
       // The current implementation in nats_engine.rs (flatten_sub) ignores the payload content
       // but requires a valid message. We'll send a structured payload for future compatibility.
       const payload = {
-        command: 'FLATTEN_ALL',
-        source: 'brain',
+        command: "FLATTEN_ALL",
+        source: "brain",
         timestamp: Date.now(),
-        reason: 'BRAIN_CIRCUIT_BREAKER',
+        reason: "BRAIN_CIRCUIT_BREAKER",
       };
 
       await this.nats.publish(subject, payload);
 
       console.log(`✅ Emergency flatten request published to ${subject}`);
 
-      this.emit('positions:flattened', {
+      this.emit("positions:flattened", {
         closedCount: -1, // Unknown async
-        reason: 'BRAIN_CIRCUIT_BREAKER',
+        reason: "BRAIN_CIRCUIT_BREAKER",
         timestamp: Date.now(),
       });
     } catch (error) {
-      console.error('❌ Failed to publish close all positions:', error);
+      console.error("❌ Failed to publish close all positions:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Trigger System Halt
+   * Stops all new orders in Execution Engine
+   */
+  async haltSystem(reason: string): Promise<void> {
+    console.log(`🚨 Triggering SYSTEM HALT: ${reason}`);
+    try {
+      const subject = TITAN_SUBJECTS.CMD.SYS.HALT;
+      const payload = {
+        state: "HARD_HALT", // "OPEN" | "SOFT_HALT" | "HARD_HALT"
+        reason,
+        timestamp: Date.now(),
+        source: "brain",
+      };
+
+      await this.nats.publish(subject, payload);
+      this.emit("system:halted", { reason, timestamp: Date.now() });
+    } catch (error) {
+      console.error("❌ Failed to broadcast system halt:", error);
       throw error;
     }
   }
@@ -225,7 +275,7 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
    */
   async getPositions(): Promise<Position[]> {
     // TODO: Implement NATS request-reply for positions when supported by Rust
-    console.warn('⚠️ getPositions not implemented for NATS yet');
+    console.warn("⚠️ getPositions not implemented for NATS yet");
     return [];
   }
 
@@ -234,11 +284,11 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
    */
   async getEquity(): Promise<number> {
     try {
-      const balances = await this.fetchExchangeBalances('main');
-      const usdt = balances.find((b) => b.currency === 'USDT');
+      const balances = await this.fetchExchangeBalances("main");
+      const usdt = balances.find((b) => b.currency === "USDT");
       return usdt ? usdt.total : 0;
     } catch (error) {
-      console.error('❌ Failed to fetch equity via NATS:', error);
+      console.error("❌ Failed to fetch equity via NATS:", error);
       return 0;
     }
   }
@@ -262,7 +312,7 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
    * Called when Execution Engine confirms an order fill
    */
   onFillConfirmation(callback: (fill: FillConfirmation) => void): void {
-    this.on('fill:confirmed', callback);
+    this.on("fill:confirmed", callback);
   }
 
   private async publishDlq(payload: unknown, reason: string): Promise<void> {
@@ -274,9 +324,12 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
 
     try {
       await this.nats.publish(TITAN_SUBJECTS.DLQ.EXECUTION, dlqPayload);
-      await this.nats.publish(TITAN_SUBJECTS.LEGACY.DLQ_EXECUTION_V0, dlqPayload); // Legacy
+      await this.nats.publish(
+        TITAN_SUBJECTS.LEGACY.DLQ_EXECUTION_V0,
+        dlqPayload,
+      ); // Legacy
     } catch (error) {
-      console.error('❌ Failed to publish to DLQ:', error);
+      console.error("❌ Failed to publish to DLQ:", error);
     }
   }
 
@@ -286,7 +339,7 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
    */
   handleFillConfirmation(fill: FillConfirmation): void {
     console.log(`✅ Fill confirmed: ${fill.signalId} @ ${fill.fillPrice}`);
-    this.emit('fill:confirmed', fill);
+    this.emit("fill:confirmed", fill);
   }
 
   /**
@@ -294,22 +347,22 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
    */
   private mapPhaseIdToSource(phaseId: PhaseId): string {
     switch (phaseId) {
-      case 'phase1':
-        return 'scavenger';
-      case 'phase2':
-        return 'hunter';
-      case 'phase3':
-        return 'sentinel';
-      case 'manual':
-        return 'manual';
+      case "phase1":
+        return "scavenger";
+      case "phase2":
+        return "hunter";
+      case "phase3":
+        return "sentinel";
+      case "manual":
+        return "manual";
       default:
-        return 'unknown';
+        return "unknown";
     }
   }
 
   async fetchExchangeBalances(exchange: string): Promise<ExchangeBalance[]> {
     if (!this.connected) {
-      throw new Error('Execution Engine not connected');
+      throw new Error("Execution Engine not connected");
     }
 
     const subject = TITAN_SUBJECTS.SYS.RPC.GET_BALANCES(exchange.toLowerCase());
@@ -333,10 +386,12 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
    */
   async fetchExchangePositions(exchange: string): Promise<ExecutionPosition[]> {
     if (!this.connected) {
-      throw new Error('Execution Engine not connected');
+      throw new Error("Execution Engine not connected");
     }
 
-    const subject = TITAN_SUBJECTS.SYS.RPC.GET_POSITIONS(exchange.toLowerCase());
+    const subject = TITAN_SUBJECTS.SYS.RPC.GET_POSITIONS(
+      exchange.toLowerCase(),
+    );
     try {
       // Request with 5s timeout
 

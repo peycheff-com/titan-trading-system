@@ -32,6 +32,7 @@ pub const EVT_EXECUTION_TRADE_CLOSED: &str = "titan.evt.analysis.trade_completed
 pub const EVT_EXECUTION_FUNDING: &str = "titan.evt.execution.funding.v1"; // Need to add to TS if not present
 pub const EVT_EXECUTION_BALANCE: &str = "titan.evt.execution.balance";
 pub const EVT_EXECUTION_REJECT: &str = "titan.evt.execution.reject.v1";
+pub const EVT_EXECUTION_TRUTH: &str = "titan.evt.execution.truth.v1";
 
 // -----------------------------------------------------------------------------
 // SUBSCRIPTION PATTERNS (WILDCARDS)

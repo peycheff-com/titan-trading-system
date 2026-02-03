@@ -6,8 +6,8 @@
  * 2. RiskGuardian PowerLaw metrics integration and gating rules
  */
 
-import { RiskGuardian } from "../../src/engine/RiskGuardian";
-import { AllocationEngine } from "../../src/engine/AllocationEngine";
+import { RiskGuardian } from "../../src/features/Risk/RiskGuardian";
+import { AllocationEngine } from "../../src/features/Allocation/AllocationEngine";
 import { PowerLawRepository } from "../../src/db/repositories/PowerLawRepository";
 import { DatabaseManager } from "../../src/db/DatabaseManager";
 import {
@@ -34,7 +34,7 @@ const mockDatabaseManager = {
 } as unknown as DatabaseManager;
 
 // Mock TailRiskCalculator
-jest.mock("../../src/engine/TailRiskCalculator", () => {
+jest.mock("../../src/features/Risk/TailRiskCalculator", () => {
     return {
         TailRiskCalculator: jest.fn().mockImplementation(() => ({
             // We will override this implementation in individual tests if needed

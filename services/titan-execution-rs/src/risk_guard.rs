@@ -36,6 +36,10 @@ pub enum RiskRejectionReason {
     InvalidSize,
 
     PolicyMissing,
+    PolicyHashMismatch {
+        expected: String,
+        actual: String,
+    },
     MarketDataStale(String),
 
     // Execution Constraints Violations (PowerLaw)
@@ -97,6 +101,11 @@ impl std::fmt::Display for RiskRejectionReason {
 
             RiskRejectionReason::InvalidSize => write!(f, "Invalid size (<= 0)"),
             RiskRejectionReason::PolicyMissing => write!(f, "Risk Policy not loaded"),
+            RiskRejectionReason::PolicyHashMismatch { expected, actual } => write!(
+                f,
+                "Policy Hash Mismatch: Expected {}, Got {}",
+                expected, actual
+            ),
             RiskRejectionReason::ConstraintMaxOrderNotionalExceeded {
                 symbol,
                 order_notional,
@@ -275,6 +284,23 @@ impl RiskGuard {
                     return Err(RiskRejectionReason::PolicyMissing); // Use existing or add new?
                                                                     // Ideally add RiskRejectionReason::SystemEmergency
                 }
+            }
+        }
+
+        // 0.5. Check Policy Hash (Final Veto)
+        if let Some(ref intent_hash) = intent.policy_hash {
+            let current_hash = policy.compute_hash();
+            if *intent_hash != current_hash {
+                warn!(
+                    signal_id = %intent.signal_id,
+                    expected = %current_hash,
+                    actual = %intent_hash,
+                    "Risk Reject: Policy Hash Mismatch"
+                );
+                return Err(RiskRejectionReason::PolicyHashMismatch {
+                    expected: current_hash,
+                    actual: intent_hash.clone(),
+                });
             }
         }
 
@@ -465,9 +491,15 @@ impl RiskGuard {
         // 4. Daily Loss Limit
 
         // 4. Daily Loss Limit
-        // Sum PnL from trade history for today.
-        // TODO: Filter history by 'today'. For now, use total history buffer (assuming it's recent).
-        let current_pnl: Decimal = state.get_trade_history().iter().map(|t| t.pnl).sum();
+        // Sum PnL from trade history for today (UTC).
+        let today = chrono::Utc::now().date_naive();
+        let current_pnl: Decimal = state
+            .get_trade_history()
+            .iter()
+            .filter(|t| t.closed_at.date_naive() == today)
+            .map(|t| t.pnl)
+            .sum();
+
         if current_pnl <= policy.max_daily_loss {
             // Allow CLOSE intents to reduce risk?
             // Simple guard: Block ALL new risk.
