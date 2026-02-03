@@ -54,7 +54,7 @@ jobs:
             context: services/titan-execution-rs
             file: services/titan-execution-rs/Dockerfile
             image: titan-execution-rs
-          - name: apps/titan-console
+          - name: titan-console
             context: .
             file: apps/titan-console/Dockerfile
             image: titan-console
