@@ -73,8 +73,8 @@ chmod +x "$NEW_RELEASE/scripts/"*.sh
 
 # 4. Verify Provenance
 log "Verifying artifact provenance..."
-cp "$TITAN_ROOT/scripts/security/provenance.ts" "$NEW_RELEASE/scripts/provenance.ts"
-cp "$TITAN_ROOT/scripts/security/titan_release.pub" "$NEW_RELEASE/scripts/titan_release.pub"
+    # Provenance scripts are now shipped in the deployment package.
+    # We do NOT overwrite them from TITAN_ROOT (which may be stale).
 
 # Ensure npx/node is available. If not, this fails.
 # We verification requires the signature file.

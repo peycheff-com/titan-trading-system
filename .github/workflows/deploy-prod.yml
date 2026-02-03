@@ -215,6 +215,10 @@ jobs:
           cp scripts/ci/*.py deploy_package/scripts/
           chmod +x deploy_package/scripts/*.sh
 
+          # Security Scripts (for verification)
+          cp scripts/security/provenance.ts deploy_package/scripts/
+          cp scripts/security/titan_release.pub deploy_package/scripts/
+
           # Compose
           cp docker-compose.prod.yml deploy_package/compose/
 
