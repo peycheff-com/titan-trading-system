@@ -1,6 +1,5 @@
 import { ManualTradeService } from "../../src/engine/ManualTradeService";
 import { ExecutionEngineClient } from "../../src/types/execution";
-import { IntentSignal } from "../../src/types/risk";
 import { ManualTradeRequestBody } from "../../src/schemas/apiSchemas";
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 
@@ -65,11 +64,16 @@ describe("ManualTradeService", () => {
 
         it("should handle execution errors gracefully", async () => {
             const error = new Error("Execution failed");
+            const consoleSpy = jest.spyOn(console, "error").mockImplementation(
+                () => {},
+            );
             mockExecutionClient.forwardSignal.mockRejectedValue(error);
 
             await expect(manualTradeService.executeManualTrade(validRequest))
                 .rejects
                 .toThrow("Execution failed");
+
+            consoleSpy.mockRestore();
         });
 
         // Test default leverage and timestamp logic if request omits them
@@ -78,7 +82,6 @@ describe("ManualTradeService", () => {
                 symbol: "ETHUSDT",
                 side: "SELL",
                 size: 500,
-                bypassRisk: true,
             } as ManualTradeRequestBody;
 
             await manualTradeService.executeManualTrade(minimalRequest);
