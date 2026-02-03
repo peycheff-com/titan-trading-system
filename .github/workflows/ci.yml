@@ -209,6 +209,10 @@ jobs:
         working-directory: ${{ matrix.service }}
         run: npm ci
 
+      - name: Build shared packages (dependency)
+        if: startsWith(matrix.service, 'services/') || startsWith(matrix.service, 'apps/')
+        run: npm run build --workspace=packages/shared
+
       - name: Lint
         working-directory: ${{ matrix.service }}
         run: npm run lint --if-present
