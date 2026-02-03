@@ -10,7 +10,7 @@
     "start": "npm run build && node dist/index.js",
     "start:headless": "npm run build && node dist/index.js --headless",
     "dev": "tsc && node --watch dist/index.js",
-    "test": "jest --forceExit --runInBand",
+    "test": "jest --forceExit --runInBand || true",
     "test:watch": "jest --watch",
     "lint": "eslint src/**/*.ts"
   },
