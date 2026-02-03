@@ -43,8 +43,6 @@ function checkGitStatus(): boolean {
 
 function checkTests(): boolean {
     // In a real scenario, we might parse a JUnit report or coverage summary.
-    // For now, checks if 'npm test' passes? Too slow.
-    // Check for existence of a recent test report or similar?
     // We'll trust the CI pipeline context, but if running locally:
     log("Assuming CI has verified tests (CI Context check).", true);
     return true;

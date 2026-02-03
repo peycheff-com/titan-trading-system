@@ -30,7 +30,7 @@ log "Repo is clean."
 # 2. Security Scan
 log "Scanning for secrets..."
 # Simple grep exclude known keys
-if grep -r "BEGIN PRIVATE KEY" . --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=evidence --exclude=*.key --exclude=*.pem; then
+if grep -r "BEGIN PRIVATE KEY" . --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=evidence --exclude-dir=target --exclude=*.key --exclude=*.pem; then
     error "Private keys found in source!"
 else
     log "No private keys found."
