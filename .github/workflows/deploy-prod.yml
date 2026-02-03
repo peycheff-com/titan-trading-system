@@ -51,7 +51,7 @@ jobs:
             file: services/titan-brain/Dockerfile
             image: titan-brain
           - name: titan-execution-rs
-            context: services/titan-execution-rs
+            context: .
             file: services/titan-execution-rs/Dockerfile
             image: titan-execution-rs
           - name: titan-console

@@ -10,8 +10,11 @@ RUN apt-get update && apt-get install -y \
     protobuf-compiler \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy manifests
-COPY Cargo.toml Cargo.lock ./
+# Copy the shared packages directory needed by build.rs
+COPY packages/shared /usr/src/packages/shared
+
+# Copy manifests (from repo root context, so paths are relative to root)
+COPY services/titan-execution-rs/Cargo.toml services/titan-execution-rs/Cargo.lock ./
 
 # Create dummy main to cache dependencies
 RUN mkdir src && \
@@ -25,8 +28,8 @@ RUN cargo build --release --bin titan-execution-rs
 # Remove dummy source
 RUN rm -rf src
 
-# Copy actual source code
-COPY . .
+# Copy actual source code (from repo root context)
+COPY services/titan-execution-rs/ .
 
 # Touch main files to force rebuild of the app itself
 RUN touch src/main.rs src/lib.rs
