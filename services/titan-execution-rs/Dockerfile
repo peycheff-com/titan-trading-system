@@ -11,7 +11,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the shared packages directory needed by build.rs
-COPY packages/shared /usr/src/packages/shared
+# build.rs uses CARGO_MANIFEST_DIR (/usr/src/app) + ../../packages/shared = /usr/packages/shared
+COPY packages/shared /usr/packages/shared
 
 # Copy manifests (from repo root context, so paths are relative to root)
 COPY services/titan-execution-rs/Cargo.toml services/titan-execution-rs/Cargo.lock ./
