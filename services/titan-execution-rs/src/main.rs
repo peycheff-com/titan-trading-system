@@ -411,7 +411,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             let timestamp = chrono::Utc::now().timestamp_millis();
             let positions = state_for_truth.read().get_all_positions();
             let policy_hash = risk_guard_for_truth.get_current_policy_hash();
-            
+
             // Construct Snapshot
             let snapshot = serde_json::json!({
                 "timestamp": timestamp,
@@ -424,9 +424,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             });
 
             if let Ok(payload) = serde_json::to_vec(&snapshot) {
-                 if let Err(e) = nats_for_truth.publish(subjects::EVT_EXECUTION_TRUTH, payload.into()).await {
+                if let Err(e) = nats_for_truth
+                    .publish(subjects::EVT_EXECUTION_TRUTH, payload.into())
+                    .await
+                {
                     tracing::error!("Failed to publish truth snapshot: {}", e);
-                 }
+                }
             }
         }
     });
