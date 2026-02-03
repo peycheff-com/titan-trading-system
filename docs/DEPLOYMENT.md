@@ -25,6 +25,8 @@ The pipeline is defined in `.github/workflows/deploy-prod.yml`.
     *   Bundles `scripts/`, `docker-compose.prod.yml`, and `digests.json`.
 3.  **Deploy (Droplet)**:
     *   SCP the bundle to a temporary directory on the droplet.
+
+    
     *   Executes `deploy.sh`.
 
 ## Droplet Layout
