@@ -205,10 +205,6 @@ jobs:
       - name: Install dependencies (Root)
         run: npm ci
 
-      - name: Install dependencies (${{ matrix.service }})
-        working-directory: ${{ matrix.service }}
-        run: npm ci
-
       - name: Build shared packages (dependency)
         if: startsWith(matrix.service, 'services/') || startsWith(matrix.service, 'apps/')
         run: npm run build --workspace=packages/shared
