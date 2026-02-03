@@ -23,7 +23,7 @@ if (!process.env.DEBUG) {
     debug: jest.fn(),
     info: jest.fn(),
     warn: jest.fn(),
-    // Keep error for debugging test failures
+    error: jest.fn(), // Mock error to prevent test failures from expected error logging
   };
 }
 
