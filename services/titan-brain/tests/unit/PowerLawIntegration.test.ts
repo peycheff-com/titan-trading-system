@@ -14,8 +14,6 @@ import {
     AllocationEngineConfig,
     EquityTier,
     IntentSignal,
-    PhaseId,
-    Position,
     PowerLawMetrics,
     RiskGuardianConfig,
 } from "../../src/types/index";
@@ -388,11 +386,10 @@ describe("PowerLaw Integration", () => {
             // Implementation uses linear interpolation throttle: 0.6 * 2.2 - 0.8 = 0.52
             // 15000 * 0.52 = 7800
             expect(decision.adjustedSize).toBeCloseTo(7800, -2);
-            expect(decision.reason).toContain("Size reduced due to alpha"); // Matches actual output
             // "Signal approved with size adjustment: Risk/Latency/Alpha" is what code usually says if adjusted.
             // Check code: 'Signal approved with size adjustment: Risk/Latency/Alpha'
-            expect(decision.reason).toMatch(
-                /Signal approved with size adjustment|Size reduced due to alpha/,
+            expect(decision.reason).toBe(
+                "Signal approved with size adjustment: Risk/Latency/Alpha",
             );
         });
     });
