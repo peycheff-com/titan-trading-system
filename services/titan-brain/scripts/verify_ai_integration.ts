@@ -1,7 +1,14 @@
-import { MockAdapter } from "../src/engine/MockAdapter.js";
-import { ActiveInferenceEngine } from "../src/engine/ActiveInferenceEngine.js";
+/**
+ * AI Integration Verification Script
+ *
+ * This script verifies the Active Inference Engine integration.
+ * It simulates market data and verifies the engine processes it correctly.
+ */
+import {
+    ActiveInferenceEngine,
+    MarketState,
+} from "../src/engine/ActiveInferenceEngine.js";
 import { loadConfigFromEnvironment } from "../src/config/ConfigLoader.js";
-import { MarketSignal, SignalType } from "../src/types/index.js";
 
 async function main() {
     console.log("Starting Active Inference Integration Verification...");
@@ -24,41 +31,26 @@ async function main() {
     const engine = new ActiveInferenceEngine(config.brain.activeInference);
     console.log("ActiveInferenceEngine initialized.");
 
-    // 3. Setup Mock Adapter
-    const adapter = new MockAdapter();
-    adapter.registerEngine(engine);
-    console.log("MockAdapter registered.");
-
-    // 4. Simulate Market Data
+    // 3. Simulate Market Data
     console.log("Simulating market data...");
     const basePrice = 50000;
 
     for (let i = 0; i < 60; i++) {
         const price = basePrice + Math.sin(i * 0.1) * 100 +
             (Math.random() - 0.5) * 50;
-        const signal: MarketSignal = {
-            id: `sig_${i}`,
-            type: SignalType.PRICE_UPDATE,
-            symbol: "BTCUSDT",
+        const state: MarketState = {
+            price,
+            volume: 100 + Math.random() * 50,
             timestamp: Date.now() + i * 1000,
-            data: {
-                price,
-                volume: 100 + Math.random() * 50,
-                orderBook: {
-                    bids: [[price - 1, 1]],
-                    asks: [[price + 1, 1]],
-                },
-            },
-            source: "mock",
-            confidence: 1.0,
         };
 
-        await adapter.emitSignal(signal);
+        // Process market state through engine
+        engine.processUpdate(state);
         if (i % 10 === 0) process.stdout.write(".");
     }
     console.log("\nMarket data simulation complete.");
 
-    // 5. Verify Metrics
+    // 4. Verify Metrics
     const metrics = engine.getState();
     console.log("Engine Metrics:", JSON.stringify(metrics, null, 2));
 
@@ -68,9 +60,7 @@ async function main() {
         );
     }
 
-    // 6. Verify Mock Adapter Output
-    // In a real scenario we'd check if the adapter received allocations back
-    // For now we check if engine state is valid
+    // 5. Verify Engine State
     const state = engine.getState();
     if (!state) {
         throw new Error("Engine state is null");

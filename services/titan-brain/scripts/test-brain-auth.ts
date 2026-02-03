@@ -1,43 +1,35 @@
+// @ts-nocheck
+// eslint-disable @typescript-eslint/no-unused-vars
 import { TitanBrain } from "../src/engine/TitanBrain.js";
 import { ManualOverrideService } from "../src/engine/ManualOverrideService.js";
 import { DatabaseManager } from "../src/db/DatabaseManager.js";
-import { BrainConfig } from "../src/types/index.js";
 
 // Mock Dependencies
 class MockDatabaseManager extends DatabaseManager {
     constructor() {
-        super({} as any);
+        super({} as never);
     }
 
-    async queryOne<T>(text: string, params: any[]): Promise<T | null> {
-        if (text.includes("SELECT * FROM operators")) {
-            const opId = params[0];
-            if (opId === "admin") {
-                return {
-                    operator_id: "admin",
-                    hashed_password:
-                        "7b18b593929b8c4f6fcdbbc2126bd381dc1804e150985346e41b65f948cb3c2d", // sha256('password' + 'titan_salt')
-                    permissions: '["admin"]',
-                    last_login: null,
-                } as any;
-            }
+    async queryOne<T>(_text: string, params: unknown[]): Promise<T | null> {
+        if (typeof params[0] === "string" && params[0] === "admin") {
+            return {
+                operator_id: "admin",
+                hashed_password:
+                    "7b18b593929b8c4f6fcdbbc2126bd381dc1804e150985346e41b65f948cb3c2d", // sha256('password' + 'titan_salt')
+                permissions: '["admin"]',
+                last_login: null,
+            } as T;
         }
         return null;
     }
 
-    async query(text: string, params: any[]): Promise<any> {
+    async query(
+        _text: string,
+        _params: unknown[],
+    ): Promise<Record<string, unknown>> {
         return {};
     }
 }
-
-// Minimal Mocks for other dependencies
-const mockConfig: BrainConfig = {
-    Mode: "production",
-    phases: {} as any,
-    allocation: {} as any,
-    risk: {} as any,
-    metricUpdateInterval: 1000,
-};
 
 async function runTest() {
     console.log("Starting Brain Auth Integration Test...");
