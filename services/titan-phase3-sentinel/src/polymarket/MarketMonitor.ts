@@ -75,7 +75,7 @@ export class MarketMonitor {
         source: 'sentinel',
         symbol: 'POLYMARKET', // Sentinel logic should resolve this or pass metadata
         direction: 'LONG',
-        type: 'BUY_SETUP' as any, // Temporary cast until shared types updated
+        type: 'BUY_SETUP',
         entry_zone: { min: signal.price, max: signal.price * 1.05 },
         stop_loss: 0,
         take_profits: [],

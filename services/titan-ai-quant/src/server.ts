@@ -1,6 +1,5 @@
 import http from 'http';
 import { NightlyOptimize } from './cron/NightlyOptimize.js';
-import { getErrorLogger } from './utils/ErrorHandler.js';
 import { NatsAdapter } from './messaging/NatsAdapter.js';
 
 const logger = console;

@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 import { TitanAnalyst } from './TitanAnalyst';
-import { Config, OHLCV, RegimeSnapshot, Trade } from '../types';
+import { OHLCV, RegimeSnapshot, Trade } from '../types';
 import { PredictiveAnalytics } from './PredictiveAnalytics';
 import { RealTimeOptimizer } from './RealTimeOptimizer';
 
@@ -45,11 +45,11 @@ export class AIIntegration extends EventEmitter {
     this.predictiveAnalytics.processMarketData(symbol, data);
   }
 
-  addRegimeSnapshot(snapshot: RegimeSnapshot) {
+  addRegimeSnapshot(_snapshot: RegimeSnapshot) {
     this.emit('regimeSnapshotAdded');
   }
 
-  addTrade(trade: Trade) {
+  addTrade(_trade: Trade) {
     this.emit('tradeAdded');
   }
 
@@ -61,7 +61,11 @@ export class AIIntegration extends EventEmitter {
     };
   }
 
-  private selectOptimalStrategies(symbol: string, regime: any, predictions: any[]) {
+  private selectOptimalStrategies(
+    _symbol: string,
+    _regime: unknown,
+    predictions: Array<{ strategy: string; confidence: number }>,
+  ) {
     // Stub implementation for property test
     const selectedStrategies = predictions.map((p) => ({
       strategy: p.strategy,
@@ -70,7 +74,10 @@ export class AIIntegration extends EventEmitter {
     }));
     return {
       selectedStrategies,
-      totalAllocation: selectedStrategies.reduce((sum: number, s: any) => sum + s.allocation, 0),
+      totalAllocation: selectedStrategies.reduce(
+        (sum: number, s: { allocation: number }) => sum + s.allocation,
+        0,
+      ),
     };
   }
 
