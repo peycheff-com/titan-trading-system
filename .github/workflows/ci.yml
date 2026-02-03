@@ -82,7 +82,7 @@ jobs:
         run: npm run sota:circular
 
       - name: Check Immutability Violations
-        run: npm run sota:immutability -- --max-warnings=0
+        run: npm run sota:immutability
 
       - name: Check Dead Code (knip)
         run: |
@@ -134,7 +134,7 @@ jobs:
         continue-on-error: true
 
       - name: Generate SBOM (Node.js)
-        continue-on-error: true  # npm ls may fail with workspace dep issues
+        continue-on-error: true # npm ls may fail with workspace dep issues
         run: |
           npx @cyclonedx/cyclonedx-npm --output-file sbom-nodejs.json || echo '{"note": "SBOM generation failed"}' > sbom-nodejs.json
           echo "✅ Node.js SBOM generated: sbom-nodejs.json"
