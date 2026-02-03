@@ -1,5 +1,4 @@
-// @ts-nocheck
-// eslint-disable @typescript-eslint/no-unused-vars
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 import { TitanBrain } from "../src/engine/TitanBrain.js";
 import { ManualOverrideService } from "../src/engine/ManualOverrideService.js";
 import { DatabaseManager } from "../src/db/DatabaseManager.js";

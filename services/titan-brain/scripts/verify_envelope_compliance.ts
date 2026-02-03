@@ -1,5 +1,4 @@
-// @ts-nocheck
-// eslint-disable @typescript-eslint/no-unused-vars
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
     AIOptimizationRequest,
     getNatsPublisher,
@@ -16,9 +15,9 @@ async function verify() {
     console.log("Connected to NATS...");
 
     // Subscribe to verify
-    const sub = nats.subscribe(
+    const _sub = nats.subscribe(
         TitanSubject.AI_OPTIMIZATION_REQUESTS,
-        (data: any, subject) => {
+        (data: unknown, subject) => {
             console.log(
                 `Received message on ${subject}:`,
                 JSON.stringify(data, null, 2),
