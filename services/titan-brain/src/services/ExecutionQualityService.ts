@@ -7,8 +7,11 @@ import {
     TITAN_QUALITY_TOPIC,
 } from "@titan/shared/dist/schemas/ExecutionQuality.js";
 import { type NatsClient } from "@titan/shared/dist/messaging/NatsClient.js";
-import { Logger } from "@titan/shared/dist/logger/Logger.js";
-import { metrics } from "@titan/shared/dist/observability/Metrics.js";
+import {
+    getLogger,
+    getMetrics,
+    type StructuredLogger,
+} from "../monitoring/index.js";
 
 interface ExecutionSample {
     readonly timestamp: number;
@@ -19,14 +22,16 @@ interface ExecutionSample {
 
 export class ExecutionQualityService {
     private readonly nc: NatsClient;
-    private readonly logger: Logger;
+    private readonly logger: StructuredLogger;
     private readonly windowMs: number = 60000; // 1 minute window
     // eslint-disable-next-line functional/prefer-readonly-type
     private samples: ExecutionSample[] = [];
+    // eslint-disable-next-line functional/no-let
+    private intervalId: NodeJS.Timeout | null = null;
 
     constructor(nc: NatsClient) {
         this.nc = nc;
-        this.logger = Logger.getInstance("ExecutionQuality");
+        this.logger = getLogger({ component: "ExecutionQuality" });
     }
 
     public async start(): Promise<void> {
@@ -40,15 +45,21 @@ export class ExecutionQualityService {
                     const report = ExecutionReportSchema.parse(data);
                     this.processExecution(report);
                 } catch (err) {
-                    this.logger.error("Failed to parse execution report", {
-                        error: err,
-                    });
+                    this.logger.error("Failed to parse execution report", err);
                 }
             },
         );
 
         // Determine quality every 5 seconds
-        setInterval(() => this.publishQuality(), 5000);
+        this.intervalId = setInterval(() => this.publishQuality(), 5000);
+    }
+
+    public async stop(): Promise<void> {
+        this.logger.info("Stopping Execution Quality Service");
+        if (this.intervalId) {
+            clearInterval(this.intervalId);
+            this.intervalId = null;
+        }
     }
 
     private processExecution(report: ExecutionReport): void {
@@ -60,10 +71,8 @@ export class ExecutionQualityService {
         // Let's assume for now we just track latency and fill rate if target is missing.
 
         // Calculate Latency (ExecTime - OrderTime)
-        // We use report.transaction_time (or similar) vs report.order_id timestamp?
-        // Let's assume local arrival time vs report time for now to keep it simple,
-        // OR ideally we use a timestamp from the order report.
-        const latency = Date.now() - (report.transaction_time || Date.now());
+        // usage of timestamp from report
+        const latency = Date.now() - (report.timestamp || Date.now());
 
         // Fill Rate: cumulative_quantity / order_quantity (if order_quantity known)
         // Required fields might be missing in partial reports.
@@ -79,10 +88,12 @@ export class ExecutionQualityService {
 
         // eslint-disable-next-line functional/immutable-data
         this.samples.push(sample);
-        this.logger.debug("Recorded execution sample", { sample });
+        this.logger.debug("Recorded execution sample", {
+            sample: JSON.stringify(sample),
+        });
 
-        metrics.recordHistogram("titan.execution.latency", latency, {
-            venue: report.venue || "unknown",
+        getMetrics().observeHistogram("titan.execution.latency", latency, {
+            venue: "unknown",
         });
     }
 
@@ -130,7 +141,7 @@ export class ExecutionQualityService {
         this.logger.info("Publishing Execution Quality", {
             quality: qualityEvent,
         });
-        metrics.setGauge("titan.quality.score", score);
+        getMetrics().setGauge("titan.quality.score", score);
 
         await this.nc.publish(TITAN_QUALITY_TOPIC, qualityEvent);
     }

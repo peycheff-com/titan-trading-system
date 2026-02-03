@@ -88,7 +88,7 @@ const riskConfig: RiskGuardianConfig = {
         threshold: 0.2,
     },
     fractal: {
-        phase1: { maxLeverage: 20, maxDrawdown: 0.1, maxAllocation: 0.2 },
+        phase1: { maxLeverage: 20, maxDrawdown: 0.1, maxAllocation: 20.0 },
         phase2: { maxLeverage: 3, maxDrawdown: 0.15, maxAllocation: 0.3 },
         phase3: { maxLeverage: 2, maxDrawdown: 0.2, maxAllocation: 0.5 },
         manual: { maxLeverage: 10, maxDrawdown: 0.25, maxAllocation: 1.0 },

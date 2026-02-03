@@ -698,7 +698,9 @@ async function main(): Promise<void> {
       const { ExecutionQualityService } = await import(
         "./services/ExecutionQualityService.js"
       );
-      const executionQualityService = new ExecutionQualityService();
+      const executionQualityService = new ExecutionQualityService(
+        getNatsClient(),
+      );
       await executionQualityService.start();
       logger.info("   ✅ ExecutionQualityService initialized");
 

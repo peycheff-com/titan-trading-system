@@ -72,6 +72,11 @@ describe("operator_actions_enforcement", () => {
 
     const mockAllocationEngine = {
         getWeights: jest.fn().mockReturnValue({ w1: 0, w2: 0, w3: 0 }),
+        getRegimeAdjustedWeights: jest.fn().mockReturnValue({
+            p1: 0.3,
+            p2: 0.3,
+            p3: 0.4,
+        }),
     } as unknown as AllocationEngine;
 
     const mockPerformanceTracker = {
