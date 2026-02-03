@@ -104,7 +104,7 @@ echo "TITAN_MODE=DISARMED" >> "$NEW_RELEASE/.env.deploy"
 # 6. Pull Images (Deterministic)
 log "Pulling images pinned by digest..."
 cd "$NEW_RELEASE"
-docker compose -f docker-compose.prod.yml -f compose.override.digest.yml pull
+docker compose --env-file .env.prod -f docker-compose.prod.yml -f compose.override.digest.yml pull
 if [ $? -ne 0 ]; then
     error "Docker pull failed!"
     exit 1
@@ -113,7 +113,7 @@ fi
 # 7. Database Migrations (Schema Safety)
 log "Running database migrations..."
 # We use the new image to run migrations against the existing DB
-if docker compose -f docker-compose.prod.yml -f compose.override.digest.yml run --rm --no-deps titan-brain npm run migrate; then
+if docker compose --env-file .env.prod -f docker-compose.prod.yml -f compose.override.digest.yml run --rm --no-deps titan-brain npm run migrate; then
     log "Migrations successful."
 else
     error "Migrations failed! Aborting."
@@ -128,7 +128,7 @@ ln -sfn "$NEW_RELEASE" "$TITAN_ROOT/current"
 
 # Start New Release (Recreates containers with new config only if changed)
 log "Applying new configuration (Rolling Update)..."
-if docker compose -f docker-compose.prod.yml -f compose.override.digest.yml up -d --remove-orphans; then
+if docker compose --env-file .env.prod -f docker-compose.prod.yml -f compose.override.digest.yml up -d --remove-orphans; then
     log "Containers updated."
 else
     error "Failed to update containers! Initiating Rollback..."
