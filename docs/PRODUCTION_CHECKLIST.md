@@ -13,7 +13,7 @@
 - [ ] SSL Certificates (LetsEncrypt) are valid.
 
 ## Application Health
-- [ ] Console UI loads at `https://titan.deployment.com`
+- [ ] Console UI loads at `https://titan.peycheff.com`
 - [ ] Login works with `TITAN_MASTER_PASSWORD`.
 - [ ] Dashboard shows 'Connected' state.
 - [ ] 'Live Ops' stream is active (heartbeats visible).
