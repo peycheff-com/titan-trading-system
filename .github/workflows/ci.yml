@@ -8,17 +8,19 @@ on:
 
 jobs:
   # ===========================================================================
-  # Configuration Validation
+  # Preflight: Fail Fast (Config, Contracts, Hygiene)
   # ===========================================================================
-  config-validation:
-    name: config-validation
+  preflight:
+    name: preflight
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required for git diff in Turbo
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
@@ -33,7 +35,6 @@ jobs:
       - name: Validate environment variables (Dry Run)
         run: npx ts-node scripts/ops/validate_env.ts
         env:
-          # Mock secrets for CI validation pass (we only check existence/format)
           HMAC_SECRET: 'ci_secret'
           TITAN_MASTER_PASSWORD: 'ci_password'
           DATABASE_URL: 'postgres://user:pass@localhost:5432/db'
@@ -47,159 +48,40 @@ jobs:
           NATS_QUANT_PASSWORD: 'ci_quant_pass'
           NATS_CONSOLE_PASSWORD: 'ci_console_pass'
 
-  # ===========================================================================
-  # SOTA Standards Check (Architecture & Hygiene)
-  # ===========================================================================
-  sota-checks:
-    name: sota-checks
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Check Contract Drift
+        # Only run if relevant files changed, or just run it (it's fast enough if no regen)
+        run: ./scripts/ci/check_contracts.sh
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
-      - name: Install dependencies (Root)
-        run: npm ci
-
-      - name: Install Python dependencies
-        run: pip install pyyaml
-
-      - name: Check Zombie Dependencies
-        run: npm run sota:zombie
-
-      - name: Check Circular Dependencies
-        run: npm run sota:circular
-
-      - name: Check Immutability Violations
-        run: npm run sota:immutability
-
+      - name: SOTA Hygiene Checks
+        run: |
+            npm run sota:zombie
+            npm run sota:circular
+            npm run sota:immutability
+            
       - name: Check Dead Code (knip)
         run: |
           UNUSED=$(npx knip --no-progress 2>&1 | grep -c "^Unused files" || true)
           if npx knip --no-progress 2>&1 | grep -q "^Unused files"; then
-            echo "❌ Dead code detected! Run 'npx knip' locally to see details."
+            echo "❌ Dead code detected!"
             npx knip --no-progress 2>&1 | head -30
             exit 1
           fi
-          echo "✅ No unused files detected"
 
   # ===========================================================================
-  # Security Vulnerability Scanning (P0-003)
-  # ===========================================================================
-  security-scan:
-    name: security-scan
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
-
-      - name: Setup Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-
-      - name: Install cargo-audit
-        run: cargo install cargo-audit
-
-      - name: Install dependencies (Root)
-        run: npm ci
-
-      - name: NPM Audit (High/Critical only)
-        run: npm audit --audit-level=high
-        continue-on-error: true
-
-      - name: Cargo Audit
-        working-directory: services/titan-execution-rs
-        run: cargo audit
-        continue-on-error: true
-
-      - name: Generate SBOM (Node.js)
-        continue-on-error: true # npm ls may fail with workspace dep issues
-        run: |
-          npx @cyclonedx/cyclonedx-npm --output-file sbom-nodejs.json || echo '{"note": "SBOM generation failed"}' > sbom-nodejs.json
-          echo "✅ Node.js SBOM generated: sbom-nodejs.json"
-
-      - name: Generate SBOM (Rust)
-        working-directory: services/titan-execution-rs
-        run: |
-          cargo install cargo-sbom || true
-          cargo sbom > sbom-rust.json 2>/dev/null || echo '{"note": "cargo-sbom not available"}' > sbom-rust.json
-          echo "✅ Rust SBOM generated: sbom-rust.json"
-
-      - name: Upload SBOMs
-        uses: actions/upload-artifact@v4
-        with:
-          name: sbom-artifacts
-          path: |
-            sbom-nodejs.json
-            services/titan-execution-rs/sbom-rust.json
-
-  # ===========================================================================
-  # Contract Drift Check (Shipping Gate)
-  # ===========================================================================
-  contract-check:
-    name: contract-check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
-
-      - name: Check Contract Drift
-        run: ./scripts/ci/check_contracts.sh
-
-  # ===========================================================================
-  # Node.js Services Matrix (Lint, Test, Build)
+  # Node.js: Selective Build & Test (Turbo)
   # ===========================================================================
   node-services:
-    name: ${{ matrix.service }}
+    name: node-services
+    needs: preflight
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        service:
-          - services/titan-brain
-          - services/titan-phase1-scavenger
-          - services/titan-phase2-hunter
-          - services/titan-phase3-sentinel
-          - services/titan-ai-quant
-          - services/titan-console-api
-          - services/titan-opsd
-          - packages/shared
-          - apps/titan-console
-
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
@@ -208,49 +90,35 @@ jobs:
       - name: Install dependencies (Root)
         run: npm ci
 
-      - name: Build shared packages (dependency)
-        if: startsWith(matrix.service, 'services/') || startsWith(matrix.service, 'apps/')
-        run: npm run build --workspace=packages/shared
-
-      - name: Lint
-        working-directory: ${{ matrix.service }}
-        run: npm run lint --if-present
-
-      - name: Start NATS
+      - name: Start NATS (for integration tests)
         run: |
           docker run -d --name nats -p 4222:4222 -p 8222:8222 nats:2.10.22-alpine -js -m 8222
-          echo "Waiting for NATS..."
+          # Wait loop
           for i in {1..30}; do
-            if wget --no-verbose --spider --tries=1 http://localhost:8222/varz; then
-              echo "NATS is up"
-              exit 0
-            fi
+            if wget --no-verbose --spider --tries=1 http://localhost:8222/varz; then exit 0; fi
             sleep 1
           done
-          echo "NATS failed to start"
-          docker logs nats
           exit 1
 
-      - name: Test
-        working-directory: ${{ matrix.service }}
+      - name: Turbo Build & Test
         env:
           NATS_URL: nats://localhost:4222
-        # Run test:unit if available, otherwise test, or skip if neither exists
         run: |
-          if npm run | grep -q "test:unit"; then
-            npm run test:unit
-          elif npm run | grep -q "test"; then
-            npm run test
+          # Determine filter argument
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            FILTER="--filter=...[origin/main...HEAD]"
+            echo "🔎 PR Detected: Running only affected packages ($FILTER)"
           else
-            echo "No test script found, skipping"
+            FILTER="" # Run all on main
+            echo "🌍 Main/Push Detected: Running all packages"
           fi
-
-      - name: Build
-        working-directory: ${{ matrix.service }}
-        run: npm run build --if-present
+          
+          # Run build, lint, test
+          # Note: We rely on Turbo caching to skip work on main if unchanged
+          npx turbo run build lint test $FILTER
 
   # ===========================================================================
-  # Rust Services (Separate Job)
+  # Rust Services (Pinned & Cached)
   # ===========================================================================
   rust-services:
     name: titan-execution-rs
@@ -258,18 +126,20 @@ jobs:
     defaults:
       run:
         working-directory: services/titan-execution-rs
-
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
+          toolchain: 1.89.0
           components: rustfmt, clippy
+
+      - name: Rust Cache
+        uses: swatinem/rust-cache@v2
+        with:
+            workspaces: services/titan-execution-rs
 
       - name: Check Formatting
         run: cargo fmt -- --check
@@ -280,16 +150,7 @@ jobs:
       - name: Start NATS
         run: |
           docker run -d --name nats -p 4222:4222 -p 8222:8222 nats:2.10.22-alpine -js -m 8222
-          echo "Waiting for NATS..."
-          for i in {1..30}; do
-            if wget --no-verbose --spider --tries=1 http://localhost:8222/varz; then
-              echo "NATS is up"
-              exit 0
-            fi
-            sleep 1
-          done
-          echo "NATS failed to start"
-          docker logs nats
+          for i in {1..30}; do if wget --no-verbose --spider --tries=1 http://localhost:8222/varz; then exit 0; fi; sleep 0.5; done
           exit 1
 
       - name: Run Tests
@@ -302,26 +163,53 @@ jobs:
         run: cargo build --release
 
   # ===========================================================================
-  # Final Status Check
+  # Security Scan (Policy Gate)
+  # ===========================================================================
+  security-scan:
+    name: security-scan
+    runs-on: ubuntu-latest
+    # Run on PRs and Push, but maybe skip if only docs changed? 
+    # For now, keep it simple.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.89.0
+      - run: npm ci
+      - name: NPM Audit (High/Critical)
+        run: npm audit --audit-level=high
+      - name: Cargo Audit
+        working-directory: services/titan-execution-rs
+        run: |
+            cargo install cargo-audit
+            cargo audit
+
+  # ===========================================================================
+  # Status Aggregator (Required Check)
   # ===========================================================================
   status-check:
     name: CI Pipeline Status
     runs-on: ubuntu-latest
-    needs:
-      [config-validation, sota-checks, security-scan, contract-check, node-services, rust-services]
     if: always()
+    needs: [preflight, node-services, rust-services, security-scan]
     steps:
       - name: Check Results
         run: |
-          if [ "${{ needs.config-validation.result }}" == "failure" ] || \
-             [ "${{ needs.sota-checks.result }}" == "failure" ] || \
-             [ "${{ needs.security-scan.result }}" == "failure" ] || \
-             [ "${{ needs.contract-check.result }}" == "failure" ] || \
-             [ "${{ needs.node-services.result }}" == "failure" ] || \
-             [ "${{ needs.rust-services.result }}" == "failure" ]; then
-            echo "❌ CI Pipeline Failed"
-            exit 1
-          else
-            echo "✅ CI Pipeline Passed"
-            exit 0
-          fi
+           # Helper to check status
+           check_status() {
+             if [ "$1" == "failure" ] || [ "$1" == "cancelled" ]; then 
+               echo "❌ Job failed or cancelled"
+               exit 1
+             fi
+           }
+           
+           check_status "${{ needs.preflight.result }}"
+           check_status "${{ needs.node-services.result }}"
+           check_status "${{ needs.rust-services.result }}"
+           check_status "${{ needs.security-scan.result }}"
+           
+           echo "✅ All Checks Passed"

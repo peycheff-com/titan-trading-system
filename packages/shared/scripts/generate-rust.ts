@@ -8,7 +8,10 @@ import * as fs from "fs";
 import * as path from "path";
 
 const SCHEMA_DIR = path.resolve(__dirname, "../schemas/json");
-const OUTPUT_DIR = path.resolve(__dirname, "../../titan-execution-rs/src");
+const OUTPUT_DIR = path.resolve(
+    __dirname,
+    "../../../services/titan-execution-rs/src",
+);
 
 if (!fs.existsSync(OUTPUT_DIR)) {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });

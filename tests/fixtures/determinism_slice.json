@@ -1,0 +1,11 @@
+{
+  "description": "Determinism verification slice - recorded NATS events for replay testing",
+  "version": 1,
+  "events": [
+    {"seq": 1, "subject": "titan.market.trade", "data": {"symbol": "BTCUSDT", "price": 50000, "size": 0.1, "side": "buy", "ts": 1738796400000}},
+    {"seq": 2, "subject": "titan.market.trade", "data": {"symbol": "ETHUSDT", "price": 3000, "size": 1.0, "side": "sell", "ts": 1738796401000}},
+    {"seq": 3, "subject": "titan.signal.opportunity", "data": {"id": "opp-001", "symbol": "BTCUSDT", "score": 0.85}},
+    {"seq": 4, "subject": "titan.order.request", "data": {"id": "ord-001", "symbol": "BTCUSDT", "side": "buy", "qty": 0.05}},
+    {"seq": 5, "subject": "titan.order.fill", "data": {"id": "ord-001", "fillPrice": 50010, "fillQty": 0.05}}
+  ]
+}

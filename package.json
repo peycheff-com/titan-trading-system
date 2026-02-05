@@ -62,24 +62,33 @@
     "sota:docs:links": "npx ts-node --esm scripts/docs/validate_links.ts",
     "sota:docs:truth": "npx ts-node --esm scripts/docs/check_truth.ts",
     "sota:docs:all": "npm run sota:docs:truth && npm run sota:docs:links",
+    "sota:edge:validation": "npx ts-node --compiler-options '{\"module\":\"commonjs\"}' scripts/sota/check_edge_validation.ts",
+    "sota:contracts:schemas": "npx ts-node --compiler-options '{\"module\":\"commonjs\"}' scripts/sota/check_contracts_schemas.ts",
+    "sota:replay:determinism": "npx ts-node --compiler-options '{\"module\":\"commonjs\"}' scripts/sota/verify_determinism.ts",
+    "sota:health:deps": "npx ts-node --compiler-options '{\"module\":\"commonjs\"}' scripts/sota/check_health_deps.ts",
+    "sota:runbooks": "npx ts-node --compiler-options '{\"module\":\"commonjs\"}' scripts/sota/check_runbooks.ts",
+    "sota:migrations:safety": "npx ts-node --compiler-options '{\"module\":\"commonjs\"}' scripts/sota/check_migrations.ts",
+    "sota:metrics:required": "npx ts-node --compiler-options '{\"module\":\"commonjs\"}' scripts/sota/check_metrics_probes.ts",
     "docs:serve": "mkdocs serve",
     "docs:build": "mkdocs build",
-    "sota:all": "npm run sota:circular && npm run sota:arch && npm run sota:complexity && npm run sota:god && npm run sota:dead && npm run sota:zombie && npm run sota:secrets && npm run sota:immutability && npm run sota:audit && npm run sota:license && npm run sota:bundle && npm run sota:correctness && npm run sota:typecheck && npm run sota:deps && npm run sota:rust:fmt && npm run sota:rust:clippy && npm run sota:rust:test && npm run sota:perf && npm run sota:db && npm run sota:unit && npm run sota:docs:all"
+    "sota:all": "npm run sota:circular && npm run sota:arch && npm run sota:complexity && npm run sota:god && npm run sota:dead && npm run sota:zombie && npm run sota:secrets && npm run sota:immutability && npm run sota:audit && npm run sota:license && npm run sota:bundle && npm run sota:correctness && npm run sota:typecheck && npm run sota:deps && npm run sota:rust:fmt && npm run sota:rust:clippy && npm run sota:rust:test && npm run sota:perf && npm run sota:db && npm run sota:unit && npm run sota:docs:all && npm run sota:edge:validation && npm run sota:contracts:schemas && npm run sota:replay:determinism && npm run sota:health:deps && npm run sota:runbooks && npm run sota:migrations:safety && npm run sota:metrics:required"
   },
   "engines": {
     "node": ">=20.0.0"
   },
   "dependencies": {
     "nats": "^2.29.3",
-    "uuid": "^13.0.0",
-    "zod": "^4.3.6"
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@stryker-mutator/core": "^9.4.0",
     "@stryker-mutator/jest-runner": "^9.4.0",
     "@types/jest": "^30.0.0",
+    "ajv": "^8.17.1",
     "commander": "^14.0.2",
+    "csv-parse": "^6.1.0",
     "depcheck": "^1.4.7",
+    "dependency-cruiser": "^17.3.7",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-functional": "^9.0.2",
@@ -87,11 +96,13 @@
     "eslint-plugin-sonarjs": "^3.0.5",
     "jest": "^30.2.0",
     "knip": "^5.82.1",
+    "madge": "^8.0.0",
     "prettier": "^3.8.0",
     "ts-jest": "^29.4.6",
     "turbo": "^2.3.3",
     "typescript-eslint": "^8.53.0",
-    "undici": "^7.19.1"
+    "undici": "^7.19.1",
+    "zod": "^4.3.6"
   },
   "overrides": {
     "d3-color": "^3.1.0",

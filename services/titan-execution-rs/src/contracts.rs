@@ -11,7 +11,7 @@
 //     let model: BaseCommand = serde_json::from_str(&json).unwrap();
 // }
 
-use serde::{Deserialize, Serialize};
+use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -5,17 +5,20 @@ import {
   JetStreamManager,
   JSONCodec,
   KV,
+  KvEntry,
+  KvWatchOptions,
   NatsConnection,
+  QueuedIterator,
   StringCodec,
   Subscription,
-} from 'nats';
-import { EventEmitter } from 'eventemitter3';
-import { createEnvelope } from '../schemas/envelope.js';
-import { createHmac, randomBytes } from 'crypto';
-import { context, propagation, trace } from '@opentelemetry/api';
+} from "nats";
+import { EventEmitter } from "eventemitter3";
+import { createEnvelope } from "../schemas/envelope.js";
+import { createHmac, randomBytes } from "crypto";
+import { context, propagation, trace } from "@opentelemetry/api";
 
-import { TITAN_SUBJECTS } from './titan_subjects.js';
-import { TITAN_STREAMS } from './titan_streams.js';
+import { TITAN_SUBJECTS } from "./titan_subjects.js";
+import { TITAN_STREAMS } from "./titan_streams.js";
 
 export const TitanSubject = {
   // --- COMMANDS (TITAN_CMD) ---
@@ -98,7 +101,12 @@ export class NatsClient extends EventEmitter {
   private sc = StringCodec();
   private static instance: NatsClient;
 
-  private readonly STREAM_PREFIXES = ['titan.cmd.', 'titan.evt.', 'titan.data.', 'titan.signal.'];
+  private readonly STREAM_PREFIXES = [
+    "titan.cmd.",
+    "titan.evt.",
+    "titan.data.",
+    "titan.signal.",
+  ];
 
   private constructor() {
     super();
@@ -112,16 +120,18 @@ export class NatsClient extends EventEmitter {
     return NatsClient.instance;
   }
 
-  public async connect(config: NatsConfig = { servers: ['nats://localhost:4222'] }): Promise<void> {
+  public async connect(
+    config: NatsConfig = { servers: ["nats://localhost:4222"] },
+  ): Promise<void> {
     if (this.nc) {
       return;
     }
 
     // Auto-read from environment if not explicitly provided
     const servers =
-      config.servers.length > 0 && config.servers[0] !== 'nats://localhost:4222'
+      config.servers.length > 0 && config.servers[0] !== "nats://localhost:4222"
         ? config.servers
-        : [process.env.NATS_URL || 'nats://localhost:4222'];
+        : [process.env.NATS_URL || "nats://localhost:4222"];
     const user = config.user ?? process.env.NATS_USER;
     const pass = config.pass ?? process.env.NATS_PASS;
 
@@ -150,10 +160,10 @@ export class NatsClient extends EventEmitter {
       this.nc.closed().then((err) => {
         if (err) {
           console.error(`NATS connection closed with error: ${err.message}`);
-          this.emit('error', err);
+          this.emit("error", err);
         } else {
-          console.log('NATS connection closed');
-          this.emit('closed');
+          console.log("NATS connection closed");
+          this.emit("closed");
         }
         // eslint-disable-next-line functional/immutable-data
         this.nc = null;
@@ -179,30 +189,38 @@ export class NatsClient extends EventEmitter {
         console.log(`Verified JetStream stream: ${stream.name}`);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        if (!msg.includes('already in use')) {
+        if (!msg.includes("already in use")) {
           try {
             await this.jsm.streams.update(stream.name, stream as any);
           } catch (updateErr) {
-            console.warn(`Failed to create/update stream ${stream.name}:`, updateErr);
+            console.warn(
+              `Failed to create/update stream ${stream.name}:`,
+              updateErr,
+            );
           }
         }
       }
     }
   }
 
-  public async publish<T>(subject: TitanSubject | string, data: T): Promise<void> {
+  public async publish<T>(
+    subject: TitanSubject | string,
+    data: T,
+  ): Promise<void> {
     if (!this.nc) {
-      throw new Error('NATS client not connected');
+      throw new Error("NATS client not connected");
     }
 
-    const payload = typeof data === 'string' ? this.sc.encode(data) : this.jc.encode(data);
+    const payload = typeof data === "string"
+      ? this.sc.encode(data)
+      : this.jc.encode(data);
 
     // Use JetStream if subject matches any stream prefix
     // eslint-disable-next-line functional/no-let
     let isJetStream = false;
     if (this.js) {
-      if (typeof subject === 'string') {
-        if (subject.startsWith('titan.signal.')) {
+      if (typeof subject === "string") {
+        if (subject.startsWith("titan.signal.")) {
           console.warn(
             `[DEPRECATION] Publishing to '${subject}' is deprecated. Migration deadline: Feb 28, 2026. Use 'titan.data.*' instead.`,
           );
@@ -255,12 +273,12 @@ export class NatsClient extends EventEmitter {
     // Security Signing (Jan 2026 Audit)
     const secret = process.env.HMAC_SECRET;
     if (secret) {
-      const nonce = randomBytes(16).toString('hex');
-      const keyId = process.env.HMAC_KEY_ID || 'default';
+      const nonce = randomBytes(16).toString("hex");
+      const keyId = process.env.HMAC_KEY_ID || "default";
 
       // Canonicalize JSON (Sort keys recursively)
       const canonicalize = (obj: unknown): unknown => {
-        if (typeof obj !== 'object' || obj === null) {
+        if (typeof obj !== "object" || obj === null) {
           return obj;
         }
         if (Array.isArray(obj)) {
@@ -278,7 +296,7 @@ export class NatsClient extends EventEmitter {
       // Canonical String: ts.nonce.payload_json_sorted
       const payloadStr = JSON.stringify(canonicalize(data));
       const canonical = `${envelope.ts}.${nonce}.${payloadStr}`;
-      const sig = createHmac('sha256', secret).update(canonical).digest('hex');
+      const sig = createHmac("sha256", secret).update(canonical).digest("hex");
 
       // eslint-disable-next-line functional/immutable-data
       envelope.sig = sig;
@@ -297,7 +315,7 @@ export class NatsClient extends EventEmitter {
     durableName?: string, // If provided, creates a durable consumer
   ): Subscription {
     if (!this.nc) {
-      throw new Error('NATS client not connected');
+      throw new Error("NATS client not connected");
     }
 
     // Wrapper to handle both sync and async callbacks uniformly
@@ -313,8 +331,8 @@ export class NatsClient extends EventEmitter {
     // Check if we should use JetStream Push Consumer
     // eslint-disable-next-line functional/no-let
     let isJetStream = false;
-    if (this.js && typeof subject === 'string') {
-      if (subject.startsWith('titan.signal.')) {
+    if (this.js && typeof subject === "string") {
+      if (subject.startsWith("titan.signal.")) {
         console.warn(
           `[DEPRECATION] Subscribing to '${subject}' is deprecated. Migration deadline: Feb 28, 2026. Use 'titan.data.*' instead.`,
         );
@@ -350,7 +368,10 @@ export class NatsClient extends EventEmitter {
               await executeCallback(decoded, m.subject);
               m.ack();
             } catch (err) {
-              console.error(`Failed to process durable message on ${subject}:`, err);
+              console.error(
+                `Failed to process durable message on ${subject}:`,
+                err,
+              );
               m.nak();
             }
           }
@@ -362,7 +383,9 @@ export class NatsClient extends EventEmitter {
       // Return a dummy subscription
       return {
         unsubscribe: () =>
-          console.warn('Unsubscribing from durable JS subscription not fully supported'),
+          console.warn(
+            "Unsubscribing from durable JS subscription not fully supported",
+          ),
         closed: Promise.resolve(undefined),
         drain: () => Promise.resolve(),
         isClosed: () => false,
@@ -416,7 +439,7 @@ export class NatsClient extends EventEmitter {
     options: { timeout?: number } = {},
   ): Promise<T> {
     if (!this.nc) {
-      throw new Error('NATS client not connected');
+      throw new Error("NATS client not connected");
     }
 
     const payload = this.jc.encode(data);
@@ -468,17 +491,17 @@ export class NatsClient extends EventEmitter {
     };
 
     // Use a specific or generic DLQ subject
-    const dlqSubject = subject.startsWith('titan.')
-      ? `titan.dlq.${subject.replace(/^titan\./, '')}`
+    const dlqSubject = subject.startsWith("titan.")
+      ? `titan.dlq.${subject.replace(/^titan\./, "")}`
       : `titan.dlq.unknown.${subject}`;
 
     try {
       await this.publish(dlqSubject, dliPayload);
       console.log(`Published to DLQ: ${dlqSubject}`);
     } catch (e) {
-      console.error('Failed to publish to DLQ:', e);
+      console.error("Failed to publish to DLQ:", e);
       // Failsafe: Log to stderr if NATS is down
-      console.error('DLQ Payload:', JSON.stringify(dliPayload));
+      console.error("DLQ Payload:", JSON.stringify(dliPayload));
     }
   }
 
@@ -497,7 +520,7 @@ export class NatsClient extends EventEmitter {
     }
 
     if (!this.js) {
-      throw new Error('NATS JetStream not initialized - call connect() first');
+      throw new Error("NATS JetStream not initialized - call connect() first");
     }
 
     const kv = await this.js.views.kv(bucket, { history: 5 });
@@ -509,7 +532,11 @@ export class NatsClient extends EventEmitter {
   /**
    * Put a value into a KV bucket
    */
-  public async kvPut<T>(bucket: string, key: string, value: T): Promise<number> {
+  public async kvPut<T>(
+    bucket: string,
+    key: string,
+    value: T,
+  ): Promise<number> {
     const kv = await this.getKv(bucket);
     const encoded = this.jc.encode(value);
     return kv.put(key, encoded);
@@ -547,6 +574,17 @@ export class NatsClient extends EventEmitter {
   public async kvDelete(bucket: string, key: string): Promise<void> {
     const kv = await this.getKv(bucket);
     await kv.delete(key);
+  }
+
+  /**
+   * Watch a KV bucket for changes
+   */
+  public async kvWatch(
+    bucket: string,
+    options: KvWatchOptions = {},
+  ): Promise<QueuedIterator<KvEntry>> {
+    const kv = await this.getKv(bucket);
+    return kv.watch(options);
   }
 }
 

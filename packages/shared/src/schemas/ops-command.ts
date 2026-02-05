@@ -1,15 +1,14 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 export enum OpsCommandType {
-  RESTART = "restart",
-  DEPLOY = "deploy",
-  CANCEL_ALL = "cancel_all",
-  SET_RISK = "set_risk",
-  HALT = "halt",
-  DISARM = "disarm",
-  DISARM = "disarm",
-  ARM = "arm",
-  EXPORT_EVIDENCE = "export_evidence",
+  RESTART = 'restart',
+  DEPLOY = 'deploy',
+  CANCEL_ALL = 'cancel_all',
+  SET_RISK = 'set_risk',
+  HALT = 'halt',
+  DISARM = 'disarm',
+  ARM = 'arm',
+  EXPORT_EVIDENCE = 'export_evidence',
 }
 
 export const OpsCommandSchemaV1 = z.object({

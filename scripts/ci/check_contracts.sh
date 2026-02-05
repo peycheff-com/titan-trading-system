@@ -14,6 +14,9 @@ cd packages/shared
 npm run build
 
 echo "  ↳ Generating Schemas & Rust Types..."
+# Clean previous artifacts to ensure determinism
+rm -f packages/shared/src/schemas/*.ts
+rm -f services/titan-execution-rs/src/contracts/*.rs
 npm run generate:schemas
 npm run generate:rust
 
