@@ -131,7 +131,7 @@ services:
   # MONITORING
   # =============================================================================
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.54.1
     container_name: titan-prometheus
     volumes:
       - ./monitoring/prometheus/config/prometheus.yml:/etc/prometheus/prometheus.yml
@@ -149,7 +149,7 @@ services:
     restart: unless-stopped
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.2.0
     container_name: titan-grafana
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${TITAN_MASTER_PASSWORD:-admin}
@@ -164,7 +164,7 @@ services:
     restart: unless-stopped
 
   titan-tempo:
-    image: grafana/tempo:latest
+    image: grafana/tempo:2.6.0
     container_name: titan-tempo
     user: root
     command: ['-config.file=/etc/tempo.yaml']

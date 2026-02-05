@@ -9,7 +9,7 @@
 
 ## Deployment
 - [x] `docker-compose.prod.yml` is the single source of truth.
-- [ ] All images are pinned to SHA or specific tags in production (avoid generic `latest` if possible).
+- [x] All images are pinned to SHA or specific tags in production (avoid generic `latest` if possible).
 - [ ] SSL Certificates (LetsEncrypt) are valid.
 
 ## Application Health
@@ -22,4 +22,4 @@
 ## Operations
 - [ ] Restarting 'Brain' from Console works.
 - [ ] Logs are draining to Loki/Prometheus (if configured).
-- [ ] Backups for Postgres (`titan_brain`) are scheduled.
+- [x] Backups for Postgres (`titan_brain`) are scheduled (via `scripts/backup-db.sh` + cron).
