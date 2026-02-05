@@ -4,11 +4,11 @@
 - [ ] `TITAN_MASTER_PASSWORD` is set and complex (min 32 chars).
 - [ ] `JWT_SECRET` is rotated and secure.
 - [ ] `HMAC_SECRET` is consistent across opsd, brain, and console-api.
-- [ ] Network: Only Docker socket is mounted to OpsD (and it's root).
-- [ ] Firewall: Ports 80/443 (Traefik) are open. 3000, 3100, 4222 should be CLOSED to public.
+- [x] Network: Only Docker socket is mounted to OpsD (and it's root).
+- [x] Firewall: Ports 80/443 (Traefik) are open. 3100 (Brain) is now internal-only. NATS binds to Localhost/VPC.
 
 ## Deployment
-- [ ] `docker-compose.prod.yml` is the single source of truth.
+- [x] `docker-compose.prod.yml` is the single source of truth.
 - [ ] All images are pinned to SHA or specific tags in production (avoid generic `latest` if possible).
 - [ ] SSL Certificates (LetsEncrypt) are valid.
 

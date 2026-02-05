@@ -209,8 +209,6 @@ services:
       - HMAC_SECRET=${HMAC_SECRET}
       - LOG_LEVEL=info
       - SERVICE_NAME=titan-brain
-    ports:
-      - '3100:3100'
     volumes:
       - titan-ipc:/tmp
     networks:
