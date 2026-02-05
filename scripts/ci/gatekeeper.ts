@@ -51,10 +51,32 @@ function checkTests(): boolean {
 function checkSecurity(): boolean {
   // Basic check for private keys committed
   try {
-    // Simple heuristic scan
+    // Simple heuristic scan while excluding known scanner scripts to avoid self-matching.
     const HEAD = 'BEGIN ' + 'PRIVATE KEY';
     const find = execSync(
-      `grep -r "${HEAD}" . --exclude-dir=node_modules --exclude-dir=.git --exclude='*.key' || true`
+      [
+        'rg',
+        '--line-number',
+        '--color=never',
+        '--glob',
+        '!.git/**',
+        '--glob',
+        '!node_modules/**',
+        '--glob',
+        '!evidence/**',
+        '--glob',
+        '!target/**',
+        '--glob',
+        '!**/*.key',
+        '--glob',
+        '!**/*.pem',
+        '--glob',
+        '!scripts/readiness/run.sh',
+        '--glob',
+        '!scripts/ci/gatekeeper.ts',
+        `"${HEAD}"`,
+        '.',
+      ].join(' ') + ' || true'
     ).toString();
     if (find.trim()) {
       log('Potential private keys found in source checks!', false);

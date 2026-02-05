@@ -56,11 +56,8 @@ jobs:
 
       - name: Run Gatekeeper
         run: |
-          # We assume npx is available
-          # Check if ts-node is installed or just run with npx
-          chmod +x scripts/ci/gatekeeper.ts
-          npm install --no-save tsx
-          npx tsx scripts/ci/gatekeeper.ts
+          # Run tsx without mutating the repository checkout.
+          npm exec --yes --package=tsx -- tsx scripts/ci/gatekeeper.ts
 
   build-and-push:
     needs: [ci-check, readiness-gate]

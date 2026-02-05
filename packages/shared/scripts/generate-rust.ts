@@ -48,7 +48,13 @@ async function generateRust() {
     });
 
     const outputFile = path.join(OUTPUT_DIR, "contracts.rs");
-    fs.writeFileSync(outputFile, lines.join("\n"));
+    const rustOutput = lines
+        .join("\n")
+        .replace(
+            "use serde::{Serialize, Deserialize};",
+            "use serde::{Deserialize, Serialize};",
+        );
+    fs.writeFileSync(outputFile, rustOutput);
     console.log(`Generated Rust contracts at ${outputFile}`);
 }
 
