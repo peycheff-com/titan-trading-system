@@ -7,11 +7,11 @@
   "scripts": {
     "build": "tsc",
     "build:all": "npm run build",
-    "test": "jest --selectProjects unit property",
-    "test:watch": "jest --watch --selectProjects unit property",
-    "test:coverage": "jest --coverage --selectProjects unit property",
-    "test:integration": "jest --selectProjects integration",
-    "test:all": "jest",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:integration": "vitest run --dir tests/integration",
+    "test:all": "npm run test && npm run test:integration",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "generate:schemas": "ts-node scripts/generate-schemas.ts",
@@ -19,7 +19,9 @@
   },
   "dependencies": {
     "@opentelemetry/api": "^1.7.0",
+    "@types/fast-json-stable-stringify": "^2.0.0",
     "eventemitter3": "^5.0.1",
+    "fast-json-stable-stringify": "^2.1.0",
     "nats": "^2.29.3",
     "tweetnacl": "^1.0.3",
     "tweetnacl-util": "^0.15.1",
@@ -43,6 +45,7 @@
     "ts-jest": "^29.1.0",
     "typescript": "^5.3.3",
     "typescript-eslint": "^8.53.0",
+    "vitest": "^4.0.18",
     "zod-to-json-schema": "^3.25.1"
   },
   "keywords": [

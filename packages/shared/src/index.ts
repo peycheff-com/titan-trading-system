@@ -216,6 +216,22 @@ export {
 export { TITAN_SUBJECTS } from "./messaging/titan_subjects.js";
 export { TITAN_STREAMS } from "./messaging/titan_streams.js";
 
+// Specialized NATS configurations for venue telemetry and market data
+export {
+  getAllKvBucketNames,
+  getAllStreamNames,
+  getStreamForSubject,
+  JsDiscardPolicy,
+  JsRetentionPolicy,
+  JsStorageType,
+  TITAN_CONSUMERS,
+  TITAN_KV_BUCKETS,
+  TITAN_STREAMS as TITAN_VENUE_STREAMS,
+  type TitanConsumerConfig,
+  type TitanKvConfig,
+  type TitanStreamConfig,
+} from "./messaging/nats-streams.js";
+
 // Intent schema (NATS contract)
 export {
   createIntentMessage,
@@ -279,6 +295,10 @@ export {
 export { RiskState } from "./types/RiskState.js";
 export * from "./types/budget.js";
 export * from "./types/truth.js";
+export * from "./schemas/market-trade.js";
+export * from "./schemas/orderbook.js";
+export * from "./schemas/venue-status.js";
+export * from "./schemas/venue-config.js";
 export * from "./types/Phase.js";
 
 export const SharedLogLevel = LogLevel;
@@ -420,3 +440,66 @@ export {
   ExecutionQualityScoreSchema,
   TITAN_QUALITY_TOPIC,
 } from "./schemas/ExecutionQuality.js";
+
+// Venue Types and Telemetry (Feb 2026)
+export {
+  ALL_VENUE_IDS,
+  DEFAULT_STALE_THRESHOLD_MS,
+  InstrumentType,
+  VENUE_CAPABILITIES,
+  type VenueCapabilities,
+  VenueId,
+  VenueRecommendedAction,
+  VenueWsState,
+} from "./types/venues.js";
+
+export {
+  calculateStaleness,
+  deriveRecommendedAction,
+  parseVenueStatusV1,
+  safeParseVenueStatusV1,
+  VENUE_STATUS_SUBJECT,
+  type VenueStatusV1,
+  VenueStatusV1Schema,
+} from "./schemas/venue-status.js";
+
+// Market Trade Schema (Feb 2026)
+export {
+  type MarketTradeV1,
+  MarketTradeV1Schema,
+  parseMarketTradeV1,
+  safeParseMarketTradeV1,
+  type TakerSide,
+  TakerSideSchema,
+} from "./schemas/market-trade.js";
+
+// Symbol Normalization Utilities (Feb 2026)
+export {
+  denormalizeSymbol,
+  type NormalizedSymbol,
+  normalizeSymbol,
+} from "./utils/symbol-normalization.js";
+
+// Ops Console Schemas (Feb 2026)
+export {
+  OpsCommandSchemaV1,
+  OpsCommandType,
+  type OpsCommandV1,
+} from "./schemas/ops-command.js";
+
+export {
+  OpsReceiptSchemaV1,
+  OpsReceiptStatus,
+  type OpsReceiptV1,
+} from "./schemas/ops-receipt.js";
+
+export {
+  EvidencePackManifestSchemaV1,
+  type EvidencePackManifestV1,
+} from "./schemas/evidence-pack.js";
+
+// Security (Feb 2026)
+export {
+  calculateOpsSignature,
+  verifyOpsCommand,
+} from "./security/ops-security.js";

@@ -25,7 +25,8 @@ import {
   describe,
   expect,
   it,
-} from "@jest/globals";
+  vi,
+} from "vitest";
 import crypto from "crypto";
 // Node 18+ has native fetch - no import needed
 import WebSocket from "ws";
@@ -119,6 +120,7 @@ describeIntegration("End-to-End Signal Flow Integration", () => {
     executionBaseUrl =
       `http://${TEST_CONFIG.execution.host}:${TEST_CONFIG.execution.port}`;
     brainBaseUrl = `http://${TEST_CONFIG.brain.host}:${TEST_CONFIG.brain.port}`;
+    vi.setConfig({ testTimeout: TEST_CONFIG.timeout });
   });
 
   afterAll(async () => {

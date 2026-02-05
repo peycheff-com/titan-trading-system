@@ -239,6 +239,47 @@ CREATE INDEX IF NOT EXISTS idx_ledger_entries_account_id ON ledger_entries(accou
 CREATE INDEX IF NOT EXISTS idx_ledger_transactions_correlation_id ON ledger_transactions(correlation_id);
 CREATE INDEX IF NOT EXISTS idx_ledger_transactions_created_at ON ledger_transactions(created_at DESC);
 
+-- Configuration Management System
+-- config_overrides: Active configuration overrides with expiry
+CREATE TABLE IF NOT EXISTS config_overrides (
+  id VARCHAR(50) PRIMARY KEY DEFAULT gen_random_uuid()::varchar,
+  key VARCHAR(100) NOT NULL,
+  value JSONB NOT NULL,
+  previous_value JSONB,
+  operator_id VARCHAR(50) NOT NULL,
+  reason TEXT NOT NULL,
+  expires_at BIGINT,
+  active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  deactivated_at TIMESTAMP,
+  deactivated_by VARCHAR(50),
+  CONSTRAINT fk_config_overrides_operator FOREIGN KEY (operator_id) REFERENCES operators(id)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_config_overrides_active_key ON config_overrides(key) WHERE active = true;
+CREATE INDEX IF NOT EXISTS idx_config_overrides_key ON config_overrides(key, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_config_overrides_operator ON config_overrides(operator_id, created_at DESC);
+
+-- config_receipts: Immutable audit log of all configuration changes
+CREATE TABLE IF NOT EXISTS config_receipts (
+  id VARCHAR(50) PRIMARY KEY DEFAULT gen_random_uuid()::varchar,
+  key VARCHAR(100) NOT NULL,
+  action VARCHAR(20) NOT NULL, -- 'override', 'rollback', 'propose'
+  previous_value JSONB,
+  new_value JSONB,
+  operator_id VARCHAR(50) NOT NULL,
+  reason TEXT NOT NULL,
+  expires_at BIGINT,
+  signature VARCHAR(128) NOT NULL, -- HMAC signature for tamper detection
+  timestamp BIGINT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_config_receipts_operator FOREIGN KEY (operator_id) REFERENCES operators(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_config_receipts_key ON config_receipts(key, timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_config_receipts_operator ON config_receipts(operator_id, timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_config_receipts_timestamp ON config_receipts(timestamp DESC);
+
 -- Enable Row Level Security (RLS)
 ALTER TABLE allocation_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE phase_trades ENABLE ROW LEVEL SECURITY;
@@ -256,6 +297,8 @@ ALTER TABLE event_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ledger_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ledger_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ledger_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE config_overrides ENABLE ROW LEVEL SECURITY;
+ALTER TABLE config_receipts ENABLE ROW LEVEL SECURITY;
 
 -- Retention Policy Function
 CREATE OR REPLACE FUNCTION maintain_retention_policy() RETURNS void AS $$

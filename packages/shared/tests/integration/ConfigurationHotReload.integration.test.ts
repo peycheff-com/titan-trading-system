@@ -21,7 +21,8 @@ import {
   describe,
   expect,
   it,
-} from "@jest/globals";
+  vi,
+} from "vitest";
 // Node 18+ has native fetch - no import needed
 import WebSocket from "ws";
 import fs from "fs/promises";
@@ -189,7 +190,7 @@ describeIntegration("Configuration Hot-Reload Integration", () => {
       `http://${CONFIG_TEST_CONFIG.brain.host}:${CONFIG_TEST_CONFIG.brain.port}`;
     executionBaseUrl =
       `http://${CONFIG_TEST_CONFIG.execution.host}:${CONFIG_TEST_CONFIG.execution.port}`;
-    jest.setTimeout(CONFIG_TEST_CONFIG.timeout);
+    vi.setConfig({ testTimeout: CONFIG_TEST_CONFIG.timeout });
   });
 
   beforeEach(async () => {

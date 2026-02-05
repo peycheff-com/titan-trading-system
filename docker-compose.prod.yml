@@ -286,12 +286,11 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=8080
-      - VITE_API_URL=http://titan-brain:3100
-      - VITE_WS_URL=ws://titan-brain:3100
+      - API_PROXY_TARGET=http://titan-console-api:3000
     networks:
       - titan-network
     depends_on:
-      - titan-brain
+      - titan-console-api
     restart: unless-stopped
     labels:
       - traefik.enable=true
@@ -304,6 +303,49 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+
+  titan-console-api:
+    image: ${TITAN_REGISTRY:-ghcr.io/peycheff-com/titan-trading-system}/titan-console-api:${IMAGE_TAG:-latest}
+    container_name: titan-console-api
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - NATS_URL=nats://nats:4222
+      - NATS_USER=console
+      - NATS_PASS=${NATS_CONSOLE_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - TITAN_MASTER_PASSWORD=${TITAN_MASTER_PASSWORD}
+    networks:
+      - titan-network
+    depends_on:
+      nats:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/health']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  titan-opsd:
+    image: ${TITAN_REGISTRY:-ghcr.io/peycheff-com/titan-trading-system}/titan-opsd:${IMAGE_TAG:-latest}
+    container_name: titan-opsd
+    user: root
+    environment:
+      - NODE_ENV=production
+      - NATS_URL=nats://nats:4222
+      - NATS_USER=ops
+      - NATS_PASS=${NATS_CONSOLE_PASSWORD} # Using console pass for opsd for now or new one? opsd usually implies system level.
+      - HMAC_SECRET=${HMAC_SECRET}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./docker-compose.prod.yml:/app/docker-compose.prod.yml
+    networks:
+      - titan-network
+    depends_on:
+      nats:
+        condition: service_healthy
+    restart: unless-stopped
 
   # =============================================================================
   # PHASE 1: SCAVENGER

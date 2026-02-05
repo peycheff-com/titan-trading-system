@@ -1,0 +1,37 @@
+# Docker Compose for Integration Tests
+# Usage: docker compose -f docker-compose.test.yml up -d
+
+services:
+  nats:
+    image: nats:2.10.22-alpine
+    container_name: titan-nats-test
+    ports:
+      - '4222:4222'
+      - '8222:8222'
+    command: ['--jetstream', '--store_dir=/data']
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:8222/healthz']
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    tmpfs:
+      - /data:size=100m
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: titan-postgres-test
+    ports:
+      - '5433:5432'
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: titan_test
+    tmpfs:
+      - /var/lib/postgresql/data:size=100m
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 3s

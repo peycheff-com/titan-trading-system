@@ -1,0 +1,25 @@
+# Titan Production Checklist
+
+## Security Pre-Flight
+- [ ] `TITAN_MASTER_PASSWORD` is set and complex (min 32 chars).
+- [ ] `JWT_SECRET` is rotated and secure.
+- [ ] `HMAC_SECRET` is consistent across opsd, brain, and console-api.
+- [ ] Network: Only Docker socket is mounted to OpsD (and it's root).
+- [ ] Firewall: Ports 80/443 (Traefik) are open. 3000, 3100, 4222 should be CLOSED to public.
+
+## Deployment
+- [ ] `docker-compose.prod.yml` is the single source of truth.
+- [ ] All images are pinned to SHA or specific tags in production (avoid generic `latest` if possible).
+- [ ] SSL Certificates (LetsEncrypt) are valid.
+
+## Application Health
+- [ ] Console UI loads at `https://titan.deployment.com`
+- [ ] Login works with `TITAN_MASTER_PASSWORD`.
+- [ ] Dashboard shows 'Connected' state.
+- [ ] 'Live Ops' stream is active (heartbeats visible).
+- [ ] 'Export Evidence' triggers a download.
+
+## Operations
+- [ ] Restarting 'Brain' from Console works.
+- [ ] Logs are draining to Loki/Prometheus (if configured).
+- [ ] Backups for Postgres (`titan_brain`) are scheduled.

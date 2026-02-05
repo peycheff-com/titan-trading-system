@@ -9,17 +9,17 @@
 
 /* eslint-disable functional/immutable-data, functional/no-let -- MetricsCollector is stateful by design */
 
-import { EventEmitter } from 'events';
-import { Logger } from '../logging/Logger.js';
+import { EventEmitter } from "events";
+import { Logger } from "../logging/Logger.js";
 
 /**
  * Metric types supported by Prometheus
  */
 export enum MetricType {
-  COUNTER = 'counter',
-  GAUGE = 'gauge',
-  HISTOGRAM = 'histogram',
-  SUMMARY = 'summary',
+  COUNTER = "counter",
+  GAUGE = "gauge",
+  HISTOGRAM = "histogram",
+  SUMMARY = "summary",
 }
 
 /**
@@ -108,7 +108,7 @@ export class MetricsCollector extends EventEmitter {
 
   constructor(logger?: Logger) {
     super();
-    this.logger = logger ?? Logger.getInstance('metrics-collector');
+    this.logger = logger ?? Logger.getInstance("metrics-collector");
     this.startTime = Date.now();
 
     // Initialize metric structures
@@ -120,7 +120,7 @@ export class MetricsCollector extends EventEmitter {
     // Register default metrics
     this.registerDefaultMetrics();
 
-    this.logger.info('Metrics collector initialized');
+    this.logger.info("Metrics collector initialized");
   }
 
   /**
@@ -130,10 +130,26 @@ export class MetricsCollector extends EventEmitter {
     return {
       requestsTotal: 0,
       requestDuration: this.createHistogramBuckets([
-        0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10,
+        0.005,
+        0.01,
+        0.025,
+        0.05,
+        0.1,
+        0.25,
+        0.5,
+        1,
+        2.5,
+        5,
+        10,
       ]),
       requestsInFlight: 0,
-      responseSize: this.createHistogramBuckets([100, 1000, 10000, 100000, 1000000]),
+      responseSize: this.createHistogramBuckets([
+        100,
+        1000,
+        10000,
+        100000,
+        1000000,
+      ]),
     };
   }
 
@@ -146,7 +162,17 @@ export class MetricsCollector extends EventEmitter {
       connectionsIdle: 0,
       connectionsWaiting: 0,
       queryDuration: this.createHistogramBuckets([
-        0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5,
+        0.001,
+        0.005,
+        0.01,
+        0.025,
+        0.05,
+        0.1,
+        0.25,
+        0.5,
+        1,
+        2.5,
+        5,
       ]),
       queriesTotal: 0,
       queryErrors: 0,
@@ -159,7 +185,14 @@ export class MetricsCollector extends EventEmitter {
   private initializeHealthMetrics(): HealthMetrics {
     return {
       healthCheckStatus: 0,
-      healthCheckDuration: this.createHistogramBuckets([0.1, 0.25, 0.5, 1, 2.5, 5]),
+      healthCheckDuration: this.createHistogramBuckets([
+        0.1,
+        0.25,
+        0.5,
+        1,
+        2.5,
+        5,
+      ]),
       componentStatus: new Map(),
     };
   }
@@ -201,118 +234,146 @@ export class MetricsCollector extends EventEmitter {
   private registerDefaultMetrics(): void {
     // HTTP metrics
     this.registerMetric({
-      name: 'http_requests_total',
+      name: "http_requests_total",
       type: MetricType.COUNTER,
-      help: 'Total number of HTTP requests',
-      labels: ['method', 'route', 'status_code'],
+      help: "Total number of HTTP requests",
+      labels: ["method", "route", "status_code"],
     });
 
     this.registerMetric({
-      name: 'http_request_duration_seconds',
+      name: "http_request_duration_seconds",
       type: MetricType.HISTOGRAM,
-      help: 'HTTP request duration in seconds',
-      labels: ['method', 'route'],
+      help: "HTTP request duration in seconds",
+      labels: ["method", "route"],
     });
 
     this.registerMetric({
-      name: 'http_requests_in_flight',
+      name: "http_requests_in_flight",
       type: MetricType.GAUGE,
-      help: 'Current number of HTTP requests being processed',
+      help: "Current number of HTTP requests being processed",
     });
 
     this.registerMetric({
-      name: 'http_response_size_bytes',
+      name: "http_response_size_bytes",
       type: MetricType.HISTOGRAM,
-      help: 'HTTP response size in bytes',
-      labels: ['method', 'route'],
+      help: "HTTP response size in bytes",
+      labels: ["method", "route"],
     });
 
     // Database metrics
     this.registerMetric({
-      name: 'database_connections_active',
+      name: "database_connections_active",
       type: MetricType.GAUGE,
-      help: 'Number of active database connections',
+      help: "Number of active database connections",
     });
 
     this.registerMetric({
-      name: 'database_connections_idle',
+      name: "database_connections_idle",
       type: MetricType.GAUGE,
-      help: 'Number of idle database connections',
+      help: "Number of idle database connections",
     });
 
     this.registerMetric({
-      name: 'database_connections_waiting',
+      name: "database_connections_waiting",
       type: MetricType.GAUGE,
-      help: 'Number of clients waiting for database connections',
+      help: "Number of clients waiting for database connections",
     });
 
     this.registerMetric({
-      name: 'database_query_duration_seconds',
+      name: "database_query_duration_seconds",
       type: MetricType.HISTOGRAM,
-      help: 'Database query duration in seconds',
-      labels: ['operation'],
+      help: "Database query duration in seconds",
+      labels: ["operation"],
     });
 
     this.registerMetric({
-      name: 'database_queries_total',
+      name: "database_queries_total",
       type: MetricType.COUNTER,
-      help: 'Total number of database queries',
-      labels: ['operation', 'status'],
+      help: "Total number of database queries",
+      labels: ["operation", "status"],
     });
 
     // Health check metrics
     this.registerMetric({
-      name: 'health_check_status',
+      name: "health_check_status",
       type: MetricType.GAUGE,
-      help: 'Health check status (1 = healthy, 0 = unhealthy)',
+      help: "Health check status (1 = healthy, 0 = unhealthy)",
     });
 
     this.registerMetric({
-      name: 'health_check_duration_seconds',
+      name: "health_check_duration_seconds",
       type: MetricType.HISTOGRAM,
-      help: 'Health check duration in seconds',
+      help: "Health check duration in seconds",
     });
 
     this.registerMetric({
-      name: 'component_health_status',
+      name: "component_health_status",
       type: MetricType.GAUGE,
-      help: 'Component health status (1 = healthy, 0 = unhealthy)',
-      labels: ['component'],
+      help: "Component health status (1 = healthy, 0 = unhealthy)",
+      labels: ["component"],
     });
 
     // Business metrics
     this.registerMetric({
-      name: 'signals_processed_total',
+      name: "signals_processed_total",
       type: MetricType.COUNTER,
-      help: 'Total number of signals processed',
-      labels: ['type', 'status'],
+      help: "Total number of signals processed",
+      labels: ["type", "status"],
     });
 
     this.registerMetric({
-      name: 'orders_executed_total',
+      name: "orders_executed_total",
       type: MetricType.COUNTER,
-      help: 'Total number of orders executed',
-      labels: ['side', 'status'],
+      help: "Total number of orders executed",
+      labels: ["side", "status"],
     });
 
     this.registerMetric({
-      name: 'errors_total',
+      name: "errors_total",
       type: MetricType.COUNTER,
-      help: 'Total number of errors',
-      labels: ['type', 'component'],
+      help: "Total number of errors",
+      labels: ["type", "component"],
     });
 
     // System metrics
     this.registerMetric({
-      name: 'process_start_time_seconds',
+      name: "process_start_time_seconds",
       type: MetricType.GAUGE,
-      help: 'Start time of the process since unix epoch in seconds',
+      help: "Start time of the process since unix epoch in seconds",
     });
 
     this.registerMetric({
-      name: 'process_uptime_seconds',
+      name: "process_uptime_seconds",
       type: MetricType.GAUGE,
-      help: 'Process uptime in seconds',
+      help: "Process uptime in seconds",
+    });
+
+    // Venue telemetry metrics
+    this.registerMetric({
+      name: "brain_venue_state",
+      type: MetricType.GAUGE,
+      help:
+        "Venue WebSocket state (1=connected, 2=degraded, 3=disconnected, 0=unknown)",
+      labels: ["venue"],
+    });
+
+    this.registerMetric({
+      name: "brain_venue_stale",
+      type: MetricType.COUNTER,
+      help: "Count of stale venue status detections",
+      labels: ["venue"],
+    });
+
+    this.registerMetric({
+      name: "brain_venues_connected",
+      type: MetricType.GAUGE,
+      help: "Number of venues in connected state",
+    });
+
+    this.registerMetric({
+      name: "brain_venues_total",
+      type: MetricType.GAUGE,
+      help: "Total number of known venues",
     });
   }
 
@@ -324,7 +385,7 @@ export class MetricsCollector extends EventEmitter {
 
     this.values.set(definition.name, []);
 
-    this.logger.debug('Registered metric', undefined, {
+    this.logger.debug("Registered metric", undefined, {
       name: definition.name,
       type: definition.type,
       labels: definition.labels,
@@ -344,7 +405,7 @@ export class MetricsCollector extends EventEmitter {
     // Increment total requests
 
     this.httpMetrics.requestsTotal++;
-    this.incrementCounter('http_requests_total', {
+    this.incrementCounter("http_requests_total", {
       method,
       route,
       status_code: statusCode.toString(),
@@ -352,19 +413,19 @@ export class MetricsCollector extends EventEmitter {
 
     // Record request duration
     this.recordHistogram(this.httpMetrics.requestDuration, duration);
-    this.recordHistogramMetric('http_request_duration_seconds', duration, {
+    this.recordHistogramMetric("http_request_duration_seconds", duration, {
       method,
       route,
     });
 
     // Record response size
     this.recordHistogram(this.httpMetrics.responseSize, responseSize);
-    this.recordHistogramMetric('http_response_size_bytes', responseSize, {
+    this.recordHistogramMetric("http_response_size_bytes", responseSize, {
       method,
       route,
     });
 
-    this.emit('http:request', {
+    this.emit("http:request", {
       method,
       route,
       statusCode,
@@ -378,53 +439,64 @@ export class MetricsCollector extends EventEmitter {
    */
   recordHttpRequestStart(): void {
     this.httpMetrics.requestsInFlight++;
-    this.setGauge('http_requests_in_flight', this.httpMetrics.requestsInFlight);
+    this.setGauge("http_requests_in_flight", this.httpMetrics.requestsInFlight);
   }
 
   /**
    * Record HTTP request end (decrement in-flight counter)
    */
   recordHttpRequestEnd(): void {
-    this.httpMetrics.requestsInFlight = Math.max(0, this.httpMetrics.requestsInFlight - 1);
-    this.setGauge('http_requests_in_flight', this.httpMetrics.requestsInFlight);
+    this.httpMetrics.requestsInFlight = Math.max(
+      0,
+      this.httpMetrics.requestsInFlight - 1,
+    );
+    this.setGauge("http_requests_in_flight", this.httpMetrics.requestsInFlight);
   }
 
   /**
    * Record database connection metrics
    */
-  recordDatabaseConnections(active: number, idle: number, waiting: number): void {
+  recordDatabaseConnections(
+    active: number,
+    idle: number,
+    waiting: number,
+  ): void {
     this.databaseMetrics.connectionsActive = active;
 
     this.databaseMetrics.connectionsIdle = idle;
 
     this.databaseMetrics.connectionsWaiting = waiting;
 
-    this.setGauge('database_connections_active', active);
-    this.setGauge('database_connections_idle', idle);
-    this.setGauge('database_connections_waiting', waiting);
+    this.setGauge("database_connections_active", active);
+    this.setGauge("database_connections_idle", idle);
+    this.setGauge("database_connections_waiting", waiting);
 
-    this.emit('database:connections', { active, idle, waiting });
+    this.emit("database:connections", { active, idle, waiting });
   }
 
   /**
    * Record database query metrics
    */
-  recordDatabaseQuery(operation: string, duration: number, success: boolean): void {
+  recordDatabaseQuery(
+    operation: string,
+    duration: number,
+    success: boolean,
+  ): void {
     this.databaseMetrics.queriesTotal++;
     if (!success) {
       this.databaseMetrics.queryErrors++;
     }
 
     this.recordHistogram(this.databaseMetrics.queryDuration, duration);
-    this.recordHistogramMetric('database_query_duration_seconds', duration, {
+    this.recordHistogramMetric("database_query_duration_seconds", duration, {
       operation,
     });
-    this.incrementCounter('database_queries_total', {
+    this.incrementCounter("database_queries_total", {
       operation,
-      status: success ? 'success' : 'error',
+      status: success ? "success" : "error",
     });
 
-    this.emit('database:query', { operation, duration, success });
+    this.emit("database:query", { operation, duration, success });
   }
 
   /**
@@ -434,10 +506,10 @@ export class MetricsCollector extends EventEmitter {
     this.healthMetrics.healthCheckStatus = healthy ? 1 : 0;
     this.recordHistogram(this.healthMetrics.healthCheckDuration, duration);
 
-    this.setGauge('health_check_status', this.healthMetrics.healthCheckStatus);
-    this.recordHistogramMetric('health_check_duration_seconds', duration);
+    this.setGauge("health_check_status", this.healthMetrics.healthCheckStatus);
+    this.recordHistogramMetric("health_check_duration_seconds", duration);
 
-    this.emit('health:check', { healthy, duration });
+    this.emit("health:check", { healthy, duration });
   }
 
   /**
@@ -447,9 +519,9 @@ export class MetricsCollector extends EventEmitter {
     const status = healthy ? 1 : 0;
 
     this.healthMetrics.componentStatus.set(component, status);
-    this.setGauge('component_health_status', status, { component });
+    this.setGauge("component_health_status", status, { component });
 
-    this.emit('health:component', { component, healthy });
+    this.emit("health:component", { component, healthy });
   }
 
   /**
@@ -457,12 +529,12 @@ export class MetricsCollector extends EventEmitter {
    */
   recordSignalProcessed(type: string, success: boolean): void {
     this.businessMetrics.signalsProcessed++;
-    this.incrementCounter('signals_processed_total', {
+    this.incrementCounter("signals_processed_total", {
       type,
-      status: success ? 'success' : 'error',
+      status: success ? "success" : "error",
     });
 
-    this.emit('business:signal', { type, success });
+    this.emit("business:signal", { type, success });
   }
 
   /**
@@ -470,12 +542,12 @@ export class MetricsCollector extends EventEmitter {
    */
   recordOrderExecuted(side: string, success: boolean): void {
     this.businessMetrics.ordersExecuted++;
-    this.incrementCounter('orders_executed_total', {
+    this.incrementCounter("orders_executed_total", {
       side,
-      status: success ? 'success' : 'error',
+      status: success ? "success" : "error",
     });
 
-    this.emit('business:order', { side, success });
+    this.emit("business:order", { side, success });
   }
 
   /**
@@ -483,17 +555,61 @@ export class MetricsCollector extends EventEmitter {
    */
   recordError(type: string, component: string): void {
     this.businessMetrics.errorsTotal++;
-    this.incrementCounter('errors_total', { type, component });
+    this.incrementCounter("errors_total", { type, component });
 
-    this.emit('error:recorded', { type, component });
+    this.emit("error:recorded", { type, component });
+  }
+
+  /**
+   * Record venue status metrics
+   * @param venue - Venue identifier
+   * @param state - WebSocket state (connected/degraded/disconnected)
+   * @param isStale - Whether the status is stale
+   */
+  recordVenueStatus(
+    venue: string,
+    state: "connected" | "degraded" | "disconnected" | "unknown",
+    isStale: boolean,
+  ): void {
+    const stateValue = state === "connected"
+      ? 1
+      : state === "degraded"
+      ? 2
+      : state === "disconnected"
+      ? 3
+      : 0;
+
+    this.setGauge("brain_venue_state", stateValue, { venue });
+
+    if (isStale) {
+      this.incrementCounter("brain_venue_stale", { venue });
+    }
+
+    this.emit("venue:status", { venue, state, isStale });
+  }
+
+  /**
+   * Record venue summary metrics
+   * @param connected - Number of connected venues
+   * @param total - Total number of venues
+   */
+  recordVenueSummary(connected: number, total: number): void {
+    this.setGauge("brain_venues_connected", connected);
+    this.setGauge("brain_venues_total", total);
   }
 
   /**
    * Increment a counter metric
    */
-  private incrementCounter(name: string, labels?: Record<string, string>, value: number = 1): void {
+  private incrementCounter(
+    name: string,
+    labels?: Record<string, string>,
+    value: number = 1,
+  ): void {
     const values = this.values.get(name) || [];
-    const existingIndex = values.findIndex((v) => this.labelsMatch(v.labels, labels));
+    const existingIndex = values.findIndex((v) =>
+      this.labelsMatch(v.labels, labels)
+    );
 
     if (existingIndex >= 0) {
       values[existingIndex].value += value;
@@ -507,9 +623,15 @@ export class MetricsCollector extends EventEmitter {
   /**
    * Set a gauge metric
    */
-  private setGauge(name: string, value: number, labels?: Record<string, string>): void {
+  private setGauge(
+    name: string,
+    value: number,
+    labels?: Record<string, string>,
+  ): void {
     const values = this.values.get(name) || [];
-    const existingIndex = values.findIndex((v) => this.labelsMatch(v.labels, labels));
+    const existingIndex = values.findIndex((v) =>
+      this.labelsMatch(v.labels, labels)
+    );
 
     if (existingIndex >= 0) {
       values[existingIndex].value = value;
@@ -561,7 +683,10 @@ export class MetricsCollector extends EventEmitter {
   /**
    * Check if labels match
    */
-  private labelsMatch(labels1?: Record<string, string>, labels2?: Record<string, string>): boolean {
+  private labelsMatch(
+    labels1?: Record<string, string>,
+    labels2?: Record<string, string>,
+  ): boolean {
     if (!labels1 && !labels2) return true;
     if (!labels1 || !labels2) return false;
 
@@ -570,18 +695,23 @@ export class MetricsCollector extends EventEmitter {
 
     if (keys1.length !== keys2.length) return false;
 
-    return keys1.every((key, index) => key === keys2[index] && labels1[key] === labels2[key]);
+    return keys1.every((key, index) =>
+      key === keys2[index] && labels1[key] === labels2[key]
+    );
   }
 
   /**
    * Get all metrics in Prometheus format
    */
   getPrometheusMetrics(): string {
-    let output = '';
+    let output = "";
 
     // Add process metrics
-    this.setGauge('process_start_time_seconds', this.startTime / 1000);
-    this.setGauge('process_uptime_seconds', (Date.now() - this.startTime) / 1000);
+    this.setGauge("process_start_time_seconds", this.startTime / 1000);
+    this.setGauge(
+      "process_uptime_seconds",
+      (Date.now() - this.startTime) / 1000,
+    );
 
     // Generate metrics output
     for (const [name, definition] of this.metrics) {
@@ -599,7 +729,7 @@ export class MetricsCollector extends EventEmitter {
         }
       }
 
-      output += '\n';
+      output += "\n";
     }
 
     return output;
@@ -610,12 +740,12 @@ export class MetricsCollector extends EventEmitter {
    */
   private formatLabels(labels?: Record<string, string>): string {
     if (!labels || Object.keys(labels).length === 0) {
-      return '';
+      return "";
     }
 
     const labelPairs = Object.entries(labels)
       .map(([key, value]) => `${key}="${value.replace(/"/g, '\\"')}"`)
-      .join(',');
+      .join(",");
 
     return `{${labelPairs}}`;
   }
@@ -655,6 +785,6 @@ export class MetricsCollector extends EventEmitter {
 
     this.startTime = Date.now(); // Reset start time for accurate uptime calculation
 
-    this.logger.info('Metrics collector reset');
+    this.logger.info("Metrics collector reset");
   }
 }

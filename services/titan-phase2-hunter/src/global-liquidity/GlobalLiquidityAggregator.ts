@@ -8,18 +8,28 @@
  * Requirements: 4.1-4.7, 6.1-6.7 (Global Liquidity Aggregation)
  */
 
-import { EventEmitter } from 'events';
-import { MultiExchangeManager, ExchangeStatusSummary } from './MultiExchangeManager';
-import { ExchangeTrade, ConnectionHealth } from './ExchangeWebSocketClient';
-import { GlobalCVDAggregator } from './GlobalCVDAggregator';
-import { ManipulationDetector, ComprehensiveManipulationAnalysis } from './ManipulationDetector';
+import { EventEmitter } from "events";
 import {
-  ConsensusValidator,
+  ExchangeStatusSummary,
+  MultiExchangeManager,
+} from "./MultiExchangeManager";
+import {
+  ConnectionHealth,
+  ExchangeId,
+  ExchangeTrade,
+} from "./ExchangeWebSocketClient";
+import { GlobalCVDAggregator } from "./GlobalCVDAggregator";
+import {
+  ComprehensiveManipulationAnalysis,
+  ManipulationDetector,
+} from "./ManipulationDetector";
+import {
   ConsensusValidationResult,
+  ConsensusValidator,
   SignalValidationResponse,
-} from './ConsensusValidator';
-import { ConnectionStatus, GlobalCVDData, EnhancedErrorType } from '../types';
-import { Logger } from '../logging/Logger';
+} from "./ConsensusValidator";
+import { ConnectionStatus, EnhancedErrorType, GlobalCVDData } from "../types";
+import { Logger } from "../logging/Logger";
 
 /**
  * Global Liquidity Aggregator configuration
@@ -27,13 +37,13 @@ import { Logger } from '../logging/Logger';
 export interface GlobalLiquidityAggregatorConfig {
   enabled: boolean;
   symbols: string[];
-  exchanges: ('binance' | 'coinbase' | 'kraken')[];
+  exchanges: ("binance" | "coinbase" | "kraken")[];
   exchangeWeights: {
     binance: number;
     coinbase: number;
     kraken: number;
   };
-  weightingMethod: 'volume' | 'liquidity' | 'hybrid' | 'fixed';
+  weightingMethod: "volume" | "liquidity" | "hybrid" | "fixed";
   consensusThreshold: number;
   manipulationSensitivity: number;
   reconnectInterval: number;
@@ -58,7 +68,7 @@ export interface GlobalCVDUpdateEvent {
 export interface FallbackState {
   active: boolean;
   reason: string;
-  fallbackExchange: 'binance' | 'coinbase' | 'kraken' | null;
+  fallbackExchange: "binance" | "coinbase" | "kraken" | null;
   activatedAt: Date | null;
 }
 
@@ -67,14 +77,14 @@ export interface FallbackState {
  */
 const DEFAULT_CONFIG: GlobalLiquidityAggregatorConfig = {
   enabled: true,
-  symbols: ['BTCUSDT'],
-  exchanges: ['binance', 'coinbase', 'kraken'],
+  symbols: ["BTCUSDT"],
+  exchanges: ["binance", "coinbase", "kraken"],
   exchangeWeights: {
     binance: 40,
     coinbase: 35,
     kraken: 25,
   },
-  weightingMethod: 'volume',
+  weightingMethod: "volume",
   consensusThreshold: 0.67,
   manipulationSensitivity: 70,
   reconnectInterval: 5000,
@@ -115,14 +125,17 @@ export class GlobalLiquidityAggregator extends EventEmitter {
   private isInitialized: boolean = false;
   private fallbackState: FallbackState = {
     active: false,
-    reason: '',
+    reason: "",
     fallbackExchange: null,
     activatedAt: null,
   };
   private updateTimer: NodeJS.Timeout | null = null;
   private lastGlobalCVD: Map<string, GlobalCVDData> = new Map();
 
-  constructor(config: Partial<GlobalLiquidityAggregatorConfig> = {}, logger?: Logger) {
+  constructor(
+    config: Partial<GlobalLiquidityAggregatorConfig> = {},
+    logger?: Logger,
+  ) {
     super();
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.logger = logger || new Logger({ enableConsoleOutput: true });
@@ -157,17 +170,17 @@ export class GlobalLiquidityAggregator extends EventEmitter {
    */
   async initialize(): Promise<void> {
     if (this.isInitialized) {
-      console.log('⚠️ GlobalLiquidityAggregator already initialized');
+      console.log("⚠️ GlobalLiquidityAggregator already initialized");
       return;
     }
 
     if (!this.config.enabled) {
-      console.log('⚠️ GlobalLiquidityAggregator is disabled');
+      console.log("⚠️ GlobalLiquidityAggregator is disabled");
       return;
     }
 
-    console.log('🌐 Initializing Global Liquidity Aggregator...');
-    this.logInfo('Initializing Global Liquidity Aggregator');
+    console.log("🌐 Initializing Global Liquidity Aggregator...");
+    this.logInfo("Initializing Global Liquidity Aggregator");
 
     try {
       // Initialize exchange connections
@@ -181,13 +194,19 @@ export class GlobalLiquidityAggregator extends EventEmitter {
 
       // eslint-disable-next-line functional/immutable-data
       this.isInitialized = true;
-      console.log('✅ Global Liquidity Aggregator initialized');
-      this.logInfo('Global Liquidity Aggregator initialized successfully');
+      console.log("✅ Global Liquidity Aggregator initialized");
+      this.logInfo("Global Liquidity Aggregator initialized successfully");
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      console.error('❌ Failed to initialize Global Liquidity Aggregator:', errorMsg);
-      this.logError('Failed to initialize Global Liquidity Aggregator', errorMsg);
-      this.emit('error', {
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      console.error(
+        "❌ Failed to initialize Global Liquidity Aggregator:",
+        errorMsg,
+      );
+      this.logError(
+        "Failed to initialize Global Liquidity Aggregator",
+        errorMsg,
+      );
+      this.emit("error", {
         type: EnhancedErrorType.EXCHANGE_CONNECTION_LOST,
         message: errorMsg,
       });
@@ -199,7 +218,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
    * Shutdown the Global Liquidity Aggregator
    */
   async shutdown(): Promise<void> {
-    console.log('🔌 Shutting down Global Liquidity Aggregator...');
+    console.log("🔌 Shutting down Global Liquidity Aggregator...");
 
     // Stop periodic updates
     this.stopPeriodicUpdates();
@@ -212,7 +231,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
 
     // eslint-disable-next-line functional/immutable-data
     this.isInitialized = false;
-    console.log('✅ Global Liquidity Aggregator shutdown complete');
+    console.log("✅ Global Liquidity Aggregator shutdown complete");
   }
 
   /**
@@ -236,8 +255,8 @@ export class GlobalLiquidityAggregator extends EventEmitter {
    */
   validateSignal(
     symbol: string,
-    direction: 'LONG' | 'SHORT',
-    technicalConfidence: number
+    direction: "LONG" | "SHORT",
+    technicalConfidence: number,
   ): SignalValidationResponse | null {
     if (!this.isInitialized) return null;
 
@@ -249,16 +268,16 @@ export class GlobalLiquidityAggregator extends EventEmitter {
         consensusResult: {
           isValid: false,
           hasConsensus: false,
-          consensusDirection: 'neutral',
+          consensusDirection: "neutral",
           confidence: 0,
           votes: [],
           agreementRatio: 0,
           connectedExchanges: 0,
-          reasoning: ['No Global CVD data available'],
+          reasoning: ["No Global CVD data available"],
           timestamp: new Date(),
         },
-        recommendation: 'veto',
-        reasoning: ['Global CVD data unavailable - cannot validate signal'],
+        recommendation: "veto",
+        reasoning: ["Global CVD data unavailable - cannot validate signal"],
       };
     }
 
@@ -280,7 +299,9 @@ export class GlobalLiquidityAggregator extends EventEmitter {
    * Get manipulation analysis for a symbol
    * Requirement 4.3: Flag as FAKEOUT if one exchange sweeps but others hold steady
    */
-  getManipulationAnalysis(symbol: string): ComprehensiveManipulationAnalysis | null {
+  getManipulationAnalysis(
+    symbol: string,
+  ): ComprehensiveManipulationAnalysis | null {
     if (!this.isInitialized) return null;
 
     const globalCVD = this.getGlobalCVD(symbol);
@@ -289,7 +310,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
     return this.manipulationDetector.analyzeManipulation(
       symbol,
       globalCVD.exchangeFlows,
-      globalCVD.aggregatedCVD
+      globalCVD.aggregatedCVD,
     );
   }
 
@@ -317,7 +338,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
   /**
    * Get health metrics for all exchanges
    */
-  getHealthMetrics(): Map<'binance' | 'coinbase' | 'kraken', ConnectionHealth> {
+  getHealthMetrics(): Map<ExchangeId, ConnectionHealth> {
     return this.exchangeManager.getHealthMetrics();
   }
 
@@ -341,53 +362,59 @@ export class GlobalLiquidityAggregator extends EventEmitter {
    */
   private setupEventListeners(): void {
     // Exchange manager events
-    this.exchangeManager.on('trade', (trade: ExchangeTrade) => {
+    this.exchangeManager.on("trade", (trade: ExchangeTrade) => {
       this.cvdAggregator.processTrade(trade);
     });
 
-    this.exchangeManager.on('exchangeConnected', (exchange: string) => {
+    this.exchangeManager.on("exchangeConnected", (exchange: string) => {
       this.cvdAggregator.updateExchangeStatus(
-        exchange as 'binance' | 'coinbase' | 'kraken',
-        ConnectionStatus.CONNECTED
+        exchange as "binance" | "coinbase" | "kraken",
+        ConnectionStatus.CONNECTED,
       );
-      this.emit('exchangeConnected', exchange);
+      this.emit("exchangeConnected", exchange);
       this.checkFallbackStatus();
     });
 
-    this.exchangeManager.on('exchangeDisconnected', (exchange: string) => {
+    this.exchangeManager.on("exchangeDisconnected", (exchange: string) => {
       this.cvdAggregator.updateExchangeStatus(
-        exchange as 'binance' | 'coinbase' | 'kraken',
-        ConnectionStatus.DISCONNECTED
+        exchange as "binance" | "coinbase" | "kraken",
+        ConnectionStatus.DISCONNECTED,
       );
-      this.emit('exchangeDisconnected', exchange);
+      this.emit("exchangeDisconnected", exchange);
       this.checkFallbackStatus();
       this.logWarning(`Exchange disconnected: ${exchange}`);
     });
 
-    this.exchangeManager.on('statusChange', (status: ExchangeStatusSummary) => {
+    this.exchangeManager.on("statusChange", (status: ExchangeStatusSummary) => {
       this.handleStatusChange(status);
     });
 
     // CVD aggregator events
-    this.cvdAggregator.on('cvdUpdate', (data: { symbol: string; data: GlobalCVDData }) => {
-      this.handleCVDUpdate(data.symbol, data.data);
-    });
+    this.cvdAggregator.on(
+      "cvdUpdate",
+      (data: { symbol: string; data: GlobalCVDData }) => {
+        this.handleCVDUpdate(data.symbol, data.data);
+      },
+    );
 
     // Manipulation detector events
     this.manipulationDetector.on(
-      'manipulationDetected',
+      "manipulationDetected",
       (analysis: ComprehensiveManipulationAnalysis) => {
-        this.emit('manipulationDetected', analysis);
+        this.emit("manipulationDetected", analysis);
         this.logWarning(
-          `Manipulation detected: ${analysis.pattern} on ${analysis.suspectExchange}`
+          `Manipulation detected: ${analysis.pattern} on ${analysis.suspectExchange}`,
         );
-      }
+      },
     );
 
     // Consensus validator events
-    this.consensusValidator.on('consensusReached', (result: ConsensusValidationResult) => {
-      this.emit('consensusReached', result);
-    });
+    this.consensusValidator.on(
+      "consensusReached",
+      (result: ConsensusValidationResult) => {
+        this.emit("consensusReached", result);
+      },
+    );
   }
 
   /**
@@ -403,11 +430,13 @@ export class GlobalLiquidityAggregator extends EventEmitter {
     const manipulation = this.manipulationDetector.analyzeManipulation(
       symbol,
       globalCVD.exchangeFlows,
-      globalCVD.aggregatedCVD
+      globalCVD.aggregatedCVD,
     );
 
     // Validate consensus
-    const consensus = this.consensusValidator.validateConsensus(globalCVD.exchangeFlows);
+    const consensus = this.consensusValidator.validateConsensus(
+      globalCVD.exchangeFlows,
+    );
 
     // Emit comprehensive update event
     const updateEvent: GlobalCVDUpdateEvent = {
@@ -418,7 +447,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
       timestamp: new Date(),
     };
 
-    this.emit('globalCVDUpdate', updateEvent);
+    this.emit("globalCVDUpdate", updateEvent);
   }
 
   /**
@@ -426,7 +455,9 @@ export class GlobalLiquidityAggregator extends EventEmitter {
    */
   private handleStatusChange(status: ExchangeStatusSummary): void {
     // Log status change
-    console.log(`📊 Exchange status: ${status.connectedCount}/${status.totalExchanges} connected`);
+    console.log(
+      `📊 Exchange status: ${status.connectedCount}/${status.totalExchanges} connected`,
+    );
 
     // Check if we need to activate fallback
     if (status.connectedCount < 2 && this.config.fallbackToSingleExchange) {
@@ -445,14 +476,14 @@ export class GlobalLiquidityAggregator extends EventEmitter {
 
     // Find the connected exchange
     // eslint-disable-next-line functional/no-let
-    let fallbackExchange: 'binance' | 'coinbase' | 'kraken' | null = null;
+    let fallbackExchange: "binance" | "coinbase" | "kraken" | null = null;
 
     if (status.binance === ConnectionStatus.CONNECTED) {
-      fallbackExchange = 'binance';
+      fallbackExchange = "binance";
     } else if (status.coinbase === ConnectionStatus.CONNECTED) {
-      fallbackExchange = 'coinbase';
+      fallbackExchange = "coinbase";
     } else if (status.kraken === ConnectionStatus.CONNECTED) {
-      fallbackExchange = 'kraken';
+      fallbackExchange = "kraken";
     }
 
     // eslint-disable-next-line functional/immutable-data
@@ -463,12 +494,15 @@ export class GlobalLiquidityAggregator extends EventEmitter {
       activatedAt: new Date(),
     };
 
-    this.emit('fallbackActivated', this.fallbackState);
-    this.logWarning(`Fallback activated: using ${fallbackExchange || 'none'} only`);
+    this.emit("fallbackActivated", this.fallbackState);
+    this.logWarning(
+      `Fallback activated: using ${fallbackExchange || "none"} only`,
+    );
 
-    this.emit('error', {
+    this.emit("error", {
       type: EnhancedErrorType.EXCHANGE_CONNECTION_LOST,
-      message: `Multiple exchanges offline, falling back to ${fallbackExchange}`,
+      message:
+        `Multiple exchanges offline, falling back to ${fallbackExchange}`,
     });
   }
 
@@ -481,13 +515,13 @@ export class GlobalLiquidityAggregator extends EventEmitter {
     // eslint-disable-next-line functional/immutable-data
     this.fallbackState = {
       active: false,
-      reason: '',
+      reason: "",
       fallbackExchange: null,
       activatedAt: null,
     };
 
-    this.emit('fallbackDeactivated');
-    this.logInfo('Fallback deactivated: multiple exchanges restored');
+    this.emit("fallbackDeactivated");
+    this.logInfo("Fallback deactivated: multiple exchanges restored");
   }
 
   /**
@@ -511,7 +545,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
     return {
       ...globalCVD,
       confidence: Math.max(0, globalCVD.confidence - 30), // Reduce confidence in fallback mode
-      consensus: 'neutral', // Cannot determine consensus with single exchange
+      consensus: "neutral", // Cannot determine consensus with single exchange
     };
   }
 
@@ -548,8 +582,8 @@ export class GlobalLiquidityAggregator extends EventEmitter {
    * Log info message
    */
   private logInfo(message: string): void {
-    this.logger.logError('WARNING', message, {
-      component: 'GlobalLiquidityAggregator',
+    this.logger.logError("WARNING", message, {
+      component: "GlobalLiquidityAggregator",
     });
   }
 
@@ -557,8 +591,8 @@ export class GlobalLiquidityAggregator extends EventEmitter {
    * Log warning message
    */
   private logWarning(message: string): void {
-    this.logger.logError('WARNING', message, {
-      component: 'GlobalLiquidityAggregator',
+    this.logger.logError("WARNING", message, {
+      component: "GlobalLiquidityAggregator",
     });
   }
 
@@ -566,8 +600,8 @@ export class GlobalLiquidityAggregator extends EventEmitter {
    * Log error message
    */
   private logError(message: string, details: string): void {
-    this.logger.logError('ERROR', `${message}: ${details}`, {
-      component: 'GlobalLiquidityAggregator',
+    this.logger.logError("ERROR", `${message}: ${details}`, {
+      component: "GlobalLiquidityAggregator",
     });
   }
 
@@ -577,22 +611,28 @@ export class GlobalLiquidityAggregator extends EventEmitter {
    */
   private logValidation(
     symbol: string,
-    direction: 'LONG' | 'SHORT',
-    response: SignalValidationResponse
+    direction: "LONG" | "SHORT",
+    response: SignalValidationResponse,
   ): void {
     const { consensusResult, recommendation, adjustedConfidence } = response;
 
     console.log(`📊 Global CVD Validation: ${symbol} ${direction}`);
     console.log(
-      `   Consensus: ${consensusResult.consensusDirection} (${consensusResult.confidence.toFixed(0)}%)`
+      `   Consensus: ${consensusResult.consensusDirection} (${
+        consensusResult.confidence.toFixed(0)
+      }%)`,
     );
-    console.log(`   Agreement: ${(consensusResult.agreementRatio * 100).toFixed(0)}%`);
+    console.log(
+      `   Agreement: ${(consensusResult.agreementRatio * 100).toFixed(0)}%`,
+    );
     console.log(`   Recommendation: ${recommendation}`);
     console.log(`   Adjusted Confidence: ${adjustedConfidence.toFixed(0)}%`);
 
     // Log individual exchange votes
     for (const vote of consensusResult.votes) {
-      console.log(`   ${vote.exchange}: ${vote.direction} (CVD: ${vote.cvd.toFixed(0)})`);
+      console.log(
+        `   ${vote.exchange}: ${vote.direction} (CVD: ${vote.cvd.toFixed(0)})`,
+      );
     }
   }
 
@@ -624,7 +664,9 @@ export class GlobalLiquidityAggregator extends EventEmitter {
       this.cvdAggregator.updateExchangeWeights(config.exchangeWeights);
     }
     if (config.consensusThreshold !== undefined) {
-      this.consensusValidator.updateConfig({ consensusThreshold: config.consensusThreshold });
+      this.consensusValidator.updateConfig({
+        consensusThreshold: config.consensusThreshold,
+      });
     }
     if (config.manipulationSensitivity !== undefined) {
       this.manipulationDetector.updateConfig({

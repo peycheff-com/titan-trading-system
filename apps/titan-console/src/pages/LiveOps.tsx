@@ -5,7 +5,9 @@ import { ServiceHealthCard } from '@/components/titan/ServiceHealthCard';
 import { DenseTable } from '@/components/titan/DenseTable';
 import { cn } from '@/lib/utils';
 import { Phase, Severity } from '@/types';
-import { Activity, Filter, Radio } from 'lucide-react';
+import { Activity, Filter, Radio, Download } from 'lucide-react';
+import { getApiBaseUrl } from '@/lib/api-config';
+import { toast } from 'sonner';
 import { useTitanWebSocket } from '@/context/WebSocketContext';
 
 const latencySteps = [
@@ -49,10 +51,15 @@ interface LiveOpsData {
   services: LiveOpsService[];
 }
 
+
+
+
+
 export default function LiveOps() {
   const [selectedSeverity, setSelectedSeverity] = useState<string>('all');
   const [selectedSymbol, setSelectedSymbol] = useState<string>('all');
   const [data, setData] = useState<LiveOpsData>({ events: [], orders: [], services: [] });
+  const [isExporting, setIsExporting] = useState(false);
   const { lastMessage } = useTitanWebSocket();
 
   const handleMessage = useCallback((msg: any) => {
@@ -100,6 +107,43 @@ export default function LiveOps() {
 
   const symbols = [...new Set(data.events.filter((e) => e.symbol).map((e) => e.symbol))];
 
+
+  const handleExportEvidence = async () => {
+    try {
+      setIsExporting(true);
+      const token = localStorage.getItem('titan_jwt');
+      const response = await fetch(`${getApiBaseUrl()}/ops/command`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          type: 'export_evidence',
+          target: 'all',
+          meta: { initiator_id: 'console-user', reason: 'manual_export' }
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast.success('Evidence Pack Generated', {
+          description: `Download ready at: ${result.result?.url || 'Simulated URL'}`,
+          action: {
+            label: 'Download',
+            onClick: () => window.open(result.result?.url, '_blank')
+          }
+        });
+      } else {
+        toast.error('Export Failed');
+      }
+    } catch (err) {
+      toast.error('Export Failed', { description: String(err) });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -113,6 +157,14 @@ export default function LiveOps() {
             Real-time event stream and system monitoring
           </p>
         </div>
+        <button
+            onClick={handleExportEvidence}
+            disabled={isExporting}
+            className="flex items-center gap-2 rounded-md bg-secondary px-3 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50"
+        >
+            <Download className="h-4 w-4" />
+            {isExporting ? 'Exporting...' : 'Export Evidence'}
+        </button>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">

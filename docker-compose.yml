@@ -119,9 +119,52 @@ services:
     ports:
       - '8080:8080'
     environment:
-      - VITE_API_URL=http://localhost:3100
+      - API_PROXY_TARGET=http://titan-console-api:3000
     depends_on:
-      titan-brain:
+      - titan-console-api
+    networks:
+      - titan-network
+    restart: unless-stopped
+
+  titan-console-api:
+    build:
+      context: .
+      dockerfile: services/titan-console-api/Dockerfile
+    container_name: titan-console-api
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - NATS_URL=nats://nats:4222
+      - NATS_USER=console
+      - NATS_PASS=console_password
+      - JWT_SECRET=dev_jwt_secret
+      - TITAN_MASTER_PASSWORD=dev_master_password
+    depends_on:
+      nats:
+        condition: service_healthy
+    networks:
+      - titan-network
+    restart: unless-stopped
+
+  titan-opsd:
+    build:
+      context: .
+      dockerfile: services/titan-opsd/Dockerfile
+    container_name: titan-opsd
+    user: root
+    environment:
+      - NODE_ENV=development
+      - NATS_URL=nats://nats:4222
+      - NATS_USER=ops
+      - NATS_PASS=console_password # Using same pass for dev simplicity or verify nats.conf
+      - HMAC_SECRET=titan_dev_hmac_secret
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./docker-compose.yml:/app/docker-compose.yml
+    depends_on:
+      nats:
         condition: service_healthy
     networks:
       - titan-network

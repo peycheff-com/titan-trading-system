@@ -24,7 +24,8 @@ import {
   describe,
   expect,
   it,
-} from "@jest/globals";
+  vi,
+} from "vitest";
 // import fetch from 'node-fetch';
 import WebSocket from "ws";
 import crypto from "crypto";
@@ -304,7 +305,12 @@ class DisasterRecoveryTester {
   }
 }
 
-describe.skip("Production Readiness Validation", () => {
+// Skip integration tests unless INTEGRATION_TESTS=true environment variable is set
+const describeIntegration = process.env.INTEGRATION_TESTS === "true"
+  ? describe
+  : describe.skip;
+
+describeIntegration("Production Readiness Validation", () => {
   let metrics: ProductionMetrics;
   let brainBaseUrl: string;
   let executionBaseUrl: string;
@@ -318,7 +324,7 @@ describe.skip("Production Readiness Validation", () => {
     consoleBaseUrl =
       `http://${PROD_CONFIG.services.console.host}:${PROD_CONFIG.services.console.port}`;
 
-    jest.setTimeout(PROD_CONFIG.timeout);
+    vi.setConfig({ testTimeout: PROD_CONFIG.timeout });
   });
 
   beforeEach(() => {

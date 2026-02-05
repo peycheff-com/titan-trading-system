@@ -7,9 +7,14 @@
  * Requirements: 4.2 (Global CVD Calculation)
  */
 
-import { EventEmitter } from 'events';
-import { ExchangeTrade } from './ExchangeWebSocketClient';
-import { ConnectionStatus, ExchangeFlow, GlobalCVDData, ManipulationAnalysis } from '../types';
+import { EventEmitter } from "events";
+import { ExchangeId, ExchangeTrade } from "./ExchangeWebSocketClient";
+import {
+  ConnectionStatus,
+  ExchangeFlow,
+  GlobalCVDData,
+  ManipulationAnalysis,
+} from "../types";
 
 /**
  * CVD calculation window configuration
@@ -27,6 +32,7 @@ export interface ExchangeWeightConfig {
   binance: number;
   coinbase: number;
   kraken: number;
+  hyperliquid?: number; // DEX weight (optional)
 }
 
 /**
@@ -34,7 +40,7 @@ export interface ExchangeWeightConfig {
  */
 export interface GlobalCVDAggregatorConfig {
   exchangeWeights: ExchangeWeightConfig;
-  weightingMethod: 'volume' | 'liquidity' | 'hybrid' | 'fixed';
+  weightingMethod: "volume" | "liquidity" | "hybrid" | "fixed";
   updateInterval: number; // milliseconds
   tradeHistoryWindow: number; // milliseconds
   cvdWindows: CVDWindowConfig;
@@ -44,20 +50,29 @@ export interface GlobalCVDAggregatorConfig {
  * Trade history entry with CVD contribution
  */
 interface TradeHistoryEntry {
-  exchange: 'binance' | 'coinbase' | 'kraken';
+  exchange: "binance" | "coinbase" | "kraken" | "hyperliquid";
   symbol: string;
   price: number;
   quantity: number;
-  side: 'buy' | 'sell';
+  side: "buy" | "sell";
   timestamp: number;
   cvdContribution: number; // positive for buy, negative for sell
 }
+
+/** Supported CVD exchanges (subset of all exchanges) */
+type CVDExchange = "binance" | "coinbase" | "kraken" | "hyperliquid";
+const CVD_SUPPORTED_EXCHANGES: readonly CVDExchange[] = [
+  "binance",
+  "coinbase",
+  "kraken",
+  "hyperliquid",
+] as const;
 
 /**
  * Exchange CVD state
  */
 interface ExchangeCVDState {
-  exchange: 'binance' | 'coinbase' | 'kraken';
+  exchange: "binance" | "coinbase" | "kraken" | "hyperliquid";
   cvd: number;
   volume: number;
   trades: number;
@@ -74,7 +89,7 @@ const DEFAULT_CONFIG: GlobalCVDAggregatorConfig = {
     coinbase: 35,
     kraken: 25,
   },
-  weightingMethod: 'volume',
+  weightingMethod: "volume",
   updateInterval: 1000, // 1 second
   tradeHistoryWindow: 15 * 60 * 1000, // 15 minutes
   cvdWindows: {
@@ -97,7 +112,10 @@ const DEFAULT_CONFIG: GlobalCVDAggregatorConfig = {
 export class GlobalCVDAggregator extends EventEmitter {
   private config: GlobalCVDAggregatorConfig;
   private tradeHistory: Map<string, TradeHistoryEntry[]> = new Map();
-  private exchangeStates: Map<'binance' | 'coinbase' | 'kraken', ExchangeCVDState> = new Map();
+  private exchangeStates: Map<
+    "binance" | "coinbase" | "kraken" | "hyperliquid",
+    ExchangeCVDState
+  > = new Map();
   private dynamicWeights: ExchangeWeightConfig;
   private updateTimer: NodeJS.Timeout | null = null;
   private lastGlobalCVD: GlobalCVDData | null = null;
@@ -113,7 +131,12 @@ export class GlobalCVDAggregator extends EventEmitter {
    * Initialize exchange states
    */
   private initializeExchangeStates(): void {
-    const exchanges: ('binance' | 'coinbase' | 'kraken')[] = ['binance', 'coinbase', 'kraken'];
+    const exchanges: ("binance" | "coinbase" | "kraken" | "hyperliquid")[] = [
+      "binance",
+      "coinbase",
+      "kraken",
+      "hyperliquid",
+    ];
 
     for (const exchange of exchanges) {
       // eslint-disable-next-line functional/immutable-data
@@ -139,7 +162,7 @@ export class GlobalCVDAggregator extends EventEmitter {
       this.calculateAndEmitGlobalCVD();
     }, this.config.updateInterval);
 
-    console.log('📊 Global CVD Aggregator started');
+    console.log("📊 Global CVD Aggregator started");
   }
 
   /**
@@ -152,7 +175,7 @@ export class GlobalCVDAggregator extends EventEmitter {
       this.updateTimer = null;
     }
 
-    console.log('📊 Global CVD Aggregator stopped');
+    console.log("📊 Global CVD Aggregator stopped");
   }
 
   /**
@@ -160,15 +183,21 @@ export class GlobalCVDAggregator extends EventEmitter {
    * Requirement 4.2: Aggregate buy/sell volume from all three exchanges
    */
   processTrade(trade: ExchangeTrade): void {
+    // Only process trades from CVD-supported exchanges
+    if (!CVD_SUPPORTED_EXCHANGES.includes(trade.exchange as CVDExchange)) {
+      return; // Skip unsupported exchanges (bybit, mexc)
+    }
+    const exchange = trade.exchange as CVDExchange;
     const symbol = trade.symbol;
 
     // Calculate CVD contribution (positive for buy, negative for sell)
-    const cvdContribution =
-      trade.side === 'buy' ? trade.quantity * trade.price : -trade.quantity * trade.price;
+    const cvdContribution = trade.side === "buy"
+      ? trade.quantity * trade.price
+      : -trade.quantity * trade.price;
 
     // Create history entry
     const entry: TradeHistoryEntry = {
-      exchange: trade.exchange,
+      exchange,
       symbol,
       price: trade.price,
       quantity: trade.quantity,
@@ -186,7 +215,7 @@ export class GlobalCVDAggregator extends EventEmitter {
     this.tradeHistory.get(symbol)!.push(entry);
 
     // Update exchange state
-    const state = this.exchangeStates.get(trade.exchange);
+    const state = this.exchangeStates.get(exchange);
     if (state) {
       // eslint-disable-next-line functional/immutable-data
       state.cvd += cvdContribution;
@@ -208,8 +237,8 @@ export class GlobalCVDAggregator extends EventEmitter {
    * Update exchange connection status
    */
   updateExchangeStatus(
-    exchange: 'binance' | 'coinbase' | 'kraken',
-    status: ConnectionStatus
+    exchange: "binance" | "coinbase" | "kraken" | "hyperliquid",
+    status: ConnectionStatus,
   ): void {
     const state = this.exchangeStates.get(exchange);
     if (state) {
@@ -218,7 +247,7 @@ export class GlobalCVDAggregator extends EventEmitter {
     }
 
     // Recalculate weights if using dynamic weighting
-    if (this.config.weightingMethod !== 'fixed') {
+    if (this.config.weightingMethod !== "fixed") {
       this.recalculateDynamicWeights();
     }
   }
@@ -229,22 +258,29 @@ export class GlobalCVDAggregator extends EventEmitter {
    */
   calculateGlobalCVD(
     symbol: string,
-    windowMs: number = this.config.cvdWindows.mediumWindow
+    windowMs: number = this.config.cvdWindows.mediumWindow,
   ): GlobalCVDData {
     const now = Date.now();
     const cutoff = now - windowMs;
     const trades = this.tradeHistory.get(symbol) || [];
-    const recentTrades = trades.filter(t => t.timestamp > cutoff);
+    const recentTrades = trades.filter((t) => t.timestamp > cutoff);
 
     // Calculate per-exchange CVD and volume
     const exchangeFlows: ExchangeFlow[] = [];
     const exchangeCVDs: Map<
-      'binance' | 'coinbase' | 'kraken',
+      "binance" | "coinbase" | "kraken" | "hyperliquid",
       { cvd: number; volume: number; trades: number }
     > = new Map();
 
     // Initialize
-    for (const exchange of ['binance', 'coinbase', 'kraken'] as const) {
+    for (
+      const exchange of [
+        "binance",
+        "coinbase",
+        "kraken",
+        "hyperliquid",
+      ] as const
+    ) {
       // eslint-disable-next-line functional/immutable-data
       exchangeCVDs.set(exchange, { cvd: 0, volume: 0, trades: 0 });
     }
@@ -279,12 +315,12 @@ export class GlobalCVDAggregator extends EventEmitter {
       // Calculate weight based on method
       // eslint-disable-next-line functional/no-let
       let weight: number;
-      if (this.config.weightingMethod === 'volume' && totalVolume > 0) {
+      if (this.config.weightingMethod === "volume" && totalVolume > 0) {
         weight = data.volume / totalVolume;
-      } else if (this.config.weightingMethod === 'fixed') {
-        weight = this.config.exchangeWeights[exchange] / 100;
+      } else if (this.config.weightingMethod === "fixed") {
+        weight = (this.config.exchangeWeights[exchange] ?? 25) / 100;
       } else {
-        weight = this.dynamicWeights[exchange] / 100;
+        weight = (this.dynamicWeights[exchange] ?? 25) / 100;
       }
 
       // Only include connected exchanges in weighted calculation
@@ -347,8 +383,14 @@ export class GlobalCVDAggregator extends EventEmitter {
     long: GlobalCVDData;
   } {
     return {
-      short: this.calculateGlobalCVD(symbol, this.config.cvdWindows.shortWindow),
-      medium: this.calculateGlobalCVD(symbol, this.config.cvdWindows.mediumWindow),
+      short: this.calculateGlobalCVD(
+        symbol,
+        this.config.cvdWindows.shortWindow,
+      ),
+      medium: this.calculateGlobalCVD(
+        symbol,
+        this.config.cvdWindows.mediumWindow,
+      ),
       long: this.calculateGlobalCVD(symbol, this.config.cvdWindows.longWindow),
     };
   }
@@ -357,25 +399,25 @@ export class GlobalCVDAggregator extends EventEmitter {
    * Get exchange flow for a specific exchange
    */
   getExchangeFlow(
-    exchange: 'binance' | 'coinbase' | 'kraken',
-    symbol: string
+    exchange: "binance" | "coinbase" | "kraken",
+    symbol: string,
   ): ExchangeFlow | null {
     const globalCVD = this.calculateGlobalCVD(symbol);
-    return globalCVD.exchangeFlows.find(f => f.exchange === exchange) || null;
+    return globalCVD.exchangeFlows.find((f) => f.exchange === exchange) || null;
   }
 
   /**
    * Determine consensus direction from exchange flows
    */
   private determineConsensus(
-    flows: ExchangeFlow[]
-  ): 'bullish' | 'bearish' | 'neutral' | 'conflicted' {
+    flows: ExchangeFlow[],
+  ): "bullish" | "bearish" | "neutral" | "conflicted" {
     const connectedFlows = flows.filter(
-      f => f.status === ConnectionStatus.CONNECTED && f.trades > 0
+      (f) => f.status === ConnectionStatus.CONNECTED && f.trades > 0,
     );
 
     if (connectedFlows.length === 0) {
-      return 'neutral';
+      return "neutral";
     }
 
     // eslint-disable-next-line functional/no-let
@@ -389,26 +431,29 @@ export class GlobalCVDAggregator extends EventEmitter {
     }
 
     // Check for consensus (2 out of 3 or all agree)
-    if (bullishCount >= 2) return 'bullish';
-    if (bearishCount >= 2) return 'bearish';
-    if (bullishCount === 1 && bearishCount === 1) return 'conflicted';
+    if (bullishCount >= 2) return "bullish";
+    if (bearishCount >= 2) return "bearish";
+    if (bullishCount === 1 && bearishCount === 1) return "conflicted";
 
-    return 'neutral';
+    return "neutral";
   }
 
   /**
    * Calculate confidence score based on exchange agreement and volume
    */
-  private calculateConfidence(flows: ExchangeFlow[], totalVolume: number): number {
+  private calculateConfidence(
+    flows: ExchangeFlow[],
+    totalVolume: number,
+  ): number {
     const connectedFlows = flows.filter(
-      f => f.status === ConnectionStatus.CONNECTED && f.trades > 0
+      (f) => f.status === ConnectionStatus.CONNECTED && f.trades > 0,
     );
 
     if (connectedFlows.length === 0) return 0;
 
     // Factor 1: Exchange agreement (0-50 points)
-    const directions = connectedFlows.map(f => Math.sign(f.cvd));
-    const agreementCount = directions.filter(d => d === directions[0]).length;
+    const directions = connectedFlows.map((f) => Math.sign(f.cvd));
+    const agreementCount = directions.filter((d) => d === directions[0]).length;
     const agreementScore = (agreementCount / connectedFlows.length) * 50;
 
     // Factor 2: Volume significance (0-30 points)
@@ -425,7 +470,7 @@ export class GlobalCVDAggregator extends EventEmitter {
    */
   private detectManipulation(flows: ExchangeFlow[]): ManipulationAnalysis {
     const connectedFlows = flows.filter(
-      f => f.status === ConnectionStatus.CONNECTED && f.trades > 0
+      (f) => f.status === ConnectionStatus.CONNECTED && f.trades > 0,
     );
 
     if (connectedFlows.length < 2) {
@@ -433,12 +478,13 @@ export class GlobalCVDAggregator extends EventEmitter {
         detected: false,
         suspectExchange: null,
         divergenceScore: 0,
-        pattern: 'none',
+        pattern: "none",
       };
     }
 
     // Calculate average CVD
-    const avgCVD = connectedFlows.reduce((sum, f) => sum + f.cvd, 0) / connectedFlows.length;
+    const avgCVD = connectedFlows.reduce((sum, f) => sum + f.cvd, 0) /
+      connectedFlows.length;
 
     // Find outliers (CVD significantly different from average)
     // eslint-disable-next-line functional/no-let
@@ -448,7 +494,9 @@ export class GlobalCVDAggregator extends EventEmitter {
 
     for (const flow of connectedFlows) {
       const divergence = Math.abs(flow.cvd - avgCVD);
-      const normalizedDivergence = avgCVD !== 0 ? divergence / Math.abs(avgCVD) : 0;
+      const normalizedDivergence = avgCVD !== 0
+        ? divergence / Math.abs(avgCVD)
+        : 0;
 
       if (normalizedDivergence > maxDivergence) {
         maxDivergence = normalizedDivergence;
@@ -464,7 +512,7 @@ export class GlobalCVDAggregator extends EventEmitter {
       detected,
       suspectExchange: detected ? suspectExchange : null,
       divergenceScore,
-      pattern: detected ? 'single_exchange_outlier' : 'none',
+      pattern: detected ? "single_exchange_outlier" : "none",
     };
   }
 
@@ -474,7 +522,10 @@ export class GlobalCVDAggregator extends EventEmitter {
   private recalculateDynamicWeights(): void {
     // eslint-disable-next-line functional/no-let
     let totalVolume = 0;
-    const volumes: Map<'binance' | 'coinbase' | 'kraken', number> = new Map();
+    const volumes: Map<
+      "binance" | "coinbase" | "kraken" | "hyperliquid",
+      number
+    > = new Map();
 
     for (const [exchange, state] of this.exchangeStates) {
       if (state.status === ConnectionStatus.CONNECTED) {
@@ -508,7 +559,7 @@ export class GlobalCVDAggregator extends EventEmitter {
     if (!trades) return;
 
     const cutoff = Date.now() - this.config.tradeHistoryWindow;
-    const filtered = trades.filter(t => t.timestamp > cutoff);
+    const filtered = trades.filter((t) => t.timestamp > cutoff);
     // eslint-disable-next-line functional/immutable-data
     this.tradeHistory.set(symbol, filtered);
   }
@@ -520,7 +571,7 @@ export class GlobalCVDAggregator extends EventEmitter {
     // Calculate for all tracked symbols
     for (const symbol of this.tradeHistory.keys()) {
       const globalCVD = this.calculateGlobalCVD(symbol);
-      this.emit('cvdUpdate', { symbol, data: globalCVD });
+      this.emit("cvdUpdate", { symbol, data: globalCVD });
     }
   }
 
@@ -528,7 +579,7 @@ export class GlobalCVDAggregator extends EventEmitter {
    * Get current exchange weights
    */
   getExchangeWeights(): ExchangeWeightConfig {
-    return this.config.weightingMethod === 'fixed'
+    return this.config.weightingMethod === "fixed"
       ? { ...this.config.exchangeWeights }
       : { ...this.dynamicWeights };
   }
@@ -538,10 +589,16 @@ export class GlobalCVDAggregator extends EventEmitter {
    */
   updateExchangeWeights(weights: Partial<ExchangeWeightConfig>): void {
     // eslint-disable-next-line functional/immutable-data
-    this.config.exchangeWeights = { ...this.config.exchangeWeights, ...weights };
+    this.config.exchangeWeights = {
+      ...this.config.exchangeWeights,
+      ...weights,
+    };
 
     // Validate weights sum to 100
-    const total = Object.values(this.config.exchangeWeights).reduce((a, b) => a + b, 0);
+    const total = Object.values(this.config.exchangeWeights).reduce(
+      (a, b) => a + b,
+      0,
+    );
     if (Math.abs(total - 100) > 0.1) {
       console.warn(`⚠️ Exchange weights sum to ${total}%, should be 100%`);
     }
@@ -557,7 +614,11 @@ export class GlobalCVDAggregator extends EventEmitter {
   /**
    * Get trade history statistics
    */
-  getTradeHistoryStats(): { symbols: number; totalTrades: number; memoryEstimate: string } {
+  getTradeHistoryStats(): {
+    symbols: number;
+    totalTrades: number;
+    memoryEstimate: string;
+  } {
     // eslint-disable-next-line functional/no-let
     let totalTrades = 0;
     for (const trades of this.tradeHistory.values()) {

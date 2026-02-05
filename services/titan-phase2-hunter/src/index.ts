@@ -917,6 +917,20 @@ class HunterApplication {
             uptime: process.uptime(),
           }),
         );
+      } else if (req.url === "/metrics") {
+        // Prometheus metrics format
+        const lines: string[] = [
+          "# HELP hunter_uptime_seconds Process uptime in seconds",
+          "# TYPE hunter_uptime_seconds gauge",
+          `hunter_uptime_seconds ${process.uptime().toFixed(2)}`,
+          "",
+          "# HELP hunter_info Build and version info",
+          "# TYPE hunter_info gauge",
+          `hunter_info{version="1.0.0"} 1`,
+        ];
+
+        res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
+        res.end(lines.join("\n") + "\n");
       } else {
         res.writeHead(404);
         res.end();

@@ -31,6 +31,8 @@ import Journal from '@/pages/ops/Journal';
 import Alerts from '@/pages/ops/Alerts';
 import Infra from '@/pages/ops/Infra';
 import PowerLaw from '@/pages/ops/PowerLaw';
+import ConfigCenter from '@/pages/ops/ConfigCenter';
+import Venues from '@/pages/ops/Venues';
 import SettingsPage from '@/pages/Settings';
 import NotFound from '@/pages/NotFound';
 
@@ -96,6 +98,8 @@ const App = () => (
                   <Route path="/alerts" element={<Alerts />} />
                   <Route path="/infra" element={<Infra />} />
                   <Route path="/powerlaw" element={<PowerLaw />} />
+                  <Route path="/config" element={<ConfigCenter />} />
+                  <Route path="/venues" element={<Venues />} />
                   <Route path="/settings" element={<SettingsPage />} />
                 </Route>
 

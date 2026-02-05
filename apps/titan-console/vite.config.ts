@@ -8,13 +8,37 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 3001,
+    proxy: {
+      "/api": {
+        target: process.env.API_PROXY_TARGET || "http://localhost:3000",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ""),
+        ws: true,
+      },
+      "/ops": {
+        target: process.env.API_PROXY_TARGET || "http://localhost:3000",
+        changeOrigin: true,
+      },
+    },
   },
   preview: {
     host: "0.0.0.0",
     port: process.env.PORT ? parseInt(process.env.PORT) : 8080,
     allowedHosts: true,
-    // Allow all hosts in production (configured via reverse proxy)
+    proxy: {
+      "/api": {
+        target: process.env.API_PROXY_TARGET || "http://titan-console-api:3000",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ""),
+        ws: true,
+      },
+      "/ops": {
+        target: process.env.API_PROXY_TARGET || "http://titan-console-api:3000",
+        changeOrigin: true,
+      },
+    },
   },
+
   plugins: [react(), mode === "development" && componentTagger()].filter(
     Boolean,
   ),

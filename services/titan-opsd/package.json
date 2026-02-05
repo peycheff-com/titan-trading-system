@@ -1,0 +1,26 @@
+{
+  "name": "titan-opsd",
+  "version": "1.0.0",
+  "description": "Titan Ops Daemon - Privileged Operations Executor",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc && node --watch dist/index.js",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix"
+  },
+  "dependencies": {
+    "@titan/shared": "*",
+    "@types/uuid": "^10.0.0",
+    "dotenv": "^16.4.7",
+    "nats": "^2.29.3",
+    "uuid": "^13.0.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "typescript": "^5.3.3"
+  }
+}

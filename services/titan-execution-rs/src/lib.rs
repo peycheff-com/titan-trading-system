@@ -4,6 +4,7 @@ pub mod circuit_breaker;
 pub mod config;
 pub mod context;
 pub mod contracts;
+pub mod dex_validator;
 pub mod drift_detector;
 pub mod engine;
 pub mod exchange;

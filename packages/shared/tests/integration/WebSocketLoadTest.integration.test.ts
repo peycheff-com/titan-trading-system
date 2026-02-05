@@ -23,7 +23,8 @@ import {
   describe,
   expect,
   it,
-} from "@jest/globals";
+  vi,
+} from "vitest";
 import WebSocket from "ws";
 import { performance } from "perf_hooks";
 
@@ -193,13 +194,18 @@ class LoadTestClient {
   }
 }
 
-describe.skip("WebSocket Load Testing", () => {
+// Skip integration tests unless INTEGRATION_TESTS=true environment variable is set
+const describeIntegration = process.env.INTEGRATION_TESTS === "true"
+  ? describe
+  : describe.skip;
+
+describeIntegration("WebSocket Load Testing", () => {
   let metrics: PerformanceMetrics;
   let clients: LoadTestClient[] = [];
 
   beforeAll(() => {
     // Increase timeout for load tests
-    jest.setTimeout(LOAD_TEST_CONFIG.timeout);
+    vi.setConfig({ testTimeout: LOAD_TEST_CONFIG.timeout });
   });
 
   beforeEach(() => {
@@ -244,8 +250,9 @@ describe.skip("WebSocket Load Testing", () => {
       );
 
       const results = await Promise.allSettled(connectionPromises);
-      const successfulConnections =
-        results.filter((result) => result.status === "fulfilled").length;
+      const successfulConnections = results.filter((result) =>
+        result.status === "fulfilled"
+      ).length;
 
       console.log(
         `Successfully connected: ${successfulConnections}/${connectionCount}`,

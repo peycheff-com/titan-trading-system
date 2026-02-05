@@ -191,6 +191,15 @@ pub struct TradeRecord {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DexFillProof {
+    pub sig: String,
+    pub block_height: u64,
+    pub tx_hash: String,
+    pub gas_used: Decimal,
+    pub program_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FillReport {
     pub fill_id: String,
     pub signal_id: String,
@@ -207,6 +216,8 @@ pub struct FillReport {
     pub t_exchange: i64,
     pub client_order_id: String,
     pub execution_id: String,
+    #[serde(default)]
+    pub dex_proof: Option<DexFillProof>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

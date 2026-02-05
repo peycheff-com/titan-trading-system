@@ -256,6 +256,7 @@ impl ExecutionPipeline {
                         t_exchange: response.t_exchange.unwrap_or(self.ctx.time.now_millis()),
                         client_order_id: request.client_order_id.clone(),
                         execution_id: response.order_id.clone(),
+                        dex_proof: None,
                     };
 
                     pipeline_result
