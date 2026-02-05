@@ -8,18 +8,16 @@ Welcome to the Titan Trading System documentation hub. This guide helps you navi
 *Build, test, and extend the system.*
 
 1.  **[System Source of Truth](canonical/SYSTEM_SOURCE_OF_TRUTH.md)**: Start here. The authoritative map of ports, services, and invariants.
-2.  **[Architecture Overview](explanation/architecture_overview.md)**: High-level topology.
+2.  **[Architecture Overview](ARCHITECTURE.md)**: High-level topology.
 3.  **[Local Development Guide](how-to/local_development.md)**: How to run the stack locally.
-4.  **Code Governance**:
-    - [Style Guide](STYLE_GUIDE.md)
+4.  **[Contributing & Style](CONTRIBUTING.md)**: Coding rules, SOTA gates, and style guide.
 
 ### 🛡️ For Operators (Live Environment)
 *Deploy, monitor, and manage the organism.*
 
-1.  **[Deployment Standards](how-to/deploy-production.md)**: Production deployment guide.
-2.  **[Incident Response](runbooks/incident_response.md)**: Emergency procedures.
-3.  **[Secrets Management](security/secrets-management.md)**: Handling credentials securely.
-4.  **[Architecture Overview](explanation/architecture_overview.md)**: High-level system design.
+1.  **[Deployment Guide](DEPLOYMENT.md)**: Production deployment (Manual & Policy).
+2.  **[Operations Manual](OPERATIONS.md)**: Monitoring, Secrets, and Self-Hosted AI.
+3.  **[Incident Response](runbooks/incident_response.md)**: Emergency procedures.
 
 ## By Section
 
@@ -30,8 +28,7 @@ Learn by doing.
 ### 🛠️ [How-To Guides](how-to/index.md)
 Solve specific problems.
 - [Local Development](how-to/local_development.md)
-- [Deploy to Production](how-to/deploy-production.md)
-- [Manage Secrets](security/secrets-management.md)
+- [Deploy to Production](DEPLOYMENT.md)
 
 ### 📖 [Reference](reference/index.md)
 Technical details.
@@ -40,9 +37,8 @@ Technical details.
 
 ### 💡 [Explanation](explanation/index.md)
 Background and context.
-- [Architecture Overview](explanation/architecture_overview.md)
+- [Architecture Overview](ARCHITECTURE.md)
 - [Execution Routing](explanation/execution-routing.md)
-
 - [HA Strategy](explanation/ha-strategy.md)
 - [CI Quality Gates](explanation/ci-quality-gates.md)
 

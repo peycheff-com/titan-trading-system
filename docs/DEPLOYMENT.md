@@ -1,77 +1,112 @@
-# Titan Deployment Architecture
+# Production Deployment Standard
 
-## Overview
+> **Status**: Canonical
+> **Authority**: Titan Ops
 
-The Titan Trading System uses a fully automated, atomic, and immutable deployment pipeline powered by GitHub Actions and Docker. The deployment strategy prioritizes safety (fail-closed), determinism (digest pinning), and auditability.
+## 1. The Deployment Contract
 
-## Principles
+Deployment to Titan Production is a **manual, high-assurance event**. We rarely deploy. When we do, it is a deliberate act of sovereignty.
 
-1.  **Immutability**: Builds are performed once in CI. Artifacts are pushed to GHCR. Production pulls exact digests (e.g., `image@sha256:abc...`).
-2.  **Atomicity**: Deployments use a "Release Directory" pattern (`/opt/titan/releases/<timestamp>-<sha>`). The active system is switched via a single symlink change (`/opt/titan/current`).
-3.  **Single Source of Truth**: The `docker-compose.prod.yml` in the repository is the canonical definition. It is copied to the release directory. Secrets are injected via a stable `.env.prod` file on the host.
-4.  **Verification**: Every deployment runs a `verify.sh` suite checking health, connectivity, and Policy Hash Parity before being marked successful. Failure triggers immediate automatic rollback.
+**Constraint**: All production changes must be performed by an authorized operator.
+**Target**: DigitalOcean Droplet (`titan-core-vps`) via Docker Compose.
 
-## CI/CD Pipeline
+## 2. Pre-Flight Checklist
 
-The pipeline is defined in `.github/workflows/deploy-prod.yml`.
+### Security
+- [ ] `TITAN_MASTER_PASSWORD` is set (min 32 chars).
+- [ ] `HMAC_SECRET` is consistent across opsd, brain, and console-api.
+- [ ] Network: Only Docker socket is mounted to OpsD (root).
+- [ ] Firewall: only 80/443 (Traefik) open. 3100 (Brain) is internal-only.
 
-1.  **Build & Push**:
-    *   Triggers on push to `main`.
-    *   Builds all services in parallel using a matrix strategy.
-    *   Pushes to GitHub Container Registry (GHCR).
-    *   **Crucial Step**: Captures the exact SHA256 digest of the pushed image.
-2.  **Artifact bundle**:
-    *   Consolidates all digests into `digests.json`.
-    *   Bundles `scripts/`, `docker-compose.prod.yml`, and `digests.json`.
-3.  **Deploy (Droplet)**:
-    *   SCP the bundle to a temporary directory on the droplet.
+### Application Health
+- [ ] Console UI loads at `https://titan.peycheff.com`.
+- [ ] Dashboard shows 'Connected' state.
+- [ ] 'Live Ops' stream is active (heartbeats visible).
+- [ ] 'Export Evidence' triggers a download.
 
-    
-    *   Executes `deploy.sh`.
+### Operations
+- [ ] Backups for Postgres (`titan_brain`) are scheduled.
+- [ ] Logs are draining to Loki/Prometheus (if configured).
 
-## Droplet Layout
+## 3. Deploy Procedure
 
-Location: `/opt/titan`
-
-```
-/opt/titan/
-├── releases/                  # Immutable release history
-│   ├── 20260202T120000Z-abc1234/
-│   │   ├── docker-compose.prod.yml
-│   │   ├── compose.override.digest.yml  # Generated from digests.json
-│   │   ├── scripts/
-│   │   ├── evidence/
-│   │   └── .env.prod -> ../../compose/.env.prod  # Symlinked secrets
-├── current -> releases/2026... # Active release pointer
-├── compose/
-│   ├── .env.prod              # MASTER SECRETS FILE (Manually managed)
-├── state/
-│   ├── deploy.lock            # Flock file
-│   └── last_known_good.json
-└── logs/
+### Step 1: Connect
+```bash
+ssh deploy@<droplet-ip>
+cd /opt/titan
 ```
 
-## Deployment Logic (`deploy.sh`)
+### Step 2: Update Code
+```bash
+git pull origin main
+```
 
-1.  Acquire lock (`flock`).
-2.  Create new release directory.
-3.  Generate `compose.override.digest.yml` using `digests.json` (Ensures we run exactly what CI built).
-4.  Pull images.
-5.  Run Database Migrations (using new image, but separate run).
-6.  **Atomic Switch**: Update `current` symlink.
-7.  `docker compose up -d` (Recreates containers with new config).
-    *   Uses `COMPOSE_PROJECT_NAME=titan` to ensure continuity of persistent volumes (DB, Redis).
-8.  Run `verify.sh`.
-    *   Checks Health URLs.
-    *   Checks Policy Hash Parity.
-9.  **Failure Handling**: If any step fails, `rollback.sh` is invoked automatically.
+### Step 3: Atomic Drift-Correction
+We use `docker-compose.prod.yml` as the single source of truth.
 
-## Rollback
+```bash
+# Pull new images
+docker compose -f docker-compose.prod.yml pull
 
-Detailed in `RUNBOOK.md`.
-Essentially:
-1.  Verify failure.
-2.  Identify previous release directory.
-3.  Update `current` symlink to previous release.
-4.  `docker compose up -d` (Restores old containers).
-5.  Verify.
+# Atomic Switch (Zero Downtime for stateless, briefly for Brain)
+docker compose -f docker-compose.prod.yml up -d --remove-orphans
+```
+
+### Step 4: Verification
+Run the verification script (if available) or manual check:
+```bash
+# Check status
+docker compose -f docker-compose.prod.yml ps
+
+# Tail logs for errors
+docker compose -f docker-compose.prod.yml logs -f --tail=100 titan-brain
+```
+
+## 4. Rollback
+If health checks fail within 5 minutes of deploy:
+
+```bash
+# Revert to previous hash
+git checkout HEAD~1
+
+# Redeploy
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+## 5. Secrets Management
+Secrets are injected via environment variables in `.env` or Docker Swarm secrets (future).
+For now, we use a `.env.prod` file on the host, safeguarded by file permissions (`600`).
+
+**Never commit `.env` files to git.**
+
+---
+
+## 6. Advanced: Policy Change Protocol
+
+> **Critical**: Policy changes require synchronized deployment across Brain and Execution to maintain the `policy_hash` invariant.
+
+### Invariants
+1. **Policy Hash Parity**: Brain and Execution MUST have identical `policy_hash` values.
+2. **Fail-Closed**: Brain fails handshake if hashes mismatch.
+
+### Procedure
+
+1. **DISARM Execution**:
+   ```bash
+   nats pub titan.cmd.operator.disarm.v1 "Pre-deployment disarm"
+   ```
+
+2. **Deploy Execution**:
+   - Verify startup logs: `[INFO] Loaded RiskPolicy (hash: abc...)`
+   - Verify responder: `nats req titan.req.exec.policy_hash.v1 "{}"`
+
+3. **Deploy Brain**:
+   - Verify handshake: `✅ Policy hash handshake OK`
+
+4. **ARM Execution**:
+   ```bash
+   nats pub titan.cmd.operator.arm.v1 "Post-deployment arm"
+   ```
+
+5. **Rollback**: If mismatch occurs, DISARM immediately, revert both services, and Redeploy.
+
