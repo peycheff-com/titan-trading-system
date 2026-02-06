@@ -1,0 +1,129 @@
+# AI Documentation Regeneration Workflow
+#
+# 2026 SOTA Practice: Autonomous documentation updates
+#
+# This workflow:
+# 1. Triggers on pushes to main that change code files
+# 2. Analyzes which documentation may need updates
+# 3. Creates an issue with AI-generated recommendations
+# 4. Optionally auto-creates a PR with suggested changes
+#
+# Required secrets:
+# - OPENAI_API_KEY or ANTHROPIC_API_KEY (optional - falls back to local analysis)
+
+name: AI Doc Regeneration
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/**/*.rs'
+      - 'packages/**/*.ts'
+      - 'apps/**/*.ts'
+      - 'config/**'
+      - 'docker-compose*.yml'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (no issue/PR creation)'
+        required: false
+        default: 'false'
+        type: boolean
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  analyze-docs:
+    name: Analyze Documentation Impact
+    runs-on: ubuntu-latest
+    outputs:
+      has_updates: ${{ steps.analyze.outputs.has_updates }}
+      update_count: ${{ steps.analyze.outputs.update_count }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 2  # Need previous commit for diff
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Run AI Documentation Analyzer
+        id: analyze
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AI_DOC_PROVIDER: ${{ secrets.OPENAI_API_KEY && 'openai' || (secrets.ANTHROPIC_API_KEY && 'anthropic' || 'local') }}
+        run: |
+          node scripts/docs/ai-doc-updater.js ${{ inputs.dry_run == 'true' && '--dry-run' || '' }}
+
+      - name: Upload analysis artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-doc-analysis
+          path: .github/ai-doc-analysis.md
+          retention-days: 7
+
+  create-issue:
+    name: Create Documentation Issue
+    needs: analyze-docs
+    if: ${{ needs.analyze-docs.outputs.has_updates == 'true' && github.event.inputs.dry_run != 'true' }}
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Download analysis
+        uses: actions/download-artifact@v4
+        with:
+          name: ai-doc-analysis
+          path: .github/
+
+      - name: Check for existing issue
+        id: check_issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          EXISTING=$(gh issue list --label "ai-doc-update" --state open --json number --jq '.[0].number // empty')
+          echo "existing_issue=${EXISTING}" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TITLE="📚 AI-Detected Documentation Updates Needed"
+          BODY=$(cat .github/ai-doc-analysis.md)
+          
+          if [ -n "${{ steps.check_issue.outputs.existing_issue }}" ]; then
+            echo "Updating existing issue #${{ steps.check_issue.outputs.existing_issue }}"
+            gh issue comment "${{ steps.check_issue.outputs.existing_issue }}" --body "$BODY"
+          else
+            echo "Creating new issue"
+            gh issue create \
+              --title "$TITLE" \
+              --body "$BODY" \
+              --label "ai-doc-update,documentation"
+          fi
+
+  # Optional: Auto-create PR with doc stubs (disabled by default)
+  # create-pr:
+  #   name: Create Documentation PR
+  #   needs: analyze-docs
+  #   if: false  # Enable when ready
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v5
+  #     - name: Create branch and PR
+  #       run: |
+  #         git checkout -b docs/ai-update-$(date +%Y%m%d)
+  #         # Apply changes here
+  #         git push origin HEAD
+  #         gh pr create --title "📚 AI Documentation Update" --body "..."
