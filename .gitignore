@@ -176,6 +176,11 @@ services/*/src/**/*.js.map
 services/*/src/**/*.d.ts
 services/*/src/**/*.d.ts.map
 
+packages/*/src/**/*.js
+packages/*/src/**/*.js.map
+packages/*/src/**/*.d.ts
+packages/*/src/**/*.d.ts.map
+
 # Compiled scripts and tests (TypeScript -> JS)
 scripts/**/*.js
 scripts/**/*.js.map
