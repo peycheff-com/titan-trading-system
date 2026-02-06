@@ -34,8 +34,8 @@ COPY package.json package-lock.json ./
 COPY packages/shared/package.json ./packages/shared/
 COPY services/titan-console-api/package.json ./services/titan-console-api/
 
-# Install production dependencies only
-RUN npm ci --workspace=packages/shared --workspace=services/titan-console-api --omit=dev
+# Install production dependencies only (including root deps like uuid)
+RUN npm ci --omit=dev
 
 # Copy built artifacts
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
