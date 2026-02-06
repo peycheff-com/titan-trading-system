@@ -318,6 +318,7 @@ Respond in JSON format:
   /**
    * Call Gemini using Application Default Credentials (ADC)
    * Requires: gcloud auth application-default login
+   * Uses the generativelanguage.googleapis.com endpoint with OAuth Bearer token
    */
   async callGeminiWithADC(prompt, model) {
     // Get access token from gcloud CLI
@@ -339,17 +340,10 @@ Respond in JSON format:
 
     console.log('Using Application Default Credentials (ADC) for Gemini');
 
-    // Use Vertex AI endpoint with OAuth token
-    const projectId = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || this.getGcloudProject();
-    const location = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1';
-    
-    if (!projectId) {
-      console.log('No Google Cloud project configured. Set GOOGLE_CLOUD_PROJECT or run: gcloud config set project YOUR_PROJECT');
-      return this.localAnalysis(prompt);
-    }
-
+    // Use generativelanguage.googleapis.com with OAuth Bearer token
+    // This works with Google One Ultra / Google Workspace subscriptions
     const response = await fetch(
-      `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${model}:generateContent`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
       {
         method: 'POST',
         headers: {
@@ -358,7 +352,6 @@ Respond in JSON format:
         },
         body: JSON.stringify({
           contents: [{
-            role: 'user',
             parts: [{
               text: prompt + '\n\nIMPORTANT: Respond with valid JSON only, no markdown formatting.'
             }]
@@ -373,17 +366,6 @@ Respond in JSON format:
     );
 
     return this.parseGeminiResponse(await response.json(), prompt);
-  }
-
-  /**
-   * Get Google Cloud project from gcloud config
-   */
-  getGcloudProject() {
-    try {
-      return execSync('gcloud config get-value project 2>/dev/null', { encoding: 'utf8' }).trim();
-    } catch (e) {
-      return null;
-    }
   }
 
   /**
