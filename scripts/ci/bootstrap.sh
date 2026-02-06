@@ -1,34 +1,40 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
-# Scripts/CI/Bootstrap.sh
-# Verifies the CI environment matches expected toolchain versions.
+# scripts/ci/bootstrap.sh
+# Canonical bootstrap for all CI jobs.
+# Enforces strict mode, prints versions, and validates workspace.
 
-echo "🚀 Bootstrapping CI Environment..."
+echo "::group::CI Bootstrap"
+echo "Starting CI Bootstrap..."
+date -u
 
-# 1. Check Node.js
-REQUIRED_NODE="${NODE_VERSION:-20}" # Default to 20 if unset, but CI sets it
-CURRENT_NODE=$(node -v | cut -d'v' -f2)
-
-if [[ "$CURRENT_NODE" != "$REQUIRED_NODE"* ]]; then
-    echo "⚠️  Node version mismatch! Expected: $REQUIRED_NODE, Found: $CURRENT_NODE"
-    # fine to warn for now or exit 1 if strict
-else
-    echo "✅ Node.js $CURRENT_NODE matches requirement."
+# 1. Validate Shell Environment
+if [[ -z "${BASH_VERSION:-}" ]]; then
+  echo "Error: This script must be run with bash."
+  exit 1
 fi
 
-# 2. Check NPM
-REQUIRED_NPM="${NPM_VERSION:-10}"
-CURRENT_NPM=$(npm -v)
-echo "✅ NPM $CURRENT_NPM"
+# 2. Export Common Environment Variables
+export CI=true
+export FORCE_COLOR=1
+export NODE_OPTIONS="--max-old-space-size=4096"
 
-# 3. Check Rust
-if command -v rustc >/dev/null 2>&1; then
-    REQUIRED_RUST="${RUST_VERSION:-1.80}"
-    CURRENT_RUST=$(rustc -V | cut -d' ' -f2)
-    echo "✅ Rust $CURRENT_RUST"
-else
-    echo "ℹ️  Rust not found (skipping check)"
+# 3. Print Toolchain Versions
+echo "--- Toolchain Versions ---"
+echo "Node: $(node --version 2>/dev/null || echo 'Not installed')"
+echo "NPM: $(npm --version 2>/dev/null || echo 'Not installed')"
+echo "Rust: $(rustc --version 2>/dev/null || echo 'Not installed')"
+echo "Cargo: $(cargo --version 2>/dev/null || echo 'Not installed')"
+echo "Go: $(go version 2>/dev/null || echo 'Not installed')"
+echo "Docker: $(docker --version 2>/dev/null || echo 'Not installed')"
+echo "--------------------------"
+
+# 4. Validate Workspace
+if [[ ! -f "package.json" ]]; then
+  echo "Error: package.json not found. Must run from repo root."
+  exit 1
 fi
 
-echo "✅ Bootstrap complete."
+echo "Bootstrap complete."
+echo "::endgroup::"

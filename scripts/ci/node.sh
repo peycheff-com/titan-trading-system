@@ -1,47 +1,46 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
+# scripts/ci/node.sh
 
-# Scripts/CI/Node.sh
-# Standardized entrypoint for Node.js CI tasks
+source ./scripts/ci/bootstrap.sh
 
-COMMAND="${1:-test}"
-BASE_REF="${DiffBase:-origin/main}" # Default diff base
+echo "::group::Node.js Services"
 
-echo "📦 Node.js CI: Running $COMMAND"
-
-# Ensure dependencies
-if [ ! -d "node_modules" ]; then
-    echo "Installing dependencies..."
-    npm ci
+# Install Dependencies
+if [[ "${1:-}" == "install" ]] || [[ "${1:-}" == "all" ]]; then
+  echo "Installing Node dependencies..."
+  npm ci
 fi
 
-# Determine filter
-FILTER=""
-if [ -n "${GITHUB_BASE_REF:-}" ]; then
-    # PR Context
-    FILTER="--filter=...[origin/${GITHUB_BASE_REF}...HEAD]"
-    echo "🔎 PR Context: Filtering for changed packages ($FILTER)"
-else
-    echo "🌍 Full Run: No filter applied"
+# Lint & Test
+if [[ "${1:-}" == "test" ]] || [[ "${1:-}" == "all" ]]; then
+  # Ensure NATS is running for integration tests
+  if ! nc -z localhost 4222 2>/dev/null; then
+    echo "Starting NATS (Docker)..."
+    docker run -d --name nats_ci -p 4222:4222 -p 8222:8222 nats:2.10.22-alpine -js -m 8222 || true
+    # Wait for health
+    echo "Waiting for NATS..."
+    for i in {1..30}; do
+      if curl -s http://localhost:8222/varz >/dev/null; then
+        echo "NATS is up."
+        break
+      fi
+      sleep 1
+    done
+  else
+    echo "NATS is already running."
+  fi
+
+  echo "Running Node lint and tests..."
+  # Use turbo if available, otherwise npm run
+  if npx turbo --version >/dev/null 2>&1; then
+    npx turbo run lint test build --filter="!//*" # specific filters can be passed
+  else
+    npm run lint
+    npm run test
+    npm run build
+  fi
 fi
 
-case "$COMMAND" in
-    "build")
-        npx turbo run build $FILTER
-        ;;
-    "lint")
-        npx turbo run lint $FILTER
-        ;;
-    "test")
-        npx turbo run test --filter=!titan-execution-rs $FILTER
-        ;;
-    "all")
-        npx turbo run build lint test --filter=!titan-execution-rs $FILTER
-        ;;
-    *)
-        echo "❌ Unknown command: $COMMAND"
-        exit 1
-        ;;
-esac
-
-echo "✅ Node.js CI $COMMAND complete."
+echo "Node.js tasks complete."
+echo "::endgroup::"

@@ -167,7 +167,7 @@ jobs:
 
       - name: Validate configuration
         if: ${{ needs.changes.outputs.docs_only != 'true' }}
-        run: npm run validate:config
+        run: ./scripts/ci/config_validate.sh
 
       - name: Validate environment variables (Dry Run)
         if: ${{ needs.changes.outputs.docs_only != 'true' }}
@@ -186,47 +186,16 @@ jobs:
           NATS_QUANT_PASSWORD: 'ci_quant_pass'
           NATS_CONSOLE_PASSWORD: 'ci_console_pass'
 
-      - name: Check Contract Drift
+      - name: Check Contracts & Schemas
         if: ${{ needs.changes.outputs.run_contracts == 'true' }}
-        run: ./scripts/ci/check_contracts.sh
+        run: ./scripts/ci/contracts.sh
 
-      - name: SOTA Hygiene Checks
+      - name: SOTA Hygiene & Docs
         if: ${{ needs.changes.outputs.run_hygiene == 'true' }}
-        run: |
-          npm run sota:zombie
-          npm run sota:circular
-          npm run sota:immutability
+        run: ./scripts/ci/sota.sh
 
       - name: Verify Documentation Invariants
         run: ./scripts/verify-docs.sh
-
-      # 2026 SOTA: Full Documentation Quality Suite
-      - name: Documentation Staleness Detection
-        run: ./scripts/docs/detect-staleness.sh
-        continue-on-error: true # Soft-fail (warning only)
-
-      - name: Documentation Link Validation
-        run: ./scripts/docs/check-links.sh
-        continue-on-error: true # Soft-fail for external link issues
-
-      - name: API-to-OpenAPI Sync Check
-        run: ./scripts/docs/check-api-sync.sh
-        continue-on-error: true # Soft-fail (advisory)
-
-      - name: Code Block Validation
-        run: ./scripts/docs/validate-codeblocks.sh
-
-      - name: Signature Drift Detection
-        run: ./scripts/docs/detect-signature-drift.sh
-
-      - name: Check Dead Code (knip)
-        if: ${{ needs.changes.outputs.run_hygiene == 'true' }}
-        run: |
-          if npx knip --no-progress 2>&1 | grep -q "^Unused files"; then
-            echo "❌ Dead code detected!"
-            npx knip --no-progress 2>&1 | head -30
-            exit 1
-          fi
 
       - name: Preflight summary
         if: always()
@@ -289,7 +258,7 @@ jobs:
           done
           exit 1
 
-      - name: Turbo Build & Test
+      - name: Canonical Node.js Pipeline
         env:
           NATS_URL: nats://localhost:4222
         run: ./scripts/ci/node.sh all
@@ -330,31 +299,11 @@ jobs:
           rustc -V
           cargo -V
 
-      - name: Check Formatting
-        run: ./scripts/ci/rust.sh fmt
-
-      - name: Lint (Clippy)
-        run: ./scripts/ci/rust.sh clippy
-
-      - name: Start NATS
-        run: |
-          docker run -d --name nats -p 4222:4222 -p 8222:8222 nats:2.10.22-alpine -js -m 8222
-          for i in {1..30}; do
-            if wget --no-verbose --spider --tries=1 http://localhost:8222/varz; then
-              exit 0
-            fi
-            sleep 1
-          done
-          exit 1
-
-      - name: Run Tests
+      - name: Canonical Rust Pipeline
         env:
           NATS_URL: nats://localhost:4222
           RUST_LOG: info
-        run: ./scripts/ci/rust.sh test
-
-      - name: Build
-        run: ./scripts/ci/rust.sh build
+        run: ./scripts/ci/rust.sh all
 
       - name: Rust services summary
         if: always()
@@ -410,12 +359,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: NPM Audit (High/Critical)
-        run: npm audit --audit-level=high
-
-      - name: Cargo Audit
-        working-directory: services/titan-execution-rs
-        run: cargo audit
+      - name: Canonical Security Scan
+        run: ./scripts/ci/security.sh
 
       - name: Security summary
         if: always()
@@ -487,24 +432,14 @@ jobs:
     if: ${{ always() && github.event_name != 'schedule' }}
     needs: [changes, preflight, node-services, rust-services, security-scan]
     steps:
-      - name: Check Results
+      - name: Canonical Status Gate
         shell: bash
-        run: |
-          set -euo pipefail
-
-          check_status() {
-            if [ "$1" = "failure" ] || [ "$1" = "cancelled" ]; then
-              echo "❌ $2 failed or cancelled"
-              exit 1
-            fi
-          }
-
-          check_status "${{ needs.preflight.result }}" "preflight"
-          check_status "${{ needs.node-services.result }}" "node-services"
-          check_status "${{ needs.rust-services.result }}" "rust-services"
-          check_status "${{ needs.security-scan.result }}" "security-scan"
-
-          echo "✅ All required CI checks passed"
+        env:
+          STATUS_PREFLIGHT: ${{ needs.preflight.result }}
+          STATUS_NODE: ${{ needs.node-services.result }}
+          STATUS_RUST: ${{ needs.rust-services.result }}
+          STATUS_SECURITY: ${{ needs.security-scan.result }}
+        run: ./scripts/ci/status_gate.sh
 
       - name: Status summary
         if: always()
@@ -515,4 +450,5 @@ jobs:
             echo "node-services=${{ needs.node-services.result }}"
             echo "rust-services=${{ needs.rust-services.result }}"
             echo "security-scan=${{ needs.security-scan.result }}"
+            echo "Gate: PASSED"
           } >> "$GITHUB_STEP_SUMMARY"

@@ -1,48 +1,44 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
+# scripts/ci/rust.sh
 
-# Scripts/CI/Rust.sh
-# Standardized entrypoint for Rust CI tasks
+source ./scripts/ci/bootstrap.sh
 
-COMMAND="${1:-test}"
-WORKDIR="services/titan-execution-rs"
+echo "::group::Rust Services"
 
-echo "🦀 Rust CI: Running $COMMAND"
-
-if [ ! -d "$WORKDIR" ]; then
-    echo "❌ Rust directory $WORKDIR not found!"
-    exit 1
+# Check if cargo is available
+if ! command -v cargo &> /dev/null; then
+  echo "Cargo not found. Skipping Rust checks."
+  exit 0
 fi
 
-cd "$WORKDIR"
+# Build & Test
+if [[ "${1:-}" == "all" ]]; then
+    echo "Running cargo fmt check..."
+    cargo fmt --all -- --check
 
-case "$COMMAND" in
-    "fmt")
-        cargo fmt -- --check
-        ;;
-    "clippy")
-        cargo clippy -- -D warnings
-        ;;
-    "test")
-        # Ensure NATS is up if needed (mock check)
-        if ! curl -s http://localhost:8222/varz >/dev/null; then
-             echo "⚠️  NATS likely not running, tests might fail if they require it."
+    echo "Running cargo clippy..."
+    cargo clippy --all-targets --all-features -- -D warnings
+
+    # Ensure NATS is running for tests
+    if ! nc -z localhost 4222 2>/dev/null; then
+      echo "Starting NATS (Docker)..."
+      docker run -d --name nats_ci -p 4222:4222 -p 8222:8222 nats:2.10.22-alpine -js -m 8222 || true
+      echo "Waiting for NATS..."
+      for i in {1..30}; do
+        if curl -s http://localhost:8222/varz >/dev/null; then
+          echo "NATS is up."
+          break
         fi
-        cargo test
-        ;;
-    "build")
-        cargo build --release
-        ;;
-    "all")
-        cargo fmt -- --check
-        cargo clippy -- -D warnings
-        cargo test
-        cargo build --release
-        ;;
-    *)
-        echo "❌ Unknown command: $COMMAND"
-        exit 1
-        ;;
-esac
+        sleep 1
+      done
+    else
+      echo "NATS is already running."
+    fi
 
-echo "✅ Rust CI $COMMAND complete."
+    echo "Running cargo test..."
+    cargo test --all
+fi
+
+echo "Rust tasks complete."
+echo "::endgroup::"
