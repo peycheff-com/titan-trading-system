@@ -115,7 +115,7 @@ jobs:
           
           # Run build, lint, test
           # Note: We rely on Turbo caching to skip work on main if unchanged
-          npx turbo run build lint test $FILTER
+          npx turbo run build lint test --filter=!titan-execution-rs $FILTER
 
   # ===========================================================================
   # Rust Services (Pinned & Cached)
