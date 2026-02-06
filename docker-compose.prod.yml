@@ -7,7 +7,7 @@ services:
   # REVERSE PROXY
   # =============================================================================
   traefik:
-    image: traefik:v3.0
+    image: traefik:v3.3
     container_name: titan-traefik
     command:
       - --api.dashboard=true
