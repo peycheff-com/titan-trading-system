@@ -203,15 +203,15 @@ jobs:
       # 2026 SOTA: Full Documentation Quality Suite
       - name: Documentation Staleness Detection
         run: ./scripts/docs/detect-staleness.sh
-        continue-on-error: true  # Soft-fail (warning only)
+        continue-on-error: true # Soft-fail (warning only)
 
       - name: Documentation Link Validation
         run: ./scripts/docs/check-links.sh
-        continue-on-error: true  # Soft-fail for external link issues
+        continue-on-error: true # Soft-fail for external link issues
 
       - name: API-to-OpenAPI Sync Check
         run: ./scripts/docs/check-api-sync.sh
-        continue-on-error: true  # Soft-fail (advisory)
+        continue-on-error: true # Soft-fail (advisory)
 
       - name: Code Block Validation
         run: ./scripts/docs/validate-codeblocks.sh
@@ -308,9 +308,6 @@ jobs:
     needs: changes
     if: ${{ github.event_name != 'schedule' && needs.changes.outputs.run_rust == 'true' }}
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: services/titan-execution-rs
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.1.3
