@@ -1,13 +1,13 @@
-import { Logger } from "@titan/shared/dist/logger/Logger.js";
+import { Logger } from "@titan/shared";
 import { ProposalGateway } from "../../src/governance/ProposalGateway.js";
 import {
     generateKeyPair,
     signObject,
-} from "@titan/shared/dist/governance/crypto.js";
+} from "@titan/shared";
 import {
     ProposalType,
     SignedProposal,
-} from "@titan/shared/dist/governance/types.js";
+} from "@titan/shared";
 
 describe("ProposalGateway Integration", () => {
     let gateway: ProposalGateway;

@@ -1,5 +1,5 @@
 import { ChangePointDetector } from "../../src/features/Risk/ChangePointDetector";
-import { RegimeState } from "@titan/shared/dist/ipc/index.js";
+import { RegimeState } from "@titan/shared";
 
 describe("ChangePointDetector", () => {
     let detector: ChangePointDetector;

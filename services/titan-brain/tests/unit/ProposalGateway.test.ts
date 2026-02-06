@@ -7,19 +7,19 @@
 import { ProposalGateway } from "../../src/governance/ProposalGateway.js";
 
 // Mock shared dependencies with inline factories for hoisting
-jest.mock("@titan/shared/dist/governance/types.js", () => ({
-    signedProposalSchema: {
-        safeParse: jest.fn(),
-    },
-}));
-
-jest.mock("@titan/shared/dist/governance/crypto.js", () => ({
-    verifyObjectSignature: jest.fn(),
-}));
+jest.mock("@titan/shared", () => {
+    const actual = jest.requireActual("@titan/shared");
+    return {
+        ...actual,
+        signedProposalSchema: {
+            safeParse: jest.fn(),
+        },
+        verifyObjectSignature: jest.fn(),
+    };
+});
 
 // Import after mocking
-import { signedProposalSchema } from "@titan/shared/dist/governance/types.js";
-import { verifyObjectSignature } from "@titan/shared/dist/governance/crypto.js";
+import { signedProposalSchema, verifyObjectSignature } from "@titan/shared";
 
 const mockSignedProposalSchema = signedProposalSchema as jest.Mocked<
     typeof signedProposalSchema

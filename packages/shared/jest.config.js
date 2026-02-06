@@ -28,8 +28,7 @@ module.exports = {
   roots: ['<rootDir>/tests', '<rootDir>/src'],
   testMatch: [
     '**/*.test.ts',
-    '**/*.property.test.ts',
-    '**/*.integration.test.ts'
+    '**/*.property.test.ts'
   ],
   
   // File extensions
@@ -111,6 +110,7 @@ module.exports = {
   testTimeout: 30000,
   
   // Custom test runners for different test types
+  // Integration tests in this package use Vitest and run via `npm run test:integration`.
   projects: [
     {
       displayName: 'unit',
@@ -130,16 +130,6 @@ module.exports = {
       preset: 'ts-jest',
       testEnvironment: 'node',
       testMatch: ['<rootDir>/tests/property/**/*.property.test.ts'],
-      transform: {
-        '^.+\\.ts$': ['ts-jest', tsJestConfig]
-      },
-      setupFilesAfterEnv: ['<rootDir>/tests/setup.ts']
-    },
-    {
-      displayName: 'integration',
-      preset: 'ts-jest',
-      testEnvironment: 'node',
-      testMatch: ['<rootDir>/tests/integration/**/*.integration.test.ts'],
       transform: {
         '^.+\\.ts$': ['ts-jest', tsJestConfig]
       },
