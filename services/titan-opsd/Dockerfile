@@ -38,4 +38,4 @@ COPY --from=builder /app/node_modules ./node_modules
 # Install docker CLI for container operations
 RUN apk add --no-cache docker-cli
 
-CMD ["node", "dist/index.js"]
+CMD ["node", "dist/src/index.js"]
