@@ -25,22 +25,26 @@ FROM nginx:alpine
 # Copy built assets
 COPY --from=builder /app/apps/titan-console/dist /usr/share/nginx/html
 
-# Custom nginx config for SPA routing
-RUN echo 'server { \
-    listen 8080; \
-    server_name _; \
-    root /usr/share/nginx/html; \
-    index index.html; \
-    location / { \
-    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https: wss: http://localhost:* ws://localhost:*;" always; \
-    try_files $uri $uri/ /index.html; \
-    } \
-    location /health { \
-    access_log off; \
-    return 200 "ok"; \
-    add_header Content-Type text/plain; \
-    } \
-    }' > /etc/nginx/conf.d/default.conf
+# Custom nginx config for SPA routing with relaxed CSP for Vite
+RUN cat <<'EOF' > /etc/nginx/conf.d/default.conf
+server {
+    listen 8080;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+    
+    location / {
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https: wss:; manifest-src 'self';" always;
+        try_files $uri $uri/ /index.html;
+    }
+    
+    location /health {
+        access_log off;
+        return 200 "ok";
+        add_header Content-Type text/plain;
+    }
+}
+EOF
 
 EXPOSE 8080
 
