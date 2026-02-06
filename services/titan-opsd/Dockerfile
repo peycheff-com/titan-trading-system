@@ -31,6 +31,7 @@ WORKDIR /app
 # Copy built artifacts
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/packages/shared/package.json ./packages/shared/
+COPY --from=builder /app/packages/shared/*.json ./packages/shared/
 COPY --from=builder /app/services/titan-opsd/dist ./dist
 COPY --from=builder /app/services/titan-opsd/package.json ./
 COPY --from=builder /app/node_modules ./node_modules
