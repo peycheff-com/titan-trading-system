@@ -2,37 +2,173 @@ name: Titan Monorepo CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, 'codex/**']
   pull_request:
     branches: [main, develop]
+  schedule:
+    - cron: '17 7 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22.19.0'
+  NPM_VERSION: '11.6.2'
+  RUST_VERSION: '1.89.0'
 
 jobs:
-  # ===========================================================================
-  # Preflight: Fail Fast (Config, Contracts, Hygiene)
-  # ===========================================================================
+  changes:
+    name: changes
+    runs-on: ubuntu-latest
+    outputs:
+      docs_only: ${{ steps.detect.outputs.docs_only }}
+      run_node: ${{ steps.detect.outputs.run_node }}
+      run_rust: ${{ steps.detect.outputs.run_rust }}
+      run_security: ${{ steps.detect.outputs.run_security }}
+      run_contracts: ${{ steps.detect.outputs.run_contracts }}
+      run_hygiene: ${{ steps.detect.outputs.run_hygiene }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed scopes
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            echo "run_node=false" >> "$GITHUB_OUTPUT"
+            echo "run_rust=false" >> "$GITHUB_OUTPUT"
+            echo "run_security=false" >> "$GITHUB_OUTPUT"
+            echo "run_contracts=false" >> "$GITHUB_OUTPUT"
+            echo "run_hygiene=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Change Detection"
+              echo "Nightly schedule run. Diff-based jobs are skipped in favor of nightly security."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch --no-tags --prune --depth=1 origin "${{ github.base_ref }}"
+            DIFF_BASE="origin/${{ github.base_ref }}"
+            DIFF_HEAD="HEAD"
+          else
+            if [ -n "${{ github.event.before }}" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+              DIFF_BASE="${{ github.event.before }}"
+            else
+              DIFF_BASE="$(git rev-list --max-parents=0 HEAD)"
+            fi
+            DIFF_HEAD="${{ github.sha }}"
+          fi
+
+          CHANGED_FILES="$(git diff --name-only "$DIFF_BASE" "$DIFF_HEAD" || true)"
+
+          docs_only=true
+          if [ -z "$CHANGED_FILES" ]; then
+            docs_only=false
+          else
+            while IFS= read -r file; do
+              [ -z "$file" ] && continue
+              if [[ ! "$file" =~ ^(docs/|README\.md$|mkdocs\.yml$|.*\.md$|site/) ]]; then
+                docs_only=false
+                break
+              fi
+            done <<< "$CHANGED_FILES"
+          fi
+
+          run_node=true
+          run_rust=false
+          run_security=true
+          run_contracts=true
+          run_hygiene=true
+
+          if echo "$CHANGED_FILES" | grep -Eq '^(services/titan-execution-rs/|rust-toolchain\.toml|services/titan-execution-rs/Cargo\.lock|packages/shared/scripts/generate-rust\.ts|packages/shared/schemas/json/|scripts/ci/check_contracts\.sh|\.github/workflows/ci\.yml)'; then
+            run_rust=true
+          fi
+
+          if [ "$docs_only" = true ]; then
+            run_node=false
+            run_rust=false
+            run_security=false
+            run_contracts=false
+            run_hygiene=false
+          fi
+
+          echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
+          echo "run_node=$run_node" >> "$GITHUB_OUTPUT"
+          echo "run_rust=$run_rust" >> "$GITHUB_OUTPUT"
+          echo "run_security=$run_security" >> "$GITHUB_OUTPUT"
+          echo "run_contracts=$run_contracts" >> "$GITHUB_OUTPUT"
+          echo "run_hygiene=$run_hygiene" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Change Detection"
+            echo "docs_only=$docs_only"
+            echo "run_node=$run_node"
+            echo "run_rust=$run_rust"
+            echo "run_security=$run_security"
+            echo "run_contracts=$run_contracts"
+            echo "run_hygiene=$run_hygiene"
+            echo ""
+            echo "Changed files:"
+            if [ -n "$CHANGED_FILES" ]; then
+              echo '```'
+              echo "$CHANGED_FILES"
+              echo '```'
+            else
+              echo "(none)"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
   preflight:
     name: preflight
+    needs: changes
+    if: ${{ github.event_name != 'schedule' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Required for git diff in Turbo
+          fetch-depth: 0
 
       - name: Setup Node.js
+        id: setup-node
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'npm'
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
           cache-dependency-path: '**/package-lock.json'
 
+      - name: Pin npm version
+        if: ${{ needs.changes.outputs.docs_only != 'true' }}
+        run: npm install -g npm@${{ env.NPM_VERSION }}
+
+      - name: Print toolchain versions
+        run: |
+          node -v
+          npm -v
+
+      - name: Docs-only short-circuit
+        if: ${{ needs.changes.outputs.docs_only == 'true' }}
+        run: echo "Docs-only change detected. Heavy preflight checks skipped."
+
       - name: Install dependencies (Root)
+        if: ${{ needs.changes.outputs.docs_only != 'true' }}
         run: npm ci
 
       - name: Validate configuration
+        if: ${{ needs.changes.outputs.docs_only != 'true' }}
         run: npm run validate:config
 
       - name: Validate environment variables (Dry Run)
+        if: ${{ needs.changes.outputs.docs_only != 'true' }}
         run: npx ts-node scripts/ops/validate_env.ts
         env:
           HMAC_SECRET: 'ci_secret'
@@ -49,30 +185,40 @@ jobs:
           NATS_CONSOLE_PASSWORD: 'ci_console_pass'
 
       - name: Check Contract Drift
-        # Only run if relevant files changed, or just run it (it's fast enough if no regen)
+        if: ${{ needs.changes.outputs.run_contracts == 'true' }}
         run: ./scripts/ci/check_contracts.sh
 
       - name: SOTA Hygiene Checks
+        if: ${{ needs.changes.outputs.run_hygiene == 'true' }}
         run: |
-            npm run sota:zombie
-            npm run sota:circular
-            npm run sota:immutability
-            
+          npm run sota:zombie
+          npm run sota:circular
+          npm run sota:immutability
+
       - name: Check Dead Code (knip)
+        if: ${{ needs.changes.outputs.run_hygiene == 'true' }}
         run: |
-          UNUSED=$(npx knip --no-progress 2>&1 | grep -c "^Unused files" || true)
           if npx knip --no-progress 2>&1 | grep -q "^Unused files"; then
             echo "❌ Dead code detected!"
             npx knip --no-progress 2>&1 | head -30
             exit 1
           fi
 
-  # ===========================================================================
-  # Node.js: Selective Build & Test (Turbo)
-  # ===========================================================================
+      - name: Preflight summary
+        if: always()
+        run: |
+          {
+            echo "### Preflight"
+            echo "setup-node cache-hit=${{ steps.setup-node.outputs.cache-hit }}"
+            echo "docs_only=${{ needs.changes.outputs.docs_only }}"
+            echo "run_contracts=${{ needs.changes.outputs.run_contracts }}"
+            echo "run_hygiene=${{ needs.changes.outputs.run_hygiene }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   node-services:
     name: node-services
-    needs: preflight
+    needs: [changes, preflight]
+    if: ${{ github.event_name != 'schedule' && needs.changes.outputs.run_node == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -81,11 +227,29 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Node.js
+        id: setup-node
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'npm'
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
           cache-dependency-path: '**/package-lock.json'
+
+      - name: Pin npm version
+        run: npm install -g npm@${{ env.NPM_VERSION }}
+
+      - name: Restore Turbo cache
+        id: turbo-cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ env.NODE_VERSION }}-${{ hashFiles('package-lock.json', 'turbo.json') }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-${{ env.NODE_VERSION }}-
+
+      - name: Print toolchain versions
+        run: |
+          node -v
+          npm -v
 
       - name: Install dependencies (Root)
         run: npm ci
@@ -93,9 +257,10 @@ jobs:
       - name: Start NATS (for integration tests)
         run: |
           docker run -d --name nats -p 4222:4222 -p 8222:8222 nats:2.10.22-alpine -js -m 8222
-          # Wait loop
           for i in {1..30}; do
-            if wget --no-verbose --spider --tries=1 http://localhost:8222/varz; then exit 0; fi
+            if wget --no-verbose --spider --tries=1 http://localhost:8222/varz; then
+              exit 0
+            fi
             sleep 1
           done
           exit 1
@@ -104,24 +269,29 @@ jobs:
         env:
           NATS_URL: nats://localhost:4222
         run: |
-          # Determine filter argument
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            FILTER="--filter=...[origin/main...HEAD]"
-            echo "🔎 PR Detected: Running only affected packages ($FILTER)"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            FILTER="--filter=...[origin/${{ github.base_ref }}...HEAD]"
+            echo "🔎 PR detected: affected packages only ($FILTER)"
           else
-            FILTER="" # Run all on main
-            echo "🌍 Main/Push Detected: Running all packages"
+            FILTER=""
+            echo "🌍 Push detected: running full graph"
           fi
-          
-          # Run build, lint, test
-          # Note: We rely on Turbo caching to skip work on main if unchanged
+
           npx turbo run build lint test --filter=!titan-execution-rs $FILTER
 
-  # ===========================================================================
-  # Rust Services (Pinned & Cached)
-  # ===========================================================================
+      - name: Node services summary
+        if: always()
+        run: |
+          {
+            echo "### Node Services"
+            echo "setup-node cache-hit=${{ steps.setup-node.outputs.cache-hit }}"
+            echo "turbo cache-hit=${{ steps.turbo-cache.outputs.cache-hit }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   rust-services:
     name: titan-execution-rs
+    needs: changes
+    if: ${{ github.event_name != 'schedule' && needs.changes.outputs.run_rust == 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -133,13 +303,18 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: 1.89.0
+          toolchain: ${{ env.RUST_VERSION }}
           components: rustfmt, clippy
 
       - name: Rust Cache
         uses: swatinem/rust-cache@v2
         with:
-            workspaces: services/titan-execution-rs
+          workspaces: services/titan-execution-rs
+
+      - name: Print toolchain versions
+        run: |
+          rustc -V
+          cargo -V
 
       - name: Check Formatting
         run: cargo fmt -- --check
@@ -150,7 +325,12 @@ jobs:
       - name: Start NATS
         run: |
           docker run -d --name nats -p 4222:4222 -p 8222:8222 nats:2.10.22-alpine -js -m 8222
-          for i in {1..30}; do if wget --no-verbose --spider --tries=1 http://localhost:8222/varz; then exit 0; fi; sleep 0.5; done
+          for i in {1..30}; do
+            if wget --no-verbose --spider --tries=1 http://localhost:8222/varz; then
+              exit 0
+            fi
+            sleep 1
+          done
           exit 1
 
       - name: Run Tests
@@ -162,54 +342,147 @@ jobs:
       - name: Build
         run: cargo build --release
 
-  # ===========================================================================
-  # Security Scan (Policy Gate)
-  # ===========================================================================
+      - name: Rust services summary
+        if: always()
+        run: |
+          {
+            echo "### Rust Services"
+            echo "run_rust=${{ needs.changes.outputs.run_rust }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   security-scan:
     name: security-scan
+    needs: changes
+    if: ${{ github.event_name != 'schedule' && needs.changes.outputs.run_security == 'true' }}
     runs-on: ubuntu-latest
-    # Run on PRs and Push, but maybe skip if only docs changed? 
-    # For now, keep it simple.
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        id: setup-node
+        uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'npm'
-      - uses: dtolnay/rust-toolchain@master
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Pin npm version
+        run: npm install -g npm@${{ env.NPM_VERSION }}
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: 1.89.0
-      - run: npm ci
+          toolchain: ${{ env.RUST_VERSION }}
+
+      - name: Install cargo-audit
+        run: cargo install --locked cargo-audit --version 0.21.2
+
+      - name: Print toolchain versions
+        run: |
+          node -v
+          npm -v
+          rustc -V
+          cargo -V
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: NPM Audit (High/Critical)
         run: npm audit --audit-level=high
+
       - name: Cargo Audit
         working-directory: services/titan-execution-rs
-        run: |
-            cargo install cargo-audit
-            cargo audit
+        run: cargo audit
 
-  # ===========================================================================
-  # Status Aggregator (Required Check)
-  # ===========================================================================
+      - name: Security summary
+        if: always()
+        run: |
+          {
+            echo "### Security Scan"
+            echo "setup-node cache-hit=${{ steps.setup-node.outputs.cache-hit }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  nightly-security:
+    name: nightly-security
+    if: ${{ github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Pin npm version
+        run: npm install -g npm@${{ env.NPM_VERSION }}
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+
+      - name: Install cargo-audit
+        run: cargo install --locked cargo-audit --version 0.21.2
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run full dependency audits
+        run: |
+          mkdir -p artifacts/ci
+          npm audit --json > artifacts/ci/npm-audit.json || true
+          (cd services/titan-execution-rs && cargo audit > ../../artifacts/ci/cargo-audit.txt) || true
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: cyclonedx-json
+          output-file: artifacts/ci/sbom.cdx.json
+
+      - name: Upload nightly security artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-security-${{ github.run_id }}
+          path: artifacts/ci
+
   status-check:
     name: CI Pipeline Status
     runs-on: ubuntu-latest
-    if: always()
-    needs: [preflight, node-services, rust-services, security-scan]
+    if: ${{ always() && github.event_name != 'schedule' }}
+    needs: [changes, preflight, node-services, rust-services, security-scan]
     steps:
       - name: Check Results
+        shell: bash
         run: |
-           # Helper to check status
-           check_status() {
-             if [ "$1" == "failure" ] || [ "$1" == "cancelled" ]; then 
-               echo "❌ Job failed or cancelled"
-               exit 1
-             fi
-           }
-           
-           check_status "${{ needs.preflight.result }}"
-           check_status "${{ needs.node-services.result }}"
-           check_status "${{ needs.rust-services.result }}"
-           check_status "${{ needs.security-scan.result }}"
-           
-           echo "✅ All Checks Passed"
+          set -euo pipefail
+
+          check_status() {
+            if [ "$1" = "failure" ] || [ "$1" = "cancelled" ]; then
+              echo "❌ $2 failed or cancelled"
+              exit 1
+            fi
+          }
+
+          check_status "${{ needs.preflight.result }}" "preflight"
+          check_status "${{ needs.node-services.result }}" "node-services"
+          check_status "${{ needs.rust-services.result }}" "rust-services"
+          check_status "${{ needs.security-scan.result }}" "security-scan"
+
+          echo "✅ All required CI checks passed"
+
+      - name: Status summary
+        if: always()
+        run: |
+          {
+            echo "### Aggregated Status"
+            echo "preflight=${{ needs.preflight.result }}"
+            echo "node-services=${{ needs.node-services.result }}"
+            echo "rust-services=${{ needs.rust-services.result }}"
+            echo "security-scan=${{ needs.security-scan.result }}"
+          } >> "$GITHUB_STEP_SUMMARY"
