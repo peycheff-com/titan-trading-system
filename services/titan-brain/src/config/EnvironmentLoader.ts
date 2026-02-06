@@ -1,15 +1,6 @@
-// import { EquityTier, TitanBrainConfig } from '../types/index.js'; // REMOVED
+import { EquityTier, TitanBrainConfigInput } from "./ConfigSchema.js";
 
-export enum EquityTier {
-  MICRO = 'MICRO', // < $1,500
-  SMALL = 'SMALL', // $1,500 - $5,000
-  MEDIUM = 'MEDIUM', // $5,000 - $25,000
-  LARGE = 'LARGE', // $25,000 - $50,000
-  INSTITUTIONAL = 'INSTITUTIONAL', // > $50,000
-}
-type TitanBrainConfig = any;
-
-export function loadConfigFromEnvironment(): Partial<TitanBrainConfig> {
+export function loadConfigFromEnvironment(): Partial<TitanBrainConfigInput> {
   return {
     ...loadBrainConfig(),
     ...loadAllocationConfig(),
@@ -26,8 +17,11 @@ export function loadConfigFromEnvironment(): Partial<TitanBrainConfig> {
   };
 }
 
-function loadBrainConfig(): Partial<TitanBrainConfig> {
-  if (process.env.BRAIN_SIGNAL_TIMEOUT || process.env.BRAIN_METRIC_UPDATE_INTERVAL) {
+function loadBrainConfig(): Partial<TitanBrainConfigInput> {
+  if (
+    process.env.BRAIN_SIGNAL_TIMEOUT ||
+    process.env.BRAIN_METRIC_UPDATE_INTERVAL
+  ) {
     return {
       brain: {
         signalTimeout: process.env.BRAIN_SIGNAL_TIMEOUT
@@ -42,13 +36,13 @@ function loadBrainConfig(): Partial<TitanBrainConfig> {
         maxQueueSize: process.env.BRAIN_MAX_QUEUE_SIZE
           ? parseInt(process.env.BRAIN_MAX_QUEUE_SIZE)
           : undefined,
-      } as any,
+      },
     };
   }
   return {};
 }
 
-function loadAllocationConfig(): Partial<TitanBrainConfig> {
+function loadAllocationConfig(): Partial<TitanBrainConfigInput> {
   if (
     process.env.ALLOCATION_START_P2 ||
     process.env.ALLOCATION_FULL_P2 ||
@@ -84,14 +78,17 @@ function loadAllocationConfig(): Partial<TitanBrainConfig> {
             ? parseInt(process.env.LEVERAGE_CAP_INSTITUTIONAL)
             : undefined,
         },
-      } as any,
+      },
     };
   }
   return {};
 }
 
-function loadPerformanceConfig(): Partial<TitanBrainConfig> {
-  if (process.env.PERFORMANCE_WINDOW_DAYS || process.env.PERFORMANCE_MIN_TRADE_COUNT) {
+function loadPerformanceConfig(): Partial<TitanBrainConfigInput> {
+  if (
+    process.env.PERFORMANCE_WINDOW_DAYS ||
+    process.env.PERFORMANCE_MIN_TRADE_COUNT
+  ) {
     return {
       performanceTracker: {
         windowDays: process.env.PERFORMANCE_WINDOW_DAYS
@@ -112,14 +109,17 @@ function loadPerformanceConfig(): Partial<TitanBrainConfig> {
         bonusThreshold: process.env.PERFORMANCE_BONUS_THRESHOLD
           ? parseFloat(process.env.PERFORMANCE_BONUS_THRESHOLD)
           : undefined,
-      } as any,
+      },
     };
   }
   return {};
 }
 
-function loadRiskConfig(): Partial<TitanBrainConfig> {
-  if (process.env.RISK_MAX_CORRELATION || process.env.RISK_CORRELATION_PENALTY) {
+function loadRiskConfig(): Partial<TitanBrainConfigInput> {
+  if (
+    process.env.RISK_MAX_CORRELATION ||
+    process.env.RISK_CORRELATION_PENALTY
+  ) {
     return {
       riskGuardian: {
         maxCorrelation: process.env.RISK_MAX_CORRELATION
@@ -137,14 +137,17 @@ function loadRiskConfig(): Partial<TitanBrainConfig> {
         minStopDistanceMultiplier: process.env.RISK_MIN_STOP_DISTANCE_MULTIPLIER
           ? parseFloat(process.env.RISK_MIN_STOP_DISTANCE_MULTIPLIER)
           : undefined,
-      } as any,
+      },
     };
   }
   return {};
 }
 
-function loadCapitalConfig(): Partial<TitanBrainConfig> {
-  if (process.env.CAPITAL_SWEEP_THRESHOLD || process.env.CAPITAL_RESERVE_LIMIT) {
+function loadCapitalConfig(): Partial<TitanBrainConfigInput> {
+  if (
+    process.env.CAPITAL_SWEEP_THRESHOLD ||
+    process.env.CAPITAL_RESERVE_LIMIT
+  ) {
     return {
       capitalFlow: {
         sweepThreshold: process.env.CAPITAL_SWEEP_THRESHOLD
@@ -160,14 +163,17 @@ function loadCapitalConfig(): Partial<TitanBrainConfig> {
         retryBaseDelay: process.env.CAPITAL_RETRY_BASE_DELAY
           ? parseInt(process.env.CAPITAL_RETRY_BASE_DELAY)
           : undefined,
-      } as any,
+      },
     };
   }
   return {};
 }
 
-function loadBreakerConfig(): Partial<TitanBrainConfig> {
-  if (process.env.BREAKER_MAX_DAILY_DRAWDOWN || process.env.BREAKER_MIN_EQUITY) {
+function loadBreakerConfig(): Partial<TitanBrainConfigInput> {
+  if (
+    process.env.BREAKER_MAX_DAILY_DRAWDOWN ||
+    process.env.BREAKER_MIN_EQUITY
+  ) {
     return {
       circuitBreaker: {
         maxDailyDrawdown: process.env.BREAKER_MAX_DAILY_DRAWDOWN
@@ -185,13 +191,13 @@ function loadBreakerConfig(): Partial<TitanBrainConfig> {
         cooldownMinutes: process.env.BREAKER_COOLDOWN_MINUTES
           ? parseInt(process.env.BREAKER_COOLDOWN_MINUTES)
           : undefined,
-      } as any,
+      },
     };
   }
   return {};
 }
 
-function loadDatabaseConfig(): Partial<TitanBrainConfig> {
+function loadDatabaseConfig(): Partial<TitanBrainConfigInput> {
   if (process.env.DB_HOST) {
     return {
       database: {
@@ -206,13 +212,13 @@ function loadDatabaseConfig(): Partial<TitanBrainConfig> {
         idleTimeout: process.env.DB_IDLE_TIMEOUT
           ? parseInt(process.env.DB_IDLE_TIMEOUT)
           : undefined,
-      } as any,
+      },
     };
   }
   return {};
 }
 
-function loadRedisConfig(): Partial<TitanBrainConfig> {
+function loadRedisConfig(): Partial<TitanBrainConfigInput> {
   if (process.env.REDIS_URL) {
     return {
       redis: {
@@ -223,26 +229,28 @@ function loadRedisConfig(): Partial<TitanBrainConfig> {
         retryDelay: process.env.REDIS_RETRY_DELAY
           ? parseInt(process.env.REDIS_RETRY_DELAY)
           : undefined,
-      } as any,
+      },
     };
   }
   return {};
 }
 
-function loadServerConfig(): Partial<TitanBrainConfig> {
+function loadServerConfig(): Partial<TitanBrainConfigInput> {
   if (process.env.SERVER_PORT || process.env.SERVER_HOST) {
     return {
       server: {
         host: process.env.SERVER_HOST,
-        port: process.env.SERVER_PORT ? parseInt(process.env.SERVER_PORT) : undefined,
-        corsOrigins: process.env.CORS_ORIGINS?.split(','),
-      } as any,
+        port: process.env.SERVER_PORT
+          ? parseInt(process.env.SERVER_PORT)
+          : undefined,
+        corsOrigins: process.env.CORS_ORIGINS?.split(","),
+      },
     };
   }
   return {};
 }
 
-function loadNotificationConfig(): Partial<TitanBrainConfig> {
+function loadNotificationConfig(): Partial<TitanBrainConfigInput> {
   if (process.env.TELEGRAM_BOT_TOKEN || process.env.EMAIL_SMTP_HOST) {
     return {
       notifications: {
@@ -254,17 +262,19 @@ function loadNotificationConfig(): Partial<TitanBrainConfig> {
         email: {
           enabled: !!process.env.EMAIL_SMTP_HOST,
           smtpHost: process.env.EMAIL_SMTP_HOST,
-          smtpPort: process.env.EMAIL_SMTP_PORT ? parseInt(process.env.EMAIL_SMTP_PORT) : undefined,
+          smtpPort: process.env.EMAIL_SMTP_PORT
+            ? parseInt(process.env.EMAIL_SMTP_PORT)
+            : undefined,
           from: process.env.EMAIL_FROM,
-          to: process.env.EMAIL_TO?.split(','),
+          to: process.env.EMAIL_TO?.split(","),
         },
-      } as any,
+      },
     };
   }
   return {};
 }
 
-function loadServicesConfig(): Partial<TitanBrainConfig> {
+function loadServicesConfig(): Partial<TitanBrainConfigInput> {
   if (
     process.env.EXECUTION_SERVICE_URL ||
     process.env.PHASE1_WEBHOOK_URL ||
@@ -277,21 +287,24 @@ function loadServicesConfig(): Partial<TitanBrainConfig> {
         phase1WebhookUrl: process.env.PHASE1_WEBHOOK_URL,
         phase2WebhookUrl: process.env.PHASE2_WEBHOOK_URL,
         phase3WebhookUrl: process.env.PHASE3_WEBHOOK_URL,
-      } as any,
+      },
     };
   }
   return {};
 }
 
-function loadReconciliationConfig(): Partial<TitanBrainConfig> {
-  if (process.env.RECONCILIATION_INTERVAL || process.env.RECONCILIATION_EXCHANGES) {
+function loadReconciliationConfig(): Partial<TitanBrainConfigInput> {
+  if (
+    process.env.RECONCILIATION_INTERVAL ||
+    process.env.RECONCILIATION_EXCHANGES
+  ) {
     return {
       reconciliation: {
         intervalMs: process.env.RECONCILIATION_INTERVAL
           ? parseInt(process.env.RECONCILIATION_INTERVAL)
           : undefined,
-        exchanges: process.env.RECONCILIATION_EXCHANGES?.split(','),
-      } as any,
+        exchanges: process.env.RECONCILIATION_EXCHANGES?.split(","),
+      },
     };
   }
   return {};
