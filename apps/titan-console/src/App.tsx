@@ -34,6 +34,7 @@ import PowerLaw from '@/pages/ops/PowerLaw';
 import ConfigCenter from '@/pages/ops/ConfigCenter';
 import Venues from '@/pages/ops/Venues';
 import SettingsPage from '@/pages/Settings';
+import CredentialsPage from '@/pages/Credentials';
 import NotFound from '@/pages/NotFound';
 
 const queryClient = new QueryClient();
@@ -100,6 +101,7 @@ const App = () => (
                   <Route path="/powerlaw" element={<PowerLaw />} />
                   <Route path="/config" element={<ConfigCenter />} />
                   <Route path="/venues" element={<Venues />} />
+                  <Route path="/credentials" element={<CredentialsPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
                 </Route>
 

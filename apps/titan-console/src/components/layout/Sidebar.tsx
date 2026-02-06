@@ -26,6 +26,7 @@ import {
   Settings,
   Terminal,
   History,
+  Key,
 } from 'lucide-react';
 
 const navigation = [
@@ -61,6 +62,7 @@ const navigation = [
       { name: 'Trade History', path: '/history', icon: History },
       { name: 'Alerts', path: '/alerts', icon: Bell },
       { name: 'Infra / DR', path: '/infra', icon: Server },
+      { name: 'API Keys', path: '/credentials', icon: Key },
       { name: 'Settings', path: '/settings', icon: Settings },
     ],
   },

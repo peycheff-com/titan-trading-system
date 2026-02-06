@@ -30,6 +30,7 @@ async function main() {
 
         // Register routes
         await fastify.register(import("./routes/ops.js"));
+        await fastify.register(import("./routes/credentials.js"));
 
         const port = Number(process.env.PORT) || 3001;
         await fastify.listen({ port, host: "0.0.0.0" });
