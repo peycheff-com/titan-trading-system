@@ -25,7 +25,7 @@ FROM nginx:alpine
 # Copy built assets
 COPY --from=builder /app/apps/titan-console/dist /usr/share/nginx/html
 
-# Custom nginx config for SPA routing with relaxed CSP for Vite
+# Custom nginx config for SPA routing with permissive CSP for production
 RUN cat <<'EOF' > /etc/nginx/conf.d/default.conf
 server {
     listen 8080;
@@ -34,7 +34,7 @@ server {
     index index.html;
     
     location / {
-        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https: wss:; manifest-src 'self';" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https: wss: http:; manifest-src 'self'; frame-ancestors 'self';" always;
         try_files $uri $uri/ /index.html;
     }
     
