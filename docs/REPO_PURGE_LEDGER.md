@@ -3,7 +3,10 @@
 **Date**: 2026-02-06  
 **Baseline Commit**: `5bf765c247f33309b51b3e6323c263237a0357e8`
 
-## Summary
+## Commits
+
+1. `e9682ada` - chore(hygiene): remove dead code and empty directories
+2. `23bec705` - test(hygiene): fix flaky HologramScanner timing test
 
 | Category | Count | Evidence |
 |----------|-------|----------|
@@ -42,6 +45,7 @@ Categories:
 |------|--------|
 | `npm run build` | ✅ Pass (13 tasks, 1m22s) |
 | `npm run lint:all` | ✅ Pass (0 errors, 896 warnings) |
+| `npm run test:all` | ✅ Pass (656 passed) |
 | Imports intact | ✅ No missing module errors |
 
 ## Items NOT Removed (Verified Live)
