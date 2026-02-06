@@ -18,9 +18,7 @@ All messages follow a consistent JSON format:
 {
   "type": "MESSAGE_TYPE",
   "timestamp": 1702500000000,
-  "data": {
-    // Message-specific data
-  }
+  "data": {}
 }
 ```
 

@@ -42,8 +42,8 @@ validate_file() {
     local block_start_line=0
     local line_num=0
     
-    while IFS= read -r line; do
-        ((line_num++))
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line_num=$((line_num + 1))
         
         if [[ "$in_code_block" == false ]]; then
             # Check for code block start
@@ -61,21 +61,21 @@ validate_file() {
                 # Validate based on language
                 case "$code_lang" in
                     json)
-                        ((CHECKED++))
+                        CHECKED=$((CHECKED + 1))
                         echo "$code_content" > "$TEMP_DIR/test.json"
                         if ! python3 -m json.tool "$TEMP_DIR/test.json" > /dev/null 2>&1; then
                             echo -e "${RED}✗ Invalid JSON in $file_relative:$block_start_line${NC}"
-                            ((ERRORS++))
+                            ERRORS=$((ERRORS + 1))
                         else
                             echo -e "${GREEN}✓ JSON valid in $file_relative:$block_start_line${NC}"
                         fi
                         ;;
                     yaml|yml)
-                        ((CHECKED++))
+                        CHECKED=$((CHECKED + 1))
                         echo "$code_content" > "$TEMP_DIR/test.yaml"
                         if ! python3 -c "import yaml; yaml.safe_load(open('$TEMP_DIR/test.yaml'))" 2>/dev/null; then
                             echo -e "${RED}✗ Invalid YAML in $file_relative:$block_start_line${NC}"
-                            ((ERRORS++))
+                            ERRORS=$((ERRORS + 1))
                         else
                             echo -e "${GREEN}✓ YAML valid in $file_relative:$block_start_line${NC}"
                         fi
@@ -83,7 +83,7 @@ validate_file() {
                     typescript|ts|javascript|js)
                         # Only check if we have tsc/node available
                         if command -v node &> /dev/null; then
-                            ((CHECKED++))
+                            CHECKED=$((CHECKED + 1))
                             echo "$code_content" > "$TEMP_DIR/test.js"
                             # Basic syntax check using node
                             if ! node --check "$TEMP_DIR/test.js" 2>/dev/null; then
@@ -91,7 +91,7 @@ validate_file() {
                                 echo "$code_content" > "$TEMP_DIR/test.mjs"
                                 if ! node --check "$TEMP_DIR/test.mjs" 2>/dev/null; then
                                     echo -e "${YELLOW}⚠ Possible syntax issue in $file_relative:$block_start_line${NC}"
-                                    ((SKIPPED++))
+                                    SKIPPED=$((SKIPPED + 1))
                                 else
                                     echo -e "${GREEN}✓ JS/TS valid in $file_relative:$block_start_line${NC}"
                                 fi
@@ -99,11 +99,11 @@ validate_file() {
                                 echo -e "${GREEN}✓ JS/TS valid in $file_relative:$block_start_line${NC}"
                             fi
                         else
-                            ((SKIPPED++))
+                            SKIPPED=$((SKIPPED + 1))
                         fi
                         ;;
                     bash|sh|shell)
-                        ((CHECKED++))
+                        CHECKED=$((CHECKED + 1))
                         echo "$code_content" > "$TEMP_DIR/test.sh"
                         if ! bash -n "$TEMP_DIR/test.sh" 2>/dev/null; then
                             echo -e "${YELLOW}⚠ Possible bash syntax issue in $file_relative:$block_start_line${NC}"
@@ -112,7 +112,7 @@ validate_file() {
                         fi
                         ;;
                     *)
-                        ((SKIPPED++))
+                        SKIPPED=$((SKIPPED + 1))
                         ;;
                 esac
                 
