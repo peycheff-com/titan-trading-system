@@ -143,3 +143,36 @@ If PR #2 causes CI regressions:
 2. Keep PR #1 commits intact (correctness fixes remain valid).
 3. Re-run CI on the revert commit and confirm `CI Pipeline Status` returns green.
 
+---
+
+## 10. Feb 2026 SOTA Upgrade
+
+Commits:
+
+- `52161239` - chaos.yml soft-fail on missing secrets
+- `ae5659a4` - cargo-audit caching + improved Rust cache
+- `95a81430` - checkout@v5 upgrade + merge_group trigger
+
+### Features Applied
+
+| Feature | Description |
+|---------|-------------|
+| `actions/checkout@v5` | Upgraded from v4 across all 4 workflows |
+| `merge_group` trigger | Enables merge queue support for batch PR checks |
+| cargo-audit caching | Saves ~2min by caching the binary |
+| Rust cache improvements | Added `cache-on-failure` and `shared-key` for better hit rates |
+
+### Performance Gains (Run 21750779448)
+
+| Job | Before | After | Improvement |
+|-----|--------|-------|-------------|
+| security-scan | 5m16s | 2m27s | **-53%** |
+| titan-execution-rs | 7m5s | 1m49s | **-74%** |
+| node-services | 6m23s | 2m24s | -62% |
+
+### Cache Key Policy (Updated)
+
+- Node package cache: `actions/setup-node` with `cache: npm` and `**/package-lock.json`
+- Turbo cache: `${runner.os}-turbo-${NODE_VERSION}-${hash(package-lock.json,turbo.json)}`
+- Rust cache: `swatinem/rust-cache@v2` with `shared-key: rust-${{ hashFiles('**/Cargo.lock') }}` and `cache-on-failure: true`
+- cargo-audit: `actions/cache@v4` with `key: ${runner.os}-cargo-audit-${RUST_VERSION}`
