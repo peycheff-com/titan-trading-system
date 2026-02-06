@@ -69,8 +69,7 @@ services:
   redis:
     image: redis:7.4-alpine
     container_name: titan-redis
-    ports:
-      - '6379:6379'
+    # NOTE: No host port exposure - internal network only (security hardening)
     volumes:
       - titan-redis-data:/data
     networks:
@@ -92,8 +91,7 @@ services:
       POSTGRES_USER: ${TITAN_DB_USER:-titan}
       POSTGRES_PASSWORD: ${TITAN_DB_PASSWORD:-titan_secret}
       POSTGRES_DB: ${TITAN_DB_NAME:-titan_brain}
-    ports:
-      - '5432:5432'
+    # NOTE: No host port exposure - internal network only (security hardening)
     volumes:
       - titan-db-data:/var/lib/postgresql/data
     networks:
@@ -142,8 +140,8 @@ services:
       - '--storage.tsdb.path=/prometheus'
       - '--web.console.libraries=/usr/share/prometheus/console_libraries'
       - '--web.console.templates=/usr/share/prometheus/consoles'
-    ports:
-      - '9090:9090'
+    # NOTE: No host port exposure - access via internal network only
+    # For external access, use Traefik with authentication
     networks:
       - titan-network
     restart: unless-stopped
@@ -157,8 +155,8 @@ services:
     volumes:
       - titan-grafana-data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
-    ports:
-      - '3000:3000'
+    # NOTE: No host port exposure - access via internal network only
+    # TODO: Add Traefik route with basic auth for external access
     networks:
       - titan-network
     restart: unless-stopped
@@ -171,11 +169,7 @@ services:
     volumes:
       - ./monitoring/tempo/tempo.yaml:/etc/tempo.yaml
       - titan-tempo-data:/tmp/tempo
-    ports:
-      - '14268:14268'
-      - '3200:3200'
-      - '4317:4317'
-      - '4318:4318'
+    # NOTE: No host port exposure - internal tracing only (security hardening)
     networks:
       - titan-network
     restart: unless-stopped
