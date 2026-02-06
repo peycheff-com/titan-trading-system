@@ -18,18 +18,37 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
+      - name: Check Secrets Available
+        id: check-secrets
+        run: |
+          if [ -z "${{ secrets.NATS_SYS_PASSWORD }}" ]; then
+            echo "secrets_available=false" >> $GITHUB_OUTPUT
+            echo "::warning::Production secrets not configured - chaos tests will be skipped"
+          else
+            echo "secrets_available=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Start Stack (Production Mode)
+        if: steps.check-secrets.outputs.secrets_available == 'true'
         run: docker compose -f docker-compose.prod.yml up -d
+        env:
+          NATS_SYS_PASSWORD: ${{ secrets.NATS_SYS_PASSWORD }}
 
       - name: Install Chaos Deps
+        if: steps.check-secrets.outputs.secrets_available == 'true'
         run: npm ci
 
       - name: Run Chaos Suite (Burst & Timeout)
+        if: steps.check-secrets.outputs.secrets_available == 'true'
         run: npx tsx scripts/verification/chaos-tests.ts all
         env:
-            TITAN_IPC_SOCKET: /tmp/titan-ipc.sock
-            TITAN_HMAC_SECRET: ${{ secrets.HMAC_SECRET }}
+          TITAN_IPC_SOCKET: /tmp/titan-ipc.sock
+          TITAN_HMAC_SECRET: ${{ secrets.HMAC_SECRET }}
 
       - name: Audit Logs
-        if: failure()
+        if: failure() && steps.check-secrets.outputs.secrets_available == 'true'
         run: docker compose -f docker-compose.prod.yml logs --tail=100
+
+      - name: Skip Notice
+        if: steps.check-secrets.outputs.secrets_available != 'true'
+        run: echo "✓ Chaos tests skipped - configure NATS_SYS_PASSWORD secret to enable"
