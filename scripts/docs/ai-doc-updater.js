@@ -273,7 +273,7 @@ Respond in JSON format:
    *    - Uses: gcloud auth application-default print-access-token
    */
   async callGemini(prompt) {
-    const model = 'gemini-2.0-flash-exp';
+    const model = 'gemini-3-pro-preview';  // Latest smartest model (Feb 2026)
     
     // Check for API key first
     if (process.env.GEMINI_API_KEY) {
