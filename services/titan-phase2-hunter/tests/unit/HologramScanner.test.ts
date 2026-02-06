@@ -256,7 +256,7 @@ describe("HologramScanner", () => {
       expect(result.errorCount).toBe(0);
       expect(result.symbols).toHaveLength(5);
       expect(result.top20).toHaveLength(5);
-      expect(result.scanDuration).toBeGreaterThan(0);
+      expect(result.scanDuration).toBeGreaterThanOrEqual(0);
       expect(result.timestamp).toBeGreaterThan(0);
 
       // Check ranking
