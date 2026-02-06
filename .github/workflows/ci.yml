@@ -200,6 +200,25 @@ jobs:
       - name: Verify Documentation Invariants
         run: ./scripts/verify-docs.sh
 
+      # 2026 SOTA: Full Documentation Quality Suite
+      - name: Documentation Staleness Detection
+        run: ./scripts/docs/detect-staleness.sh
+        continue-on-error: true  # Soft-fail (warning only)
+
+      - name: Documentation Link Validation
+        run: ./scripts/docs/check-links.sh
+        continue-on-error: true  # Soft-fail for external link issues
+
+      - name: API-to-OpenAPI Sync Check
+        run: ./scripts/docs/check-api-sync.sh
+        continue-on-error: true  # Soft-fail (advisory)
+
+      - name: Code Block Validation
+        run: ./scripts/docs/validate-codeblocks.sh
+
+      - name: Signature Drift Detection
+        run: ./scripts/docs/detect-signature-drift.sh
+
       - name: Check Dead Code (knip)
         if: ${{ needs.changes.outputs.run_hygiene == 'true' }}
         run: |

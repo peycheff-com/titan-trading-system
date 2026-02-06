@@ -1,0 +1,97 @@
+# ai-doc-config.yaml - 2026 SOTA AI Documentation Configuration
+#
+# Tier-1 Practice: Model Context Protocol (MCP) and AI assistant integration
+# Provides context paths and rules for AI documentation assistants.
+#
+# Compatible with:
+# - GitHub Copilot Workspace
+# - Amazon CodeWhisperer
+# - Anthropic Claude MCP
+# - Custom AI documentation tools
+
+version: "1.0"
+name: "titan-ai-docs"
+
+# MCP Context Configuration
+mcp:
+  enabled: true
+  server_name: "titan-docs"
+  
+  # Files AI should always have context about
+  context_paths:
+    - path: "docs/canonical/SYSTEM_SOURCE_OF_TRUTH.md"
+      priority: 1
+      description: "Canonical system invariants - MUST be consulted for any system behavior questions"
+    
+    - path: "docs/reference/openapi.yaml"
+      priority: 2
+      description: "API specification - reference for all HTTP endpoints"
+    
+    - path: "packages/shared/risk_policy.json"
+      priority: 2
+      description: "Risk policy configuration - trading limits and safety parameters"
+    
+    - path: "config/nats.conf"
+      priority: 3
+      description: "NATS configuration - messaging topology and ACLs"
+    
+    - path: "docker-compose.prod.yml"
+      priority: 3
+      description: "Production infrastructure - service topology"
+
+# Auto-update triggers
+auto_update:
+  enabled: false  # Set to true when AI doc regeneration is enabled
+  
+  triggers:
+    - event: "push"
+      branch: "main"
+      paths:
+        - "services/titan-execution-rs/src/**"
+        - "packages/shared/src/**"
+      action: "suggest_doc_update"
+    
+    - event: "pull_request"
+      action: "review_doc_coverage"
+
+# Documentation rules for AI
+ai_rules:
+  - name: "invariant_check"
+    description: "Always verify claims against SYSTEM_SOURCE_OF_TRUTH.md invariants"
+    enforcement: "required"
+  
+  - name: "symbol_references"
+    description: "Use symbol names (function/struct names), never line numbers"
+    enforcement: "required"
+  
+  - name: "evidence_based"
+    description: "All claims about system behavior must cite specific code"
+    enforcement: "suggested"
+  
+  - name: "freshness_warning"
+    description: "Warn if documentation appears older than 30 days"
+    enforcement: "suggested"
+
+# Review requirements
+review:
+  canonical_docs:
+    requires: ["@peycheff"]
+    auto_merge: false
+  
+  api_docs:
+    requires: ["@api-team"]
+    auto_merge: true
+    
+  operational_docs:
+    requires: ["@peycheff", "@ops-team"]
+    auto_merge: false
+
+# Integration with external tools
+integrations:
+  github_copilot:
+    enabled: true
+    custom_instructions_path: ".github/copilot-instructions.md"
+  
+  dependabot:
+    enabled: true
+    update_docs_on_dep_change: true
