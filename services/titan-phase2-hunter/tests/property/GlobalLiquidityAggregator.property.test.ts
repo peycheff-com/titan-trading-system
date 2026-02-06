@@ -68,6 +68,7 @@ describe("Global Liquidity Aggregator Property Tests", () => {
                             if (buyVol > 0) {
                                 aggregator.processTrade({
                                     exchange: input.exchange,
+                                    product: "spot",
                                     symbol: "BTC-USD",
                                     price: 1,
                                     quantity: buyVol,
@@ -79,6 +80,7 @@ describe("Global Liquidity Aggregator Property Tests", () => {
                             if (sellVol > 0) {
                                 aggregator.processTrade({
                                     exchange: input.exchange,
+                                    product: "spot",
                                     symbol: "BTC-USD",
                                     price: 1,
                                     quantity: sellVol,
@@ -131,6 +133,7 @@ describe("Global Liquidity Aggregator Property Tests", () => {
             // Binance/Coinbase neutral/bullish, Kraken huge bearish
             aggregator.processTrade({
                 exchange: "binance",
+                product: "spot",
                 symbol: "BTC",
                 price: 100,
                 quantity: 10,
@@ -140,6 +143,7 @@ describe("Global Liquidity Aggregator Property Tests", () => {
             }); // +1000
             aggregator.processTrade({
                 exchange: "coinbase",
+                product: "spot",
                 symbol: "BTC",
                 price: 100,
                 quantity: 10,
@@ -149,6 +153,7 @@ describe("Global Liquidity Aggregator Property Tests", () => {
             }); // +1000
             aggregator.processTrade({
                 exchange: "kraken",
+                product: "spot",
                 symbol: "BTC",
                 price: 100,
                 quantity: 50,
