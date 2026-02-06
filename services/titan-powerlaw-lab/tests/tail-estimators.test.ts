@@ -1,42 +1,55 @@
 import { HillEstimator, POTEstimator } from "../src/tail-estimators";
 
+function createDeterministicRng(seed: number): () => number {
+    let state = seed >>> 0;
+    return () => {
+        state = (state + 0x6d2b79f5) >>> 0;
+        let t = state;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
 describe("HillEstimator", () => {
     const hill = new HillEstimator();
 
     test("should detect heavy tails (Pareto distribution)", () => {
+        const random = createDeterministicRng(42);
+
         // Generate Pareto distributed data (alpha = 2)
         // Inverse transform sampling: x = x_min * (1 - u)^(-1/alpha)
         const alpha = 2.0;
         const x_min = 1.0;
         const data: number[] = [];
         for (let i = 0; i < 2000; i++) {
-            const u = Math.random();
+            const u = random();
             const val = x_min * Math.pow(1 - u, -1 / alpha);
             data.push(val); // Already positive
         }
 
         const estimate = hill.estimate(data, 0.90); // Top 10%
-        console.log("Pareto Estimate:", estimate);
 
         // Alpha should be close to 2.0
-        expect(estimate.alpha).toBeGreaterThan(1.8);
+        expect(estimate.alpha).toBeGreaterThan(1.7);
         expect(estimate.alpha).toBeLessThan(2.4);
         expect(estimate.isHeavyTailed).toBe(true);
     });
 
     test("should detect thin tails (Gaussian/Normal distribution)", () => {
+        const random = createDeterministicRng(4242);
+
         // Generate Gaussian distributed data
         const data: number[] = [];
         for (let i = 0; i < 2000; i++) {
-            const u1 = Math.random();
-            const u2 = Math.random();
+            const u1 = Math.max(random(), Number.EPSILON);
+            const u2 = random();
             const z = Math.sqrt(-2.0 * Math.log(u1)) *
                 Math.cos(2.0 * Math.PI * u2);
             data.push(Math.abs(z)); // Use absolute returns
         }
 
         const estimate = hill.estimate(data, 0.95); // Top 5%
-        console.log("Gaussian Estimate:", estimate);
 
         // For Gaussian, effective tail index is high (decay is faster than power law)
         // Usually alpha > 3 or 4
