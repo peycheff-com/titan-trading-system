@@ -14,7 +14,7 @@ export const BrainSchema = z.object({
     metricUpdateInterval: z.number().min(1000).max(3600000).default(60000),
     dashboardCacheTTL: z.number().min(100).max(60000).default(5000),
     maxQueueSize: z.number().min(10).max(10000).default(100),
-    initialCapital: z.number().optional(),
+    initialCapital: z.number().default(100000),
 });
 
 // Allocation Engine Config
@@ -58,6 +58,7 @@ export const PerformanceTrackerSchema = z
     });
 
 // Risk Guardian Config
+// Risk Guardian Config
 export const RiskGuardianSchema = z.object({
     maxCorrelation: z.number().min(0).max(1).default(0.8),
     correlationPenalty: z.number().min(0).max(1).default(0.5),
@@ -66,13 +67,22 @@ export const RiskGuardianSchema = z.object({
         300000,
     ),
     minStopDistanceMultiplier: z.number().default(1.5),
-    minConfidenceScore: z.number().optional(),
+    minConfidenceScore: z.number().default(0.7),
+    version: z.literal(1).default(1),
+    maxAccountLeverage: z.number().min(1).max(100).default(10),
+    maxPositionNotional: z.number().min(0).default(100000),
+    maxDailyLoss: z.number().min(0).default(1000),
+    maxOpenOrdersPerSymbol: z.number().min(1).default(5),
+    maxSlippageBps: z.number().min(0).default(100),
+    maxStalenessMs: z.number().min(0).default(60000),
+    symbolWhitelist: z.array(z.string()).default([]),
+    lastUpdated: z.number().default(0),
     confidence: z.object({
-        decayRate: z.number(),
-        recoveryRate: z.number(),
-        threshold: z.number(),
-    }).optional(),
-    fractal: z.object({}).optional(),
+        decayRate: z.number().default(0.1),
+        recoveryRate: z.number().default(0.01),
+        threshold: z.number().default(0.5),
+    }).default({ decayRate: 0.1, recoveryRate: 0.01, threshold: 0.5 }),
+    fractal: z.record(z.any()).default({}), // Use z.record or strict type if known, here loose object is fine for now or z.object({}) is empty. But Type expects key-value.
 });
 
 // Capital Flow Config
@@ -169,6 +179,13 @@ export const ReconciliationSchema = z.object({
     exchanges: z.array(z.string()).default(["BYBIT"]),
 });
 
+// Leader Election Config
+export const LeaderElectionSchema = z.object({
+    enabled: z.boolean().default(true),
+    leaseDurationMs: z.number().min(1000).max(60000).default(10000),
+    heartbeatIntervalMs: z.number().min(100).max(10000).default(2000),
+});
+
 // Root Schema
 export const TitanBrainConfigSchema = z.object({
     brain: BrainSchema,
@@ -184,6 +201,7 @@ export const TitanBrainConfigSchema = z.object({
     activeInference: ActiveInferenceSchema,
     services: ServicesSchema,
     reconciliation: ReconciliationSchema,
+    leaderElection: LeaderElectionSchema,
 });
 
 export type TitanBrainConfig = z.infer<typeof TitanBrainConfigSchema>;

@@ -22,7 +22,7 @@ export default fp(async function (fastify: FastifyInstance) {
       // Fastify auth boundary: request decoration is required to share claims downstream.
       // eslint-disable-next-line functional/immutable-data, @typescript-eslint/no-explicit-any
       (request as any).user = decoded;
-    } catch (err) {
+    } catch (_err) {
       reply.code(401).send({ error: 'Unauthorized' });
     }
   });

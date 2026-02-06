@@ -7,9 +7,20 @@ source ./scripts/ci/bootstrap.sh
 echo "::group::Node.js Services"
 
 # Install Dependencies
-if [[ "${1:-}" == "install" ]] || [[ "${1:-}" == "all" ]]; then
+if [[ "${1:-}" == "install" ]] || [[ "${1:-}" == "all" ]] || [[ "${1:-}" == "check" ]]; then
   echo "Installing Node dependencies..."
   npm ci
+fi
+
+# Lint & Build (Check)
+if [[ "${1:-}" == "check" ]]; then
+  echo "Running Node lint and build..."
+  if npx turbo --version >/dev/null 2>&1; then
+    npx turbo run lint build --filter="!//*"
+  else
+    npm run lint
+    npm run build
+  fi
 fi
 
 # Lint & Test

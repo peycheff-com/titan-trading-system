@@ -58,12 +58,21 @@ export const defaultConfig: TitanBrainConfig = {
     correlationUpdateInterval: 300000,
     minStopDistanceMultiplier: 1.5,
     minConfidenceScore: 0.7,
+    version: 1,
+    maxAccountLeverage: 10,
+    maxPositionNotional: 100000,
+    maxDailyLoss: 1000,
+    maxOpenOrdersPerSymbol: 5,
+    maxSlippageBps: 100,
+    maxStalenessMs: 60000,
     confidence: {
       decayRate: 0.1,
       recoveryRate: 0.01,
       threshold: 0.5,
     },
     fractal: {},
+    symbolWhitelist: [],
+    lastUpdated: 0,
   },
   capitalFlow: {
     sweepThreshold: 1.2,
@@ -119,6 +128,11 @@ export const defaultConfig: TitanBrainConfig = {
   reconciliation: {
     intervalMs: 60000,
     exchanges: ["BYBIT"],
+  },
+  leaderElection: {
+    enabled: true,
+    leaseDurationMs: 10000,
+    heartbeatIntervalMs: 2000,
   },
 };
 
@@ -244,6 +258,10 @@ function deepMerge(
       target.reconciliation,
       source.reconciliation,
     ),
+    leaderElection: mergeConfigSection(
+      target.leaderElection,
+      source.leaderElection,
+    ),
   };
 }
 
@@ -284,8 +302,8 @@ export function loadConfig(
   const envSource = Object.keys(envConfig).length > 0 ? "environment" : null;
 
   const mergedConfig = deepMerge(
-    deepMerge({ ...defaultConfig }, fileRef.config),
-    envConfig,
+    deepMerge({ ...defaultConfig }, fileRef.config as any),
+    envConfig as any,
   );
 
   const sources: string[] = ["defaults", fileRef.source, envSource].filter(
