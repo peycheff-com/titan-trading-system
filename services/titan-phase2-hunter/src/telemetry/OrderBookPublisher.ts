@@ -73,12 +73,14 @@ export class OrderBookPublisher extends EventEmitter {
             });
         }, this.config.flushIntervalMs);
 
+        // eslint-disable-next-line functional/immutable-data -- internal publisher state transition
         this.state = { ...this.state, flushTimer: timer };
     }
 
     stop(): void {
         if (this.state.flushTimer) {
             clearInterval(this.state.flushTimer);
+            // eslint-disable-next-line functional/immutable-data -- internal publisher state transition
             this.state = { ...this.state, flushTimer: null };
         }
         this.flushBuffer().catch(console.error);
@@ -116,12 +118,14 @@ export class OrderBookPublisher extends EventEmitter {
 
         if (this.state.deltaBuffer.length >= this.config.maxBufferSize) {
             // Drop oldest
+            // eslint-disable-next-line functional/immutable-data -- internal publisher state transition
             this.state = {
                 ...this.state,
                 deltaBuffer: [...this.state.deltaBuffer.slice(1), delta],
                 deltasDropped: this.state.deltasDropped + 1,
             };
         } else {
+            // eslint-disable-next-line functional/immutable-data -- internal publisher state transition
             this.state = {
                 ...this.state,
                 deltaBuffer: [...this.state.deltaBuffer, delta],
@@ -134,6 +138,7 @@ export class OrderBookPublisher extends EventEmitter {
             return;
         }
 
+        // eslint-disable-next-line functional/immutable-data -- internal publisher state transition
         this.state = { ...this.state, isPublishing: true };
         const startTime = Date.now();
 
@@ -142,24 +147,25 @@ export class OrderBookPublisher extends EventEmitter {
             if (!nats.isConnected()) return;
 
             const deltas = this.state.deltaBuffer;
+            // eslint-disable-next-line functional/immutable-data -- internal publisher state transition
             this.state = { ...this.state, deltaBuffer: [] };
-
-            let published = 0;
+            const published = deltas.length;
             for (const delta of deltas) {
                 const subject = TITAN_SUBJECTS.DATA.VENUES.ORDERBOOKS(
                     delta.venue,
                     delta.symbol.replace("/", "_"),
                 );
                 await nats.publish(subject, delta);
-                published++;
             }
 
+            // eslint-disable-next-line functional/immutable-data -- internal publisher state transition
             this.state = {
                 ...this.state,
                 deltasPublished: this.state.deltasPublished + published,
                 lastFlushTime: Date.now() - startTime,
             };
         } finally {
+            // eslint-disable-next-line functional/immutable-data -- internal publisher state transition
             this.state = { ...this.state, isPublishing: false };
         }
     }

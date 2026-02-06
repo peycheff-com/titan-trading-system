@@ -114,6 +114,7 @@ export class MarketTradePublisher extends EventEmitter {
       });
     }, this.config.flushIntervalMs);
 
+    // eslint-disable-next-line functional/immutable-data -- internal publisher state transition
     this.state = { ...this.state, flushTimer: timer };
   }
 
@@ -123,6 +124,7 @@ export class MarketTradePublisher extends EventEmitter {
   stop(): void {
     if (this.state.flushTimer) {
       clearInterval(this.state.flushTimer);
+      // eslint-disable-next-line functional/immutable-data -- internal publisher state transition
       this.state = { ...this.state, flushTimer: null };
     }
 
@@ -149,12 +151,14 @@ export class MarketTradePublisher extends EventEmitter {
 
     // Backpressure: drop oldest if buffer full
     if (this.state.tradeBuffer.length >= this.config.maxBufferSize) {
+      // eslint-disable-next-line functional/immutable-data -- internal publisher state transition
       this.state = {
         ...this.state,
         tradeBuffer: [...this.state.tradeBuffer.slice(1), normalized],
         tradesDropped: this.state.tradesDropped + 1,
       };
     } else {
+      // eslint-disable-next-line functional/immutable-data -- internal publisher state transition
       this.state = {
         ...this.state,
         tradeBuffer: [...this.state.tradeBuffer, normalized],
@@ -211,6 +215,7 @@ export class MarketTradePublisher extends EventEmitter {
       return;
     }
 
+    // eslint-disable-next-line functional/immutable-data -- internal publisher state transition
     this.state = { ...this.state, isPublishing: true };
     const startTime = Date.now();
 
@@ -223,24 +228,25 @@ export class MarketTradePublisher extends EventEmitter {
 
       // Take all buffered trades immutably
       const trades = this.state.tradeBuffer;
+      // eslint-disable-next-line functional/immutable-data -- internal publisher state transition
       this.state = { ...this.state, tradeBuffer: [] };
-
-      let published = 0;
+      const published = trades.length;
       for (const trade of trades) {
         const subject = TITAN_SUBJECTS.DATA.VENUES.TRADES(
           trade.venue,
           trade.symbol.replace('/', '_')
         );
         await nats.publish(subject, trade);
-        published++;
       }
 
+      // eslint-disable-next-line functional/immutable-data -- internal publisher state transition
       this.state = {
         ...this.state,
         tradesPublished: this.state.tradesPublished + published,
         lastFlushTime: Date.now() - startTime,
       };
     } finally {
+      // eslint-disable-next-line functional/immutable-data -- internal publisher state transition
       this.state = { ...this.state, isPublishing: false };
     }
   }

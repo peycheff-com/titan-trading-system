@@ -92,6 +92,7 @@ export class VenueStatusPublisher extends EventEmitter {
 
     console.log(`[VenueStatusPublisher] Starting (interval=${this.config.publishIntervalMs}ms)`);
 
+    // eslint-disable-next-line functional/immutable-data -- lifecycle timer is internal mutable runtime state
     this.publishTimer = setInterval(() => {
       this.publishAllStatuses().catch(err => {
         console.error('[VenueStatusPublisher] Publish error:', err);
@@ -106,6 +107,7 @@ export class VenueStatusPublisher extends EventEmitter {
   stop(): void {
     if (this.publishTimer) {
       clearInterval(this.publishTimer);
+      // eslint-disable-next-line functional/immutable-data -- lifecycle timer is internal mutable runtime state
       this.publishTimer = null;
     }
     console.log(`[VenueStatusPublisher] Stopped (published=${this.metricsEmitted})`);
@@ -115,15 +117,18 @@ export class VenueStatusPublisher extends EventEmitter {
    * Update health data from MultiExchangeManager
    */
   updateHealth(healthMap: Map<string, ConnectionHealth>): void {
-    for (const [exchange, health] of healthMap) {
+    const updates = Array.from(healthMap, ([exchange, health]) => {
       // Extend with parse errors if available
       const extended: ExtendedConnectionHealth = {
         ...health,
         parseErrors5m: (health as ExtendedConnectionHealth).parseErrors5m ?? 0,
         wsUrl: (health as ExtendedConnectionHealth).wsUrl ?? '',
       };
-      this.latestHealth.set(exchange, extended);
-    }
+      return [exchange, extended] as const;
+    });
+    const updated = new Map([...this.latestHealth, ...updates]);
+    // eslint-disable-next-line functional/immutable-data -- replace map snapshot atomically
+    this.latestHealth = updated;
   }
 
   /**
@@ -203,6 +208,7 @@ export class VenueStatusPublisher extends EventEmitter {
       return;
     }
 
+    // eslint-disable-next-line functional/immutable-data -- publish loop lock
     this.isPublishing = true;
 
     try {
@@ -228,9 +234,11 @@ export class VenueStatusPublisher extends EventEmitter {
           console.warn(`[VenueStatusPublisher] KV write failed for ${status.venue}:`, err);
         });
 
+        // eslint-disable-next-line functional/immutable-data -- telemetry counter
         this.metricsEmitted++;
       }
     } finally {
+      // eslint-disable-next-line functional/immutable-data -- publish loop lock
       this.isPublishing = false;
     }
   }
