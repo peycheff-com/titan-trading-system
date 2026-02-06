@@ -50,7 +50,7 @@ jest.mock("../../src/features/Risk/TailRiskCalculator", () => {
 });
 
 // Mock ChangePointDetector
-jest.mock("../../src/engine/ChangePointDetector", () => {
+jest.mock("../../src/features/Risk/ChangePointDetector", () => {
     return {
         ChangePointDetector: jest.fn().mockImplementation(() => ({
             update: jest.fn().mockReturnValue({ regime: "STABLE", score: 0 }),
