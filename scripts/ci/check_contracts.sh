@@ -15,7 +15,10 @@ npm run build
 
 echo "  ↳ Generating Schemas & Rust Types..."
 # Clean previous artifacts to ensure determinism
-rm -f packages/shared/src/schemas/*.ts
+# Clean previous artifacts to ensure determinism
+# Intentionally only cleaning generated artifacts if needed, but for now relying on overwrite.
+# rm -f packages/shared/src/schemas/*.ts <- INCORRECT: This deletes source files!
+rm -f packages/shared/schemas/json/*.json
 rm -f services/titan-execution-rs/src/contracts/*.rs
 npm run generate:schemas
 npm run generate:rust

@@ -1,1 +1,0 @@
-{"version":3,"file":"OperatorAction.d.ts","sourceRoot":"","sources":["OperatorAction.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,CAAC,EAAE,MAAM,KAAK,CAAC;AAExB,eAAO,MAAM,sBAAsB,4EAKjC,CAAC;AAEH,MAAM,MAAM,kBAAkB,GAAG,CAAC,CAAC,KAAK,CAAC,OAAO,sBAAsB,CAAC,CAAC;AAExE,eAAO,MAAM,oBAAoB;;;;;;;;;;;;;;;;;;;;;;;;EAQ/B,CAAC;AAEH,MAAM,MAAM,cAAc,GAAG,CAAC,CAAC,KAAK,CAAC,OAAO,oBAAoB,CAAC,CAAC"}
