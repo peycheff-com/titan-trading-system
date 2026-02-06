@@ -26,30 +26,34 @@
 
 ## 2. System Invariants (Non-negotiables)
 
-These are the **inviolable rules** governing the Titan system. Each invariant is backed by file-level evidence.
+These are the **inviolable rules** governing the Titan system. Each invariant is backed by **symbol-based evidence** (not line numbers) for resilience to refactoring.
 
-| ID    | Invariant                                                                                                       | Evidence                                                              |
+> [!NOTE]
+> Evidence references use symbol names to survive code changes. Verify via: `grep -r "SymbolName" path/to/file`
+
+| ID    | Invariant                                                                                                       | Evidence (Symbol-Based)                                               |
 | ----- | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| I-01  | All trading signals MUST be mediated through Titan Brain before reaching Execution                              | `services/titan-brain/src/index.ts:766-822` (forwardSignalToExecution)|
-| I-02  | HMAC_SECRET is **fail-closed**: empty secret = `panic!` in production                                           | `services/titan-execution-rs/src/security.rs:35-49`                   |
-| I-03  | Risk Policy hash MUST match between TypeScript and Rust at boot                                                 | `packages/shared/src/schemas/RiskPolicy.ts:35-48`, `services/titan-execution-rs/src/risk_policy.rs:131-136` |
-| I-04  | Symbol whitelist is the sole source of tradeable pairs                                                          | `packages/shared/risk_policy.json` → `symbolWhitelist` field          |
-| I-05  | All phase services (Scavenger, Hunter, Sentinel) require Brain approval before execution                        | NATS ACLs in `config/nats.conf:26-97`                                 |
-| I-06  | Circuit breaker activation is final until operator ARM command with HMAC signature                              | `services/titan-execution-rs/src/nats_engine.rs:947`, `security.rs:130-184` |
-| I-07  | Execution engine only processes intents from `titan.cmd.execution.place.v1.>` subjects                          | `services/titan-execution-rs/src/nats_engine.rs:583-677`              |
-| I-08  | JetStream streams are authoritative for event persistence (`TITAN_COMMANDS`, `TITAN_EVENTS`, `TITAN_DATA`)      | `packages/shared/src/messaging/NatsClient.ts:174-207`                 |
-| I-09  | Envelope signatures require `ts`, `nonce`, and `sig` fields; missing any = rejection                            | `services/titan-execution-rs/src/security.rs:76-79`                   |
-| I-10  | Timestamp drift tolerance is 5 minutes (300,000ms) by default                                                   | `services/titan-execution-rs/src/security.rs:30-33`                   |
-| I-11  | Rate limiting enforced via TokenBucket in Rust (default 10 RPS for Bybit)                                       | `services/titan-execution-rs/src/rate_limiter.rs:11-56`               |
-| I-12  | RiskGuard is final veto before order submission; it evaluates policy + shadow state                             | `services/titan-execution-rs/src/risk_guard.rs:130-198`               |
-| I-13  | NATS users have granular publish/subscribe ACLs preventing cross-service impersonation                          | `config/nats.conf:22-101`                                             |
-| I-14  | Database tables use Row Level Security (RLS) enabled by default                                                 | `services/titan-brain/src/db/schema.sql:243-258`                      |
-| I-15  | `fills` and `event_log` tables are partitioned by month for performance and retention                           | `services/titan-brain/src/db/schema.sql:172, 196`                     |
-| I-16  | Circuit breaker states are: Normal → Cautious → Defensive → Emergency                                          | `services/titan-execution-rs/src/risk_policy.rs:8-15`                 |
-| I-17  | All services must expose `/health` endpoint for orchestration health checks                                     | Docker Compose healthchecks in `docker-compose.prod.yml`              |
-| I-18  | Phase services broadcast state via `titan.evt.phase.*` subjects                                                 | `config/nats.conf:44, 54, 64` (publish permissions)                   |
-| I-19  | DLQ (Dead Letter Queue) exists at `titan.dlq.execution.core` and `titan.execution.dlq`                          | `packages/shared/src/messaging/ExecutionClient.ts:178-189`            |
-| I-20  | Risk policy embedded at Rust compile time via `include_str!`                                                    | `services/titan-execution-rs/src/risk_policy.rs:102`                  |
+| I-01  | All trading signals MUST be mediated through Titan Brain before reaching Execution                              | `ExecutionPipeline.process_intent()` in `nats_engine.rs`              |
+| I-02  | HMAC_SECRET is **fail-closed**: empty secret = `panic!` in production                                           | `HmacValidator::new()` panic block in `security.rs`                   |
+| I-03  | Risk Policy hash MUST match between TypeScript and Rust at boot                                                 | `RiskPolicy.computeHash()` in TS, `RiskPolicy::get_hash()` in Rust    |
+| I-04  | Symbol whitelist is the sole source of tradeable pairs                                                          | `symbolWhitelist` field in `packages/shared/risk_policy.json`         |
+| I-05  | All phase services (Scavenger, Hunter, Sentinel) require Brain approval before execution                        | `publish` ACLs in `config/nats.conf` (titan.cmd.* subjects)           |
+| I-06  | Circuit breaker activation is final until operator ARM command with HMAC signature                              | `GlobalHaltState.set_halt()` + `validate_risk_command()` in `security.rs` |
+| I-07  | Execution engine only processes intents from `titan.cmd.execution.>` subjects                                   | Consumer `EXECUTION_CORE` filter in `nats_engine.rs`                  |
+| I-08  | JetStream streams are authoritative for event persistence (`TITAN_CMD`, `TITAN_EVT`)                            | Stream init in `NatsClient.ensureJetStreamResources()` (TS) and `nats_engine.rs` |
+| I-09  | Envelope signatures require `ts`, `nonce`, and `sig` fields; missing any = rejection                            | `HmacValidator::validate()` field checks in `security.rs`             |
+| I-10  | Timestamp drift tolerance is 5 minutes (300,000ms) by default                                                   | `HMAC_TIMESTAMP_TOLERANCE` env var parsed in `HmacValidator::new()`   |
+| I-11  | Rate limiting enforced via TokenBucket in Rust (default 10 RPS for Bybit)                                       | `struct TokenBucket` in `rate_limiter.rs`                             |
+| I-12  | RiskGuard is final veto before order submission; it evaluates policy + shadow state                             | `RiskGuard::evaluate()` in `risk_guard.rs`                            |
+| I-13  | NATS users have granular publish/subscribe ACLs preventing cross-service impersonation                          | `authorization { users [ ... ] }` block in `config/nats.conf`         |
+| I-14  | Database tables use Row Level Security (RLS) enabled by default                                                 | `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` in `schema.sql`           |
+| I-15  | `fills` and `event_log` tables are partitioned by month for performance and retention                           | `PARTITION BY RANGE` in `schema.sql` table definitions                |
+| I-16  | Circuit breaker states are: Normal → Cautious → Defensive → Emergency                                          | `pub enum RiskState` in `risk_policy.rs`                              |
+| I-17  | All services must expose `/health` endpoint for orchestration health checks                                     | `healthcheck` directives in `docker-compose.prod.yml`                 |
+| I-18  | Phase services broadcast state via `titan.evt.phase.*` subjects                                                 | `publish: ["titan.evt.phase.*"]` ACLs in `config/nats.conf`           |
+| I-19  | DLQ (Dead Letter Queue) exists at `titan.dlq.execution.core`                                                    | `DLQ_EXECUTION_CORE` constant in `subjects.rs`                        |
+| I-20  | Risk policy embedded at Rust compile time via `include_str!`                                                    | `const RISK_POLICY_JSON: &str = include_str!()` in `risk_policy.rs`   |
+
 
 ---
 

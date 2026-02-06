@@ -1,6 +1,71 @@
-# Docs Ownership
-/docs/canonical/ @peycheff
-/docs/security/ @peycheff
-/docs/runbooks/ @peycheff @ops-team
-/docs/reference/openapi.yaml @api-team
-/docs/reference/asyncapi.yaml @platform-team
+# Titan Monorepo CODEOWNERS
+# Tier-1 Big Tech Practice: Full documentation and code ownership mapping
+#
+# Reference: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# RULES:
+# 1. Each code path must have an owner
+# 2. Doc paths mapped to relevant code owners for sync enforcement
+# 3. Canonical docs require senior review
+
+# =============================================================================
+# CANONICAL DOCUMENTATION (HIGHEST PRIORITY - SENIOR REVIEW REQUIRED)
+# =============================================================================
+/docs/canonical/                        @peycheff
+/docs/security/                         @peycheff
+
+# =============================================================================
+# OPERATIONAL DOCUMENTATION
+# =============================================================================
+/docs/runbooks/                         @peycheff @ops-team
+/docs/operations/                       @peycheff @ops-team
+/docs/how-to/                           @peycheff
+
+# =============================================================================
+# API & CONTRACT DOCUMENTATION
+# =============================================================================
+/docs/reference/openapi.yaml            @api-team
+/docs/reference/asyncapi.yaml           @platform-team
+/docs/api/                              @api-team
+/docs/contracts/                        @platform-team
+
+# =============================================================================
+# ARCHITECTURE & DESIGN DOCUMENTATION
+# =============================================================================
+/docs/architecture/                     @peycheff
+/docs/explanation/                      @peycheff
+/docs/rfcs/                             @peycheff
+
+# =============================================================================
+# CI/CD & INFRASTRUCTURE
+# =============================================================================
+/.github/                               @peycheff
+/docs/ci/                               @peycheff
+/scripts/                               @peycheff
+/config/                                @peycheff
+/docker-compose*.yml                    @peycheff
+
+# =============================================================================
+# CORE SERVICES (CODE + RELATED DOCS SYNC)
+# =============================================================================
+/services/titan-brain/                  @peycheff
+/services/titan-execution-rs/           @peycheff
+/packages/shared/                       @peycheff
+
+# =============================================================================
+# STRATEGY SERVICES
+# =============================================================================
+/services/titan-phase1-scavenger/       @peycheff
+/services/titan-phase2-hunter/          @peycheff
+/services/titan-phase3-sentinel/        @peycheff
+/services/titan-ai-quant/               @peycheff
+
+# =============================================================================
+# APPLICATIONS
+# =============================================================================
+/apps/titan-console/                    @peycheff
+
+# =============================================================================
+# DEFAULT (CATCH ALL)
+# =============================================================================
+*                                       @peycheff

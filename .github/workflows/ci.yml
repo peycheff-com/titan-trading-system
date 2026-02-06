@@ -197,6 +197,9 @@ jobs:
           npm run sota:circular
           npm run sota:immutability
 
+      - name: Verify Documentation Invariants
+        run: ./scripts/verify-docs.sh
+
       - name: Check Dead Code (knip)
         if: ${{ needs.changes.outputs.run_hygiene == 'true' }}
         run: |
