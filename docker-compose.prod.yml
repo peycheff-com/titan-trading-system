@@ -28,6 +28,8 @@ services:
       - traefik-certs:/letsencrypt
     networks:
       - titan-network
+    environment:
+      - DOCKER_API_VERSION=1.44
     restart: unless-stopped
 
   # =============================================================================
