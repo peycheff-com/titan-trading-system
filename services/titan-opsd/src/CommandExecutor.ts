@@ -1,5 +1,7 @@
 import { OpsCommandType, OpsCommandV1 } from "@titan/shared";
 import { spawn } from "child_process";
+import { Readable } from "stream";
+import { text as readText } from "node:stream/consumers";
 
 export class CommandExecutor {
     async execute(cmd: OpsCommandV1): Promise<Record<string, unknown>> {
@@ -127,13 +129,10 @@ export class CommandExecutor {
         });
     }
 
-    private async readStream(
-        stream: NodeJS.ReadableStream | null,
-    ): Promise<string> {
+    private async readStream(stream: Readable | null): Promise<string> {
         if (!stream) {
             return "";
         }
-        const chunks = await Array.fromAsync(stream as AsyncIterable<Buffer>);
-        return Buffer.concat(chunks).toString();
+        return readText(stream);
     }
 }
