@@ -326,8 +326,8 @@ services:
     environment:
       - NODE_ENV=production
       - NATS_URL=nats://nats:4222
-      - NATS_USER=ops
-      - NATS_PASS=${NATS_CONSOLE_PASSWORD} # Using console pass for opsd for now or new one? opsd usually implies system level.
+      - NATS_USER=console
+      - NATS_PASS=${NATS_CONSOLE_PASSWORD}
       - HMAC_SECRET=${HMAC_SECRET}
       - OPS_SECRET=${HMAC_SECRET}
     volumes:
