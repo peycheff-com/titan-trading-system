@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod tests {
+mod integration {
     use crate::circuit_breaker::GlobalHalt;
     use crate::context::ExecutionContext;
     use crate::exchange::adapter::OrderRequest;

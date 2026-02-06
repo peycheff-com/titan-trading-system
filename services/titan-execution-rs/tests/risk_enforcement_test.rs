@@ -3,9 +3,7 @@
 //! Tests RiskPolicy parsing and RiskRejectionReason behavior.
 //! Fulfills GAP-07: Risk Violation Enforcement
 
-use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
-use std::collections::HashSet;
 
 use titan_execution_rs::risk_guard::RiskRejectionReason;
 use titan_execution_rs::risk_policy::{RiskPolicy, RiskState};

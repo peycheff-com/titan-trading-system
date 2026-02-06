@@ -3,7 +3,6 @@
 //! Tests RiskState transitions and system halt behavior.
 //! Fulfills GAP-08: Circuit Breaker Enforcement
 
-use rust_decimal_macros::dec;
 use serde_json::json;
 
 use titan_execution_rs::risk_policy::{RiskPolicy, RiskState};
@@ -61,8 +60,8 @@ fn test_all_risk_state_variants() {
             "symbolWhitelist": []
         });
 
-        let parsed: RiskPolicy =
-            serde_json::from_value(policy_json).expect(&format!("Failed to parse {}", name));
+        let parsed: RiskPolicy = serde_json::from_value(policy_json)
+            .unwrap_or_else(|_| panic!("Failed to parse {}", name));
         assert_eq!(
             parsed.current_state, expected_state,
             "State mismatch for {}",
@@ -107,6 +106,7 @@ fn test_risk_state_equality() {
 
 /// Test RiskState Debug/Clone traits
 #[test]
+#[allow(clippy::clone_on_copy)]
 fn test_risk_state_traits() {
     let state = RiskState::Emergency;
     let cloned = state.clone();

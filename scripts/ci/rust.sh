@@ -12,6 +12,17 @@ if ! command -v cargo &> /dev/null; then
   exit 0
 fi
 
+# Locate Cargo Workspace
+if [[ -f "Cargo.toml" ]]; then
+  echo "Found Cargo.toml in root."
+elif [[ -d "services/titan-execution-rs" ]]; then
+  echo "Changing directory to services/titan-execution-rs..."
+  cd services/titan-execution-rs
+else
+  echo "Error: Could not locate Cargo.toml or services/titan-execution-rs"
+  exit 1
+fi
+
 # Build & Test
 if [[ "${1:-}" == "all" ]]; then
     echo "Running cargo fmt check..."

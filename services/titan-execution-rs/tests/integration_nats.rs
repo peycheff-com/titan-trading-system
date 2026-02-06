@@ -1,7 +1,6 @@
 use async_trait::async_trait;
 use chrono::Utc;
 use futures::StreamExt;
-use hex;
 use hmac::{Hmac, Mac};
 use parking_lot::RwLock;
 use serde_json::Value;

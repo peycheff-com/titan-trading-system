@@ -370,12 +370,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_weighted_split() {
-        let mut routing = RoutingConfig::default();
-        routing.fanout = Some(true);
-        routing.weights = Some(HashMap::from([
-            ("binance".to_string(), 0.7),
-            ("bybit".to_string(), 0.3),
-        ]));
+        let routing = RoutingConfig {
+            fanout: Some(true),
+            weights: Some(HashMap::from([
+                ("binance".to_string(), 0.7),
+                ("bybit".to_string(), 0.3),
+            ])),
+            ..Default::default()
+        };
 
         let router = ExecutionRouter::with_routing(routing);
         router.register("binance", Arc::new(MockAdapter));
@@ -410,8 +412,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_fanout_disabled_defaults_to_single_route() {
-        let mut routing = RoutingConfig::default();
-        routing.fanout = Some(false);
+        let routing = RoutingConfig {
+            fanout: Some(false),
+            ..Default::default()
+        };
 
         let router = ExecutionRouter::with_routing(routing);
         router.register("bybit", Arc::new(MockAdapter));
@@ -435,16 +439,18 @@ mod tests {
 
     #[tokio::test]
     async fn test_weighted_split_preserves_dust() {
-        let mut routing = RoutingConfig::default();
-        routing.fanout = Some(true);
-        routing.weights = Some(HashMap::from([
-            ("A".to_string(), 0.33),
-            ("B".to_string(), 0.33),
-            ("C".to_string(), 0.33),
-            // Sum = 0.99. The remaining 0.01 should conceptually be handled by normalization or the last-bucket logic.
-            // Wait, normalized weights will handle the sum != 1.0 case by dividing by sum.
-            // But let's verify weird decimal quantities.
-        ]));
+        let routing = RoutingConfig {
+            fanout: Some(true),
+            weights: Some(HashMap::from([
+                ("A".to_string(), 0.33),
+                ("B".to_string(), 0.33),
+                ("C".to_string(), 0.33),
+                // Sum = 0.99. The remaining 0.01 should conceptually be handled by normalization or the last-bucket logic.
+                // Wait, normalized weights will handle the sum != 1.0 case by dividing by sum.
+                // But let's verify weird decimal quantities.
+            ])),
+            ..Default::default()
+        };
 
         let router = ExecutionRouter::with_routing(routing);
         router.register("A", Arc::new(MockAdapter));

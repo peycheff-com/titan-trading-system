@@ -311,16 +311,17 @@ mod tests {
 
     #[test]
     fn test_risk_guard_validation() {
-        let mut settings = Settings::default();
-        settings.execution = Some(ExecutionConfig {
-            risk_guard: RiskGuardConfig {
-                max_leverage: 100.0, // Unsafe
-                daily_loss_limit: 1000.0,
-                symbol_whitelist: vec!["BTC/USDT".into()],
+        let settings = Settings {
+            execution: Some(ExecutionConfig {
+                risk_guard: RiskGuardConfig {
+                    max_leverage: 100.0, // Unsafe
+                    daily_loss_limit: 1000.0,
+                    symbol_whitelist: vec!["BTC/USDT".into()],
+                },
                 ..Default::default()
-            },
+            }),
             ..Default::default()
-        });
+        };
 
         let result = settings.validate();
         assert!(result.is_err());

@@ -700,8 +700,10 @@ mod tests {
         let (p, path) = create_test_persistence();
         let ctx = Arc::new(ExecutionContext::new_system());
         let state = Arc::new(RwLock::new(ShadowState::new(p, ctx, Some(10000.0))));
-        let mut policy = RiskPolicy::default();
-        policy.max_position_notional = dec!(10000.0); // Max $10k
+        let policy = RiskPolicy {
+            max_position_notional: dec!(10000.0), // Max $10k
+            ..Default::default()
+        };
 
         let guard = RiskGuard::new(policy, state);
 
@@ -725,8 +727,10 @@ mod tests {
         let (p, path) = create_test_persistence();
         let ctx = Arc::new(ExecutionContext::new_system());
         let state = Arc::new(RwLock::new(ShadowState::new(p, ctx, Some(10000.0))));
-        let mut policy = RiskPolicy::default();
-        policy.max_daily_loss = dec!(-800.0);
+        let policy = RiskPolicy {
+            max_daily_loss: dec!(-800.0),
+            ..Default::default()
+        };
 
         let guard = RiskGuard::new(policy, state.clone());
 
@@ -822,8 +826,10 @@ mod tests {
         let ctx = Arc::new(ExecutionContext::new_system());
         // Equity = 1000
         let state = Arc::new(RwLock::new(ShadowState::new(p, ctx, Some(1000.0))));
-        let mut policy = RiskPolicy::default();
-        policy.max_account_leverage = dec!(5.0); // 5x Leverage Limit
+        let policy = RiskPolicy {
+            max_account_leverage: dec!(5.0), // 5x Leverage Limit
+            ..Default::default()
+        };
 
         let guard = RiskGuard::new(policy, state.clone());
 
@@ -875,8 +881,10 @@ mod tests {
         let (p, path) = create_test_persistence();
         let ctx = Arc::new(ExecutionContext::new_system());
         let state = Arc::new(RwLock::new(ShadowState::new(p, ctx, Some(10000.0))));
-        let mut policy = RiskPolicy::default();
-        policy.max_open_orders_per_symbol = 2; // Strict limit
+        let policy = RiskPolicy {
+            max_open_orders_per_symbol: 2, // Strict limit
+            ..Default::default()
+        };
 
         let guard = RiskGuard::new(policy, state.clone());
 
