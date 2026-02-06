@@ -100,34 +100,40 @@ export class CommandExecutor {
     private runDocker(args: string[]): Promise<string> {
         return new Promise((resolve, reject) => {
             const child = spawn("docker", args);
-            const stdoutChunks: Buffer[] = [];
-            const stderrChunks: Buffer[] = [];
+            const stdoutPromise = this.readStream(child.stdout);
+            const stderrPromise = this.readStream(child.stderr);
 
-            // eslint-disable-next-line functional/immutable-data
-            child.stdout.on(
-                "data",
-                (data) => stdoutChunks.push(Buffer.from(data)),
-            );
+            child.on("error", reject);
 
-            // eslint-disable-next-line functional/immutable-data
-            child.stderr.on(
-                "data",
-                (data) => stderrChunks.push(Buffer.from(data)),
-            );
-
-            child.on("close", (code) => {
-                const stdout = Buffer.concat(stdoutChunks).toString();
-                const stderr = Buffer.concat(stderrChunks).toString();
-                if (code === 0) {
-                    resolve(stdout);
-                } else {
-                    reject(
-                        new Error(
-                            `Docker command failed (code ${code}): ${stderr}`,
-                        ),
-                    );
+            child.on("close", async (code) => {
+                try {
+                    const [stdout, stderr] = await Promise.all([
+                        stdoutPromise,
+                        stderrPromise,
+                    ]);
+                    if (code === 0) {
+                        resolve(stdout);
+                    } else {
+                        reject(
+                            new Error(
+                                `Docker command failed (code ${code}): ${stderr}`,
+                            ),
+                        );
+                    }
+                } catch (streamError) {
+                    reject(streamError);
                 }
             });
         });
+    }
+
+    private async readStream(
+        stream: NodeJS.ReadableStream | null,
+    ): Promise<string> {
+        if (!stream) {
+            return "";
+        }
+        const chunks = await Array.fromAsync(stream as AsyncIterable<Buffer>);
+        return Buffer.concat(chunks).toString();
     }
 }

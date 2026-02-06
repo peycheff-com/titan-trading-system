@@ -20,7 +20,7 @@ export default async function opsRoutes(fastify: FastifyInstance) {
             const body = request.body as any;
 
             // Construct Command
-            const cmd = {
+            const unsignedCmd = {
                 v: 1,
                 id: uuidv4(),
                 ts: new Date().toISOString(),
@@ -39,8 +39,14 @@ export default async function opsRoutes(fastify: FastifyInstance) {
             if (!secret) {
                 throw new Error("OPS_SECRET not configured");
             }
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            cmd.meta.signature = calculateOpsSignature(cmd as any, secret);
+            const cmd = {
+                ...unsignedCmd,
+                meta: {
+                    ...unsignedCmd.meta,
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    signature: calculateOpsSignature(unsignedCmd as any, secret),
+                },
+            };
 
             // Validate
             const parse = OpsCommandSchemaV1.safeParse(cmd);
