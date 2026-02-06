@@ -329,6 +329,7 @@ services:
       - NATS_USER=ops
       - NATS_PASS=${NATS_CONSOLE_PASSWORD} # Using console pass for opsd for now or new one? opsd usually implies system level.
       - HMAC_SECRET=${HMAC_SECRET}
+      - OPS_SECRET=${HMAC_SECRET}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./docker-compose.prod.yml:/app/docker-compose.prod.yml
