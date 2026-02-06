@@ -8,7 +8,7 @@
  * This script:
  * 1. Detects which files changed in the current commit/PR
  * 2. Maps changed code files to their documentation
- * 3. Analyzes the changes using AI (OpenAI/Anthropic)
+ * 3. Analyzes the changes using AI (Gemini/OpenAI/Anthropic)
  * 4. Generates suggested doc updates
  * 
  * Usage: node ai-doc-updater.js [--dry-run] [--commit-sha <sha>]
@@ -40,7 +40,7 @@ class AIDocUpdater {
     this.dryRun = options.dryRun || false;
     this.commitSha = options.commitSha || 'HEAD';
     this.repoRoot = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
-    this.aiProvider = process.env.AI_DOC_PROVIDER || 'openai'; // openai, anthropic, or local
+    this.aiProvider = process.env.AI_DOC_PROVIDER || 'gemini'; // gemini, openai, anthropic, or local
   }
 
   /**
@@ -170,11 +170,26 @@ Respond in JSON format:
       return this.localAnalysis(prompt);
     }
 
+    if (this.aiProvider === 'gemini' && process.env.GEMINI_API_KEY) {
+      return await this.callGemini(prompt);
+    }
+
     if (this.aiProvider === 'openai' && process.env.OPENAI_API_KEY) {
       return await this.callOpenAI(prompt);
     }
 
     if (this.aiProvider === 'anthropic' && process.env.ANTHROPIC_API_KEY) {
+      return await this.callAnthropic(prompt);
+    }
+
+    // Auto-detect available provider
+    if (process.env.GEMINI_API_KEY) {
+      return await this.callGemini(prompt);
+    }
+    if (process.env.OPENAI_API_KEY) {
+      return await this.callOpenAI(prompt);
+    }
+    if (process.env.ANTHROPIC_API_KEY) {
       return await this.callAnthropic(prompt);
     }
 
@@ -246,6 +261,53 @@ Respond in JSON format:
     // Extract JSON from response
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     return jsonMatch ? JSON.parse(jsonMatch[0]) : { updates_needed: [], summary: 'Failed to parse response' };
+  }
+
+  /**
+   * Call Google Gemini API
+   */
+  async callGemini(prompt) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    const model = 'gemini-2.0-flash-exp';
+    
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: prompt + '\n\nIMPORTANT: Respond with valid JSON only, no markdown formatting.'
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 2000,
+            responseMimeType: 'application/json'
+          }
+        })
+      }
+    );
+
+    const data = await response.json();
+    
+    if (data.error) {
+      console.error('Gemini API error:', data.error.message);
+      return this.localAnalysis(prompt);
+    }
+
+    try {
+      const text = data.candidates[0].content.parts[0].text;
+      // Extract JSON from response
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      return jsonMatch ? JSON.parse(jsonMatch[0]) : { updates_needed: [], summary: 'Failed to parse response' };
+    } catch (e) {
+      console.error('Error parsing Gemini response:', e.message);
+      return this.localAnalysis(prompt);
+    }
   }
 
   /**

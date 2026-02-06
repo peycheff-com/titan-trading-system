@@ -9,7 +9,8 @@
 # 4. Optionally auto-creates a PR with suggested changes
 #
 # Required secrets:
-# - OPENAI_API_KEY or ANTHROPIC_API_KEY (optional - falls back to local analysis)
+# - GEMINI_API_KEY (recommended - used by default)
+# - OPENAI_API_KEY or ANTHROPIC_API_KEY (alternative providers)
 
 name: AI Doc Regeneration
 
@@ -57,9 +58,10 @@ jobs:
       - name: Run AI Documentation Analyzer
         id: analyze
         env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          AI_DOC_PROVIDER: ${{ secrets.OPENAI_API_KEY && 'openai' || (secrets.ANTHROPIC_API_KEY && 'anthropic' || 'local') }}
+          AI_DOC_PROVIDER: ${{ secrets.GEMINI_API_KEY && 'gemini' || (secrets.OPENAI_API_KEY && 'openai' || (secrets.ANTHROPIC_API_KEY && 'anthropic' || 'local')) }}
         run: |
           node scripts/docs/ai-doc-updater.js ${{ inputs.dry_run == 'true' && '--dry-run' || '' }}
 
