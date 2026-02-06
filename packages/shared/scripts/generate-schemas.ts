@@ -2,10 +2,7 @@ process.env.TITAN_GENERATING_SCHEMAS = "true";
 
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { EnvelopeSchema } from "../src/schemas/envelope";
-import {
-    IntentPayloadSchemaV1,
-    IntentSchemaV1,
-} from "../src/schemas/intentSchema";
+import { IntentPayloadSchemaV1 } from "../src/schemas/intentSchema";
 import { BaseCommandSchema } from "../src/schemas/base";
 import { FeeScheduleSchema } from "../src/schemas/FeeSchedule";
 import * as fs from "fs";

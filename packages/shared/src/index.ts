@@ -5,7 +5,7 @@
  * across different Titan services for centralized management.
  */
 
-import { loadSecretsFromFiles } from "./config/loadSecrets.js";
+import { loadSecretsFromFiles } from './config/loadSecrets.js';
 
 // Ensure *_FILE secrets are promoted to env early in service startup.
 loadSecretsFromFiles();
@@ -19,7 +19,7 @@ export {
   type WebSocketConfig,
   WebSocketManager,
   type WebSocketMessage,
-} from "./WebSocketManager.js";
+} from './WebSocketManager.js';
 
 // Telemetry Service
 export {
@@ -32,7 +32,7 @@ export {
   type SignalData,
   type TelemetryConfig,
   TelemetryService,
-} from "./TelemetryService.js";
+} from './TelemetryService.js';
 
 // Configuration Management
 export {
@@ -44,7 +44,7 @@ export {
   type PhaseConfig,
   resetConfigManager,
   type ServiceConfig,
-} from "./ConfigManager.js";
+} from './ConfigManager.js';
 
 // Configuration Schema and Validation
 export {
@@ -57,13 +57,10 @@ export {
   PhaseConfigBaseSchema,
   PhaseConfigSchema,
   type ValidationResult,
-} from "./config/ConfigSchema.js";
+} from './config/ConfigSchema.js';
 
 // Secrets (Docker secrets / Vault file mounts)
-export {
-  loadSecretsFromFiles,
-  type LoadSecretsOptions,
-} from "./config/loadSecrets.js";
+export { loadSecretsFromFiles, type LoadSecretsOptions } from './config/loadSecrets.js';
 
 // Hierarchical Configuration Loading
 export {
@@ -72,7 +69,7 @@ export {
   type ConfigSource,
   createConfigLoader,
   HierarchicalConfigLoader,
-} from "./config/HierarchicalConfigLoader.js";
+} from './config/HierarchicalConfigLoader.js';
 
 // Configuration Encryption
 export {
@@ -82,7 +79,7 @@ export {
   type EncryptionResult,
   getConfigEncryption,
   resetConfigEncryption,
-} from "./config/ConfigEncryption.js";
+} from './config/ConfigEncryption.js';
 
 // Hot-Reload Configuration Management
 export {
@@ -91,7 +88,7 @@ export {
   HotReloadConfigManager,
   type HotReloadEvent,
   type HotReloadOptions,
-} from "./config/HotReloadConfigManager.js";
+} from './config/HotReloadConfigManager.js';
 
 // Configuration Version History
 export {
@@ -102,7 +99,7 @@ export {
   type RollbackResult,
   type VersionComparison,
   type VersionHistoryMetadata,
-} from "./config/ConfigVersionHistory.js";
+} from './config/ConfigVersionHistory.js';
 
 // Resource Optimization
 export {
@@ -113,7 +110,7 @@ export {
   resetResourceOptimizer,
   ResourceOptimizer,
   type ResourceThresholds,
-} from "./ResourceOptimizer.js";
+} from './ResourceOptimizer.js';
 
 // Performance Monitoring
 export {
@@ -124,7 +121,7 @@ export {
   type PerformanceMonitorConfig,
   resetPerformanceMonitor,
   type ScalingRecommendation,
-} from "./PerformanceMonitor.js";
+} from './PerformanceMonitor.js';
 
 // Load Balancing
 export {
@@ -136,7 +133,7 @@ export {
   type LoadBalancingMetrics,
   type RoutingInfo,
   type ServerHealth,
-} from "./LoadBalancer.js";
+} from './LoadBalancer.js';
 
 // Service Discovery
 export {
@@ -148,7 +145,7 @@ export {
   type ServiceEvent,
   type ServiceInstance,
   type ServiceQuery,
-} from "./ServiceDiscovery.js";
+} from './ServiceDiscovery.js';
 
 // Distributed State Management
 export {
@@ -162,7 +159,7 @@ export {
   resetDistributedStateManager,
   type StateEntry,
   type StateOperation,
-} from "./DistributedStateManager.js";
+} from './DistributedStateManager.js';
 
 // Network Optimization
 export {
@@ -176,7 +173,7 @@ export {
   type NetworkOptimizerConfig,
   type NetworkPath,
   resetNetworkOptimizer,
-} from "./NetworkOptimizer.js";
+} from './NetworkOptimizer.js';
 
 // Messaging
 export {
@@ -184,11 +181,11 @@ export {
   NatsClient,
   type NatsConfig,
   TitanSubject,
-} from "./messaging/NatsClient.js";
+} from './messaging/NatsClient.js';
 
-export { SignalClient } from "./messaging/SignalClient.js";
+export { SignalClient } from './messaging/SignalClient.js';
 
-export { ExecutionClient } from "./messaging/ExecutionClient.js";
+export { ExecutionClient } from './messaging/ExecutionClient.js';
 
 // Policy Handshake (P0 Brain-Execution Verification)
 export {
@@ -197,7 +194,7 @@ export {
   type PolicyHashResponse,
   requestExecutionPolicyHash,
   verifyExecutionPolicyHash,
-} from "./messaging/PolicyHandshake.js";
+} from './messaging/PolicyHandshake.js';
 
 // Power Law Configuration (Jan 2026 Audit Consolidation)
 export {
@@ -205,16 +202,16 @@ export {
   POWER_LAW_FALLBACK_SYMBOL,
   POWER_LAW_SYMBOL_WHITELIST,
   type PowerLawSymbol,
-} from "./config/powerlaw_symbols.js";
+} from './config/powerlaw_symbols.js';
 
 export {
   isStandardSubject,
   POWER_LAW_SUBJECTS,
   SUBJECT_MIGRATION_MAP,
-} from "./messaging/powerlaw_subjects.js";
+} from './messaging/powerlaw_subjects.js';
 
-export { TITAN_SUBJECTS } from "./messaging/titan_subjects.js";
-export { TITAN_STREAMS } from "./messaging/titan_streams.js";
+export { TITAN_SUBJECTS } from './messaging/titan_subjects.js';
+export { TITAN_STREAMS } from './messaging/titan_streams.js';
 
 // Specialized NATS configurations for venue telemetry and market data
 export {
@@ -230,7 +227,7 @@ export {
   type TitanConsumerConfig,
   type TitanKvConfig,
   type TitanStreamConfig,
-} from "./messaging/nats-streams.js";
+} from './messaging/nats-streams.js';
 
 // Intent schema (NATS contract)
 export {
@@ -239,24 +236,15 @@ export {
   type IntentMessage,
   IntentPayloadSchemaV1,
   type IntentPayloadV1,
-  IntentSchemaV1,
   IntentStatusEnum,
   IntentTypeEnum,
   validateIntentPayload,
-} from "./schemas/intentSchema.js";
+} from './schemas/intentSchema.js';
 
 // Canonical Envelopes
-export {
-  createEnvelope,
-  type Envelope,
-  EnvelopeSchema,
-} from "./schemas/envelope.js";
+export { createEnvelope, type Envelope, EnvelopeSchema } from './schemas/envelope.js';
 
-export {
-  type BaseCommand,
-  BaseCommandSchema,
-  type BaseEvent,
-} from "./schemas/base.js";
+export { type BaseCommand, BaseCommandSchema, type BaseEvent } from './schemas/base.js';
 
 // IPC (Fast Path Communication)
 export {
@@ -271,7 +259,7 @@ export {
   type PrepareResponse,
   RegimeState,
   type SignalSource,
-} from "./ipc/index.js";
+} from './ipc/index.js';
 
 // Logger
 import {
@@ -281,52 +269,39 @@ import {
   LogLevel,
   PerformanceTimer,
   TradeLogEntry,
-} from "./logger/Logger.js";
+} from './logger/Logger.js';
 
-export {
-  LogEntry as SharedLogEntry,
-  Logger,
-  LoggerConfig,
-  PerformanceTimer,
-  TradeLogEntry,
-};
+export { LogEntry as SharedLogEntry, Logger, LoggerConfig, PerformanceTimer, TradeLogEntry };
 
 // Risk and Truth Types
-export { RiskState } from "./types/RiskState.js";
-export * from "./types/budget.js";
-export * from "./types/truth.js";
-export * from "./schemas/market-trade.js";
-export * from "./schemas/orderbook.js";
-export * from "./schemas/venue-status.js";
-export * from "./schemas/venue-config.js";
-export * from "./types/Phase.js";
+export { RiskState } from './types/RiskState.js';
+export * from './types/budget.js';
+export * from './types/truth.js';
+export * from './schemas/market-trade.js';
+export * from './schemas/orderbook.js';
+export * from './schemas/venue-status.js';
+export * from './schemas/venue-config.js';
+export * from './types/Phase.js';
 
 export const SharedLogLevel = LogLevel;
 export type SharedLogLevel = LogLevel;
 
 // Time Utilities
-export * from "./utils/time/Clock.js";
+export * from './utils/time/Clock.js';
 
 // Governance
-export * from "./governance/types.js";
-export * from "./governance/crypto.js";
+export * from './governance/types.js';
+export * from './governance/crypto.js';
 export {
   DefaultRiskPolicyV1,
   getCanonicalRiskPolicy,
   RiskPolicySchemaV1,
   type RiskPolicyV1,
-} from "./schemas/RiskPolicy.js";
+} from './schemas/RiskPolicy.js';
 
-export {
-  SystemState,
-  SystemStateSchema,
-  type SystemStatus,
-} from "./schemas/SystemState.js";
+export { SystemState, SystemStateSchema, type SystemStatus } from './schemas/SystemState.js';
 
-export {
-  type ExecutionReport,
-  ExecutionReportSchema,
-} from "./schemas/ExecutionReportSchema.js";
+export { type ExecutionReport, ExecutionReportSchema } from './schemas/ExecutionReportSchema.js';
 
 // Regulatory Compliance
 export {
@@ -334,17 +309,14 @@ export {
   DoraIncidentClassification,
   DoraIncidentSchema,
   DoraIncidentStatus,
-} from "./schemas/DoraIncident.js";
+} from './schemas/DoraIncident.js';
 
-export * from "./ai/index.js";
+export * from './ai/index.js';
 
-export { type DliMessage, DliSchema } from "./schemas/dlq.js";
+export { type DliMessage, DliSchema } from './schemas/dlq.js';
 
 // Coordination
-export {
-  LeaderElector,
-  type LeaderElectorConfig,
-} from "./coordination/LeaderElector.js";
+export { LeaderElector, type LeaderElectorConfig } from './coordination/LeaderElector.js';
 
 // Operator Actions
 export {
@@ -352,7 +324,7 @@ export {
   OperatorActionSchema,
   type OperatorActionType,
   OperatorActionTypeEnum,
-} from "./schemas/OperatorAction.js";
+} from './schemas/OperatorAction.js';
 
 // Canonical Fee Schedule
 export {
@@ -364,7 +336,7 @@ export {
   type FeeTier,
   FeeTierSchema,
   getCanonicalFeeSchedule,
-} from "./schemas/FeeSchedule.js";
+} from './schemas/FeeSchedule.js';
 
 // Canonical Power Law Metrics (Jan 2026)
 export {
@@ -378,7 +350,7 @@ export {
   upgradeToV1,
   type VolClusterState,
   VolClusterStateSchema,
-} from "./schemas/PowerLawMetrics.js";
+} from './schemas/PowerLawMetrics.js';
 
 // Execution Constraints (Jan 2026)
 export {
@@ -406,7 +378,7 @@ export {
   TifProfileSchema,
   type TifType,
   TifTypeSchema,
-} from "./schemas/ExecutionConstraints.js";
+} from './schemas/ExecutionConstraints.js';
 
 // Power Law Impact Events (Jan 2026)
 export {
@@ -415,22 +387,22 @@ export {
   ImpactActionSchema,
   PowerLawImpactSchemaV1,
   type PowerLawImpactV1,
-} from "./schemas/PowerLawImpact.js";
+} from './schemas/PowerLawImpact.js';
 
 // Observability
-export { TITAN_SEMANTICS } from "./observability/SemanticConventions.js";
+export { TITAN_SEMANTICS } from './observability/SemanticConventions.js';
 export {
   type ComponentHealth,
   type HealthCheckResult,
   HealthMonitor,
   type HealthStatus as MonitorHealthStatus,
-} from "./observability/Health.js";
+} from './observability/Health.js';
 export {
   metrics,
   MetricsCollector,
   type MetricTag,
   type MetricValue,
-} from "./observability/Metrics.js";
+} from './observability/Metrics.js';
 
 // Execution Quality
 export {
@@ -439,7 +411,7 @@ export {
   type ExecutionQualityScore,
   ExecutionQualityScoreSchema,
   TITAN_QUALITY_TOPIC,
-} from "./schemas/ExecutionQuality.js";
+} from './schemas/ExecutionQuality.js';
 
 // Venue Types and Telemetry (Feb 2026)
 export {
@@ -451,7 +423,7 @@ export {
   VenueId,
   VenueRecommendedAction,
   VenueWsState,
-} from "./types/venues.js";
+} from './types/venues.js';
 
 export {
   calculateStaleness,
@@ -461,7 +433,7 @@ export {
   VENUE_STATUS_SUBJECT,
   type VenueStatusV1,
   VenueStatusV1Schema,
-} from "./schemas/venue-status.js";
+} from './schemas/venue-status.js';
 
 // Market Trade Schema (Feb 2026)
 export {
@@ -471,35 +443,24 @@ export {
   safeParseMarketTradeV1,
   type TakerSide,
   TakerSideSchema,
-} from "./schemas/market-trade.js";
+} from './schemas/market-trade.js';
 
 // Symbol Normalization Utilities (Feb 2026)
 export {
   denormalizeSymbol,
   type NormalizedSymbol,
   normalizeSymbol,
-} from "./utils/symbol-normalization.js";
+} from './utils/symbol-normalization.js';
 
 // Ops Console Schemas (Feb 2026)
-export {
-  OpsCommandSchemaV1,
-  OpsCommandType,
-  type OpsCommandV1,
-} from "./schemas/ops-command.js";
+export { OpsCommandSchemaV1, OpsCommandType, type OpsCommandV1 } from './schemas/ops-command.js';
 
-export {
-  OpsReceiptSchemaV1,
-  OpsReceiptStatus,
-  type OpsReceiptV1,
-} from "./schemas/ops-receipt.js";
+export { OpsReceiptSchemaV1, OpsReceiptStatus, type OpsReceiptV1 } from './schemas/ops-receipt.js';
 
 export {
   EvidencePackManifestSchemaV1,
   type EvidencePackManifestV1,
-} from "./schemas/evidence-pack.js";
+} from './schemas/evidence-pack.js';
 
 // Security (Feb 2026)
-export {
-  calculateOpsSignature,
-  verifyOpsCommand,
-} from "./security/ops-security.js";
+export { calculateOpsSignature, verifyOpsCommand } from './security/ops-security.js';

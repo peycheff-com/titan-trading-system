@@ -5,6 +5,7 @@
     { "path": "./services/titan-ai-quant" },
     { "path": "./packages/titan-backtesting" },
     { "path": "./services/titan-brain" },
+    { "path": "./services/titan-console-api" },
     { "path": "./apps/titan-console" },
     { "path": "./services/titan-phase1-scavenger" },
     { "path": "./services/titan-phase2-hunter" },

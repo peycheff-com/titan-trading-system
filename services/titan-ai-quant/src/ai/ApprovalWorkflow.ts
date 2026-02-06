@@ -10,12 +10,17 @@
  * Requirements: 4.3, 4.4, 4.6
  */
 
-import * as fs from 'fs';
+import * as fs from "fs";
 
-import { StrategicMemory } from './StrategicMemory.js';
-import type { Config, OptimizationProposal } from '../types/index.js';
-import { safeValidateConfig } from '../config/ConfigSchema.js';
-import { ErrorCode, getUserFriendlyMessage, logError, TitanError } from '../utils/ErrorHandler.js';
+import { StrategicMemory } from "./StrategicMemory.js";
+import type { Config, OptimizationProposal } from "../types/index.js";
+import { safeValidateConfig } from "../config/ConfigSchema.js";
+import {
+  ErrorCode,
+  getUserFriendlyMessage,
+  logError,
+  TitanError,
+} from "../utils/ErrorHandler.js";
 
 export interface ApprovalWorkflowOptions {
   /** Path to config.json file */
@@ -25,7 +30,10 @@ export interface ApprovalWorkflowOptions {
   /** Callback when config is updated (for hot reload) */
   onConfigUpdate?: (config: Config) => void;
   /** Callback when proposal is applied */
-  onProposalApplied?: (proposal: OptimizationProposal, versionTag: string) => void;
+  onProposalApplied?: (
+    proposal: OptimizationProposal,
+    versionTag: string,
+  ) => void;
   /** Callback when proposal is rejected */
   onProposalRejected?: (proposal: OptimizationProposal, reason: string) => void;
   /** Callback when an error occurs */
@@ -54,15 +62,22 @@ function generateVersionTag(proposalId: number): string {
 /**
  * Set a nested value in an object using dot notation path
  */
-function setNestedValue(obj: Record<string, unknown>, path: string, value: unknown): void {
-  const keys = path.split('.');
+function setNestedValue(
+  obj: Record<string, unknown>,
+  path: string,
+  value: unknown,
+): void {
+  const keys = path.split(".");
   // eslint-disable-next-line functional/no-let
   let current: Record<string, unknown> = obj;
 
   // eslint-disable-next-line functional/no-let
   for (let i = 0; i < keys.length - 1; i++) {
     const key = keys[i];
-    if (!(key in current) || typeof current[key] !== 'object' || current[key] === null) {
+    if (
+      !(key in current) || typeof current[key] !== "object" ||
+      current[key] === null
+    ) {
       current[key] = {};
     }
     current = current[key] as Record<string, unknown>;
@@ -84,8 +99,14 @@ export class ApprovalWorkflow {
   private configPath: string;
   private memory: StrategicMemory;
   private onConfigUpdate?: (config: Config) => void;
-  private onProposalApplied?: (proposal: OptimizationProposal, versionTag: string) => void;
-  private onProposalRejected?: (proposal: OptimizationProposal, reason: string) => void;
+  private onProposalApplied?: (
+    proposal: OptimizationProposal,
+    versionTag: string,
+  ) => void;
+  private onProposalRejected?: (
+    proposal: OptimizationProposal,
+    reason: string,
+  ) => void;
   private onError?: (error: TitanError) => void;
 
   /** Lock to prevent concurrent approval attempts */
@@ -152,7 +173,7 @@ export class ApprovalWorkflow {
    * Load current config from file
    */
   private loadConfig(): Config {
-    const configContent = fs.readFileSync(this.configPath, 'utf-8');
+    const configContent = fs.readFileSync(this.configPath, "utf-8");
     return JSON.parse(configContent) as Config;
   }
 
@@ -170,7 +191,7 @@ export class ApprovalWorkflow {
     }
 
     // Write to temp file first
-    fs.writeFileSync(tempPath, JSON.stringify(config, null, 2), 'utf-8');
+    fs.writeFileSync(tempPath, JSON.stringify(config, null, 2), "utf-8");
 
     // Rename temp to actual (atomic on most filesystems)
     fs.renameSync(tempPath, this.configPath);
@@ -189,13 +210,16 @@ export class ApprovalWorkflow {
   async applyProposal(proposal: OptimizationProposal): Promise<ApprovalResult> {
     // Validate proposal has an ID
     if (proposal.id === undefined) {
-      const error = new TitanError(ErrorCode.CONFIG_VALIDATION_ERROR, 'Proposal must have an ID');
+      const error = new TitanError(
+        ErrorCode.CONFIG_VALIDATION_ERROR,
+        "Proposal must have an ID",
+      );
       this.handleError(error);
       return { success: false, error: getUserFriendlyMessage(error.code) };
     }
 
     // Validate proposal is pending
-    if (proposal.status !== 'pending') {
+    if (proposal.status !== "pending") {
       const error = new TitanError(
         ErrorCode.STALE_PROPOSAL,
         `Proposal is not pending (status: ${proposal.status})`,
@@ -216,7 +240,10 @@ export class ApprovalWorkflow {
       previousConfig = this.loadConfig();
 
       // Create a mutable copy
-      const newConfig = JSON.parse(JSON.stringify(previousConfig)) as Record<string, unknown>;
+      const newConfig = JSON.parse(JSON.stringify(previousConfig)) as Record<
+        string,
+        unknown
+      >;
 
       // Apply the proposed change
       setNestedValue(newConfig, proposal.targetKey, proposal.suggestedValue);
@@ -272,7 +299,9 @@ export class ApprovalWorkflow {
         const error = new TitanError(
           ErrorCode.HOT_RELOAD_FAILURE,
           `Hot reload failed: ${
-            hotReloadError instanceof Error ? hotReloadError.message : String(hotReloadError)
+            hotReloadError instanceof Error
+              ? hotReloadError.message
+              : String(hotReloadError)
           }`,
           { versionTag, proposalId: proposal.id },
         );
@@ -302,14 +331,11 @@ export class ApprovalWorkflow {
 
       return { success: true, versionTag };
     } catch (error) {
-      const titanError =
-        error instanceof TitanError
-          ? error
-          : new TitanError(
-              ErrorCode.CONFIG_WRITE_FAILURE,
-              error instanceof Error ? error.message : String(error),
-              { proposalId: proposal.id },
-            );
+      const titanError = error instanceof TitanError ? error : new TitanError(
+        ErrorCode.CONFIG_WRITE_FAILURE,
+        error instanceof Error ? error.message : String(error),
+        { proposalId: proposal.id },
+      );
       this.handleError(titanError);
 
       // Attempt rollback on any error
@@ -326,7 +352,7 @@ export class ApprovalWorkflow {
               logError(
                 new TitanError(
                   ErrorCode.CONFIG_WRITE_FAILURE,
-                  'Failed to rollback config - system may be in inconsistent state',
+                  "Failed to rollback config - system may be in inconsistent state",
                 ),
               );
             }
@@ -359,15 +385,15 @@ export class ApprovalWorkflow {
    */
   async rejectProposal(
     proposal: OptimizationProposal,
-    reason: string = 'User rejected',
+    reason: string = "User rejected",
   ): Promise<RejectionResult> {
     // Validate proposal has an ID
     if (proposal.id === undefined) {
-      return { success: false, error: 'Proposal must have an ID' };
+      return { success: false, error: "Proposal must have an ID" };
     }
 
     // Validate proposal is pending
-    if (proposal.status !== 'pending') {
+    if (proposal.status !== "pending") {
       return {
         success: false,
         error: `Proposal is not pending (status: ${proposal.status})`,
@@ -379,15 +405,17 @@ export class ApprovalWorkflow {
 
     try {
       // Update proposal status to rejected
-      await this.memory.updateProposalStatus(proposal.id, 'rejected');
+      await this.memory.updateProposalStatus(proposal.id, "rejected");
 
       // Store rejection insight for future reference (prevents re-asking)
       await this.memory.storeInsight(
-        'proposal_rejection',
+        "proposal_rejection",
         `Proposal ${proposal.id} for ${proposal.targetKey} was rejected. Reason: ${reason}. ` +
-          `Suggested change: ${JSON.stringify(proposal.currentValue)} → ${JSON.stringify(
-            proposal.suggestedValue,
-          )}`,
+          `Suggested change: ${JSON.stringify(proposal.currentValue)} → ${
+            JSON.stringify(
+              proposal.suggestedValue,
+            )
+          }`,
         0.5, // Medium confidence - this is a user decision
       );
 
@@ -396,7 +424,9 @@ export class ApprovalWorkflow {
 
       return { success: true };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = error instanceof Error
+        ? error.message
+        : String(error);
       return { success: false, error: errorMessage };
     } finally {
       this.releaseLock();
@@ -446,7 +476,9 @@ export class ApprovalWorkflow {
 
       return { success: true, versionTag };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = error instanceof Error
+        ? error.message
+        : String(error);
       return { success: false, error: errorMessage };
     } finally {
       this.releaseLock();
@@ -460,5 +492,3 @@ export class ApprovalWorkflow {
     return this.isLocked;
   }
 }
-
-export default ApprovalWorkflow;

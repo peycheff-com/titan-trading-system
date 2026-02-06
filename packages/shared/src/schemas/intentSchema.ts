@@ -1,22 +1,22 @@
-import { z } from 'zod';
-import { createEnvelope, Envelope } from './envelope';
+import { z } from "zod";
+import { createEnvelope, Envelope } from "./envelope";
 
 export const IntentTypeEnum = z.enum([
-  'BUY_SETUP',
-  'SELL_SETUP',
-  'CLOSE_LONG',
-  'CLOSE_SHORT',
-  'CLOSE',
+  "BUY_SETUP",
+  "SELL_SETUP",
+  "CLOSE_LONG",
+  "CLOSE_SHORT",
+  "CLOSE",
 ]);
 
 export const IntentStatusEnum = z.enum([
-  'PENDING',
-  'VALIDATED',
-  'REJECTED',
-  'EXECUTED',
-  'EXECUTED_PARTIAL',
-  'EXPIRED',
-  'FAILED',
+  "PENDING",
+  "VALIDATED",
+  "REJECTED",
+  "EXECUTED",
+  "EXECUTED_PARTIAL",
+  "EXPIRED",
+  "FAILED",
 ]);
 
 const RawIntentSchemaV1 = z
@@ -29,7 +29,7 @@ const RawIntentSchemaV1 = z
       .number()
       .int()
       .refine((value) => [-1, 0, 1].includes(value), {
-        message: 'direction must be -1, 0, or 1',
+        message: "direction must be -1, 0, or 1",
       }),
     type: IntentTypeEnum,
     entry_zone: z.array(z.number()).optional(),
@@ -67,15 +67,17 @@ const RawIntentSchemaV1 = z
   })
   .passthrough();
 
-export const IntentPayloadSchemaV1 = RawIntentSchemaV1.superRefine((data, ctx) => {
-  if (data.t_signal === undefined && data.timestamp === undefined) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 't_signal is required (timestamp is accepted as legacy alias)',
-      path: ['t_signal'],
-    });
-  }
-}).transform((data) => ({
+export const IntentPayloadSchemaV1 = RawIntentSchemaV1.superRefine(
+  (data, ctx) => {
+    if (data.t_signal === undefined && data.timestamp === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "t_signal is required (timestamp is accepted as legacy alias)",
+        path: ["t_signal"],
+      });
+    }
+  },
+).transform((data) => ({
   ...data,
   t_signal: data.t_signal ?? data.timestamp ?? 0,
   entry_zone: data.entry_zone ?? [],
@@ -87,9 +89,7 @@ export type IntentPayloadV1 = z.infer<typeof IntentPayloadSchemaV1>;
 // The full Message type is an Envelope containing the IntentPayload
 export type IntentMessage = Envelope<IntentPayloadV1>;
 
-// Legacy schema export for backward compatibility during migration,
-// BUT we should encourage using Envelope wrappers.
-export const IntentSchemaV1 = IntentPayloadSchemaV1;
+// Legacy schema export removed to fix duplicate export warning
 
 export function validateIntentPayload(payload: unknown): {
   valid: boolean;
@@ -101,7 +101,9 @@ export function validateIntentPayload(payload: unknown): {
     return {
       valid: false,
       errors: parsed.error.issues.map((issue) =>
-        issue.path.length ? `${issue.path.join('.')}: ${issue.message}` : issue.message,
+        issue.path.length
+          ? `${issue.path.join(".")}: ${issue.message}`
+          : issue.message
       ),
     };
   }
@@ -113,7 +115,7 @@ export function validateIntentPayload(payload: unknown): {
   };
 }
 
-import { TITAN_SUBJECTS } from '../messaging/titan_subjects';
+import { TITAN_SUBJECTS } from "../messaging/titan_subjects";
 
 export function createIntentMessage(
   payload: IntentPayloadV1,
