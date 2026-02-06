@@ -264,11 +264,31 @@ Respond in JSON format:
   }
 
   /**
-   * Call Google Gemini API
+   * Call Google Gemini API (supports both API key and ADC)
+   * 
+   * Authentication priority:
+   * 1. GEMINI_API_KEY environment variable (direct API key)
+   * 2. Application Default Credentials via gcloud CLI
+   *    - Run: gcloud auth application-default login
+   *    - Uses: gcloud auth application-default print-access-token
    */
   async callGemini(prompt) {
-    const apiKey = process.env.GEMINI_API_KEY;
     const model = 'gemini-2.0-flash-exp';
+    
+    // Check for API key first
+    if (process.env.GEMINI_API_KEY) {
+      return await this.callGeminiWithApiKey(prompt, model);
+    }
+    
+    // Fall back to ADC (Application Default Credentials)
+    return await this.callGeminiWithADC(prompt, model);
+  }
+
+  /**
+   * Call Gemini using API key
+   */
+  async callGeminiWithApiKey(prompt, model) {
+    const apiKey = process.env.GEMINI_API_KEY;
     
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
@@ -292,10 +312,86 @@ Respond in JSON format:
       }
     );
 
-    const data = await response.json();
+    return this.parseGeminiResponse(await response.json(), prompt);
+  }
+
+  /**
+   * Call Gemini using Application Default Credentials (ADC)
+   * Requires: gcloud auth application-default login
+   */
+  async callGeminiWithADC(prompt, model) {
+    // Get access token from gcloud CLI
+    let accessToken;
+    try {
+      accessToken = execSync('gcloud auth application-default print-access-token 2>/dev/null', { 
+        encoding: 'utf8' 
+      }).trim();
+    } catch (e) {
+      console.log('ADC not configured. Run: gcloud auth application-default login');
+      console.log('Falling back to local analysis');
+      return this.localAnalysis(prompt);
+    }
+
+    if (!accessToken) {
+      console.log('No access token available, using local analysis');
+      return this.localAnalysis(prompt);
+    }
+
+    console.log('Using Application Default Credentials (ADC) for Gemini');
+
+    // Use Vertex AI endpoint with OAuth token
+    const projectId = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || this.getGcloudProject();
+    const location = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1';
     
+    if (!projectId) {
+      console.log('No Google Cloud project configured. Set GOOGLE_CLOUD_PROJECT or run: gcloud config set project YOUR_PROJECT');
+      return this.localAnalysis(prompt);
+    }
+
+    const response = await fetch(
+      `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${model}:generateContent`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({
+          contents: [{
+            role: 'user',
+            parts: [{
+              text: prompt + '\n\nIMPORTANT: Respond with valid JSON only, no markdown formatting.'
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 2000,
+            responseMimeType: 'application/json'
+          }
+        })
+      }
+    );
+
+    return this.parseGeminiResponse(await response.json(), prompt);
+  }
+
+  /**
+   * Get Google Cloud project from gcloud config
+   */
+  getGcloudProject() {
+    try {
+      return execSync('gcloud config get-value project 2>/dev/null', { encoding: 'utf8' }).trim();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /**
+   * Parse Gemini API response
+   */
+  parseGeminiResponse(data, prompt) {
     if (data.error) {
-      console.error('Gemini API error:', data.error.message);
+      console.error('Gemini API error:', data.error.message || JSON.stringify(data.error));
       return this.localAnalysis(prompt);
     }
 
