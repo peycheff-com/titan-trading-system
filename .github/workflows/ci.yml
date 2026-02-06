@@ -292,16 +292,7 @@ jobs:
       - name: Turbo Build & Test
         env:
           NATS_URL: nats://localhost:4222
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            FILTER="--filter=...[origin/${{ github.base_ref }}...HEAD]"
-            echo "🔎 PR detected: affected packages only ($FILTER)"
-          else
-            FILTER=""
-            echo "🌍 Push detected: running full graph"
-          fi
-
-          npx turbo run build lint test --filter=!titan-execution-rs $FILTER
+        run: ./scripts/ci/node.sh all
 
       - name: Node services summary
         if: always()
@@ -343,10 +334,10 @@ jobs:
           cargo -V
 
       - name: Check Formatting
-        run: cargo fmt -- --check
+        run: ./scripts/ci/rust.sh fmt
 
       - name: Lint (Clippy)
-        run: cargo clippy -- -D warnings
+        run: ./scripts/ci/rust.sh clippy
 
       - name: Start NATS
         run: |
@@ -363,10 +354,10 @@ jobs:
         env:
           NATS_URL: nats://localhost:4222
           RUST_LOG: info
-        run: cargo test
+        run: ./scripts/ci/rust.sh test
 
       - name: Build
-        run: cargo build --release
+        run: ./scripts/ci/rust.sh build
 
       - name: Rust services summary
         if: always()
