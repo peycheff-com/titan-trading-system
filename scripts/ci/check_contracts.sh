@@ -26,10 +26,10 @@ npm run generate:rust
 # 2. Check for Drift
 echo "  ↳ Verifying git status..."
 cd ../..
-if [ -n "$(git status --porcelain)" ]; then
+if [ -n "$(git status --porcelain packages/shared services/titan-execution-rs)" ]; then
   echo "❌ CONTRACT DRIFT DETECTED!"
   echo "   The following files have changed after regeneration:"
-  git status --porcelain
+  git status --porcelain packages/shared services/titan-execution-rs
   echo ""
   echo "   Please run 'npm run generate:schemas' and 'npm run generate:rust' locally and commit the changes."
   exit 1
