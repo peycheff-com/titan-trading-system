@@ -1,0 +1,1731 @@
+• turbo 2.8.1
+• Packages in scope: @titan/shared
+• Running test in 1 packages
+• Remote caching disabled
+@titan/shared:build: cache hit, replaying logs 6673d78047a59d5f
+@titan/shared:build: 
+@titan/shared:build: 
+@titan/shared:build: > @titan/shared@1.0.0 build
+@titan/shared:build: > tsc
+@titan/shared:build: 
+@titan/shared:test: cache miss, executing 04083c10fccf012d
+@titan/shared:test: 
+@titan/shared:test: > @titan/shared@1.0.0 test
+@titan/shared:test: > jest
+@titan/shared:test: 
+@titan/shared:test: PASS property tests/property/SystemIntegration.property.test.ts (43.116 s)
+@titan/shared:test: PASS property tests/property/DatabasePerformance.property.test.ts
+@titan/shared:test: PASS property tests/property/BackupRecovery.property.test.ts
+@titan/shared:test: PASS property tests/property/UIConfiguration.property.test.ts
+@titan/shared:test: PASS unit tests/unit/schemas/ExecutionReportSchema.test.ts
+@titan/shared:test: PASS unit tests/unit/messaging/SignalClient.test.ts
+@titan/shared:test: PASS unit tests/unit/schemas/RiskPolicy.test.ts
+@titan/shared:test: PASS unit tests/unit/schemas/SystemState.test.ts
+@titan/shared:test: PASS unit tests/unit/messaging/NatsClient.test.ts
+@titan/shared:test: PASS unit tests/unit/schemas/envelope.test.ts
+@titan/shared:test: PASS unit tests/unit/math/PowerLawCalculators.test.ts
+@titan/shared:test: PASS unit tests/unit/schemas/FeeSchedule.test.ts
+@titan/shared:test: PASS unit tests/unit/math/HawkesProcess.test.ts
+@titan/shared:test: FAIL property tests/property/WebSocketOptimization.property.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/WebSocketManager.js:9
+@titan/shared:test:     import WebSocket from 'ws';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:       10 |
+@titan/shared:test:       11 | import * as fc from "fast-check";
+@titan/shared:test:     > 12 | import { WebSocketManager } from "../../src/WebSocketManager";
+@titan/shared:test:          | ^
+@titan/shared:test:       13 |
+@titan/shared:test:       14 | describe("WebSocket Optimization Property Tests", () => {
+@titan/shared:test:       15 |   let wsManager: WebSocketManager;
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/property/WebSocketOptimization.property.test.ts:12:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL property tests/property/WebSocketManager.property.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/WebSocketManager.js:9
+@titan/shared:test:     import WebSocket from 'ws';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:       10 |
+@titan/shared:test:       11 | import * as fc from "fast-check";
+@titan/shared:test:     > 12 | import {
+@titan/shared:test:          | ^
+@titan/shared:test:       13 |   SubscriptionCallback,
+@titan/shared:test:       14 |   WebSocketManager,
+@titan/shared:test:       15 | } from "../../src/WebSocketManager";
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/property/WebSocketManager.property.test.ts:12:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL property tests/property/ResourceUsage.property.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/ResourceOptimizer.js:9
+@titan/shared:test:     import { EventEmitter } from 'eventemitter3';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:       10 |
+@titan/shared:test:       11 | import * as fc from "fast-check";
+@titan/shared:test:     > 12 | import {
+@titan/shared:test:          | ^
+@titan/shared:test:       13 |   BenchmarkResult,
+@titan/shared:test:       14 |   CPUStats,
+@titan/shared:test:       15 |   MemoryStats,
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/property/ResourceUsage.property.test.ts:12:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL unit tests/unit/schemas/venue-status.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/types/venues.js:10
+@titan/shared:test:     export const VenueId = {
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Unexpected token 'export'
+@titan/shared:test: 
+@titan/shared:test:        6 |  */
+@titan/shared:test:        7 | import { z } from 'zod';
+@titan/shared:test:     >  8 | import { VenueId, VenueRecommendedAction, VenueWsState } from '../types/venues.js';
+@titan/shared:test:          | ^
+@titan/shared:test:        9 |
+@titan/shared:test:       10 | /**
+@titan/shared:test:       11 |  * VenueStatusV1 Zod Schema
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (src/schemas/venue-status.ts:8:1)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/schemas/venue-status.test.ts:6:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL unit tests/unit/logger/Logger.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/logger/Logger.js:12
+@titan/shared:test:     import { context, trace } from '@opentelemetry/api';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:        6 |  */
+@titan/shared:test:        7 |
+@titan/shared:test:     >  8 | import {
+@titan/shared:test:          | ^
+@titan/shared:test:        9 |     Logger,
+@titan/shared:test:       10 |     type LoggerConfig,
+@titan/shared:test:       11 |     LogLevel,
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/logger/Logger.test.ts:8:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL unit tests/unit/governance/crypto.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/governance/crypto.js:1
+@titan/shared:test:     ({"Object.<anonymous>":function(module,exports,require,__dirname,__filename,jest){import nacl from 'tweetnacl';
+@titan/shared:test:                                                                                       ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:        6 |  */
+@titan/shared:test:        7 |
+@titan/shared:test:     >  8 | import {
+@titan/shared:test:          | ^
+@titan/shared:test:        9 |     generateKeyPair,
+@titan/shared:test:       10 |     signObject,
+@titan/shared:test:       11 |     verifyObjectSignature,
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/governance/crypto.test.ts:8:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL unit tests/unit/config/HotReloadConfigManager.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/config/HotReloadConfigManager.js:9
+@titan/shared:test:     import { EventEmitter } from 'eventemitter3';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:        6 |  */
+@titan/shared:test:        7 |
+@titan/shared:test:     >  8 | import { HotReloadConfigManager } from "../../../src/config/HotReloadConfigManager";
+@titan/shared:test:          | ^
+@titan/shared:test:        9 | import { existsSync, mkdirSync, rmSync, writeFileSync } from "fs";
+@titan/shared:test:       10 | import { join } from "path";
+@titan/shared:test:       11 |
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/config/HotReloadConfigManager.test.ts:8:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL unit tests/unit/config/HierarchicalConfigLoader.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/config/HierarchicalConfigLoader.js:12
+@titan/shared:test:     import { existsSync, readFileSync } from 'fs';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:        6 |  */
+@titan/shared:test:        7 |
+@titan/shared:test:     >  8 | import { HierarchicalConfigLoader } from "../../../src/config/HierarchicalConfigLoader";
+@titan/shared:test:          | ^
+@titan/shared:test:        9 | import { ConfigValidator } from "../../../src/config/ConfigSchema";
+@titan/shared:test:       10 | import { existsSync, mkdirSync, rmSync, writeFileSync } from "fs";
+@titan/shared:test:       11 | import { join } from "path";
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/config/HierarchicalConfigLoader.test.ts:8:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL unit tests/unit/config/ConfigVersionHistory.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/config/ConfigVersionHistory.js:9
+@titan/shared:test:     import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:        6 |  */
+@titan/shared:test:        7 |
+@titan/shared:test:     >  8 | import { ConfigVersionHistory } from '../../../src/config/ConfigVersionHistory';
+@titan/shared:test:          | ^
+@titan/shared:test:        9 | import { mkdirSync, rmSync, existsSync } from 'fs';
+@titan/shared:test:       10 | import { join } from 'path';
+@titan/shared:test:       11 |
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/config/ConfigVersionHistory.test.ts:8:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL unit tests/unit/config/ConfigEncryption.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/config/ConfigEncryption.js:9
+@titan/shared:test:     import { createCipheriv, createDecipheriv, createHash, pbkdf2Sync, randomBytes, } from 'crypto';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:        6 |  */
+@titan/shared:test:        7 |
+@titan/shared:test:     >  8 | import { ConfigEncryption } from '../../../src/config/ConfigEncryption';
+@titan/shared:test:          | ^
+@titan/shared:test:        9 |
+@titan/shared:test:       10 | describe('ConfigEncryption', () => {
+@titan/shared:test:       11 |   let encryption: ConfigEncryption;
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/config/ConfigEncryption.test.ts:8:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL unit tests/unit/coordination/LeaderElector.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/coordination/LeaderElector.js:1
+@titan/shared:test:     ({"Object.<anonymous>":function(module,exports,require,__dirname,__filename,jest){import { EventEmitter } from 'eventemitter3';
+@titan/shared:test:                                                                                       ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:     > 1 | import {
+@titan/shared:test:         | ^
+@titan/shared:test:       2 |     LeaderElector,
+@titan/shared:test:       3 |     LeaderElectorConfig,
+@titan/shared:test:       4 | } from "../../../src/coordination/LeaderElector";
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/coordination/LeaderElector.test.ts:1:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL unit tests/unit/symbol-normalization.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/utils/symbol-normalization.js:10
+@titan/shared:test:     import { InstrumentType, VenueId } from '../types/venues.js';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:        5 |  * covering all supported venues and instrument types.
+@titan/shared:test:        6 |  */
+@titan/shared:test:     >  7 | import { denormalizeSymbol, normalizeSymbol } from '../../src/utils/symbol-normalization';
+@titan/shared:test:          | ^
+@titan/shared:test:        8 | import { InstrumentType, VenueId } from '../../src/types/venues';
+@titan/shared:test:        9 |
+@titan/shared:test:       10 | describe('Symbol Normalization', () => {
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/symbol-normalization.test.ts:7:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL unit tests/unit/intentSchema.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/messaging/titan_subjects.js:20
+@titan/shared:test:     export const TITAN_SUBJECTS = {
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Unexpected token 'export'
+@titan/shared:test: 
+@titan/shared:test:       112 | }
+@titan/shared:test:       113 |
+@titan/shared:test:     > 114 | import { TITAN_SUBJECTS } from '../messaging/titan_subjects';
+@titan/shared:test:           | ^
+@titan/shared:test:       115 |
+@titan/shared:test:       116 | export function createIntentMessage(
+@titan/shared:test:       117 |   payload: IntentPayloadV1,
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (src/schemas/intentSchema.ts:114:1)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/intentSchema.test.ts:1:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL unit tests/unit/WebSocketManager.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/WebSocketManager.js:9
+@titan/shared:test:     import WebSocket from 'ws';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:       3 |  */
+@titan/shared:test:       4 |
+@titan/shared:test:     > 5 | import { WebSocketConfig, WebSocketManager } from "../../src/WebSocketManager";
+@titan/shared:test:         | ^
+@titan/shared:test:       6 |
+@titan/shared:test:       7 | describe("WebSocketManager Unit Tests", () => {
+@titan/shared:test:       8 |   let wsManager: WebSocketManager;
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/WebSocketManager.test.ts:5:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL unit tests/unit/PerformanceMonitor.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/PerformanceMonitor.js:9
+@titan/shared:test:     import { EventEmitter } from 'eventemitter3';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:        5 |  */
+@titan/shared:test:        6 |
+@titan/shared:test:     >  7 | import {
+@titan/shared:test:          | ^
+@titan/shared:test:        8 |   getPerformanceMonitor,
+@titan/shared:test:        9 |   PerformanceMonitor,
+@titan/shared:test:       10 |   resetPerformanceMonitor,
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/PerformanceMonitor.test.ts:7:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL unit tests/unit/ResourceOptimizer.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/ResourceOptimizer.js:9
+@titan/shared:test:     import { EventEmitter } from 'eventemitter3';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:        5 |  */
+@titan/shared:test:        6 |
+@titan/shared:test:     >  7 | import {
+@titan/shared:test:          | ^
+@titan/shared:test:        8 |   getResourceOptimizer,
+@titan/shared:test:        9 |   resetResourceOptimizer,
+@titan/shared:test:       10 |   ResourceOptimizer,
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/ResourceOptimizer.test.ts:7:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL unit tests/unit/TelemetryService.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/TelemetryService.js:9
+@titan/shared:test:     import { EventEmitter } from 'eventemitter3';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:       3 |  */
+@titan/shared:test:       4 |
+@titan/shared:test:     > 5 | import {
+@titan/shared:test:         | ^
+@titan/shared:test:       6 |   ExecutionData,
+@titan/shared:test:       7 |   LogLevel,
+@titan/shared:test:       8 |   MetricData,
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/TelemetryService.test.ts:5:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL unit tests/unit/DistributedStateManager.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/DistributedStateManager.js:9
+@titan/shared:test:     import { EventEmitter } from 'eventemitter3';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:        6 |  */
+@titan/shared:test:        7 |
+@titan/shared:test:     >  8 | import {
+@titan/shared:test:          | ^
+@titan/shared:test:        9 |     type DistributedStateConfig,
+@titan/shared:test:       10 |     DistributedStateManager,
+@titan/shared:test:       11 |     HighestVersionResolver,
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/DistributedStateManager.test.ts:8:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL unit tests/unit/LoadBalancer.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/LoadBalancer.js:9
+@titan/shared:test:     import { EventEmitter } from "eventemitter3";
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:        6 |  */
+@titan/shared:test:        7 |
+@titan/shared:test:     >  8 | import {
+@titan/shared:test:          | ^
+@titan/shared:test:        9 |     type BackendServer,
+@titan/shared:test:       10 |     DEFAULT_LOAD_BALANCER_CONFIG,
+@titan/shared:test:       11 |     LoadBalancer,
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/LoadBalancer.test.ts:8:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL unit tests/unit/ConfigManager.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/ConfigManager.js:9
+@titan/shared:test:     import { EventEmitter } from 'eventemitter3';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:       3 |  */
+@titan/shared:test:       4 |
+@titan/shared:test:     > 5 | import {
+@titan/shared:test:         | ^
+@titan/shared:test:       6 |   BrainConfig,
+@titan/shared:test:       7 |   ConfigManager,
+@titan/shared:test:       8 |   PhaseConfig,
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/ConfigManager.test.ts:5:1)
+@titan/shared:test: 
+@titan/shared:test: Summary of all failing tests
+@titan/shared:test: FAIL tests/property/WebSocketOptimization.property.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/WebSocketManager.js:9
+@titan/shared:test:     import WebSocket from 'ws';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:       10 |
+@titan/shared:test:       11 | import * as fc from "fast-check";
+@titan/shared:test:     > 12 | import { WebSocketManager } from "../../src/WebSocketManager";
+@titan/shared:test:          | ^
+@titan/shared:test:       13 |
+@titan/shared:test:       14 | describe("WebSocket Optimization Property Tests", () => {
+@titan/shared:test:       15 |   let wsManager: WebSocketManager;
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/property/WebSocketOptimization.property.test.ts:12:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL tests/property/WebSocketManager.property.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/WebSocketManager.js:9
+@titan/shared:test:     import WebSocket from 'ws';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:       10 |
+@titan/shared:test:       11 | import * as fc from "fast-check";
+@titan/shared:test:     > 12 | import {
+@titan/shared:test:          | ^
+@titan/shared:test:       13 |   SubscriptionCallback,
+@titan/shared:test:       14 |   WebSocketManager,
+@titan/shared:test:       15 | } from "../../src/WebSocketManager";
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/property/WebSocketManager.property.test.ts:12:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL tests/property/ResourceUsage.property.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/ResourceOptimizer.js:9
+@titan/shared:test:     import { EventEmitter } from 'eventemitter3';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:       10 |
+@titan/shared:test:       11 | import * as fc from "fast-check";
+@titan/shared:test:     > 12 | import {
+@titan/shared:test:          | ^
+@titan/shared:test:       13 |   BenchmarkResult,
+@titan/shared:test:       14 |   CPUStats,
+@titan/shared:test:       15 |   MemoryStats,
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/property/ResourceUsage.property.test.ts:12:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL tests/unit/schemas/venue-status.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/types/venues.js:10
+@titan/shared:test:     export const VenueId = {
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Unexpected token 'export'
+@titan/shared:test: 
+@titan/shared:test:        6 |  */
+@titan/shared:test:        7 | import { z } from 'zod';
+@titan/shared:test:     >  8 | import { VenueId, VenueRecommendedAction, VenueWsState } from '../types/venues.js';
+@titan/shared:test:          | ^
+@titan/shared:test:        9 |
+@titan/shared:test:       10 | /**
+@titan/shared:test:       11 |  * VenueStatusV1 Zod Schema
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (src/schemas/venue-status.ts:8:1)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/schemas/venue-status.test.ts:6:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL tests/unit/logger/Logger.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/logger/Logger.js:12
+@titan/shared:test:     import { context, trace } from '@opentelemetry/api';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:        6 |  */
+@titan/shared:test:        7 |
+@titan/shared:test:     >  8 | import {
+@titan/shared:test:          | ^
+@titan/shared:test:        9 |     Logger,
+@titan/shared:test:       10 |     type LoggerConfig,
+@titan/shared:test:       11 |     LogLevel,
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/logger/Logger.test.ts:8:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL tests/unit/governance/crypto.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/governance/crypto.js:1
+@titan/shared:test:     ({"Object.<anonymous>":function(module,exports,require,__dirname,__filename,jest){import nacl from 'tweetnacl';
+@titan/shared:test:                                                                                       ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:        6 |  */
+@titan/shared:test:        7 |
+@titan/shared:test:     >  8 | import {
+@titan/shared:test:          | ^
+@titan/shared:test:        9 |     generateKeyPair,
+@titan/shared:test:       10 |     signObject,
+@titan/shared:test:       11 |     verifyObjectSignature,
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/governance/crypto.test.ts:8:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL tests/unit/config/HotReloadConfigManager.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/config/HotReloadConfigManager.js:9
+@titan/shared:test:     import { EventEmitter } from 'eventemitter3';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:        6 |  */
+@titan/shared:test:        7 |
+@titan/shared:test:     >  8 | import { HotReloadConfigManager } from "../../../src/config/HotReloadConfigManager";
+@titan/shared:test:          | ^
+@titan/shared:test:        9 | import { existsSync, mkdirSync, rmSync, writeFileSync } from "fs";
+@titan/shared:test:       10 | import { join } from "path";
+@titan/shared:test:       11 |
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/config/HotReloadConfigManager.test.ts:8:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL tests/unit/config/HierarchicalConfigLoader.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/config/HierarchicalConfigLoader.js:12
+@titan/shared:test:     import { existsSync, readFileSync } from 'fs';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:        6 |  */
+@titan/shared:test:        7 |
+@titan/shared:test:     >  8 | import { HierarchicalConfigLoader } from "../../../src/config/HierarchicalConfigLoader";
+@titan/shared:test:          | ^
+@titan/shared:test:        9 | import { ConfigValidator } from "../../../src/config/ConfigSchema";
+@titan/shared:test:       10 | import { existsSync, mkdirSync, rmSync, writeFileSync } from "fs";
+@titan/shared:test:       11 | import { join } from "path";
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/config/HierarchicalConfigLoader.test.ts:8:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL tests/unit/config/ConfigVersionHistory.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/config/ConfigVersionHistory.js:9
+@titan/shared:test:     import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:        6 |  */
+@titan/shared:test:        7 |
+@titan/shared:test:     >  8 | import { ConfigVersionHistory } from '../../../src/config/ConfigVersionHistory';
+@titan/shared:test:          | ^
+@titan/shared:test:        9 | import { mkdirSync, rmSync, existsSync } from 'fs';
+@titan/shared:test:       10 | import { join } from 'path';
+@titan/shared:test:       11 |
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/config/ConfigVersionHistory.test.ts:8:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL tests/unit/config/ConfigEncryption.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/config/ConfigEncryption.js:9
+@titan/shared:test:     import { createCipheriv, createDecipheriv, createHash, pbkdf2Sync, randomBytes, } from 'crypto';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:        6 |  */
+@titan/shared:test:        7 |
+@titan/shared:test:     >  8 | import { ConfigEncryption } from '../../../src/config/ConfigEncryption';
+@titan/shared:test:          | ^
+@titan/shared:test:        9 |
+@titan/shared:test:       10 | describe('ConfigEncryption', () => {
+@titan/shared:test:       11 |   let encryption: ConfigEncryption;
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/config/ConfigEncryption.test.ts:8:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL tests/unit/coordination/LeaderElector.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/coordination/LeaderElector.js:1
+@titan/shared:test:     ({"Object.<anonymous>":function(module,exports,require,__dirname,__filename,jest){import { EventEmitter } from 'eventemitter3';
+@titan/shared:test:                                                                                       ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:     > 1 | import {
+@titan/shared:test:         | ^
+@titan/shared:test:       2 |     LeaderElector,
+@titan/shared:test:       3 |     LeaderElectorConfig,
+@titan/shared:test:       4 | } from "../../../src/coordination/LeaderElector";
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/coordination/LeaderElector.test.ts:1:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL tests/unit/symbol-normalization.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/utils/symbol-normalization.js:10
+@titan/shared:test:     import { InstrumentType, VenueId } from '../types/venues.js';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:        5 |  * covering all supported venues and instrument types.
+@titan/shared:test:        6 |  */
+@titan/shared:test:     >  7 | import { denormalizeSymbol, normalizeSymbol } from '../../src/utils/symbol-normalization';
+@titan/shared:test:          | ^
+@titan/shared:test:        8 | import { InstrumentType, VenueId } from '../../src/types/venues';
+@titan/shared:test:        9 |
+@titan/shared:test:       10 | describe('Symbol Normalization', () => {
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/symbol-normalization.test.ts:7:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL tests/unit/intentSchema.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/messaging/titan_subjects.js:20
+@titan/shared:test:     export const TITAN_SUBJECTS = {
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Unexpected token 'export'
+@titan/shared:test: 
+@titan/shared:test:       112 | }
+@titan/shared:test:       113 |
+@titan/shared:test:     > 114 | import { TITAN_SUBJECTS } from '../messaging/titan_subjects';
+@titan/shared:test:           | ^
+@titan/shared:test:       115 |
+@titan/shared:test:       116 | export function createIntentMessage(
+@titan/shared:test:       117 |   payload: IntentPayloadV1,
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (src/schemas/intentSchema.ts:114:1)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/intentSchema.test.ts:1:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL tests/unit/WebSocketManager.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/WebSocketManager.js:9
+@titan/shared:test:     import WebSocket from 'ws';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:       3 |  */
+@titan/shared:test:       4 |
+@titan/shared:test:     > 5 | import { WebSocketConfig, WebSocketManager } from "../../src/WebSocketManager";
+@titan/shared:test:         | ^
+@titan/shared:test:       6 |
+@titan/shared:test:       7 | describe("WebSocketManager Unit Tests", () => {
+@titan/shared:test:       8 |   let wsManager: WebSocketManager;
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/WebSocketManager.test.ts:5:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL tests/unit/PerformanceMonitor.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/PerformanceMonitor.js:9
+@titan/shared:test:     import { EventEmitter } from 'eventemitter3';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:        5 |  */
+@titan/shared:test:        6 |
+@titan/shared:test:     >  7 | import {
+@titan/shared:test:          | ^
+@titan/shared:test:        8 |   getPerformanceMonitor,
+@titan/shared:test:        9 |   PerformanceMonitor,
+@titan/shared:test:       10 |   resetPerformanceMonitor,
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/PerformanceMonitor.test.ts:7:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL tests/unit/ResourceOptimizer.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/ResourceOptimizer.js:9
+@titan/shared:test:     import { EventEmitter } from 'eventemitter3';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:        5 |  */
+@titan/shared:test:        6 |
+@titan/shared:test:     >  7 | import {
+@titan/shared:test:          | ^
+@titan/shared:test:        8 |   getResourceOptimizer,
+@titan/shared:test:        9 |   resetResourceOptimizer,
+@titan/shared:test:       10 |   ResourceOptimizer,
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/ResourceOptimizer.test.ts:7:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL tests/unit/TelemetryService.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/TelemetryService.js:9
+@titan/shared:test:     import { EventEmitter } from 'eventemitter3';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:       3 |  */
+@titan/shared:test:       4 |
+@titan/shared:test:     > 5 | import {
+@titan/shared:test:         | ^
+@titan/shared:test:       6 |   ExecutionData,
+@titan/shared:test:       7 |   LogLevel,
+@titan/shared:test:       8 |   MetricData,
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/TelemetryService.test.ts:5:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL tests/unit/DistributedStateManager.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/DistributedStateManager.js:9
+@titan/shared:test:     import { EventEmitter } from 'eventemitter3';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:        6 |  */
+@titan/shared:test:        7 |
+@titan/shared:test:     >  8 | import {
+@titan/shared:test:          | ^
+@titan/shared:test:        9 |     type DistributedStateConfig,
+@titan/shared:test:       10 |     DistributedStateManager,
+@titan/shared:test:       11 |     HighestVersionResolver,
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/DistributedStateManager.test.ts:8:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL tests/unit/LoadBalancer.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/LoadBalancer.js:9
+@titan/shared:test:     import { EventEmitter } from "eventemitter3";
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:        6 |  */
+@titan/shared:test:        7 |
+@titan/shared:test:     >  8 | import {
+@titan/shared:test:          | ^
+@titan/shared:test:        9 |     type BackendServer,
+@titan/shared:test:       10 |     DEFAULT_LOAD_BALANCER_CONFIG,
+@titan/shared:test:       11 |     LoadBalancer,
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/LoadBalancer.test.ts:8:1)
+@titan/shared:test: 
+@titan/shared:test: FAIL tests/unit/ConfigManager.test.ts
+@titan/shared:test:   ● Test suite failed to run
+@titan/shared:test: 
+@titan/shared:test:     Jest encountered an unexpected token
+@titan/shared:test: 
+@titan/shared:test:     Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+@titan/shared:test: 
+@titan/shared:test:     Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+@titan/shared:test: 
+@titan/shared:test:     By default "node_modules" folder is ignored by transformers.
+@titan/shared:test: 
+@titan/shared:test:     Here's what you can do:
+@titan/shared:test:      • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+@titan/shared:test:      • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+@titan/shared:test:      • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+@titan/shared:test:      • If you need a custom transformation specify a "transform" option in your config.
+@titan/shared:test:      • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+@titan/shared:test: 
+@titan/shared:test:     You'll find more details and examples of these config options in the docs:
+@titan/shared:test:     https://jestjs.io/docs/configuration
+@titan/shared:test:     For information about custom transformations, see:
+@titan/shared:test:     https://jestjs.io/docs/code-transformation
+@titan/shared:test: 
+@titan/shared:test:     Details:
+@titan/shared:test: 
+@titan/shared:test:     /Users/ivan/Code/trading/titan/packages/shared/src/ConfigManager.js:9
+@titan/shared:test:     import { EventEmitter } from 'eventemitter3';
+@titan/shared:test:     ^^^^^^
+@titan/shared:test: 
+@titan/shared:test:     SyntaxError: Cannot use import statement outside a module
+@titan/shared:test: 
+@titan/shared:test:       3 |  */
+@titan/shared:test:       4 |
+@titan/shared:test:     > 5 | import {
+@titan/shared:test:         | ^
+@titan/shared:test:       6 |   BrainConfig,
+@titan/shared:test:       7 |   ConfigManager,
+@titan/shared:test:       8 |   PhaseConfig,
+@titan/shared:test: 
+@titan/shared:test:       at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+@titan/shared:test:       at Object.<anonymous> (tests/unit/ConfigManager.test.ts:5:1)
+@titan/shared:test: 
+@titan/shared:test: 
+@titan/shared:test: Test Suites: 20 failed, 13 passed, 33 total
+@titan/shared:test: Tests:       174 passed, 174 total
+@titan/shared:test: Snapshots:   0 total
+@titan/shared:test: Time:        45.885 s, estimated 47 s
+@titan/shared:test: Ran all test suites in 2 projects.
+@titan/shared:test: npm error Lifecycle script `test` failed with error:
+@titan/shared:test: npm error code 1
+@titan/shared:test: npm error path /Users/ivan/Code/trading/titan/packages/shared
+@titan/shared:test: npm error workspace @titan/shared@1.0.0
+@titan/shared:test: npm error location /Users/ivan/Code/trading/titan/packages/shared
+@titan/shared:test: npm error command failed
+@titan/shared:test: npm error command sh -c jest
+@titan/shared:test: ERROR: command finished with error: command (/Users/ivan/Code/trading/titan/packages/shared) /Users/ivan/.local/share/mise/installs/node/22.19.0/bin/npm run test exited (1)
+@titan/shared#test: command (/Users/ivan/Code/trading/titan/packages/shared) /Users/ivan/.local/share/mise/installs/node/22.19.0/bin/npm run test exited (1)
+
+ Tasks:    1 successful, 2 total
+Cached:    1 cached, 2 total
+  Time:    46.381s 
+Failed:    @titan/shared#test
+
+ ERROR  run failed: command  exited (1)

@@ -48,20 +48,27 @@ jobs:
 
   readiness-gate:
     runs-on: ubuntu-latest
+    outputs:
+      tier: ${{ steps.gating.outputs.tier }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
         with:
           fetch-depth: 0 # Need full history for some checks if needed, but shallow is ok for status
 
+      - name: Path Gating
+        id: gating
+        run: ./scripts/ci/changed_paths.sh
+
       - name: Run Gatekeeper
+        if: steps.gating.outputs.tier != 'A'
         run: |
           # Run tsx without mutating the repository checkout.
           npm exec --yes --package=tsx -- tsx scripts/ci/gatekeeper.ts
 
   build-and-push:
     needs: [ci-check, readiness-gate]
-    if: ${{ always() && (needs.ci-check.result == 'success' || needs.ci-check.result == 'skipped') && needs.readiness-gate.result == 'success' }}
+    if: ${{ always() && (needs.ci-check.result == 'success' || needs.ci-check.result == 'skipped') && needs.readiness-gate.result == 'success' && needs.readiness-gate.outputs.tier != 'A' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read

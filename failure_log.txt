@@ -1,0 +1,200 @@
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2156505Z       ✓ should reject invalid number strings (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2156677Z       ✓ should validate number ranges (12 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2156840Z       ✓ should reject infinity and NaN
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2156943Z     Boolean Validation
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2157121Z       ✓ should validate boolean values (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2157275Z       ✓ should convert string booleans
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2157450Z       ✓ should convert number booleans (9 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2157577Z     Trading-Specific Validations
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2157778Z       ✓ should validate signal IDs (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2157949Z       ✓ should validate phase IDs (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2158138Z       ✓ should validate trading symbols (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2158468Z       ✓ should validate trade sides (9 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2158653Z       ✓ should validate position sizes (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2158816Z       ✓ should validate leverage (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2158952Z     Allocation Weights Validation
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2159148Z       ✓ should validate correct allocation weights
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2159429Z       ✓ should reject allocation weights that do not sum to 1.0 (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2159771Z       ✓ should reject negative allocation weights (13 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2160020Z       ✓ should reject allocation weights greater than 1.0 (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2160126Z     Signal Request Validation
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2160343Z       ✓ should validate complete signal request (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2160546Z       ✓ should reject invalid signal request (10 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2160743Z       ✓ should handle missing optional fields (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2160849Z     Permissions Validation
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2161020Z       ✓ should validate correct permissions
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2161217Z       ✓ should reject invalid permissions (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2161392Z       ✓ should reject empty permissions array
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2161401Z 
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2161570Z PASS tests/unit/ServiceDiscovery.test.ts
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2161667Z   ServiceDiscovery
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2161765Z     registerService
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2161957Z       ✓ should register a service endpoint (12 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2162207Z       ✓ should initialize service status as unhealthy (10 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2162380Z       ✓ should create a service client (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2162566Z       ✓ should log service registration (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2162664Z     getServiceEndpoint
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2162901Z       ✓ should return endpoint for registered service (7 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2163102Z       ✓ should return null for unknown service (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2163202Z     getServiceClient
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2163400Z       ✓ should return null for unknown service (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2163516Z     getAllServiceStatuses
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2163778Z       ✓ should return empty array when no services registered (5 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2164009Z       ✓ should return all registered service statuses (2 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2164105Z     getHealthyServices
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2164449Z       ✓ should return empty array when all unhealthy (6 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2164589Z     getUnhealthyRequiredServices
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2164811Z       ✓ should return unhealthy required services (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2165059Z       ✓ should return empty array when no required services (3 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2165165Z     startHealthChecking
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2165372Z       ✓ should not start when disabled in config (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2165542Z       ✓ should start when enabled (2 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2165642Z     stopHealthChecking
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2165812Z       ✓ should stop health checking (4 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2165913Z     getHealthStatus
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2166106Z       ✓ should return overall health status (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2166346Z       ✓ should report unhealthy when required services are down
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2166432Z     shutdown
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2166681Z       ✓ should clear all services and stop health checking (8 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2166780Z     compatibility aliases
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2167036Z       ✓ getAllServices should alias getAllServiceStatuses (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2167255Z       ✓ getService should alias getServiceStatus (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2167263Z 
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2167469Z PASS tests/services/CircuitBreaker.test.ts (7.716 s)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2167559Z   CircuitBreaker
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2167652Z     constructor
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2167878Z       ✓ should initialize with correct configuration (10 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2168050Z       ✓ should log initialization (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2168150Z     execute - CLOSED state
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2168349Z       ✓ should execute function successfully (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2168667Z       ✓ should handle function failure (59 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2168920Z       ✓ should transition to OPEN after failure threshold (12 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2169116Z       ✓ should reset failure count on success (2 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2169282Z       ✓ should handle timeout (523 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2169380Z     execute - OPEN state
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2169693Z       ✓ should reject requests immediately (10 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2169968Z       ✓ should transition to HALF_OPEN after recovery timeout (1108 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2170078Z     execute - HALF_OPEN state
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2170251Z       ✓ should allow limited calls (1102 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2170514Z       ✓ should transition to CLOSED after successful calls (1101 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2170716Z       ✓ should transition to OPEN on failure (1104 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2170939Z       ✓ should reject requests after max calls (1105 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2171044Z     state transitions
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2171224Z       ✓ should emit stateChange events (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2171316Z     admin operations
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2171509Z       ✓ should force close circuit breaker (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2171670Z       ✓ should reset statistics (10 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2171769Z     utility methods
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2171975Z       ✓ should calculate failure rate correctly (11 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2172133Z       ✓ should check if healthy
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2172316Z       ✓ should calculate time until next attempt
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2172411Z     defaults
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2172600Z       ✓ should have correct default configurations
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2172696Z     error handling
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2172918Z       ✓ should handle CircuitBreakerError correctly (9 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2172931Z 
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2173153Z PASS tests/property/PerformanceTracker.property.test.ts
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2173291Z   PerformanceTracker Property Tests
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2173444Z     Property 3: Performance Modifier Bounds
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2173721Z       ✓ should always return modifier within bounds [0.5, 1.2] (681 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2174017Z       ✓ should apply malus multiplier for all negative Sharpe ratios (110 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2174403Z       ✓ should apply bonus multiplier for all high Sharpe ratios (140 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2174630Z       ✓ should return 1.0 for normal Sharpe ratios (136 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2174907Z       ✓ should be piecewise constant with correct thresholds (180 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2175125Z       ✓ should handle boundary conditions correctly (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2175343Z       ✓ should handle extreme Sharpe ratio values (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2175477Z     Sharpe Ratio Calculation Properties
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2175699Z       ✓ should return 0 for insufficient PnL data (42 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2175955Z       ✓ should return finite Sharpe ratio for valid PnL data (238 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2176197Z       ✓ should handle zero standard deviation correctly (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2176340Z     Configuration Validation Properties
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2176534Z       ✓ should use configuration values correctly
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2176542Z 
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2176693Z PASS tests/unit/NatsPublisher.test.ts
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2176791Z   NatsPublisher
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2176875Z     connect
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2177213Z       ✓ should connect to NATS with default URL (2 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2177505Z       ✓ should connect to NATS with custom URL (5 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2177724Z       ✓ should not reconnect if already connected (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2177970Z       ✓ should throw and log error on connection failure (35 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2178073Z     triggerAIOptimization
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2178338Z       ✓ should publish optimization request when connected (12 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2178520Z       ✓ should warn and skip when not connected
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2178712Z       ✓ should log error on publish failure (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2178966Z     publishRiskCommand
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2179173Z       ✓ should publish risk command when connected
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2179380Z       ✓ should warn and skip when not connected (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2179618Z       ✓ should throw and log error on publish failure (10 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2179704Z     close
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2179886Z       ✓ should close connection when connected
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2180212Z       ✓ should not close when not connected
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2180419Z       ✓ should prevent further operations after close
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2180542Z     getNatsPublisher singleton
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2180723Z       ✓ should return the same instance (1 ms)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2180731Z 
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2181029Z ##[endgroup]
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2181273Z ##[group]titan-phase2-hunter:test
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2181487Z cache miss, executing [2mad3919637ca204d4[0m
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2181496Z 
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2181639Z > titan-phase2-hunter@1.0.0 test
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2181732Z > jest
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2181740Z 
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2181994Z 🚀 Setting up Titan Phase 2 Hunter test environment...
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2182169Z ✅ Test environment setup complete
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2182621Z PASS integration tests/integration/EnhancementIntegration.checkpoint.integration.test.ts (22.945 s)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2182922Z PASS integration tests/integration/EndToEnd.integration.test.ts (26.381 s)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2183146Z PASS unit tests/unit/BotTrapDetector.test.ts (17.12 s)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2183346Z PASS unit tests/unit/BacktestEngine.test.ts (23.07 s)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2183537Z PASS unit tests/unit/RiskManager.test.ts (16.17 s)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2183713Z PASS unit tests/unit/DrawdownProtector.test.ts
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2183930Z PASS unit tests/unit/BybitPerpsClient.test.ts (17.007 s)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2184130Z PASS unit tests/unit/SignalGenerator.test.ts (7.599 s)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2184599Z PASS unit tests/unit/AdvancedFlowValidator.test.ts (16.152 s)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2184778Z PASS unit tests/unit/CVDValidator.test.ts
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2184998Z PASS unit tests/unit/PortfolioManager.test.ts (13.879 s)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2185277Z PASS unit tests/unit/analytics/PerformanceAnalytics.test.ts (14.838 s)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2185509Z PASS unit tests/unit/analytics/PerformanceReporter.test.ts
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2185716Z PASS unit tests/unit/CredentialManager.test.ts (8.97 s)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2185925Z PASS unit tests/unit/HologramScanner.test.ts (20.36 s)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2186124Z PASS unit tests/unit/HologramEngine.test.ts (19.465 s)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2186326Z PASS unit tests/unit/SessionProfiler.test.ts (16.55 s)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2186480Z PASS unit tests/unit/FractalMath.test.ts
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2186757Z PASS property tests/property/CVDValidator.property.test.ts (20.637 s)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2186963Z PASS unit tests/unit/PositionManager.test.ts (17.419 s)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2187159Z PASS unit tests/unit/EventEmitter.test.ts (15.353 s)
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2187346Z PASS unit tests/unit/InefficiencyMapper.test.ts
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2187580Z ##[endgroup]
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2187589Z 
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2187843Z [1m Tasks:    [32m[1m31 successful[0m, 36 total[0m
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2188042Z [1mCached:    [1m7 cached[0m, 36 total[0m
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2188220Z [1m  Time:    [1m4m51.201s[0m [0m
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2188435Z [1mFailed:    [31m[1m@titan/shared#test[0m[0m
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2188447Z 
+node-services	Canonical Node.js Pipeline	2026-02-06T20:44:48.2191417Z ##[error]Process completed with exit code 1.
+node-services	Node services summary	﻿2026-02-06T20:44:48.2236544Z ##[group]Run {
+node-services	Node services summary	2026-02-06T20:44:48.2236673Z [36;1m{[0m
+node-services	Node services summary	2026-02-06T20:44:48.2236779Z [36;1m  echo "### Node Services"[0m
+node-services	Node services summary	2026-02-06T20:44:48.2236898Z [36;1m  echo "setup-node cache-hit=true"[0m
+node-services	Node services summary	2026-02-06T20:44:48.2236999Z [36;1m  echo "turbo cache-hit=false"[0m
+node-services	Node services summary	2026-02-06T20:44:48.2237104Z [36;1m} >> "$GITHUB_STEP_SUMMARY"[0m
+node-services	Node services summary	2026-02-06T20:44:48.2319204Z shell: /usr/bin/bash -e {0}
+node-services	Node services summary	2026-02-06T20:44:48.2319288Z env:
+node-services	Node services summary	2026-02-06T20:44:48.2319385Z   NODE_VERSION: 22.19.0
+node-services	Node services summary	2026-02-06T20:44:48.2319475Z   NPM_VERSION: 11.6.2
+node-services	Node services summary	2026-02-06T20:44:48.2319558Z   RUST_VERSION: 1.89.0
+node-services	Node services summary	2026-02-06T20:44:48.2319645Z ##[endgroup]
+node-services	Post Checkout code	﻿2026-02-06T20:44:48.2446454Z Post job cleanup.
+node-services	Post Checkout code	2026-02-06T20:44:48.4695508Z [command]/usr/bin/git version
+node-services	Post Checkout code	2026-02-06T20:44:48.4740593Z git version 2.52.0
+node-services	Post Checkout code	2026-02-06T20:44:48.4798327Z Temporarily overriding HOME='/home/runner/work/_temp/73c287e8-38c9-480d-b418-e2b6d596dfbf' before making global git config changes
+node-services	Post Checkout code	2026-02-06T20:44:48.4800241Z Adding repository directory to the temporary git global config as a safe directory
+node-services	Post Checkout code	2026-02-06T20:44:48.4811994Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/titan-trading-system/titan-trading-system
+node-services	Post Checkout code	2026-02-06T20:44:48.4845325Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+node-services	Post Checkout code	2026-02-06T20:44:48.4877873Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+node-services	Post Checkout code	2026-02-06T20:44:48.5107594Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+node-services	Post Checkout code	2026-02-06T20:44:48.5127674Z http.https://github.com/.extraheader
+node-services	Post Checkout code	2026-02-06T20:44:48.5140959Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+node-services	Post Checkout code	2026-02-06T20:44:48.5173425Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+node-services	Post Checkout code	2026-02-06T20:44:48.5419365Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+node-services	Post Checkout code	2026-02-06T20:44:48.5454736Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+node-services	Complete job	﻿2026-02-06T20:44:48.5842706Z Cleaning up orphan processes
