@@ -29,13 +29,18 @@ FROM node:22-alpine
 
 WORKDIR /app
 
+# Copy package files for production install
+COPY package.json package-lock.json ./
+COPY packages/shared/package.json ./packages/shared/
+COPY services/titan-console-api/package.json ./services/titan-console-api/
+
+# Install production dependencies only
+RUN npm ci --workspace=packages/shared --workspace=services/titan-console-api --omit=dev
+
 # Copy built artifacts
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
-COPY --from=builder /app/packages/shared/package.json ./packages/shared/
 COPY --from=builder /app/packages/shared/*.json ./packages/shared/
 COPY --from=builder /app/services/titan-console-api/dist ./dist
-COPY --from=builder /app/services/titan-console-api/package.json ./
-COPY --from=builder /app/node_modules ./node_modules
 
 # Install curl for healthcheck
 RUN apk add --no-cache curl
