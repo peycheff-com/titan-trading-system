@@ -4,7 +4,7 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Copy root package files for workspace resolution
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json tsconfig.json tsconfig.base.json ./
 COPY packages/shared/package.json packages/shared/
 COPY services/titan-console-api/package.json services/titan-console-api/
 
@@ -14,6 +14,7 @@ RUN npm ci --workspace=packages/shared --workspace=services/titan-console-api
 # Copy source code
 COPY packages/shared packages/shared/
 COPY services/titan-console-api services/titan-console-api/
+
 
 # Build shared package first
 WORKDIR /app/packages/shared
