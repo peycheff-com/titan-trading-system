@@ -7,6 +7,8 @@
 
 1. `e9682ada` - chore(hygiene): remove dead code and empty directories
 2. `23bec705` - test(hygiene): fix flaky HologramScanner timing test
+3. `654b786c` - docs(hygiene): update purge ledger with test verification
+4. `449b0179` - chore(deps): remove unused csv-parse dependency
 
 | Category | Count | Evidence |
 |----------|-------|----------|
