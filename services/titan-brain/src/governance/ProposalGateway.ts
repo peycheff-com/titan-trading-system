@@ -1,6 +1,9 @@
-import { ProposalDecision, signedProposalSchema } from '@titan/shared/dist/governance/types.js';
-import { verifyObjectSignature } from '@titan/shared/dist/governance/crypto.js';
-import { Logger } from '@titan/shared/dist/logger/Logger.js';
+import {
+  Logger,
+  ProposalDecision,
+  signedProposalSchema,
+  verifyObjectSignature,
+} from "@titan/shared";
 
 export class ProposalGateway {
   private logger: Logger;
@@ -20,20 +23,31 @@ export class ProposalGateway {
     // 1. Schema Validation
     const parseResult = signedProposalSchema.safeParse(proposal);
     if (!parseResult.success) {
-      this.logger.warn('Proposal Schema Validation Failed', undefined, {
+      this.logger.warn("Proposal Schema Validation Failed", undefined, {
         error: parseResult.error,
       });
-      return this.reject('INVALID_SCHEMA', 'Schema validation failed', timestamp);
+      return this.reject(
+        "INVALID_SCHEMA",
+        "Schema validation failed",
+        timestamp,
+      );
     }
 
     const signedProposal = parseResult.data;
 
     // 2. Authorization Check (Is this key allowed to propose?)
-    if (this.authorizedKeys.size > 0 && !this.authorizedKeys.has(signedProposal.publicKey)) {
-      this.logger.warn('Unauthorized Proposal Key', undefined, {
+    if (
+      this.authorizedKeys.size > 0 &&
+      !this.authorizedKeys.has(signedProposal.publicKey)
+    ) {
+      this.logger.warn("Unauthorized Proposal Key", undefined, {
         key: signedProposal.publicKey,
       });
-      return this.reject(signedProposal.metadata.id, 'UNAUTHORIZED_KEY', timestamp);
+      return this.reject(
+        signedProposal.metadata.id,
+        "UNAUTHORIZED_KEY",
+        timestamp,
+      );
     }
 
     // 3. Cryptographic Verification
@@ -50,34 +64,42 @@ export class ProposalGateway {
     );
 
     if (!isValid) {
-      this.logger.warn('Proposal Signature Verification Failed', undefined, {
+      this.logger.warn("Proposal Signature Verification Failed", undefined, {
         id: signedProposal.metadata.id,
       });
-      return this.reject(signedProposal.metadata.id, 'INVALID_SIGNATURE', timestamp);
+      return this.reject(
+        signedProposal.metadata.id,
+        "INVALID_SIGNATURE",
+        timestamp,
+      );
     }
 
     // 4. Decision Logic (Auto-Approve for Phase 1)
-    this.logger.info('Proposal Verified and Accepted', undefined, {
+    this.logger.info("Proposal Verified and Accepted", undefined, {
       id: signedProposal.metadata.id,
       type: signedProposal.payload.type,
     });
 
     return {
       proposalId: signedProposal.metadata.id,
-      verdict: 'ACCEPTED',
-      reason: 'Signature verified and key authorized.',
+      verdict: "ACCEPTED",
+      reason: "Signature verified and key authorized.",
       timestamp,
-      executor: 'TitanBrain',
+      executor: "TitanBrain",
     };
   }
 
-  private reject(id: string, reason: string, timestamp: number): ProposalDecision {
+  private reject(
+    id: string,
+    reason: string,
+    timestamp: number,
+  ): ProposalDecision {
     return {
       proposalId: id,
-      verdict: 'REJECTED',
+      verdict: "REJECTED",
       reason,
       timestamp,
-      executor: 'TitanBrain',
+      executor: "TitanBrain",
     };
   }
 }

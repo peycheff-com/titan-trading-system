@@ -8,7 +8,6 @@ import * as path from "path";
  */
 export function generateKeys(privateKeyPath?: string, publicKeyPath?: string) {
     const { privateKey, publicKey } = crypto.generateKeyPairSync("ed25519", {
-        modulusLength: 4096,
         publicKeyEncoding: {
             type: "spki",
             format: "pem",

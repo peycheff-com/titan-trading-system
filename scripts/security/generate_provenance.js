@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { execSync } from "child_process";
 import * as crypto from "crypto";
+import * as os from "os";
 /**
  * Generates a SLSA v1.0 Provenance predicate.
  * https://slsa.dev/spec/v1.0/provenance
@@ -59,7 +60,7 @@ function generateProvenance() {
                 },
             },
             systemParameters: {
-                hostname: require("os").hostname(),
+                hostname: os.hostname(),
                 platform: process.platform,
                 nodeVersion: process.version,
             },

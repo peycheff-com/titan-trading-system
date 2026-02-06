@@ -121,20 +121,28 @@ export class VenueStatusStore extends EventEmitter {
         const bucket = TITAN_KV_BUCKETS.CONFIG.bucket;
 
         try {
-            await nats.kvWatch(
-                bucket,
-                "config.venue.>",
-                async (key, value, operation) => {
+            const watcher = await nats.kvWatch(bucket, {
+                key: "config.venue.>",
+            });
+
+            // Process updates in background
+            (async () => {
+                for await (const entry of watcher) {
+                    const key = entry.key;
+                    const operation = entry.operation;
                     const venueId = key.split(".").pop() as VenueId | undefined;
 
                     if (!venueId || !ALL_VENUE_IDS.includes(venueId)) {
-                        return;
+                        continue;
                     }
 
                     if (operation === "DEL" || operation === "PURGE") {
                         this.venueConfigs.delete(venueId);
                         this.logger.info(`Venue config removed for ${venueId}`);
-                    } else if (value) {
+                    } else if (entry.value.length > 0) {
+                        const value = JSON.parse(
+                            new TextDecoder().decode(entry.value),
+                        );
                         const result = safeParseVenueConfigV1(value);
                         if (result.success) {
                             this.venueConfigs.set(venueId, result.data);
@@ -152,8 +160,10 @@ export class VenueStatusStore extends EventEmitter {
 
                     // Re-evaluate staleness for this venue immediately
                     this.refreshStaleness(venueId);
-                },
-            );
+                }
+            })().catch((err) => {
+                this.logger.warn(`Config KV watch processing failed: ${err}`);
+            });
         } catch (err) {
             this.logger.warn(
                 `Config KV watch failed (bucket likely missing): ${err}`,

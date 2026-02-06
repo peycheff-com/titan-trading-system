@@ -1,5 +1,4 @@
 import fetch from "node-fetch";
-import { io } from "socket.io-client"; // Using socket.io-client or generic WebSocket depending on implementation.
 // Note: The UI uses 'useTitanWebSocket' which likely uses native WebSocket.
 import WebSocket from "ws";
 
@@ -25,7 +24,7 @@ async function runDrill() {
         );
     }
 
-    const authData = await authRes.json();
+    const authData = await authRes.json() as { token: string };
     const token = authData.token;
     console.log("✅ Login successful. Token received.");
 

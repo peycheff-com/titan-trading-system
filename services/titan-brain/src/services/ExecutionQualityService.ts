@@ -1,12 +1,11 @@
 import {
+    type ExecutionQualityEvent,
     type ExecutionReport,
     ExecutionReportSchema,
-} from "@titan/shared/dist/schemas/ExecutionReportSchema.js";
-import {
-    type ExecutionQualityEvent,
+    type NatsClient,
     TITAN_QUALITY_TOPIC,
-} from "@titan/shared/dist/schemas/ExecutionQuality.js";
-import { type NatsClient } from "@titan/shared/dist/messaging/NatsClient.js";
+} from "@titan/shared";
+
 import {
     getLogger,
     getMetrics,
