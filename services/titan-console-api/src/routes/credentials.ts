@@ -10,7 +10,6 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { Pool } from 'pg';
 import {
-  CredentialInput,
   CredentialProvider,
   CredentialType,
   getCredentialVault,
@@ -21,8 +20,8 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-interface CredentialParams {
-  id: string;
+interface AuthenticatedRequest extends FastifyRequest {
+  user?: { id: string };
 }
 
 interface CredentialBody {
@@ -70,8 +69,8 @@ async function logAudit(
 
 export default async function credentialsRoutes(fastify: FastifyInstance) {
   // List all credentials for the user (redacted)
-  fastify.get('/api/credentials', async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = (request as any).user?.id || 'default-user';
+  fastify.get('/api/credentials', async (request: FastifyRequest, _reply: FastifyReply) => {
+    const userId = (request as AuthenticatedRequest).user?.id || 'default-user';
     const vault = getCredentialVault();
 
     const result = await pool.query(
@@ -121,7 +120,7 @@ export default async function credentialsRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/credentials',
     async (request: FastifyRequest<{ Body: CredentialBody }>, reply: FastifyReply) => {
-      const userId = (request as any).user?.id || 'default-user';
+      const userId = (request as AuthenticatedRequest).user?.id || 'default-user';
       const vault = getCredentialVault();
       const { provider, credentials, metadata = {} } = request.body;
 
@@ -199,8 +198,8 @@ export default async function credentialsRoutes(fastify: FastifyInstance) {
   // Delete credentials for a provider
   fastify.delete(
     '/api/credentials/:provider',
-    async (request: FastifyRequest<{ Params: { provider: string } }>, reply: FastifyReply) => {
-      const userId = (request as any).user?.id || 'default-user';
+    async (request: FastifyRequest<{ Params: { provider: string } }>, _reply: FastifyReply) => {
+      const userId = (request as AuthenticatedRequest).user?.id || 'default-user';
       const { provider } = request.params;
 
       // Get credential IDs for audit
@@ -242,7 +241,7 @@ export default async function credentialsRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/credentials/:provider/test',
     async (request: FastifyRequest<{ Params: { provider: string } }>, reply: FastifyReply) => {
-      const userId = (request as any).user?.id || 'default-user';
+      const userId = (request as AuthenticatedRequest).user?.id || 'default-user';
       const vault = getCredentialVault();
       const { provider } = request.params;
 
@@ -333,7 +332,7 @@ export default async function credentialsRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/credentials/:provider/internal',
     async (request: FastifyRequest<{ Params: { provider: string } }>, reply: FastifyReply) => {
-      const userId = (request as any).user?.id || 'default-user';
+      const userId = (request as AuthenticatedRequest).user?.id || 'default-user';
       const vault = getCredentialVault();
       const { provider } = request.params;
 
@@ -487,7 +486,7 @@ async function testGeminiConnection(
       success: false,
       message: errorData.error?.message || 'Invalid API key',
     };
-  } catch (e) {
+  } catch {
     return { success: false, message: 'Failed to connect to Gemini API' };
   }
 }
