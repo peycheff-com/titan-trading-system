@@ -58,6 +58,17 @@ export const defaultConfig: TitanBrainConfig = {
       threshold: 0.5,
     },
     fractal: {},
+    minConfidenceScore: 0.7,
+    version: 1,
+    maxPositionNotional: 100000,
+    maxDailyLoss: 1000,
+    maxOpenOrdersPerSymbol: 5,
+    maxSlippageBps: 50,
+    maxStalenessMs: 60000,
+    symbolWhitelist: ['BTCUSDT', 'ETHUSDT'],
+    lastUpdated: Date.now(),
+    minStopDistanceMultiplier: 1.5,
+    maxAccountLeverage: 10,
   },
 
   capitalFlow: {

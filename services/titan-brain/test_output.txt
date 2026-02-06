@@ -1,0 +1,355 @@
+
+> titan-brain@1.0.0 test
+> npm run test:unit
+
+
+> titan-brain@1.0.0 test:unit
+> jest --config jest.config.cjs
+
+FAIL tests/unit/ConfigLoader.test.ts
+  ● Configuration › ConfigLoader class › should validate configuration
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      138 |       const validConfig = { ...defaultConfig };
+      139 |       const result = validateConfig(validConfig);
+    > 140 |       expect(result.valid).toBe(true);
+          |                            ^
+      141 |     });
+      142 |
+      143 |     it("should detect invalid configuration", () => {
+
+      at Object.<anonymous> (tests/unit/ConfigLoader.test.ts:140:28)
+
+PASS tests/unit/TitanBrain.test.ts
+PASS tests/property/RiskGuardian.property.test.ts
+PASS tests/property/SecurityAuditLogger.property.test.ts
+PASS tests/cache/InMemoryCache.test.ts
+PASS tests/unit/CircuitBreaker.test.ts
+  ● Console
+
+    console.error
+      Failed to close positions during circuit breaker trigger: Error: API error
+          at Object.<anonymous> (/Users/ivan/Code/trading/titan/services/titan-brain/tests/unit/CircuitBreaker.test.ts:233:9)
+          at Promise.then.completed (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:316:40)
+          at processTicksAndRejections (node:internal/process/task_queues:105:5)
+          at _runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:126:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at run (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:444:34)
+          at Object.worker (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/testWorker.js:106:12)
+
+      306 |       } catch (error) {
+      307 |         // Log error but don't prevent breaker activation
+    > 308 |         console.error('Failed to close positions during circuit breaker trigger:', error);
+          |                 ^
+      309 |       }
+      310 |     }
+      311 |
+
+      at CircuitBreaker.trigger (src/engine/CircuitBreaker.ts:308:17)
+      at Object.<anonymous> (tests/unit/CircuitBreaker.test.ts:236:7)
+
+    console.error
+      Failed to send emergency notification: Error: Network error
+          at Object.<anonymous> (/Users/ivan/Code/trading/titan/services/titan-brain/tests/unit/CircuitBreaker.test.ts:298:9)
+          at Promise.then.completed (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:316:40)
+          at processTicksAndRejections (node:internal/process/task_queues:105:5)
+          at _runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:126:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at run (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:444:34)
+          at Object.worker (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/testWorker.js:106:12)
+
+      315 |         await this.notificationHandler.sendEmergencyNotification(reason, this.dailyStartEquity);
+      316 |       } catch (error) {
+    > 317 |         console.error('Failed to send emergency notification:', error);
+          |                 ^
+      318 |       }
+      319 |     }
+      320 |
+
+      at CircuitBreaker.trigger (src/engine/CircuitBreaker.ts:317:17)
+      at Object.<anonymous> (tests/unit/CircuitBreaker.test.ts:301:7)
+
+    console.error
+      Failed to persist breaker event: Error: DB error
+          at Object.<anonymous> (/Users/ivan/Code/trading/titan/services/titan-brain/tests/unit/CircuitBreaker.test.ts:530:9)
+          at Promise.then.completed (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:316:40)
+          at _runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:126:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at run (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:444:34)
+          at Object.worker (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/testWorker.js:106:12)
+
+      335 |         await this.eventPersistence.persistEvent(event);
+      336 |       } catch (error) {
+    > 337 |         console.error('Failed to persist breaker event:', error);
+          |                 ^
+      338 |       }
+      339 |     }
+      340 |
+
+      at CircuitBreaker.trigger (src/engine/CircuitBreaker.ts:337:17)
+      at Object.<anonymous> (tests/unit/CircuitBreaker.test.ts:533:7)
+
+PASS tests/services/ServiceClient.test.ts
+PASS tests/server/WebhookServer.hmac.test.ts
+  ● Console
+
+    console.error
+      {"timestamp":"2026-02-06T20:30:18.569Z","level":"ERROR","message":"Security event: HMAC validation failed","component":"webhook-server","operation":"security_event","metadata":{"event":"HMAC validation failed","severity":"high","ip":"127.0.0.1","endpoint":"/webhook/phase3","error":"Invalid signature","userAgent":"lightMyRequest"}}
+
+      283 |         case 'ERROR':
+      284 |         case 'FATAL':
+    > 285 |           console.error(logString);
+          |                   ^
+      286 |           break;
+      287 |         default:
+      288 |           console.log(logString);
+
+      at Logger.writeLog (../../packages/shared/src/logger/Logger.ts:285:19)
+      at Logger.logSecurityEvent (../../packages/shared/src/logger/Logger.ts:500:10)
+      at Object.<anonymous> (src/server/WebhookServer.ts:426:21)
+      at hookIterator (../../node_modules/fastify/lib/hooks.js:408:10)
+      at next (../../node_modules/fastify/lib/hooks.js:242:18)
+      at hookRunner (../../node_modules/fastify/lib/hooks.js:264:5)
+      at validationCompleted (../../node_modules/fastify/lib/handle-request.js:117:5)
+      at preValidationCallback (../../node_modules/fastify/lib/handle-request.js:101:5)
+      at handler (../../node_modules/fastify/lib/handle-request.js:78:7)
+      at onDone (../../node_modules/fastify/lib/content-type-parser.js:229:5)
+      at Parser.defaultJsonParser [as fn] (../../node_modules/fastify/lib/content-type-parser.js:317:7)
+      at Request.onEnd (../../node_modules/fastify/lib/content-type-parser.js:299:27)
+
+PASS tests/property/PerformanceTracker.property.test.ts
+PASS tests/integration/controllers/SignalController.test.ts
+PASS tests/property/CapitalFlowManager.property.test.ts
+PASS tests/unit/controllers/AuditController.test.ts
+PASS tests/health/HealthManager.test.ts
+PASS tests/property/AllocationEngine.property.test.ts
+PASS tests/unit/RiskGuardian.test.ts
+  ● Console
+
+    console.log
+      [RiskGuardian] Mock Calibrator Report
+
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:625:17)
+
+    console.log
+      [RiskGuardian] Mock Calibrator Report
+
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:625:17)
+
+    console.log
+      [RiskGuardian] Mock Calibrator Report
+
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:625:17)
+
+    console.log
+      [RiskGuardian] Mock Calibrator Report
+
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:625:17)
+
+    console.log
+      [RiskGuardian] Mock Calibrator Report
+
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:625:17)
+
+    console.log
+      [RiskGuardian] Mock Calibrator Report
+
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:625:17)
+
+    console.log
+      [RiskGuardian] Mock Calibrator Report
+
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:625:17)
+
+    console.log
+      [RiskGuardian] Mock Calibrator Report
+
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:625:17)
+
+    console.warn
+      [RiskGuardian] High Latency (250ms) - Penalizing size by 25%
+
+      702 |         const penalty = 0.25;
+      703 |         effectiveSize = signal.requestedSize * (1 - penalty);
+    > 704 |         console.warn(
+          |                 ^
+      705 |           `[RiskGuardian] High Latency (${signal.latencyProfile.endToEnd}ms) - Penalizing size by 25%`,
+      706 |         );
+      707 |       }
+
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:704:17)
+      at Object.<anonymous> (tests/unit/RiskGuardian.test.ts:880:37)
+
+    console.log
+      [RiskGuardian] Mock Calibrator Report
+
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:625:17)
+
+    console.log
+      [RiskGuardian] Mock Calibrator Report
+
+      at RiskGuardian.checkSignal (src/features/Risk/RiskGuardian.ts:625:17)
+
+PASS tests/integration/MarketDataIngestion.test.ts
+PASS tests/security/SecurityEnforcement.test.ts
+PASS tests/metrics/MetricsCollector.test.ts
+PASS tests/security/HMACValidator.test.ts
+PASS tests/unit/services/Reconciliation.test.ts
+PASS tests/unit/ChangePointDetector.test.ts
+PASS tests/logging/Logger.test.ts
+PASS tests/unit/FeatureStoreClient.test.ts
+PASS tests/unit/PowerLawIntegration.test.ts
+PASS tests/unit/DashboardService.test.ts
+  ● Console
+
+    console.error
+      Error fetching balances: Error: API Error
+          at Object.<anonymous> (/Users/ivan/Code/trading/titan/services/titan-brain/tests/unit/DashboardService.test.ts:119:56)
+          at Promise.then.completed (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:316:40)
+          at processTicksAndRejections (node:internal/process/task_queues:105:5)
+          at _runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:126:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at _runTestsForDescribeBlock (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:121:9)
+          at run (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/runTest.js:444:34)
+          at Object.worker (/Users/ivan/Code/trading/titan/services/titan-brain/node_modules/jest-runner/build/testWorker.js:106:12)
+
+      175 |     const providerPromises = Array.from(this.walletProviders.values()).map((p) =>
+      176 |       p().catch((err) => {
+    > 177 |         console.error('Error fetching balances:', err);
+          |                 ^
+      178 |         return [] as WalletBalance[];
+      179 |       }),
+      180 |     );
+
+      at src/server/DashboardService.ts:177:17
+          at async Promise.all (index 0)
+      at DashboardService.calculateNAV (src/server/DashboardService.ts:182:26)
+      at Object.<anonymous> (tests/unit/DashboardService.test.ts:124:22)
+
+PASS tests/performance/performance.test.ts
+PASS tests/unit/AllocationEngine.test.ts
+PASS tests/unit/ServiceDiscovery.test.ts
+PASS tests/unit/RiskGuardianVerification.test.ts
+PASS tests/unit/SignalRouter.test.ts
+PASS tests/unit/ReconciliationService.test.ts
+PASS tests/unit/HunterPredicates.test.ts
+PASS tests/unit/PrometheusMetrics.test.ts
+PASS tests/unit/VenueStatusStore.test.ts
+PASS tests/integration/controllers/SafetyController.test.ts
+PASS tests/unit/GateOrdering.invariant.test.ts
+PASS tests/unit/RegimeInferenceService.test.ts
+PASS tests/unit/PowerLawPolicyModule.test.ts
+PASS tests/unit/PerformanceTracker.test.ts
+PASS tests/unit/ProposalGateway.test.ts
+PASS tests/cache/CacheManager.test.ts
+PASS tests/unit/EventStore.test.ts
+PASS tests/unit/engine/OperatorActions.test.ts
+PASS tests/verification/SystemVerification.test.ts
+PASS tests/database/DatabaseManager.test.ts
+PASS tests/middleware/RateLimiter.test.ts
+PASS tests/unit/InputValidator.test.ts
+PASS tests/unit/NatsConsumer.test.ts
+PASS tests/unit/controllers/DashboardController.test.ts
+PASS tests/unit/ManualTradeService.test.ts
+PASS tests/unit/TitanNotificationHandler.test.ts
+PASS tests/server/ExecutionEngineClient.test.ts
+PASS tests/unit/NatsPublisher.test.ts
+PASS tests/unit/accounting/PostingEngine.test.ts
+PASS tests/unit/StructuredLogger.test.ts
+PASS tests/unit/BanditAllocator.test.ts
+PASS tests/unit/types.test.ts
+PASS tests/unit/controllers/LedgerController.test.ts
+PASS tests/unit/db/FillsRepository.test.ts
+PASS tests/services/accounting/PostingEngine.test.ts
+PASS tests/services/RiskManager.test.ts
+PASS tests/unit/CanaryLogic.test.ts
+PASS tests/services/CircuitBreaker.test.ts (7.402 s)
+PASS tests/unit/CapitalFlowManager.test.ts (7.442 s)
+PASS tests/unit/NotificationService.test.ts (8.214 s)
+(node:75543) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 21 SIGTERM listeners added to [process]. MaxListeners is 20. Use emitter.setMaxListeners() to increase limit
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:75543) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 21 SIGINT listeners added to [process]. MaxListeners is 20. Use emitter.setMaxListeners() to increase limit
+(node:75543) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 21 SIGUSR2 listeners added to [process]. MaxListeners is 20. Use emitter.setMaxListeners() to increase limit
+(node:75543) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 21 uncaughtException listeners added to [process]. MaxListeners is 20. Use emitter.setMaxListeners() to increase limit
+(node:75543) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 21 unhandledRejection listeners added to [process]. MaxListeners is 20. Use emitter.setMaxListeners() to increase limit
+PASS tests/startup/StartupManager.test.ts (19.314 s)
+A worker process has failed to exit gracefully and has been force exited. This is likely caused by tests leaking due to improper teardown. Try running with --detectOpenHandles to find leaks. Active timers can also cause this, ensure that .unref() was called on them.
+
+Summary of all failing tests
+FAIL tests/unit/ConfigLoader.test.ts
+  ● Configuration › ConfigLoader class › should validate configuration
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      138 |       const validConfig = { ...defaultConfig };
+      139 |       const result = validateConfig(validConfig);
+    > 140 |       expect(result.valid).toBe(true);
+          |                            ^
+      141 |     });
+      142 |
+      143 |     it("should detect invalid configuration", () => {
+
+      at Object.<anonymous> (tests/unit/ConfigLoader.test.ts:140:28)
+
+
+Test Suites: 1 failed, 65 passed, 66 total
+Tests:       1 failed, 2 skipped, 921 passed, 924 total
+Snapshots:   0 total
+Time:        20.071 s
+Ran all test suites.
+npm error Lifecycle script `test:unit` failed with error:
+npm error code 1
+npm error path /Users/ivan/Code/trading/titan/services/titan-brain
+npm error workspace titan-brain@1.0.0
+npm error location /Users/ivan/Code/trading/titan/services/titan-brain
+npm error command failed
+npm error command sh -c jest --config jest.config.cjs
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path /Users/ivan/Code/trading/titan/services/titan-brain
+npm error workspace titan-brain@1.0.0
+npm error location /Users/ivan/Code/trading/titan/services/titan-brain
+npm error command failed
+npm error command sh -c npm run test:unit

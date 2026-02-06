@@ -8,26 +8,26 @@
  * Requirements: 4.1, 4.6 (Global Liquidity Aggregation)
  */
 
-import { EventEmitter } from "events";
-import WebSocket from "ws";
-import { ConnectionStatus, ExchangeFlow } from "../types";
+import { EventEmitter } from 'events';
+import WebSocket from 'ws';
+import { ConnectionStatus, ExchangeFlow } from '../types';
 
 /**
  * Supported exchange identifiers
  */
 export type ExchangeId =
-  | "binance"
-  | "bybit"
-  | "coinbase"
-  | "deribit"
-  | "hyperliquid"
-  | "kraken"
-  | "mexc";
+  | 'binance'
+  | 'bybit'
+  | 'coinbase'
+  | 'deribit'
+  | 'hyperliquid'
+  | 'kraken'
+  | 'mexc';
 
 /**
  * Supported product types
  */
-export type ProductType = "spot" | "linear" | "inverse" | "option";
+export type ProductType = 'spot' | 'linear' | 'inverse' | 'option';
 
 /**
  * Trade data from exchange WebSocket
@@ -38,7 +38,7 @@ export interface ExchangeTrade {
   symbol: string;
   price: number;
   quantity: number;
-  side: "buy" | "sell";
+  side: 'buy' | 'sell';
   timestamp: number;
   tradeId: string;
 }
@@ -73,10 +73,7 @@ export interface ExchangeWebSocketConfig {
 /**
  * Default configuration values
  */
-const DEFAULT_CONFIG: Omit<
-  ExchangeWebSocketConfig,
-  "exchange" | "product" | "symbols"
-> = {
+const DEFAULT_CONFIG: Omit<ExchangeWebSocketConfig, 'exchange' | 'product' | 'symbols'> = {
   reconnectInterval: 5000,
   maxReconnectAttempts: 10,
   heartbeatInterval: 30000,
@@ -86,38 +83,35 @@ const DEFAULT_CONFIG: Omit<
 /**
  * Exchange WebSocket URLs by exchange and product type
  */
-const EXCHANGE_WS_URLS: Record<
-  ExchangeId,
-  Partial<Record<ProductType, string>>
-> = {
+const EXCHANGE_WS_URLS: Record<ExchangeId, Partial<Record<ProductType, string>>> = {
   binance: {
-    spot: "wss://stream.binance.com:9443/ws",
-    linear: "wss://fstream.binance.com/ws",
-    inverse: "wss://dstream.binance.com/ws",
-    option: "wss://nbstream.binance.com/eoptions/ws",
+    spot: 'wss://stream.binance.com:9443/ws',
+    linear: 'wss://fstream.binance.com/ws',
+    inverse: 'wss://dstream.binance.com/ws',
+    option: 'wss://nbstream.binance.com/eoptions/ws',
   },
   bybit: {
-    spot: "wss://stream.bybit.com/v5/public/spot",
-    linear: "wss://stream.bybit.com/v5/public/linear",
-    inverse: "wss://stream.bybit.com/v5/public/inverse",
-    option: "wss://stream.bybit.com/v5/public/option",
+    spot: 'wss://stream.bybit.com/v5/public/spot',
+    linear: 'wss://stream.bybit.com/v5/public/linear',
+    inverse: 'wss://stream.bybit.com/v5/public/inverse',
+    option: 'wss://stream.bybit.com/v5/public/option',
   },
   coinbase: {
-    spot: "wss://advanced-trade-ws.coinbase.com",
+    spot: 'wss://advanced-trade-ws.coinbase.com',
   },
   deribit: {
-    linear: "wss://www.deribit.com/ws/api/v2",
-    option: "wss://www.deribit.com/ws/api/v2",
+    linear: 'wss://www.deribit.com/ws/api/v2',
+    option: 'wss://www.deribit.com/ws/api/v2',
   },
   kraken: {
-    spot: "wss://ws.kraken.com/v2",
-    linear: "wss://futures.kraken.com/ws/v1",
+    spot: 'wss://ws.kraken.com/v2',
+    linear: 'wss://futures.kraken.com/ws/v1',
   },
   mexc: {
-    spot: "wss://wbs.mexc.com/ws",
+    spot: 'wss://wbs.mexc.com/ws',
   },
   hyperliquid: {
-    linear: "wss://api.hyperliquid.xyz/ws",
+    linear: 'wss://api.hyperliquid.xyz/ws',
   },
 };
 
@@ -150,13 +144,13 @@ export class ExchangeWebSocketClient extends EventEmitter {
     config: Partial<ExchangeWebSocketConfig> & {
       exchange: ExchangeId;
       product?: ProductType;
-    },
+    }
   ) {
     super();
     this.config = {
       ...DEFAULT_CONFIG,
-      symbols: ["BTCUSDT"],
-      product: "spot",
+      symbols: ['BTCUSDT'],
+      product: 'spot',
       ...config,
     };
   }
@@ -179,10 +173,8 @@ export class ExchangeWebSocketClient extends EventEmitter {
         // eslint-disable-next-line functional/immutable-data
         this.connectionStartTime = Date.now();
 
-        this.ws.on("open", () => {
-          console.log(
-            `🔗 ${this.config.exchange.toUpperCase()} WebSocket connected`,
-          );
+        this.ws.on('open', () => {
+          console.log(`🔗 ${this.config.exchange.toUpperCase()} WebSocket connected`);
           // eslint-disable-next-line functional/immutable-data
           this.reconnectAttempts = 0;
           // eslint-disable-next-line functional/immutable-data
@@ -191,15 +183,15 @@ export class ExchangeWebSocketClient extends EventEmitter {
           this.lastMessageTime = Date.now();
           this.startHeartbeat();
           this.subscribeToStreams();
-          this.emit("connected", this.config.exchange);
+          this.emit('connected', this.config.exchange);
           resolve();
         });
 
-        this.ws.on("message", (data: WebSocket.Data) => {
+        this.ws.on('message', (data: WebSocket.Data) => {
           this.handleMessage(data);
         });
 
-        this.ws.on("pong", () => {
+        this.ws.on('pong', () => {
           const latency = Date.now() - this.pingTime;
           // eslint-disable-next-line functional/immutable-data
           this.latencyMeasurements.push(latency);
@@ -209,23 +201,20 @@ export class ExchangeWebSocketClient extends EventEmitter {
           }
         });
 
-        this.ws.on("error", (error: Error) => {
-          console.error(
-            `❌ ${this.config.exchange.toUpperCase()} WebSocket error:`,
-            error.message,
-          );
-          this.emit("error", { exchange: this.config.exchange, error });
+        this.ws.on('error', (error: Error) => {
+          console.error(`❌ ${this.config.exchange.toUpperCase()} WebSocket error:`, error.message);
+          this.emit('error', { exchange: this.config.exchange, error });
           if (!this.isReconnecting && this.reconnectAttempts === 0) {
             reject(error);
           }
         });
 
-        this.ws.on("close", (code: number, reason: Buffer) => {
+        this.ws.on('close', (code: number, reason: Buffer) => {
           console.log(
-            `🔌 ${this.config.exchange.toUpperCase()} WebSocket closed: ${code} ${reason.toString()}`,
+            `🔌 ${this.config.exchange.toUpperCase()} WebSocket closed: ${code} ${reason.toString()}`
           );
           this.stopHeartbeat();
-          this.emit("disconnected", this.config.exchange);
+          this.emit('disconnected', this.config.exchange);
 
           if (!this.isClosing) {
             this.attemptReconnect();
@@ -275,9 +264,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
       case WebSocket.CLOSING:
       case WebSocket.CLOSED:
       default:
-        return this.isReconnecting
-          ? ConnectionStatus.RECONNECTING
-          : ConnectionStatus.DISCONNECTED;
+        return this.isReconnecting ? ConnectionStatus.RECONNECTING : ConnectionStatus.DISCONNECTED;
     }
   }
 
@@ -285,16 +272,14 @@ export class ExchangeWebSocketClient extends EventEmitter {
    * Get connection health metrics
    */
   getHealth(): ConnectionHealth {
-    const avgLatency = this.latencyMeasurements.length > 0
-      ? this.latencyMeasurements.reduce((a, b) => a + b, 0) /
-        this.latencyMeasurements.length
-      : 0;
+    const avgLatency =
+      this.latencyMeasurements.length > 0
+        ? this.latencyMeasurements.reduce((a, b) => a + b, 0) / this.latencyMeasurements.length
+        : 0;
 
     const now = Date.now();
     const timeSinceReset = (now - this.lastMessageCountReset) / 1000;
-    const messagesPerSecond = timeSinceReset > 0
-      ? this.messageCount / timeSinceReset
-      : 0;
+    const messagesPerSecond = timeSinceReset > 0 ? this.messageCount / timeSinceReset : 0;
 
     // Reset message count periodically
     if (timeSinceReset > 60) {
@@ -324,27 +309,23 @@ export class ExchangeWebSocketClient extends EventEmitter {
     const baseUrl = exchangeUrls[this.config.product];
 
     if (!baseUrl) {
-      throw new Error(
-        `No WebSocket URL for ${this.config.exchange} ${this.config.product}`,
-      );
+      throw new Error(`No WebSocket URL for ${this.config.exchange} ${this.config.product}`);
     }
 
     switch (this.config.exchange) {
-      case "binance": {
+      case 'binance': {
         // Binance uses stream names in URL for all products
-        const streamSuffix = this.config.product === "spot"
-          ? "aggTrade"
-          : "aggTrade";
+        const streamSuffix = this.config.product === 'spot' ? 'aggTrade' : 'aggTrade';
         const streams = this.config.symbols
-          .map((s) => `${s.toLowerCase()}@${streamSuffix}`)
-          .join("/");
+          .map(s => `${s.toLowerCase()}@${streamSuffix}`)
+          .join('/');
         return `${baseUrl}/${streams}`;
       }
 
-      case "bybit":
-      case "coinbase":
-      case "kraken":
-      case "mexc":
+      case 'bybit':
+      case 'coinbase':
+      case 'kraken':
+      case 'mexc':
         // These exchanges subscribe after connection
         return baseUrl;
 
@@ -360,25 +341,25 @@ export class ExchangeWebSocketClient extends EventEmitter {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
 
     switch (this.config.exchange) {
-      case "bybit":
+      case 'bybit':
         this.subscribeBybit();
         break;
-      case "coinbase":
+      case 'coinbase':
         this.subscribeCoinbase();
         break;
-      case "kraken":
+      case 'kraken':
         this.subscribeKraken();
         break;
-      case "mexc":
+      case 'mexc':
         this.subscribeMexc();
         break;
-      case "hyperliquid":
+      case 'hyperliquid':
         this.subscribeHyperliquid();
         break;
-      case "deribit":
+      case 'deribit':
         this.subscribeDeribit();
         break;
-        // Binance subscribes via URL
+      // Binance subscribes via URL
     }
   }
 
@@ -387,11 +368,9 @@ export class ExchangeWebSocketClient extends EventEmitter {
    */
   private subscribeBybit(): void {
     // Bybit V5 Format: publicTrade.{SYMBOL}
-    const args = this.config.symbols.map((s) =>
-      `publicTrade.${s.toUpperCase()}`
-    );
+    const args = this.config.symbols.map(s => `publicTrade.${s.toUpperCase()}`);
     const subscribeMessage = {
-      op: "subscribe",
+      op: 'subscribe',
       args: args,
     };
     this.ws?.send(JSON.stringify(subscribeMessage));
@@ -401,13 +380,11 @@ export class ExchangeWebSocketClient extends EventEmitter {
    * Subscribe to Coinbase trade stream
    */
   private subscribeCoinbase(): void {
-    const productIds = this.config.symbols.map((s) =>
-      this.convertSymbolToCoinbase(s)
-    );
+    const productIds = this.config.symbols.map(s => this.convertSymbolToCoinbase(s));
     const subscribeMessage = {
-      type: "subscribe",
+      type: 'subscribe',
       product_ids: productIds,
-      channels: ["matches"],
+      channels: ['matches'],
     };
     this.ws?.send(JSON.stringify(subscribeMessage));
   }
@@ -416,11 +393,11 @@ export class ExchangeWebSocketClient extends EventEmitter {
    * Subscribe to Kraken trade stream
    */
   private subscribeKraken(): void {
-    const pairs = this.config.symbols.map((s) => this.convertSymbolToKraken(s));
+    const pairs = this.config.symbols.map(s => this.convertSymbolToKraken(s));
     const subscribeMessage = {
-      event: "subscribe",
+      event: 'subscribe',
       pair: pairs,
-      subscription: { name: "trade" },
+      subscription: { name: 'trade' },
     };
     this.ws?.send(JSON.stringify(subscribeMessage));
   }
@@ -430,11 +407,9 @@ export class ExchangeWebSocketClient extends EventEmitter {
    */
   private subscribeMexc(): void {
     // MEXC Format: spot@public.deals.v3.api@<SYMBOL>
-    const params = this.config.symbols.map((s) =>
-      `spot@public.deals.v3.api@${s.toUpperCase()}`
-    );
+    const params = this.config.symbols.map(s => `spot@public.deals.v3.api@${s.toUpperCase()}`);
     const subscribeMessage = {
-      method: "SUBSCRIPTION",
+      method: 'SUBSCRIPTION',
       params: params,
     };
     this.ws?.send(JSON.stringify(subscribeMessage));
@@ -449,15 +424,15 @@ export class ExchangeWebSocketClient extends EventEmitter {
     for (const symbol of this.config.symbols) {
       // Strip common quote currencies for Hyperliquid
       const coin = symbol
-        .replace(/USDT$/, "")
-        .replace(/USD$/, "")
-        .replace(/PERP$/, "")
+        .replace(/USDT$/, '')
+        .replace(/USD$/, '')
+        .replace(/PERP$/, '')
         .toUpperCase();
 
       const subscribeMessage = {
-        method: "subscribe",
+        method: 'subscribe',
         subscription: {
-          type: "trades",
+          type: 'trades',
           coin: coin,
         },
       };
@@ -473,14 +448,14 @@ export class ExchangeWebSocketClient extends EventEmitter {
     // Deribit uses instrument names like "BTC-PERPETUAL" for perpetual futures
     // or "BTC-31JAN25-100000-C" for options
     // Build channels using map to avoid array mutation
-    const channels = this.config.symbols.map((symbol) => {
+    const channels = this.config.symbols.map(symbol => {
       const baseCoin = symbol
-        .replace(/USDT$/, "")
-        .replace(/USD$/, "")
-        .replace(/PERP$/, "")
+        .replace(/USDT$/, '')
+        .replace(/USD$/, '')
+        .replace(/PERP$/, '')
         .toUpperCase();
 
-      if (this.config.product === "option") {
+      if (this.config.product === 'option') {
         // Subscribe to all options trades for this coin using trades.option.{currency}.raw
         return `trades.option.${baseCoin}.raw`;
       } else {
@@ -491,9 +466,9 @@ export class ExchangeWebSocketClient extends EventEmitter {
 
     // Deribit uses JSON-RPC 2.0
     const subscribeMessage = {
-      jsonrpc: "2.0",
+      jsonrpc: '2.0',
       id: Date.now(),
-      method: "public/subscribe",
+      method: 'public/subscribe',
       params: {
         channels: channels,
       },
@@ -516,7 +491,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
       const trade = this.parseTradeMessage(message);
 
       if (trade) {
-        this.emit("trade", trade);
+        this.emit('trade', trade);
       }
     } catch (error) {
       // Ignore parse errors for non-trade messages
@@ -528,19 +503,19 @@ export class ExchangeWebSocketClient extends EventEmitter {
    */
   private parseTradeMessage(message: any): ExchangeTrade | null {
     switch (this.config.exchange) {
-      case "binance":
+      case 'binance':
         return this.parseBinanceTrade(message);
-      case "bybit":
+      case 'bybit':
         return this.parseBybitTrade(message);
-      case "coinbase":
+      case 'coinbase':
         return this.parseCoinbaseTrade(message);
-      case "kraken":
+      case 'kraken':
         return this.parseKrakenTrade(message);
-      case "mexc":
+      case 'mexc':
         return this.parseMexcTrade(message);
-      case "hyperliquid":
+      case 'hyperliquid':
         return this.parseHyperliquidTrade(message);
-      case "deribit":
+      case 'deribit':
         return this.parseDeribitTrade(message);
       default:
         return null;
@@ -551,15 +526,15 @@ export class ExchangeWebSocketClient extends EventEmitter {
    * Parse Binance aggTrade message
    */
   private parseBinanceTrade(message: any): ExchangeTrade | null {
-    if (message.e !== "aggTrade") return null;
+    if (message.e !== 'aggTrade') return null;
 
     return {
-      exchange: "binance",
+      exchange: 'binance',
       product: this.config.product,
       symbol: message.s,
       price: parseFloat(message.p),
       quantity: parseFloat(message.q),
-      side: message.m ? "sell" : "buy", // m=true means buyer is maker (sell aggressor)
+      side: message.m ? 'sell' : 'buy', // m=true means buyer is maker (sell aggressor)
       timestamp: message.T,
       tradeId: message.a.toString(),
     };
@@ -583,12 +558,10 @@ export class ExchangeWebSocketClient extends EventEmitter {
     //     "i": "uuid"         // trade ID
     //   }]
     // }
-    if (!message.topic || !message.topic.startsWith("publicTrade.")) {
+    if (!message.topic || !message.topic.startsWith('publicTrade.')) {
       return null;
     }
-    if (
-      !message.data || !Array.isArray(message.data) || message.data.length === 0
-    ) {
+    if (!message.data || !Array.isArray(message.data) || message.data.length === 0) {
       return null;
     }
 
@@ -596,12 +569,12 @@ export class ExchangeWebSocketClient extends EventEmitter {
     const trade = message.data[message.data.length - 1];
 
     return {
-      exchange: "bybit",
+      exchange: 'bybit',
       product: this.config.product,
       symbol: trade.s,
       price: parseFloat(trade.p),
       quantity: parseFloat(trade.v),
-      side: trade.S.toLowerCase() as "buy" | "sell",
+      side: trade.S.toLowerCase() as 'buy' | 'sell',
       timestamp: trade.T,
       tradeId: trade.i,
     };
@@ -611,15 +584,15 @@ export class ExchangeWebSocketClient extends EventEmitter {
    * Parse Coinbase match message
    */
   private parseCoinbaseTrade(message: any): ExchangeTrade | null {
-    if (message.type !== "match") return null;
+    if (message.type !== 'match') return null;
 
     return {
-      exchange: "coinbase",
+      exchange: 'coinbase',
       product: this.config.product,
       symbol: this.convertCoinbaseToSymbol(message.product_id),
       price: parseFloat(message.price),
       quantity: parseFloat(message.size),
-      side: message.side as "buy" | "sell",
+      side: message.side as 'buy' | 'sell',
       timestamp: new Date(message.time).getTime(),
       tradeId: message.trade_id.toString(),
     };
@@ -631,7 +604,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
   private parseKrakenTrade(message: any): ExchangeTrade | null {
     // Kraken sends array format: [channelID, [[price, volume, time, side, orderType, misc], ...], channelName, pair]
     if (!Array.isArray(message) || message.length < 4) return null;
-    if (message[2] !== "trade") return null;
+    if (message[2] !== 'trade') return null;
 
     const trades = message[1];
     const pair = message[3];
@@ -642,12 +615,12 @@ export class ExchangeWebSocketClient extends EventEmitter {
     const latestTrade = trades[trades.length - 1];
 
     return {
-      exchange: "kraken",
+      exchange: 'kraken',
       product: this.config.product,
       symbol: this.convertKrakenToSymbol(pair),
       price: parseFloat(latestTrade[0]),
       quantity: parseFloat(latestTrade[1]),
-      side: latestTrade[3] === "b" ? "buy" : "sell",
+      side: latestTrade[3] === 'b' ? 'buy' : 'sell',
       timestamp: Math.floor(parseFloat(latestTrade[2]) * 1000),
       tradeId: `${pair}-${latestTrade[2]}`,
     };
@@ -673,7 +646,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
     //   "t": 1612239652345 // Push time
     // }
 
-    if (!message.c || !message.c.startsWith("spot@public.deals.v3.api@")) {
+    if (!message.c || !message.c.startsWith('spot@public.deals.v3.api@')) {
       return null;
     }
     if (!message.d || !message.d.deals || !Array.isArray(message.d.deals)) {
@@ -687,15 +660,15 @@ export class ExchangeWebSocketClient extends EventEmitter {
     const deal = deals[deals.length - 1];
 
     // Extract symbol from channel name
-    const symbol = message.c.split("@")[2];
+    const symbol = message.c.split('@')[2];
 
     return {
-      exchange: "mexc",
+      exchange: 'mexc',
       product: this.config.product,
       symbol: symbol,
       price: parseFloat(deal.p),
       quantity: parseFloat(deal.q),
-      side: deal.S === 1 ? "buy" : "sell",
+      side: deal.S === 1 ? 'buy' : 'sell',
       timestamp: deal.t,
       tradeId: `${symbol}-${deal.t}-${deal.p}`, // Construct a unique ID as MEXC doesn't provide one per trade in this stream
     };
@@ -707,13 +680,10 @@ export class ExchangeWebSocketClient extends EventEmitter {
    */
   private parseHyperliquidTrade(message: any): ExchangeTrade | null {
     // Subscription response
-    if (message.channel === "subscriptionResponse") return null;
+    if (message.channel === 'subscriptionResponse') return null;
 
     // Trade data comes in "trades" channel
-    if (
-      message.channel !== "trades" || !message.data ||
-      !Array.isArray(message.data)
-    ) {
+    if (message.channel !== 'trades' || !message.data || !Array.isArray(message.data)) {
       return null;
     }
 
@@ -724,12 +694,12 @@ export class ExchangeWebSocketClient extends EventEmitter {
     const trade = trades[trades.length - 1];
 
     return {
-      exchange: "hyperliquid",
+      exchange: 'hyperliquid',
       product: this.config.product, // Always 'linear' for Hyperliquid perps
       symbol: `${trade.coin}USD`, // Normalize to BTCUSD format
       price: parseFloat(trade.px),
       quantity: parseFloat(trade.sz),
-      side: trade.side.toLowerCase() as "buy" | "sell",
+      side: trade.side.toLowerCase() as 'buy' | 'sell',
       timestamp: trade.time,
       tradeId: trade.hash || `${trade.coin}-${trade.time}-${trade.tid}`,
     };
@@ -748,7 +718,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
     if (message.error) return null;
 
     // Trade data comes via "subscription" method
-    if (message.method !== "subscription" || !message.params) return null;
+    if (message.method !== 'subscription' || !message.params) return null;
 
     const { channel, data } = message.params;
     if (!channel || !data || !Array.isArray(data) || data.length === 0) {
@@ -760,16 +730,16 @@ export class ExchangeWebSocketClient extends EventEmitter {
 
     // Normalize symbol from Deribit format (BTC-PERPETUAL or BTC-31JAN25-100000-C)
     // Extract the base currency (first part before first dash)
-    const instrumentParts = trade.instrument_name.split("-");
+    const instrumentParts = trade.instrument_name.split('-');
     const baseCoin = instrumentParts[0];
 
     return {
-      exchange: "deribit",
+      exchange: 'deribit',
       product: this.config.product,
       symbol: `${baseCoin}USD`, // Normalize to BTCUSD format
       price: trade.price,
       quantity: trade.amount,
-      side: trade.direction.toLowerCase() as "buy" | "sell",
+      side: trade.direction.toLowerCase() as 'buy' | 'sell',
       timestamp: trade.timestamp,
       tradeId: trade.trade_id,
     };
@@ -780,11 +750,11 @@ export class ExchangeWebSocketClient extends EventEmitter {
    */
   private convertSymbolToCoinbase(symbol: string): string {
     // Handle common patterns
-    if (symbol.endsWith("USDT")) {
-      return symbol.replace("USDT", "-USD");
+    if (symbol.endsWith('USDT')) {
+      return symbol.replace('USDT', '-USD');
     }
-    if (symbol.endsWith("USD")) {
-      return symbol.replace("USD", "-USD");
+    if (symbol.endsWith('USD')) {
+      return symbol.replace('USD', '-USD');
     }
     return symbol;
   }
@@ -793,7 +763,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
    * Convert Coinbase format to symbol (BTC-USD -> BTCUSDT)
    */
   private convertCoinbaseToSymbol(productId: string): string {
-    return productId.replace("-USD", "USDT").replace("-", "");
+    return productId.replace('-USD', 'USDT').replace('-', '');
   }
 
   /**
@@ -802,12 +772,12 @@ export class ExchangeWebSocketClient extends EventEmitter {
   private convertSymbolToKraken(symbol: string): string {
     // Kraken uses XBT for BTC
     // eslint-disable-next-line functional/no-let
-    let converted = symbol.replace("BTC", "XBT");
+    let converted = symbol.replace('BTC', 'XBT');
 
-    if (converted.endsWith("USDT")) {
-      converted = converted.replace("USDT", "/USD");
-    } else if (converted.endsWith("USD")) {
-      converted = converted.slice(0, -3) + "/USD";
+    if (converted.endsWith('USDT')) {
+      converted = converted.replace('USDT', '/USD');
+    } else if (converted.endsWith('USD')) {
+      converted = converted.slice(0, -3) + '/USD';
     }
 
     return converted;
@@ -817,7 +787,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
    * Convert Kraken format to symbol (XBT/USD -> BTCUSDT)
    */
   private convertKrakenToSymbol(pair: string): string {
-    return pair.replace("XBT", "BTC").replace("/USD", "USDT").replace("/", "");
+    return pair.replace('XBT', 'BTC').replace('/USD', 'USDT').replace('/', '');
   }
 
   /**
@@ -837,13 +807,13 @@ export class ExchangeWebSocketClient extends EventEmitter {
         // Check for stale connection
         if (Date.now() - this.lastMessageTime > this.config.messageTimeout) {
           console.warn(
-            `⚠️ ${this.config.exchange.toUpperCase()} connection stale, reconnecting...`,
+            `⚠️ ${this.config.exchange.toUpperCase()} connection stale, reconnecting...`
           );
           this.ws.close();
         }
 
         // Emit health update
-        this.emit("healthUpdate", this.getHealth());
+        this.emit('healthUpdate', this.getHealth());
       }
     }, this.config.heartbeatInterval);
   }
@@ -865,12 +835,10 @@ export class ExchangeWebSocketClient extends EventEmitter {
   private attemptReconnect(): void {
     if (this.isReconnecting || this.isClosing) return;
     if (this.reconnectAttempts >= this.config.maxReconnectAttempts) {
-      console.error(
-        `❌ ${this.config.exchange.toUpperCase()} max reconnect attempts reached`,
-      );
-      this.emit("error", {
+      console.error(`❌ ${this.config.exchange.toUpperCase()} max reconnect attempts reached`);
+      this.emit('error', {
         exchange: this.config.exchange,
-        error: new Error("Max reconnect attempts reached"),
+        error: new Error('Max reconnect attempts reached'),
       });
       return;
     }
@@ -882,14 +850,14 @@ export class ExchangeWebSocketClient extends EventEmitter {
 
     const delay = Math.min(
       this.config.reconnectInterval * Math.pow(2, this.reconnectAttempts - 1),
-      60000, // Max 60 seconds
+      60000 // Max 60 seconds
     );
 
     console.log(
-      `🔄 ${this.config.exchange.toUpperCase()} reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.config.maxReconnectAttempts})`,
+      `🔄 ${this.config.exchange.toUpperCase()} reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.config.maxReconnectAttempts})`
     );
 
-    this.emit("reconnecting", {
+    this.emit('reconnecting', {
       exchange: this.config.exchange,
       attempt: this.reconnectAttempts,
     });
@@ -898,10 +866,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
       try {
         await this.connect();
       } catch (error) {
-        console.error(
-          `❌ ${this.config.exchange.toUpperCase()} reconnect failed:`,
-          error,
-        );
+        console.error(`❌ ${this.config.exchange.toUpperCase()} reconnect failed:`, error);
         // eslint-disable-next-line functional/immutable-data
         this.isReconnecting = false;
         this.attemptReconnect();

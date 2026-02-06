@@ -7,8 +7,8 @@
  * Requirements: 4.3, 4.5 (Cross-Exchange Manipulation Detection)
  */
 
-import { EventEmitter } from "events";
-import { ConnectionStatus, ExchangeFlow, ManipulationAnalysis } from "../types";
+import { EventEmitter } from 'events';
+import { ConnectionStatus, ExchangeFlow, ManipulationAnalysis } from '../types';
 
 /**
  * Manipulation detection configuration
@@ -28,8 +28,8 @@ export interface ManipulationDetectorConfig {
 export interface DivergenceAnalysis {
   hasDivergence: boolean;
   divergenceScore: number; // 0-100
-  leadingExchange: "binance" | "coinbase" | "kraken" | "hyperliquid" | null;
-  laggingExchanges: ("binance" | "coinbase" | "kraken" | "hyperliquid")[];
+  leadingExchange: 'binance' | 'coinbase' | 'kraken' | 'hyperliquid' | null;
+  laggingExchanges: ('binance' | 'coinbase' | 'kraken' | 'hyperliquid')[];
   cvdDivergence: number;
   volumeDivergence: number;
   timestamp: Date;
@@ -40,9 +40,9 @@ export interface DivergenceAnalysis {
  */
 export interface OutlierAnalysis {
   hasOutlier: boolean;
-  outlierExchange: "binance" | "coinbase" | "kraken" | "hyperliquid" | null;
+  outlierExchange: 'binance' | 'coinbase' | 'kraken' | 'hyperliquid' | null;
   outlierScore: number; // 0-100
-  outlierType: "cvd" | "volume" | "price" | "none";
+  outlierType: 'cvd' | 'volume' | 'price' | 'none';
   deviation: number; // Standard deviations from mean
   timestamp: Date;
 }
@@ -51,12 +51,12 @@ export interface OutlierAnalysis {
  * Manipulation pattern types
  */
 export type ManipulationPattern =
-  | "single_exchange_outlier"
-  | "coordinated_manipulation"
-  | "volume_spike"
-  | "price_divergence"
-  | "cvd_painting"
-  | "none";
+  | 'single_exchange_outlier'
+  | 'coordinated_manipulation'
+  | 'volume_spike'
+  | 'price_divergence'
+  | 'cvd_painting'
+  | 'none';
 
 /**
  * Comprehensive manipulation analysis
@@ -65,10 +65,10 @@ export interface ComprehensiveManipulationAnalysis {
   detected: boolean;
   confidence: number; // 0-100
   pattern: ManipulationPattern;
-  suspectExchange: "binance" | "coinbase" | "kraken" | "hyperliquid" | null;
+  suspectExchange: 'binance' | 'coinbase' | 'kraken' | 'hyperliquid' | null;
   divergence: DivergenceAnalysis;
   outlier: OutlierAnalysis;
-  recommendation: "proceed" | "caution" | "veto";
+  recommendation: 'proceed' | 'caution' | 'veto';
   reasoning: string[];
   timestamp: Date;
 }
@@ -123,20 +123,18 @@ export class ManipulationDetector extends EventEmitter {
   analyzeManipulation(
     symbol: string,
     exchangeFlows: ExchangeFlow[],
-    aggregatedCVD: number,
+    aggregatedCVD: number
   ): ComprehensiveManipulationAnalysis {
     // Store historical data
     this.storeHistoricalData(symbol, exchangeFlows, aggregatedCVD);
 
     // Get connected exchanges only
     const connectedFlows = exchangeFlows.filter(
-      (f) => f.status === ConnectionStatus.CONNECTED && f.trades > 0,
+      f => f.status === ConnectionStatus.CONNECTED && f.trades > 0
     );
 
     if (connectedFlows.length < 2) {
-      return this.createNeutralAnalysis(
-        "Insufficient connected exchanges for analysis",
-      );
+      return this.createNeutralAnalysis('Insufficient connected exchanges for analysis');
     }
 
     // Perform analyses
@@ -144,14 +142,8 @@ export class ManipulationDetector extends EventEmitter {
     const outlier = this.analyzeOutliers(connectedFlows);
 
     // Determine overall manipulation status
-    const {
-      detected,
-      confidence,
-      pattern,
-      suspectExchange,
-      recommendation,
-      reasoning,
-    } = this.synthesizeAnalysis(divergence, outlier, connectedFlows);
+    const { detected, confidence, pattern, suspectExchange, recommendation, reasoning } =
+      this.synthesizeAnalysis(divergence, outlier, connectedFlows);
 
     const analysis: ComprehensiveManipulationAnalysis = {
       detected,
@@ -167,13 +159,13 @@ export class ManipulationDetector extends EventEmitter {
 
     // Emit events if manipulation detected
     if (detected) {
-      this.emit("manipulationDetected", analysis);
+      this.emit('manipulationDetected', analysis);
     }
     if (divergence.hasDivergence) {
-      this.emit("divergenceAlert", divergence);
+      this.emit('divergenceAlert', divergence);
     }
     if (outlier.hasOutlier) {
-      this.emit("outlierAlert", outlier);
+      this.emit('outlierAlert', outlier);
     }
 
     return analysis;
@@ -198,21 +190,14 @@ export class ManipulationDetector extends EventEmitter {
 
     // Calculate average CVD and volume
     const avgCVD = flows.reduce((sum, f) => sum + f.cvd, 0) / flows.length;
-    const avgVolume = flows.reduce((sum, f) => sum + f.volume, 0) /
-      flows.length;
+    const avgVolume = flows.reduce((sum, f) => sum + f.volume, 0) / flows.length;
 
     // Find the exchange with highest absolute CVD (potential leader)
     // eslint-disable-next-line functional/no-let
     let maxAbsCVD = 0;
     // eslint-disable-next-line functional/no-let
-    let leadingExchange:
-      | "binance"
-      | "coinbase"
-      | "kraken"
-      | "hyperliquid"
-      | null = null;
-    const laggingExchanges:
-      ("binance" | "coinbase" | "kraken" | "hyperliquid")[] = [];
+    let leadingExchange: 'binance' | 'coinbase' | 'kraken' | 'hyperliquid' | null = null;
+    const laggingExchanges: ('binance' | 'coinbase' | 'kraken' | 'hyperliquid')[] = [];
 
     for (const flow of flows) {
       if (Math.abs(flow.cvd) > maxAbsCVD) {
@@ -227,10 +212,7 @@ export class ManipulationDetector extends EventEmitter {
     for (const flow of flows) {
       if (flow.exchange !== leadingExchange) {
         const divergence = Math.abs(
-          flow.cvd -
-            (leadingExchange
-              ? flows.find((f) => f.exchange === leadingExchange)!.cvd
-              : 0),
+          flow.cvd - (leadingExchange ? flows.find(f => f.exchange === leadingExchange)!.cvd : 0)
         );
 
         if (divergence > maxDivergence) {
@@ -238,9 +220,7 @@ export class ManipulationDetector extends EventEmitter {
         }
 
         // Check if this exchange is lagging (opposite direction or much smaller magnitude)
-        const leaderCVD = flows.find((f) =>
-          f.exchange === leadingExchange
-        )?.cvd || 0;
+        const leaderCVD = flows.find(f => f.exchange === leadingExchange)?.cvd || 0;
         if (
           Math.sign(flow.cvd) !== Math.sign(leaderCVD) ||
           Math.abs(flow.cvd) < Math.abs(leaderCVD) * 0.3
@@ -252,14 +232,9 @@ export class ManipulationDetector extends EventEmitter {
     }
 
     // Calculate divergence score (0-100)
-    const cvdDivergence = avgCVD !== 0
-      ? (maxDivergence / Math.abs(avgCVD)) * 100
-      : 0;
+    const cvdDivergence = avgCVD !== 0 ? (maxDivergence / Math.abs(avgCVD)) * 100 : 0;
     const volumeDivergence = this.calculateVolumeDivergence(flows, avgVolume);
-    const divergenceScore = Math.min(
-      100,
-      (cvdDivergence + volumeDivergence) / 2,
-    );
+    const divergenceScore = Math.min(100, (cvdDivergence + volumeDivergence) / 2);
 
     const hasDivergence = divergenceScore > this.config.divergenceThreshold;
 
@@ -284,75 +259,57 @@ export class ManipulationDetector extends EventEmitter {
         hasOutlier: false,
         outlierExchange: null,
         outlierScore: 0,
-        outlierType: "none",
+        outlierType: 'none',
         deviation: 0,
         timestamp: new Date(),
       };
     }
 
     // Calculate statistics for CVD
-    const cvdValues = flows.map((f) => f.cvd);
+    const cvdValues = flows.map(f => f.cvd);
     const cvdMean = cvdValues.reduce((a, b) => a + b, 0) / cvdValues.length;
     const cvdStdDev = this.calculateStdDev(cvdValues, cvdMean);
 
     // Calculate statistics for volume
-    const volumeValues = flows.map((f) => f.volume);
-    const volumeMean = volumeValues.reduce((a, b) => a + b, 0) /
-      volumeValues.length;
+    const volumeValues = flows.map(f => f.volume);
+    const volumeMean = volumeValues.reduce((a, b) => a + b, 0) / volumeValues.length;
     const volumeStdDev = this.calculateStdDev(volumeValues, volumeMean);
 
     // Find outliers
     // eslint-disable-next-line functional/no-let
     let maxDeviation = 0;
     // eslint-disable-next-line functional/no-let
-    let outlierExchange:
-      | "binance"
-      | "coinbase"
-      | "kraken"
-      | "hyperliquid"
-      | null = null;
+    let outlierExchange: 'binance' | 'coinbase' | 'kraken' | 'hyperliquid' | null = null;
     // eslint-disable-next-line functional/no-let
-    let outlierType: "cvd" | "volume" | "price" | "none" = "none";
+    let outlierType: 'cvd' | 'volume' | 'price' | 'none' = 'none';
 
     for (const flow of flows) {
       // Check CVD outlier
-      const cvdDeviation = cvdStdDev > 0
-        ? Math.abs(flow.cvd - cvdMean) / cvdStdDev
-        : 0;
-      if (
-        cvdDeviation > maxDeviation &&
-        cvdDeviation > this.config.outlierStdDevMultiplier
-      ) {
+      const cvdDeviation = cvdStdDev > 0 ? Math.abs(flow.cvd - cvdMean) / cvdStdDev : 0;
+      if (cvdDeviation > maxDeviation && cvdDeviation > this.config.outlierStdDevMultiplier) {
         maxDeviation = cvdDeviation;
         outlierExchange = flow.exchange;
-        outlierType = "cvd";
+        outlierType = 'cvd';
       }
 
       // Check volume outlier
-      const volumeDeviation = volumeStdDev > 0
-        ? Math.abs(flow.volume - volumeMean) / volumeStdDev
-        : 0;
-      if (
-        volumeDeviation > maxDeviation &&
-        volumeDeviation > this.config.outlierStdDevMultiplier
-      ) {
+      const volumeDeviation =
+        volumeStdDev > 0 ? Math.abs(flow.volume - volumeMean) / volumeStdDev : 0;
+      if (volumeDeviation > maxDeviation && volumeDeviation > this.config.outlierStdDevMultiplier) {
         maxDeviation = volumeDeviation;
         outlierExchange = flow.exchange;
-        outlierType = "volume";
+        outlierType = 'volume';
       }
     }
 
     const hasOutlier = maxDeviation > this.config.outlierStdDevMultiplier;
-    const outlierScore = Math.min(
-      100,
-      (maxDeviation / this.config.outlierStdDevMultiplier) * 50,
-    );
+    const outlierScore = Math.min(100, (maxDeviation / this.config.outlierStdDevMultiplier) * 50);
 
     return {
       hasOutlier,
       outlierExchange: hasOutlier ? outlierExchange : null,
       outlierScore,
-      outlierType: hasOutlier ? outlierType : "none",
+      outlierType: hasOutlier ? outlierType : 'none',
       deviation: maxDeviation,
       timestamp: new Date(),
     };
@@ -376,13 +333,13 @@ export class ManipulationDetector extends EventEmitter {
 
     for (const point of recentHistory) {
       const connectedFlows = point.exchangeFlows.filter(
-        (f) => f.status === ConnectionStatus.CONNECTED,
+        f => f.status === ConnectionStatus.CONNECTED
       );
 
       if (connectedFlows.length < 2) continue;
 
       const outlier = this.analyzeOutliers(connectedFlows);
-      if (outlier.hasOutlier && outlier.outlierType === "cvd") {
+      if (outlier.hasOutlier && outlier.outlierType === 'cvd') {
         if (lastOutlier === outlier.outlierExchange) {
           consistentOutlierCount++;
         } else {
@@ -402,74 +359,66 @@ export class ManipulationDetector extends EventEmitter {
   private synthesizeAnalysis(
     divergence: DivergenceAnalysis,
     outlier: OutlierAnalysis,
-    flows: ExchangeFlow[],
+    flows: ExchangeFlow[]
   ): {
     detected: boolean;
     confidence: number;
     pattern: ManipulationPattern;
-    suspectExchange: "binance" | "coinbase" | "kraken" | "hyperliquid" | null;
-    recommendation: "proceed" | "caution" | "veto";
+    suspectExchange: 'binance' | 'coinbase' | 'kraken' | 'hyperliquid' | null;
+    recommendation: 'proceed' | 'caution' | 'veto';
     reasoning: string[];
   } {
     const reasoning: string[] = [];
     // eslint-disable-next-line functional/no-let
     let confidence = 0;
     // eslint-disable-next-line functional/no-let
-    let pattern: ManipulationPattern = "none";
+    let pattern: ManipulationPattern = 'none';
     // eslint-disable-next-line functional/no-let
-    let suspectExchange:
-      | "binance"
-      | "coinbase"
-      | "kraken"
-      | "hyperliquid"
-      | null = null;
+    let suspectExchange: 'binance' | 'coinbase' | 'kraken' | 'hyperliquid' | null = null;
 
     // Check for single exchange outlier
     if (outlier.hasOutlier) {
       confidence += outlier.outlierScore * 0.4;
-      pattern = "single_exchange_outlier";
+      pattern = 'single_exchange_outlier';
       suspectExchange = outlier.outlierExchange;
       // eslint-disable-next-line functional/immutable-data
       reasoning.push(
-        `${outlier.outlierExchange} shows ${outlier.outlierType} outlier (${
-          outlier.deviation.toFixed(1)
-        } std devs)`,
+        `${outlier.outlierExchange} shows ${outlier.outlierType} outlier (${outlier.deviation.toFixed(
+          1
+        )} std devs)`
       );
     }
 
     // Check for divergence
     if (divergence.hasDivergence) {
       confidence += divergence.divergenceScore * 0.4;
-      if (pattern === "none") {
-        pattern = "single_exchange_outlier";
+      if (pattern === 'none') {
+        pattern = 'single_exchange_outlier';
       }
       if (!suspectExchange) {
         suspectExchange = divergence.leadingExchange;
       }
       // eslint-disable-next-line functional/immutable-data
       reasoning.push(
-        `Exchange divergence detected: ${divergence.leadingExchange} leading, ${
-          divergence.laggingExchanges.join(", ")
-        } lagging`,
+        `Exchange divergence detected: ${divergence.leadingExchange} leading, ${divergence.laggingExchanges.join(
+          ', '
+        )} lagging`
       );
     }
 
     // Check for volume anomaly
-    const avgVolume = flows.reduce((sum, f) => sum + f.volume, 0) /
-      flows.length;
+    const avgVolume = flows.reduce((sum, f) => sum + f.volume, 0) / flows.length;
     for (const flow of flows) {
-      if (
-        flow.volume > avgVolume * (this.config.volumeAnomalyThreshold / 100)
-      ) {
+      if (flow.volume > avgVolume * (this.config.volumeAnomalyThreshold / 100)) {
         confidence += 20;
-        if (pattern === "none") {
-          pattern = "volume_spike";
+        if (pattern === 'none') {
+          pattern = 'volume_spike';
         }
         // eslint-disable-next-line functional/immutable-data
         reasoning.push(
-          `${flow.exchange} volume spike: ${
-            ((flow.volume / avgVolume) * 100).toFixed(0)
-          }% of average`,
+          `${flow.exchange} volume spike: ${((flow.volume / avgVolume) * 100).toFixed(
+            0
+          )}% of average`
         );
         break;
       }
@@ -477,20 +426,20 @@ export class ManipulationDetector extends EventEmitter {
 
     // Determine recommendation
     // eslint-disable-next-line functional/no-let
-    let recommendation: "proceed" | "caution" | "veto";
+    let recommendation: 'proceed' | 'caution' | 'veto';
     if (confidence >= 70) {
-      recommendation = "veto";
+      recommendation = 'veto';
       // eslint-disable-next-line functional/immutable-data
-      reasoning.push("High manipulation confidence - signal vetoed");
+      reasoning.push('High manipulation confidence - signal vetoed');
     } else if (confidence >= 40) {
-      recommendation = "caution";
+      recommendation = 'caution';
       // eslint-disable-next-line functional/immutable-data
-      reasoning.push("Moderate manipulation risk - proceed with caution");
+      reasoning.push('Moderate manipulation risk - proceed with caution');
     } else {
-      recommendation = "proceed";
+      recommendation = 'proceed';
       if (reasoning.length === 0) {
         // eslint-disable-next-line functional/immutable-data
-        reasoning.push("No significant manipulation patterns detected");
+        reasoning.push('No significant manipulation patterns detected');
       }
     }
 
@@ -507,10 +456,7 @@ export class ManipulationDetector extends EventEmitter {
   /**
    * Calculate volume divergence score
    */
-  private calculateVolumeDivergence(
-    flows: ExchangeFlow[],
-    avgVolume: number,
-  ): number {
+  private calculateVolumeDivergence(flows: ExchangeFlow[], avgVolume: number): number {
     if (avgVolume === 0) return 0;
 
     // eslint-disable-next-line functional/no-let
@@ -531,9 +477,8 @@ export class ManipulationDetector extends EventEmitter {
   private calculateStdDev(values: number[], mean: number): number {
     if (values.length < 2) return 0;
 
-    const squaredDiffs = values.map((v) => Math.pow(v - mean, 2));
-    const avgSquaredDiff = squaredDiffs.reduce((a, b) => a + b, 0) /
-      values.length;
+    const squaredDiffs = values.map(v => Math.pow(v - mean, 2));
+    const avgSquaredDiff = squaredDiffs.reduce((a, b) => a + b, 0) / values.length;
     return Math.sqrt(avgSquaredDiff);
   }
 
@@ -543,7 +488,7 @@ export class ManipulationDetector extends EventEmitter {
   private storeHistoricalData(
     symbol: string,
     exchangeFlows: ExchangeFlow[],
-    aggregatedCVD: number,
+    aggregatedCVD: number
   ): void {
     if (!this.historicalData.has(symbol)) {
       // eslint-disable-next-line functional/immutable-data
@@ -560,7 +505,7 @@ export class ManipulationDetector extends EventEmitter {
 
     // Cleanup old data
     const cutoff = Date.now() - this.config.analysisWindow;
-    const filtered = history.filter((h) => h.timestamp > cutoff);
+    const filtered = history.filter(h => h.timestamp > cutoff);
     // eslint-disable-next-line functional/immutable-data
     this.historicalData.set(symbol, filtered);
   }
@@ -568,13 +513,11 @@ export class ManipulationDetector extends EventEmitter {
   /**
    * Create neutral analysis result
    */
-  private createNeutralAnalysis(
-    reason: string,
-  ): ComprehensiveManipulationAnalysis {
+  private createNeutralAnalysis(reason: string): ComprehensiveManipulationAnalysis {
     return {
       detected: false,
       confidence: 0,
-      pattern: "none",
+      pattern: 'none',
       suspectExchange: null,
       divergence: {
         hasDivergence: false,
@@ -589,11 +532,11 @@ export class ManipulationDetector extends EventEmitter {
         hasOutlier: false,
         outlierExchange: null,
         outlierScore: 0,
-        outlierType: "none",
+        outlierType: 'none',
         deviation: 0,
         timestamp: new Date(),
       },
-      recommendation: "proceed",
+      recommendation: 'proceed',
       reasoning: [reason],
       timestamp: new Date(),
     };

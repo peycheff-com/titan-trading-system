@@ -1,0 +1,1426 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="665" failures="0" errors="0" time="13.232">
+  <testsuite name="HologramScanner" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:08" time="1.222" tests="21">
+    <testcase classname="HologramScanner rankByAlignment should rank symbols by status priority then alignment score" name="HologramScanner rankByAlignment should rank symbols by status priority then alignment score" time="0.003">
+    </testcase>
+    <testcase classname="HologramScanner rankByAlignment should use RS score as tiebreaker for same status and alignment score" name="HologramScanner rankByAlignment should use RS score as tiebreaker for same status and alignment score" time="0.001">
+    </testcase>
+    <testcase classname="HologramScanner rankByAlignment should handle empty array" name="HologramScanner rankByAlignment should handle empty array" time="0">
+    </testcase>
+    <testcase classname="HologramScanner selectTop20 should select top 20 tradeable symbols (A+ and B)" name="HologramScanner selectTop20 should select top 20 tradeable symbols (A+ and B)" time="0.001">
+    </testcase>
+    <testcase classname="HologramScanner selectTop20 should fall back to best available if less than 20 tradeable symbols" name="HologramScanner selectTop20 should fall back to best available if less than 20 tradeable symbols" time="0">
+    </testcase>
+    <testcase classname="HologramScanner selectTop20 should handle empty array" name="HologramScanner selectTop20 should handle empty array" time="0.001">
+    </testcase>
+    <testcase classname="HologramScanner scan should complete successful scan" name="HologramScanner scan should complete successful scan" time="0.002">
+    </testcase>
+    <testcase classname="HologramScanner scan should handle partial failures gracefully" name="HologramScanner scan should handle partial failures gracefully" time="0.001">
+    </testcase>
+    <testcase classname="HologramScanner scan should emit scanComplete event on success" name="HologramScanner scan should emit scanComplete event on success" time="0.001">
+    </testcase>
+    <testcase classname="HologramScanner scan should emit scanError event on failure" name="HologramScanner scan should emit scanError event on failure" time="0.01">
+    </testcase>
+    <testcase classname="HologramScanner scan should prevent concurrent scans" name="HologramScanner scan should prevent concurrent scans" time="0.102">
+    </testcase>
+    <testcase classname="HologramScanner scan should update scan statistics" name="HologramScanner scan should update scan statistics" time="0">
+    </testcase>
+    <testcase classname="HologramScanner getSymbolSummary should return hologram summary for valid symbol" name="HologramScanner getSymbolSummary should return hologram summary for valid symbol" time="0.001">
+    </testcase>
+    <testcase classname="HologramScanner getSymbolSummary should return error message for failed analysis" name="HologramScanner getSymbolSummary should return error message for failed analysis" time="0">
+    </testcase>
+    <testcase classname="HologramScanner statistics and monitoring should track scan statistics correctly" name="HologramScanner statistics and monitoring should track scan statistics correctly" time="0.001">
+    </testcase>
+    <testcase classname="HologramScanner statistics and monitoring should reset statistics" name="HologramScanner statistics and monitoring should reset statistics" time="0">
+    </testcase>
+    <testcase classname="HologramScanner statistics and monitoring should report scanning status correctly" name="HologramScanner statistics and monitoring should report scanning status correctly" time="0.052">
+    </testcase>
+    <testcase classname="HologramScanner error handling should handle fetchTopSymbols failure" name="HologramScanner error handling should handle fetchTopSymbols failure" time="0.001">
+    </testcase>
+    <testcase classname="HologramScanner error handling should handle empty symbol list" name="HologramScanner error handling should handle empty symbol list" time="0">
+    </testcase>
+    <testcase classname="HologramScanner error handling should continue scan even if some symbols fail" name="HologramScanner error handling should continue scan even if some symbols fail" time="0.001">
+    </testcase>
+    <testcase classname="HologramScanner cleanup should cleanup resources properly" name="HologramScanner cleanup should cleanup resources properly" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="Oracle Property Tests" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:09" time="0.845" tests="5">
+    <testcase classname="Oracle Property Tests SentimentCalculator should always return sentiment between -100 and +100" name="Oracle Property Tests SentimentCalculator should always return sentiment between -100 and +100" time="0.042">
+    </testcase>
+    <testcase classname="Oracle Property Tests SentimentCalculator should always return confidence between 0 and 100" name="Oracle Property Tests SentimentCalculator should always return confidence between 0 and 100" time="0.013">
+    </testcase>
+    <testcase classname="Oracle Property Tests SentimentCalculator should give higher or equal weight to closer events (Monotonicity)" name="Oracle Property Tests SentimentCalculator should give higher or equal weight to closer events (Monotonicity)" time="0.001">
+    </testcase>
+    <testcase classname="Oracle Property Tests SentimentCalculator Oracle Conviction Logic should return multiplier between 0.5 and MAX" name="Oracle Property Tests SentimentCalculator Oracle Conviction Logic should return multiplier between 0.5 and MAX" time="0.018">
+    </testcase>
+    <testcase classname="Oracle Property Tests SentimentCalculator Oracle Conviction Logic should apply boost when strongly aligned (Long + Bullish &gt; 60)" name="Oracle Property Tests SentimentCalculator Oracle Conviction Logic should apply boost when strongly aligned (Long + Bullish &gt; 60)" time="0.009">
+    </testcase>
+  </testsuite>
+  <testsuite name="BybitPerpsClient" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:08" time="2.94" tests="29">
+    <testcase classname="BybitPerpsClient fetchTopSymbols should fetch and return top 100 symbols by volume" name="BybitPerpsClient fetchTopSymbols should fetch and return top 100 symbols by volume" time="0.002">
+    </testcase>
+    <testcase classname="BybitPerpsClient fetchTopSymbols should return cached data on subsequent calls" name="BybitPerpsClient fetchTopSymbols should return cached data on subsequent calls" time="0">
+    </testcase>
+    <testcase classname="BybitPerpsClient fetchTopSymbols should handle API errors" name="BybitPerpsClient fetchTopSymbols should handle API errors" time="0.009">
+    </testcase>
+    <testcase classname="BybitPerpsClient fetchOHLCV should fetch OHLCV data and convert to standard format" name="BybitPerpsClient fetchOHLCV should fetch OHLCV data and convert to standard format" time="0.001">
+    </testcase>
+    <testcase classname="BybitPerpsClient fetchOHLCV should convert intervals correctly" name="BybitPerpsClient fetchOHLCV should convert intervals correctly" time="0">
+    </testcase>
+    <testcase classname="BybitPerpsClient fetchOHLCV should cache OHLCV data" name="BybitPerpsClient fetchOHLCV should cache OHLCV data" time="0">
+    </testcase>
+    <testcase classname="BybitPerpsClient getCurrentPrice should fetch current price for symbol" name="BybitPerpsClient getCurrentPrice should fetch current price for symbol" time="0">
+    </testcase>
+    <testcase classname="BybitPerpsClient getCurrentPrice should handle missing ticker data" name="BybitPerpsClient getCurrentPrice should handle missing ticker data" time="0.001">
+    </testcase>
+    <testcase classname="BybitPerpsClient getEquity should fetch account equity" name="BybitPerpsClient getEquity should fetch account equity" time="0">
+    </testcase>
+    <testcase classname="BybitPerpsClient placeOrder should place market order successfully" name="BybitPerpsClient placeOrder should place market order successfully" time="0">
+    </testcase>
+    <testcase classname="BybitPerpsClient placeOrder should place limit order with price" name="BybitPerpsClient placeOrder should place limit order with price" time="0">
+    </testcase>
+    <testcase classname="BybitPerpsClient placeOrder should place post-only order" name="BybitPerpsClient placeOrder should place post-only order" time="0.001">
+    </testcase>
+    <testcase classname="BybitPerpsClient placeOrder should include stop loss and take profit" name="BybitPerpsClient placeOrder should include stop loss and take profit" time="0">
+    </testcase>
+    <testcase classname="BybitPerpsClient placeOrder should throw error for limit order without price" name="BybitPerpsClient placeOrder should throw error for limit order without price" time="0">
+    </testcase>
+    <testcase classname="BybitPerpsClient placeOrderWithRetry should retry failed orders" name="BybitPerpsClient placeOrderWithRetry should retry failed orders" time="1.002">
+    </testcase>
+    <testcase classname="BybitPerpsClient placeOrderWithRetry should fail after max retries" name="BybitPerpsClient placeOrderWithRetry should fail after max retries" time="1.002">
+    </testcase>
+    <testcase classname="BybitPerpsClient setLeverage should set leverage for symbol" name="BybitPerpsClient setLeverage should set leverage for symbol" time="0">
+    </testcase>
+    <testcase classname="BybitPerpsClient setStopLoss should set stop loss for position" name="BybitPerpsClient setStopLoss should set stop loss for position" time="0">
+    </testcase>
+    <testcase classname="BybitPerpsClient setTakeProfit should set take profit for position" name="BybitPerpsClient setTakeProfit should set take profit for position" time="0.001">
+    </testcase>
+    <testcase classname="BybitPerpsClient getOrderStatus should get order status" name="BybitPerpsClient getOrderStatus should get order status" time="0">
+    </testcase>
+    <testcase classname="BybitPerpsClient getOrderStatus should handle order not found" name="BybitPerpsClient getOrderStatus should handle order not found" time="0">
+    </testcase>
+    <testcase classname="BybitPerpsClient cancelOrder should cancel order successfully" name="BybitPerpsClient cancelOrder should cancel order successfully" time="0">
+    </testcase>
+    <testcase classname="BybitPerpsClient getPositionInfo should get position info" name="BybitPerpsClient getPositionInfo should get position info" time="0">
+    </testcase>
+    <testcase classname="BybitPerpsClient getPositionInfo should return null for no position" name="BybitPerpsClient getPositionInfo should return null for no position" time="0">
+    </testcase>
+    <testcase classname="BybitPerpsClient cache management should clear cache" name="BybitPerpsClient cache management should clear cache" time="0">
+    </testcase>
+    <testcase classname="BybitPerpsClient cache management should track cache size" name="BybitPerpsClient cache management should track cache size" time="0.001">
+    </testcase>
+    <testcase classname="BybitPerpsClient error handling should handle HTTP errors" name="BybitPerpsClient error handling should handle HTTP errors" time="0">
+    </testcase>
+    <testcase classname="BybitPerpsClient error handling should handle network errors" name="BybitPerpsClient error handling should handle network errors" time="0">
+    </testcase>
+    <testcase classname="BybitPerpsClient error handling should handle API errors" name="BybitPerpsClient error handling should handle API errors" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="Enhanced2026ConfigManager Property Tests" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:10" time="1.027" tests="7">
+    <testcase classname="Enhanced2026ConfigManager Property Tests should only accept valid Oracle veto thresholds (30-70%)" name="Enhanced2026ConfigManager Property Tests should only accept valid Oracle veto thresholds (30-70%)" time="0.041">
+    </testcase>
+    <testcase classname="Enhanced2026ConfigManager Property Tests should only accept valid Oracle conviction multipliers (1.0-2.0)" name="Enhanced2026ConfigManager Property Tests should only accept valid Oracle conviction multipliers (1.0-2.0)" time="0.027">
+    </testcase>
+    <testcase classname="Enhanced2026ConfigManager Property Tests should only accept valid sweep thresholds (3-10)" name="Enhanced2026ConfigManager Property Tests should only accept valid sweep thresholds (3-10)" time="0.019">
+    </testcase>
+    <testcase classname="Enhanced2026ConfigManager Property Tests should only accept valid precision thresholds (0.1-1.0%)" name="Enhanced2026ConfigManager Property Tests should only accept valid precision thresholds (0.1-1.0%)" time="0.019">
+    </testcase>
+    <testcase classname="Enhanced2026ConfigManager Property Tests should validate exchange weights sum to 100% and are within range" name="Enhanced2026ConfigManager Property Tests should validate exchange weights sum to 100% and are within range" time="0.047">
+    </testcase>
+    <testcase classname="Enhanced2026ConfigManager Property Tests should enforce min multiplier &lt; max multiplier" name="Enhanced2026ConfigManager Property Tests should enforce min multiplier &lt; max multiplier" time="0.014">
+    </testcase>
+    <testcase classname="Enhanced2026ConfigManager Property Tests should maintain configuration integrity through randomized partial updates" name="Enhanced2026ConfigManager Property Tests should maintain configuration integrity through randomized partial updates" time="0.02">
+    </testcase>
+  </testsuite>
+  <testsuite name="CredentialManager" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:11" time="0.593" tests="31">
+    <testcase classname="CredentialManager Master Password Management should set master password directly" name="CredentialManager Master Password Management should set master password directly" time="0">
+    </testcase>
+    <testcase classname="CredentialManager Master Password Management should get master password from environment variable" name="CredentialManager Master Password Management should get master password from environment variable" time="0.001">
+    </testcase>
+    <testcase classname="CredentialManager Master Password Management should throw error when no master password provided" name="CredentialManager Master Password Management should throw error when no master password provided" time="0.006">
+    </testcase>
+    <testcase classname="CredentialManager Master Password Management should throw error when trying to save without master password" name="CredentialManager Master Password Management should throw error when trying to save without master password" time="0.001">
+    </testcase>
+    <testcase classname="CredentialManager Master Password Management should throw error when trying to load without master password" name="CredentialManager Master Password Management should throw error when trying to load without master password" time="0">
+    </testcase>
+    <testcase classname="CredentialManager Credential Validation should validate valid credentials" name="CredentialManager Credential Validation should validate valid credentials" time="0.016">
+    </testcase>
+    <testcase classname="CredentialManager Credential Validation should reject credentials with empty Binance API key" name="CredentialManager Credential Validation should reject credentials with empty Binance API key" time="0">
+    </testcase>
+    <testcase classname="CredentialManager Credential Validation should reject credentials with empty Binance API secret" name="CredentialManager Credential Validation should reject credentials with empty Binance API secret" time="0">
+    </testcase>
+    <testcase classname="CredentialManager Credential Validation should reject credentials with empty Bybit API key" name="CredentialManager Credential Validation should reject credentials with empty Bybit API key" time="0.001">
+    </testcase>
+    <testcase classname="CredentialManager Credential Validation should reject credentials with empty Bybit API secret" name="CredentialManager Credential Validation should reject credentials with empty Bybit API secret" time="0">
+    </testcase>
+    <testcase classname="CredentialManager Credential Validation should reject credentials missing Binance section" name="CredentialManager Credential Validation should reject credentials missing Binance section" time="0">
+    </testcase>
+    <testcase classname="CredentialManager Credential Validation should reject credentials missing Bybit section" name="CredentialManager Credential Validation should reject credentials missing Bybit section" time="0">
+    </testcase>
+    <testcase classname="CredentialManager Encryption and Decryption should save and load credentials successfully" name="CredentialManager Encryption and Decryption should save and load credentials successfully" time="0.03">
+    </testcase>
+    <testcase classname="CredentialManager Encryption and Decryption should create encrypted file with restricted permissions" name="CredentialManager Encryption and Decryption should create encrypted file with restricted permissions" time="0.016">
+    </testcase>
+    <testcase classname="CredentialManager Encryption and Decryption should fail to load with wrong master password" name="CredentialManager Encryption and Decryption should fail to load with wrong master password" time="0.031">
+    </testcase>
+    <testcase classname="CredentialManager Encryption and Decryption should throw error when loading non-existent credentials" name="CredentialManager Encryption and Decryption should throw error when loading non-existent credentials" time="0">
+    </testcase>
+    <testcase classname="CredentialManager Encryption and Decryption should handle corrupted credentials file" name="CredentialManager Encryption and Decryption should handle corrupted credentials file" time="0.016">
+    </testcase>
+    <testcase classname="CredentialManager File Operations should check if credentials exist" name="CredentialManager File Operations should check if credentials exist" time="0.015">
+    </testcase>
+    <testcase classname="CredentialManager File Operations should delete credentials securely" name="CredentialManager File Operations should delete credentials securely" time="0.016">
+    </testcase>
+    <testcase classname="CredentialManager File Operations should get credentials file info" name="CredentialManager File Operations should get credentials file info" time="0.015">
+    </testcase>
+    <testcase classname="CredentialManager File Operations should test credentials validity" name="CredentialManager File Operations should test credentials validity" time="0.045">
+    </testcase>
+    <testcase classname="CredentialManager Exchange-Specific Operations should update Binance credentials" name="CredentialManager Exchange-Specific Operations should update Binance credentials" time="0.036">
+    </testcase>
+    <testcase classname="CredentialManager Exchange-Specific Operations should update Bybit credentials" name="CredentialManager Exchange-Specific Operations should update Bybit credentials" time="0.031">
+    </testcase>
+    <testcase classname="CredentialManager Exchange-Specific Operations should get specific exchange credentials" name="CredentialManager Exchange-Specific Operations should get specific exchange credentials" time="0.046">
+    </testcase>
+    <testcase classname="CredentialManager Exchange-Specific Operations should create new credentials when updating non-existent file" name="CredentialManager Exchange-Specific Operations should create new credentials when updating non-existent file" time="0.03">
+    </testcase>
+    <testcase classname="CredentialManager Master Password Change should change master password successfully" name="CredentialManager Master Password Change should change master password successfully" time="0.075">
+    </testcase>
+    <testcase classname="CredentialManager Master Password Change should throw error when changing password without current password set" name="CredentialManager Master Password Change should throw error when changing password without current password set" time="0.001">
+    </testcase>
+    <testcase classname="CredentialManager Master Password Change should restore old password on failure" name="CredentialManager Master Password Change should restore old password on failure" time="0.061">
+    </testcase>
+    <testcase classname="CredentialManager Edge Cases should handle credentials with whitespace" name="CredentialManager Edge Cases should handle credentials with whitespace" time="0.017">
+    </testcase>
+    <testcase classname="CredentialManager Edge Cases should handle very long credentials" name="CredentialManager Edge Cases should handle very long credentials" time="0.031">
+    </testcase>
+    <testcase classname="CredentialManager Edge Cases should handle special characters in credentials" name="CredentialManager Edge Cases should handle special characters in credentials" time="0.03">
+    </testcase>
+  </testsuite>
+  <testsuite name="DrawdownProtector" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:11" time="0.186" tests="22">
+    <testcase classname="DrawdownProtector Daily Drawdown Protection should trigger level 1 protection at 3% drawdown" name="DrawdownProtector Daily Drawdown Protection should trigger level 1 protection at 3% drawdown" time="0.001">
+    </testcase>
+    <testcase classname="DrawdownProtector Daily Drawdown Protection should trigger level 2 protection at 5% drawdown" name="DrawdownProtector Daily Drawdown Protection should trigger level 2 protection at 5% drawdown" time="0.001">
+    </testcase>
+    <testcase classname="DrawdownProtector Daily Drawdown Protection should trigger level 3 protection at 7% drawdown" name="DrawdownProtector Daily Drawdown Protection should trigger level 3 protection at 7% drawdown" time="0">
+    </testcase>
+    <testcase classname="DrawdownProtector Daily Drawdown Protection should reset daily drawdown on new day" name="DrawdownProtector Daily Drawdown Protection should reset daily drawdown on new day" time="0.001">
+    </testcase>
+    <testcase classname="DrawdownProtector Weekly Drawdown Protection should trigger leverage reduction at 10% weekly drawdown" name="DrawdownProtector Weekly Drawdown Protection should trigger leverage reduction at 10% weekly drawdown" time="0">
+    </testcase>
+    <testcase classname="DrawdownProtector Weekly Drawdown Protection should reset weekly drawdown on new week" name="DrawdownProtector Weekly Drawdown Protection should reset weekly drawdown on new week" time="0">
+    </testcase>
+    <testcase classname="DrawdownProtector Consecutive Loss Protection should trigger protection after 3 consecutive losses" name="DrawdownProtector Consecutive Loss Protection should trigger protection after 3 consecutive losses" time="0.002">
+    </testcase>
+    <testcase classname="DrawdownProtector Consecutive Loss Protection should reset consecutive losses on win" name="DrawdownProtector Consecutive Loss Protection should reset consecutive losses on win" time="0">
+    </testcase>
+    <testcase classname="DrawdownProtector Win Rate Monitoring should trigger strategy degradation warning when win rate &lt; 40%" name="DrawdownProtector Win Rate Monitoring should trigger strategy degradation warning when win rate &lt; 40%" time="0.001">
+    </testcase>
+    <testcase classname="DrawdownProtector Win Rate Monitoring should not trigger warning with insufficient trades" name="DrawdownProtector Win Rate Monitoring should not trigger warning with insufficient trades" time="0">
+    </testcase>
+    <testcase classname="DrawdownProtector Win Rate Monitoring should not trigger warning with good win rate" name="DrawdownProtector Win Rate Monitoring should not trigger warning with good win rate" time="0">
+    </testcase>
+    <testcase classname="DrawdownProtector Emergency Flatten should close all positions during emergency flatten" name="DrawdownProtector Emergency Flatten should close all positions during emergency flatten" time="0.001">
+    </testcase>
+    <testcase classname="DrawdownProtector Emergency Flatten should handle order failures during emergency flatten" name="DrawdownProtector Emergency Flatten should handle order failures during emergency flatten" time="0">
+    </testcase>
+    <testcase classname="DrawdownProtector Trade Tracking should add trades and maintain history" name="DrawdownProtector Trade Tracking should add trades and maintain history" time="0">
+    </testcase>
+    <testcase classname="DrawdownProtector Trade Tracking should limit trade history to 100 trades" name="DrawdownProtector Trade Tracking should limit trade history to 100 trades" time="0.001">
+    </testcase>
+    <testcase classname="DrawdownProtector State Management should return current state" name="DrawdownProtector State Management should return current state" time="0.001">
+    </testcase>
+    <testcase classname="DrawdownProtector State Management should reset state correctly" name="DrawdownProtector State Management should reset state correctly" time="0">
+    </testcase>
+    <testcase classname="DrawdownProtector State Management should provide statistics" name="DrawdownProtector State Management should provide statistics" time="0">
+    </testcase>
+    <testcase classname="DrawdownProtector Configuration should update configuration" name="DrawdownProtector Configuration should update configuration" time="0.001">
+    </testcase>
+    <testcase classname="DrawdownProtector Emergency Pause Management should lift emergency pause after duration expires" name="DrawdownProtector Emergency Pause Management should lift emergency pause after duration expires" time="0.15">
+    </testcase>
+    <testcase classname="DrawdownProtector Emergency Pause Management should block new positions during emergency pause" name="DrawdownProtector Emergency Pause Management should block new positions during emergency pause" time="0.001">
+    </testcase>
+    <testcase classname="DrawdownProtector Emergency Pause Management should block new positions when daily drawdown &gt;= 5%" name="DrawdownProtector Emergency Pause Management should block new positions when daily drawdown &gt;= 5%" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="ArbitrageMonitor Property Tests" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:11" time="0.562" tests="2">
+    <testcase classname="ArbitrageMonitor Property Tests should correctly identify arbitrage opportunities when spread exceeds threshold" name="ArbitrageMonitor Property Tests should correctly identify arbitrage opportunities when spread exceeds threshold" time="0.019">
+    </testcase>
+    <testcase classname="ArbitrageMonitor Property Tests should correctly calculate raw spreads between exchanges" name="ArbitrageMonitor Property Tests should correctly calculate raw spreads between exchanges" time="0.004">
+    </testcase>
+  </testsuite>
+  <testsuite name="ConvictionSizingEngine Properties" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:11" time="0.997" tests="2">
+    <testcase classname="ConvictionSizingEngine Properties should reduce risk when high/extreme impact events are imminent" name="ConvictionSizingEngine Properties should reduce risk when high/extreme impact events are imminent" time="0.038">
+    </testcase>
+    <testcase classname="ConvictionSizingEngine Properties eventRiskMultiplier should never exceed 1.0" name="ConvictionSizingEngine Properties eventRiskMultiplier should never exceed 1.0" time="0.012">
+    </testcase>
+  </testsuite>
+  <testsuite name="FractalMath Property Tests" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:12" time="0.865" tests="5">
+    <testcase classname="FractalMath Property Tests Property 1: Fractal detection should be deterministic and consistent" name="FractalMath Property Tests Property 1: Fractal detection should be deterministic and consistent" time="0.058">
+    </testcase>
+    <testcase classname="FractalMath Property Tests Property 2: All detected fractals should satisfy Bill Williams definition" name="FractalMath Property Tests Property 2: All detected fractals should satisfy Bill Williams definition" time="0.033">
+    </testcase>
+    <testcase classname="FractalMath Property Tests Property 3: Fractal count should be within expected bounds" name="FractalMath Property Tests Property 3: Fractal count should be within expected bounds" time="0.009">
+    </testcase>
+    <testcase classname="FractalMath Property Tests Property 4: Should handle insufficient input gracefully" name="FractalMath Property Tests Property 4: Should handle insufficient input gracefully" time="0.002">
+    </testcase>
+    <testcase classname="FractalMath Property Tests Property 5: Input array should remain unchanged" name="FractalMath Property Tests Property 5: Input array should remain unchanged" time="0.017">
+    </testcase>
+  </testsuite>
+  <testsuite name="CVDValidator Property Tests" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:12" time="0.797" tests="7">
+    <testcase classname="CVDValidator Property Tests Property 4: Should detect absorption when price makes Lower Low and CVD makes Higher Low" name="CVDValidator Property Tests Property 4: Should detect absorption when price makes Lower Low and CVD makes Higher Low" time="0.025">
+    </testcase>
+    <testcase classname="CVDValidator Property Tests Property 5: Should detect distribution when price makes Higher High and CVD makes Lower High" name="CVDValidator Property Tests Property 5: Should detect distribution when price makes Higher High and CVD makes Lower High" time="0.019">
+    </testcase>
+    <testcase classname="CVDValidator Property Tests Property 6: Should not detect false positives in random data" name="CVDValidator Property Tests Property 6: Should not detect false positives in random data" time="0.002">
+    </testcase>
+    <testcase classname="CVDValidator Property Tests Property 7: Should handle insufficient data gracefully" name="CVDValidator Property Tests Property 7: Should handle insufficient data gracefully" time="0.002">
+    </testcase>
+    <testcase classname="CVDValidator Property Tests Property 8: Confidence scores should be consistent and bounded" name="CVDValidator Property Tests Property 8: Confidence scores should be consistent and bounded" time="0.006">
+    </testcase>
+    <testcase classname="CVDValidator Property Tests Property 9: Should emit events when patterns are detected" name="CVDValidator Property Tests Property 9: Should emit events when patterns are detected" time="0.003">
+    </testcase>
+    <testcase classname="CVDValidator Property Tests Property 10: Input arrays should remain unchanged" name="CVDValidator Property Tests Property 10: Input arrays should remain unchanged" time="0.006">
+    </testcase>
+  </testsuite>
+  <testsuite name="Logger" errors="0" failures="0" skipped="7" timestamp="2026-02-06T20:32:13" time="0.542" tests="9">
+    <testcase classname="Logger constructor should create log directory if it does not exist" name="Logger constructor should create log directory if it does not exist" time="0">
+      <skipped/>
+    </testcase>
+    <testcase classname="Logger constructor should initialize write stream" name="Logger constructor should initialize write stream" time="0">
+      <skipped/>
+    </testcase>
+    <testcase classname="Logger logSignal should log signal with comprehensive data" name="Logger logSignal should log signal with comprehensive data" time="0">
+      <skipped/>
+    </testcase>
+    <testcase classname="Logger logExecution should log execution with fill details" name="Logger logExecution should log execution with fill details" time="0">
+      <skipped/>
+    </testcase>
+    <testcase classname="Logger logPositionClose should log position close with P&amp;L details" name="Logger logPositionClose should log position close with P&amp;L details" time="0">
+      <skipped/>
+    </testcase>
+    <testcase classname="Logger logError should log error with context" name="Logger logError should log error with context" time="0">
+      <skipped/>
+    </testcase>
+    <testcase classname="Logger JSONL format should write each log entry as a single JSON line" name="Logger JSONL format should write each log entry as a single JSON line" time="0">
+      <skipped/>
+    </testcase>
+    <testcase classname="Logger updateConfig should update configuration" name="Logger updateConfig should update configuration" time="0.069">
+    </testcase>
+    <testcase classname="Logger close should close write stream" name="Logger close should close write stream" time="0.018">
+    </testcase>
+  </testsuite>
+  <testsuite name="PolymarketClient" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:13" time="0.491" tests="9">
+    <testcase classname="PolymarketClient Connection Management should successfully connect when API is reachable" name="PolymarketClient Connection Management should successfully connect when API is reachable" time="0.001">
+    </testcase>
+    <testcase classname="PolymarketClient Connection Management should fail to connect when API is unreachable" name="PolymarketClient Connection Management should fail to connect when API is unreachable" time="0.011">
+    </testcase>
+    <testcase classname="PolymarketClient Market Fetching should fetch markets with correct parameters" name="PolymarketClient Market Fetching should fetch markets with correct parameters" time="0">
+    </testcase>
+    <testcase classname="PolymarketClient Market Fetching should fetch specific market by ID" name="PolymarketClient Market Fetching should fetch specific market by ID" time="0">
+    </testcase>
+    <testcase classname="PolymarketClient Market Fetching should return null for non-existent market" name="PolymarketClient Market Fetching should return null for non-existent market" time="0.011">
+    </testcase>
+    <testcase classname="PolymarketClient Rate Limiting &amp; Retries should retry on temporary failures" name="PolymarketClient Rate Limiting &amp; Retries should retry on temporary failures" time="0.031">
+    </testcase>
+    <testcase classname="PolymarketClient Rate Limiting &amp; Retries should handle 429 Rate Limit responses" name="PolymarketClient Rate Limiting &amp; Retries should handle 429 Rate Limit responses" time="0">
+    </testcase>
+    <testcase classname="PolymarketClient Category Specific Fetching should fetch crypto markets using keywords" name="PolymarketClient Category Specific Fetching should fetch crypto markets using keywords" time="0">
+    </testcase>
+    <testcase classname="PolymarketClient Data Transformation should correctly convert market to prediction event" name="PolymarketClient Data Transformation should correctly convert market to prediction event" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="PatternPrecisionAnalyzer Property Tests" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:14" time="0.819" tests="5">
+    <testcase classname="PatternPrecisionAnalyzer Property Tests Precision Scoring should flag patterns with exact tick precision as suspect" name="PatternPrecisionAnalyzer Property Tests Precision Scoring should flag patterns with exact tick precision as suspect" time="0.012">
+    </testcase>
+    <testcase classname="PatternPrecisionAnalyzer Property Tests Precision Scoring should give higher precision scores to more precise patterns" name="PatternPrecisionAnalyzer Property Tests Precision Scoring should give higher precision scores to more precise patterns" time="0.004">
+    </testcase>
+    <testcase classname="PatternPrecisionAnalyzer Property Tests Timing Perfection should score session open times higher than random times" name="PatternPrecisionAnalyzer Property Tests Timing Perfection should score session open times higher than random times" time="0.004">
+    </testcase>
+    <testcase classname="PatternPrecisionAnalyzer Property Tests Timing Perfection should score &quot;perfect&quot; minutes (:00, :15, :30, :45) higher" name="PatternPrecisionAnalyzer Property Tests Timing Perfection should score &quot;perfect&quot; minutes (:00, :15, :30, :45) higher" time="0.004">
+    </testcase>
+    <testcase classname="PatternPrecisionAnalyzer Property Tests Round Number Bias should flag ROUND_NUMBER_ALIGNMENT for round number patterns" name="PatternPrecisionAnalyzer Property Tests Round Number Bias should flag ROUND_NUMBER_ALIGNMENT for round number patterns" time="0.003">
+    </testcase>
+  </testsuite>
+  <testsuite name="ConfigManager" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:14" time="0.807" tests="11">
+    <testcase classname="ConfigManager Configuration Loading should initialize and load config from shared manager" name="ConfigManager Configuration Loading should initialize and load config from shared manager" time="0.003">
+    </testcase>
+    <testcase classname="ConfigManager Configuration Loading should merge with defaults if shared config is missing fields" name="ConfigManager Configuration Loading should merge with defaults if shared config is missing fields" time="0.002">
+    </testcase>
+    <testcase classname="ConfigManager Configuration Validation should validate valid configuration updates" name="ConfigManager Configuration Validation should validate valid configuration updates" time="0.001">
+    </testcase>
+    <testcase classname="ConfigManager Configuration Validation should reject invalid alignment weights" name="ConfigManager Configuration Validation should reject invalid alignment weights" time="0.007">
+    </testcase>
+    <testcase classname="ConfigManager Configuration Updates should update alignment weights and save" name="ConfigManager Configuration Updates should update alignment weights and save" time="0">
+    </testcase>
+    <testcase classname="ConfigManager Configuration Updates should emit configChanged event on updates" name="ConfigManager Configuration Updates should emit configChanged event on updates" time="0.001">
+    </testcase>
+    <testcase classname="ConfigManager Hot Reload should listen to shared manager events" name="ConfigManager Hot Reload should listen to shared manager events" time="0">
+    </testcase>
+    <testcase classname="ConfigManager Oracle Configuration Validation should validate Oracle veto threshold range (30-70%)" name="ConfigManager Oracle Configuration Validation should validate Oracle veto threshold range (30-70%)" time="0.001">
+    </testcase>
+    <testcase classname="ConfigManager Oracle Configuration Validation should validate Oracle conviction multiplier max (1.0-2.0)" name="ConfigManager Oracle Configuration Validation should validate Oracle conviction multiplier max (1.0-2.0)" time="0.002">
+    </testcase>
+    <testcase classname="ConfigManager Bot Trap Configuration Validation should validate precision threshold range (0.1-1%)" name="ConfigManager Bot Trap Configuration Validation should validate precision threshold range (0.1-1%)" time="0.001">
+    </testcase>
+    <testcase classname="ConfigManager Utility Methods should generate proper summary" name="ConfigManager Utility Methods should generate proper summary" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="PortfolioManager" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:15" time="0.028" tests="31">
+    <testcase classname="PortfolioManager calcTotalExposure should calculate total exposure correctly" name="PortfolioManager calcTotalExposure should calculate total exposure correctly" time="0">
+    </testcase>
+    <testcase classname="PortfolioManager calcTotalExposure should return 0 for zero equity" name="PortfolioManager calcTotalExposure should return 0 for zero equity" time="0">
+    </testcase>
+    <testcase classname="PortfolioManager calcTotalExposure should handle empty positions" name="PortfolioManager calcTotalExposure should handle empty positions" time="0.001">
+    </testcase>
+    <testcase classname="PortfolioManager enforceMaxPositions should allow new position when under limit" name="PortfolioManager enforceMaxPositions should allow new position when under limit" time="0">
+    </testcase>
+    <testcase classname="PortfolioManager enforceMaxPositions should reject new position when at limit" name="PortfolioManager enforceMaxPositions should reject new position when at limit" time="0">
+    </testcase>
+    <testcase classname="PortfolioManager enforceMaxPositions should only count open positions" name="PortfolioManager enforceMaxPositions should only count open positions" time="0">
+    </testcase>
+    <testcase classname="PortfolioManager allocateRiskPerTrade should allocate risk dynamically based on open positions" name="PortfolioManager allocateRiskPerTrade should allocate risk dynamically based on open positions" time="0">
+    </testcase>
+    <testcase classname="PortfolioManager allocateRiskPerTrade should handle no open positions" name="PortfolioManager allocateRiskPerTrade should handle no open positions" time="0">
+    </testcase>
+    <testcase classname="PortfolioManager rankSignals should rank signals by composite score" name="PortfolioManager rankSignals should rank signals by composite score" time="0">
+    </testcase>
+    <testcase classname="PortfolioManager rankSignals should limit to top 3 signals" name="PortfolioManager rankSignals should limit to top 3 signals" time="0">
+    </testcase>
+    <testcase classname="PortfolioManager rankSignals should handle empty signals array" name="PortfolioManager rankSignals should handle empty signals array" time="0">
+    </testcase>
+    <testcase classname="PortfolioManager checkPortfolioHeat should calculate portfolio heat correctly" name="PortfolioManager checkPortfolioHeat should calculate portfolio heat correctly" time="0">
+    </testcase>
+    <testcase classname="PortfolioManager checkPortfolioHeat should reject when portfolio heat exceeds limit" name="PortfolioManager checkPortfolioHeat should reject when portfolio heat exceeds limit" time="0">
+    </testcase>
+    <testcase classname="PortfolioManager checkPortfolioHeat should return false for zero equity" name="PortfolioManager checkPortfolioHeat should return false for zero equity" time="0">
+    </testcase>
+    <testcase classname="PortfolioManager adjustForDirectionalBias should not adjust when no directional bias" name="PortfolioManager adjustForDirectionalBias should not adjust when no directional bias" time="0">
+    </testcase>
+    <testcase classname="PortfolioManager adjustForDirectionalBias should reduce position size when adding to directional bias" name="PortfolioManager adjustForDirectionalBias should reduce position size when adding to directional bias" time="0">
+    </testcase>
+    <testcase classname="PortfolioManager adjustForDirectionalBias should not adjust when going against directional bias" name="PortfolioManager adjustForDirectionalBias should not adjust when going against directional bias" time="0.001">
+    </testcase>
+    <testcase classname="PortfolioManager adjustForDirectionalBias should handle empty positions" name="PortfolioManager adjustForDirectionalBias should handle empty positions" time="0">
+    </testcase>
+    <testcase classname="PortfolioManager updatePortfolioState should update portfolio state correctly" name="PortfolioManager updatePortfolioState should update portfolio state correctly" time="0">
+    </testcase>
+    <testcase classname="PortfolioManager updatePortfolioState should detect neutral bias with mixed positions" name="PortfolioManager updatePortfolioState should detect neutral bias with mixed positions" time="0">
+    </testcase>
+    <testcase classname="PortfolioManager canAcceptSignal should accept signal when all limits are within bounds" name="PortfolioManager canAcceptSignal should accept signal when all limits are within bounds" time="0">
+    </testcase>
+    <testcase classname="PortfolioManager canAcceptSignal should reject signal when position limit exceeded" name="PortfolioManager canAcceptSignal should reject signal when position limit exceeded" time="0">
+    </testcase>
+    <testcase classname="PortfolioManager getPortfolioStatistics should return correct portfolio statistics" name="PortfolioManager getPortfolioStatistics should return correct portfolio statistics" time="0">
+    </testcase>
+    <testcase classname="PortfolioManager position management should add and remove positions correctly" name="PortfolioManager position management should add and remove positions correctly" time="0.001">
+    </testcase>
+    <testcase classname="PortfolioManager position management should update positions correctly" name="PortfolioManager position management should update positions correctly" time="0">
+    </testcase>
+    <testcase classname="PortfolioManager position management should get open positions only" name="PortfolioManager position management should get open positions only" time="0">
+    </testcase>
+    <testcase classname="PortfolioManager position management should clear all positions" name="PortfolioManager position management should clear all positions" time="0">
+    </testcase>
+    <testcase classname="PortfolioManager configuration should update configuration correctly" name="PortfolioManager configuration should update configuration correctly" time="0">
+    </testcase>
+    <testcase classname="PortfolioManager event emission should emit portfolio updated event" name="PortfolioManager event emission should emit portfolio updated event" time="0">
+    </testcase>
+    <testcase classname="PortfolioManager event emission should emit signal rejected event" name="PortfolioManager event emission should emit signal rejected event" time="0">
+    </testcase>
+    <testcase classname="PortfolioManager event emission should emit directional bias event" name="PortfolioManager event emission should emit directional bias event" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="HunterEventEmitter" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:15" time="0.027" tests="19">
+    <testcase classname="HunterEventEmitter Singleton Pattern should return the same instance" name="HunterEventEmitter Singleton Pattern should return the same instance" time="0.001">
+    </testcase>
+    <testcase classname="HunterEventEmitter Basic Event Operations should emit and receive events" name="HunterEventEmitter Basic Event Operations should emit and receive events" time="0">
+    </testcase>
+    <testcase classname="HunterEventEmitter Basic Event Operations should handle multiple listeners for the same event" name="HunterEventEmitter Basic Event Operations should handle multiple listeners for the same event" time="0">
+    </testcase>
+    <testcase classname="HunterEventEmitter Basic Event Operations should handle once listeners correctly" name="HunterEventEmitter Basic Event Operations should handle once listeners correctly" time="0">
+    </testcase>
+    <testcase classname="HunterEventEmitter Basic Event Operations should remove listeners correctly" name="HunterEventEmitter Basic Event Operations should remove listeners correctly" time="0">
+    </testcase>
+    <testcase classname="HunterEventEmitter Convenience Methods should emit hologram updated event" name="HunterEventEmitter Convenience Methods should emit hologram updated event" time="0">
+    </testcase>
+    <testcase classname="HunterEventEmitter Convenience Methods should emit session change event" name="HunterEventEmitter Convenience Methods should emit session change event" time="0.001">
+    </testcase>
+    <testcase classname="HunterEventEmitter Convenience Methods should emit CVD absorption event" name="HunterEventEmitter Convenience Methods should emit CVD absorption event" time="0">
+    </testcase>
+    <testcase classname="HunterEventEmitter Convenience Methods should emit signal generated event" name="HunterEventEmitter Convenience Methods should emit signal generated event" time="0">
+    </testcase>
+    <testcase classname="HunterEventEmitter Convenience Methods should emit execution complete event" name="HunterEventEmitter Convenience Methods should emit execution complete event" time="0">
+    </testcase>
+    <testcase classname="HunterEventEmitter Convenience Methods should emit error event" name="HunterEventEmitter Convenience Methods should emit error event" time="0">
+    </testcase>
+    <testcase classname="HunterEventEmitter Convenience Methods should emit scan complete event" name="HunterEventEmitter Convenience Methods should emit scan complete event" time="0.002">
+    </testcase>
+    <testcase classname="HunterEventEmitter Convenience Methods should emit Judas swing event" name="HunterEventEmitter Convenience Methods should emit Judas swing event" time="0">
+    </testcase>
+    <testcase classname="HunterEventEmitter Convenience Methods should emit POI detected event" name="HunterEventEmitter Convenience Methods should emit POI detected event" time="0">
+    </testcase>
+    <testcase classname="HunterEventEmitter Convenience Methods should emit risk warning event" name="HunterEventEmitter Convenience Methods should emit risk warning event" time="0.001">
+    </testcase>
+    <testcase classname="HunterEventEmitter Event Statistics should return correct event statistics" name="HunterEventEmitter Event Statistics should return correct event statistics" time="0">
+    </testcase>
+    <testcase classname="HunterEventEmitter Event Statistics should clear all listeners" name="HunterEventEmitter Event Statistics should clear all listeners" time="0">
+    </testcase>
+    <testcase classname="HunterEventEmitter Error Handling should propagate listener errors as expected" name="HunterEventEmitter Error Handling should propagate listener errors as expected" time="0.005">
+    </testcase>
+    <testcase classname="HunterEventEmitter Error Handling should handle multiple listeners where some throw errors" name="HunterEventEmitter Error Handling should handle multiple listeners where some throw errors" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="EnhancedRiskManager" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:15" time="0.029" tests="37">
+    <testcase classname="EnhancedRiskManager initialization should initialize with default config" name="EnhancedRiskManager initialization should initialize with default config" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager initialization should initialize with custom config" name="EnhancedRiskManager initialization should initialize with custom config" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager initialization should start with no active conditions" name="EnhancedRiskManager initialization should start with no active conditions" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager initialization should start with default adjustments" name="EnhancedRiskManager initialization should start with default adjustments" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager high-impact event detection (Requirement 8.1) should activate condition when high-impact event exceeds threshold" name="EnhancedRiskManager high-impact event detection (Requirement 8.1) should activate condition when high-impact event exceeds threshold" time="0.001">
+    </testcase>
+    <testcase classname="EnhancedRiskManager high-impact event detection (Requirement 8.1) should reduce position size by 50% for high-impact events" name="EnhancedRiskManager high-impact event detection (Requirement 8.1) should reduce position size by 50% for high-impact events" time="0.001">
+    </testcase>
+    <testcase classname="EnhancedRiskManager high-impact event detection (Requirement 8.1) should not activate for events below threshold" name="EnhancedRiskManager high-impact event detection (Requirement 8.1) should not activate for events below threshold" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager high-impact event detection (Requirement 8.1) should mark extreme events as critical severity" name="EnhancedRiskManager high-impact event detection (Requirement 8.1) should mark extreme events as critical severity" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager prediction market volatility (Requirement 8.2) should activate condition for extreme uncertainty" name="EnhancedRiskManager prediction market volatility (Requirement 8.2) should activate condition for extreme uncertainty" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager prediction market volatility (Requirement 8.2) should tighten stop loss for extreme uncertainty" name="EnhancedRiskManager prediction market volatility (Requirement 8.2) should tighten stop loss for extreme uncertainty" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager scheduled event risk adjustments (Requirements 8.4, 8.5) should activate condition for imminent high-impact events" name="EnhancedRiskManager scheduled event risk adjustments (Requirements 8.4, 8.5) should activate condition for imminent high-impact events" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager scheduled event risk adjustments (Requirements 8.4, 8.5) should reduce position size by 30% for scheduled events" name="EnhancedRiskManager scheduled event risk adjustments (Requirements 8.4, 8.5) should reduce position size by 30% for scheduled events" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager scheduled event risk adjustments (Requirements 8.4, 8.5) should halt entries for events within 1 hour" name="EnhancedRiskManager scheduled event risk adjustments (Requirements 8.4, 8.5) should halt entries for events within 1 hour" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager Global CVD divergence monitoring (Requirement 8.3) should activate condition for high CVD divergence" name="EnhancedRiskManager Global CVD divergence monitoring (Requirement 8.3) should activate condition for high CVD divergence" time="0.001">
+    </testcase>
+    <testcase classname="EnhancedRiskManager Global CVD divergence monitoring (Requirement 8.3) should halt entries when manipulation detected" name="EnhancedRiskManager Global CVD divergence monitoring (Requirement 8.3) should halt entries when manipulation detected" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager Global CVD divergence monitoring (Requirement 8.3) should deactivate condition when divergence normalizes" name="EnhancedRiskManager Global CVD divergence monitoring (Requirement 8.3) should deactivate condition when divergence normalizes" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager Bot trap frequency monitoring (Requirement 8.3) should track bot trap rate" name="EnhancedRiskManager Bot trap frequency monitoring (Requirement 8.3) should track bot trap rate" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager Bot trap frequency monitoring (Requirement 8.3) should activate condition when bot trap rate exceeds threshold" name="EnhancedRiskManager Bot trap frequency monitoring (Requirement 8.3) should activate condition when bot trap rate exceeds threshold" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager Bot trap frequency monitoring (Requirement 8.3) should mark as critical when rate exceeds 80%" name="EnhancedRiskManager Bot trap frequency monitoring (Requirement 8.3) should mark as critical when rate exceeds 80%" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager multi-exchange failure protocols (Requirement 8.6) should track exchange status" name="EnhancedRiskManager multi-exchange failure protocols (Requirement 8.6) should track exchange status" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager multi-exchange failure protocols (Requirement 8.6) should activate condition for single exchange offline" name="EnhancedRiskManager multi-exchange failure protocols (Requirement 8.6) should activate condition for single exchange offline" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager multi-exchange failure protocols (Requirement 8.6) should halt entries when multiple exchanges fail" name="EnhancedRiskManager multi-exchange failure protocols (Requirement 8.6) should halt entries when multiple exchanges fail" time="0.001">
+    </testcase>
+    <testcase classname="EnhancedRiskManager multi-exchange failure protocols (Requirement 8.6) should emit events for exchange status changes" name="EnhancedRiskManager multi-exchange failure protocols (Requirement 8.6) should emit events for exchange status changes" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager Oracle connection stability (Requirement 8.5) should track Oracle failures" name="EnhancedRiskManager Oracle connection stability (Requirement 8.5) should track Oracle failures" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager Oracle connection stability (Requirement 8.5) should activate condition when Oracle is unstable" name="EnhancedRiskManager Oracle connection stability (Requirement 8.5) should activate condition when Oracle is unstable" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager Oracle connection stability (Requirement 8.5) should reduce position size when Oracle is unstable" name="EnhancedRiskManager Oracle connection stability (Requirement 8.5) should reduce position size when Oracle is unstable" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager Oracle connection stability (Requirement 8.5) should recover when Oracle stabilizes" name="EnhancedRiskManager Oracle connection stability (Requirement 8.5) should recover when Oracle stabilizes" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager comprehensive evaluation should evaluate all conditions at once" name="EnhancedRiskManager comprehensive evaluation should evaluate all conditions at once" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager comprehensive evaluation should aggregate adjustments from multiple conditions" name="EnhancedRiskManager comprehensive evaluation should aggregate adjustments from multiple conditions" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager position size and leverage adjustments should calculate adjusted position size" name="EnhancedRiskManager position size and leverage adjustments should calculate adjusted position size" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager position size and leverage adjustments should calculate adjusted stop loss" name="EnhancedRiskManager position size and leverage adjustments should calculate adjusted stop loss" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager position size and leverage adjustments should calculate adjusted max leverage" name="EnhancedRiskManager position size and leverage adjustments should calculate adjusted max leverage" time="0.001">
+    </testcase>
+    <testcase classname="EnhancedRiskManager canOpenNewPositions should allow positions when no halt conditions" name="EnhancedRiskManager canOpenNewPositions should allow positions when no halt conditions" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager canOpenNewPositions should block positions when halt condition active" name="EnhancedRiskManager canOpenNewPositions should block positions when halt condition active" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager statistics should return comprehensive statistics" name="EnhancedRiskManager statistics should return comprehensive statistics" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager configuration should update configuration" name="EnhancedRiskManager configuration should update configuration" time="0">
+    </testcase>
+    <testcase classname="EnhancedRiskManager reset and cleanup should reset state" name="EnhancedRiskManager reset and cleanup should reset state" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="PatternPrecisionAnalyzer" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:15" time="0.463" tests="36">
+    <testcase classname="PatternPrecisionAnalyzer calculatePrecisionScore should return high precision score for exact tick levels" name="PatternPrecisionAnalyzer calculatePrecisionScore should return high precision score for exact tick levels" time="0">
+    </testcase>
+    <testcase classname="PatternPrecisionAnalyzer calculatePrecisionScore should return lower precision score for varied levels" name="PatternPrecisionAnalyzer calculatePrecisionScore should return lower precision score for varied levels" time="0.001">
+    </testcase>
+    <testcase classname="PatternPrecisionAnalyzer calculatePrecisionScore should handle single level gracefully" name="PatternPrecisionAnalyzer calculatePrecisionScore should handle single level gracefully" time="0">
+    </testcase>
+    <testcase classname="PatternPrecisionAnalyzer calculatePrecisionScore should add bonus for round number alignment" name="PatternPrecisionAnalyzer calculatePrecisionScore should add bonus for round number alignment" time="0">
+    </testcase>
+    <testcase classname="PatternPrecisionAnalyzer analyzeEqualHighs should flag equal highs with exact tick precision as SUSPECT_TRAP" name="PatternPrecisionAnalyzer analyzeEqualHighs should flag equal highs with exact tick precision as SUSPECT_TRAP" time="0">
+    </testcase>
+    <testcase classname="PatternPrecisionAnalyzer analyzeEqualHighs should not flag equal highs with natural variation" name="PatternPrecisionAnalyzer analyzeEqualHighs should not flag equal highs with natural variation" time="0">
+    </testcase>
+    <testcase classname="PatternPrecisionAnalyzer analyzeFVG should flag FVG with round number boundaries as suspicious" name="PatternPrecisionAnalyzer analyzeFVG should flag FVG with round number boundaries as suspicious" time="0">
+    </testcase>
+    <testcase classname="PatternPrecisionAnalyzer analyzeFVG should analyze FVG with non-round boundaries normally" name="PatternPrecisionAnalyzer analyzeFVG should analyze FVG with non-round boundaries normally" time="0">
+    </testcase>
+    <testcase classname="PatternPrecisionAnalyzer analyzeOrderBlock should analyze order block for trap characteristics" name="PatternPrecisionAnalyzer analyzeOrderBlock should analyze order block for trap characteristics" time="0">
+    </testcase>
+    <testcase classname="PatternPrecisionAnalyzer pattern frequency tracking should track pattern frequency and flag high frequency as suspicious" name="PatternPrecisionAnalyzer pattern frequency tracking should track pattern frequency and flag high frequency as suspicious" time="0">
+    </testcase>
+    <testcase classname="PatternPrecisionAnalyzer session level alignment should detect session level alignment" name="PatternPrecisionAnalyzer session level alignment should detect session level alignment" time="0">
+    </testcase>
+    <testcase classname="SuspectPatternRiskAdjuster calculateRiskAdjustments should reduce position size by 50% for SUSPECT_TRAP" name="SuspectPatternRiskAdjuster calculateRiskAdjustments should reduce position size by 50% for SUSPECT_TRAP" time="0">
+    </testcase>
+    <testcase classname="SuspectPatternRiskAdjuster calculateRiskAdjustments should increase CVD confirmation threshold by 50% for textbook patterns" name="SuspectPatternRiskAdjuster calculateRiskAdjustments should increase CVD confirmation threshold by 50% for textbook patterns" time="0">
+    </testcase>
+    <testcase classname="SuspectPatternRiskAdjuster calculateRiskAdjustments should not adjust for non-suspect patterns" name="SuspectPatternRiskAdjuster calculateRiskAdjustments should not adjust for non-suspect patterns" time="0">
+    </testcase>
+    <testcase classname="SuspectPatternRiskAdjuster calculateRiskAdjustments should apply additional reduction for extreme suspicion" name="SuspectPatternRiskAdjuster calculateRiskAdjustments should apply additional reduction for extreme suspicion" time="0.003">
+    </testcase>
+    <testcase classname="SuspectPatternRiskAdjuster validateEntry should block entry for SUSPECT_TRAP without flow validation" name="SuspectPatternRiskAdjuster validateEntry should block entry for SUSPECT_TRAP without flow validation" time="0">
+    </testcase>
+    <testcase classname="SuspectPatternRiskAdjuster validateEntry should block entry for SUSPECT_TRAP without passive absorption" name="SuspectPatternRiskAdjuster validateEntry should block entry for SUSPECT_TRAP without passive absorption" time="0">
+    </testcase>
+    <testcase classname="SuspectPatternRiskAdjuster validateEntry should allow entry for SUSPECT_TRAP with passive absorption" name="SuspectPatternRiskAdjuster validateEntry should allow entry for SUSPECT_TRAP with passive absorption" time="0">
+    </testcase>
+    <testcase classname="SuspectPatternRiskAdjuster validateEntry should allow entry for non-suspect patterns without flow validation" name="SuspectPatternRiskAdjuster validateEntry should allow entry for non-suspect patterns without flow validation" time="0">
+    </testcase>
+    <testcase classname="SuspectPatternRiskAdjuster generateBotTrapAnalysis should generate comprehensive analysis from multiple patterns" name="SuspectPatternRiskAdjuster generateBotTrapAnalysis should generate comprehensive analysis from multiple patterns" time="0.001">
+    </testcase>
+    <testcase classname="AdaptiveLearningEngine recordPatternDetection should record pattern detection" name="AdaptiveLearningEngine recordPatternDetection should record pattern detection" time="0">
+    </testcase>
+    <testcase classname="AdaptiveLearningEngine recordOutcome should record trade outcome and update statistics" name="AdaptiveLearningEngine recordOutcome should record trade outcome and update statistics" time="0">
+    </testcase>
+    <testcase classname="AdaptiveLearningEngine calculateStatistics should calculate correct statistics" name="AdaptiveLearningEngine calculateStatistics should calculate correct statistics" time="0">
+    </testcase>
+    <testcase classname="AdaptiveLearningEngine validateProposedThreshold should validate proposed threshold changes" name="AdaptiveLearningEngine validateProposedThreshold should validate proposed threshold changes" time="0.001">
+    </testcase>
+    <testcase classname="AdaptiveLearningEngine getParameterHistory should track parameter adjustment history" name="AdaptiveLearningEngine getParameterHistory should track parameter adjustment history" time="0">
+    </testcase>
+    <testcase classname="BotTrapDetector analyzePOI should analyze FVG for bot trap characteristics" name="BotTrapDetector analyzePOI should analyze FVG for bot trap characteristics" time="0">
+    </testcase>
+    <testcase classname="BotTrapDetector analyzePOI should analyze Order Block for bot trap characteristics" name="BotTrapDetector analyzePOI should analyze Order Block for bot trap characteristics" time="0">
+    </testcase>
+    <testcase classname="BotTrapDetector analyzePOI should analyze Liquidity Pool for bot trap characteristics" name="BotTrapDetector analyzePOI should analyze Liquidity Pool for bot trap characteristics" time="0">
+    </testcase>
+    <testcase classname="BotTrapDetector validateEntry should validate entry with flow validation" name="BotTrapDetector validateEntry should validate entry with flow validation" time="0">
+    </testcase>
+    <testcase classname="BotTrapDetector generateAnalysis should generate comprehensive analysis for multiple POIs" name="BotTrapDetector generateAnalysis should generate comprehensive analysis for multiple POIs" time="0">
+    </testcase>
+    <testcase classname="BotTrapDetector recordTradeOutcome should record trade outcome for learning" name="BotTrapDetector recordTradeOutcome should record trade outcome for learning" time="0">
+    </testcase>
+    <testcase classname="BotTrapDetector getLearningStatistics should return learning statistics" name="BotTrapDetector getLearningStatistics should return learning statistics" time="0">
+    </testcase>
+    <testcase classname="BotTrapDetector getTrapDetectionRate should calculate trap detection rate" name="BotTrapDetector getTrapDetectionRate should calculate trap detection rate" time="0">
+    </testcase>
+    <testcase classname="BotTrapDetector isTrapSaturationEmergency should detect trap saturation emergency" name="BotTrapDetector isTrapSaturationEmergency should detect trap saturation emergency" time="0">
+    </testcase>
+    <testcase classname="BotTrapDetector event emission should emit bot trap events" name="BotTrapDetector event emission should emit bot trap events" time="0.001">
+    </testcase>
+    <testcase classname="BotTrapDetector disabled mode should return null analysis when disabled" name="BotTrapDetector disabled mode should return null analysis when disabled" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="End-to-End Integration Tests" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:15" time="0.85" tests="9">
+    <testcase classname="End-to-End Integration Tests Complete End-to-End Flow should execute full cycle: Hologram Scan → Session Check → POI Detection → CVD Validation → Signal Generation → Execution" name="End-to-End Integration Tests Complete End-to-End Flow should execute full cycle: Hologram Scan → Session Check → POI Detection → CVD Validation → Signal Generation → Execution" time="0.007">
+    </testcase>
+    <testcase classname="End-to-End Integration Tests Complete End-to-End Flow should handle hologram scan with multiple symbols" name="End-to-End Integration Tests Complete End-to-End Flow should handle hologram scan with multiple symbols" time="0.001">
+    </testcase>
+    <testcase classname="End-to-End Integration Tests Complete End-to-End Flow should validate session transitions and killzone detection" name="End-to-End Integration Tests Complete End-to-End Flow should validate session transitions and killzone detection" time="0.001">
+    </testcase>
+    <testcase classname="End-to-End Integration Tests Complete End-to-End Flow should detect and validate POIs correctly" name="End-to-End Integration Tests Complete End-to-End Flow should detect and validate POIs correctly" time="0.001">
+    </testcase>
+    <testcase classname="End-to-End Integration Tests Complete End-to-End Flow should calculate CVD and detect absorption patterns" name="End-to-End Integration Tests Complete End-to-End Flow should calculate CVD and detect absorption patterns" time="0">
+    </testcase>
+    <testcase classname="End-to-End Integration Tests Complete End-to-End Flow should handle error conditions gracefully" name="End-to-End Integration Tests Complete End-to-End Flow should handle error conditions gracefully" time="0.001">
+    </testcase>
+    <testcase classname="End-to-End Integration Tests Performance and Reliability should complete hologram scan within reasonable time" name="End-to-End Integration Tests Performance and Reliability should complete hologram scan within reasonable time" time="0.001">
+    </testcase>
+    <testcase classname="End-to-End Integration Tests Performance and Reliability should handle concurrent operations" name="End-to-End Integration Tests Performance and Reliability should handle concurrent operations" time="0">
+    </testcase>
+    <testcase classname="End-to-End Integration Tests Performance and Reliability should maintain data consistency across components" name="End-to-End Integration Tests Performance and Reliability should maintain data consistency across components" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="Checkpoint 9: Core Enhancement Integration Complete" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:15" time="0.835" tests="38">
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 1. Enhancement Layer Integration with Existing Phase 2 should integrate Oracle layer with classic hologram scoring" name="Checkpoint 9: Core Enhancement Integration Complete 1. Enhancement Layer Integration with Existing Phase 2 should integrate Oracle layer with classic hologram scoring" time="0.002">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 1. Enhancement Layer Integration with Existing Phase 2 should integrate Flow Validator with signal validation" name="Checkpoint 9: Core Enhancement Integration Complete 1. Enhancement Layer Integration with Existing Phase 2 should integrate Flow Validator with signal validation" time="0.001">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 1. Enhancement Layer Integration with Existing Phase 2 should integrate Bot Trap Detector with position sizing" name="Checkpoint 9: Core Enhancement Integration Complete 1. Enhancement Layer Integration with Existing Phase 2 should integrate Bot Trap Detector with position sizing" time="0">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 1. Enhancement Layer Integration with Existing Phase 2 should integrate Global CVD with consensus validation" name="Checkpoint 9: Core Enhancement Integration Complete 1. Enhancement Layer Integration with Existing Phase 2 should integrate Global CVD with consensus validation" time="0.001">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 1. Enhancement Layer Integration with Existing Phase 2 should combine all enhancement layers in scoring formula (Req 5.1)" name="Checkpoint 9: Core Enhancement Integration Complete 1. Enhancement Layer Integration with Existing Phase 2 should combine all enhancement layers in scoring formula (Req 5.1)" time="0">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 1. Enhancement Layer Integration with Existing Phase 2 should properly weight enhancement factors (Req 5.1)" name="Checkpoint 9: Core Enhancement Integration Complete 1. Enhancement Layer Integration with Existing Phase 2 should properly weight enhancement factors (Req 5.1)" time="0">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 2. Fallback Mechanisms Work Correctly should fall back gracefully when Oracle data is null" name="Checkpoint 9: Core Enhancement Integration Complete 2. Fallback Mechanisms Work Correctly should fall back gracefully when Oracle data is null" time="0">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 2. Fallback Mechanisms Work Correctly should fall back gracefully when Flow Validator data is null" name="Checkpoint 9: Core Enhancement Integration Complete 2. Fallback Mechanisms Work Correctly should fall back gracefully when Flow Validator data is null" time="0">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 2. Fallback Mechanisms Work Correctly should fall back gracefully when Global CVD data is null" name="Checkpoint 9: Core Enhancement Integration Complete 2. Fallback Mechanisms Work Correctly should fall back gracefully when Global CVD data is null" time="0">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 2. Fallback Mechanisms Work Correctly should use neutral multipliers when enhancement data is missing" name="Checkpoint 9: Core Enhancement Integration Complete 2. Fallback Mechanisms Work Correctly should use neutral multipliers when enhancement data is missing" time="0.001">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 2. Fallback Mechanisms Work Correctly should continue operation with partial enhancement data" name="Checkpoint 9: Core Enhancement Integration Complete 2. Fallback Mechanisms Work Correctly should continue operation with partial enhancement data" time="0">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 2. Fallback Mechanisms Work Correctly should handle enhanced engine initialization" name="Checkpoint 9: Core Enhancement Integration Complete 2. Fallback Mechanisms Work Correctly should handle enhanced engine initialization" time="0">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Prediction Emergency (Req 14.1) should trigger PREDICTION_EMERGENCY for extreme event probability &gt; 90%" name="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Prediction Emergency (Req 14.1) should trigger PREDICTION_EMERGENCY for extreme event probability &gt; 90%" time="0.001">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Prediction Emergency (Req 14.1) should not trigger for events below 90% threshold" name="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Prediction Emergency (Req 14.1) should not trigger for events below 90% threshold" time="0">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Liquidity Emergency (Req 14.2) should trigger LIQUIDITY_EMERGENCY when 2+ exchanges offline" name="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Liquidity Emergency (Req 14.2) should trigger LIQUIDITY_EMERGENCY when 2+ exchanges offline" time="0">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Liquidity Emergency (Req 14.2) should not trigger when sufficient exchanges online" name="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Liquidity Emergency (Req 14.2) should not trigger when sufficient exchanges online" time="0">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Flow Emergency (Req 14.4) should trigger FLOW_EMERGENCY for extreme CVD divergence" name="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Flow Emergency (Req 14.4) should trigger FLOW_EMERGENCY for extreme CVD divergence" time="0">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Flow Emergency (Req 14.4) should not trigger for normal CVD divergence" name="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Flow Emergency (Req 14.4) should not trigger for normal CVD divergence" time="0">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Trap Saturation Emergency (Req 14.5) should trigger TRAP_SATURATION when detection rate &gt; 80%" name="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Trap Saturation Emergency (Req 14.5) should trigger TRAP_SATURATION when detection rate &gt; 80%" time="0.001">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Trap Saturation Emergency (Req 14.5) should not trigger for normal trap detection rate" name="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Trap Saturation Emergency (Req 14.5) should not trigger for normal trap detection rate" time="0">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Graceful Degradation (Req 14.6) should assess system health correctly" name="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Graceful Degradation (Req 14.6) should assess system health correctly" time="0.001">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Graceful Degradation (Req 14.6) should recommend fallback to classic when multiple systems fail" name="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Graceful Degradation (Req 14.6) should recommend fallback to classic when multiple systems fail" time="0.001">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Graceful Degradation (Req 14.6) should track degradation level changes" name="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Graceful Degradation (Req 14.6) should track degradation level changes" time="0">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Emergency Notification (Req 14.7) should log emergency events" name="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Emergency Notification (Req 14.7) should log emergency events" time="0">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Emergency Notification (Req 14.7) should track active emergencies" name="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Emergency Notification (Req 14.7) should track active emergencies" time="0">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Emergency Notification (Req 14.7) should clear emergencies when conditions normalize" name="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Emergency Notification (Req 14.7) should clear emergencies when conditions normalize" time="0">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Comprehensive Emergency Evaluation should evaluate all emergency conditions at once" name="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Comprehensive Emergency Evaluation should evaluate all emergency conditions at once" time="0">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Comprehensive Emergency Evaluation should detect multiple simultaneous emergencies" name="Checkpoint 9: Core Enhancement Integration Complete 3. Emergency Protocols and Graceful Degradation Comprehensive Emergency Evaluation should detect multiple simultaneous emergencies" time="0.001">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 4. End-to-End Enhancement Integration Flow should complete full enhancement flow: Score → Validate → Size → Risk Check" name="Checkpoint 9: Core Enhancement Integration Complete 4. End-to-End Enhancement Integration Flow should complete full enhancement flow: Score → Validate → Size → Risk Check" time="0.001">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 4. End-to-End Enhancement Integration Flow should properly veto signals when enhancement layers conflict" name="Checkpoint 9: Core Enhancement Integration Complete 4. End-to-End Enhancement Integration Flow should properly veto signals when enhancement layers conflict" time="0">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 4. End-to-End Enhancement Integration Flow should reduce position size when bot trap detected" name="Checkpoint 9: Core Enhancement Integration Complete 4. End-to-End Enhancement Integration Flow should reduce position size when bot trap detected" time="0">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 4. End-to-End Enhancement Integration Flow should halt trading when emergency conditions met" name="Checkpoint 9: Core Enhancement Integration Complete 4. End-to-End Enhancement Integration Flow should halt trading when emergency conditions met" time="0">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 4. End-to-End Enhancement Integration Flow should cap position multiplier at 2.0x (Req 7.5)" name="Checkpoint 9: Core Enhancement Integration Complete 4. End-to-End Enhancement Integration Flow should cap position multiplier at 2.0x (Req 7.5)" time="0">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 4. End-to-End Enhancement Integration Flow should use conservative multiplier on conflicts (Req 7.6)" name="Checkpoint 9: Core Enhancement Integration Complete 4. End-to-End Enhancement Integration Flow should use conservative multiplier on conflicts (Req 7.6)" time="0">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 5. Component Health and Statistics should track component health status" name="Checkpoint 9: Core Enhancement Integration Complete 5. Component Health and Statistics should track component health status" time="0">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 5. Component Health and Statistics should provide comprehensive statistics" name="Checkpoint 9: Core Enhancement Integration Complete 5. Component Health and Statistics should provide comprehensive statistics" time="0.001">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 5. Component Health and Statistics should track risk manager statistics" name="Checkpoint 9: Core Enhancement Integration Complete 5. Component Health and Statistics should track risk manager statistics" time="0">
+    </testcase>
+    <testcase classname="Checkpoint 9: Core Enhancement Integration Complete 5. Component Health and Statistics should reset state correctly" name="Checkpoint 9: Core Enhancement Integration Complete 5. Component Health and Statistics should reset state correctly" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="HologramEngine" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:16" time="0.509" tests="18">
+    <testcase classname="HologramEngine analyze should analyze symbol and return complete hologram state" name="HologramEngine analyze should analyze symbol and return complete hologram state" time="0.001">
+    </testcase>
+    <testcase classname="HologramEngine analyze should throw error on invalid candle data" name="HologramEngine analyze should throw error on invalid candle data" time="0.008">
+    </testcase>
+    <testcase classname="HologramEngine analyze should throw error on API failure" name="HologramEngine analyze should throw error on API failure" time="0.001">
+    </testcase>
+    <testcase classname="HologramEngine calcRelativeStrength should return 0 for BTCUSDT symbol" name="HologramEngine calcRelativeStrength should return 0 for BTCUSDT symbol" time="0">
+    </testcase>
+    <testcase classname="HologramEngine calcRelativeStrength should calculate positive RS when asset outperforms BTC" name="HologramEngine calcRelativeStrength should calculate positive RS when asset outperforms BTC" time="0">
+    </testcase>
+    <testcase classname="HologramEngine calcRelativeStrength should calculate negative RS when asset underperforms BTC" name="HologramEngine calcRelativeStrength should calculate negative RS when asset underperforms BTC" time="0">
+    </testcase>
+    <testcase classname="HologramEngine calcRelativeStrength should return 0 on insufficient data" name="HologramEngine calcRelativeStrength should return 0 on insufficient data" time="0.001">
+    </testcase>
+    <testcase classname="HologramEngine calcRelativeStrength should return 0 on API error" name="HologramEngine calcRelativeStrength should return 0 on API error" time="0">
+    </testcase>
+    <testcase classname="HologramEngine calcRelativeStrength should clamp extreme RS values to [-1, 1] range" name="HologramEngine calcRelativeStrength should clamp extreme RS values to [-1, 1] range" time="0">
+    </testcase>
+    <testcase classname="HologramEngine analyze should analyze symbol and return complete hologram state" name="HologramEngine analyze should analyze symbol and return complete hologram state" time="0.001">
+    </testcase>
+    <testcase classname="HologramEngine analyze should throw error on invalid candle data" name="HologramEngine analyze should throw error on invalid candle data" time="0">
+    </testcase>
+    <testcase classname="HologramEngine analyze should throw error on API failure" name="HologramEngine analyze should throw error on API failure" time="0">
+    </testcase>
+    <testcase classname="HologramEngine validateHologramState should validate correct hologram state" name="HologramEngine validateHologramState should validate correct hologram state" time="0">
+    </testcase>
+    <testcase classname="HologramEngine validateHologramState should throw error for invalid alignment score" name="HologramEngine validateHologramState should throw error for invalid alignment score" time="0.001">
+    </testcase>
+    <testcase classname="HologramEngine validateHologramState should throw error for invalid status" name="HologramEngine validateHologramState should throw error for invalid status" time="0">
+    </testcase>
+    <testcase classname="HologramEngine getHologramSummary should generate readable hologram summary" name="HologramEngine getHologramSummary should generate readable hologram summary" time="0.001">
+    </testcase>
+    <testcase classname="HologramEngine cache management should clear cache" name="HologramEngine cache management should clear cache" time="0.002">
+    </testcase>
+    <testcase classname="HologramEngine cache management should provide cache statistics" name="HologramEngine cache management should provide cache statistics" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="AdvancedFlowValidator Property Tests" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:16" time="0.522" tests="5">
+    <testcase classname="AdvancedFlowValidator Property Tests SweepDetector should detect sweeps when multiple levels are cleared rapidly" name="AdvancedFlowValidator Property Tests SweepDetector should detect sweeps when multiple levels are cleared rapidly" time="0.015">
+    </testcase>
+    <testcase classname="AdvancedFlowValidator Property Tests SweepDetector should score high urgency sweeps higher than low urgency" name="AdvancedFlowValidator Property Tests SweepDetector should score high urgency sweeps higher than low urgency" time="0">
+    </testcase>
+    <testcase classname="AdvancedFlowValidator Property Tests IcebergDetector should calculate higher density for faster refill rates" name="AdvancedFlowValidator Property Tests IcebergDetector should calculate higher density for faster refill rates" time="0">
+    </testcase>
+    <testcase classname="AdvancedFlowValidator Property Tests InstitutionalFlowClassifier should classify high maker buy volume as passive absorption" name="AdvancedFlowValidator Property Tests InstitutionalFlowClassifier should classify high maker buy volume as passive absorption" time="0.009">
+    </testcase>
+    <testcase classname="AdvancedFlowValidator Property Tests InstitutionalFlowClassifier should classify high taker buy volume as aggressive pushing" name="AdvancedFlowValidator Property Tests InstitutionalFlowClassifier should classify high taker buy volume as aggressive pushing" time="0.01">
+    </testcase>
+  </testsuite>
+  <testsuite name="SignalGenerator" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:16" time="0.836" tests="29">
+    <testcase classname="SignalGenerator checkHologramStatus should return true for A+ status with no veto" name="SignalGenerator checkHologramStatus should return true for A+ status with no veto" time="0.002">
+    </testcase>
+    <testcase classname="SignalGenerator checkHologramStatus should return true for B status with sufficient alignment score" name="SignalGenerator checkHologramStatus should return true for B status with sufficient alignment score" time="0">
+    </testcase>
+    <testcase classname="SignalGenerator checkHologramStatus should return false for B status with insufficient alignment score" name="SignalGenerator checkHologramStatus should return false for B status with insufficient alignment score" time="0.001">
+    </testcase>
+    <testcase classname="SignalGenerator checkHologramStatus should return false for CONFLICT status" name="SignalGenerator checkHologramStatus should return false for CONFLICT status" time="0">
+    </testcase>
+    <testcase classname="SignalGenerator checkHologramStatus should return false when veto is active" name="SignalGenerator checkHologramStatus should return false when veto is active" time="0">
+    </testcase>
+    <testcase classname="SignalGenerator checkSession should return true when in killzone" name="SignalGenerator checkSession should return true when in killzone" time="0">
+    </testcase>
+    <testcase classname="SignalGenerator checkSession should return false when not in killzone" name="SignalGenerator checkSession should return false when not in killzone" time="0">
+    </testcase>
+    <testcase classname="SignalGenerator checkRSScore should return true for LONG direction with positive RS above threshold" name="SignalGenerator checkRSScore should return true for LONG direction with positive RS above threshold" time="0">
+    </testcase>
+    <testcase classname="SignalGenerator checkRSScore should return false for LONG direction with RS below threshold" name="SignalGenerator checkRSScore should return false for LONG direction with RS below threshold" time="0">
+    </testcase>
+    <testcase classname="SignalGenerator checkRSScore should return true for SHORT direction with negative RS below threshold" name="SignalGenerator checkRSScore should return true for SHORT direction with negative RS below threshold" time="0">
+    </testcase>
+    <testcase classname="SignalGenerator checkRSScore should return false for SHORT direction with RS above threshold" name="SignalGenerator checkRSScore should return false for SHORT direction with RS above threshold" time="0">
+    </testcase>
+    <testcase classname="SignalGenerator checkPOIProximity should return true when price is within proximity of bullish FVG for LONG" name="SignalGenerator checkPOIProximity should return true when price is within proximity of bullish FVG for LONG" time="0">
+    </testcase>
+    <testcase classname="SignalGenerator checkPOIProximity should return true when price is within proximity of bullish Order Block for LONG" name="SignalGenerator checkPOIProximity should return true when price is within proximity of bullish Order Block for LONG" time="0.001">
+    </testcase>
+    <testcase classname="SignalGenerator checkPOIProximity should return false when price is too far from POI" name="SignalGenerator checkPOIProximity should return false when price is too far from POI" time="0">
+    </testcase>
+    <testcase classname="SignalGenerator checkPOIProximity should return false when POI is mitigated" name="SignalGenerator checkPOIProximity should return false when POI is mitigated" time="0">
+    </testcase>
+    <testcase classname="SignalGenerator checkCVDAbsorption should return true when CVD confirmation is not required" name="SignalGenerator checkCVDAbsorption should return true when CVD confirmation is not required" time="0">
+    </testcase>
+    <testcase classname="SignalGenerator checkCVDAbsorption should return true when absorption has sufficient confidence" name="SignalGenerator checkCVDAbsorption should return true when absorption has sufficient confidence" time="0">
+    </testcase>
+    <testcase classname="SignalGenerator checkCVDAbsorption should return false when absorption confidence is too low" name="SignalGenerator checkCVDAbsorption should return false when absorption confidence is too low" time="0">
+    </testcase>
+    <testcase classname="SignalGenerator checkCVDAbsorption should return false when no absorption is provided and CVD is required" name="SignalGenerator checkCVDAbsorption should return false when no absorption is provided and CVD is required" time="0">
+    </testcase>
+    <testcase classname="SignalGenerator checkOracleVeto should allow signal when Oracle score is neutral" name="SignalGenerator checkOracleVeto should allow signal when Oracle score is neutral" time="0">
+    </testcase>
+    <testcase classname="SignalGenerator checkOracleVeto should veto LONG signal when Oracle is strongly bearish" name="SignalGenerator checkOracleVeto should veto LONG signal when Oracle is strongly bearish" time="0">
+    </testcase>
+    <testcase classname="SignalGenerator checkOracleVeto should allow LONG signal when Oracle is bullish" name="SignalGenerator checkOracleVeto should allow LONG signal when Oracle is bullish" time="0.001">
+    </testcase>
+    <testcase classname="SignalGenerator checkGlobalCVD should allow signal when Global CVD is neutral" name="SignalGenerator checkGlobalCVD should allow signal when Global CVD is neutral" time="0">
+    </testcase>
+    <testcase classname="SignalGenerator checkGlobalCVD should allow signal when Global CVD confirms direction" name="SignalGenerator checkGlobalCVD should allow signal when Global CVD confirms direction" time="0">
+    </testcase>
+    <testcase classname="SignalGenerator checkGlobalCVD should warn/veto signal when Global CVD opposes direction with manipulation" name="SignalGenerator checkGlobalCVD should warn/veto signal when Global CVD opposes direction with manipulation" time="0">
+    </testcase>
+    <testcase classname="SignalGenerator validateSignal should return valid signal when all conditions are met" name="SignalGenerator validateSignal should return valid signal when all conditions are met" time="0">
+    </testcase>
+    <testcase classname="SignalGenerator validateSignal should return invalid signal when hologram status is insufficient" name="SignalGenerator validateSignal should return invalid signal when hologram status is insufficient" time="0">
+    </testcase>
+    <testcase classname="SignalGenerator configuration management should update configuration correctly" name="SignalGenerator configuration management should update configuration correctly" time="0">
+    </testcase>
+    <testcase classname="SignalGenerator configuration management should return current configuration" name="SignalGenerator configuration management should return current configuration" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="EventMonitor Property Tests" errors="0" failures="0" skipped="1" timestamp="2026-02-06T20:32:17" time="0.784" tests="7">
+    <testcase classname="EventMonitor Property Tests detectSignificantChanges should detect probability changes greater than threshold" name="EventMonitor Property Tests detectSignificantChanges should detect probability changes greater than threshold" time="0.008">
+    </testcase>
+    <testcase classname="EventMonitor Property Tests detectSignificantChanges should detect any change &gt;= threshold" name="EventMonitor Property Tests detectSignificantChanges should detect any change &gt;= threshold" time="0.007">
+    </testcase>
+    <testcase classname="EventMonitor Property Tests detectSignificantChanges should detect critical threshold crossings" name="EventMonitor Property Tests detectSignificantChanges should detect critical threshold crossings" time="0.003">
+    </testcase>
+    <testcase classname="EventMonitor Property Tests getUpcomingHighImpactEvents should correctly filter high impact events within time window" name="EventMonitor Property Tests getUpcomingHighImpactEvents should correctly filter high impact events within time window" time="0">
+      <skipped/>
+    </testcase>
+    <testcase classname="EventMonitor Property Tests calculateCompositeRiskScore should return a score between 0 and 100" name="EventMonitor Property Tests calculateCompositeRiskScore should return a score between 0 and 100" time="0.01">
+    </testcase>
+    <testcase classname="EventMonitor Property Tests calculateCompositeRiskScore should increase score with closer extreme events" name="EventMonitor Property Tests calculateCompositeRiskScore should increase score with closer extreme events" time="0.004">
+    </testcase>
+    <testcase classname="EventMonitor Property Tests detectAnomalies should detect flash volatility anomalies" name="EventMonitor Property Tests detectAnomalies should detect flash volatility anomalies" time="0.002">
+    </testcase>
+  </testsuite>
+  <testsuite name="Global Liquidity Aggregator Property Tests" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:17" time="0.479" tests="3">
+    <testcase classname="Global Liquidity Aggregator Property Tests GlobalCVDAggregator should correctly calculate weighted average CVD" name="Global Liquidity Aggregator Property Tests GlobalCVDAggregator should correctly calculate weighted average CVD" time="0.01">
+    </testcase>
+    <testcase classname="Global Liquidity Aggregator Property Tests GlobalCVDAggregator should detect manipulation when one exchange deviates significantly" name="Global Liquidity Aggregator Property Tests GlobalCVDAggregator should detect manipulation when one exchange deviates significantly" time="0.001">
+    </testcase>
+    <testcase classname="Global Liquidity Aggregator Property Tests ConsensusValidator should only reach consensus when agreement ratio meets threshold" name="Global Liquidity Aggregator Property Tests ConsensusValidator should only reach consensus when agreement ratio meets threshold" time="0.005">
+    </testcase>
+  </testsuite>
+  <testsuite name="BacktestEngine" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:17" time="0.872" tests="18">
+    <testcase classname="BacktestEngine fetchHistoricalData should fetch historical data for multiple symbols" name="BacktestEngine fetchHistoricalData should fetch historical data for multiple symbols" time="0.205">
+    </testcase>
+    <testcase classname="BacktestEngine fetchHistoricalData should handle API errors gracefully" name="BacktestEngine fetchHistoricalData should handle API errors gracefully" time="0.013">
+    </testcase>
+    <testcase classname="BacktestEngine fetchHistoricalData should filter candles within date range" name="BacktestEngine fetchHistoricalData should filter candles within date range" time="0.102">
+    </testcase>
+    <testcase classname="BacktestEngine simulateTrade should apply correct slippage for POST_ONLY orders" name="BacktestEngine simulateTrade should apply correct slippage for POST_ONLY orders" time="0.002">
+    </testcase>
+    <testcase classname="BacktestEngine simulateTrade should apply correct slippage for IOC orders" name="BacktestEngine simulateTrade should apply correct slippage for IOC orders" time="0">
+    </testcase>
+    <testcase classname="BacktestEngine simulateTrade should apply correct slippage for MARKET orders" name="BacktestEngine simulateTrade should apply correct slippage for MARKET orders" time="0.001">
+    </testcase>
+    <testcase classname="BacktestEngine simulateTrade should handle POST_ONLY orders that do not fill" name="BacktestEngine simulateTrade should handle POST_ONLY orders that do not fill" time="0.001">
+    </testcase>
+    <testcase classname="BacktestEngine applyFees should apply maker rebate for POST_ONLY orders" name="BacktestEngine applyFees should apply maker rebate for POST_ONLY orders" time="0.001">
+    </testcase>
+    <testcase classname="BacktestEngine applyFees should apply taker fee for IOC orders" name="BacktestEngine applyFees should apply taker fee for IOC orders" time="0.003">
+    </testcase>
+    <testcase classname="BacktestEngine applyFees should apply taker fee for MARKET orders" name="BacktestEngine applyFees should apply taker fee for MARKET orders" time="0.001">
+    </testcase>
+    <testcase classname="BacktestEngine calcBacktestResults should calculate correct metrics for profitable trades" name="BacktestEngine calcBacktestResults should calculate correct metrics for profitable trades" time="0.001">
+    </testcase>
+    <testcase classname="BacktestEngine calcBacktestResults should calculate correct metrics for mixed trades" name="BacktestEngine calcBacktestResults should calculate correct metrics for mixed trades" time="0.001">
+    </testcase>
+    <testcase classname="BacktestEngine calcBacktestResults should handle empty trade list" name="BacktestEngine calcBacktestResults should handle empty trade list" time="0.001">
+    </testcase>
+    <testcase classname="BacktestEngine generateEquityCurve should generate correct equity curve points" name="BacktestEngine generateEquityCurve should generate correct equity curve points" time="0">
+    </testcase>
+    <testcase classname="BacktestEngine generateEquityCurve should calculate drawdown correctly" name="BacktestEngine generateEquityCurve should calculate drawdown correctly" time="0.001">
+    </testcase>
+    <testcase classname="BacktestEngine configuration management should update configuration correctly" name="BacktestEngine configuration management should update configuration correctly" time="0.001">
+    </testcase>
+    <testcase classname="BacktestEngine configuration management should return current configuration" name="BacktestEngine configuration management should return current configuration" time="0.001">
+    </testcase>
+    <testcase classname="BacktestEngine configuration management should track running state correctly" name="BacktestEngine configuration management should track running state correctly" time="0.003">
+    </testcase>
+  </testsuite>
+  <testsuite name="PositionManager" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:18" time="0.788" tests="22">
+    <testcase classname="PositionManager Position Management should add and retrieve positions" name="PositionManager Position Management should add and retrieve positions" time="0.004">
+    </testcase>
+    <testcase classname="PositionManager Position Management should remove positions" name="PositionManager Position Management should remove positions" time="0">
+    </testcase>
+    <testcase classname="PositionManager Position Management should update position data" name="PositionManager Position Management should update position data" time="0.001">
+    </testcase>
+    <testcase classname="PositionManager Move Stop to Breakeven should move stop to breakeven at 1.5R profit" name="PositionManager Move Stop to Breakeven should move stop to breakeven at 1.5R profit" time="0.001">
+    </testcase>
+    <testcase classname="PositionManager Move Stop to Breakeven should not move stop to breakeven if not profitable enough" name="PositionManager Move Stop to Breakeven should not move stop to breakeven if not profitable enough" time="0">
+    </testcase>
+    <testcase classname="PositionManager Move Stop to Breakeven should not move stop if already at breakeven" name="PositionManager Move Stop to Breakeven should not move stop if already at breakeven" time="0">
+    </testcase>
+    <testcase classname="PositionManager Take Partial Profit should take partial profit at 2R profit" name="PositionManager Take Partial Profit should take partial profit at 2R profit" time="0.001">
+    </testcase>
+    <testcase classname="PositionManager Take Partial Profit should not take partial profit if not profitable enough" name="PositionManager Take Partial Profit should not take partial profit if not profitable enough" time="0">
+    </testcase>
+    <testcase classname="PositionManager Trailing Stop should update trailing stop for profitable long position" name="PositionManager Trailing Stop should update trailing stop for profitable long position" time="0">
+    </testcase>
+    <testcase classname="PositionManager Trailing Stop should update trailing stop for profitable short position" name="PositionManager Trailing Stop should update trailing stop for profitable short position" time="0">
+    </testcase>
+    <testcase classname="PositionManager Trailing Stop should not trail stop if not profitable" name="PositionManager Trailing Stop should not trail stop if not profitable" time="0">
+    </testcase>
+    <testcase classname="PositionManager Trailing Stop should not trail stop if new stop is worse than current" name="PositionManager Trailing Stop should not trail stop if new stop is worse than current" time="0">
+    </testcase>
+    <testcase classname="PositionManager Tighten Stop After 48h should tighten stop after 48 hours" name="PositionManager Tighten Stop After 48h should tighten stop after 48 hours" time="0.001">
+    </testcase>
+    <testcase classname="PositionManager Tighten Stop After 48h should not tighten stop if position is too young" name="PositionManager Tighten Stop After 48h should not tighten stop if position is too young" time="0">
+    </testcase>
+    <testcase classname="PositionManager Close Position should close position for stop hit" name="PositionManager Close Position should close position for stop hit" time="0.001">
+    </testcase>
+    <testcase classname="PositionManager Close Position should close position for target hit" name="PositionManager Close Position should close position for target hit" time="0">
+    </testcase>
+    <testcase classname="PositionManager Close Position should close short position correctly" name="PositionManager Close Position should close short position correctly" time="0">
+    </testcase>
+    <testcase classname="PositionManager Statistics should calculate position statistics" name="PositionManager Statistics should calculate position statistics" time="0">
+    </testcase>
+    <testcase classname="PositionManager Emergency Close should emergency close all positions" name="PositionManager Emergency Close should emergency close all positions" time="0">
+    </testcase>
+    <testcase classname="PositionManager Configuration should update configuration" name="PositionManager Configuration should update configuration" time="0.001">
+    </testcase>
+    <testcase classname="PositionManager Error Handling should handle API errors gracefully" name="PositionManager Error Handling should handle API errors gracefully" time="0.01">
+    </testcase>
+    <testcase classname="PositionManager Error Handling should emit error events" name="PositionManager Error Handling should emit error events" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="ConfigManager" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:19" time="0.056" tests="5">
+    <testcase classname="ConfigManager should initialize with default config when none exists" name="ConfigManager should initialize with default config when none exists" time="0.002">
+    </testcase>
+    <testcase classname="ConfigManager should update local state from shared config on init" name="ConfigManager should update local state from shared config on init" time="0">
+    </testcase>
+    <testcase classname="ConfigManager should validate invalid alignment weights" name="ConfigManager should validate invalid alignment weights" time="0.005">
+    </testcase>
+    <testcase classname="ConfigManager should validate invalid total weight" name="ConfigManager should validate invalid total weight" time="0.001">
+    </testcase>
+    <testcase classname="ConfigManager should sync maxLeverage to root config when updating riskConfig" name="ConfigManager should sync maxLeverage to root config when updating riskConfig" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="ScoringEngine Property Tests" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:19" time="0.507" tests="3">
+    <testcase classname="ScoringEngine Property Tests Property: Enhanced Score must always be within [0, 100]" name="ScoringEngine Property Tests Property: Enhanced Score must always be within [0, 100]" time="0.017">
+    </testcase>
+    <testcase classname="ScoringEngine Property Tests Property: Score increases when Daily Trend aligns" name="ScoringEngine Property Tests Property: Score increases when Daily Trend aligns" time="0.004">
+    </testcase>
+    <testcase classname="ScoringEngine Property Tests Property: Higher Oracle Sentiment leads to higher score" name="ScoringEngine Property Tests Property: Higher Oracle Sentiment leads to higher score" time="0.004">
+    </testcase>
+  </testsuite>
+  <testsuite name="InefficiencyMapper Property Tests" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:19" time="0.809" tests="4">
+    <testcase classname="InefficiencyMapper Property Tests Property 5: POI mitigation should be consistent and permanent" name="InefficiencyMapper Property Tests Property 5: POI mitigation should be consistent and permanent" time="0.033">
+    </testcase>
+    <testcase classname="InefficiencyMapper Property Tests Property 6: POI mitigation should trigger at correct price levels" name="InefficiencyMapper Property Tests Property 6: POI mitigation should trigger at correct price levels" time="0.006">
+    </testcase>
+    <testcase classname="InefficiencyMapper Property Tests Property 7: POI structure should remain consistent during validation" name="InefficiencyMapper Property Tests Property 7: POI structure should remain consistent during validation" time="0.009">
+    </testcase>
+    <testcase classname="InefficiencyMapper Property Tests Property 8: POI validation should be deterministic" name="InefficiencyMapper Property Tests Property 8: POI validation should be deterministic" time="0.003">
+    </testcase>
+  </testsuite>
+  <testsuite name="FootprintAnalyzer" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:19" time="0.452" tests="25">
+    <testcase classname="FootprintAnalyzer buildFootprint should build footprint from trades and candle" name="FootprintAnalyzer buildFootprint should build footprint from trades and candle" time="0.001">
+    </testcase>
+    <testcase classname="FootprintAnalyzer buildFootprint should calculate correct delta (buy - sell volume)" name="FootprintAnalyzer buildFootprint should calculate correct delta (buy - sell volume)" time="0">
+    </testcase>
+    <testcase classname="FootprintAnalyzer buildFootprint should calculate imbalance score between -100 and +100" name="FootprintAnalyzer buildFootprint should calculate imbalance score between -100 and +100" time="0">
+    </testcase>
+    <testcase classname="FootprintAnalyzer analyzeFootprint should analyze footprint and determine dominant flow" name="FootprintAnalyzer analyzeFootprint should analyze footprint and determine dominant flow" time="0.001">
+    </testcase>
+    <testcase classname="FootprintAnalyzer analyzeFootprint should detect institutional signature for concentrated volume" name="FootprintAnalyzer analyzeFootprint should detect institutional signature for concentrated volume" time="0">
+    </testcase>
+    <testcase classname="FootprintAnalyzer classifyVolume should classify aggressive vs passive volume" name="FootprintAnalyzer classifyVolume should classify aggressive vs passive volume" time="0">
+    </testcase>
+    <testcase classname="SweepDetector detectSweeps should detect sweep pattern when 5+ levels cleared" name="SweepDetector detectSweeps should detect sweep pattern when 5+ levels cleared" time="0.001">
+    </testcase>
+    <testcase classname="SweepDetector detectSweeps should not detect sweep when fewer than 5 levels cleared" name="SweepDetector detectSweeps should not detect sweep when fewer than 5 levels cleared" time="0">
+    </testcase>
+    <testcase classname="SweepDetector detectSweeps should classify urgency based on speed" name="SweepDetector detectSweeps should classify urgency based on speed" time="0">
+    </testcase>
+    <testcase classname="SweepDetector analyzeSweeps should provide comprehensive sweep analysis" name="SweepDetector analyzeSweeps should provide comprehensive sweep analysis" time="0">
+    </testcase>
+    <testcase classname="SweepDetector validateSweep should validate and score sweep patterns" name="SweepDetector validateSweep should validate and score sweep patterns" time="0">
+    </testcase>
+    <testcase classname="IcebergDetector measureRefillRate should measure liquidity refill rate at price level" name="IcebergDetector measureRefillRate should measure liquidity refill rate at price level" time="0">
+    </testcase>
+    <testcase classname="IcebergDetector calculateIcebergDensity should calculate iceberg density at price level" name="IcebergDetector calculateIcebergDensity should calculate iceberg density at price level" time="0">
+    </testcase>
+    <testcase classname="IcebergDetector monitorOrderBlockLiquidity should monitor Order Block liquidity changes" name="IcebergDetector monitorOrderBlockLiquidity should monitor Order Block liquidity changes" time="0.001">
+    </testcase>
+    <testcase classname="InstitutionalFlowClassifier detectPassiveAbsorption should detect passive absorption pattern" name="InstitutionalFlowClassifier detectPassiveAbsorption should detect passive absorption pattern" time="0">
+    </testcase>
+    <testcase classname="InstitutionalFlowClassifier detectAggressivePushing should detect aggressive pushing pattern" name="InstitutionalFlowClassifier detectAggressivePushing should detect aggressive pushing pattern" time="0">
+    </testcase>
+    <testcase classname="InstitutionalFlowClassifier buildFlowValidationScore should build comprehensive flow validation score" name="InstitutionalFlowClassifier buildFlowValidationScore should build comprehensive flow validation score" time="0.001">
+    </testcase>
+    <testcase classname="InstitutionalFlowClassifier classifyFlow should provide comprehensive flow classification" name="InstitutionalFlowClassifier classifyFlow should provide comprehensive flow classification" time="0">
+    </testcase>
+    <testcase classname="AdvancedFlowValidator validatePOI should validate POI with flow analysis" name="AdvancedFlowValidator validatePOI should validate POI with flow analysis" time="0.001">
+    </testcase>
+    <testcase classname="AdvancedFlowValidator validatePOI should veto bullish POI when iceberg detected" name="AdvancedFlowValidator validatePOI should veto bullish POI when iceberg detected" time="0.001">
+    </testcase>
+    <testcase classname="AdvancedFlowValidator validatePOI should return disabled result when validator is disabled" name="AdvancedFlowValidator validatePOI should return disabled result when validator is disabled" time="0">
+    </testcase>
+    <testcase classname="AdvancedFlowValidator enhanceCVDConfirmation should enhance CVD confirmation with flow analysis" name="AdvancedFlowValidator enhanceCVDConfirmation should enhance CVD confirmation with flow analysis" time="0.001">
+    </testcase>
+    <testcase classname="AdvancedFlowValidator processTrade should process trades for all analyzers" name="AdvancedFlowValidator processTrade should process trades for all analyzers" time="0">
+    </testcase>
+    <testcase classname="AdvancedFlowValidator getState should return validator state" name="AdvancedFlowValidator getState should return validator state" time="0">
+    </testcase>
+    <testcase classname="AdvancedFlowValidator getStats should return comprehensive statistics" name="AdvancedFlowValidator getStats should return comprehensive statistics" time="0.002">
+    </testcase>
+  </testsuite>
+  <testsuite name="PerformanceReporter" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:19" time="0.724" tests="14">
+    <testcase classname="PerformanceReporter Report Generation should generate a report with correct trade counts" name="PerformanceReporter Report Generation should generate a report with correct trade counts" time="0.003">
+    </testcase>
+    <testcase classname="PerformanceReporter Report Generation should calculate win rates correctly" name="PerformanceReporter Report Generation should calculate win rates correctly" time="0.001">
+    </testcase>
+    <testcase classname="PerformanceReporter Report Generation should calculate total returns correctly" name="PerformanceReporter Report Generation should calculate total returns correctly" time="0">
+    </testcase>
+    <testcase classname="PerformanceReporter Report Generation should include enhancement metrics in report" name="PerformanceReporter Report Generation should include enhancement metrics in report" time="0.001">
+    </testcase>
+    <testcase classname="PerformanceReporter Optimization Suggestions should suggest Oracle veto threshold adjustment when effectiveness is low" name="PerformanceReporter Optimization Suggestions should suggest Oracle veto threshold adjustment when effectiveness is low" time="0">
+    </testcase>
+    <testcase classname="PerformanceReporter Optimization Suggestions should suggest Bot Trap precision adjustment when false positive rate is high" name="PerformanceReporter Optimization Suggestions should suggest Bot Trap precision adjustment when false positive rate is high" time="0">
+    </testcase>
+    <testcase classname="PerformanceReporter Optimization Suggestions should suggest win rate improvement when below target" name="PerformanceReporter Optimization Suggestions should suggest win rate improvement when below target" time="0">
+    </testcase>
+    <testcase classname="PerformanceReporter Optimization Suggestions should sort suggestions by priority and expected improvement" name="PerformanceReporter Optimization Suggestions should sort suggestions by priority and expected improvement" time="0.003">
+    </testcase>
+    <testcase classname="PerformanceReporter Comparative Analysis should calculate win rate difference correctly" name="PerformanceReporter Comparative Analysis should calculate win rate difference correctly" time="0">
+    </testcase>
+    <testcase classname="PerformanceReporter Comparative Analysis should calculate return difference correctly" name="PerformanceReporter Comparative Analysis should calculate return difference correctly" time="0">
+    </testcase>
+    <testcase classname="PerformanceReporter Layer Contribution Analysis should analyze all three enhancement layers" name="PerformanceReporter Layer Contribution Analysis should analyze all three enhancement layers" time="0.001">
+    </testcase>
+    <testcase classname="PerformanceReporter Layer Contribution Analysis should calculate layer scores" name="PerformanceReporter Layer Contribution Analysis should calculate layer scores" time="0">
+    </testcase>
+    <testcase classname="PerformanceReporter Report Formatting should format report as string" name="PerformanceReporter Report Formatting should format report as string" time="0.009">
+    </testcase>
+    <testcase classname="PerformanceReporter Report Formatting should format report as JSON" name="PerformanceReporter Report Formatting should format report as JSON" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="CorrelationManager" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:20" time="0.03" tests="24">
+    <testcase classname="CorrelationManager calcCorrelation should calculate correlation between two symbols" name="CorrelationManager calcCorrelation should calculate correlation between two symbols" time="0.001">
+    </testcase>
+    <testcase classname="CorrelationManager calcCorrelation should return 0 for insufficient data" name="CorrelationManager calcCorrelation should return 0 for insufficient data" time="0">
+    </testcase>
+    <testcase classname="CorrelationManager calcCorrelation should handle API errors gracefully" name="CorrelationManager calcCorrelation should handle API errors gracefully" time="0">
+    </testcase>
+    <testcase classname="CorrelationManager checkCorrelationLimit should reject signal when correlation exceeds reject threshold" name="CorrelationManager checkCorrelationLimit should reject signal when correlation exceeds reject threshold" time="0.001">
+    </testcase>
+    <testcase classname="CorrelationManager checkCorrelationLimit should reduce position size when correlation exceeds threshold" name="CorrelationManager checkCorrelationLimit should reduce position size when correlation exceeds threshold" time="0.001">
+    </testcase>
+    <testcase classname="CorrelationManager checkCorrelationLimit should allow position when correlation is below threshold" name="CorrelationManager checkCorrelationLimit should allow position when correlation is below threshold" time="0">
+    </testcase>
+    <testcase classname="CorrelationManager checkCorrelationLimit should handle empty positions array" name="CorrelationManager checkCorrelationLimit should handle empty positions array" time="0.001">
+    </testcase>
+    <testcase classname="CorrelationManager calcTotalCorrelatedExposure should calculate total correlated exposure" name="CorrelationManager calcTotalCorrelatedExposure should calculate total correlated exposure" time="0">
+    </testcase>
+    <testcase classname="CorrelationManager calcTotalCorrelatedExposure should return 0 for single position" name="CorrelationManager calcTotalCorrelatedExposure should return 0 for single position" time="0">
+    </testcase>
+    <testcase classname="CorrelationManager calcTotalCorrelatedExposure should handle empty positions array" name="CorrelationManager calcTotalCorrelatedExposure should handle empty positions array" time="0">
+    </testcase>
+    <testcase classname="CorrelationManager detectHighBeta should detect high beta market conditions" name="CorrelationManager detectHighBeta should detect high beta market conditions" time="0">
+    </testcase>
+    <testcase classname="CorrelationManager detectHighBeta should detect normal market conditions" name="CorrelationManager detectHighBeta should detect normal market conditions" time="0.001">
+    </testcase>
+    <testcase classname="CorrelationManager detectHighBeta should handle empty symbols array" name="CorrelationManager detectHighBeta should handle empty symbols array" time="0">
+    </testcase>
+    <testcase classname="CorrelationManager generateCorrelationMatrix should generate correlation matrix for given symbols" name="CorrelationManager generateCorrelationMatrix should generate correlation matrix for given symbols" time="0">
+    </testcase>
+    <testcase classname="CorrelationManager generateCorrelationMatrix should handle empty symbols array" name="CorrelationManager generateCorrelationMatrix should handle empty symbols array" time="0">
+    </testcase>
+    <testcase classname="CorrelationManager generateCorrelationMatrix should handle single symbol" name="CorrelationManager generateCorrelationMatrix should handle single symbol" time="0.001">
+    </testcase>
+    <testcase classname="CorrelationManager Configuration and Statistics should update configuration" name="CorrelationManager Configuration and Statistics should update configuration" time="0">
+    </testcase>
+    <testcase classname="CorrelationManager Configuration and Statistics should return statistics" name="CorrelationManager Configuration and Statistics should return statistics" time="0">
+    </testcase>
+    <testcase classname="CorrelationManager Configuration and Statistics should clear cache" name="CorrelationManager Configuration and Statistics should clear cache" time="0">
+    </testcase>
+    <testcase classname="CorrelationManager Event Emission should emit correlation:updated event" name="CorrelationManager Event Emission should emit correlation:updated event" time="0">
+    </testcase>
+    <testcase classname="CorrelationManager Event Emission should emit correlation:high_beta event" name="CorrelationManager Event Emission should emit correlation:high_beta event" time="0.001">
+    </testcase>
+    <testcase classname="CorrelationManager Event Emission should emit correlation:reject event" name="CorrelationManager Event Emission should emit correlation:reject event" time="0">
+    </testcase>
+    <testcase classname="CorrelationManager Monitoring Lifecycle should start and stop monitoring" name="CorrelationManager Monitoring Lifecycle should start and stop monitoring" time="0">
+    </testcase>
+    <testcase classname="CorrelationManager Monitoring Lifecycle should cleanup resources on destroy" name="CorrelationManager Monitoring Lifecycle should cleanup resources on destroy" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="SessionProfiler" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:20" time="0.023" tests="31">
+    <testcase classname="SessionProfiler getSessionState should identify Asian session (00:00-06:00 UTC)" name="SessionProfiler getSessionState should identify Asian session (00:00-06:00 UTC)" time="0">
+    </testcase>
+    <testcase classname="SessionProfiler getSessionState should identify London session (07:00-10:00 UTC)" name="SessionProfiler getSessionState should identify London session (07:00-10:00 UTC)" time="0.001">
+    </testcase>
+    <testcase classname="SessionProfiler getSessionState should identify NY session (13:00-16:00 UTC)" name="SessionProfiler getSessionState should identify NY session (13:00-16:00 UTC)" time="0">
+    </testcase>
+    <testcase classname="SessionProfiler getSessionState should identify Dead Zone (21:00-01:00 UTC)" name="SessionProfiler getSessionState should identify Dead Zone (21:00-01:00 UTC)" time="0">
+    </testcase>
+    <testcase classname="SessionProfiler getSessionState should identify Dead Zone early morning (00:30 UTC)" name="SessionProfiler getSessionState should identify Dead Zone early morning (00:30 UTC)" time="0">
+    </testcase>
+    <testcase classname="SessionProfiler getSessionState should handle Dead Zone early morning correctly" name="SessionProfiler getSessionState should handle Dead Zone early morning correctly" time="0">
+    </testcase>
+    <testcase classname="SessionProfiler storeAsianRange should store Asian range from OHLCV data" name="SessionProfiler storeAsianRange should store Asian range from OHLCV data" time="0">
+    </testcase>
+    <testcase classname="SessionProfiler storeAsianRange should handle empty OHLCV data" name="SessionProfiler storeAsianRange should handle empty OHLCV data" time="0">
+    </testcase>
+    <testcase classname="SessionProfiler storeAsianRange should ignore non-Asian session data" name="SessionProfiler storeAsianRange should ignore non-Asian session data" time="0">
+    </testcase>
+    <testcase classname="SessionProfiler detectJudasSwing should detect Asian High sweep during London session" name="SessionProfiler detectJudasSwing should detect Asian High sweep during London session" time="0.001">
+    </testcase>
+    <testcase classname="SessionProfiler detectJudasSwing should detect Asian Low sweep during London session" name="SessionProfiler detectJudasSwing should detect Asian Low sweep during London session" time="0">
+    </testcase>
+    <testcase classname="SessionProfiler detectJudasSwing should not detect Judas Swing when price is within Asian range" name="SessionProfiler detectJudasSwing should not detect Judas Swing when price is within Asian range" time="0">
+    </testcase>
+    <testcase classname="SessionProfiler detectJudasSwing should not detect Judas Swing during Asian session" name="SessionProfiler detectJudasSwing should not detect Judas Swing during Asian session" time="0">
+    </testcase>
+    <testcase classname="SessionProfiler detectJudasSwing should detect London range sweep during NY session" name="SessionProfiler detectJudasSwing should detect London range sweep during NY session" time="0">
+    </testcase>
+    <testcase classname="SessionProfiler isKillzone should return true during London session" name="SessionProfiler isKillzone should return true during London session" time="0">
+    </testcase>
+    <testcase classname="SessionProfiler isKillzone should return true during NY session" name="SessionProfiler isKillzone should return true during NY session" time="0">
+    </testcase>
+    <testcase classname="SessionProfiler isKillzone should return false during Asian session" name="SessionProfiler isKillzone should return false during Asian session" time="0">
+    </testcase>
+    <testcase classname="SessionProfiler isKillzone should return false during Dead Zone" name="SessionProfiler isKillzone should return false during Dead Zone" time="0">
+    </testcase>
+    <testcase classname="SessionProfiler shouldDisableNewEntries should return true during Dead Zone" name="SessionProfiler shouldDisableNewEntries should return true during Dead Zone" time="0.001">
+    </testcase>
+    <testcase classname="SessionProfiler shouldDisableNewEntries should return false during killzones" name="SessionProfiler shouldDisableNewEntries should return false during killzones" time="0">
+    </testcase>
+    <testcase classname="SessionProfiler updateLondonRange should store London range from OHLCV data" name="SessionProfiler updateLondonRange should store London range from OHLCV data" time="0">
+    </testcase>
+    <testcase classname="SessionProfiler updateLondonRange should ignore non-London session data" name="SessionProfiler updateLondonRange should ignore non-London session data" time="0">
+    </testcase>
+    <testcase classname="SessionProfiler session transition events should emit SESSION_CHANGE event on session transition" name="SessionProfiler session transition events should emit SESSION_CHANGE event on session transition" time="0">
+    </testcase>
+    <testcase classname="SessionProfiler session transition events should emit LONDON_OPEN event when transitioning to London" name="SessionProfiler session transition events should emit LONDON_OPEN event when transitioning to London" time="0">
+    </testcase>
+    <testcase classname="SessionProfiler session transition events should emit NY_OPEN event when transitioning to NY" name="SessionProfiler session transition events should emit NY_OPEN event when transitioning to NY" time="0">
+    </testcase>
+    <testcase classname="SessionProfiler session transition events should emit DEAD_ZONE_START event when transitioning to Dead Zone" name="SessionProfiler session transition events should emit DEAD_ZONE_START event when transitioning to Dead Zone" time="0.001">
+    </testcase>
+    <testcase classname="SessionProfiler getSessionStats should return comprehensive session statistics" name="SessionProfiler getSessionStats should return comprehensive session statistics" time="0">
+    </testcase>
+    <testcase classname="SessionProfiler edge cases should handle session boundary correctly (exactly 06:00 UTC)" name="SessionProfiler edge cases should handle session boundary correctly (exactly 06:00 UTC)" time="0">
+    </testcase>
+    <testcase classname="SessionProfiler edge cases should handle session boundary correctly (exactly 07:00 UTC)" name="SessionProfiler edge cases should handle session boundary correctly (exactly 07:00 UTC)" time="0">
+    </testcase>
+    <testcase classname="SessionProfiler edge cases should handle midnight transition correctly" name="SessionProfiler edge cases should handle midnight transition correctly" time="0.001">
+    </testcase>
+    <testcase classname="SessionProfiler edge cases should not emit duplicate session change events" name="SessionProfiler edge cases should not emit duplicate session change events" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="PerformanceAnalytics" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:20" time="0.018" tests="13">
+    <testcase classname="PerformanceAnalytics Trade Recording should record a trade correctly" name="PerformanceAnalytics Trade Recording should record a trade correctly" time="0.001">
+    </testcase>
+    <testcase classname="PerformanceAnalytics Trade Recording should record multiple trades" name="PerformanceAnalytics Trade Recording should record multiple trades" time="0">
+    </testcase>
+    <testcase classname="PerformanceAnalytics Trade Recording should record vetoed signals" name="PerformanceAnalytics Trade Recording should record vetoed signals" time="0">
+    </testcase>
+    <testcase classname="PerformanceAnalytics Oracle Effectiveness should calculate aligned win rate correctly" name="PerformanceAnalytics Oracle Effectiveness should calculate aligned win rate correctly" time="0">
+    </testcase>
+    <testcase classname="PerformanceAnalytics Oracle Effectiveness should calculate win rate improvement" name="PerformanceAnalytics Oracle Effectiveness should calculate win rate improvement" time="0">
+    </testcase>
+    <testcase classname="PerformanceAnalytics Oracle Effectiveness should calculate veto effectiveness" name="PerformanceAnalytics Oracle Effectiveness should calculate veto effectiveness" time="0">
+    </testcase>
+    <testcase classname="PerformanceAnalytics Global CVD Effectiveness should calculate confirmed win rate" name="PerformanceAnalytics Global CVD Effectiveness should calculate confirmed win rate" time="0">
+    </testcase>
+    <testcase classname="PerformanceAnalytics Global CVD Effectiveness should calculate false signal reduction rate" name="PerformanceAnalytics Global CVD Effectiveness should calculate false signal reduction rate" time="0.001">
+    </testcase>
+    <testcase classname="PerformanceAnalytics Bot Trap Effectiveness should calculate detection accuracy" name="PerformanceAnalytics Bot Trap Effectiveness should calculate detection accuracy" time="0">
+    </testcase>
+    <testcase classname="PerformanceAnalytics Bot Trap Effectiveness should calculate avoided losses" name="PerformanceAnalytics Bot Trap Effectiveness should calculate avoided losses" time="0">
+    </testcase>
+    <testcase classname="PerformanceAnalytics Prediction Accuracy should calculate sentiment accuracy" name="PerformanceAnalytics Prediction Accuracy should calculate sentiment accuracy" time="0">
+    </testcase>
+    <testcase classname="PerformanceAnalytics Prediction Accuracy should calculate conviction multiplier performance" name="PerformanceAnalytics Prediction Accuracy should calculate conviction multiplier performance" time="0">
+    </testcase>
+    <testcase classname="PerformanceAnalytics Data Export/Import should export and import data correctly" name="PerformanceAnalytics Data Export/Import should export and import data correctly" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="InefficiencyMapper" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:20" time="0.02" tests="19">
+    <testcase classname="InefficiencyMapper detectFVG should detect bullish FVG when candle 1 high &lt; candle 3 low" name="InefficiencyMapper detectFVG should detect bullish FVG when candle 1 high &lt; candle 3 low" time="0">
+    </testcase>
+    <testcase classname="InefficiencyMapper detectFVG should detect bearish FVG when candle 1 low &gt; candle 3 high" name="InefficiencyMapper detectFVG should detect bearish FVG when candle 1 low &gt; candle 3 high" time="0">
+    </testcase>
+    <testcase classname="InefficiencyMapper detectFVG should return empty array when no FVGs exist" name="InefficiencyMapper detectFVG should return empty array when no FVGs exist" time="0">
+    </testcase>
+    <testcase classname="InefficiencyMapper detectFVG should return empty array when insufficient candles" name="InefficiencyMapper detectFVG should return empty array when insufficient candles" time="0">
+    </testcase>
+    <testcase classname="InefficiencyMapper detectOrderBlock should detect bullish order block for bullish BOS" name="InefficiencyMapper detectOrderBlock should detect bullish order block for bullish BOS" time="0.001">
+    </testcase>
+    <testcase classname="InefficiencyMapper detectOrderBlock should detect bearish order block for bearish BOS" name="InefficiencyMapper detectOrderBlock should detect bearish order block for bearish BOS" time="0">
+    </testcase>
+    <testcase classname="InefficiencyMapper detectOrderBlock should return empty array when no BOS events" name="InefficiencyMapper detectOrderBlock should return empty array when no BOS events" time="0">
+    </testcase>
+    <testcase classname="InefficiencyMapper detectLiquidityPools should detect liquidity pools at fractal points" name="InefficiencyMapper detectLiquidityPools should detect liquidity pools at fractal points" time="0">
+    </testcase>
+    <testcase classname="InefficiencyMapper detectLiquidityPools should filter out weak liquidity pools" name="InefficiencyMapper detectLiquidityPools should filter out weak liquidity pools" time="0">
+    </testcase>
+    <testcase classname="InefficiencyMapper detectLiquidityPools should merge nearby liquidity pools" name="InefficiencyMapper detectLiquidityPools should merge nearby liquidity pools" time="0">
+    </testcase>
+    <testcase classname="InefficiencyMapper validatePOI should invalidate bullish FVG when price fills the gap" name="InefficiencyMapper validatePOI should invalidate bullish FVG when price fills the gap" time="0.001">
+    </testcase>
+    <testcase classname="InefficiencyMapper validatePOI should invalidate bearish FVG when price fills the gap" name="InefficiencyMapper validatePOI should invalidate bearish FVG when price fills the gap" time="0">
+    </testcase>
+    <testcase classname="InefficiencyMapper validatePOI should invalidate bullish order block when price closes below low" name="InefficiencyMapper validatePOI should invalidate bullish order block when price closes below low" time="0">
+    </testcase>
+    <testcase classname="InefficiencyMapper validatePOI should invalidate bearish order block when price closes above high" name="InefficiencyMapper validatePOI should invalidate bearish order block when price closes above high" time="0">
+    </testcase>
+    <testcase classname="InefficiencyMapper validatePOI should invalidate liquidity pool when swept" name="InefficiencyMapper validatePOI should invalidate liquidity pool when swept" time="0">
+    </testcase>
+    <testcase classname="InefficiencyMapper validatePOI should apply age decay to order block confidence" name="InefficiencyMapper validatePOI should apply age decay to order block confidence" time="0">
+    </testcase>
+    <testcase classname="InefficiencyMapper getAllPOIs should return all POI types and filter valid ones" name="InefficiencyMapper getAllPOIs should return all POI types and filter valid ones" time="0">
+    </testcase>
+    <testcase classname="InefficiencyMapper findAlignedPOIs should find POIs that align within proximity threshold" name="InefficiencyMapper findAlignedPOIs should find POIs that align within proximity threshold" time="0.001">
+    </testcase>
+    <testcase classname="InefficiencyMapper findAlignedPOIs should not group POIs that are too far apart" name="InefficiencyMapper findAlignedPOIs should not group POIs that are too far apart" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="CVDValidator" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:20" time="0.02" tests="35">
+    <testcase classname="CVDValidator calcCVD should calculate positive CVD for net buying pressure" name="CVDValidator calcCVD should calculate positive CVD for net buying pressure" time="0">
+    </testcase>
+    <testcase classname="CVDValidator calcCVD should calculate negative CVD for net selling pressure" name="CVDValidator calcCVD should calculate negative CVD for net selling pressure" time="0">
+    </testcase>
+    <testcase classname="CVDValidator calcCVD should filter trades by time window" name="CVDValidator calcCVD should filter trades by time window" time="0">
+    </testcase>
+    <testcase classname="CVDValidator calcCVD should return zero CVD for empty trades" name="CVDValidator calcCVD should return zero CVD for empty trades" time="0">
+    </testcase>
+    <testcase classname="CVDValidator calcCVD should handle equal buy and sell volumes" name="CVDValidator calcCVD should handle equal buy and sell volumes" time="0">
+    </testcase>
+    <testcase classname="CVDValidator detectAbsorption should detect absorption pattern (price LL, CVD HL)" name="CVDValidator detectAbsorption should detect absorption pattern (price LL, CVD HL)" time="0">
+    </testcase>
+    <testcase classname="CVDValidator detectAbsorption should not detect absorption when price pattern is wrong" name="CVDValidator detectAbsorption should not detect absorption when price pattern is wrong" time="0.001">
+    </testcase>
+    <testcase classname="CVDValidator detectAbsorption should not detect absorption when CVD pattern is wrong" name="CVDValidator detectAbsorption should not detect absorption when CVD pattern is wrong" time="0">
+    </testcase>
+    <testcase classname="CVDValidator detectAbsorption should return null for insufficient data points" name="CVDValidator detectAbsorption should return null for insufficient data points" time="0">
+    </testcase>
+    <testcase classname="CVDValidator detectAbsorption should calculate absorption strength correctly" name="CVDValidator detectAbsorption should calculate absorption strength correctly" time="0">
+    </testcase>
+    <testcase classname="CVDValidator detectDistribution should detect distribution pattern (price HH, CVD LH)" name="CVDValidator detectDistribution should detect distribution pattern (price HH, CVD LH)" time="0">
+    </testcase>
+    <testcase classname="CVDValidator detectDistribution should not detect distribution when price pattern is wrong" name="CVDValidator detectDistribution should not detect distribution when price pattern is wrong" time="0">
+    </testcase>
+    <testcase classname="CVDValidator detectDistribution should not detect distribution when CVD pattern is wrong" name="CVDValidator detectDistribution should not detect distribution when CVD pattern is wrong" time="0">
+    </testcase>
+    <testcase classname="CVDValidator detectDistribution should return null for insufficient data points" name="CVDValidator detectDistribution should return null for insufficient data points" time="0.001">
+    </testcase>
+    <testcase classname="CVDValidator detectDistribution should calculate distribution strength correctly" name="CVDValidator detectDistribution should calculate distribution strength correctly" time="0">
+    </testcase>
+    <testcase classname="CVDValidator validateWithCVD should increase confidence for bullish POI with absorption" name="CVDValidator validateWithCVD should increase confidence for bullish POI with absorption" time="0">
+    </testcase>
+    <testcase classname="CVDValidator validateWithCVD should decrease confidence for bullish POI with distribution" name="CVDValidator validateWithCVD should decrease confidence for bullish POI with distribution" time="0.001">
+    </testcase>
+    <testcase classname="CVDValidator validateWithCVD should increase confidence for bearish POI with distribution" name="CVDValidator validateWithCVD should increase confidence for bearish POI with distribution" time="0">
+    </testcase>
+    <testcase classname="CVDValidator validateWithCVD should decrease confidence for bearish POI with absorption" name="CVDValidator validateWithCVD should decrease confidence for bearish POI with absorption" time="0">
+    </testcase>
+    <testcase classname="CVDValidator validateWithCVD should add confidence for liquidity pool with any CVD divergence" name="CVDValidator validateWithCVD should add confidence for liquidity pool with any CVD divergence" time="0">
+    </testcase>
+    <testcase classname="CVDValidator validateWithCVD should return zero adjustment when no CVD signals provided" name="CVDValidator validateWithCVD should return zero adjustment when no CVD signals provided" time="0">
+    </testcase>
+    <testcase classname="CVDValidator recordTrade should record trade and maintain history" name="CVDValidator recordTrade should record trade and maintain history" time="0">
+    </testcase>
+    <testcase classname="CVDValidator recordTrade should maintain separate history for different symbols" name="CVDValidator recordTrade should maintain separate history for different symbols" time="0">
+    </testcase>
+    <testcase classname="CVDValidator recordTrade should filter old trades from history" name="CVDValidator recordTrade should filter old trades from history" time="0">
+    </testcase>
+    <testcase classname="CVDValidator recordTrade should accumulate multiple trades for same symbol" name="CVDValidator recordTrade should accumulate multiple trades for same symbol" time="0">
+    </testcase>
+    <testcase classname="CVDValidator getCurrentCVD should return current CVD for symbol" name="CVDValidator getCurrentCVD should return current CVD for symbol" time="0">
+    </testcase>
+    <testcase classname="CVDValidator getCurrentCVD should return zero for symbol with no trades" name="CVDValidator getCurrentCVD should return zero for symbol with no trades" time="0.001">
+    </testcase>
+    <testcase classname="CVDValidator getCurrentCVD should respect custom time window" name="CVDValidator getCurrentCVD should respect custom time window" time="0">
+    </testcase>
+    <testcase classname="CVDValidator utility methods should clear history for specific symbol" name="CVDValidator utility methods should clear history for specific symbol" time="0">
+    </testcase>
+    <testcase classname="CVDValidator utility methods should provide history statistics" name="CVDValidator utility methods should provide history statistics" time="0">
+    </testcase>
+    <testcase classname="CVDValidator utility methods should handle empty history gracefully" name="CVDValidator utility methods should handle empty history gracefully" time="0">
+    </testcase>
+    <testcase classname="CVDValidator edge cases should handle zero quantity trades" name="CVDValidator edge cases should handle zero quantity trades" time="0">
+    </testcase>
+    <testcase classname="CVDValidator edge cases should handle very small CVD values in divergence detection" name="CVDValidator edge cases should handle very small CVD values in divergence detection" time="0">
+    </testcase>
+    <testcase classname="CVDValidator edge cases should handle identical price values" name="CVDValidator edge cases should handle identical price values" time="0">
+    </testcase>
+    <testcase classname="CVDValidator edge cases should handle identical CVD values" name="CVDValidator edge cases should handle identical CVD values" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="BinanceSpotClient" errors="0" failures="0" skipped="1" timestamp="2026-02-06T20:32:20" time="0.021" tests="11">
+    <testcase classname="BinanceSpotClient subscribeAggTrades should add callback to subscriptions" name="BinanceSpotClient subscribeAggTrades should add callback to subscriptions" time="0">
+    </testcase>
+    <testcase classname="BinanceSpotClient subscribeAggTrades should handle multiple callbacks for same symbol" name="BinanceSpotClient subscribeAggTrades should handle multiple callbacks for same symbol" time="0">
+    </testcase>
+    <testcase classname="BinanceSpotClient subscribeAggTrades should normalize symbol to lowercase" name="BinanceSpotClient subscribeAggTrades should normalize symbol to lowercase" time="0">
+      <skipped/>
+    </testcase>
+    <testcase classname="BinanceSpotClient unsubscribeAggTrades should remove callback from subscriptions" name="BinanceSpotClient unsubscribeAggTrades should remove callback from subscriptions" time="0">
+    </testcase>
+    <testcase classname="BinanceSpotClient getConnectionStatus should return CLOSED when no WebSocket" name="BinanceSpotClient getConnectionStatus should return CLOSED when no WebSocket" time="0.001">
+    </testcase>
+    <testcase classname="BinanceSpotClient getConnectionStatus should return correct status based on WebSocket state" name="BinanceSpotClient getConnectionStatus should return correct status based on WebSocket state" time="0">
+    </testcase>
+    <testcase classname="BinanceSpotClient error handling should call error callbacks when error occurs" name="BinanceSpotClient error handling should call error callbacks when error occurs" time="0">
+    </testcase>
+    <testcase classname="BinanceSpotClient error handling should call reconnect callbacks on reconnection" name="BinanceSpotClient error handling should call reconnect callbacks on reconnection" time="0">
+    </testcase>
+    <testcase classname="BinanceSpotClient message handling should parse aggregate trade messages correctly" name="BinanceSpotClient message handling should parse aggregate trade messages correctly" time="0">
+    </testcase>
+    <testcase classname="BinanceSpotClient message handling should handle sell trades correctly" name="BinanceSpotClient message handling should handle sell trades correctly" time="0">
+    </testcase>
+    <testcase classname="BinanceSpotClient cleanup should cleanup resources on close" name="BinanceSpotClient cleanup should cleanup resources on close" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="SignalValidator" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:20" time="0.017" tests="7">
+    <testcase classname="SignalValidator validateSignal should validate signal with all layers" name="SignalValidator validateSignal should validate signal with all layers" time="0.002">
+    </testcase>
+    <testcase classname="SignalValidator validateSignal should veto when Oracle vetoes" name="SignalValidator validateSignal should veto when Oracle vetoes" time="0">
+    </testcase>
+    <testcase classname="SignalValidator validateSignal should veto when manipulation detected" name="SignalValidator validateSignal should veto when manipulation detected" time="0">
+    </testcase>
+    <testcase classname="SignalValidator validateSignal should recommend caution for conflicting signals" name="SignalValidator validateSignal should recommend caution for conflicting signals" time="0">
+    </testcase>
+    <testcase classname="SignalValidator validateSignal should adjust confidence based on layer validations" name="SignalValidator validateSignal should adjust confidence based on layer validations" time="0">
+    </testcase>
+    <testcase classname="SignalValidator conflict resolution should use conservative strategy by default" name="SignalValidator conflict resolution should use conservative strategy by default" time="0">
+    </testcase>
+    <testcase classname="SignalValidator conflict resolution should detect conflicts between layers" name="SignalValidator conflict resolution should detect conflicts between layers" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="ScoringEngine" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:20" time="0.017" tests="8">
+    <testcase classname="ScoringEngine calculateEnhancedScore should return high score for perfect alignment" name="ScoringEngine calculateEnhancedScore should return high score for perfect alignment" time="0">
+    </testcase>
+    <testcase classname="ScoringEngine calculateEnhancedScore should return lower score for misalignment" name="ScoringEngine calculateEnhancedScore should return lower score for misalignment" time="0">
+    </testcase>
+    <testcase classname="ScoringEngine should apply bot trap penalty" name="ScoringEngine should apply bot trap penalty" time="0">
+    </testcase>
+    <testcase classname="ScoringEngine should handle null enhancement data gracefully" name="ScoringEngine should handle null enhancement data gracefully" time="0">
+    </testcase>
+    <testcase classname="ScoringEngine determineAlignment should return A+ for high score" name="ScoringEngine determineAlignment should return A+ for high score" time="0">
+    </testcase>
+    <testcase classname="ScoringEngine determineAlignment should return B for medium score" name="ScoringEngine determineAlignment should return B for medium score" time="0">
+    </testcase>
+    <testcase classname="ScoringEngine determineAlignment should veto if score is too low" name="ScoringEngine determineAlignment should veto if score is too low" time="0">
+    </testcase>
+    <testcase classname="ScoringEngine determineAlignment should veto if Oracle vetoes" name="ScoringEngine determineAlignment should veto if Oracle vetoes" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="ConvictionSizingEngine" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:20" time="0.017" tests="5">
+    <testcase classname="ConvictionSizingEngine calculatePositionSize should calculate position size with all factors" name="ConvictionSizingEngine calculatePositionSize should calculate position size with all factors" time="0">
+    </testcase>
+    <testcase classname="ConvictionSizingEngine calculatePositionSize should cap multiplier at 2.0x (Requirement 7.5)" name="ConvictionSizingEngine calculatePositionSize should cap multiplier at 2.0x (Requirement 7.5)" time="0">
+    </testcase>
+    <testcase classname="ConvictionSizingEngine calculatePositionSize should reduce size for bot trap (Requirement 3.5)" name="ConvictionSizingEngine calculatePositionSize should reduce size for bot trap (Requirement 3.5)" time="0.001">
+    </testcase>
+    <testcase classname="ConvictionSizingEngine calculatePositionSize should use conservative multiplier on conflicts (Requirement 7.6)" name="ConvictionSizingEngine calculatePositionSize should use conservative multiplier on conflicts (Requirement 7.6)" time="0">
+    </testcase>
+    <testcase classname="ConvictionSizingEngine calculatePositionSize should handle null enhancement data" name="ConvictionSizingEngine calculatePositionSize should handle null enhancement data" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="FractalMath" errors="0" failures="0" skipped="0" timestamp="2026-02-06T20:32:20" time="0.699" tests="24">
+    <testcase classname="FractalMath detectFractals should detect swing high fractal" name="FractalMath detectFractals should detect swing high fractal" time="0.002">
+    </testcase>
+    <testcase classname="FractalMath detectFractals should detect swing low fractal" name="FractalMath detectFractals should detect swing low fractal" time="0">
+    </testcase>
+    <testcase classname="FractalMath detectFractals should detect both high and low fractals" name="FractalMath detectFractals should detect both high and low fractals" time="0">
+    </testcase>
+    <testcase classname="FractalMath detectFractals should return empty array for insufficient candles" name="FractalMath detectFractals should return empty array for insufficient candles" time="0">
+    </testcase>
+    <testcase classname="FractalMath detectFractals should not detect fractal when pattern is not met" name="FractalMath detectFractals should not detect fractal when pattern is not met" time="0">
+    </testcase>
+    <testcase classname="FractalMath detectBOS should detect bullish BOS when close breaks above swing high" name="FractalMath detectBOS should detect bullish BOS when close breaks above swing high" time="0">
+    </testcase>
+    <testcase classname="FractalMath detectBOS should detect bearish BOS when close breaks below swing low" name="FractalMath detectBOS should detect bearish BOS when close breaks below swing low" time="0.002">
+    </testcase>
+    <testcase classname="FractalMath detectBOS should return empty array when no fractals provided" name="FractalMath detectBOS should return empty array when no fractals provided" time="0">
+    </testcase>
+    <testcase classname="FractalMath detectMSS should detect bearish MSS when bullish trend reverses" name="FractalMath detectMSS should detect bearish MSS when bullish trend reverses" time="0.001">
+    </testcase>
+    <testcase classname="FractalMath detectMSS should detect bullish MSS when bearish trend reverses" name="FractalMath detectMSS should detect bullish MSS when bearish trend reverses" time="0">
+    </testcase>
+    <testcase classname="FractalMath detectMSS should return null when no MSS occurs" name="FractalMath detectMSS should return null when no MSS occurs" time="0">
+    </testcase>
+    <testcase classname="FractalMath calcDealingRange should calculate dealing range with premium/discount zones" name="FractalMath calcDealingRange should calculate dealing range with premium/discount zones" time="0">
+    </testcase>
+    <testcase classname="FractalMath calcDealingRange should throw error when insufficient fractals" name="FractalMath calcDealingRange should throw error when insufficient fractals" time="0.007">
+    </testcase>
+    <testcase classname="FractalMath calcDealingRange should handle multiple fractals and find highest/lowest" name="FractalMath calcDealingRange should handle multiple fractals and find highest/lowest" time="0.001">
+    </testcase>
+    <testcase classname="FractalMath getTrendState should return BULL for consistent bullish BOS" name="FractalMath getTrendState should return BULL for consistent bullish BOS" time="0">
+    </testcase>
+    <testcase classname="FractalMath getTrendState should return BEAR for consistent bearish BOS" name="FractalMath getTrendState should return BEAR for consistent bearish BOS" time="0">
+    </testcase>
+    <testcase classname="FractalMath getTrendState should return RANGE for mixed BOS" name="FractalMath getTrendState should return RANGE for mixed BOS" time="0">
+    </testcase>
+    <testcase classname="FractalMath getTrendState should return RANGE for insufficient BOS events" name="FractalMath getTrendState should return RANGE for insufficient BOS events" time="0">
+    </testcase>
+    <testcase classname="FractalMath validateCandles should validate correct OHLCV data" name="FractalMath validateCandles should validate correct OHLCV data" time="0">
+    </testcase>
+    <testcase classname="FractalMath validateCandles should throw error for insufficient candles" name="FractalMath validateCandles should throw error for insufficient candles" time="0">
+    </testcase>
+    <testcase classname="FractalMath validateCandles should throw error for invalid high-low relationship" name="FractalMath validateCandles should throw error for invalid high-low relationship" time="0">
+    </testcase>
+    <testcase classname="FractalMath validateCandles should throw error for close outside high-low range" name="FractalMath validateCandles should throw error for close outside high-low range" time="0.001">
+    </testcase>
+    <testcase classname="FractalMath helper methods should get last fractal of specific type" name="FractalMath helper methods should get last fractal of specific type" time="0">
+    </testcase>
+    <testcase classname="FractalMath helper methods should determine price location in dealing range" name="FractalMath helper methods should determine price location in dealing range" time="0">
+    </testcase>
+  </testsuite>
+</testsuites>
