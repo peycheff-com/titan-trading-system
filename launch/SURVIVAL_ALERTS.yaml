@@ -1,0 +1,183 @@
+# Titan Survival Alerts & Cutover Criteria
+# ==============================================================================
+# This document defines the ~10 critical alerts that route to human-waking
+# channels and the metric-based criteria for posture promotion.
+# ==============================================================================
+
+---
+# SURVIVAL ALERTS
+# These are P0 alerts that MUST wake a human.
+# All other alerts are informational only during constrained launch.
+---
+survival_alerts:
+  #============================================================================
+  # SECURITY & INTEGRITY (3)
+  #============================================================================
+
+  - id: SURVIVAL-001
+    name: policy_hash_mismatch
+    severity: P0
+    description: Brain and Execution have different risk policy hashes
+    trigger: Brain startup handshake fails OR runtime hash comparison mismatch
+    action: HALT trading, investigate policy drift
+    routing: pagerduty, telegram
+
+  - id: SURVIVAL-002
+    name: unsigned_command_accepted
+    severity: P0
+    description: A command without valid HMAC was processed
+    trigger: HmacValidator accepts command with empty/invalid signature
+    action: HALT immediately, forensic investigation
+    routing: pagerduty, telegram, slack
+
+  - id: SURVIVAL-003
+    name: secret_missing_startup
+    severity: P0
+    description: Service started without required secrets
+    trigger: HMAC_SECRET or exchange credentials missing at startup
+    action: Block startup (fail-closed), alert ops
+    routing: pagerduty
+
+  #============================================================================
+  # CONNECTIVITY & INFRASTRUCTURE (2)
+  #============================================================================
+
+  - id: SURVIVAL-004
+    name: exchange_connectivity_lost
+    severity: P0
+    description: Lost connection to primary exchange API
+    trigger: 3+ consecutive API failures OR WebSocket disconnect > 30s
+    action: HALT new orders, attempt reconnect, alert
+    routing: pagerduty, telegram
+
+  - id: SURVIVAL-005
+    name: jetstream_disk_critical
+    severity: P0
+    description: JetStream storage approaching capacity
+    trigger: Disk usage > 85% OR write failures
+    action: Alert ops, prepare for graceful degradation
+    routing: pagerduty
+
+  #============================================================================
+  # RISK & LOSS (2)
+  #============================================================================
+
+  - id: SURVIVAL-006
+    name: drawdown_breach
+    severity: P0
+    description: Daily loss exceeds configured limit
+    trigger: daily_pnl < -DAILY_LOSS_LIMIT_USD
+    action: Auto-HALT, alert, await manual review
+    routing: pagerduty, telegram
+
+  - id: SURVIVAL-007
+    name: leverage_breach
+    severity: P0
+    description: Position leverage exceeds maximum allowed
+    trigger: leverage > MAX_LEVERAGE for any position
+    action: Reduce position immediately, alert
+    routing: pagerduty
+
+  #============================================================================
+  # OPERATIONAL SAFETY (3)
+  #============================================================================
+
+  - id: SURVIVAL-008
+    name: circuit_breaker_tripped
+    severity: P0
+    description: Circuit breaker triggered due to error cascade
+    trigger: CircuitBreaker.trigger() called
+    action: Trading halted, alert for investigation
+    routing: pagerduty, telegram
+
+  - id: SURVIVAL-009
+    name: reconcile_mismatch
+    severity: P0
+    description: Local state differs from exchange state
+    trigger: Reconciliation finds position/balance mismatch > tolerance
+    action: HALT, alert, manual reconciliation required
+    routing: pagerduty, telegram
+
+  - id: SURVIVAL-010
+    name: service_down
+    severity: P0
+    description: Critical service health check failed
+    trigger: Health endpoint returns non-200 for > 60s
+    action: Alert, trigger restart/failover
+    routing: pagerduty
+---
+# CUTOVER CRITERIA
+# Metric-based promotion from constrained_alpha to expanded postures.
+# ALL criteria must be met over the evaluation window.
+---
+cutover_criteria:
+  #============================================================================
+  # FROM: constrained_alpha -> expanded_beta
+  # WINDOW: 100+ trades, 7+ days
+  #============================================================================
+
+  constrained_to_expanded:
+    min_trades: 100
+    min_days: 7
+
+    security:
+      unsigned_commands_accepted: 0
+      policy_hash_mismatches: 0
+      secret_rotation_events: 0 # No unplanned rotations
+
+    reliability:
+      reconcile_mismatch_rate: '< 0.01' # < 1% of checks
+      order_lifecycle_completeness: '> 0.99' # 99%+ orders reach terminal state
+      event_lag_p99_ms: '< 1000' # Sub-second event propagation
+
+    performance:
+      slippage_bps: '< 50' # < 50 basis points avg slippage
+      fill_rate: '> 0.95' # 95%+ orders filled
+      latency_p99_ms: '< 500' # Order submission latency
+
+    safety:
+      circuit_breaker_trips: 0
+      p0_alerts_unacked: 0 # No unacknowledged survival alerts
+      max_drawdown_breach: 0 # Never hit daily limit
+
+  #============================================================================
+  # FROM: expanded_beta -> production_full
+  # WINDOW: 500+ trades, 30+ days
+  #============================================================================
+
+  expanded_to_production:
+    min_trades: 500
+    min_days: 30
+
+    security:
+      unsigned_commands_accepted: 0
+      policy_hash_mismatches: 0
+
+    reliability:
+      reconcile_mismatch_rate: '< 0.005' # < 0.5%
+      order_lifecycle_completeness: '> 0.995'
+      event_lag_p99_ms: '< 500'
+
+    performance:
+      slippage_bps: '< 30'
+      fill_rate: '> 0.98'
+
+    safety:
+      circuit_breaker_trips: 0
+      p0_alerts_unacked: 0
+      sharpe_ratio: '> 1.0' # Must demonstrate edge
+---
+# ALERT ROUTING CONFIGURATION
+---
+routing:
+  pagerduty:
+    service_key: '${PAGERDUTY_SERVICE_KEY}'
+    escalation_policy: titan-critical
+
+  telegram:
+    bot_token: '${TELEGRAM_BOT_TOKEN}'
+    chat_id: '${TELEGRAM_ALERTS_CHAT_ID}'
+
+  slack:
+    webhook_url: '${SLACK_WEBHOOK_URL}'
+    channel: '#titan-alerts'

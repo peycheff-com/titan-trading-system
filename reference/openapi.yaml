@@ -1,0 +1,36 @@
+openapi: 3.0.0
+info:
+  title: Titan Brain API
+  version: 1.0.0
+  description: Orchestration layer for Titan Trading System.
+servers:
+  - url: http://localhost:3100
+    description: Local Dev
+paths:
+  /health:
+    get:
+      summary: Health Check
+      responses:
+        '200':
+          description: OK
+  /signals:
+    post:
+      summary: Submit Signal
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Signal'
+      responses:
+        '200':
+          description: Signal Accepted
+components:
+  schemas:
+    Signal:
+      type: object
+      properties:
+        symbol:
+          type: string
+        action:
+          type: string
+          enum: [BUY, SELL]

@@ -1,0 +1,30 @@
+asyncapi: 2.6.0
+info:
+  title: Titan Event Bus
+  version: 1.0.0
+  description: NATS JetStream Event Catalog.
+channels:
+  titan.cmd.sys.halt.v1:
+    publish:
+      message:
+        $ref: '#/components/messages/HaltCommand'
+  titan.evt.fill:
+    subscribe:
+      message:
+        $ref: '#/components/messages/FillEvent'
+components:
+  messages:
+    HaltCommand:
+      payload:
+        type: object
+        properties:
+          reason:
+            type: string
+    FillEvent:
+      payload:
+        type: object
+        properties:
+          orderId:
+            type: string
+          price:
+            type: number

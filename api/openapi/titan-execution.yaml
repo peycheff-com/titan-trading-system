@@ -1,0 +1,1322 @@
+openapi: 3.0.3
+info:
+  title: Titan Execution API
+  description: |
+    Core execution microservice for the Titan Trading System. Handles order placement,
+    position tracking, WebSocket communications, and emergency controls.
+    
+    The Execution service operates as the central hub for all trading operations,
+    maintaining Shadow State for position tracking and providing real-time updates
+    via WebSocket channels.
+  version: 1.0.0
+  contact:
+    name: Titan Trading System
+    email: support@titan-trading.com
+  license:
+    name: Proprietary
+    url: https://titan-trading.com/license
+
+servers:
+  - url: http://localhost:3002
+    description: Development server
+  - url: https://titan-execution.yourdomain.com
+    description: Production server
+
+security:
+  - hmacSignature: []
+  - basicAuth: []
+
+paths:
+  # Health and Status Endpoints
+  /health:
+    get:
+      summary: Basic health check
+      description: Returns basic health status for load balancers and monitoring
+      tags: [Health]
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /health/detailed:
+    get:
+      summary: Detailed health check
+      description: Returns comprehensive health information including all components
+      tags: [Health]
+      responses:
+        '200':
+          description: Detailed health information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailedHealthResponse'
+
+  /health/live:
+    get:
+      summary: Liveness probe
+      description: Simple endpoint for Kubernetes liveness probes
+      tags: [Health]
+      responses:
+        '200':
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "alive"
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /health/ready:
+    get:
+      summary: Readiness probe
+      description: Checks if service is ready to accept traffic
+      tags: [Health]
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ready"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  checks:
+                    type: object
+        '503':
+          description: Service not ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Webhook Endpoints
+  /webhook:
+    post:
+      summary: TradingView webhook receiver
+      description: |
+        Main webhook endpoint for receiving signals from TradingView or other sources.
+        Supports PREPARE, CONFIRM, ABORT, and HEARTBEAT signal types with comprehensive
+        validation and processing.
+      tags: [Webhooks]
+      security:
+        - hmacSignature: []
+      parameters:
+        - name: x-source
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [titan_dashboard]
+          description: Source identifier for request validation
+        - name: x-signature
+          in: header
+          required: true
+          schema:
+            type: string
+          description: HMAC-SHA256 signature of request body
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookSignal'
+            examples:
+              prepare_signal:
+                summary: PREPARE Signal
+                value:
+                  type: "PREPARE"
+                  signal_id: "titan_BTCUSDT_12345_1"
+                  symbol: "BTCUSDT"
+                  direction: "LONG"
+                  size: 100
+                  leverage: 15
+                  timestamp: 1702500000000
+              confirm_signal:
+                summary: CONFIRM Signal
+                value:
+                  type: "CONFIRM"
+                  signal_id: "titan_BTCUSDT_12345_1"
+                  symbol: "BTCUSDT"
+                  direction: "LONG"
+                  size: 100
+                  entry_price: 43250.50
+                  stop_loss: 42800.00
+                  take_profit: 44000.00
+                  timestamp: 1702500000000
+              abort_signal:
+                summary: ABORT Signal
+                value:
+                  type: "ABORT"
+                  signal_id: "titan_BTCUSDT_12345_1"
+                  reason: "Market conditions changed"
+                  timestamp: 1702500000000
+              heartbeat_signal:
+                summary: HEARTBEAT Signal
+                value:
+                  type: "HEARTBEAT"
+                  timestamp: 1702500000000
+      responses:
+        '200':
+          description: Signal processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookResponse'
+        '400':
+          description: Invalid signal format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid signature or source
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Signal rejected by safety gates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Duplicate signal or replay attack
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # State and Position Endpoints
+  /state:
+    get:
+      summary: Get Shadow State snapshot
+      description: Returns current Shadow State including positions, equity, and metrics
+      tags: [State]
+      responses:
+        '200':
+          description: Shadow State snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateSnapshot'
+
+  /positions:
+    get:
+      summary: Get all open positions
+      description: Returns all currently open positions from Shadow State
+      tags: [Positions]
+      responses:
+        '200':
+          description: Open positions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  positions:
+                    type: object
+                    additionalProperties:
+                      $ref: '#/components/schemas/Position'
+                  count:
+                    type: integer
+
+  /positions/{symbol}:
+    get:
+      summary: Get position for specific symbol
+      description: Returns position details for a specific trading symbol
+      tags: [Positions]
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Trading symbol (e.g., BTCUSDT)
+      responses:
+        '200':
+          description: Position details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  position:
+                    $ref: '#/components/schemas/Position'
+                  has_position:
+                    type: boolean
+        '404':
+          description: Position not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /pnl:
+    get:
+      summary: Get PnL statistics
+      description: Returns profit and loss statistics from Shadow State
+      tags: [Analytics]
+      parameters:
+        - name: window
+          in: query
+          schema:
+            type: integer
+            default: 100
+          description: Window size for statistics calculation
+      responses:
+        '200':
+          description: PnL statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PnLStats'
+
+  /trades:
+    get:
+      summary: Get recent trade history
+      description: Returns recent trade history from Shadow State
+      tags: [Analytics]
+      parameters:
+        - name: count
+          in: query
+          schema:
+            type: integer
+            default: 50
+          description: Number of recent trades to return
+      responses:
+        '200':
+          description: Trade history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trades:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Trade'
+                  count:
+                    type: integer
+
+  # Console API Endpoints
+  /api/console/master-arm:
+    get:
+      summary: Get Master Arm status
+      description: Returns current Master Arm status (ENABLED/DISABLED)
+      tags: [Console]
+      responses:
+        '200':
+          description: Master Arm status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  master_arm:
+                    type: boolean
+                  status:
+                    type: string
+                    enum: [ENABLED, DISABLED]
+
+    post:
+      summary: Set Master Arm status
+      description: Enable or disable the Master Arm (requires operator authentication)
+      tags: [Console]
+      security:
+        - basicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled:
+                  type: boolean
+                  description: Whether to enable or disable Master Arm
+                operator_id:
+                  type: string
+                  description: Operator identifier
+              example:
+                enabled: true
+                operator_id: "admin"
+      responses:
+        '200':
+          description: Master Arm status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  master_arm:
+                    type: boolean
+                  previous_state:
+                    type: boolean
+                  status:
+                    type: string
+                  operator_id:
+                    type: string
+
+  /api/console/config:
+    get:
+      summary: Get configuration
+      description: Returns current system configuration
+      tags: [Console]
+      security:
+        - basicAuth: []
+      responses:
+        '200':
+          description: System configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemConfig'
+
+    post:
+      summary: Update configuration
+      description: Update system configuration (requires operator authentication)
+      tags: [Console]
+      security:
+        - basicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigUpdate'
+      responses:
+        '200':
+          description: Configuration updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updates:
+                    type: array
+                    items:
+                      type: object
+                  config:
+                    $ref: '#/components/schemas/SystemConfig'
+
+  /api/console/validate-api-keys:
+    post:
+      summary: Validate API keys
+      description: Validate broker API keys without saving them
+      tags: [Console]
+      security:
+        - basicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [apiKey, apiSecret]
+              properties:
+                apiKey:
+                  type: string
+                  description: Broker API key
+                apiSecret:
+                  type: string
+                  description: Broker API secret
+                operator_id:
+                  type: string
+                  description: Operator identifier
+      responses:
+        '200':
+          description: API keys are valid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  message:
+                    type: string
+                  operator_id:
+                    type: string
+        '400':
+          description: API keys are invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Emergency Control Endpoints
+  /api/console/flatten-all:
+    post:
+      summary: Emergency flatten all positions
+      description: |
+        Emergency control to close all open positions immediately.
+        This will also disable the Master Arm for safety.
+      tags: [Emergency]
+      security:
+        - basicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                operator_id:
+                  type: string
+                  description: Operator identifier
+              example:
+                operator_id: "admin"
+      responses:
+        '200':
+          description: All positions flattened
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  action:
+                    type: string
+                    example: "FLATTEN_ALL"
+                  positions_affected:
+                    type: integer
+                  orders_cancelled:
+                    type: integer
+                  trade_records:
+                    type: integer
+                  master_arm:
+                    type: boolean
+                  master_arm_disabled:
+                    type: boolean
+                  operator_id:
+                    type: string
+
+  /api/console/cancel-all:
+    post:
+      summary: Emergency cancel all orders
+      description: Emergency control to cancel all pending orders
+      tags: [Emergency]
+      security:
+        - basicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                operator_id:
+                  type: string
+                  description: Operator identifier
+      responses:
+        '200':
+          description: All orders cancelled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  action:
+                    type: string
+                    example: "CANCEL_ALL"
+                  positions_affected:
+                    type: integer
+                  orders_cancelled:
+                    type: integer
+                  cancel_results:
+                    type: array
+                    items:
+                      type: object
+                  operator_id:
+                    type: string
+
+  # System Status and Monitoring
+  /api/console/system-status:
+    get:
+      summary: Get system status
+      description: Returns comprehensive system status for monitoring dashboard
+      tags: [Console]
+      responses:
+        '200':
+          description: System status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemStatus'
+
+  /api/console/positions:
+    get:
+      summary: Get positions for console
+      description: Returns formatted position data for console display
+      tags: [Console]
+      responses:
+        '200':
+          description: Console position data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  positions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ConsolePosition'
+
+  /api/console/trades:
+    get:
+      summary: Get trade history for console
+      description: Returns formatted trade history for console display
+      tags: [Console]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+          description: Maximum number of trades to return
+      responses:
+        '200':
+          description: Console trade data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trades:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ConsoleTrade'
+                  total:
+                    type: integer
+
+  /api/console/signals:
+    get:
+      summary: Get recent signals for console
+      description: Returns recent signal activity for console display
+      tags: [Console]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+          description: Maximum number of signals to return
+      responses:
+        '200':
+          description: Console signal data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  signals:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ConsoleSignal'
+                  total:
+                    type: integer
+
+  /api/console/regime-state:
+    get:
+      summary: Get regime state for console
+      description: Returns current market regime state for console display
+      tags: [Console]
+      responses:
+        '200':
+          description: Console regime state data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  regime_state:
+                    $ref: '#/components/schemas/RegimeState'
+
+  /api/console/performance:
+    get:
+      summary: Get performance metrics for console
+      description: Returns performance metrics for console display
+      tags: [Console]
+      parameters:
+        - name: timeframe
+          in: query
+          schema:
+            type: string
+            default: "ALL"
+            enum: [ALL, 1D, 7D, 30D]
+          description: Timeframe for performance calculation
+      responses:
+        '200':
+          description: Console performance data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  performance:
+                    $ref: '#/components/schemas/PerformanceMetrics'
+
+  /api/console/test-webhook:
+    post:
+      summary: Test webhook configuration
+      description: Test webhook URL and HMAC configuration
+      tags: [Console]
+      security:
+        - basicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [webhook_url]
+              properties:
+                webhook_url:
+                  type: string
+                  format: uri
+                  description: Webhook URL to test
+                hmac_secret:
+                  type: string
+                  description: HMAC secret for signature generation
+      responses:
+        '200':
+          description: Webhook test successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  message:
+                    type: string
+                  url:
+                    type: string
+                  has_hmac:
+                    type: boolean
+                  test_payload:
+                    type: object
+                  signature:
+                    type: string
+        '400':
+          description: Webhook test failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Metrics Endpoint
+  /metrics:
+    get:
+      summary: Prometheus metrics
+      description: Returns Prometheus-formatted metrics for monitoring
+      tags: [Monitoring]
+      responses:
+        '200':
+          description: Prometheus metrics
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: |
+                  # HELP titan_signals_total Total number of signals processed
+                  # TYPE titan_signals_total counter
+                  titan_signals_total{type="PREPARE"} 150
+                  titan_signals_total{type="CONFIRM"} 145
+                  titan_signals_total{type="ABORT"} 5
+
+components:
+  securitySchemes:
+    hmacSignature:
+      type: apiKey
+      in: header
+      name: x-signature
+      description: HMAC-SHA256 signature of request body
+    basicAuth:
+      type: http
+      scheme: basic
+      description: Basic authentication for console endpoints
+
+  schemas:
+    # Webhook Signal Types
+    WebhookSignal:
+      type: object
+      required: [type, signal_id, timestamp]
+      discriminator:
+        propertyName: type
+        mapping:
+          PREPARE: '#/components/schemas/PrepareSignal'
+          CONFIRM: '#/components/schemas/ConfirmSignal'
+          ABORT: '#/components/schemas/AbortSignal'
+          HEARTBEAT: '#/components/schemas/HeartbeatSignal'
+      properties:
+        type:
+          type: string
+          enum: [PREPARE, CONFIRM, ABORT, HEARTBEAT]
+        signal_id:
+          type: string
+        timestamp:
+          type: integer
+
+    PrepareSignal:
+      allOf:
+        - $ref: '#/components/schemas/WebhookSignal'
+        - type: object
+          required: [symbol, direction, size]
+          properties:
+            symbol:
+              type: string
+              example: "BTCUSDT"
+            direction:
+              type: string
+              enum: [LONG, SHORT]
+            size:
+              type: number
+              minimum: 0
+            leverage:
+              type: number
+              minimum: 1
+              maximum: 100
+
+    ConfirmSignal:
+      allOf:
+        - $ref: '#/components/schemas/WebhookSignal'
+        - type: object
+          required: [symbol, direction, size, entry_price]
+          properties:
+            symbol:
+              type: string
+            direction:
+              type: string
+              enum: [LONG, SHORT]
+            size:
+              type: number
+              minimum: 0
+            entry_price:
+              type: number
+              minimum: 0
+            stop_loss:
+              type: number
+              minimum: 0
+            take_profit:
+              type: number
+              minimum: 0
+
+    AbortSignal:
+      allOf:
+        - $ref: '#/components/schemas/WebhookSignal'
+        - type: object
+          properties:
+            reason:
+              type: string
+              description: Reason for aborting the signal
+
+    HeartbeatSignal:
+      allOf:
+        - $ref: '#/components/schemas/WebhookSignal'
+        - type: object
+          properties:
+            equity:
+              type: number
+              description: Current equity value
+
+    WebhookResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        signal_id:
+          type: string
+        processing_time_ms:
+          type: number
+        timestamp:
+          type: string
+          format: date-time
+
+    # Position and State Types
+    Position:
+      type: object
+      properties:
+        symbol:
+          type: string
+        side:
+          type: string
+          enum: [LONG, SHORT]
+        size:
+          type: number
+        entry_price:
+          type: number
+        current_price:
+          type: number
+        unrealized_pnl:
+          type: number
+        unrealized_pnl_pct:
+          type: number
+        liquidation_price:
+          type: number
+        stop_loss:
+          type: number
+        take_profit:
+          type: number
+        leverage:
+          type: number
+        timestamp:
+          type: string
+          format: date-time
+
+    ConsolePosition:
+      allOf:
+        - $ref: '#/components/schemas/Position'
+        - type: object
+          properties:
+            status:
+              type: string
+              enum: [OPEN, CLOSING, CLOSED]
+
+    Trade:
+      type: object
+      properties:
+        id:
+          type: integer
+        signal_id:
+          type: string
+        symbol:
+          type: string
+        side:
+          type: string
+          enum: [LONG, SHORT]
+        size:
+          type: number
+        entry_price:
+          type: number
+        exit_price:
+          type: number
+        pnl:
+          type: number
+        pnl_pct:
+          type: number
+        status:
+          type: string
+          enum: [OPEN, CLOSED, CANCELLED]
+        timestamp:
+          type: string
+          format: date-time
+
+    ConsoleTrade:
+      allOf:
+        - $ref: '#/components/schemas/Trade'
+        - type: object
+          properties:
+            regime_state:
+              type: integer
+            phase:
+              type: string
+
+    ConsoleSignal:
+      type: object
+      properties:
+        signal_id:
+          type: string
+        type:
+          type: string
+        symbol:
+          type: string
+        direction:
+          type: string
+        status:
+          type: string
+        entry_price:
+          type: number
+        size:
+          type: number
+        regime_state:
+          type: integer
+        phase:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    StateSnapshot:
+      type: object
+      properties:
+        equity:
+          type: number
+        daily_pnl:
+          type: number
+        daily_pnl_pct:
+          type: number
+        positions:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Position'
+        master_arm:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+
+    PnLStats:
+      type: object
+      properties:
+        total_pnl:
+          type: number
+        total_pnl_pct:
+          type: number
+        win_rate:
+          type: number
+        profit_factor:
+          type: number
+        sharpe_ratio:
+          type: number
+        max_drawdown:
+          type: number
+        avg_win:
+          type: number
+        avg_loss:
+          type: number
+        total_trades:
+          type: integer
+        winning_trades:
+          type: integer
+        losing_trades:
+          type: integer
+        window_size:
+          type: integer
+
+    # Configuration Types
+    SystemConfig:
+      type: object
+      properties:
+        risk_tuner:
+          type: object
+          properties:
+            phase1_risk_pct:
+              type: number
+            phase2_risk_pct:
+              type: number
+        asset_whitelist:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+            assets:
+              type: array
+              items:
+                type: string
+        api_keys:
+          type: object
+          properties:
+            broker:
+              type: string
+            validated:
+              type: boolean
+
+    ConfigUpdate:
+      type: object
+      properties:
+        risk_tuner:
+          type: object
+          properties:
+            phase1_risk_pct:
+              type: number
+            phase2_risk_pct:
+              type: number
+        asset_whitelist:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+            assets:
+              type: array
+              items:
+                type: string
+        api_keys:
+          type: object
+          properties:
+            broker:
+              type: string
+            bybit_api_key:
+              type: string
+            bybit_api_secret:
+              type: string
+            mexc_api_key:
+              type: string
+            mexc_api_secret:
+              type: string
+        operator_id:
+          type: string
+
+    # System Status Types
+    SystemStatus:
+      type: object
+      properties:
+        broker:
+          type: object
+          properties:
+            connected:
+              type: boolean
+            broker:
+              type: string
+            lastPing:
+              type: string
+              format: date-time
+        database:
+          type: object
+          properties:
+            connected:
+              type: boolean
+            lastWrite:
+              type: string
+              format: date-time
+        l2Cache:
+          type: object
+          properties:
+            active:
+              type: boolean
+            symbols:
+              type: array
+              items:
+                type: string
+            lastUpdate:
+              type: string
+              format: date-time
+        heartbeat:
+          type: object
+          properties:
+            alive:
+              type: boolean
+            lastBeat:
+              type: string
+              format: date-time
+        websocket:
+          type: object
+          properties:
+            console:
+              type: boolean
+            status:
+              type: boolean
+
+    RegimeState:
+      type: object
+      properties:
+        trend_state:
+          type: integer
+          description: "1=Bull, 0=Range, -1=Bear"
+        vol_state:
+          type: integer
+          description: "0=Low, 1=Normal, 2=Extreme"
+        liquidity_state:
+          type: integer
+          description: "2=High, 1=Normal, 0=Low"
+        regime_state:
+          type: integer
+          description: "1=Risk-On, 0=Neutral, -1=Risk-Off"
+        hurst_exponent:
+          type: number
+        fdi:
+          type: number
+        efficiency_ratio:
+          type: number
+        vpin_approx:
+          type: number
+        absorption_state:
+          type: boolean
+        shannon_entropy:
+          type: number
+        market_structure_score:
+          type: number
+        trend_score:
+          type: number
+        momentum_score:
+          type: number
+        vol_score:
+          type: number
+        macro_score:
+          type: number
+        proxy_score:
+          type: number
+        model_recommendation:
+          type: string
+        phase:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    PerformanceMetrics:
+      type: object
+      properties:
+        timeframe:
+          type: string
+        total_trades:
+          type: integer
+        winning_trades:
+          type: integer
+        losing_trades:
+          type: integer
+        win_rate:
+          type: number
+        total_pnl:
+          type: number
+        total_pnl_pct:
+          type: number
+        avg_win:
+          type: number
+        avg_loss:
+          type: number
+        largest_win:
+          type: number
+        largest_loss:
+          type: number
+        profit_factor:
+          type: number
+        sharpe_ratio:
+          type: number
+        max_drawdown:
+          type: number
+        max_drawdown_pct:
+          type: number
+        avg_rr_ratio:
+          type: number
+        expectancy:
+          type: number
+        timestamp:
+          type: string
+          format: date-time
+
+    # Health Response Types
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded, unhealthy]
+        version:
+          type: string
+        uptime:
+          type: string
+        uptimeSeconds:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+        components:
+          type: object
+          properties:
+            database:
+              type: string
+              enum: [healthy, unhealthy]
+            broker:
+              type: string
+              enum: [connected, disconnected]
+            fastPathIPC:
+              type: object
+              properties:
+                running:
+                  type: boolean
+                socketPath:
+                  type: string
+                activeConnections:
+                  type: integer
+
+    DetailedHealthResponse:
+      allOf:
+        - $ref: '#/components/schemas/HealthResponse'
+        - type: object
+          properties:
+            healthScore:
+              type: integer
+              minimum: 0
+              maximum: 100
+            environment:
+              type: string
+            metrics:
+              type: object
+              properties:
+                uptime:
+                  type: integer
+                memory:
+                  type: object
+                activePositions:
+                  type: integer
+                pendingSignals:
+                  type: integer
+                cpuUsage:
+                  type: object
+            system:
+              type: object
+              properties:
+                nodeVersion:
+                  type: string
+                platform:
+                  type: string
+                arch:
+                  type: string
+                hostname:
+                  type: string
+                loadAverage:
+                  type: array
+                  items:
+                    type: number
+                freeMemory:
+                  type: integer
+                totalMemory:
+                  type: integer
+
+    ErrorResponse:
+      type: object
+      required: [error, timestamp]
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+        code:
+          type: string
+          description: Error code for programmatic handling
+        timestamp:
+          type: string
+          format: date-time
+        details:
+          type: object
+          description: Additional error context
+
+tags:
+  - name: Health
+    description: Health check and system status endpoints
+  - name: Webhooks
+    description: Signal reception and processing
+  - name: State
+    description: Shadow State and system state management
+  - name: Positions
+    description: Position tracking and management
+  - name: Analytics
+    description: Performance analytics and statistics
+  - name: Console
+    description: Console dashboard API endpoints
+  - name: Emergency
+    description: Emergency control functions
+  - name: Monitoring
+    description: Monitoring and metrics endpoints
