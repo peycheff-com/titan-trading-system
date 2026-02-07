@@ -17,7 +17,7 @@
 - [ ] DNS propagated (dig returns correct IP)
 - [ ] .env.prod populated with production secrets
 - [ ] No __CHANGE_ME__ placeholders remaining
-- [ ] TITAN_MODE=DISARMED in .env.prod
+- [ ] System explicitly DISARMED before deployment (`./scripts/ops/set_trading_mode.sh disarm ...`)
 
 ### CI/CD
 - [ ] GitHub secrets updated:
@@ -59,7 +59,8 @@ nmap -Pn -p 22,80,443,3000,5432,6379,9090 <DROPLET_IP>
 - [ ] titan-redis ping: PONG
 
 ### Safety
-- [ ] TITAN_MODE shows DISARMED in Brain logs
+- [ ] Brain logs show `SYSTEM DISARMED BY OPERATOR`
+- [ ] Execution logs show `EXECUTION DISARMED`
 - [ ] No secrets visible in docker logs
 
 ---
@@ -82,17 +83,12 @@ nmap -Pn -p 22,80,443,3000,5432,6379,9090 <DROPLET_IP>
 
 ### Step 3: Arm System
 ```bash
-# Edit environment
-sudo nano /opt/titan/compose/.env.prod
+# Publish canonical ARM action
+./scripts/ops/set_trading_mode.sh arm "Go live" "<operator_id>"
 
-# Change: TITAN_MODE=DISARMED
-# To:     TITAN_MODE=ARMED
-
-# Restart Brain to apply
-docker restart titan-brain
-
-# Verify mode change
-docker logs titan-brain 2>&1 | grep "TITAN_MODE"
+# Verify mode change in both services
+docker logs titan-brain --tail 100 2>&1 | grep "SYSTEM ARMED BY OPERATOR"
+docker logs titan-execution --tail 100 2>&1 | grep "EXECUTION ARMED"
 ```
 
 ### Step 4: Monitor First Hour
@@ -106,12 +102,11 @@ docker logs titan-brain 2>&1 | grep "TITAN_MODE"
 ## Disarming (Return to Safe Mode)
 
 ```bash
-# Method 1: Via Environment
-sudo sed -i 's/TITAN_MODE=ARMED/TITAN_MODE=DISARMED/' /opt/titan/compose/.env.prod
-docker restart titan-brain
+# Preferred: publish canonical DISARM action
+./scripts/ops/set_trading_mode.sh disarm "Manual disarm" "<operator_id>"
 
-# Method 2: Via NATS Command
-docker exec titan-nats nats pub titan.cmd.sys.halt \
+# Optional hard-stop if immediate halt required
+docker exec titan-nats nats pub titan.cmd.sys.halt.v1 \
   '{"state":"HARD_HALT","reason":"Manual disarm","timestamp":'$(date +%s)'}'
 ```
 

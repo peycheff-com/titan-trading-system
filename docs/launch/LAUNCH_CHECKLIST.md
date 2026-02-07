@@ -35,22 +35,19 @@
 2. **Verify Health**
 
    ```bash
-   curl http://localhost:3000/health
-   curl http://localhost:3002/health
+   ./scripts/ops/health_check.sh
    ```
 
 3. **Confirm DISARMED State**
 
    ```bash
-   curl http://localhost:3000/api/status | jq .armed
-   # Should be: false
+   ./scripts/ops/set_trading_mode.sh disarm "Pre-launch safety check" "<operator_id>"
+   docker logs titan-brain --tail 100 2>&1 | grep "SYSTEM DISARMED BY OPERATOR"
    ```
 
 4. **ARM When Ready**
    ```bash
-   curl -X POST http://localhost:3000/api/arm \
-     -H "Content-Type: application/json" \
-     -d '{"reason": "Initial launch - operator: <name>"}'
+   ./scripts/ops/set_trading_mode.sh arm "Initial launch" "<operator_id>"
    ```
 
 ## Emergency Procedures
@@ -58,25 +55,21 @@
 ### HALT (Stop New Orders)
 
 ```bash
-curl -X POST http://localhost:3000/api/halt \
-  -H "Content-Type: application/json" \
-  -d '{"reason": "Emergency halt", "actor_id": "<operator>"}'
+docker exec titan-nats nats pub titan.cmd.sys.halt.v1 \
+  '{"state":"HARD_HALT","reason":"Emergency halt","timestamp":'$(date +%s)'}'
 ```
 
 ### FLATTEN (Close All Positions)
 
 ```bash
-curl -X POST http://localhost:3000/api/flatten \
-  -H "Content-Type: application/json" \
-  -d '{"reason": "Flatten all", "actor_id": "<operator>"}'
+docker exec titan-nats nats pub titan.cmd.risk.flatten \
+  '{"reason":"Flatten all","actor_id":"<operator>","timestamp":'$(date +%s)'}'
 ```
 
 ### DISARM (Prevent Arming)
 
 ```bash
-curl -X POST http://localhost:3000/api/disarm \
-  -H "Content-Type: application/json" \
-  -d '{"reason": "Manual disarm", "actor_id": "<operator>"}'
+./scripts/ops/set_trading_mode.sh disarm "Manual disarm" "<operator_id>"
 ```
 
 ## Constraints in Effect (constrained_alpha)

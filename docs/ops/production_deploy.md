@@ -107,14 +107,14 @@ If data corruption is suspected:
 
 1. **Disarm Execution**:
    ```bash
-   docker exec titan-nats nats pub titan.cmd.operator.disarm.v1 "Policy Update"
+   ./scripts/ops/set_trading_mode.sh disarm "Policy Update" "<operator_id>"
    ```
 2. **Deploy** (Steps 1-3 above).
 3. **Verify Policy Hash**:
    Check logs of `titan-execution` to ensure it loaded the exact hash present in `titan-brain`.
 4. **Re-Arm**:
    ```bash
-   docker exec titan-nats nats pub titan.cmd.operator.arm.v1 "Post-Deploy Arm"
+   ./scripts/ops/set_trading_mode.sh arm "Post-Deploy Arm" "<operator_id>"
    ```
 
 ## 6. Troubleshooting

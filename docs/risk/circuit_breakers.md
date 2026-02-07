@@ -33,7 +33,7 @@ The system operates in one of 4 states. Transitions are one-way (downward) durin
 Manual override to kill the system.
 ```bash
 # Via NATS (from Host)
-docker exec titan-nats nats pub titan.cmd.sys.halt.v1 '{"reason":"Manual","ts":12345}'
+docker exec titan-nats nats pub titan.cmd.sys.halt.v1 '{"state":"HARD_HALT","reason":"Manual","timestamp":12345}'
 ```
 **Effect**:
 - Cancels all open orders.
@@ -44,7 +44,7 @@ docker exec titan-nats nats pub titan.cmd.sys.halt.v1 '{"reason":"Manual","ts":1
 To return to `NORMAL` state, an Operator must sign an Arm command.
 
 ```bash
-docker exec titan-nats nats pub titan.cmd.operator.arm.v1 '{"reset_drawdown":true}'
+./scripts/ops/set_trading_mode.sh arm "Post-incident re-arm" "<operator_id>"
 ```
 **Prerequisite**:
 - Root cause resolved.
