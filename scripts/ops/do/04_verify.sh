@@ -10,6 +10,7 @@ set -euo pipefail
 
 # Configuration
 DOMAIN="${DOMAIN:-titan.peycheff.com}"
+ENV_FILE="${TITAN_ENV_FILE:-.env.prod}"
 EXPECTED_SERVICES=("titan-traefik" "titan-nats" "titan-redis" "titan-postgres" "titan-brain" "titan-execution")
 
 # Colors
@@ -22,9 +23,16 @@ PASS=0
 FAIL=0
 WARN=0
 
-check_pass() { echo -e "${GREEN}✓${NC} $1"; ((PASS++)); }
-check_fail() { echo -e "${RED}✗${NC} $1"; ((FAIL++)); }
-check_warn() { echo -e "${YELLOW}⚠${NC} $1"; ((WARN++)); }
+check_pass() { echo -e "${GREEN}✓${NC} $1"; PASS=$((PASS + 1)); }
+check_fail() { echo -e "${RED}✗${NC} $1"; FAIL=$((FAIL + 1)); }
+check_warn() { echo -e "${YELLOW}⚠${NC} $1"; WARN=$((WARN + 1)); }
+
+if [ -f "${ENV_FILE}" ]; then
+    # shellcheck disable=SC1090
+    set -a; source "${ENV_FILE}"; set +a
+fi
+
+DB_USER="${TITAN_DB_USER:-titan}"
 
 echo "============================================================"
 echo "Titan Production Verification"
@@ -98,7 +106,7 @@ echo ""
 echo "4. Database Connectivity"
 
 # PostgreSQL
-if docker exec titan-postgres pg_isready -U titan_user &>/dev/null; then
+if docker exec titan-postgres pg_isready -U "${DB_USER}" &>/dev/null; then
     check_pass "PostgreSQL accepting connections"
 else
     check_fail "PostgreSQL not ready"
@@ -150,36 +158,41 @@ echo ""
 echo "7. Port Exposure (Host)"
 echo "   Checking exposed ports on host..."
 
-# Check what's listening
-LISTENING=$(ss -tlnp 2>/dev/null | grep LISTEN | awk '{print $4}' | grep -oE ':[0-9]+$' | sort -u | tr '\n' ' ')
-echo "   Listening: ${LISTENING:-none detected}"
+if command -v ss &>/dev/null; then
+    # Check what's listening
+    LISTENING=$(ss -tlnp 2>/dev/null | grep LISTEN | awk '{print $4}' | grep -oE ':[0-9]+$' | sort -u | tr '\n' ' ' || true)
+    echo "   Listening: ${LISTENING:-none detected}"
 
-# Check for unexpected exposures
-UNEXPECTED=""
-for port in 5432 6379 9090 3000 4222; do
-    if echo "$LISTENING" | grep -q ":${port}"; then
-        UNEXPECTED="${UNEXPECTED} ${port}"
+    # Check for unexpected public exposures (loopback binds are acceptable)
+    PUBLIC_EXPOSURES=$(ss -tlnH 2>/dev/null \
+        | awk '{print $4}' \
+        | grep -E ':(5432|6379|9090|3000|4222)$' \
+        | grep -Ev '^(127\.0\.0\.1|\[::1\]|::1):' || true)
+
+    if [ -n "${PUBLIC_EXPOSURES}" ]; then
+        check_warn "Potentially exposed internal ports (non-loopback): ${PUBLIC_EXPOSURES//$'\n'/, }"
+    else
+        check_pass "No internal service ports exposed on non-loopback interfaces"
     fi
-done
-
-if [ -n "$UNEXPECTED" ]; then
-    check_warn "Potentially exposed internal ports:${UNEXPECTED}"
 else
-    check_pass "No internal service ports exposed to host"
+    check_warn "ss not available; skipping host port exposure audit"
 fi
 
 # =============================================================================
-# 8. TITAN_MODE Check
+# 8. Safety Mode Check
 # =============================================================================
 echo ""
 echo "8. Safety Mode"
-if docker logs titan-brain 2>&1 | grep -q "TITAN_MODE.*DISARMED"; then
-    check_pass "System is DISARMED"
-elif docker logs titan-brain 2>&1 | grep -q "TITAN_MODE"; then
-    MODE=$(docker logs titan-brain 2>&1 | grep "TITAN_MODE" | tail -1)
-    check_warn "TITAN_MODE detected: ${MODE}"
+
+BRAIN_MODE_LINE=$(docker logs titan-brain 2>&1 | grep -E "SYSTEM (ARMED|DISARMED) BY OPERATOR" | tail -1 || true)
+EXEC_MODE_LINE=$(docker logs titan-execution 2>&1 | grep -E "EXECUTION (ARMED|DISARMED)" | tail -1 || true)
+
+if echo "${BRAIN_MODE_LINE}" | grep -q "DISARMED" && echo "${EXEC_MODE_LINE}" | grep -q "DISARMED"; then
+    check_pass "Brain and Execution are DISARMED"
+elif echo "${BRAIN_MODE_LINE}${EXEC_MODE_LINE}" | grep -q "ARMED"; then
+    check_warn "System appears ARMED (Brain: '${BRAIN_MODE_LINE:-unknown}', Execution: '${EXEC_MODE_LINE:-unknown}')"
 else
-    check_warn "Could not detect TITAN_MODE from logs"
+    check_warn "Could not determine arm/disarm state from logs"
 fi
 
 # =============================================================================

@@ -17,42 +17,87 @@ const EnvSchema = z.object({
     // Infrastructure
     NATS_URL: z.string().default("nats://localhost:4222"),
     REDIS_URL: z.string().default("redis://localhost:6379"),
-    DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
+    DATABASE_URL: z.string().optional(),
+    TITAN_DB_HOST: z.string().optional(),
+    TITAN_DB_NAME: z.string().optional(),
+    TITAN_DB_USER: z.string().optional(),
+    TITAN_DB_PASSWORD: z.string().optional(),
 
     // NATS Auth (System & Services)
-    NATS_SYS_PASSWORD: z.string().min(
-        1,
-        "NATS_SYS_PASSWORD is required for production boot",
-    ),
-    NATS_BRAIN_PASSWORD: z.string().min(1, "NATS_BRAIN_PASSWORD is required"),
-    NATS_EXECUTION_PASSWORD: z.string().min(
-        1,
-        "NATS_EXECUTION_PASSWORD is required",
-    ),
-    NATS_SCAVENGER_PASSWORD: z.string().min(
-        1,
-        "NATS_SCAVENGER_PASSWORD is required",
-    ),
-    NATS_HUNTER_PASSWORD: z.string().min(1, "NATS_HUNTER_PASSWORD is required"),
-    NATS_SENTINEL_PASSWORD: z.string().min(
-        1,
-        "NATS_SENTINEL_PASSWORD is required",
-    ),
-    NATS_POWERLAW_PASSWORD: z.string().min(
-        1,
-        "NATS_POWERLAW_PASSWORD is required",
-    ),
-    NATS_QUANT_PASSWORD: z.string().min(1, "NATS_QUANT_PASSWORD is required"),
-    NATS_CONSOLE_PASSWORD: z.string().min(
-        1,
-        "NATS_CONSOLE_PASSWORD is required",
-    ),
+    NATS_SYS_PASSWORD: z.string().optional(),
+    NATS_BRAIN_PASSWORD: z.string().optional(),
+    NATS_EXECUTION_PASSWORD: z.string().optional(),
+    NATS_SCAVENGER_PASSWORD: z.string().optional(),
+    NATS_HUNTER_PASSWORD: z.string().optional(),
+    NATS_SENTINEL_PASSWORD: z.string().optional(),
+    NATS_POWERLAW_PASSWORD: z.string().optional(),
+    NATS_QUANT_PASSWORD: z.string().optional(),
+    NATS_CONSOLE_PASSWORD: z.string().optional(),
+    NATS_PASS: z.string().optional(),
+
+    // Console/Auth
+    JWT_SECRET: z.string().min(1, "JWT_SECRET is required"),
 
     // Exchange Keys (At least one set typically required, but we enforce structure if present)
     BYBIT_API_KEY: z.string().optional(),
     BYBIT_API_SECRET: z.string().optional(),
     BINANCE_API_KEY: z.string().optional(),
     BINANCE_API_SECRET: z.string().optional(),
+}).superRefine((env, ctx) => {
+    const hasDatabaseUrl = Boolean(env.DATABASE_URL && env.DATABASE_URL.trim().length > 0);
+    const hasDbParts = Boolean(
+        env.TITAN_DB_HOST &&
+        env.TITAN_DB_NAME &&
+        env.TITAN_DB_USER &&
+        env.TITAN_DB_PASSWORD,
+    );
+
+    if (!hasDatabaseUrl && !hasDbParts) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["DATABASE_URL"],
+            message:
+                "Provide DATABASE_URL or all TITAN_DB_HOST/TITAN_DB_NAME/TITAN_DB_USER/TITAN_DB_PASSWORD",
+        });
+    }
+
+    const hasLegacyNatsPass = Boolean(env.NATS_PASS && env.NATS_PASS.trim().length > 0);
+    const hasServiceNatsPasswords = Boolean(
+        env.NATS_SYS_PASSWORD &&
+        env.NATS_BRAIN_PASSWORD &&
+        env.NATS_EXECUTION_PASSWORD &&
+        env.NATS_SCAVENGER_PASSWORD &&
+        env.NATS_HUNTER_PASSWORD &&
+        env.NATS_SENTINEL_PASSWORD &&
+        env.NATS_POWERLAW_PASSWORD &&
+        env.NATS_QUANT_PASSWORD &&
+        env.NATS_CONSOLE_PASSWORD,
+    );
+
+    if (!hasLegacyNatsPass && !hasServiceNatsPasswords) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["NATS_SYS_PASSWORD"],
+            message:
+                "Provide NATS_PASS (legacy single password) or all service passwords: NATS_SYS_PASSWORD, NATS_BRAIN_PASSWORD, NATS_EXECUTION_PASSWORD, NATS_SCAVENGER_PASSWORD, NATS_HUNTER_PASSWORD, NATS_SENTINEL_PASSWORD, NATS_POWERLAW_PASSWORD, NATS_QUANT_PASSWORD, NATS_CONSOLE_PASSWORD",
+        });
+    }
+
+    const hasBinancePair = Boolean(
+        env.BINANCE_API_KEY && env.BINANCE_API_SECRET,
+    );
+    const hasBybitPair = Boolean(
+        env.BYBIT_API_KEY && env.BYBIT_API_SECRET,
+    );
+
+    if (!hasBinancePair && !hasBybitPair) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["BINANCE_API_KEY"],
+            message:
+                "At least one exchange keypair is required: BINANCE_API_KEY/BINANCE_API_SECRET or BYBIT_API_KEY/BYBIT_API_SECRET",
+        });
+    }
 });
 
 function validateEnv() {
