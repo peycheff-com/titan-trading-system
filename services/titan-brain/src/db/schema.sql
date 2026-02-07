@@ -253,7 +253,7 @@ CREATE TABLE IF NOT EXISTS config_overrides (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   deactivated_at TIMESTAMP,
   deactivated_by VARCHAR(50),
-  CONSTRAINT fk_config_overrides_operator FOREIGN KEY (operator_id) REFERENCES operators(id)
+  CONSTRAINT fk_config_overrides_operator FOREIGN KEY (operator_id) REFERENCES operators(operator_id)
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_config_overrides_active_key ON config_overrides(key) WHERE active = true;
@@ -273,7 +273,7 @@ CREATE TABLE IF NOT EXISTS config_receipts (
   signature VARCHAR(128) NOT NULL, -- HMAC signature for tamper detection
   timestamp BIGINT NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_config_receipts_operator FOREIGN KEY (operator_id) REFERENCES operators(id)
+  CONSTRAINT fk_config_receipts_operator FOREIGN KEY (operator_id) REFERENCES operators(operator_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_config_receipts_key ON config_receipts(key, timestamp DESC);
