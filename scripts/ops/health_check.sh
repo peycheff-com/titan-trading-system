@@ -1,45 +1,40 @@
 #!/bin/bash
 
 # Configuration
-BRAIN_URL="http://localhost:3100"
-EXECUTION_URL="http://localhost:3002"
 MAX_RETRIES=12
 SLEEP_SECONDS=5
 
 echo "🏥 Starting Health Check..."
 
-check_service() {
+check_container() {
     local name=$1
-    local url=$2
+    local container=$2
     local retries=0
 
-    echo -n "Checking $name ($url)... "
+    echo -n "Checking $name ($container)... "
     
-    until curl -s -f "$url/health" > /dev/null; do
-        ((retries++))
-        if [ $retries -ge $MAX_RETRIES ]; then
-            echo "FAILED ❌"
-            return 1
+    until [ $retries -ge $MAX_RETRIES ]; do
+        status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container" 2>/dev/null || true)"
+        if [ "$status" = "healthy" ] || [ "$status" = "running" ]; then
+            echo "OK ✅"
+            return 0
         fi
+        ((retries++))
         echo -n "."
         sleep $SLEEP_SECONDS
     done
-    
-    echo "OK ✅"
-    return 0
+
+    echo "FAILED ❌"
+    docker logs --tail 50 "$container" 2>/dev/null || true
+    return 1
 }
 
 # Check Core Services
-check_service "Titan Brain" "$BRAIN_URL" || exit 1
-check_service "Titan Execution" "$EXECUTION_URL" || exit 1
-
-# Check NATS (via Docker)
-echo -n "Checking NATS... "
-if docker exec titan-nats nats stream ls > /dev/null 2>&1; then
-    echo "OK ✅"
-else 
-    echo "WARNING: NATS CLI not available or failing. Skipping deep check."
-fi
+check_container "Titan Brain" "titan-brain" || exit 1
+check_container "Titan Execution" "titan-execution" || exit 1
+check_container "NATS" "titan-nats" || exit 1
+check_container "Redis" "titan-redis" || exit 1
+check_container "Postgres" "titan-postgres" || exit 1
 
 echo "✅ All Systems Healthy"
 exit 0

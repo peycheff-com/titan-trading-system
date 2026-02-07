@@ -3,7 +3,8 @@ set -e
 
 # Configuration
 COMPOSE_FILE="docker-compose.prod.yml"
-SERVICES=("titan-brain" "titan-execution" "titan-console" "titan-scavenger" "titan-hunter" "titan-sentinel" "titan-ai-quant")
+ENV_FILE="${TITAN_ENV_FILE:-.env.prod}"
+SERVICES=("titan-brain" "titan-execution" "titan-console" "titan-scavenger" "titan-hunter" "titan-sentinel" "titan-ai-quant" "titan-powerlaw-lab" "titan-console-api" "titan-opsd")
 
 echo "🛡️  Starting Safe Deployment..."
 
@@ -17,17 +18,17 @@ done
 
 # 2. Build new images
 echo "🏗️  Building new images..."
-if ! docker compose -f $COMPOSE_FILE build; then
+if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" build; then
     echo "❌ Build failed. Aborting."
     exit 1
 fi
 
 # 3. Deploy
 echo "🚀 Deploying..."
-docker compose -f $COMPOSE_FILE up -d --remove-orphans
+docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --remove-orphans
 
 # 4. Verification
-echo "mw  Verifying deployment..."
+echo "🔎 Verifying deployment..."
 if ./scripts/ops/health_check.sh; then
     echo "✅ Deployment Successful!"
     # Optional: cleanup backups
@@ -43,7 +44,7 @@ else
         fi
     done
     
-    docker compose -f $COMPOSE_FILE up -d
+    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d
     echo "🔄 Rollback complete. Checking health of rolled-back state..."
     ./scripts/ops/health_check.sh
     exit 1
