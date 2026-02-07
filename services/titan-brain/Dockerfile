@@ -87,7 +87,7 @@ WORKDIR /app/services/titan-brain
 EXPOSE 3100
 
 # Health check endpoint
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=480s --retries=3 \
     CMD curl -f http://localhost:3100/health || exit 1
 
 # Environment variables with defaults
@@ -97,4 +97,4 @@ ENV NODE_ENV=production \
     LOG_LEVEL=info
 
 # Start the application
-CMD ["node", "dist/index.js"]
+CMD ["node", "dist/src/index.js"]

@@ -488,6 +488,14 @@ export class StateRecoveryService {
 
     const positions = new Map<string, Position>();
     const jc = JSONCodec();
+    const replayIdleTimeoutMs = Number.parseInt(
+      process.env.TITAN_REPLAY_IDLE_TIMEOUT_MS || '5000',
+      10,
+    );
+    const replayMaxDurationMs = Number.parseInt(
+      process.env.TITAN_REPLAY_MAX_DURATION_MS || '45000',
+      10,
+    );
 
     try {
       const opts = consumerOpts();
@@ -496,8 +504,47 @@ export class StateRecoveryService {
 
       const sub = await js.subscribe(TitanSubject.EVT_EXEC_FILL + '.>', opts);
       console.log('Started replaying fills...');
+      let processedCount = 0;
+      let stopReason = 'stream_tail_reached';
+      let idleTimer: ReturnType<typeof setTimeout> | null = null;
+      let maxTimer: ReturnType<typeof setTimeout> | null = null;
+
+      const clearTimers = () => {
+        if (idleTimer) {
+          clearTimeout(idleTimer);
+          idleTimer = null;
+        }
+        if (maxTimer) {
+          clearTimeout(maxTimer);
+          maxTimer = null;
+        }
+      };
+
+      const stopSubscription = (reason: string) => {
+        stopReason = reason;
+        try {
+          sub.unsubscribe();
+        } catch {
+          // No-op: subscription may already be closed.
+        }
+      };
+
+      const resetIdleTimer = () => {
+        if (idleTimer) {
+          clearTimeout(idleTimer);
+        }
+        idleTimer = setTimeout(() => {
+          stopSubscription('idle_timeout');
+        }, replayIdleTimeoutMs);
+      };
+
+      resetIdleTimer();
+      maxTimer = setTimeout(() => {
+        stopSubscription('max_duration_timeout');
+      }, replayMaxDurationMs);
 
       for await (const m of sub) {
+        resetIdleTimer();
         try {
           const fill = jc.decode(m.data) as FillConfirmation;
           const notional = fill.fillSize * fill.fillPrice;
@@ -557,15 +604,21 @@ export class StateRecoveryService {
           }
 
           positions.set(fill.symbol, pos);
+          processedCount++;
         } catch (err) {
           console.error('Error processing message:', err);
         }
 
         if (m.info.streamSequence >= lastSeq) {
-          sub.unsubscribe();
+          stopSubscription('stream_tail_reached');
           break;
         }
       }
+
+      clearTimers();
+      console.log(
+        `Replay finished. Processed fills: ${processedCount}, reason: ${stopReason}`,
+      );
     } catch (error) {
       console.error('Failed to replay from JetStream', error);
     }

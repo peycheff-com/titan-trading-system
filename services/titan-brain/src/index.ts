@@ -22,6 +22,21 @@ import { BrainConfig } from "./config/BrainConfig.js";
 import { SharedConfigAdapter as ConfigManager } from "./config/SharedConfigAdapter.js";
 import Redis from "ioredis";
 
+function parsePositiveMs(value: string | undefined, fallback: number): number {
+  if (!value) return fallback;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+const INIT_NATS_TIMEOUT_MS = parsePositiveMs(
+  process.env.TITAN_INIT_NATS_TIMEOUT_MS,
+  480000,
+);
+const STARTUP_MAX_TIME_MS = parsePositiveMs(
+  process.env.TITAN_STARTUP_MAX_TIME_MS,
+  900000,
+);
+
 // Local implementation of standard init steps since it's not exported
 function createStandardInitSteps(): any[] {
   return [
@@ -68,7 +83,7 @@ function createStandardInitSteps(): any[] {
     {
       name: "init-nats",
       description: "Initialize NATS connection",
-      timeout: 60000,
+      timeout: INIT_NATS_TIMEOUT_MS,
       required: true,
       dependencies: ["load-config"],
       execute: async () => {
@@ -197,7 +212,7 @@ async function main(): Promise<void> {
   try {
     // Initialize startup manager
     startupManager = new StartupManager({
-      maxStartupTime: 300000, // 5 minutes for production
+      maxStartupTime: STARTUP_MAX_TIME_MS, // extended for replay-heavy startups
       gracefulShutdownTimeout: 30000, // 30 seconds
     });
 
