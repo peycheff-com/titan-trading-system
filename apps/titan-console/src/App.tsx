@@ -19,6 +19,7 @@ import { SafetyProvider } from '@/context/SafetyContext';
 import Login from '@/pages/Login';
 
 // Pages
+import ChatOps from '@/pages/ChatOps';
 import Overview from '@/pages/Overview';
 import LiveOps from '@/pages/LiveOps';
 import TradeControl from '@/pages/ops/TradeControl';
@@ -89,8 +90,9 @@ const App = () => (
 
                     {/* Protected Routes */}
                     <Route element={<RequireAuth />}>
-                      {/* Command */}
-                      <Route path="/" element={<Overview />} />
+                      {/* ChatOps — default route */}
+                      <Route path="/" element={<ChatOps />} />
+                      <Route path="/overview" element={<Overview />} />
                       <Route path="/live" element={<LiveOps />} />
                       <Route path="/trade" element={<TradeControl />} />
                       <Route path="/risk" element={<RiskPage />} />

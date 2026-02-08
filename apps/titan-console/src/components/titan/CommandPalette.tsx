@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CommandDialog,
@@ -9,12 +9,100 @@ import {
   CommandList,
   CommandSeparator,
 } from '@/components/ui/command';
-import { Search } from 'lucide-react';
+import { Search, Shield, ShieldOff, Gauge, RefreshCcw, XCircle, AlertTriangle } from 'lucide-react';
 import { NAV_GROUPS } from '@/config/navigation';
+import { compileNLToIntent } from '@/lib/intentCompiler';
+import { useSafety } from '@/context/SafetyContext';
+import { toast } from 'sonner';
+
+// ---------------------------------------------------------------------------
+// Action commands shown in ⌘K alongside navigation
+// ---------------------------------------------------------------------------
+
+interface ActionCommand {
+  name: string;
+  keywords: string;
+  icon: React.ComponentType<{ className?: string }>;
+  danger: 'safe' | 'moderate' | 'critical';
+  execute: () => void;
+}
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const { armConsole, disarmConsole, isArmed, toggleArmed } = useSafety();
+
+  // Build action commands
+  const actionCommands: ActionCommand[] = [
+    {
+      name: 'Arm System',
+      keywords: 'arm enable danger',
+      icon: Shield,
+      danger: 'moderate',
+      execute: () => {
+        armConsole();
+        toast.warning('Console armed — dangerous controls active');
+      },
+    },
+    {
+      name: 'Disarm System',
+      keywords: 'disarm disable safe',
+      icon: ShieldOff,
+      danger: 'safe',
+      execute: () => {
+        disarmConsole();
+        toast.info('Console disarmed');
+      },
+    },
+    {
+      name: 'Throttle Phase…',
+      keywords: 'throttle phase scavenger hunter sentinel',
+      icon: Gauge,
+      danger: 'moderate',
+      execute: () => {
+        navigate('/');
+        toast.info('Use chat: "throttle scavenger 50%"');
+      },
+    },
+    {
+      name: 'Run Reconciliation',
+      keywords: 'reconcile reconciliation check',
+      icon: RefreshCcw,
+      danger: 'safe',
+      execute: () => {
+        toast.info('Reconciliation command sent to chat');
+        navigate('/');
+      },
+    },
+    {
+      name: 'Flatten All (DANGER)',
+      keywords: 'flatten close all positions emergency',
+      icon: XCircle,
+      danger: 'critical',
+      execute: () => {
+        if (!isArmed) {
+          toast.error('Console must be Armed to execute FLATTEN. Arm first.');
+          return;
+        }
+        navigate('/');
+        toast.warning('Use chat to confirm: "flatten all"');
+      },
+    },
+    {
+      name: 'Override Risk (DANGER)',
+      keywords: 'override risk limit parameter',
+      icon: AlertTriangle,
+      danger: 'critical',
+      execute: () => {
+        if (!isArmed) {
+          toast.error('Console must be Armed for risk overrides.');
+          return;
+        }
+        navigate('/');
+        toast.warning('Use chat: "override risk <key> <value>"');
+      },
+    },
+  ];
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -33,6 +121,11 @@ export function CommandPalette() {
     setOpen(false);
   };
 
+  const handleAction = (cmd: ActionCommand) => {
+    cmd.execute();
+    setOpen(false);
+  };
+
   return (
     <>
       <button
@@ -47,10 +140,34 @@ export function CommandPalette() {
       </button>
 
       <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Search pages, commands..." />
+        <CommandInput placeholder="Search pages, commands, actions..." />
         <CommandList>
           <CommandEmpty>No results found.</CommandEmpty>
 
+          {/* Action commands */}
+          <CommandGroup heading="Actions">
+            {actionCommands.map((cmd) => (
+              <CommandItem
+                key={cmd.name}
+                value={`${cmd.name} ${cmd.keywords}`}
+                onSelect={() => handleAction(cmd)}
+                className="flex items-center gap-2"
+              >
+                <cmd.icon className={`h-4 w-4 ${
+                  cmd.danger === 'critical'
+                    ? 'text-status-critical'
+                    : cmd.danger === 'moderate'
+                      ? 'text-status-degraded'
+                      : 'text-muted-foreground'
+                }`} />
+                <span>{cmd.name}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+
+          <CommandSeparator />
+
+          {/* Navigation */}
           {NAV_GROUPS.map((navGroup, index) => (
             <div key={navGroup.group}>
               {index > 0 && <CommandSeparator />}

@@ -7,6 +7,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard,
+  MessageSquare,
   Radio,
   Terminal,
   Bug,
@@ -59,7 +60,8 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     group: 'Command',
     items: [
-      { name: 'Overview', path: '/', icon: LayoutDashboard },
+      { name: 'Chat Ops', path: '/', icon: MessageSquare },
+      { name: 'Overview', path: '/overview', icon: LayoutDashboard },
       { name: 'Live Ops', path: '/live', icon: Radio },
       { name: 'Trade Control', path: '/trade', icon: Terminal },
       { name: 'Risk', path: '/risk', icon: TrendingUp },
