@@ -2,18 +2,19 @@
  * Feature Flags
  *
  * These flags gate features during the migration to Operator OS.
- * Each flag must be removed before PR4 ships. No dormant flags in production.
+ *
+ * ⚠️ PR4: All migration flags have been expired.
+ * COPILOTKIT_SIDEBAR: permanently OFF — CopilotKit replaced by native ChatTranscript
+ * INSPECTOR_PANEL: permanently ON — no longer gated
+ *
+ * Remaining flag:
+ * LEGACY_API: kept for PR3→PR4 transition, will be removed when
+ *             all direct API calls are replaced by OperatorIntent.
  */
 
 export const FF = {
-  /** Gate CopilotKit sidebar (true = show CopilotKit, false = hide) */
-  COPILOTKIT_SIDEBAR: false,
-
-  /** Gate legacy direct API calls via getTitanExecutionUrl (true = allow, false = block) */
+  /** Gate legacy direct API calls via getTitanExecutionUrl (true = allow) */
   LEGACY_API: true,
-
-  /** Gate Inspector panel (true = show, false = hide) */
-  INSPECTOR_PANEL: true,
 } as const;
 
 export type FeatureFlag = keyof typeof FF;

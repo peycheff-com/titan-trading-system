@@ -6,12 +6,6 @@ import { AppShell } from '@/components/layout/AppShell';
 import { WebSocketProvider } from '@/context/WebSocketContext';
 import { NotificationManager } from '@/components/titan/NotificationManager';
 import { GenerativeUIProvider } from '@/components/generative/GenerativeUIProvider';
-import { FF } from '@/config/featureFlags';
-
-// CopilotKit — gated by feature flag
-import { CopilotKit } from "@copilotkit/react-core";
-import { CopilotSidebar } from "@copilotkit/react-ui";
-import "@copilotkit/react-ui/styles.css";
 
 // Auth
 import { useAuth, AuthProvider } from '@/context/AuthContext';
@@ -51,28 +45,6 @@ const RequireAuth = () => {
   return <AppShell />;
 };
 
-/**
- * Conditionally wrap children in CopilotKit or pass through.
- * Controlled by FF.COPILOTKIT_SIDEBAR.
- */
-function MaybeCopilot({ children }: { children: React.ReactNode }) {
-  if (!FF.COPILOTKIT_SIDEBAR) return <>{children}</>;
-  return (
-    <CopilotKit runtimeUrl="http://localhost:8090/copilotkit">
-      <CopilotSidebar
-        instructions="You are Titan, a bio-mimetic trading assistant."
-        defaultOpen={false}
-        labels={{
-          title: "Titan Memory Organ",
-          initial: "Memory Organ online. How can I assist?",
-        }}
-      >
-        {children}
-      </CopilotSidebar>
-    </CopilotKit>
-  );
-}
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -83,7 +55,6 @@ const App = () => (
             <SafetyProvider>
               <NotificationManager />
               <GenerativeUIProvider>
-                <MaybeCopilot>
                   <Routes>
                     {/* Public Route */}
                     <Route path="/login" element={<Login />} />
@@ -122,7 +93,6 @@ const App = () => (
 
                     <Route path="*" element={<NotFound />} />
                   </Routes>
-                </MaybeCopilot>
               </GenerativeUIProvider>
             </SafetyProvider>
           </WebSocketProvider>

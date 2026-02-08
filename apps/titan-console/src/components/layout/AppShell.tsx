@@ -14,7 +14,6 @@ import { TopBar } from './TopBar';
 import { InspectorPanel } from './InspectorPanel';
 import { InspectorProvider } from '@/context/InspectorContext';
 import { DensityProvider } from '@/context/DensityContext';
-import { FF } from '@/config/featureFlags';
 import { cn } from '@/lib/utils';
 
 export function AppShell() {
@@ -43,7 +42,7 @@ export function AppShell() {
               </main>
 
               {/* Inspector Panel */}
-              {FF.INSPECTOR_PANEL && <InspectorPanel />}
+              <InspectorPanel />
             </div>
           </div>
         </div>
