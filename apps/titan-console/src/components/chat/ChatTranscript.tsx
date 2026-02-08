@@ -1,24 +1,27 @@
 /**
  * ChatTranscript
  *
- * Operator chat center pane. Replaces CopilotKit sidebar.
+ * Operator chat center pane. Backend-authoritative: intent status comes
+ * from SSE stream, never from local assumptions.
  *
- * Features:
- * - Message history with operator/system messages
- * - NL input → intentCompiler → ActionCard confirmation flow
- * - Inline ActionCards for pending intents
- * - Auto-scroll on new messages
+ * Integrates useIntentStream for live status updates.
+ * Tracks operator state_hash for OCC and passes to ActionCard.
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { compileNLToIntent, type CompiledIntent } from '@/lib/intentCompiler';
-import { useOperatorIntents } from '@/hooks/useOperatorIntents';
+import {
+  useOperatorIntents,
+  useIntentStream,
+  type IntentStatus,
+  type IntentUpdateEvent,
+} from '@/hooks/useOperatorIntents';
 import { ActionCard } from './ActionCard';
 import { IntentTimeline } from './IntentTimeline';
-import { Send, Bot, User, AlertCircle } from 'lucide-react';
-import type { IntentStatus } from '@/hooks/useOperatorIntents';
+import { Send, Bot, User, AlertCircle, Wifi, WifiOff } from 'lucide-react';
 import { toast } from 'sonner';
+import { useInspector } from '@/context/InspectorContext';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -30,6 +33,9 @@ interface ChatMessage {
   content: string;
   timestamp: Date;
   intent?: CompiledIntent;
+  /** Backend intent ID (set after submission) */
+  intentId?: string;
+  /** Status from SSE stream — never set locally except on submission ack */
   intentStatus?: IntentStatus;
   error?: string;
 }
@@ -48,14 +54,59 @@ export function ChatTranscript() {
     },
   ]);
   const [input, setInput] = useState('');
+  const stateHashRef = useRef<string | undefined>();
+  const [stateHash, setStateHash] = useState<string | undefined>();
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { submitIntent } = useOperatorIntents();
+  const { submitIntent, getOperatorState } = useOperatorIntents();
+  const { inspect } = useInspector();
 
-  // Auto-scroll
+  // Sync ref to avoid stale closure in callbacks
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    stateHashRef.current = stateHash;
+  }, [stateHash]);
+
+  // Fetch operator state for OCC hash
+  const refreshState = useCallback(async () => {
+    const state = await getOperatorState();
+    if (state?.state_hash) {
+      setStateHash(state.state_hash);
+    }
+  }, [getOperatorState]);
+
+  useEffect(() => {
+    refreshState();
+  }, [refreshState]);
+
+  // SSE stream: update intent statuses in real-time
+  const handleStreamUpdate = useCallback((event: IntentUpdateEvent) => {
+    const { intent_id, status } = event;
+
+    // Update any messages that reference this intent
+    setMessages((prev) =>
+      prev.map((msg) => {
+        if (msg.intentId === intent_id) {
+          return { ...msg, intentStatus: status };
+        }
+        return msg;
+      }),
+    );
+
+    // Refresh state hash on any mutation (debounced via AbortController in refreshState)
+    refreshState();
+  }, [refreshState]);
+
+  const { connected: streamConnected } = useIntentStream(handleStreamUpdate);
+
+  // Auto-scroll on new messages
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) {
+      // Only auto-scroll if user is near the bottom (within 200px)
+      const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 200;
+      if (isNearBottom) {
+        el.scrollTop = el.scrollHeight;
+      }
     }
   }, [messages]);
 
@@ -65,10 +116,9 @@ export function ChatTranscript() {
   }, []);
 
   const addMessage = useCallback((msg: Omit<ChatMessage, 'id' | 'timestamp'>) => {
-    setMessages((prev) => [
-      ...prev,
-      { ...msg, id: crypto.randomUUID(), timestamp: new Date() },
-    ]);
+    const newMsg = { ...msg, id: crypto.randomUUID(), timestamp: new Date() };
+    setMessages((prev) => [...prev, newMsg]);
+    return newMsg.id;
   }, []);
 
   const handleSubmit = useCallback(
@@ -111,25 +161,37 @@ export function ChatTranscript() {
 
   const handleApprove = useCallback(
     async (intent: CompiledIntent) => {
+      // Read from ref to avoid stale closure
+      const currentHash = stateHashRef.current;
+
       const record = await submitIntent({
         type: intent.type,
         params: intent.params,
         reason: intent.description,
         operator_id: 'console-operator',
+        state_hash: currentHash,
       });
 
       if (record) {
+        // Track the backend intent ID so SSE updates can find this message
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.intent?.id === intent.id
+              ? { ...msg, intentId: record.id, intentStatus: 'ACCEPTED' as IntentStatus }
+              : msg,
+          ),
+        );
         addMessage({
           role: 'system',
-          content: `✅ Intent ${intent.type} submitted successfully.`,
-          intentStatus: 'ACCEPTED',
+          content: `✅ Intent ${intent.type} submitted — tracking via SSE.`,
+          intentId: record.id,
+          intentStatus: 'ACCEPTED' as IntentStatus,
         });
         toast.success(`${intent.type} submitted`);
       } else {
         addMessage({
           role: 'system',
           content: `⚠️ Failed to submit ${intent.type}. See logs.`,
-          intentStatus: 'FAILED',
           error: 'Submission failed',
         });
         toast.error(`Failed to submit ${intent.type}`);
@@ -143,16 +205,32 @@ export function ChatTranscript() {
       addMessage({
         role: 'system',
         content: `Cancelled ${intent.type}.`,
-        intentStatus: 'REJECTED',
       });
     },
     [addMessage],
   );
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col" role="main" aria-label="Operator Chat">
+      {/* SSE connection indicator */}
+      <div className="flex items-center justify-end px-4 py-1 border-b border-border/50" role="status" aria-live="polite">
+        <div className="flex items-center gap-1.5 text-xxs">
+          {streamConnected ? (
+            <>
+              <Wifi className="h-3 w-3 text-status-healthy" aria-hidden="true" />
+              <span className="text-status-healthy">Live</span>
+            </>
+          ) : (
+            <>
+              <WifiOff className="h-3 w-3 text-status-degraded" aria-hidden="true" />
+              <span className="text-status-degraded">Reconnecting…</span>
+            </>
+          )}
+        </div>
+      </div>
+
       {/* Message area */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 scrollbar-titan">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 scrollbar-titan" role="log" aria-label="Chat messages">
         <div className="mx-auto max-w-2xl space-y-4">
           {messages.map((msg) => (
             <div key={msg.id} className="flex items-start gap-3">
@@ -162,6 +240,7 @@ export function ChatTranscript() {
                   'flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full',
                   msg.role === 'operator' ? 'bg-primary/10' : 'bg-muted',
                 )}
+                aria-hidden="true"
               >
                 {msg.role === 'operator' ? (
                   <User className="h-3.5 w-3.5 text-primary" />
@@ -176,41 +255,59 @@ export function ChatTranscript() {
                   <span className="text-xs font-medium text-foreground">
                     {msg.role === 'operator' ? 'Operator' : 'Titan'}
                   </span>
-                  <span className="text-xxs text-muted-foreground/60 font-mono">
+                  <time className="text-xxs text-muted-foreground/60 font-mono" dateTime={msg.timestamp.toISOString()}>
                     {msg.timestamp.toLocaleTimeString('en-US', {
                       hour: '2-digit',
                       minute: '2-digit',
                       second: '2-digit',
                       hour12: false,
                     })}
-                  </span>
+                  </time>
                 </div>
 
                 {/* Text content */}
                 {msg.error ? (
-                  <div className="flex items-center gap-2 text-xs text-status-critical">
-                    <AlertCircle className="h-3.5 w-3.5" />
+                  <div className="flex items-center gap-2 text-xs text-status-critical" role="alert">
+                    <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" />
                     <span>{msg.content}</span>
                   </div>
                 ) : (
                   <p className="text-sm text-foreground/80">{msg.content}</p>
                 )}
 
-                {/* ActionCard for compiled intents */}
+                {/* ActionCard for compiled intents (not yet decided) */}
                 {msg.intent && !msg.intentStatus && (
                   <ActionCard
                     intent={msg.intent}
                     onApprove={handleApprove}
                     onReject={handleReject}
+                    stateHash={stateHash}
                   />
                 )}
 
-                {/* IntentTimeline for resolved intents */}
+                {/* IntentTimeline for intents with status (from SSE stream) */}
                 {msg.intentStatus && (
-                  <IntentTimeline
-                    currentStatus={msg.intentStatus}
-                    className="mt-2"
-                  />
+                  <button
+                    type="button"
+                    className="mt-2 w-full text-left hover:bg-muted/30 rounded-md transition-colors cursor-pointer"
+                    onClick={() => msg.intentId && inspect({
+                      type: 'intent',
+                      id: msg.intentId,
+                      title: `${msg.intent?.type ?? 'Intent'} — ${msg.intentStatus}`,
+                      data: {
+                        status: msg.intentStatus,
+                        type: msg.intent?.type,
+                        params: msg.intent?.params,
+                        intentId: msg.intentId,
+                      },
+                    })}
+                    aria-label={`Inspect intent ${msg.intentId ?? ''}`}
+                  >
+                    <IntentTimeline
+                      currentStatus={msg.intentStatus}
+                      intentId={msg.intentId}
+                    />
+                  </button>
                 )}
               </div>
             </div>
@@ -220,13 +317,16 @@ export function ChatTranscript() {
 
       {/* Input bar */}
       <div className="border-t border-border bg-card p-3">
-        <form onSubmit={handleSubmit} className="mx-auto flex max-w-2xl items-center gap-2">
+        <form onSubmit={handleSubmit} className="mx-auto flex max-w-2xl items-center gap-2" role="search">
+          <label htmlFor="operator-input" className="sr-only">Enter command</label>
           <input
+            id="operator-input"
             ref={inputRef}
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type a command… (arm, disarm, throttle scavenger 50%, flatten all)"
+            autoComplete="off"
             className={cn(
               'flex-1 rounded-lg border border-border bg-background px-4 py-2.5 text-sm text-foreground',
               'placeholder:text-muted-foreground/50',
@@ -236,13 +336,14 @@ export function ChatTranscript() {
           <button
             type="submit"
             disabled={!input.trim()}
+            aria-label="Send command"
             className={cn(
               'flex h-10 w-10 items-center justify-center rounded-lg transition-colors',
               'bg-primary/10 text-primary hover:bg-primary/20',
               'disabled:cursor-not-allowed disabled:opacity-30',
             )}
           >
-            <Send className="h-4 w-4" />
+            <Send className="h-4 w-4" aria-hidden="true" />
           </button>
         </form>
       </div>
