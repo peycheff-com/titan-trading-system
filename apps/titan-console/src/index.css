@@ -77,6 +77,31 @@
     --sidebar-accent-foreground: 210 20% 92%;
     --sidebar-border: 222 30% 14%;
     --sidebar-ring: 192 91% 52%;
+
+    /* Density tokens — comfortable (default) */
+    --density-row-height: 36px;
+    --density-font-data: 13px;
+    --density-padding-card: 16px;
+    --density-gap: 12px;
+    --density-line-height: 1.5;
+
+    /* Intent status colors */
+    --intent-submitted: 215 20% 55%;
+    --intent-accepted: 192 91% 52%;
+    --intent-executing: 38 92% 50%;
+    --intent-verified: 142 71% 45%;
+    --intent-unverified: 0 72% 51%;
+    --intent-failed: 0 72% 51%;
+    --intent-rejected: 0 40% 40%;
+  }
+
+  /* Compact density override */
+  [data-density="compact"] {
+    --density-row-height: 28px;
+    --density-font-data: 11px;
+    --density-padding-card: 8px;
+    --density-gap: 6px;
+    --density-line-height: 1.3;
   }
 
   .dark {
