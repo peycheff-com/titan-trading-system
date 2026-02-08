@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { getTitanExecutionUrl } from '@/lib/api-config';
+import { getTitanBrainUrl } from '@/lib/api-config';
 
 // Type definitions
 // ... (rest of imports/types)
@@ -76,7 +76,7 @@ export function useScavengerSocket() {
   const connect = useCallback(() => {
     try {
       // Connect to Titan Execution Service which proxies Scavenger WS
-      const baseUrl = getTitanExecutionUrl();
+      const baseUrl = getTitanBrainUrl();
       const wsUrl = baseUrl.replace(/^http/, 'ws') + '/ws/scavenger';
       console.log('Connecting to Scavenger WS:', wsUrl);
 

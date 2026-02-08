@@ -95,6 +95,15 @@ export function InspectorProvider({ children }: { children: ReactNode }) {
       if (e.key === 'Escape' && isOpen) {
         setIsOpen(false);
       }
+      // ⌘K — focus chat input (global command palette)
+      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        const chatInput = document.getElementById('operator-input');
+        if (chatInput) {
+          (chatInput as HTMLInputElement).focus();
+          (chatInput as HTMLInputElement).select();
+        }
+      }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);

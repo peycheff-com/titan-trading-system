@@ -42,12 +42,6 @@ export const getWsBaseUrl = () => {
   return apiBase.replace(/^http/, "ws");
 };
 
-export const getTitanExecutionUrl = () => {
-  // TODO: Phase 4: Proxy all execution requests through Brain
-  // For now, if we must access execution directly, we need the API Key (which is not safe in client)
-  // This function should eventually return the Brain URL for proxying.
-  return import.meta.env.VITE_TITAN_EXECUTION_URL || "http://localhost:3002";
-};
 
 export const getTitanBrainUrl = () => {
   return import.meta.env.VITE_TITAN_BRAIN_URL || "http://localhost:3000";
