@@ -8,7 +8,6 @@
 import {
   calculateIntentSignature,
   type OperatorIntentType,
-  type OperatorIntentV1,
   type OperatorState,
 } from '@titan/shared';
 import { v4 as uuidv4 } from 'uuid';
@@ -62,13 +61,10 @@ export class BrainApiClient {
   }
 
   private headers(): Record<string, string> {
-    const h: Record<string, string> = {
+    return {
       'Content-Type': 'application/json',
+      ...(this.authToken ? { Authorization: `Bearer ${this.authToken}` } : {}),
     };
-    if (this.authToken) {
-      h['Authorization'] = `Bearer ${this.authToken}`;
-    }
-    return h;
   }
 
   /**
@@ -139,11 +135,8 @@ export class BrainApiClient {
       submitted_at: new Date().toISOString(),
       ttl_seconds: ttlSeconds,
       signature,
+      ...(stateHash ? { state_hash: stateHash } : {}),
     };
-
-    if (stateHash) {
-      payload.state_hash = stateHash;
-    }
 
     const res = await fetch(`${this.baseUrl}/operator/intents`, {
       method: 'POST',
@@ -157,7 +150,10 @@ export class BrainApiClient {
   /**
    * Approve a pending intent.
    */
-  async approveIntent(intentId: string, approverId: string): Promise<{ status: string; error?: string }> {
+  async approveIntent(
+    intentId: string,
+    approverId: string,
+  ): Promise<{ status: string; error?: string }> {
     const res = await fetch(`${this.baseUrl}/operator/intents/${intentId}/approve`, {
       method: 'POST',
       headers: this.headers(),
