@@ -361,6 +361,54 @@ const migration012: Migration = {
   },
 };
 
+const migration013: Migration = {
+  version: 13,
+  name: 'create_operator_intents',
+  up: async (pool: Pool) => {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS operator_intents (
+          id              UUID PRIMARY KEY,
+          idempotency_key TEXT NOT NULL,
+          version         INTEGER NOT NULL DEFAULT 1,
+          type            TEXT NOT NULL,
+          params          JSONB NOT NULL DEFAULT '{}',
+          operator_id     TEXT NOT NULL,
+          reason          TEXT NOT NULL DEFAULT '',
+          signature       TEXT NOT NULL,
+          status          TEXT NOT NULL,
+          ttl_seconds     INTEGER NOT NULL DEFAULT 30,
+          state_hash      TEXT,
+          submitted_at    TIMESTAMPTZ NOT NULL,
+          resolved_at     TIMESTAMPTZ,
+          receipt         JSONB,
+          created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+      `);
+      await client.query(
+        'CREATE INDEX IF NOT EXISTS idx_intents_operator ON operator_intents (operator_id, submitted_at DESC)',
+      );
+      await client.query(
+        `CREATE INDEX IF NOT EXISTS idx_intents_status ON operator_intents (status) WHERE status NOT IN ('VERIFIED','FAILED','REJECTED')`,
+      );
+      await client.query(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_intents_idemp ON operator_intents (idempotency_key)',
+      );
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+  },
+  down: async (pool: Pool) => {
+    await pool.query('DROP TABLE IF EXISTS operator_intents');
+  },
+};
+
 // --- RUNNER ---
 
 const migrations: Migration[] = [
@@ -374,6 +422,7 @@ const migrations: Migration[] = [
   migration010,
   migration011,
   migration012,
+  migration013,
 ];
 
 export async function runMigrations(db: DatabaseManager): Promise<void> {

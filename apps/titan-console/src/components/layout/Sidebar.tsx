@@ -1,86 +1,39 @@
-import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { StatusDot } from '@/components/titan/StatusPill';
-// import { systemHealth } from '@/lib/mock-data'; // Removed
-const systemHealth: any = {
-  brain: { status: 'healthy' },
-  execution: { status: 'healthy' },
-  marketWs: { status: 'healthy' },
-};
-import {
-  LayoutDashboard,
-  Radio,
-  Bug,
-  Target,
-  Shield,
-  Brain,
-  BrainCircuit,
-  Cpu,
-  Zap,
-  BookOpen,
-  Bell,
-  Server,
-  ChevronLeft,
-  ChevronRight,
-  Settings,
-  Terminal,
-  History,
-  Key,
-} from 'lucide-react';
-
-const navigation = [
-  {
-    group: 'Command',
-    items: [
-      { name: 'Overview', path: '/', icon: LayoutDashboard },
-      { name: 'Live Ops', path: '/live', icon: Radio },
-      { name: 'Trade Control', path: '/trade', icon: Terminal },
-    ],
-  },
-  {
-    group: 'Strategy Phases',
-    items: [
-      { name: 'Scavenger', path: '/phases/scavenger', icon: Bug, phase: 'scavenger' as const },
-      { name: 'Hunter', path: '/phases/hunter', icon: Target, phase: 'hunter' as const },
-      { name: 'Sentinel', path: '/phases/sentinel', icon: Shield, phase: 'sentinel' as const },
-    ],
-  },
-  {
-    group: 'Organs',
-    items: [
-      { name: 'Brain', path: '/brain', icon: Brain },
-      { name: 'AI Quant', path: '/ai-quant', icon: Cpu },
-      { name: 'Execution', path: '/execution', icon: Zap },
-      { name: 'Decision Log', path: '/decision-log', icon: BrainCircuit },
-    ],
-  },
-  {
-    group: 'Ops',
-    items: [
-      { name: 'Journal', path: '/journal', icon: BookOpen },
-      { name: 'Trade History', path: '/history', icon: History },
-      { name: 'Alerts', path: '/alerts', icon: Bell },
-      { name: 'Infra / DR', path: '/infra', icon: Server },
-      { name: 'API Keys', path: '/credentials', icon: Key },
-      { name: 'Settings', path: '/settings', icon: Settings },
-    ],
-  },
-];
+import { NAV_GROUPS } from '@/config/navigation';
+import { useTitanWebSocket } from '@/context/WebSocketContext';
+import { Zap, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const phaseColors = {
   scavenger: 'text-phase-scavenger',
   hunter: 'text-phase-hunter',
   sentinel: 'text-phase-sentinel',
-};
+} as const;
 
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
 }
 
+/**
+ * Derive health status from WS connection.
+ * In a future PR this will read per-service health from the WS stream;
+ * for now it reflects overall connection status.
+ */
+function useServiceHealth() {
+  const { status } = useTitanWebSocket();
+  const connected = status === 'CONNECTED';
+  return {
+    brain: { status: connected ? 'healthy' : 'critical' },
+    execution: { status: connected ? 'healthy' : 'critical' },
+    marketWs: { status: connected ? 'healthy' : 'critical' },
+  } as const;
+}
+
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const location = useLocation();
+  const systemHealth = useServiceHealth();
 
   return (
     <aside
@@ -110,7 +63,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         </button>
       </div>
 
-      {/* Health indicators */}
+      {/* Health indicators — driven by WS connection */}
       <div className={cn('border-b border-border px-3 py-2', collapsed && 'px-2')}>
         {collapsed ? (
           <div className="flex flex-col items-center gap-2">
@@ -136,9 +89,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         )}
       </div>
 
-      {/* Navigation */}
+      {/* Navigation — from shared config */}
       <nav className="flex-1 overflow-y-auto px-2 py-3 scrollbar-titan">
-        {navigation.map((group) => (
+        {NAV_GROUPS.map((group) => (
           <div key={group.group} className="mb-4">
             {!collapsed && (
               <h3 className="mb-1 px-2 text-xxs font-semibold uppercase tracking-wider text-muted-foreground">

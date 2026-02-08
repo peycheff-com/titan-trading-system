@@ -10,7 +10,7 @@
   ],
   "ignoreDependencies": ["ts-node", "typescript", "eslint*", "prettier*", "nx"],
   "workspaces": {
-    "services/titan-console": {
+    "apps/titan-console": {
       "entry": ["index.html", "src/main.tsx", "vite.config.ts"],
       "project": ["src/**/*.{ts,tsx}"]
     },

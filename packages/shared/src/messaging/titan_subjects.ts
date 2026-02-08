@@ -237,6 +237,11 @@ export const TITAN_SUBJECTS = {
       OPERATOR: 'titan.evt.audit.operator.v1',
     },
 
+    OPERATOR: {
+      /** Operator intent lifecycle event (submitted, accepted, executing, verified, etc.) */
+      INTENT: 'titan.evt.operator.intent.v1',
+    },
+
     RISK: {
       CORRELATION_WARNING: 'titan.evt.risk.correlation_warning.v1',
       STATE: 'titan.evt.risk.state.v1',

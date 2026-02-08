@@ -35,6 +35,12 @@ export class BrainStateManager {
   // System Armed State
   private armed: boolean = false;
 
+  // System Mode (paper, live-limited, live-full)
+  private mode: 'paper' | 'live-limited' | 'live-full' = 'paper';
+
+  // System Halted State
+  private halted: boolean = false;
+
   /**
    * Get current allocation
    */
@@ -218,5 +224,63 @@ export class BrainStateManager {
   setArmed(armed: boolean): void {
     this.armed = armed;
     this.invalidateDashboardCache();
+  }
+
+  /**
+   * Get system mode
+   */
+  getMode(): 'paper' | 'live-limited' | 'live-full' {
+    return this.mode;
+  }
+
+  /**
+   * Set system mode
+   */
+  setMode(mode: 'paper' | 'live-limited' | 'live-full'): void {
+    this.mode = mode;
+    this.invalidateDashboardCache();
+  }
+
+  /**
+   * Check if system is halted
+   */
+  isHalted(): boolean {
+    return this.halted;
+  }
+
+  // Risk Override State
+  private riskOverride: {
+    active: boolean;
+    max_drawdown_pct?: number;
+    expires_at: string;
+  } | null = null;
+
+  /**
+   * Set system halted state
+   */
+  setHalted(halted: boolean): void {
+    this.halted = halted;
+    this.invalidateDashboardCache();
+  }
+
+  /**
+   * Set a temporary risk override
+   */
+  setRiskOverride(override: { active: boolean; max_drawdown_pct?: number; expires_at: string }): void {
+    this.riskOverride = override;
+  }
+
+  /**
+   * Clear the risk override
+   */
+  clearRiskOverride(): void {
+    this.riskOverride = null;
+  }
+
+  /**
+   * Get the current risk override
+   */
+  getRiskOverride(): { active: boolean; max_drawdown_pct?: number; expires_at: string } | null {
+    return this.riskOverride;
   }
 }

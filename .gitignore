@@ -146,6 +146,7 @@ Cargo.lock
 
 # Development artifacts
 artifacts/logs/
+artifacts/antigravity/
 reports/
 .deployment-configs/
 .genkit/

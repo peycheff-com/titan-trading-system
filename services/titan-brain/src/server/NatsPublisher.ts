@@ -121,6 +121,32 @@ export class NatsPublisher {
     }
   }
 
+  /**
+   * Publish an operator intent lifecycle event to NATS.
+   * Used by OperatorIntentService for cross-service intent state broadcasting.
+   */
+  async publishIntentEvent(event: {
+    intent_id: string;
+    status: string;
+    previous_status: string;
+    receipt?: Record<string, unknown>;
+    timestamp: string;
+  }): Promise<void> {
+    if (!this.connected) {
+      return; // Silent skip — NATS is optional for intent lifecycle
+    }
+
+    try {
+      await this.nats.publishEnvelope(TITAN_SUBJECTS.EVT.OPERATOR.INTENT, event, {
+        type: TITAN_SUBJECTS.EVT.OPERATOR.INTENT,
+        version: 1,
+        producer: 'titan-brain',
+      });
+    } catch (err) {
+      this.logger.error('Failed to publish intent event', err as Error);
+    }
+  }
+
   async close(): Promise<void> {
     if (this.connected) {
       await this.nats.close();

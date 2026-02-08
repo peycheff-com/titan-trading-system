@@ -143,6 +143,22 @@ pub static NATS_STORAGE_BYTES: Lazy<IntGauge> = Lazy::new(|| {
     .expect("nats_storage_pressure gauge")
 });
 
+pub static EVENT_LAG: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "titan_execution_event_lag",
+        "Lag in milliseconds between event timestamp and processing time"
+    )
+    .expect("event_lag gauge")
+});
+
+pub static ERROR_COUNT: Lazy<IntCounter> = Lazy::new(|| {
+    register_int_counter!(
+        "titan_execution_error_count",
+        "Total number of errors encountered during execution"
+    )
+    .expect("error_count counter")
+});
+
 pub fn inc_invalid_intents() {
     INVALID_INTENTS.inc();
 }

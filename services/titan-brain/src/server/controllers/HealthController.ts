@@ -25,6 +25,7 @@ export class HealthController {
    */
   async handleHealth(_request: FastifyRequest, reply: FastifyReply): Promise<void> {
     // Quick check: Are we initialized? Dependencies connected?
+    // We check database, nats, and other critical infrastructure via HealthManager
     const healthStatus = await this.healthManager.checkHealth();
 
     if (healthStatus.status === 'unhealthy') {

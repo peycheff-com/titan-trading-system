@@ -23,7 +23,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Shield, Activity, Wallet, Server, Save, Globe, Database } from 'lucide-react';
-import { getTitanExecutionUrl } from '@/lib/api-config';
+import { getTitanBrainUrl } from '@/lib/api-config';
 import { InfrastructureSettings } from '@/components/titan/InfrastructureSettings';
 
 // Types matching Backend Config
@@ -128,7 +128,7 @@ const Settings = () => {
   const [localMemory, setLocalMemory] = useState<StrategicMemory | null>(null);
   const [localApiKeys, setLocalApiKeys] = useState<ApiKeys | null>(null);
 
-  const TITAN_EXECUTION_URL = getTitanExecutionUrl();
+  const TITAN_EXECUTION_URL = getTitanBrainUrl();
 
   const fetchConfig = React.useCallback(async () => {
     try {

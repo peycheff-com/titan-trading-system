@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CommandDialog,
@@ -9,38 +9,100 @@ import {
   CommandList,
   CommandSeparator,
 } from '@/components/ui/command';
-import {
-  LayoutDashboard,
-  Radio,
-  Bug,
-  Target,
-  Shield,
-  Brain,
-  Cpu,
-  Zap,
-  BookOpen,
-  Bell,
-  Server,
-  Search,
-} from 'lucide-react';
+import { Search, Shield, ShieldOff, Gauge, RefreshCcw, XCircle, AlertTriangle } from 'lucide-react';
+import { NAV_GROUPS } from '@/config/navigation';
+import { compileNLToIntent } from '@/lib/intentCompiler';
+import { useSafety } from '@/context/SafetyContext';
+import { toast } from 'sonner';
 
-const routes = [
-  { name: 'Overview', path: '/', icon: LayoutDashboard, group: 'Command' },
-  { name: 'Live Ops', path: '/live', icon: Radio, group: 'Command' },
-  { name: 'Scavenger Phase', path: '/phases/scavenger', icon: Bug, group: 'Strategy Phases' },
-  { name: 'Hunter Phase', path: '/phases/hunter', icon: Target, group: 'Strategy Phases' },
-  { name: 'Sentinel Phase', path: '/phases/sentinel', icon: Shield, group: 'Strategy Phases' },
-  { name: 'Brain', path: '/brain', icon: Brain, group: 'Organs' },
-  { name: 'AI Quant', path: '/ai-quant', icon: Cpu, group: 'Organs' },
-  { name: 'Execution', path: '/execution', icon: Zap, group: 'Organs' },
-  { name: 'Journal & Forensics', path: '/journal', icon: BookOpen, group: 'Ops' },
-  { name: 'Alerts & Incidents', path: '/alerts', icon: Bell, group: 'Ops' },
-  { name: 'Infra / DR', path: '/infra', icon: Server, group: 'Ops' },
-];
+// ---------------------------------------------------------------------------
+// Action commands shown in ⌘K alongside navigation
+// ---------------------------------------------------------------------------
+
+interface ActionCommand {
+  name: string;
+  keywords: string;
+  icon: React.ComponentType<{ className?: string }>;
+  danger: 'safe' | 'moderate' | 'critical';
+  execute: () => void;
+}
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const { armConsole, disarmConsole, isArmed, toggleArmed } = useSafety();
+
+  // Build action commands
+  const actionCommands: ActionCommand[] = [
+    {
+      name: 'Arm System',
+      keywords: 'arm enable danger',
+      icon: Shield,
+      danger: 'moderate',
+      execute: () => {
+        armConsole();
+        toast.warning('Console armed — dangerous controls active');
+      },
+    },
+    {
+      name: 'Disarm System',
+      keywords: 'disarm disable safe',
+      icon: ShieldOff,
+      danger: 'safe',
+      execute: () => {
+        disarmConsole();
+        toast.info('Console disarmed');
+      },
+    },
+    {
+      name: 'Throttle Phase…',
+      keywords: 'throttle phase scavenger hunter sentinel',
+      icon: Gauge,
+      danger: 'moderate',
+      execute: () => {
+        navigate('/');
+        toast.info('Use chat: "throttle scavenger 50%"');
+      },
+    },
+    {
+      name: 'Run Reconciliation',
+      keywords: 'reconcile reconciliation check',
+      icon: RefreshCcw,
+      danger: 'safe',
+      execute: () => {
+        toast.info('Reconciliation command sent to chat');
+        navigate('/');
+      },
+    },
+    {
+      name: 'Flatten All (DANGER)',
+      keywords: 'flatten close all positions emergency',
+      icon: XCircle,
+      danger: 'critical',
+      execute: () => {
+        if (!isArmed) {
+          toast.error('Console must be Armed to execute FLATTEN. Arm first.');
+          return;
+        }
+        navigate('/');
+        toast.warning('Use chat to confirm: "flatten all"');
+      },
+    },
+    {
+      name: 'Override Risk (DANGER)',
+      keywords: 'override risk limit parameter',
+      icon: AlertTriangle,
+      danger: 'critical',
+      execute: () => {
+        if (!isArmed) {
+          toast.error('Console must be Armed for risk overrides.');
+          return;
+        }
+        navigate('/');
+        toast.warning('Use chat: "override risk <key> <value>"');
+      },
+    },
+  ];
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -59,15 +121,10 @@ export function CommandPalette() {
     setOpen(false);
   };
 
-  const groups = routes.reduce(
-    (acc, route) => {
-      if (!acc[route.group]) acc[route.group] = [];
-
-      acc[route.group].push(route);
-      return acc;
-    },
-    {} as Record<string, typeof routes>,
-  );
+  const handleAction = (cmd: ActionCommand) => {
+    cmd.execute();
+    setOpen(false);
+  };
 
   return (
     <>
@@ -83,25 +140,51 @@ export function CommandPalette() {
       </button>
 
       <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Search pages, commands..." />
+        <CommandInput placeholder="Search pages, commands, actions..." />
         <CommandList>
           <CommandEmpty>No results found.</CommandEmpty>
 
-          {Object.entries(groups).map(([group, items], index) => (
-            <div key={group}>
+          {/* Action commands */}
+          <CommandGroup heading="Actions">
+            {actionCommands.map((cmd) => (
+              <CommandItem
+                key={cmd.name}
+                value={`${cmd.name} ${cmd.keywords}`}
+                onSelect={() => handleAction(cmd)}
+                className="flex items-center gap-2"
+              >
+                <cmd.icon className={`h-4 w-4 ${
+                  cmd.danger === 'critical'
+                    ? 'text-status-critical'
+                    : cmd.danger === 'moderate'
+                      ? 'text-status-degraded'
+                      : 'text-muted-foreground'
+                }`} />
+                <span>{cmd.name}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+
+          <CommandSeparator />
+
+          {/* Navigation */}
+          {NAV_GROUPS.map((navGroup, index) => (
+            <div key={navGroup.group}>
               {index > 0 && <CommandSeparator />}
-              <CommandGroup heading={group}>
-                {items.map((route) => (
-                  <CommandItem
-                    key={route.path}
-                    value={route.name}
-                    onSelect={() => handleSelect(route.path)}
-                    className="flex items-center gap-2"
-                  >
-                    <route.icon className="h-4 w-4 text-muted-foreground" />
-                    <span>{route.name}</span>
-                  </CommandItem>
-                ))}
+              <CommandGroup heading={navGroup.group}>
+                {navGroup.items
+                  .filter((item) => item.searchable !== false)
+                  .map((route) => (
+                    <CommandItem
+                      key={route.path}
+                      value={route.name}
+                      onSelect={() => handleSelect(route.path)}
+                      className="flex items-center gap-2"
+                    >
+                      <route.icon className="h-4 w-4 text-muted-foreground" />
+                      <span>{route.name}</span>
+                    </CommandItem>
+                  ))}
               </CommandGroup>
             </div>
           ))}

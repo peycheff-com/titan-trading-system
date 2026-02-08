@@ -44,3 +44,6 @@ export {
 
 // NATS Publisher for cross-service communication
 export { AIOptimizationRequest, getNatsPublisher, NatsPublisher } from './NatsPublisher.js';
+
+// Operator Command Plane
+export { OperatorController } from './controllers/OperatorController.js';
