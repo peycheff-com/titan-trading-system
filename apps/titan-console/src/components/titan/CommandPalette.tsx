@@ -9,34 +9,8 @@ import {
   CommandList,
   CommandSeparator,
 } from '@/components/ui/command';
-import {
-  LayoutDashboard,
-  Radio,
-  Bug,
-  Target,
-  Shield,
-  Brain,
-  Cpu,
-  Zap,
-  BookOpen,
-  Bell,
-  Server,
-  Search,
-} from 'lucide-react';
-
-const routes = [
-  { name: 'Overview', path: '/', icon: LayoutDashboard, group: 'Command' },
-  { name: 'Live Ops', path: '/live', icon: Radio, group: 'Command' },
-  { name: 'Scavenger Phase', path: '/phases/scavenger', icon: Bug, group: 'Strategy Phases' },
-  { name: 'Hunter Phase', path: '/phases/hunter', icon: Target, group: 'Strategy Phases' },
-  { name: 'Sentinel Phase', path: '/phases/sentinel', icon: Shield, group: 'Strategy Phases' },
-  { name: 'Brain', path: '/brain', icon: Brain, group: 'Organs' },
-  { name: 'AI Quant', path: '/ai-quant', icon: Cpu, group: 'Organs' },
-  { name: 'Execution', path: '/execution', icon: Zap, group: 'Organs' },
-  { name: 'Journal & Forensics', path: '/journal', icon: BookOpen, group: 'Ops' },
-  { name: 'Alerts & Incidents', path: '/alerts', icon: Bell, group: 'Ops' },
-  { name: 'Infra / DR', path: '/infra', icon: Server, group: 'Ops' },
-];
+import { Search } from 'lucide-react';
+import { NAV_GROUPS } from '@/config/navigation';
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
@@ -59,16 +33,6 @@ export function CommandPalette() {
     setOpen(false);
   };
 
-  const groups = routes.reduce(
-    (acc, route) => {
-      if (!acc[route.group]) acc[route.group] = [];
-
-      acc[route.group].push(route);
-      return acc;
-    },
-    {} as Record<string, typeof routes>,
-  );
-
   return (
     <>
       <button
@@ -87,21 +51,23 @@ export function CommandPalette() {
         <CommandList>
           <CommandEmpty>No results found.</CommandEmpty>
 
-          {Object.entries(groups).map(([group, items], index) => (
-            <div key={group}>
+          {NAV_GROUPS.map((navGroup, index) => (
+            <div key={navGroup.group}>
               {index > 0 && <CommandSeparator />}
-              <CommandGroup heading={group}>
-                {items.map((route) => (
-                  <CommandItem
-                    key={route.path}
-                    value={route.name}
-                    onSelect={() => handleSelect(route.path)}
-                    className="flex items-center gap-2"
-                  >
-                    <route.icon className="h-4 w-4 text-muted-foreground" />
-                    <span>{route.name}</span>
-                  </CommandItem>
-                ))}
+              <CommandGroup heading={navGroup.group}>
+                {navGroup.items
+                  .filter((item) => item.searchable !== false)
+                  .map((route) => (
+                    <CommandItem
+                      key={route.path}
+                      value={route.name}
+                      onSelect={() => handleSelect(route.path)}
+                      className="flex items-center gap-2"
+                    >
+                      <route.icon className="h-4 w-4 text-muted-foreground" />
+                      <span>{route.name}</span>
+                    </CommandItem>
+                  ))}
               </CommandGroup>
             </div>
           ))}

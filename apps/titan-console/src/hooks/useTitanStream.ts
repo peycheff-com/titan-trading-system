@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { getTitanBrainUrl } from '@/lib/api-config';
 
 export interface StreamMessage<T = unknown> {
   subject: string;
@@ -20,7 +21,9 @@ export function useTitanStream(subjectFilter: string = '>') {
       return;
     }
 
-    const wsUrl = `ws://localhost:3100/ws/stream?token=${token}`;
+    const brainBaseUrl = getTitanBrainUrl();
+    const wsBase = brainBaseUrl.replace(/^http/, 'ws');
+    const wsUrl = `${wsBase}/ws/stream?token=${token}`;
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
