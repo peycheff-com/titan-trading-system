@@ -4,7 +4,6 @@
  * Tests the write-through persistence behavior between
  * OperatorIntentService and IntentRepository.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OperatorIntentService } from '../../../src/services/OperatorIntentService.js';
 import type { IntentRepository } from '../../../src/db/repositories/IntentRepository.js';
 import {
@@ -44,24 +43,24 @@ function makeIntent(
 }
 
 function makeMockRepo(): IntentRepository & {
-  insert: ReturnType<typeof vi.fn>;
-  updateStatus: ReturnType<typeof vi.fn>;
-  resolve: ReturnType<typeof vi.fn>;
-  findRecent: ReturnType<typeof vi.fn>;
+  insert: jest.Mock;
+  updateStatus: jest.Mock;
+  resolve: jest.Mock;
+  findRecent: jest.Mock;
 } {
   return {
-    insert: vi.fn().mockResolvedValue(undefined),
-    updateStatus: vi.fn().mockResolvedValue(undefined),
-    resolve: vi.fn().mockResolvedValue(undefined),
-    findRecent: vi.fn().mockResolvedValue([]),
-    findById: vi.fn().mockResolvedValue(null),
-    findByIdempotencyKey: vi.fn().mockResolvedValue(null),
-    findFiltered: vi.fn().mockResolvedValue({ intents: [], total: 0 }),
+    insert: jest.fn().mockResolvedValue(undefined),
+    updateStatus: jest.fn().mockResolvedValue(undefined),
+    resolve: jest.fn().mockResolvedValue(undefined),
+    findRecent: jest.fn().mockResolvedValue([]),
+    findById: jest.fn().mockResolvedValue(null),
+    findByIdempotencyKey: jest.fn().mockResolvedValue(null),
+    findFiltered: jest.fn().mockResolvedValue({ intents: [], total: 0 }),
   } as unknown as IntentRepository & {
-    insert: ReturnType<typeof vi.fn>;
-    updateStatus: ReturnType<typeof vi.fn>;
-    resolve: ReturnType<typeof vi.fn>;
-    findRecent: ReturnType<typeof vi.fn>;
+    insert: jest.Mock;
+    updateStatus: jest.Mock;
+    resolve: jest.Mock;
+    findRecent: jest.Mock;
   };
 }
 
@@ -94,14 +93,14 @@ describe('OperatorIntentService — Persistence', () => {
   let service: OperatorIntentService;
 
   beforeEach(() => {
-    vi.useFakeTimers();
+    jest.useFakeTimers();
     repo = makeMockRepo();
     service = createServiceWithRepo(repo);
   });
 
   afterEach(() => {
     service.shutdown();
-    vi.useRealTimers();
+    jest.useRealTimers();
   });
 
   // =========================================================================
@@ -115,7 +114,7 @@ describe('OperatorIntentService — Persistence', () => {
       expect(result.status).toBe('ACCEPTED');
 
       // repo.insert is called asynchronously (fire-and-forget)
-      await vi.advanceTimersByTimeAsync(10);
+      await jest.advanceTimersByTimeAsync(10);
       expect(repo.insert).toHaveBeenCalledTimes(1);
       expect(repo.insert.mock.calls[0][0].id).toBe(intent.id);
     });
@@ -127,7 +126,7 @@ describe('OperatorIntentService — Persistence', () => {
       const result = await service.submitIntent(intent);
       expect(result.status).toBe('ACCEPTED');
 
-      await vi.advanceTimersByTimeAsync(10);
+      await jest.advanceTimersByTimeAsync(10);
       // Service still works despite DB failure
       const fetched = service.getIntent(intent.id);
       expect(fetched).toBeDefined();
@@ -144,7 +143,7 @@ describe('OperatorIntentService — Persistence', () => {
       await service.submitIntent(intent);
 
       // Let executor start (ACCEPTED → EXECUTING)
-      await vi.advanceTimersByTimeAsync(10);
+      await jest.advanceTimersByTimeAsync(10);
 
       expect(repo.updateStatus).toHaveBeenCalled();
       const statusCalls = repo.updateStatus.mock.calls;
@@ -165,7 +164,7 @@ describe('OperatorIntentService — Persistence', () => {
       await service.submitIntent(intent);
 
       // Let executor complete → VERIFIED
-      await vi.advanceTimersByTimeAsync(100);
+      await jest.advanceTimersByTimeAsync(100);
 
       expect(repo.resolve).toHaveBeenCalled();
       const resolveCall = repo.resolve.mock.calls.find(
@@ -194,7 +193,7 @@ describe('OperatorIntentService — Persistence', () => {
 
       const intent = makeIntent('ARM');
       await failSvc.submitIntent(intent);
-      await vi.advanceTimersByTimeAsync(100);
+      await jest.advanceTimersByTimeAsync(100);
 
       expect(failRepo.resolve).toHaveBeenCalled();
       const resolveCall = failRepo.resolve.mock.calls.find(
@@ -250,7 +249,7 @@ describe('OperatorIntentService — Persistence', () => {
       // First, submit an intent normally
       const intent = makeIntent('ARM');
       await service.submitIntent(intent);
-      await vi.advanceTimersByTimeAsync(100);
+      await jest.advanceTimersByTimeAsync(100);
 
       // Now try to hydrate with same ID
       const storedIntent: OperatorIntentRecord = {
@@ -295,7 +294,7 @@ describe('OperatorIntentService — Persistence', () => {
       const result = await svcNoRepo.submitIntent(intent);
       expect(result.status).toBe('ACCEPTED');
 
-      await vi.advanceTimersByTimeAsync(100);
+      await jest.advanceTimersByTimeAsync(100);
       expect(svcNoRepo.getIntent(intent.id)?.status).toBe('VERIFIED');
 
       svcNoRepo.shutdown();

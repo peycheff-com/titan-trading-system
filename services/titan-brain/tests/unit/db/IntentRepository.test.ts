@@ -4,7 +4,6 @@
  * Tests the repository's SQL generation, parameter mapping,
  * and row-to-record transformation without a real database.
  */
-import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { IntentRepository } from '../../../src/db/repositories/IntentRepository.js';
 import type { DatabaseManager } from '../../../src/db/DatabaseManager.js';
 import type { OperatorIntentRecord, IntentReceipt } from '@titan/shared';
@@ -15,13 +14,13 @@ import type { OperatorIntentRecord, IntentReceipt } from '@titan/shared';
 
 function makeMockDb() {
   return {
-    query: vi.fn(),
-    queryOne: vi.fn(),
-    queryAll: vi.fn(),
+    query: jest.fn(),
+    queryOne: jest.fn(),
+    queryAll: jest.fn(),
   } as unknown as DatabaseManager & {
-    query: ReturnType<typeof vi.fn>;
-    queryOne: ReturnType<typeof vi.fn>;
-    queryAll: ReturnType<typeof vi.fn>;
+    query: jest.Mock;
+    queryOne: jest.Mock;
+    queryAll: jest.Mock;
   };
 }
 

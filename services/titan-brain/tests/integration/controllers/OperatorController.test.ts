@@ -6,7 +6,6 @@
  *
  * Uses real timers (not fake) since Fastify inject() needs actual async resolution.
  */
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { OperatorController } from '../../../src/server/controllers/OperatorController.js';
 import { OperatorIntentService } from '../../../src/services/OperatorIntentService.js';

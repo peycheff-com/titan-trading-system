@@ -7,7 +7,6 @@
  * Uses a real Fastify HTTP server + fetch with AbortController
  * since SSE is a long-lived stream that inject() can't handle.
  */
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { OperatorController } from '../../../src/server/controllers/OperatorController.js';
 import { OperatorIntentService } from '../../../src/services/OperatorIntentService.js';
