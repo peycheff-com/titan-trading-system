@@ -59,6 +59,11 @@ import {
   getVenueStatusStore,
   resetVenueStatusStore,
 } from "../services/venues/index.js";
+import { OperatorController } from "./controllers/OperatorController.js";
+import { OperatorIntentService } from "../services/OperatorIntentService.js";
+import { OperatorStateProjection } from "../services/OperatorStateProjection.js";
+import { IntentRepository } from "../db/repositories/IntentRepository.js";
+import { getNatsPublisher } from "./NatsPublisher.js";
 
 /**
  * HMAC verification options
@@ -124,6 +129,9 @@ export class WebhookServer {
   private readonly configRegistry: ConfigRegistry;
   private readonly configController: ConfigController;
   private readonly venuesController: VenuesController;
+  private readonly operatorController: OperatorController;
+  private readonly operatorIntentService: OperatorIntentService;
+  private operatorStateProjection: OperatorStateProjection | null = null;
 
   constructor(
     config: WebhookServerConfig,
@@ -231,6 +239,54 @@ export class WebhookServer {
     this.venuesController = new VenuesController(
       this.logger,
       this.authMiddleware,
+    );
+
+    // Initialize Operator Command Plane
+    const opsSecret = process.env.OPS_SECRET || process.env.HMAC_SECRET || '';
+    const intentRepo = new IntentRepository(dbManager, this.logger);
+    this.operatorIntentService = new OperatorIntentService(
+      {
+        opsSecret,
+        executors: this.buildIntentExecutors(),
+        verifiers: this.buildIntentVerifiers(),
+        getStateHash: () => this.operatorStateProjection?.computeStateHash() ?? '',
+      },
+      this.logger,
+      intentRepo,
+    );
+    // Hydrate intent buffer from DB (non-blocking)
+    this.operatorIntentService.hydrateFromDb().catch((err) => {
+      this.logger.error('Failed to hydrate intents from DB', err instanceof Error ? err : undefined);
+    });
+
+    // Bridge intent events to NATS (non-blocking, fire-and-forget)
+    try {
+      const natsPublisher = getNatsPublisher();
+      this.operatorIntentService.on('intent:updated', (event: {
+        intent_id: string;
+        status: string;
+        previous_status: string;
+        receipt?: Record<string, unknown>;
+        timestamp: string;
+      }) => {
+        natsPublisher.publishIntentEvent(event).catch(() => {
+          // Silent — NATS is optional for intent lifecycle
+        });
+      });
+    } catch {
+      this.logger.warn('NatsPublisher not available — intent events will not be published to NATS');
+    }
+
+    const operatorStateProjection = new OperatorStateProjection(
+      this.brain,
+      this.operatorIntentService,
+    );
+    this.operatorStateProjection = operatorStateProjection;
+    this.operatorController = new OperatorController(
+      this.operatorIntentService,
+      operatorStateProjection,
+      this.authMiddleware,
+      this.logger,
     );
   }
 
@@ -566,6 +622,7 @@ export class WebhookServer {
     this.safetyController.registerRoutes(this.server);
     this.configController.registerRoutes(this.server);
     this.venuesController.registerRoutes(this.server);
+    this.operatorController.registerRoutes(this.server);
 
     // Metrics (Inline as it requires metricsCollector from this class, or could move to controller if passed)
     // Keeping inline for now as it's simple
@@ -629,5 +686,94 @@ export class WebhookServer {
     this.hmacOptions.enabled = false;
 
     this.hmacValidator = null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Operator Intent Executors & Verifiers
+  // ---------------------------------------------------------------------------
+
+  private buildIntentExecutors(): Record<string, (intent: { type: string; params: Record<string, unknown> }) => Promise<{ effect?: string; prior_state?: Record<string, unknown>; new_state?: Record<string, unknown>; error?: string }>> {
+    const brain = this.brain;
+    const stateManager = brain.getStateManager();
+
+    return {
+      ARM: async () => {
+        const prior = { armed: stateManager.isArmed(), posture: stateManager.isArmed() ? 'armed' : 'disarmed' };
+        stateManager.setArmed(true);
+        return { effect: 'System armed', prior_state: prior, new_state: { armed: true, posture: 'armed' } };
+      },
+      DISARM: async () => {
+        const prior = { armed: stateManager.isArmed(), posture: stateManager.isArmed() ? 'armed' : 'disarmed' };
+        stateManager.setArmed(false);
+        return { effect: 'System disarmed', prior_state: prior, new_state: { armed: false, posture: 'disarmed' } };
+      },
+      SET_MODE: async (intent) => {
+        const mode = intent.params.mode as string;
+        const prior = { mode: stateManager.getMode() };
+        stateManager.setMode(mode as 'paper' | 'live-limited' | 'live-full');
+        return { effect: `Mode set to ${mode}`, prior_state: prior, new_state: { mode } };
+      },
+      THROTTLE_PHASE: async (intent) => {
+        const phaseId = intent.params.phase_id as string;
+        const action = intent.params.action as string;
+        return { effect: `Phase ${phaseId} ${action}`, prior_state: { phase: phaseId }, new_state: { phase: phaseId, action } };
+      },
+      RUN_RECONCILE: async () => {
+        const reconciliation = brain.getReconciliationService();
+        if (reconciliation) {
+          await reconciliation.reconcileAll();
+          return { effect: 'Reconciliation completed' };
+        }
+        return { effect: 'Reconciliation service not available', error: 'NO_RECONCILIATION_SERVICE' };
+      },
+      FLATTEN: async () => {
+        const positions = stateManager.getPositions();
+        const prior = { open_positions: positions.length };
+        await brain.closeAllPositions();
+        return { effect: 'All positions closed', prior_state: prior, new_state: { open_positions: 0 } };
+      },
+      OVERRIDE_RISK: async (intent) => {
+        const durationSec = (intent.params.duration_seconds as number) ?? 300;
+        const maxDrawdown = intent.params.max_drawdown_pct as number | undefined;
+        const priorState = { risk_overrides_active: false };
+
+        // Apply override via state manager
+        stateManager.setRiskOverride({
+          active: true,
+          max_drawdown_pct: maxDrawdown,
+          expires_at: new Date(Date.now() + durationSec * 1000).toISOString(),
+        });
+
+        // Schedule auto-revert
+        setTimeout(() => {
+          stateManager.clearRiskOverride();
+          Logger.getInstance('webhook-server').info(`OVERRIDE_RISK auto-reverted after ${durationSec}s`);
+        }, durationSec * 1000);
+
+        return {
+          effect: `Risk override applied for ${durationSec}s`,
+          prior_state: priorState,
+          new_state: { risk_overrides_active: true, duration_seconds: durationSec },
+        };
+      },
+    };
+  }
+
+  private buildIntentVerifiers(): Record<string, (intent: { type: string; params: Record<string, unknown> }) => Promise<{ passed: boolean; error?: string }>> {
+    const stateManager = this.brain.getStateManager();
+
+    return {
+      ARM: async () => ({ passed: stateManager.isArmed() }),
+      DISARM: async () => ({ passed: !stateManager.isArmed() }),
+      SET_MODE: async (intent) => ({
+        passed: stateManager.getMode() === intent.params.mode,
+      }),
+      FLATTEN: async () => ({
+        passed: stateManager.getPositions().length === 0,
+      }),
+      OVERRIDE_RISK: async () => ({
+        passed: stateManager.getRiskOverride()?.active === true,
+      }),
+    };
   }
 }

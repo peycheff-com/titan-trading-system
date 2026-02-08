@@ -15,3 +15,4 @@ export { RiskRepository } from './RiskRepository.js';
 export { PowerLawRepository } from './PowerLawRepository.js';
 export { PositionRepository } from './PositionRepository.js';
 export { TruthRepository } from './TruthRepository.js';
+export { IntentRepository } from './IntentRepository.js';

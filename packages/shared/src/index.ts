@@ -326,6 +326,33 @@ export {
   OperatorActionTypeEnum,
 } from './schemas/OperatorAction.js';
 
+// Operator Intent (Command Plane v1)
+export {
+  calculateIntentSignature,
+  DANGER_LEVEL,
+  DEFAULT_TTL,
+  IntentReceiptSchema,
+  type IntentReceipt,
+  isTerminalStatus,
+  MAX_TTL,
+  type OperatorIntentRecord,
+  OperatorIntentSchemaV1,
+  OperatorIntentStatusEnum,
+  type OperatorIntentStatus,
+  type OperatorIntentSummary,
+  OperatorIntentTypeEnum,
+  type OperatorIntentType,
+  type OperatorIntentV1,
+  type OperatorRole,
+  type OperatorState,
+  type PhaseStatus,
+  REQUIRES_APPROVAL,
+  ROLE_ALLOWED_INTENTS,
+  TERMINAL_STATUSES,
+  validateOperatorIntent,
+  verifyIntentSignature,
+} from './schemas/operatorIntent.js';
+
 // Canonical Fee Schedule
 export {
   DEFAULT_FEE_SCHEDULE,
