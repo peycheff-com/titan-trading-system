@@ -79,7 +79,7 @@ describe("Security Enforcement Verification", () => {
             const auth = new AuthMiddleware(mockLogger);
             expect(auth).toBeDefined();
             // Should verify it generates signature with test secret
-            const token = auth.generateToken("test-op", "admin");
+            const token = auth.generateToken({ operatorId: "test-op", role: "admin" });
             expect(token).toBeDefined();
         });
     });

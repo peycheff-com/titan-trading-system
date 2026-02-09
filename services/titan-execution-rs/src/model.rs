@@ -200,6 +200,7 @@ pub struct DexFillProof {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FillReport {
     pub fill_id: String,
     pub signal_id: String,
@@ -216,6 +217,9 @@ pub struct FillReport {
     pub t_exchange: i64,
     pub client_order_id: String,
     pub execution_id: String,
+
+    pub status: String,
+    pub timestamp: i64,
     #[serde(default)]
     pub dex_proof: Option<DexFillProof>,
 }

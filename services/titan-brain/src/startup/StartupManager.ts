@@ -1,24 +1,29 @@
 /**
- * StartupManager - Reliable service initialization for Railway deployment
+ * StartupManager - Reliable service initialization
  *
  * Ensures reliable service initialization with proper error handling,
  * timeout management, and graceful shutdown.
  *
+ * Deployment Target: DigitalOcean (Docker Compose)
  * Requirements: 1.2.1, 1.2.2, 1.2.3, 1.2.4, 1.2.5
  */
 
 import { EventEmitter } from 'events';
 import { Logger } from '../logging/Logger.js';
+import { PlatformAdapter } from './platforms/PlatformAdapter.js';
+import { PlatformFactory } from './platforms/PlatformFactory.js';
 
 /**
  * Startup step status
  */
 export enum StartupStatus {
-  PENDING = 'pending',
-  RUNNING = 'running',
-  COMPLETED = 'completed',
-  FAILED = 'failed',
-  SKIPPED = 'skipped',
+  STARTING = "STARTING",
+  RUNNING = "RUNNING",
+  READY = "READY",
+  FAILED = "FAILED",
+  SKIPPED = "SKIPPED",
+  PENDING = "PENDING",
+  COMPLETED = "COMPLETED"
 }
 
 /**
@@ -81,8 +86,16 @@ export class StartupManager extends EventEmitter {
   private shutdownHandlers: Array<() => Promise<void>> = [];
   private signalHandlers: Map<string, (...args: any[]) => void> = new Map();
 
+  private platform: PlatformAdapter;
+
   constructor(config: Partial<StartupManagerConfig> = {}, logger?: Logger) {
     super();
+
+    this.logger = logger ?? Logger.getInstance('startup-manager');
+    
+    // Initialize Platform Adapter
+    this.platform = PlatformFactory.getAdapter();
+    this.logger.info(`Initializing StartupManager on platform: ${this.platform.getName()}`);
 
     this.config = {
       maxStartupTime: config.maxStartupTime || 60000, // 60 seconds
@@ -92,8 +105,6 @@ export class StartupManager extends EventEmitter {
       gracefulShutdownTimeout: config.gracefulShutdownTimeout || 10000, // 10 seconds
       validateEnvironment: config.validateEnvironment ?? true,
     };
-
-    this.logger = logger ?? Logger.getInstance('startup-manager');
 
     // Setup process signal handlers
     this.setupSignalHandlers();
@@ -585,9 +596,10 @@ export class StartupManager extends EventEmitter {
   private cleanupSignalHandlers(): void {
     for (const [event, handler] of this.signalHandlers) {
       try {
-        process.removeListener(event as any, handler);
+        process.removeListener(event, handler);
       } catch (error) {
         // Ignore cleanup errors
+        this.logger.debug('Failed to remove signal listener', undefined, { error: error instanceof Error ? error.message : String(error) });
       }
     }
 

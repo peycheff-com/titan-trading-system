@@ -275,6 +275,31 @@ export class OperatorIntentService extends EventEmitter {
     const stateHashValid = payload.state_hash === currentHash;
 
     // RBAC check
+    // We now use granular permissions, but for preview we map the intent to a required permission
+    // For now, we still check against valid intent types for roles as a high-level filter
+    // RBAC Check
+    // Map each intent type to a specific Permission
+    const PERMISSION_MAP: Record<OperatorIntentType, string> = {
+      'ARM': 'safety.arm',
+      'DISARM': 'safety.disarm',
+      'SET_MODE': 'control.set_mode',
+      'THROTTLE_PHASE': 'control.throttle',
+      'FLATTEN': 'risk.flatten',
+      'RUN_RECONCILE': 'control.reconcile',
+      'OVERRIDE_RISK': 'risk.override',
+    };
+
+    const requiredPermission = PERMISSION_MAP[payload.type];
+    if (!requiredPermission) {
+       // Fallback for unknown types - should not happen if types are typed
+       this.logger.warn(`No permission mapping for intent type ${payload.type}`);
+    }
+
+    // For now, we still check against valid intent types for roles as a high-level filter
+    // ideally we would check `operator.hasPermission(requiredPermission)` here.
+    // Since we don't have the full Operator object/context here in preview, 
+    // we rely on the role-based allowlist which acts as a coarse-grained permission check.
+    // TODO: Pass full operator context to previewIntent for fine-grained checks.
     const role = (payload.role ?? 'operator') as keyof typeof ROLE_ALLOWED_INTENTS;
     const allowedTypes = ROLE_ALLOWED_INTENTS[role] ?? [];
     const rbacAllowed = allowedTypes.includes(payload.type);

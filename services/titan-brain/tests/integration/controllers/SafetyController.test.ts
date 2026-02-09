@@ -41,6 +41,9 @@ describe("SafetyController Integration", () => {
         const response = await app.inject({
             method: "POST",
             url: "/auth/arm",
+            headers: {
+                "x-titan-sudo-token": "1234567890123456",
+            },
             payload: {
                 actorId: "user-1",
                 role: "owner",
@@ -63,6 +66,9 @@ describe("SafetyController Integration", () => {
         const response = await app.inject({
             method: "POST",
             url: "/auth/arm",
+            headers: {
+                "x-titan-sudo-token": "1234567890123456",
+            },
             payload: {
                 actorId: "user-1",
                 role: "hacker",

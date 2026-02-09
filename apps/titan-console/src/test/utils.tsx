@@ -1,15 +1,11 @@
+
 import React, { ReactElement } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, RenderOptions } from '@testing-library/react';
 import { TooltipProvider } from '@radix-ui/react-tooltip';
+
 // Mock ThemeProvider since the actual component is missing
-const ThemeProvider = ({
-  children,
-}: {
-  children: React.ReactNode;
-  defaultTheme?: string;
-  storageKey?: string;
-}) => {
+const ThemeProvider = ({ children }: { children: React.ReactNode; defaultTheme?: string; storageKey?: string }) => {
   return <>{children}</>;
 };
 

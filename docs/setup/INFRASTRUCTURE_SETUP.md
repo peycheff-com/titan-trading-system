@@ -286,7 +286,7 @@ After successful infrastructure provisioning:
 
 ## Support and Documentation
 
-- [Deployment Guide](../how-to/deploy-production.md)
+See [Production Deployment](../ops/production_deploy.md)
 - [Security Guide](../security/secrets-management.md)
 - [Monitoring](../how-to/index.md)
 - [Troubleshooting Guide](../operations/troubleshooting/incident-response.md)

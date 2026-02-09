@@ -107,10 +107,21 @@ describe('OperatorController Integration', () => {
 
     const stateProjection = new OperatorStateProjection(brain, intentService);
 
+    const stubEventReplayService = {
+      reconstructStateAt: async () => ({
+        getEquity: () => ({ total: 100000, currency: 'USD' }),
+        getPositions: () => [],
+        getAllocation: () => ({ w1: 0, w2: 0, w3: 0, timestamp: 0 }),
+        getMode: () => 'paper',
+        isArmed: () => false,
+      }),
+    } as any;
+
     const controller = new OperatorController(
       intentService,
       stateProjection,
       stubAuthMiddleware,
+      stubEventReplayService,
     );
 
     app = Fastify();

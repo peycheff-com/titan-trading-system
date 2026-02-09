@@ -13,6 +13,9 @@
     { "path": "./services/titan-powerlaw-lab" },
     { "path": "./scripts" }
   ],
+  "include": [
+    "scripts/**/*"
+  ],
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",

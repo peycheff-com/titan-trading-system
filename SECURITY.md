@@ -54,10 +54,11 @@ Please include the following information in your report:
 This project adheres to the following security standards:
 
 ### Authentication & Authorization
-- OAuth 2.1 with PKCE for user authentication
-- JWT-based session management with short-lived tokens
+- JWT-based authentication with shared secret (HMAC-SHA256)
 - Role-Based Access Control (RBAC) for all operations
 - HMAC-SHA256 signed command paths for privileged operations
+- **Future Roadmap**: OAuth 2.1 with PKCE
+
 
 ### Credential Management
 - Zero-secret storage in client applications

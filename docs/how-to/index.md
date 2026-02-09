@@ -3,5 +3,5 @@
 Task-oriented guides for operators and developers.
 
 ## Operations
-- [Deploy to Production](deploy-production.md)
+- [Production Deployment](../ops/production_deploy.md)
 - [Manage Secrets](../security/secrets-management.md)

@@ -298,6 +298,70 @@ ALTER TABLE ledger_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ledger_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ledger_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE config_overrides ENABLE ROW LEVEL SECURITY;
+
+-- Truth Service (Reconciliation)
+-- truth_reconcile_run: History of reconciliation runs
+CREATE TABLE IF NOT EXISTS truth_reconcile_run (
+  id SERIAL PRIMARY KEY,
+  scope VARCHAR(50) NOT NULL, -- e.g. 'BINANCE', 'BYBIT'
+  started_at BIGINT NOT NULL,
+  finished_at BIGINT,
+  success BOOLEAN DEFAULT false,
+  stats_json JSONB,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_truth_run_scope ON truth_reconcile_run(scope, started_at DESC);
+
+-- truth_evidence_snapshot: Raw state captured during a run for proof
+CREATE TABLE IF NOT EXISTS truth_evidence_snapshot (
+  id SERIAL PRIMARY KEY,
+  run_id INTEGER NOT NULL,
+  scope VARCHAR(50) NOT NULL,
+  source VARCHAR(20) NOT NULL, -- 'BRAIN' or 'EXCHANGE'
+  fetched_at BIGINT NOT NULL,
+  payload_json JSONB NOT NULL,
+  payload_hash VARCHAR(64),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_evidence_run FOREIGN KEY (run_id) REFERENCES truth_reconcile_run(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_truth_evidence_run ON truth_evidence_snapshot(run_id);
+
+-- truth_drift_event: Discrepancies found
+CREATE TABLE IF NOT EXISTS truth_drift_event (
+  id UUID PRIMARY KEY,
+  run_id INTEGER NOT NULL,
+  scope VARCHAR(50) NOT NULL,
+  drift_type VARCHAR(50) NOT NULL, -- 'SIZE_MISMATCH', 'GHOST_POSITION'
+  severity VARCHAR(20) NOT NULL, -- 'CRITICAL', 'WARNING', 'INFO'
+  detected_at BIGINT NOT NULL,
+  details_json JSONB NOT NULL,
+  recommended_action VARCHAR(50),
+  resolution_method VARCHAR(50), -- 'MANUAL', 'AUTO_ADJUST'
+  resolved_at BIGINT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_drift_run FOREIGN KEY (run_id) REFERENCES truth_reconcile_run(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_truth_drift_run ON truth_drift_event(run_id);
+CREATE INDEX IF NOT EXISTS idx_truth_drift_scope ON truth_drift_event(scope, detected_at DESC);
+
+-- truth_confidence: Current trust score per scope
+CREATE TABLE IF NOT EXISTS truth_confidence (
+  scope VARCHAR(50) PRIMARY KEY,
+  score DECIMAL(5, 4) NOT NULL DEFAULT 1.0, -- 0.0 to 1.0
+  state VARCHAR(20) NOT NULL, -- 'HIGH', 'DEGRADED', 'LOW'
+  reasons_json JSONB,
+  last_update_ts BIGINT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- RLS for Truth Tables
+ALTER TABLE truth_reconcile_run ENABLE ROW LEVEL SECURITY;
+ALTER TABLE truth_evidence_snapshot ENABLE ROW LEVEL SECURITY;
+ALTER TABLE truth_drift_event ENABLE ROW LEVEL SECURITY;
+ALTER TABLE truth_confidence ENABLE ROW LEVEL SECURITY;
 ALTER TABLE config_receipts ENABLE ROW LEVEL SECURITY;
 
 -- Retention Policy Function

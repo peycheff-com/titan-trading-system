@@ -71,6 +71,8 @@ impl SimulationEngine {
             t_exchange: ticker.transaction_time, // Use market data time as "exchange" time
             client_order_id: format!("sim-oid-{}", self.ctx.id.new_id()),
             execution_id: format!("sim-exec-{}", self.ctx.id.new_id()),
+            status: "FILLED".to_string(),
+            timestamp: ticker.transaction_time,
             dex_proof: None,
         };
 

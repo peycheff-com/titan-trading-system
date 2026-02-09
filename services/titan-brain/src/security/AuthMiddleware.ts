@@ -1,10 +1,13 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import jwt from 'jsonwebtoken';
 import { Logger } from '../logging/Logger.js';
+import { OAuthService } from './OAuthService.js';
 
 export interface TokenPayload {
   operatorId: string;
-  role: string | string[];
+  role: string | string[]; // Legacy compatibility
+  permissions?: string[];   // New PBAC support
+  scope?: string[];         // OAuth scopes
   iat: number;
   exp: number;
 }
@@ -12,7 +15,10 @@ export interface TokenPayload {
 export class AuthMiddleware {
   private readonly secret: string;
 
-  constructor(private readonly logger: Logger) {
+  constructor(
+    private readonly logger: Logger,
+    private readonly oauthService?: OAuthService
+  ) {
     this.secret = process.env.JWT_SECRET || process.env.HMAC_SECRET || '';
 
     if (!this.secret) {
@@ -26,10 +32,10 @@ export class AuthMiddleware {
   }
 
   /**
-   * Generating a JWT token for a logged-in operator
+   * Generating a JWT token (supports both direct and OAuth flows)
    */
-  generateToken(operatorId: string, role: string | string[]): string {
-    return jwt.sign({ operatorId, role }, this.secret, { expiresIn: '8h' });
+  generateToken(payload: Partial<TokenPayload>): string {
+    return jwt.sign(payload, this.secret, { expiresIn: '8h' });
   }
 
   /**
@@ -57,11 +63,8 @@ export class AuthMiddleware {
 
       // Attach user to request
       // @ts-expect-error - We are extending the request object dynamically
-
       request.user = decoded;
 
-      // Log audit
-      // this.logger.debug(`Authenticated operator: ${decoded.operatorId}`);
     } catch (error) {
       reply.status(401).send({
         error: 'Invalid or expired token',
@@ -84,7 +87,40 @@ export class AuthMiddleware {
   }
 
   /**
-   * Factory for role-based guard
+   * Factory for permission-based guard (PBAC)
+   * Falls back to role check if permissions not present
+   */
+  requirePermission(requiredPermission: string) {
+    return async (request: FastifyRequest, reply: FastifyReply) => {
+      // @ts-expect-error - fastify-raw-body attaches rawBody to request but types are not merged
+      const user = request.user as TokenPayload;
+      
+      if (!user) {
+        reply.status(401).send({ error: 'Unauthenticated' });
+        return;
+      }
+
+      // 1. Check Permissions (SOTA)
+      if (user.permissions && user.permissions.includes(requiredPermission)) {
+        return;
+      }
+
+      // 2. Fallback to Role (Legacy/Transitional)
+      // Check if role implies superadmin
+      const roles = Array.isArray(user.role) ? user.role : [user.role];
+      if (roles.includes('superadmin')) {
+        return;
+      }
+
+      this.logger.warn(
+        `Access denied for user ${user.operatorId}. Required: ${requiredPermission}`
+      );
+      reply.status(403).send({ error: 'Insufficient permissions' });
+    };
+  }
+
+  /**
+   * @deprecated Use requirePermission
    */
   requireRole(requiredRole: string) {
     return async (request: FastifyRequest, reply: FastifyReply) => {
@@ -97,11 +133,6 @@ export class AuthMiddleware {
 
       const roles = Array.isArray(user.role) ? user.role : [user.role];
       if (!roles.includes(requiredRole) && !roles.includes('superadmin')) {
-        this.logger.warn(
-          `Access denied for user ${user.operatorId}. Required: ${requiredRole}, Has: ${roles.join(
-            ',',
-          )}`,
-        );
         reply.status(403).send({ error: 'Insufficient permissions' });
       }
     };

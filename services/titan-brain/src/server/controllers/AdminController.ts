@@ -155,7 +155,7 @@ export class AdminController {
         return;
       }
 
-      const token = await this.auth.generateToken(operatorId, roles);
+      const token = this.auth.generateToken({ operatorId, role: roles });
 
       reply.code(200).send({
         token,

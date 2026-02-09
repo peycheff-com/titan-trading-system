@@ -8,8 +8,8 @@ Welcome to the Titan Trading System documentation hub. This guide helps you navi
 *Build, test, and extend the system.*
 
 1.  **[System Source of Truth](canonical/SYSTEM_SOURCE_OF_TRUTH.md)**: Start here. The authoritative map of ports, services, and invariants.
-2.  **[Architecture Overview](ARCHITECTURE.md)**: High-level topology.
-3.  **[Local Development Guide](how-to/local_development.md)**: How to run the stack locally.
+2.  **[Architecture Overview](canonical/ARCHITECTURE.md)**: High-level topology.
+3.  **[Local Development Guide](dev/quickstart.md)**: How to run the stack locally.
 4.  **[Contributing & Style](CONTRIBUTING.md)**: Coding rules, SOTA gates, and style guide.
 
 ### 🛡️ For Operators (Live Environment)
@@ -17,7 +17,7 @@ Welcome to the Titan Trading System documentation hub. This guide helps you navi
 
 1.  **[Deployment Guide](DEPLOYMENT.md)**: Production deployment (Manual & Policy).
 2.  **[Operations Manual](OPERATIONS.md)**: Monitoring, Secrets, and Self-Hosted AI.
-3.  **[Incident Response](runbooks/incident_response.md)**: Emergency procedures.
+3.  **[Incident Response](ops/incident_response.md)**: Emergency procedures.
 
 ## By Section
 
@@ -27,7 +27,7 @@ Learn by doing.
 
 ### 🛠️ [How-To Guides](how-to/index.md)
 Solve specific problems.
-- [Local Development](how-to/local_development.md)
+- [Local Development](dev/quickstart.md)
 - [Deploy to Production](DEPLOYMENT.md)
 
 ### 📖 [Reference](reference/index.md)
@@ -35,9 +35,9 @@ Technical details.
 - [Canonical Source of Truth](canonical/SYSTEM_SOURCE_OF_TRUTH.md)
 - [API Reference](api/README.md)
 
-### 💡 [Explanation](explanation/index.md)
+### 💡 Explanation
 Background and context.
-- [Architecture Overview](ARCHITECTURE.md)
+- [Architecture Overview](canonical/ARCHITECTURE.md)
 - [Execution Routing](explanation/execution-routing.md)
 - [HA Strategy](explanation/ha-strategy.md)
 - [CI Quality Gates](explanation/ci-quality-gates.md)
@@ -46,7 +46,7 @@ Background and context.
 *Backtest, optimize, and audit.*
 
 1.  **[Research Workflow](how-to/research-workflow.md)**: From idea to production signal.
-2.  **[Valuation Report](../artifacts/valuation/reports/titan_ip_valuation_report.md)**: System integrity and IP audit.
+2.  **Valuation Report**: System integrity and IP audit. (Coming Soon)
 3.  **[Power Law Lab](../services/titan-powerlaw-lab/README.md)**: Tail risk analysis.
 4.  **[Legal & Compliance](explanation/legal-and-compliance.md)**: Risk limits and authorized use.
 
@@ -55,6 +55,7 @@ Background and context.
 *   **Canonical Truth**: If `SYSTEM_SOURCE_OF_TRUTH.md` disagrees with another doc, **Source of Truth wins**.
 *   **Fail-Closed**: The system defaults to safety (panic on missing secrets, reject on missing signatures).
 *   **Zero Drift**: Docs must match code. Run `npm run sota:arch` to verify.
+*   **Evidence First**: Claims must be backed by file paths or command outputs.
 
 ## 📂 Documentation Structure
 

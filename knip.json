@@ -5,25 +5,143 @@
     "**/*.test.ts",
     "**/dist/**",
     "**/coverage/**",
-    "services/titan-brain/src/engine/TailRiskCalculator.ts",
-    "services/titan-brain/src/ml/FeatureStoreClient.ts"
+    "packages/shared/jest.config.cjs",
+    "services/titan-brain/src/ml/FeatureStoreClient.ts",
+    "services/titan-phase2-hunter/src/types/index.ts",
+    "services/titan-brain/src/startup/StartupManager.ts",
+    "services/titan-brain/src/types/ledger.ts",
+    "services/titan-brain/src/cache/CacheManager.ts",
+    "services/titan-brain/src/metrics/MetricsCollector.ts",
+    "services/titan-phase2-hunter/src/oracle/index.ts",
+    "services/titan-phase2-hunter/src/oracle/PolymarketClient.ts",
+    "services/titan-phase2-hunter/src/risk/EnhancedRiskManager.ts",
+    "services/titan-phase3-sentinel/src/server/HealthServer.ts",
+    "services/titan-phase3-sentinel/src/types/signals.ts",
+    "services/titan-phase3-sentinel/src/types/statistics.ts",
+    "services/titan-phase3-sentinel/src/vacuum/interfaces.ts",
+    "services/titan-phase2-hunter/src/global-liquidity/index.ts",
+    "services/titan-phase2-hunter/src/logging/Logger.ts",
+    "services/titan-phase2-hunter/src/flow/index.ts",
+    "services/titan-phase2-hunter/src/global-liquidity/GlobalCVDAggregator.ts",
+    "services/titan-phase2-hunter/src/events/index.ts",
+    "services/titan-phase2-hunter/src/exchanges/BybitPerpsClient.ts",
+    "services/titan-phase2-hunter/src/flow/IcebergDetector.ts",
+    "services/titan-phase2-hunter/src/engine/ScoringEngine.ts",
+    "services/titan-phase2-hunter/src/events/EventEmitter.ts",
+    "services/titan-phase2-hunter/src/config/ConfigManager.ts",
+    "services/titan-phase2-hunter/src/monitoring/PrometheusMetrics.ts",
+    "services/titan-phase2-hunter/src/bottrap/index.ts",
+    "services/titan-phase2-hunter/src/config/schema.ts",
+    "services/titan-phase2-hunter/src/emergency/EmergencyProtocolManager.ts",
+    "services/titan-phase2-hunter/src/engine/ConvictionSizingEngine.ts",
+    "services/titan-phase2-hunter/src/engine/SignalValidator.ts",
+    "services/titan-brain/src/types/market.ts",
+    "services/titan-console-api/src/services/CredentialVault.ts",
+    "services/titan-phase1-scavenger/src/config/ConfigManager.ts",
+    "services/titan-phase1-scavenger/src/exchanges/BybitPerpsClient.ts",
+    "services/titan-phase1-scavenger/src/monitoring/PrometheusMetrics.ts",
+    "services/titan-console-api/src/services/config/ConfigRegistry.ts",
+    "services/titan-console-api/src/services/OperatorIntentService.ts",
+    "services/titan-brain/src/**/*.ts",
+    "services/titan-brain/src/services/powerlaw/index.ts",
+    "services/titan-brain/src/services/ServiceClient.ts",
+    "services/titan-brain/src/services/venues/index.ts",
+    "services/titan-brain/src/types/config.ts",
+    "services/titan-brain/src/monitoring/PrometheusMetrics.ts",
+    "services/titan-brain/src/monitoring/StructuredLogger.ts",
+    "services/titan-brain/src/schemas/apiSchemas.ts",
+    "services/titan-brain/src/server/WebSocketService.ts",
+    "services/titan-brain/src/services/config/ConfigRegistry.ts",
+    "services/titan-brain/src/services/OperatorIntentService.ts",
+    "services/titan-brain/src/config/index.ts",
+    "services/titan-brain/src/logging/Logger.ts",
+    "services/titan-brain/src/middleware/MetricsMiddleware.ts",
+    "services/titan-brain/src/monitoring/index.ts",
+    "services/titan-brain/src/config/BrainConfig.ts",
+    "apps/titan-console/src/**/*.{ts,tsx}",
+    "services/titan-ai-quant/src/**/*.{ts,tsx}",
+    "scripts/**/*.{ts,js,mjs,cjs}",
+    "packages/**/*.{ts,js,mjs,cjs}",
+    "services/titan-phase2-hunter/src/telemetry/OrderBookPublisher.ts",
+    "services/titan-ai-quant/src/config/ConfigSchema.ts",
+    "services/titan-ai-quant/src/ai/PredictiveAnalytics.ts",
+    "services/titan-ai-quant/src/cron/NightlyOptimize.ts",
+    "services/titan-ai-quant/src/simulation/DataLoader.ts",
+    "services/titan-ai-quant/src/telemetry/OrderBookPublisher.ts",
+    "services/titan-brain/src/types/**/*.ts",
+    "services/titan-brain/src/server/**/*.ts",
+    "services/titan-phase2-hunter/src/analytics/PerformanceAnalytics.ts",
+    "services/titan-phase2-hunter/src/analytics/PerformanceReporter.ts",
+    "services/titan-phase2-hunter/src/bottrap/AdaptiveLearningEngine.ts",
+    "services/titan-phase2-hunter/src/bottrap/BotTrapDetector.ts",
+    "services/titan-phase2-hunter/src/bottrap/SuspectPatternRiskAdjuster.ts",
+    "services/titan-phase3-sentinel/src/types/orders.ts",
+    "apps/titan-console/src/components/chat/ActionButton.tsx",
+    "apps/titan-console/src/components/ui/badge.tsx",
+    "apps/titan-console/src/components/ui/textarea.tsx",
+    "apps/titan-console/src/config/navigation.ts",
+    "apps/titan-console/src/config/widgets.ts",
+    "apps/titan-console/src/context/ReplayContext.tsx",
+    "apps/titan-console/src/hooks/useScavengerSocket.ts",
+    "apps/titan-console/src/lib/registry/types.ts",
+    "apps/titan-console/src/types/index.ts"
   ],
-  "ignoreDependencies": ["ts-node", "typescript", "eslint*", "prettier*", "nx"],
+  "ignoreDependencies": [
+    "eslint*",
+    "identity-obj-proxy",
+    "@jest/test-sequencer",
+    "ts-node",
+    "@copilotkit/*",
+    "@types/*",
+    "dependency-cruiser",
+    "license-checker",
+    "madge",
+    "globals",
+    "@jest/globals",
+    "@stryker-mutator/api"
+  ],
   "workspaces": {
     "apps/titan-console": {
-      "entry": ["index.html", "src/main.tsx", "vite.config.ts"],
       "project": ["src/**/*.{ts,tsx}"]
     },
     "services/titan-execution-rs": {
       "ignore": ["**"]
     },
-    "services/*": {
-      "entry": ["src/index.ts", "src/main.ts", "src/server.ts"],
+    "services/titan-brain": {
+      "entry": ["src/index.ts"],
       "project": ["src/**/*.ts"]
     },
+    "services/titan-ai-quant": {
+      "project": ["src/**/*.ts"]
+    },
+    "services/titan-console-api": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "services/titan-opsd": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "services/titan-phase1-scavenger": {
+      "project": ["src/**/*.ts"]
+    },
+    "services/titan-phase2-hunter": {
+      "project": ["src/**/*.ts"]
+    },
+    "services/titan-phase3-sentinel": {
+      "project": ["src/**/*.ts"]
+    },
+
     ".": {
       "entry": ["scripts/**/*.ts"],
       "project": ["scripts/**/*.ts"]
     }
-  }
+  },
+  "ignoreBinaries": ["tsx", "ts-node",    "python3",
+    "tsc",
+    "syft",
+    "vitest",
+    "mkdocs",
+    "scripts/sota/immutability.config.mjs"
+  ]
 }
