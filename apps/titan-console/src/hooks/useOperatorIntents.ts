@@ -29,11 +29,55 @@ export type IntentStatus =
   | 'FAILED'
   | 'REJECTED';
 
+// ---------------------------------------------------------------------------
+// Decision Trace Types — machine-readable reason codes and evidence
+// ---------------------------------------------------------------------------
+
+/** Category of reason code — maps to a system concern */
+export type ReasonCodeCategory =
+  | 'RBAC'
+  | 'OCC'
+  | 'CAP'
+  | 'BREAKER'
+  | 'CONFLICT'
+  | 'VENUE'
+  | 'POSTURE'
+  | 'RECONCILE';
+
+/** Machine-readable reason for allow/deny decisions */
+export interface ReasonCode {
+  code: ReasonCodeCategory;
+  key: string;           // e.g. 'RBAC_ROLE_DENIED', 'OCC_STATE_HASH_DRIFT'
+  message: string;       // human-readable summary
+  severity: 'info' | 'warning' | 'block';
+  metadata?: Record<string, unknown>;
+}
+
+/** Truth source evidence for VERIFIED receipts */
+export interface VerificationEvidence {
+  source: string;        // e.g. 'venue:binance', 'reconciler', 'brain:risk_engine'
+  timestamp: string;     // ISO 8601
+  hash_or_seq: string;   // content hash or sequence number
+  summary: string;       // one-line human summary
+}
+
+/** Backend-recommended next action */
+export interface RecommendedAction {
+  label: string;
+  command: string;
+  danger: 'safe' | 'moderate' | 'critical';
+}
+
+// ---------------------------------------------------------------------------
+// Core API Types
+// ---------------------------------------------------------------------------
+
 export interface IntentReceipt {
   effect?: string;
   prior_state?: Record<string, unknown>;
   new_state?: Record<string, unknown>;
   verification?: 'passed' | 'failed' | 'skipped' | 'timeout';
+  verification_evidence?: VerificationEvidence[];
   error?: string;
 }
 
@@ -72,7 +116,10 @@ export interface OperatorState {
 
 export interface IntentPreviewResult {
   allowed: boolean;
+  /** Backward-compat prose reason */
   reason: string;
+  /** Machine-readable reason codes (preferred over `reason`) */
+  reasons?: ReasonCode[];
   state_hash_valid: boolean;
   current_state_hash: string;
   risk_delta: {
@@ -90,6 +137,8 @@ export interface IntentPreviewResult {
   };
   requires_approval: boolean;
   rbac_allowed: boolean;
+  /** Backend-recommended next actions */
+  recommended_actions?: RecommendedAction[];
 }
 
 export interface IntentUpdateEvent {

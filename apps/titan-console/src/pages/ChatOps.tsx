@@ -9,7 +9,7 @@ import { ChatTranscript } from '@/components/chat/ChatTranscript';
 
 export default function ChatOps() {
   return (
-    <div className="h-[calc(100vh-8rem)]">
+    <div className="h-full">
       <ChatTranscript />
     </div>
   );

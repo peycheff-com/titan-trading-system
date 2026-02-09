@@ -1,0 +1,279 @@
+/**
+ * OperatorIntent Schema v1 (Browser Safe)
+ *
+ * Defines the schema, types, and helpers for the Operator Command Plane.
+ * Every operator action (ARM, DISARM, SET_MODE, etc.) is expressed as an
+ * OperatorIntent that flows through a deterministic lifecycle with receipts.
+ */
+import { z } from 'zod';
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+export const OperatorIntentTypeEnum = z.enum([
+  'ARM',
+  'DISARM',
+  'SET_MODE',
+  'THROTTLE_PHASE',
+  'RUN_RECONCILE',
+  'FLATTEN',
+  'OVERRIDE_RISK',
+]);
+
+export type OperatorIntentType = z.infer<typeof OperatorIntentTypeEnum>;
+
+export const OperatorIntentStatusEnum = z.enum([
+  'SUBMITTED',
+  'ACCEPTED',
+  'REJECTED',
+  'PENDING_APPROVAL',
+  'EXECUTING',
+  'VERIFIED',
+  'UNVERIFIED',
+  'FAILED',
+]);
+
+export type OperatorIntentStatus = z.infer<typeof OperatorIntentStatusEnum>;
+
+// ---------------------------------------------------------------------------
+// Danger Levels
+// ---------------------------------------------------------------------------
+
+export const DANGER_LEVEL: Record<OperatorIntentType, 'low' | 'medium' | 'critical'> = {
+  ARM: 'low',
+  DISARM: 'medium',
+  SET_MODE: 'medium',
+  THROTTLE_PHASE: 'low',
+  RUN_RECONCILE: 'low',
+  FLATTEN: 'critical',
+  OVERRIDE_RISK: 'critical',
+};
+
+// ---------------------------------------------------------------------------
+// Approval Requirements
+// ---------------------------------------------------------------------------
+
+/** Critical intents that require explicit approval before execution */
+export const REQUIRES_APPROVAL: Partial<Record<OperatorIntentType, boolean>> = {
+  FLATTEN: true,
+  OVERRIDE_RISK: true,
+};
+
+// ---------------------------------------------------------------------------
+// Default TTLs (seconds)
+// ---------------------------------------------------------------------------
+
+export const DEFAULT_TTL: Record<OperatorIntentType, number> = {
+  ARM: 15,
+  DISARM: 15,
+  SET_MODE: 15,
+  THROTTLE_PHASE: 15,
+  RUN_RECONCILE: 60,
+  FLATTEN: 30,
+  OVERRIDE_RISK: 15,
+};
+
+export const MAX_TTL: Record<OperatorIntentType, number> = {
+  ARM: 60,
+  DISARM: 60,
+  SET_MODE: 60,
+  THROTTLE_PHASE: 60,
+  RUN_RECONCILE: 300,
+  FLATTEN: 120,
+  OVERRIDE_RISK: 30,
+};
+
+// ---------------------------------------------------------------------------
+// Receipt Schema
+// ---------------------------------------------------------------------------
+
+export const IntentReceiptSchema = z.object({
+  effect: z.string().optional(),
+  prior_state: z.record(z.unknown()).optional(),
+  new_state: z.record(z.unknown()).optional(),
+  verification: z.enum(['passed', 'failed', 'skipped', 'timeout']).optional(),
+  error: z.string().optional(),
+});
+
+export type IntentReceipt = z.infer<typeof IntentReceiptSchema>;
+
+// ---------------------------------------------------------------------------
+// Main Schema
+// ---------------------------------------------------------------------------
+
+export const OperatorIntentSchemaV1 = z
+  .object({
+    // Identity
+    id: z.string().uuid(),
+    idempotency_key: z.string().min(1),
+    version: z.literal(1),
+
+    // Intent
+    type: OperatorIntentTypeEnum,
+    params: z.record(z.string(), z.unknown()).default({}),
+
+    // Governance
+    operator_id: z.string().min(1),
+    reason: z.string().min(5, 'Reason must be >= 5 characters'),
+    signature: z.string().min(1),
+
+    // Lifecycle
+    status: OperatorIntentStatusEnum.default('SUBMITTED'),
+    ttl_seconds: z.number().int().min(5).max(300).default(30),
+    submitted_at: z.string().datetime(),
+    resolved_at: z.string().datetime().optional(),
+
+    // Concurrency
+    state_hash: z.string().optional(),
+
+    // Receipt
+    receipt: IntentReceiptSchema.optional(),
+  })
+  .strict();
+
+export type OperatorIntentV1 = z.infer<typeof OperatorIntentSchemaV1>;
+
+// ---------------------------------------------------------------------------
+// Mutable runtime type (allows status updates after creation)
+// ---------------------------------------------------------------------------
+
+export interface OperatorIntentRecord {
+  id: string;
+  idempotency_key: string;
+  version: 1;
+  type: OperatorIntentType;
+  params: Record<string, unknown>;
+  operator_id: string;
+  reason: string;
+  signature: string;
+  status: OperatorIntentStatus;
+  ttl_seconds: number;
+  submitted_at: string;
+  resolved_at?: string;
+  state_hash?: string;
+  receipt?: IntentReceipt;
+  // Approval metadata (populated when status transitions through PENDING_APPROVAL)
+  approver_id?: string;
+  approved_at?: string;
+  rejection_reason?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Validation Helper
+// ---------------------------------------------------------------------------
+
+export function validateOperatorIntent(payload: unknown): {
+  valid: boolean;
+  errors: string[];
+  data?: OperatorIntentV1;
+} {
+  const parsed = OperatorIntentSchemaV1.safeParse(payload);
+  if (!parsed.success) {
+    return {
+      valid: false,
+      errors: parsed.error.issues.map((issue) =>
+        issue.path.length ? `${issue.path.join('.')}: ${issue.message}` : issue.message,
+      ),
+    };
+  }
+  return { valid: true, errors: [], data: parsed.data };
+}
+
+// ---------------------------------------------------------------------------
+// OperatorState Types (read model)
+// ---------------------------------------------------------------------------
+
+export interface PhaseStatus {
+  id: 'phase1' | 'phase2' | 'phase3';
+  name: string;
+  status: 'active' | 'throttled' | 'paused' | 'offline';
+  throttle_pct: number;
+  last_signal_at: string | null;
+}
+
+export interface OperatorIntentSummary {
+  id: string;
+  type: string;
+  status: string;
+  operator_id: string;
+  submitted_at: string;
+  resolved_at: string | null;
+  has_receipt: boolean;
+}
+
+export interface OperatorState {
+  mode: 'paper' | 'live-limited' | 'live-full';
+  posture: 'disarmed' | 'armed' | 'halted';
+  phases: {
+    phase1: PhaseStatus;
+    phase2: PhaseStatus;
+    phase3: PhaseStatus;
+  };
+  truth_confidence: 'high' | 'degraded' | 'unknown';
+  breaker: 'closed' | 'open' | 'half-open';
+  active_incidents: number;
+  last_intents: OperatorIntentSummary[];
+  pending_approvals: number;
+  state_hash: string;
+  last_updated: string;
+}
+
+// ---------------------------------------------------------------------------
+// Operator Roles
+// ---------------------------------------------------------------------------
+
+export type OperatorRole = 'observer' | 'operator' | 'risk_owner';
+
+export const ROLE_ALLOWED_INTENTS: Record<OperatorRole, readonly OperatorIntentType[]> = {
+  observer: [],
+  operator: ['ARM', 'DISARM', 'SET_MODE', 'THROTTLE_PHASE', 'RUN_RECONCILE'],
+  risk_owner: [
+    'ARM',
+    'DISARM',
+    'SET_MODE',
+    'THROTTLE_PHASE',
+    'RUN_RECONCILE',
+    'FLATTEN',
+    'OVERRIDE_RISK',
+  ],
+};
+
+// ---------------------------------------------------------------------------
+// Permission Matrix (precomputed for UI)
+// ---------------------------------------------------------------------------
+
+/** Precomputed permission matrix row for a single role */
+export interface PermissionMatrix {
+  role: OperatorRole;
+  allowed_intents: readonly OperatorIntentType[];
+  can_approve: boolean;
+  danger_intents: OperatorIntentType[];
+}
+
+/** Build the full RBAC permission matrix for UI display */
+export function buildPermissionMatrix(): PermissionMatrix[] {
+  return (['observer', 'operator', 'risk_owner'] as OperatorRole[]).map((role) => ({
+    role,
+    allowed_intents: ROLE_ALLOWED_INTENTS[role],
+    can_approve: role === 'risk_owner',
+    danger_intents: ROLE_ALLOWED_INTENTS[role].filter(
+      (t) => DANGER_LEVEL[t] === 'critical',
+    ) as OperatorIntentType[],
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Terminal States
+// ---------------------------------------------------------------------------
+
+export const TERMINAL_STATUSES: readonly OperatorIntentStatus[] = [
+  'VERIFIED',
+  'UNVERIFIED',
+  'FAILED',
+  'REJECTED',
+];
+
+export function isTerminalStatus(status: OperatorIntentStatus): boolean {
+  return TERMINAL_STATUSES.includes(status);
+}

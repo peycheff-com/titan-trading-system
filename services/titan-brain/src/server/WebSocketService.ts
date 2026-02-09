@@ -24,6 +24,7 @@ export type WSMessageType =
   | 'PHASE1_UPDATE'
   | 'PHASE_POSTURE'
   | 'PHASE_DIAGNOSTICS'
+  | 'NOTIFICATION'
   | 'ping'
   | 'pong';
 
@@ -380,6 +381,19 @@ export class WebSocketService {
       type: 'ALERT',
       timestamp: Date.now(),
       data: { level, message: alertMessage },
+    };
+
+    this.broadcast(message);
+  }
+
+  /**
+   * Broadcast structured notification to all clients
+   */
+  broadcastNotification(payload: Record<string, any>): void {
+    const message: WSMessage = {
+      type: 'NOTIFICATION', // You might need to add this to WSMessageType
+      timestamp: Date.now(),
+      data: payload,
     };
 
     this.broadcast(message);

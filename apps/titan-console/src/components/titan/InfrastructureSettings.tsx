@@ -54,7 +54,7 @@ export const InfrastructureSettings = () => {
   // TODO: Get token from auth context
   const getToken = () => localStorage.getItem('titan_jwt') || '';
 
-  const fetchStatus = async () => {
+  const fetchStatus = React.useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`${BRAIN_URL}/api/admin/infra-status`, {
@@ -73,7 +73,7 @@ export const InfrastructureSettings = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [BRAIN_URL, toast]);
 
   useEffect(() => {
     fetchStatus();
@@ -216,9 +216,9 @@ export const InfrastructureSettings = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Standby Target</label>
+              <label htmlFor="standby-target" className="text-sm font-medium">Standby Target</label>
               <Select value={failoverTarget} onValueChange={setFailoverTarget}>
-                <SelectTrigger>
+                <SelectTrigger id="standby-target">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -265,9 +265,9 @@ export const InfrastructureSettings = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Available Backups</label>
+              <label htmlFor="backup-select" className="text-sm font-medium">Available Backups</label>
               <Select value={selectedBackup} onValueChange={setSelectedBackup}>
-                <SelectTrigger>
+                <SelectTrigger id="backup-select">
                   <SelectValue placeholder="Select a backup point" />
                 </SelectTrigger>
                 <SelectContent>

@@ -10,8 +10,10 @@ export interface SentinelState {
   lastEvent: string | null;
 }
 
+import { useThrottledState } from './useThrottledState';
+
 export function useSentinelSocket() {
-  const [state, setState] = useState<SentinelState>({
+  const [state, setState] = useThrottledState<SentinelState>({
     isConnected: false,
     health: null,
     lastEvent: null,

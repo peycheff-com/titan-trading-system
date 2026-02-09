@@ -7,8 +7,10 @@ export interface StreamMessage<T = unknown> {
   timestamp: number;
 }
 
+import { useThrottledState } from './useThrottledState';
+
 export function useTitanStream(subjectFilter: string = '>') {
-  const [lastMessage, setLastMessage] = useState<StreamMessage | null>(null);
+  const [lastMessage, setLastMessage] = useThrottledState<StreamMessage | null>(null, 16); // Throttle to ~60fps
   const [isConnected, setIsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
 

@@ -10,8 +10,9 @@
 
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { cn } from '@/lib/utils';
-import type { IntentStatus } from '@/hooks/useOperatorIntents';
+import type { IntentStatus, IntentReceipt } from '@/hooks/useOperatorIntents';
 import { useOperatorIntents } from '@/hooks/useOperatorIntents';
+import { TruthTraceBlock } from './TruthTraceBlock';
 import {
   Send,
   CheckCircle,
@@ -21,7 +22,6 @@ import {
   ShieldAlert,
   XCircle,
   Ban,
-  FileText,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -95,75 +95,7 @@ const LIFECYCLE_ORDER: IntentStatus[] = [
   'VERIFIED',
 ];
 
-// ---------------------------------------------------------------------------
-// Receipt Block
-// ---------------------------------------------------------------------------
 
-interface ReceiptData {
-  effect?: string;
-  error?: string;
-  verification?: string;
-  prior_state?: Record<string, unknown>;
-  new_state?: Record<string, unknown>;
-}
-
-function ReceiptBlock({ receipt }: { receipt: ReceiptData }) {
-  return (
-    <div className="mt-2 rounded-md border border-border/50 bg-background/50 p-2.5 text-xs" role="complementary" aria-label="Intent receipt">
-      <div className="flex items-center gap-1.5 mb-1.5">
-        <FileText className="h-3 w-3 text-muted-foreground" />
-        <span className="font-semibold text-muted-foreground uppercase tracking-wider text-xxs">
-          Receipt
-        </span>
-      </div>
-
-      {receipt.effect && (
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-muted-foreground">Effect:</span>
-          <span className="text-foreground font-medium">{receipt.effect}</span>
-        </div>
-      )}
-
-      {receipt.error && (
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-muted-foreground">Error:</span>
-          <span className="text-status-critical font-medium">{receipt.error}</span>
-        </div>
-      )}
-
-      {receipt.verification && (
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-muted-foreground">Verification:</span>
-          <span className={cn(
-            'font-mono',
-            receipt.verification === 'passed' ? 'text-status-healthy'
-              : receipt.verification === 'failed' ? 'text-status-critical'
-                : 'text-muted-foreground',
-          )}>
-            {receipt.verification}
-          </span>
-        </div>
-      )}
-
-      {receipt.prior_state && receipt.new_state && (
-        <div className="flex gap-3 mt-1.5 text-xxs">
-          <div>
-            <span className="text-muted-foreground font-medium">Before: </span>
-            <span className="font-mono text-foreground/70">
-              {JSON.stringify(receipt.prior_state)}
-            </span>
-          </div>
-          <div>
-            <span className="text-muted-foreground font-medium">After: </span>
-            <span className="font-mono text-foreground/70">
-              {JSON.stringify(receipt.new_state)}
-            </span>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -178,7 +110,7 @@ interface IntentTimelineProps {
 }
 
 export function IntentTimeline({ currentStatus, intentId, timestamps, className }: IntentTimelineProps) {
-  const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+  const [receipt, setReceipt] = useState<IntentReceipt | null>(null);
   const { getIntent } = useOperatorIntents();
   const fetchedReceiptFor = useRef<string | null>(null);
 
@@ -193,7 +125,7 @@ export function IntentTimeline({ currentStatus, intentId, timestamps, className 
       fetchedReceiptFor.current = intentId;
       getIntent(intentId).then((record) => {
         if (record?.receipt) {
-          setReceipt(record.receipt as ReceiptData);
+          setReceipt(record.receipt as IntentReceipt);
         }
       });
     }
@@ -294,18 +226,8 @@ export function IntentTimeline({ currentStatus, intentId, timestamps, className 
         );
       })}
 
-      {/* Receipt block (fetched from backend on terminal status) */}
-      {receipt && <ReceiptBlock receipt={receipt} />}
-
-      {/* UNVERIFIED warning */}
-      {currentStatus === 'UNVERIFIED' && (
-        <div className="mt-2 rounded-md border border-status-critical/30 bg-status-critical/5 p-2 text-xs text-status-critical flex items-start gap-2">
-          <ShieldAlert className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-          <span>
-            Intent expired before verification completed. Check system logs for the actual outcome.
-          </span>
-        </div>
-      )}
+      {/* Receipt — rendered via TruthTraceBlock for proper evidence + actions */}
+      {receipt && <TruthTraceBlock receipt={receipt} className="mt-2" />}
     </div>
   );
 }

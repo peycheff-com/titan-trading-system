@@ -401,7 +401,7 @@ export class ManualOverrideService {
   /**
    * Get operator credentials from database
    */
-  private async getOperatorCredentials(operatorId: string): Promise<OperatorCredentials | null> {
+  public async getOperatorCredentials(operatorId: string): Promise<OperatorCredentials | null> {
     try {
       const row = await this.db.queryOne<any>(`SELECT * FROM operators WHERE operator_id = $1`, [
         operatorId,

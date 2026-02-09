@@ -126,6 +126,7 @@ import {
   TitanBrain,
   TradeGate,
 } from "./engine/index.js";
+import { EventReplayService } from "./engine/EventReplayService.js";
 import {
   DashboardService,
   ExecutionEngineClient,
@@ -171,6 +172,10 @@ let configManager: ConfigManager | null = null;
 let natsConsumer: NatsConsumer | null = null;
 // eslint-disable-next-line functional/no-let
 let accountingService: AccountingService | null = null;
+// eslint-disable-next-line functional/no-let
+let notificationService: NotificationService | null = null;
+// eslint-disable-next-line functional/no-let
+let eventReplayService: EventReplayService | null = null;
 
 /**
  * Main startup function with enhanced startup management
@@ -462,7 +467,7 @@ async function main(): Promise<void> {
       logger.info("   ✅ ManualOverrideService initialized");
 
       // Initialize notification service
-      const notificationService = new NotificationService(config.notifications);
+      notificationService = new NotificationService(config.notifications);
       logger.info("   ✅ NotificationService initialized");
 
       // Initialize FillsRepository (Audit Trail)
@@ -485,6 +490,16 @@ async function main(): Promise<void> {
       );
       const positionRepository = new PositionRepository(databaseManager!);
       logger.info("   ✅ PositionRepository initialized");
+
+      // Initialize EventReplayService (Time Travel)
+      const { EventReplayService } = await import(
+        "./engine/EventReplayService.js"
+      );
+      eventReplayService = new EventReplayService(
+        databaseManager!,
+        logger as unknown as Logger,
+      );
+      logger.info("   ✅ EventReplayService initialized");
 
       // Initialize TruthRepository (Truth Layer)
       const { TruthRepository } = await import(
@@ -655,6 +670,11 @@ async function main(): Promise<void> {
         brain!,
         signalQueue || undefined,
         dashboardService,
+        undefined, // ServiceDiscovery
+        undefined, // Logger
+        undefined, // CacheManager
+        undefined, // MetricsCollector
+        eventReplayService!, // EventReplayService
       );
 
       await webhookServer.start();
@@ -686,6 +706,12 @@ async function main(): Promise<void> {
       const natsPublisher = getNatsPublisher();
       await natsPublisher.connect(brainConfig.natsUrl);
       logger.info("   ✅ NATS Publisher started");
+
+      // Wire up NotificationService with WebSocketService
+      if (webSocketService && notificationService) {
+        notificationService.setWebSocketService(webSocketService);
+        logger.info("   ✅ NotificationService wired to WebSocketService");
+      }
 
       // Initialize Accounting Service (Phase 4) - Requires NATS
       const { FillsRepository } = await import(

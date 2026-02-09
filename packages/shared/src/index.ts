@@ -328,6 +328,7 @@ export {
 
 // Operator Intent (Command Plane v1)
 export {
+  buildPermissionMatrix,
   calculateIntentSignature,
   DANGER_LEVEL,
   DEFAULT_TTL,
@@ -345,6 +346,7 @@ export {
   type OperatorIntentV1,
   type OperatorRole,
   type OperatorState,
+  type PermissionMatrix,
   type PhaseStatus,
   REQUIRES_APPROVAL,
   ROLE_ALLOWED_INTENTS,
@@ -491,3 +493,6 @@ export {
 
 // Security (Feb 2026)
 export { calculateOpsSignature, verifyOpsCommand } from './security/ops-security.js';
+
+// Notification Taxonomy (Feb 2026)
+export * from './types/notification.js';

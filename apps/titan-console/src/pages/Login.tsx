@@ -42,20 +42,21 @@ const Login = () => {
           )}
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-300">Operator ID</label>
+            <label htmlFor="operator-id" className="text-sm font-medium text-slate-300">Operator ID</label>
             <input
+              id="operator-id"
               type="text"
               value={operatorId}
               onChange={(e) => setOperatorId(e.target.value)}
               className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded focus:outline-none focus:border-cyan-500 transition-colors text-slate-100"
               placeholder="Enter ID"
-              autoFocus
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-300">Password</label>
+            <label htmlFor="password" className="text-sm font-medium text-slate-300">Password</label>
             <input
+              id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

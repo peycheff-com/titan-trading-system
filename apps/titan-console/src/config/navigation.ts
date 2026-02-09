@@ -24,6 +24,7 @@ import {
   TrendingUp,
   Key,
   Settings,
+  UserCheck,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -95,6 +96,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { name: 'Config', path: '/config', icon: Settings },
       { name: 'Venues', path: '/venues', icon: Server },
       { name: 'API Keys', path: '/credentials', icon: Key },
+      { name: 'Identity', path: '/identity', icon: UserCheck },
       { name: 'Settings', path: '/settings', icon: Settings },
     ],
   },

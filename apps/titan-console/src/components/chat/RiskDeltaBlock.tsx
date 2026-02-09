@@ -6,10 +6,12 @@
  * - Affected phases and symbols (blast radius)
  * - Throttle adjustments
  * - Cap violations (v2)
+ * - Machine-readable reason codes (Decision Trace v1)
  */
 
 import { cn } from '@/lib/utils';
-import type { IntentPreviewResult } from '@/hooks/useOperatorIntents';
+import type { IntentPreviewResult, ReasonCode } from '@/hooks/useOperatorIntents';
+import { categoryIcons, severityTextColors as severityColors } from '@/lib/decision-trace-constants';
 import {
   ArrowRight,
   AlertTriangle,
@@ -17,7 +19,19 @@ import {
   Layers,
   TrendingDown,
   ShieldAlert,
+  Shield,
 } from 'lucide-react';
+
+function ReasonChipInline({ reason }: { reason: ReasonCode }) {
+  const Icon = categoryIcons[reason.code] || Shield;
+  const color = severityColors[reason.severity] || 'text-muted-foreground';
+  return (
+    <span className={cn('inline-flex items-center gap-1 text-xxs font-mono', color)} title={reason.key}>
+      <Icon className="h-2.5 w-2.5" aria-hidden="true" />
+      {reason.message}
+    </span>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Props
@@ -34,7 +48,7 @@ interface RiskDeltaBlockProps {
 // ---------------------------------------------------------------------------
 
 export function RiskDeltaBlock({ preview, stale, className }: RiskDeltaBlockProps) {
-  const { risk_delta, blast_radius, requires_approval, allowed, reason } = preview;
+  const { risk_delta, blast_radius, requires_approval, allowed, reason, reasons } = preview;
 
   return (
     <div
@@ -69,9 +83,17 @@ export function RiskDeltaBlock({ preview, stale, className }: RiskDeltaBlockProp
         )}
       </div>
 
-      {/* Reason (if blocked) */}
+      {/* Reason(s) — structured if available, else legacy string */}
       {!allowed && (
-        <p className="text-status-critical font-medium">{reason}</p>
+        reasons && reasons.length > 0 ? (
+          <div className="space-y-1">
+            {reasons.filter((r) => r.severity === 'block').map((r, i) => (
+              <ReasonChipInline key={i} reason={r} />
+            ))}
+          </div>
+        ) : (
+          <p className="text-status-critical font-medium">{reason}</p>
+        )
       )}
 
       {/* Posture change */}

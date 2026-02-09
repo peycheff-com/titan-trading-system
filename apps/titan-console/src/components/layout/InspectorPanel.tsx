@@ -12,7 +12,12 @@
  * Resizable via drag handle, ESC to close.
  */
 
+import { useModuleRegistry } from '@/context/ModuleRegistryContext';
 import { useInspector } from '@/context/InspectorContext';
+
+// ...
+
+
 import { cn } from '@/lib/utils';
 import {
   X,
@@ -22,17 +27,24 @@ import {
   AlertTriangle,
   Package,
   Activity,
+  Brain,
   Shield,
   ShieldAlert,
   ShieldCheck,
   Clock,
-  ChevronRight,
   BookOpen,
   ArrowRight,
+  ExternalLink,
 } from 'lucide-react';
 import { useRef, useCallback, useEffect, useState, useMemo } from 'react';
 import { useOperatorIntents } from '@/hooks/useOperatorIntents';
-import type { OperatorIntentRecord, IntentStatus, OperatorState } from '@/hooks/useOperatorIntents';
+import type { OperatorIntentRecord, IntentStatus, OperatorState, IntentPreviewResult, IntentReceipt } from '@/hooks/useOperatorIntents';
+import { DecisionTraceBlock } from '@/components/chat/DecisionTraceBlock';
+
+import { TruthTraceBlock } from '@/components/chat/TruthTraceBlock';
+import { ActionButton } from '@/components/chat/ActionButton';
+import { MemoryInspector } from '@/components/chat/MemoryInspector';
+import { useScreenSize } from '@/hooks/use-media-query';
 
 // ---------------------------------------------------------------------------
 // Entity icons
@@ -45,6 +57,7 @@ const entityIcons = {
   incident: AlertTriangle,
   config: FileText,
   phase: Package,
+  memory: Brain,
   none: Minus,
 } as const;
 
@@ -226,27 +239,35 @@ function ReceiptSection({ receipt }: { receipt: Record<string, unknown> }) {
 // Main Component
 // ---------------------------------------------------------------------------
 
-export function InspectorPanel() {
+export function InspectorPanel({ mobile = false }: { mobile?: boolean }) {
   const { entity, isOpen, width, setWidth, setOpen, inspect } = useInspector();
-  const { getIntents, getOperatorState } = useOperatorIntents();
+  const { getIntents, getOperatorState, previewIntent } = useOperatorIntents();
+  const { isMobile: screenIsMobile } = useScreenSize();
+  const registry = useModuleRegistry();
   const panelRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const startX = useRef(0);
   const startWidth = useRef(0);
 
+  // Allow prop override or screen detection
+  const isMobileView = mobile || screenIsMobile;
+
   const [events, setEvents] = useState<OperatorIntentRecord[]>([]);
   const [operatorState, setOperatorState] = useState<OperatorState | null>(null);
   const [loadingEvents, setLoadingEvents] = useState(false);
+  const [intentPreview, setIntentPreview] = useState<IntentPreviewResult | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
-  // Resize handlers
+  // Resize handlers (Desktop only)
   const onMouseDown = useCallback(
     (e: React.MouseEvent) => {
+      if (isMobileView) return;
       isDragging.current = true;
       startX.current = e.clientX;
       startWidth.current = width;
       e.preventDefault();
     },
-    [width],
+    [width, isMobileView],
   );
 
   useEffect(() => {
@@ -260,19 +281,28 @@ export function InspectorPanel() {
       isDragging.current = false;
     };
 
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
+    if (!isMobileView) {
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    }
     return () => {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
     };
-  }, [setWidth]);
+  }, [setWidth, isMobileView]);
+
+  // Pop out handler
+  const handlePopOut = () => {
+    window.open('/inspector', 'TitanInspector', 'width=450,height=800,menubar=no,toolbar=no,location=no,status=no');
+    setOpen(false);
+  };
 
   // Fetch events and state when panel opens or entity changes
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen && !mobile) return; // Always fetch if mobile (sheet) or open
 
     setLoadingEvents(true);
+    setIntentPreview(null);
 
     // Fetch recent intents
     getIntents({ limit: 20 }).then((intents) => {
@@ -284,7 +314,30 @@ export function InspectorPanel() {
     getOperatorState().then((state) => {
       if (state) setOperatorState(state);
     });
-  }, [isOpen, entity?.id, getIntents, getOperatorState]);
+
+    // Fetch preview for intent entities
+    if (entity?.type === 'intent' && entity.data) {
+      const intentData = entity.data as Record<string, unknown>;
+      const intentType = intentData.type as string;
+      const intentParams = (intentData.params as Record<string, unknown>) || {};
+      setPreviewLoading(true);
+      getOperatorState().then((state) => {
+        if (state) {
+          previewIntent({
+             type: intentType,
+             params: intentParams,
+             operator_id: 'console-operator',
+             state_hash: state.state_hash,
+          }).then((result) => {
+             setIntentPreview(result);
+             setPreviewLoading(false);
+          });
+        } else {
+             setPreviewLoading(false);
+        }
+      });
+    }
+  }, [isOpen, entity?.id, getIntents, getOperatorState, entity?.type, entity?.data, previewIntent, mobile]);
 
   // Determine entity status from data
   const entityStatus = useMemo(() => {
@@ -307,7 +360,7 @@ export function InspectorPanel() {
     return withReceipt?.receipt || null;
   }, [events]);
 
-  if (!isOpen) return null;
+  if (!isOpen && !mobile) return null;
 
   const Icon = entity ? entityIcons[entity.type] || FileText : Minus;
   const isCritical = entityStatus === 'FAILED' || entityStatus === 'UNVERIFIED' ||
@@ -318,19 +371,31 @@ export function InspectorPanel() {
       ref={panelRef}
       role="complementary"
       aria-label="Inspector panel"
-      className="relative flex h-full flex-col border-l border-border bg-card"
-      style={{ width: `${width}px`, minWidth: '280px', maxWidth: '480px' }}
+      className={cn(
+        "relative flex h-full flex-col bg-card",
+        !isMobileView && "border-l border-border"
+      )}
+      style={isMobileView ? { width: '100%' } : { width: `${width}px`, minWidth: '280px', maxWidth: '480px' }}
     >
-      {/* Drag handle */}
-      <div
-        className="absolute inset-y-0 left-0 z-10 flex w-1.5 cursor-col-resize items-center justify-center hover:bg-primary/20 transition-colors"
-        onMouseDown={onMouseDown}
-        role="separator"
-        aria-label="Resize inspector panel"
-        aria-orientation="vertical"
-      >
-        <GripVertical className="h-4 w-4 text-muted-foreground opacity-0 hover:opacity-100 transition-opacity" aria-hidden="true" />
-      </div>
+      {/* Drag handle - Desktop Only */}
+      {!isMobileView && (
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
+        <div
+            className="absolute inset-y-0 left-0 z-10 flex w-1.5 cursor-col-resize items-center justify-center hover:bg-primary/20 transition-colors"
+            onMouseDown={onMouseDown}
+            role="separator"
+            aria-label="Resize inspector panel"
+            aria-orientation="vertical"
+            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+            tabIndex={0}
+            onKeyDown={(e) => {
+            if (e.key === 'ArrowLeft') setWidth(width - 10);
+            if (e.key === 'ArrowRight') setWidth(width + 10);
+            }}
+        >
+            <GripVertical className="h-4 w-4 text-muted-foreground opacity-0 hover:opacity-100 transition-opacity" aria-hidden="true" />
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex h-12 items-center justify-between border-b border-border px-4">
@@ -345,19 +410,57 @@ export function InspectorPanel() {
             </span>
           )}
         </div>
-        <button
-          onClick={() => setOpen(false)}
-          className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-          aria-label="Close inspector (Escape)"
-        >
-          <X className="h-4 w-4" aria-hidden="true" />
-        </button>
+        <div className="flex items-center gap-1">
+            {/* Pop Out Button - Desktop Only */}
+            {!isMobileView && (
+                <button
+                    onClick={handlePopOut}
+                    className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    aria-label="Pop out inspector"
+                    title="Pop out in new window"
+                >
+                    <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                </button>
+            )}
+            
+            {/* Close Button - Hide if strictly required by mobile Sheet but often nice to have anyway. 
+                Sheet usually has its own close X, but we are inside Content. 
+                AppShell SheetContent has "p-0", so we are the content.
+                The Sheet primitive usually adds a Close X absolute top right.
+                If we render our own, we might duplicate it or overlap.
+                Sheet primitive's X is usually z-10.
+                Let's keep this one.
+            */}
+            <button
+            onClick={() => setOpen(false)}
+            className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            aria-label="Close inspector (Escape)"
+            >
+            <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+        </div>
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4 scrollbar-titan space-y-4">
+        {/* ... Content remains same ... */}
         {entity && entity.type !== 'none' ? (
           <>
+            {/* Registry-based Views */}
+            {registry.getInspectorViewsFor(entity).map((view) => (
+              <view.component key={view.id} entity={entity} />
+            ))}
+
+            {/* Special Entity Views */}
+            {entity.type === 'memory' && <MemoryInspector />}
+
+            {/* Legacy / Fallback Content (only if no specific views handled it, OR we want to support mixing?) 
+                For now, let's allow mixing: Registry views appear at the top (if priority high) or we can just append them.
+                Actually, let's render legacy content only if we haven't fully migrated.
+                For this step, I will RENDER BOTH to allow new modules to append.
+            */}
+            
+            {/* Legacy Content */}
             {/* Live Status + Risk Posture */}
             <section aria-label="Status and risk posture">
               <div className="flex items-center justify-between mb-2">
@@ -475,15 +578,40 @@ export function InspectorPanel() {
               )}
             </section>
 
-            {/* Latest Receipt */}
+            {/* Decision Trace (intent entities only) */}
+            {entity.type === 'intent' && (
+              <section aria-label="Decision trace">
+                <h4 className="mb-2 text-xxs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Decision Trace
+                </h4>
+                {previewLoading ? (
+                  <div className="flex items-center gap-2 py-3 text-xs text-muted-foreground">
+                    <Activity className="h-3 w-3 animate-pulse" aria-hidden="true" />
+                    Loading decision trace…
+                  </div>
+                ) : intentPreview ? (
+                  <DecisionTraceBlock preview={intentPreview} />
+                ) : (
+                  <div className="rounded-md border border-border bg-muted/50 p-3 text-center text-xs text-muted-foreground">
+                    Decision trace unavailable
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* Truth Trace / Receipt */}
             <section aria-label="Latest receipt">
               <h4 className="mb-2 text-xxs font-semibold uppercase tracking-wider text-muted-foreground">
-                Latest Receipt
+                {entity.type === 'intent' ? 'Truth Trace' : 'Latest Receipt'}
               </h4>
               {latestReceipt ? (
-                <div className="rounded-md border border-border/50 bg-background/50 p-2.5">
-                  <ReceiptSection receipt={latestReceipt as unknown as Record<string, unknown>} />
-                </div>
+                entity.type === 'intent' ? (
+                  <TruthTraceBlock receipt={latestReceipt as IntentReceipt} />
+                ) : (
+                  <div className="rounded-md border border-border/50 bg-background/50 p-2.5">
+                    <ReceiptSection receipt={latestReceipt as unknown as Record<string, unknown>} />
+                  </div>
+                )
               ) : (
                 <div className="rounded-md border border-border bg-muted/50 p-3 text-center text-xs text-muted-foreground">
                   No receipts available
@@ -501,43 +629,12 @@ export function InspectorPanel() {
               </div>
               <div className="space-y-1.5">
                 {runbookActions.map((action, i) => (
-                  <button
+                  <ActionButton
                     key={i}
-                    className={cn(
-                      'w-full flex items-center gap-2 rounded-md border p-2.5 text-left text-xs transition-colors',
-                      action.danger === 'critical'
-                        ? 'border-status-critical/30 bg-status-critical/5 hover:bg-status-critical/10'
-                        : action.danger === 'moderate'
-                          ? 'border-status-degraded/30 bg-status-degraded/5 hover:bg-status-degraded/10'
-                          : 'border-border/50 bg-background/50 hover:bg-muted',
-                    )}
-                    aria-label={`${action.label}: ${action.description}`}
-                    onClick={() => {
-                      // Copy command to clipboard and focus chat input
-                      navigator.clipboard.writeText(action.command);
-                      const chatInput = document.getElementById('operator-input');
-                      if (chatInput) {
-                        (chatInput as HTMLInputElement).value = action.command;
-                        (chatInput as HTMLInputElement).focus();
-                        chatInput.dispatchEvent(new Event('input', { bubbles: true }));
-                      }
-                    }}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className={cn(
-                          'font-medium',
-                          action.danger === 'critical' ? 'text-status-critical'
-                            : action.danger === 'moderate' ? 'text-status-degraded'
-                              : 'text-foreground',
-                        )}>
-                          {action.label}
-                        </span>
-                      </div>
-                      <p className="mt-0.5 text-xxs text-muted-foreground">{action.description}</p>
-                    </div>
-                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" aria-hidden="true" />
-                  </button>
+                    action={{ ...action, danger: action.danger as 'safe' | 'moderate' | 'critical' }}
+                    compact={false}
+                    requireConfirmation={isMobileView && action.danger !== 'safe'}
+                  />
                 ))}
               </div>
             </section>

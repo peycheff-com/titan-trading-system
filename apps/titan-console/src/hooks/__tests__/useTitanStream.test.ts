@@ -66,10 +66,12 @@ describe("useTitanStream", () => {
             mockWebSocket.onmessage({ data: JSON.stringify(testMessage) });
         });
 
-        expect(result.current.lastMessage).toEqual({
-            subject: "test",
-            data: testPayload,
-            timestamp: expect.any(Number),
+        await waitFor(() => {
+            expect(result.current.lastMessage).toEqual({
+                subject: "test",
+                data: testPayload,
+                timestamp: expect.any(Number),
+            });
         });
     });
 

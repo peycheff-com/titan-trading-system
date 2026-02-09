@@ -265,7 +265,6 @@ titan/
 │   ├── titan-phase3-sentinel/
 │   ├── titan-ai-quant/
 │   ├── titan-powerlaw-lab/    # Power Law Research
-│   └── canonical-powerlaw-service/
 ├── packages/
 │   ├── shared/                # Common library (@titan/shared)
 │   ├── titan-backtesting/     # Simulation engine
@@ -289,8 +288,8 @@ This repository maintains Tier-1 production standards via automated enforcement:
 | Config Validation | ✅ | Runtime config verification |
 
 **Audit Reports:**
-- [Repo Hygiene Report](docs/repo-hygiene-report.md)
-- [Deletion Ledger](docs/deletion-ledger.md)
+- [Repo Hygiene Report](docs/REPO_PURGE_LEDGER.md)
+- [Deletion Ledger](docs/REPO_PURGE_LEDGER.md)
 - [Integration Verification](docs/integration-verification.md)
 
 *Last hygiene audit: 2026-02-02*

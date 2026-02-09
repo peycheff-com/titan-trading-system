@@ -1071,8 +1071,20 @@ export class TitanBrain
     return !!result;
   }
 
-  async verifyOperatorCredentials(id: string, pass: string): Promise<boolean> {
-    return this.manualOverrideService?.authenticateOperator(id, pass) ?? false;
+  async verifyOperatorCredentials(
+    id: string,
+    pass: string,
+  ): Promise<{ valid: boolean; roles: string[] }> {
+    if (!this.manualOverrideService) return { valid: false, roles: [] };
+
+    const valid = await this.manualOverrideService.authenticateOperator(
+      id,
+      pass,
+    );
+    if (!valid) return { valid: false, roles: [] };
+
+    const creds = await this.manualOverrideService.getOperatorCredentials(id);
+    return { valid: true, roles: creds?.permissions ?? [] };
   }
 
   async deactivateManualOverride(actorId: string): Promise<boolean> {

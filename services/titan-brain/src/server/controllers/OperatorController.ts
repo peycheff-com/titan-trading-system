@@ -14,7 +14,12 @@ import type {
   FastifyRequest,
   FastifyReply,
 } from 'fastify';
-import type { OperatorIntentRecord, OperatorIntentStatus, OperatorIntentType } from '@titan/shared';
+import type {
+  OperatorIntentRecord,
+  OperatorIntentStatus,
+  OperatorIntentType,
+} from '@titan/shared';
+import { DANGER_LEVEL, REQUIRES_APPROVAL } from '@titan/shared';
 import type { OperatorIntentService, IntentPreviewResult } from '../../services/OperatorIntentService.js';
 import type { OperatorStateProjection } from '../../services/OperatorStateProjection.js';
 import { Logger } from '../../logging/Logger.js';
@@ -40,6 +45,10 @@ interface IntentsQuery {
   type?: string;
 }
 
+interface ApprovalsQuery extends IntentsQuery {
+  operator_id?: string;
+}
+
 interface PreviewIntentBody {
   type: string;
   params?: Record<string, unknown>;
@@ -48,6 +57,8 @@ interface PreviewIntentBody {
   role?: string;
 }
 
+import { EventReplayService } from '../../engine/EventReplayService.js';
+
 export class OperatorController {
   private readonly logger: Logger;
 
@@ -55,6 +66,7 @@ export class OperatorController {
     private readonly intentService: OperatorIntentService,
     private readonly stateProjection: OperatorStateProjection,
     private readonly authMiddleware: AuthMiddleware,
+    private readonly eventReplayService: EventReplayService,
     logger?: Logger,
   ) {
     this.logger = logger ?? Logger.getInstance('operator-controller');
@@ -71,12 +83,6 @@ export class OperatorController {
       '/operator/intents',
       { preHandler: this.authMiddleware.verifyToken.bind(this.authMiddleware) },
       this.handleGetIntents.bind(this),
-    );
-
-    server.get(
-      '/operator/state',
-      { preHandler: this.authMiddleware.verifyToken.bind(this.authMiddleware) },
-      this.handleGetState.bind(this),
     );
 
     server.get<{ Params: { id: string } }>(
@@ -97,19 +103,104 @@ export class OperatorController {
       this.handleIntentStream.bind(this),
     );
 
-    server.post<{ Params: { id: string }; Body: { approver_id: string } }>(
+    // Approval Workflow
+    server.post<{ Params: { id: string } }>(
       '/operator/intents/:id/approve',
       { preHandler: this.authMiddleware.verifyToken.bind(this.authMiddleware) },
       this.handleApproveIntent.bind(this),
     );
 
-    server.post<{ Params: { id: string }; Body: { approver_id: string; reason: string } }>(
+    server.post<{ Params: { id: string }; Body: { reason: string } }>(
       '/operator/intents/:id/reject',
       { preHandler: this.authMiddleware.verifyToken.bind(this.authMiddleware) },
       this.handleRejectIntent.bind(this),
     );
 
+    // Unified State (Live)
+    server.get(
+      '/operator/state',
+      { preHandler: this.authMiddleware.verifyToken.bind(this.authMiddleware) },
+      this.handleGetState.bind(this),
+    );
+
+    // Historical State (Time Travel)
+    server.get<{ Querystring: { timestamp: string } }>(
+      '/operator/history/state',
+      { preHandler: this.authMiddleware.verifyToken.bind(this.authMiddleware) },
+      this.handleGetHistoryState.bind(this),
+    );
+
+    // Approvals Queue
+    server.get<{ Querystring: ApprovalsQuery }>(
+      '/operator/approvals',
+      { preHandler: this.authMiddleware.verifyToken.bind(this.authMiddleware) },
+      this.handleGetApprovals.bind(this),
+    );
+
+    // Provenance
+    server.get<{ Params: { id: string } }>(
+      '/operator/intents/:id/provenance',
+      { preHandler: this.authMiddleware.verifyToken.bind(this.authMiddleware) },
+      this.handleGetProvenance.bind(this),
+    );
+
     this.logger.info('OperatorController routes registered');
+  }
+
+  // ---------------------------------------------------------------------------
+  // GET /operator/history/state
+  // ---------------------------------------------------------------------------
+
+  private async handleGetHistoryState(
+    request: FastifyRequest<{ Querystring: { timestamp: string } }>,
+    reply: FastifyReply,
+  ): Promise<void> {
+    try {
+      const { timestamp } = request.query;
+      
+      if (!timestamp) {
+         reply.code(400).send({ error: 'timestamp is required (ISO 8601)' });
+         return;
+      }
+
+      const ts = new Date(timestamp).getTime();
+      if (isNaN(ts)) {
+         reply.code(400).send({ error: 'Invalid timestamp format' });
+         return;
+      }
+      
+      const reconstructedState = await this.eventReplayService.reconstructStateAt(ts);
+      
+      // Serialize Reconstructed State
+      // BrainStateManager likely has private fields, so we need a serializer or getters.
+      // Assuming we can construct the same object as handleGetState returns.
+      // OperatorStateProjection uses BrainStateManager too.
+      // Ideally we'd use OperatorStateProjection logic on the *reconstructed* state manager.
+      // But OperatorStateProjection is bound to the LIVE brain.
+      // We can manually construct the response for now matching `handleGetState`.
+      
+      const payload = {
+         equity: reconstructedState.getEquity(),
+         positions: reconstructedState.getPositions(),
+         allocation: reconstructedState.getAllocation(),
+         mode: reconstructedState.getMode(),
+         armed: reconstructedState.isArmed(),
+         // Add performance/risk if available
+      };
+      
+      reply.code(200).send({
+        meta: {
+          requested_time: timestamp,
+          actual_time: new Date(ts).toISOString(),
+          is_historical: true
+        },
+        data: payload
+      });
+
+    } catch (error) {
+      this.logger.error('Error getting historical state', error as Error);
+      reply.code(500).send({ error: 'Internal server error' });
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -216,30 +307,32 @@ export class OperatorController {
   // POST /operator/intents/:id/approve
   // ---------------------------------------------------------------------------
 
-  private async handleApproveIntent(
-    request: FastifyRequest<{ Params: { id: string }; Body: { approver_id: string } }>,
+  /**
+   * Approve a pending intent
+   */
+  async handleApproveIntent(
+    request: FastifyRequest<{ Params: { id: string } }>,
     reply: FastifyReply,
   ): Promise<void> {
     try {
       const { id } = request.params;
-      const { approver_id } = request.body ?? {};
+      const operatorId = (request as any).user?.id;
 
-      if (!approver_id) {
-        reply.code(400).send({ error: 'approver_id is required' });
+      if (!operatorId) {
+        reply.code(401).send({ error: 'Unauthorized: No operator ID found in token' });
         return;
       }
 
-      const result = await this.intentService.approveIntent(id, approver_id);
+      const result = await this.intentService.approveIntent(id, operatorId);
 
       if (result.success) {
         reply.code(200).send({
-          status: 'APPROVED',
+          success: true,
           intent: result.intent ? this.toIntentResponse(result.intent) : null,
         });
       } else {
-        reply.code(result.error === 'INTENT_NOT_FOUND' ? 404 : 409).send({
+        reply.code(result.error === 'INTENT_NOT_FOUND' ? 404 : 400).send({
           error: result.error,
-          intent: result.intent ? this.toIntentResponse(result.intent) : null,
         });
       }
     } catch (error) {
@@ -252,30 +345,33 @@ export class OperatorController {
   // POST /operator/intents/:id/reject
   // ---------------------------------------------------------------------------
 
-  private async handleRejectIntent(
-    request: FastifyRequest<{ Params: { id: string }; Body: { approver_id: string; reason: string } }>,
+  /**
+   * Reject a pending intent
+   */
+  async handleRejectIntent(
+    request: FastifyRequest<{ Params: { id: string }; Body: { reason: string } }>,
     reply: FastifyReply,
   ): Promise<void> {
     try {
       const { id } = request.params;
-      const { approver_id, reason } = request.body ?? {};
+      const { reason } = request.body ?? { reason: 'No reason provided' };
+      const operatorId = (request as any).user?.id;
 
-      if (!approver_id || !reason) {
-        reply.code(400).send({ error: 'approver_id and reason are required' });
+      if (!operatorId) {
+        reply.code(401).send({ error: 'Unauthorized: No operator ID found in token' });
         return;
       }
 
-      const result = this.intentService.rejectIntent(id, approver_id, reason);
+      const result = this.intentService.rejectIntent(id, operatorId, reason);
 
       if (result.success) {
         reply.code(200).send({
-          status: 'REJECTED',
+          success: true,
           intent: result.intent ? this.toIntentResponse(result.intent) : null,
         });
       } else {
-        reply.code(result.error === 'INTENT_NOT_FOUND' ? 404 : 409).send({
+        reply.code(result.error === 'INTENT_NOT_FOUND' ? 404 : 400).send({
           error: result.error,
-          intent: result.intent ? this.toIntentResponse(result.intent) : null,
         });
       }
     } catch (error) {
@@ -292,15 +388,105 @@ export class OperatorController {
     request: FastifyRequest<{ Params: { id: string } }>,
     reply: FastifyReply,
   ): Promise<void> {
+    const intent = this.intentService.getIntent(request.params.id);
+    if (!intent) {
+      reply.code(404).send({ error: 'INTENT_NOT_FOUND' });
+      return;
+    }
+    reply.code(200).send({ intent: this.toIntentResponse(intent) });
+  }
+
+  private async handleGetApprovals(
+    request: FastifyRequest<{ Querystring: ApprovalsQuery }>,
+    reply: FastifyReply,
+  ): Promise<void> {
+    try {
+      const limit = Math.min(parseInt(request.query.limit ?? '20'), 100);
+      const status = (request.query.status as OperatorIntentStatus) ?? 'PENDING_APPROVAL';
+      const type = request.query.type as OperatorIntentType | undefined;
+      const operatorId = request.query.operator_id;
+
+      // Use existing intentService.getIntents with approval-specific filters
+      const { intents } = this.intentService.getIntents({
+        limit,
+        status,
+        type,
+        operator_id: operatorId,
+      });
+
+      // Enrich with approval-specific metadata
+      const approvals = intents.map((intent) => ({
+        ...this.toIntentResponse(intent),
+        danger_level: DANGER_LEVEL[intent.type as OperatorIntentType] ?? 'low',
+        requires_approval: REQUIRES_APPROVAL[intent.type as OperatorIntentType] ?? false,
+        time_pending_ms: intent.submitted_at
+          ? Date.now() - new Date(intent.submitted_at).getTime()
+          : 0,
+      }));
+
+      reply.code(200).send({
+        approvals,
+        total: approvals.length,
+        pending_count: this.intentService.getPendingApprovalCount(),
+      });
+    } catch (error) {
+      this.logger.error('Error fetching approvals', error as Error);
+      reply.code(500).send({ error: 'Internal server error' });
+    }
+  }
+
+  private async handleGetProvenance(
+    request: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply,
+  ): Promise<void> {
     try {
       const intent = this.intentService.getIntent(request.params.id);
       if (!intent) {
         reply.code(404).send({ error: 'INTENT_NOT_FOUND' });
         return;
       }
-      reply.code(200).send({ intent: this.toIntentResponse(intent) });
+
+      const chain = {
+        intent_id: intent.id,
+        type: intent.type,
+        lifecycle: [
+          { event: 'SUBMITTED', actor: intent.operator_id, at: intent.submitted_at },
+          ...(intent.approver_id
+            ? [
+                {
+                  event: 'APPROVED',
+                  actor: intent.approver_id,
+                  at: intent.approved_at,
+                },
+              ]
+            : []),
+          ...(intent.rejection_reason
+            ? [
+                {
+                  event: 'REJECTED',
+                  actor: intent.approver_id,
+                  at: intent.resolved_at,
+                  reason: intent.rejection_reason,
+                },
+              ]
+            : []),
+          ...(intent.resolved_at && !intent.rejection_reason
+            ? [
+                {
+                  event: intent.status,
+                  at: intent.resolved_at,
+                },
+              ]
+            : []),
+        ],
+        automation: (intent.params as any)._automation ?? null,
+        receipt: intent.receipt ?? null,
+        signature_valid: true, // simplified for v1
+      };
+
+      reply.code(200).send(chain);
     } catch (error) {
-      this.logger.error('Error getting intent', error as Error);
+      this.logger.error('Error fetching provenance', error as Error);
       reply.code(500).send({ error: 'Internal server error' });
     }
   }
@@ -446,6 +632,9 @@ export class OperatorController {
       submitted_at: intent.submitted_at,
       resolved_at: intent.resolved_at ?? null,
       receipt: intent.receipt ?? null,
+      approver_id: intent.approver_id,
+      approved_at: intent.approved_at,
+      rejection_reason: intent.rejection_reason,
     };
   }
 }

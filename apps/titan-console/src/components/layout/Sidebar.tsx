@@ -1,8 +1,17 @@
-import { Link, useLocation } from 'react-router-dom';
+/**
+ * Sidebar — Operator OS Left Rail
+ *
+ * Shows system health dots + navigation grouped by category.
+ * Nav items now switch workspace + tab via WorkspaceContext instead of
+ * using router Links. Active state derived from workspace context.
+ */
+
 import { cn } from '@/lib/utils';
 import { StatusDot } from '@/components/titan/StatusPill';
 import { NAV_GROUPS } from '@/config/navigation';
 import { useTitanWebSocket } from '@/context/WebSocketContext';
+import { useWorkspace } from '@/context/WorkspaceContext';
+import { WORKSPACES } from '@/config/workspaces';
 import { Zap, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const phaseColors = {
@@ -31,9 +40,68 @@ function useServiceHealth() {
   } as const;
 }
 
+/**
+ * Map a nav item path → (workspaceId, tabId) so clicking navigates
+ * via workspace context instead of URL router.
+ */
+function pathToWorkspaceTab(path: string): { workspaceId: string; tabId: string } | null {
+  // Build a reverse map from path → widget ID → workspace
+  const pathToWidgetId: Record<string, string> = {
+    '/': 'chatops',
+    '/overview': 'overview',
+    '/live': 'live',
+    '/trade': 'trade',
+    '/risk': 'risk',
+    '/phases/scavenger': 'scavenger',
+    '/phases/hunter': 'hunter',
+    '/phases/sentinel': 'sentinel',
+    '/brain': 'brain',
+    '/ai-quant': 'ai-quant',
+    '/execution': 'execution',
+    '/decision-log': 'decision-log',
+    '/journal': 'journal',
+    '/history': 'history',
+    '/alerts': 'alerts',
+    '/infra': 'infra',
+    '/powerlaw': 'powerlaw',
+    '/config': 'config',
+    '/venues': 'venues',
+    '/credentials': 'credentials',
+    '/identity': 'identity',
+    '/settings': 'settings',
+  };
+
+  const tabId = pathToWidgetId[path];
+  if (!tabId) return null;
+
+  // Find workspace that contains this tab
+  for (const ws of WORKSPACES) {
+    if (ws.tabs.includes(tabId)) {
+      return { workspaceId: ws.id, tabId };
+    }
+  }
+  return null;
+}
+
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
-  const location = useLocation();
   const systemHealth = useServiceHealth();
+  const { workspace, activeTab, switchWorkspace, switchTab } = useWorkspace();
+
+  const handleNavClick = (path: string) => {
+    const target = pathToWorkspaceTab(path);
+    if (!target) return;
+    if (target.workspaceId !== workspace.id) {
+      switchWorkspace(target.workspaceId);
+    }
+    // Always switch tab (even if same workspace — ensures correct tab)
+    switchTab(target.tabId);
+  };
+
+  const isItemActive = (path: string): boolean => {
+    const target = pathToWorkspaceTab(path);
+    if (!target) return false;
+    return target.workspaceId === workspace.id && target.tabId === activeTab;
+  };
 
   return (
     <aside
@@ -100,15 +168,15 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             )}
             <ul className="space-y-0.5">
               {group.items.map((item) => {
-                const isActive = location.pathname === item.path;
+                const isActive = isItemActive(item.path);
                 const Icon = item.icon;
 
                 return (
                   <li key={item.path}>
-                    <Link
-                      to={item.path}
+                    <button
+                      onClick={() => handleNavClick(item.path)}
                       className={cn(
-                        'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors',
+                        'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors',
                         isActive
                           ? 'bg-primary/10 text-primary'
                           : 'text-muted-foreground hover:bg-muted hover:text-foreground',
@@ -123,7 +191,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                         )}
                       />
                       {!collapsed && <span>{item.name}</span>}
-                    </Link>
+                    </button>
                   </li>
                 );
               })}

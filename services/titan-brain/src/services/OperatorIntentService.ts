@@ -217,6 +217,7 @@ export class OperatorIntentService extends EventEmitter {
     limit?: number;
     status?: OperatorIntentStatus;
     type?: OperatorIntentType;
+    operator_id?: string;
   }): { intents: OperatorIntentRecord[]; total: number } {
     let result = [...this.intents];
 
@@ -226,6 +227,9 @@ export class OperatorIntentService extends EventEmitter {
     if (filters?.type) {
       result = result.filter((i) => i.type === filters.type);
     }
+    if (filters?.operator_id) {
+      result = result.filter((i) => i.operator_id === filters.operator_id);
+    }
 
     const total = result.length;
     const limit = Math.min(filters?.limit ?? 20, 100);
@@ -233,6 +237,7 @@ export class OperatorIntentService extends EventEmitter {
 
     return { intents: result, total };
   }
+
 
   /**
    * Get a single intent by ID.
@@ -347,8 +352,14 @@ export class OperatorIntentService extends EventEmitter {
       return { success: false, error: `INVALID_STATUS: ${intent.status}`, intent: { ...intent } };
     }
 
+    // Set approval metadata
+    intent.approver_id = approverId;
+    intent.approved_at = new Date().toISOString();
+
     this.logger.info(`Intent ${id} approved by ${approverId}`);
-    this.updateStatus(id, 'ACCEPTED');
+    
+    // Persist status change (and metadata hopefully)
+    await this.updateStatus(id, 'ACCEPTED');
 
     // Execute asynchronously
     this.executeIntent(intent).catch((err) => {
@@ -371,6 +382,9 @@ export class OperatorIntentService extends EventEmitter {
     if (intent.status !== 'PENDING_APPROVAL') {
       return { success: false, error: `INVALID_STATUS: ${intent.status}`, intent: { ...intent } };
     }
+
+    intent.approver_id = approverId;
+    intent.rejection_reason = reason;
 
     this.logger.info(`Intent ${id} rejected by ${approverId}: ${reason}`);
     this.resolveIntent(id, 'REJECTED', {

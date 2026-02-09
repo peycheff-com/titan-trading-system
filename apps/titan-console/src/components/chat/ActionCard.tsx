@@ -14,7 +14,8 @@ import { cn } from '@/lib/utils';
 import type { CompiledIntent, DangerLevel } from '@/lib/intentCompiler';
 import type { IntentPreviewResult } from '@/hooks/useOperatorIntents';
 import { useOperatorIntents } from '@/hooks/useOperatorIntents';
-import { RiskDeltaBlock } from './RiskDeltaBlock';
+import { useScreenSize } from '@/hooks/use-media-query';
+import { DecisionTraceBlock } from './DecisionTraceBlock';
 import {
   Shield,
   ShieldAlert,
@@ -68,6 +69,8 @@ const dangerStyles: Record<DangerLevel, { border: string; bg: string; icon: type
 // ---------------------------------------------------------------------------
 
 export function ActionCard({ intent, onApprove, onReject, disabled, stateHash }: ActionCardProps) {
+  const { isMobile } = useScreenSize();
+  const [mobileConfirming, setMobileConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [decided, setDecided] = useState<'approved' | 'rejected' | null>(null);
   const [preview, setPreview] = useState<IntentPreviewResult | null>(null);
@@ -92,6 +95,14 @@ export function ActionCard({ intent, onApprove, onReject, disabled, stateHash }:
       abortRef.current?.abort();
     };
   }, []);
+
+  // Reset mobile confirming if user waits too long
+  useEffect(() => {
+    if (mobileConfirming) {
+      const timer = setTimeout(() => setMobileConfirming(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [mobileConfirming]);
 
   // Fetch preview on mount or when stateHash changes
   const fetchPreview = useCallback(async () => {
@@ -152,6 +163,13 @@ export function ActionCard({ intent, onApprove, onReject, disabled, stateHash }:
       await fetchPreview();
       return; // User must click approve again after fresh preview
     }
+
+    // Mobile double-tap safety
+    if (isMobile && !mobileConfirming) {
+      setMobileConfirming(true);
+      return;
+    }
+    setMobileConfirming(false);
 
     setSubmitting(true);
     try {
@@ -248,7 +266,7 @@ export function ActionCard({ intent, onApprove, onReject, disabled, stateHash }:
         </div>
       )}
       {preview && !previewLoading && !previewError && (
-        <RiskDeltaBlock preview={preview} stale={stale} className="mt-3" />
+        <DecisionTraceBlock preview={preview} stale={stale} className="mt-3" />
       )}
 
       {/* Decision state or action buttons */}
@@ -271,12 +289,14 @@ export function ActionCard({ intent, onApprove, onReject, disabled, stateHash }:
           <button
             onClick={handleApprove}
             disabled={!isInteractive || submitting || !!previewBlocked}
-            aria-label={stale ? `Re-confirm ${intent.type}` : `Confirm ${intent.type}`}
+            aria-label={stale ? `Re-confirm ${intent.type}` : mobileConfirming ? 'Click again to confirm' : `Confirm ${intent.type}`}
             className={cn(
               'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
               stale
                 ? 'bg-status-degraded/15 text-status-degraded hover:bg-status-degraded/25'
-                : 'bg-status-healthy/15 text-status-healthy hover:bg-status-healthy/25',
+                : mobileConfirming
+                  ? 'bg-status-critical text-status-critical-foreground animate-pulse'
+                  : 'bg-status-healthy/15 text-status-healthy hover:bg-status-healthy/25',
               'disabled:cursor-not-allowed disabled:opacity-50',
             )}
           >
@@ -284,10 +304,12 @@ export function ActionCard({ intent, onApprove, onReject, disabled, stateHash }:
               <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
             ) : stale ? (
               <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+            ) : mobileConfirming ? (
+               <ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" />
             ) : (
               <Check className="h-3.5 w-3.5" aria-hidden="true" />
             )}
-            {stale ? 'Re-confirm' : 'Confirm'}
+            {stale ? 'Re-confirm' : mobileConfirming ? 'Click again' : 'Confirm'}
           </button>
           <button
             onClick={handleReject}

@@ -6,8 +6,10 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "browser": "./dist/esm/browser.js",
+      "node": "./dist/index.js",
+      "default": "./dist/index.js",
+      "types": "./dist/index.d.ts"
     },
     "./dist/*": {
       "types": "./dist/*.d.ts",
@@ -16,7 +18,7 @@
     "./package.json": "./package.json"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && tsc -p tsconfig.browser.json",
     "build:all": "npm run build",
     "test": "jest",
     "test:watch": "jest --watch",

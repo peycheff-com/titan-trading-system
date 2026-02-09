@@ -7,14 +7,14 @@
  * - width persistence
  */
 
-import React, { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 export interface InspectorEntity {
-  type: 'position' | 'order' | 'intent' | 'incident' | 'config' | 'phase' | 'none';
+  type: 'position' | 'order' | 'intent' | 'incident' | 'config' | 'phase' | 'memory' | 'none';
   id: string;
   title: string;
   data?: Record<string, unknown>;
@@ -50,6 +50,14 @@ const MAX_WIDTH = 480;
 
 const InspectorContext = createContext<InspectorContextType | undefined>(undefined);
 
+// ... imports
+
+// Defines the shape of messages exchanged between windows
+type InspectorMessage = 
+  | { type: 'INSPECTOR_UPDATE'; entity: InspectorEntity | null }
+  | { type: 'INSPECTOR_SYNC_REQUEST' }
+  | { type: 'INSPECTOR_SYNC_RESPONSE'; entity: InspectorEntity | null; isOpen: boolean };
+
 export function InspectorProvider({ children }: { children: ReactNode }) {
   const [entity, setEntity] = useState<InspectorEntity | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -59,14 +67,67 @@ export function InspectorProvider({ children }: { children: ReactNode }) {
     return isNaN(parsed) ? DEFAULT_WIDTH : Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, parsed));
   });
 
-  const inspect = useCallback((entity: InspectorEntity) => {
-    setEntity(entity);
+  // Refs for current state to avoid re-binding effect
+  const entityRef = useRef(entity);
+  const isOpenRef = useRef(isOpen);
+
+  useEffect(() => {
+    entityRef.current = entity;
+    isOpenRef.current = isOpen;
+  }, [entity, isOpen]);
+
+  // Broadcast channel for multi-window sync
+  const channelRef = React.useRef<BroadcastChannel | null>(null);
+
+  useEffect(() => {
+    const channel = new BroadcastChannel('titan-inspector');
+    channelRef.current = channel;
+
+    channel.onmessage = (event: MessageEvent<InspectorMessage>) => {
+      const msg = event.data;
+      if (msg.type === 'INSPECTOR_UPDATE') {
+        setEntity(msg.entity);
+        if (msg.entity) {
+             setIsOpen(true);
+        }
+      } else if (msg.type === 'INSPECTOR_SYNC_REQUEST') {
+        // Another window asked for state, reply with ours if we have an entity
+        if (entityRef.current) {
+          channel.postMessage({ type: 'INSPECTOR_SYNC_RESPONSE', entity: entityRef.current, isOpen: isOpenRef.current });
+        }
+      } else if (msg.type === 'INSPECTOR_SYNC_RESPONSE') {
+        // We received initial state
+        if (msg.entity) {
+          setEntity(msg.entity);
+          setIsOpen(true); // Auto-open if we synced an active entity
+        }
+      }
+    };
+
+    // On mount, if we are empty, ask for sync (likely we are the pop-out)
+    if (!entityRef.current) {
+      channel.postMessage({ type: 'INSPECTOR_SYNC_REQUEST' });
+    }
+
+    return () => {
+      channel.close();
+    };
+  }, []); // Run once on mount
+
+  // ... (keep width state logic separate or simple)
+
+  const inspect = useCallback((newEntity: InspectorEntity) => {
+    setEntity(newEntity);
     setIsOpen(true);
+    // Broadcast change
+    channelRef.current?.postMessage({ type: 'INSPECTOR_UPDATE', entity: newEntity });
   }, []);
 
   const clear = useCallback(() => {
     setEntity(null);
     setIsOpen(false);
+     // Broadcast change
+    channelRef.current?.postMessage({ type: 'INSPECTOR_UPDATE', entity: null });
   }, []);
 
   const toggle = useCallback(() => {

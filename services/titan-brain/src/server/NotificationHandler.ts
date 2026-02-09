@@ -12,6 +12,7 @@ import {
   VetoNotification,
 } from './NotificationService.js';
 import { PhaseId } from '../types/performance.js';
+import { NotificationConfig } from '../types/config.js';
 
 /**
  * Concrete implementation of NotificationHandler that uses NotificationService
@@ -103,7 +104,7 @@ export class TitanNotificationHandler implements NotificationHandler {
   /**
    * Send system error notification
    */
-  async sendSystemError(error: string, context?: Record<string, any>): Promise<void> {
+  async sendSystemError(error: string, context?: Record<string, unknown>): Promise<void> {
     await this.notificationService.sendSystemError(error, context);
   }
 
@@ -117,7 +118,7 @@ export class TitanNotificationHandler implements NotificationHandler {
   /**
    * Update notification configuration
    */
-  updateConfig(config: any): void {
+  updateConfig(config: NotificationConfig): void {
     this.notificationService.updateConfig(config);
   }
 }

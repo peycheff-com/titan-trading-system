@@ -27,10 +27,26 @@ export class AdminController {
    * Register routes for this controller
    */
   registerRoutes(server: FastifyInstance): void {
-    // Public / Login
-    server.post<{ Body: LoginRequestBody }>('/auth/login', this.handleLogin.bind(this));
+    // Auth
+    server.post<{ Body: LoginRequestBody }>(
+      '/auth/login',
+      {},
+      this.handleLogin.bind(this),
+    );
 
-    // Protected Routes (Admin)
+    server.get(
+      '/auth/whoami',
+      { preHandler: this.auth.verifyToken.bind(this.auth) },
+      this.handleWhoAmI.bind(this),
+    );
+
+    server.get(
+      '/auth/sessions',
+      { preHandler: this.auth.verifyToken.bind(this.auth) },
+      this.handleGetSessions.bind(this),
+    );
+
+    // Operator Management
     const adminGuard = {
       preHandler: [this.auth.verifyToken.bind(this.auth), this.auth.requireRole('admin')],
     };
@@ -130,23 +146,18 @@ export class AdminController {
         return;
       }
 
-      const { operatorId, password } = parseResult.data;
+      const { operatorId, password } = request.body;
 
-      // Verify credentials via Brain (which checks against DB/Config)
-      const isValid = await this.brain.verifyOperatorCredentials(operatorId, password);
-      if (!isValid) {
-        reply.status(401).send({ error: 'Invalid credentials' });
+      const { valid, roles } = await this.brain.verifyOperatorCredentials(operatorId, password);
+
+      if (!valid) {
+        reply.code(401).send({ error: 'Invalid credentials' });
         return;
       }
 
-      // Get operator roles (Assuming brain returns simple bool now, we might default to 'admin' for now or fetch roles)
-      // TODO: Enhance verifyOperatorCredentials to return Operator object with roles
-      const roles = ['admin']; // detailed implementation pending in Brain
+      const token = await this.auth.generateToken(operatorId, roles);
 
-      const token = this.auth.generateToken(operatorId, roles);
-
-      reply.send({
-        success: true,
+      reply.code(200).send({
         token,
         operatorId,
         roles,
@@ -154,6 +165,45 @@ export class AdminController {
     } catch (error) {
       reply.status(500).send({ error: 'Login failed' });
     }
+  }
+
+  /**
+   * Handle GET /auth/whoami
+   */
+  async handleWhoAmI(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const operatorId = (request as any).user?.id;
+    const roles = (request as any).user?.roles || [];
+
+    // Construct full permission matrix
+    // We assume buildPermissionMatrix logic in frontend or helper
+    // For now, returning roles is sufficient for basic auth checks
+
+    reply.code(200).send({
+      id: operatorId,
+      roles,
+      permissions: {}, // Placeholder
+      session: {
+        valid: true,
+        expires_at: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
+      },
+    });
+  }
+
+  /**
+   * Handle GET /auth/sessions
+   */
+  async handleGetSessions(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const operatorId = (request as any).user?.id;
+
+    reply.code(200).send({
+      current: {
+        id: 'current',
+        operator_id: operatorId,
+        started_at: new Date().toISOString(),
+        last_active: new Date().toISOString(),
+      },
+      others: [],
+    });
   }
 
   /**

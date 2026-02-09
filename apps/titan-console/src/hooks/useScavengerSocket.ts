@@ -56,8 +56,10 @@ const playTrapSprungSound = () => {
   }
 };
 
+import { useThrottledState } from './useThrottledState';
+
 export function useScavengerSocket() {
-  const [state, setState] = useState<ScavengerState>({
+  const [state, setState] = useThrottledState<ScavengerState>({
     isConnected: false,
     trapMap: [],
     sensorStatus: {

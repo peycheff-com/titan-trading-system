@@ -5,8 +5,14 @@ import * as path from "path";
 const BUDGETS: Record<string, number> = {
     // 5MB for brain bundle (it's a backend service/monolith mostly, but good to track)
     "services/titan-brain/dist/index.js": 5 * 1024 * 1024,
-    // 10MB for console (React app)
-    "services/titan-console/dist/index.html": 10 * 1024 * 1024,
+    // 2MB for console JS bundle (Titan Console - Single Page App)
+    // Note: glob pattern matching is not supported by fs.statSync, so we need to handle that logic 
+    // or just point to the largest file. For now, we'll update the logic below to handle glob-like finding or 
+    // just use a fixed name if we control build names. 
+    // Since vite produces hashed filenames, we need to find them.
+    // For this scripts, let's just create a helper to find the largest JS file in the assets dir.
+    "apps/titan-console/dist/assets/largest_js": 2 * 1024 * 1024,
+    "apps/titan-console/dist/assets/largest_css": 200 * 1024,
 };
 
 console.log("⚖️  Checking Bundle Sizes...");
@@ -15,8 +21,30 @@ let failed = false;
 
 function getFileSize(filePath: string): number {
     try {
+        if (filePath.includes("apps/titan-console/dist/assets/largest_js")) {
+             return getLargestFileInDir("apps/titan-console/dist/assets", ".js");
+        }
+        if (filePath.includes("apps/titan-console/dist/assets/largest_css")) {
+             return getLargestFileInDir("apps/titan-console/dist/assets", ".css");
+        }
         const stats = fs.statSync(filePath);
         return stats.size;
+    } catch (e) {
+        return -1;
+    }
+}
+
+function getLargestFileInDir(dir: string, ext: string): number {
+    try {
+        const files = fs.readdirSync(dir);
+        let maxSize = -1;
+        files.forEach(file => {
+            if (file.endsWith(ext)) {
+                const size = fs.statSync(path.join(dir, file)).size;
+                if (size > maxSize) maxSize = size;
+            }
+        });
+        return maxSize;
     } catch (e) {
         return -1;
     }

@@ -97,6 +97,21 @@ export class AllocationRepository extends BaseRepository<AllocationRow> {
   }
 
   /**
+   * Find the nearest allocation record before or at a given timestamp
+   */
+  async findNearest(timestamp: number): Promise<AllocationRecord | null> {
+    const row = await this.db.queryOne<AllocationRow>(
+      `SELECT * FROM ${this.tableName} 
+       WHERE timestamp <= $1 
+       ORDER BY timestamp DESC 
+       LIMIT 1`,
+      [timestamp],
+    );
+
+    return row ? this.mapRowToRecord(row) : null;
+  }
+
+  /**
    * Map database row to AllocationRecord
    */
   private mapRowToRecord(row: AllocationRow): AllocationRecord {

@@ -7,6 +7,14 @@ npx knip --no-progress --no-exit-code --reporter json > knip_report.json
 
 # Print human readable summary to stdout
 echo "Generating summary..."
-npx knip --no-progress --no-exit-code
+# Print human readable summary to stdout
+echo "Generating summary..."
+KNIP_MAX=${KNIP_MAX_ISSUES:-0}
+if npx knip --no-progress --max-issues "$KNIP_MAX"; then
+    echo "✅ knip passed (max-issues=$KNIP_MAX)."
+else
+    echo "❌ knip failed (issues > $KNIP_MAX)."
+    exit 1
+fi
 
 echo "✅ Dead code scan complete. Report saved to knip_report.json"

@@ -270,22 +270,22 @@ services:
       - titan-network
     restart: unless-stopped
 
-  titan-memory:
-    profiles: ['optional']
-    build:
-      context: ./services/titan-memory
-      dockerfile: Dockerfile
-    container_name: titan-memory
-    ports:
-      - '8090:8090'
-    environment:
-      - TITAN_ENV=production
-      - TITAN_MEMORY_SECRET=change_me_in_prod
-    volumes:
-      - memory_data:/app/data
-    networks:
-      - titan-network
-    restart: unless-stopped
+#   titan-memory:
+#     profiles: ['optional']
+#     build:
+#       context: ./services/titan-memory
+#       dockerfile: Dockerfile
+#     container_name: titan-memory
+#     ports:
+#       - '8090:8090'
+#     environment:
+#       - TITAN_ENV=production
+#       - TITAN_MEMORY_SECRET=change_me_in_prod
+#     volumes:
+#       - memory_data:/app/data
+#     networks:
+#       - titan-network
+#     restart: unless-stopped
 
 volumes:
   postgres_data:

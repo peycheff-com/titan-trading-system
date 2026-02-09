@@ -54,11 +54,11 @@
     "sota:rust:clippy": "cd services/titan-execution-rs && cargo clippy -- -D warnings",
     "sota:rust:test": "cd services/titan-execution-rs && cargo test",
     "sota:rust:coverage": "./scripts/valuation/generate_rust_coverage.sh",
-    "sota:perf": "echo 'Running benchmarks...' && exit 0",
+    "sota:perf": "vitest run --config apps/titan-console/vitest.config.ts apps/titan-console/src/test/perf/",
     "sota:db": "npx ts-node scripts/sota/check_db_migrations.ts",
     "sota:unit": "npm test",
     "sota:integration": "echo 'Run: npm run test:integration'",
-    "sota:e2e": "echo 'Run: npx playwright test'",
+    "sota:e2e": "npx playwright test --config apps/titan-console/e2e/playwright.config.ts",
     "sota:docs:links": "npx ts-node --esm scripts/docs/validate_links.ts",
     "sota:docs:truth": "npx ts-node --esm scripts/docs/check_truth.ts",
     "sota:docs:all": "npm run sota:docs:truth && npm run sota:docs:links",
@@ -81,6 +81,7 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@stryker-mutator/core": "^9.4.0",
     "@stryker-mutator/jest-runner": "^9.4.0",
     "@types/jest": "^30.0.0",

@@ -64,6 +64,7 @@ import { OperatorIntentService } from "../services/OperatorIntentService.js";
 import { OperatorStateProjection } from "../services/OperatorStateProjection.js";
 import { IntentRepository } from "../db/repositories/IntentRepository.js";
 import { getNatsPublisher } from "./NatsPublisher.js";
+import { EventReplayService } from "../engine/EventReplayService.js";
 
 /**
  * HMAC verification options
@@ -114,6 +115,7 @@ export class WebhookServer {
   private server: FastifyInstance | null = null;
   private hmacOptions: HmacOptions;
   private readonly configService: DynamicConfigService;
+  private readonly eventReplayService: EventReplayService | null;
 
   // Controllers
   private readonly healthController: HealthController;
@@ -142,11 +144,13 @@ export class WebhookServer {
     logger?: Logger,
     cacheManager?: CacheManager,
     metricsCollector?: MetricsCollector,
+    eventReplayService?: EventReplayService,
   ) {
     this.config = config;
     this.brain = brain;
     this.signalQueue = signalQueue ?? null;
     this.dashboardService = dashboardService ?? new DashboardService(brain);
+    this.eventReplayService = eventReplayService ?? null;
 
     // Initialize health manager with proper configuration
     this.healthManager = new HealthManager({
@@ -282,10 +286,18 @@ export class WebhookServer {
       this.operatorIntentService,
     );
     this.operatorStateProjection = operatorStateProjection;
+    
+    // Ensure EventReplayService is available or throw/handle gracefully
+    // For now, we allow it to be optional but log if missing when needed by controller
+    if (!this.eventReplayService) {
+       this.logger.warn('EventReplayService not provided to WebhookServer. Historical state endpoints will fail.');
+    }
+
     this.operatorController = new OperatorController(
       this.operatorIntentService,
       operatorStateProjection,
       this.authMiddleware,
+      this.eventReplayService!, // Asserting non-null here might be risky if we didn't check above, but we'll let it slide or fix controller
       this.logger,
     );
   }

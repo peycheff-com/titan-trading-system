@@ -22,11 +22,11 @@ class MockDatabaseManager extends DatabaseManager {
         return null;
     }
 
-    async query(
+    async query<T>(
         _text: string,
         _params: unknown[],
-    ): Promise<Record<string, unknown>> {
-        return {};
+    ): Promise<{ rows: T[]; rowCount: number; command: string; oid: number; fields: any[] }> {
+        return { rows: [], rowCount: 0, command: "", oid: 0, fields: [] };
     }
 }
 
@@ -85,19 +85,20 @@ async function runTest() {
     };
 
     // Test 4: Delegation Success
-    const result4 = await mockBrain.verifyOperatorCredentials(
+    const result4 = await mockBrain.verifyOperatorCredentials.call(
+        mockBrain,
         "admin",
         "password",
     );
-    if (result4) {
+    if (result4.valid) {
         console.log("✅ Test 4 Passed: Delegation working (Success case)");
     } else {
         console.error("❌ Test 4 Failed: Delegation failed (Success case)");
     }
 
     // Test 5: Delegation Failure
-    const result5 = await mockBrain.verifyOperatorCredentials("admin", "wrong");
-    if (!result5) {
+    const result5 = await mockBrain.verifyOperatorCredentials.call(mockBrain, "admin", "wrong");
+    if (!result5.valid) {
         console.log("✅ Test 5 Passed: Delegation working (Failure case)");
     } else {
         console.error("❌ Test 5 Failed: Delegation failed (Failure case)");

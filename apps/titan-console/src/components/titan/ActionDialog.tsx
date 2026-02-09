@@ -47,6 +47,13 @@ export const ActionDialog: React.FC<ActionDialogProps> = ({
       <div
         className="opacity-50 cursor-not-allowed relative group"
         onClick={() => toast.error('Console must be ARMED to perform this action.')}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            toast.error('Console must be ARMED to perform this action.');
+          }
+        }}
       >
         {trigger}
         <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-[1px] rounded transition-opacity opacity-0 group-hover:opacity-100">

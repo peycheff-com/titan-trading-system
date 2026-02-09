@@ -19,7 +19,11 @@ import {
 } from '@/hooks/useOperatorIntents';
 import { ActionCard } from './ActionCard';
 import { IntentTimeline } from './IntentTimeline';
-import { Send, Bot, User, AlertCircle, Wifi, WifiOff } from 'lucide-react';
+import { A2UIRenderer } from './A2UIRenderer';
+import { MultimodalInput } from './MultimodalInput';
+import { PlaybookAuthorMode } from './PlaybookAuthorMode';
+import type { A2UISpec } from '@/lib/a2ui/schema';
+import { Bot, User, AlertCircle, Wifi, WifiOff, Brain } from 'lucide-react';
 import { toast } from 'sonner';
 import { useInspector } from '@/context/InspectorContext';
 
@@ -33,6 +37,8 @@ interface ChatMessage {
   content: string;
   timestamp: Date;
   intent?: CompiledIntent;
+  /** A2UI spec payload — when present, renders declarative components */
+  uiSpec?: A2UISpec;
   /** Backend intent ID (set after submission) */
   intentId?: string;
   /** Status from SSE stream — never set locally except on submission ack */
@@ -53,11 +59,11 @@ export function ChatTranscript() {
       timestamp: new Date(),
     },
   ]);
-  const [input, setInput] = useState('');
+  const [isAuthorMode, setIsAuthorMode] = useState(false);
+
   const stateHashRef = useRef<string | undefined>();
   const [stateHash, setStateHash] = useState<string | undefined>();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
   const { submitIntent, getOperatorState } = useOperatorIntents();
   const { inspect } = useInspector();
 
@@ -110,10 +116,7 @@ export function ChatTranscript() {
     }
   }, [messages]);
 
-  // Focus input on mount
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+
 
   const addMessage = useCallback((msg: Omit<ChatMessage, 'id' | 'timestamp'>) => {
     const newMsg = { ...msg, id: crypto.randomUUID(), timestamp: new Date() };
@@ -121,42 +124,81 @@ export function ChatTranscript() {
     return newMsg.id;
   }, []);
 
-  const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault();
-      const text = input.trim();
+  const handleMultimodalSend = useCallback(
+    async (text: string, attachments: any[]) => {
+      // 1. Display Operator Message with attachments
+      const displayContent = [
+        text,
+        ...attachments.map(a => `[Attached ${a.type}: ${a.file.name}]`)
+      ].filter(Boolean).join('\n');
+      
+      addMessage({ role: 'operator', content: displayContent });
+
+      // 2. Mock Analysis for attached files (SOTA: Multimodal Service)
+      if (attachments.length > 0) {
+        // Mocking the backend response for a screenshot analysis
+        await new Promise(r => setTimeout(r, 1000));
+        
+        const isScan = attachments.some(a => a.file.name.includes('screenshot') || a.file.name.includes('log'));
+        if (isScan) {
+          addMessage({ 
+            role: 'system', 
+            content: "🔍 Analyzed attachment. Detected high latency on **Phase 2**." 
+          });
+          
+          // Propose an intent based on "analysis"
+          const intent = {
+            id: crypto.randomUUID(),
+            type: 'THROTTLE_PHASE',
+            params: { phase: 'phase2', pct: 50 },
+            description: 'Throttle Phase 2 to 50% due to latency spike detected in logs.',
+            dangerLevel: 'moderate',
+            version: 1,
+            title: 'Throttle Phase 2'
+          };
+           
+          // @ts-ignore
+          addMessage({
+            role: 'system',
+            content: `Proposed Action: **Throttle Phase 2**`,
+            // @ts-ignore
+            intent,
+          });
+          return;
+        }
+      }
+
+      // 3. Normal Text Intent Compilation
       if (!text) return;
-      setInput('');
 
-      // Add operator message
-      addMessage({ role: 'operator', content: text });
-
-      // Try to compile as intent
+      // Special Commands
+      if (text.trim() === '/author') {
+         setIsAuthorMode(true);
+         return;
+      }
+      
       const result = compileNLToIntent(text, 'operator');
 
       if (result.matched && result.intent) {
-        // Add system message with ActionCard
         addMessage({
           role: 'system',
           content: `Compiled intent: **${result.intent.type}**`,
           intent: result.intent,
         });
       } else if (result.matched && result.error) {
-        // RBAC rejection
         addMessage({
           role: 'system',
           content: result.error,
           error: result.error,
         });
       } else {
-        // Unrecognized command
         addMessage({
           role: 'system',
           content: `Unknown command: "${text}". Try "arm", "disarm", "throttle scavenger 50%", "flatten all", or use ⌘K.`,
         });
       }
     },
-    [input, addMessage],
+    [addMessage],
   );
 
   const handleApprove = useCallback(
@@ -211,7 +253,13 @@ export function ChatTranscript() {
   );
 
   return (
-    <div className="flex h-full flex-col" role="main" aria-label="Operator Chat">
+    <div className="flex h-full flex-col relative" role="main" aria-label="Operator Chat">
+      {isAuthorMode ? (
+        <div className="absolute inset-0 z-50 bg-background">
+          <PlaybookAuthorMode onExit={() => setIsAuthorMode(false)} />
+        </div>
+      ) : (
+        <>
       {/* SSE connection indicator */}
       <div className="flex items-center justify-end px-4 py-1 border-b border-border/50" role="status" aria-live="polite">
         <div className="flex items-center gap-1.5 text-xxs">
@@ -227,6 +275,15 @@ export function ChatTranscript() {
             </>
           )}
         </div>
+        <div className="mx-auto" /> {/* Spacer */}
+        <button
+          onClick={() => inspect({ type: 'memory', id: 'global-memory', title: 'Context Memory', data: {} })}
+          className="flex items-center gap-1.5 px-2 py-0.5 rounded hover:bg-muted/50 text-xxs text-muted-foreground hover:text-foreground transition-colors"
+          title="Inspect Context Memory"
+        >
+          <Brain className="h-3 w-3" />
+          <span>Memory</span>
+        </button>
       </div>
 
       {/* Message area */}
@@ -275,8 +332,15 @@ export function ChatTranscript() {
                   <p className="text-sm text-foreground/80">{msg.content}</p>
                 )}
 
-                {/* ActionCard for compiled intents (not yet decided) */}
-                {msg.intent && !msg.intentStatus && (
+                {/* A2UI Spec — declarative component rendering */}
+                {msg.uiSpec && (
+                  <div className="mt-2">
+                    <A2UIRenderer spec={msg.uiSpec} />
+                  </div>
+                )}
+
+                {/* ActionCard for compiled intents (not yet decided) — legacy fallback */}
+                {msg.intent && !msg.intentStatus && !msg.uiSpec && (
                   <ActionCard
                     intent={msg.intent}
                     onApprove={handleApprove}
@@ -315,38 +379,14 @@ export function ChatTranscript() {
         </div>
       </div>
 
-      {/* Input bar */}
+      {/* Multimodal Input */}
       <div className="border-t border-border bg-card p-3">
-        <form onSubmit={handleSubmit} className="mx-auto flex max-w-2xl items-center gap-2" role="search">
-          <label htmlFor="operator-input" className="sr-only">Enter command</label>
-          <input
-            id="operator-input"
-            ref={inputRef}
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Type a command… (arm, disarm, throttle scavenger 50%, flatten all)"
-            autoComplete="off"
-            className={cn(
-              'flex-1 rounded-lg border border-border bg-background px-4 py-2.5 text-sm text-foreground',
-              'placeholder:text-muted-foreground/50',
-              'focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30',
-            )}
-          />
-          <button
-            type="submit"
-            disabled={!input.trim()}
-            aria-label="Send command"
-            className={cn(
-              'flex h-10 w-10 items-center justify-center rounded-lg transition-colors',
-              'bg-primary/10 text-primary hover:bg-primary/20',
-              'disabled:cursor-not-allowed disabled:opacity-30',
-            )}
-          >
-            <Send className="h-4 w-4" aria-hidden="true" />
-          </button>
-        </form>
+        <div className="mx-auto max-w-2xl">
+           <MultimodalInput onSend={handleMultimodalSend} />
+        </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

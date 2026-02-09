@@ -83,11 +83,25 @@ export class PositionRepository extends BaseRepository<PositionSnapshotRow> {
   }
 
   /**
+   * Find the nearest snapshot before or at a given timestamp
+   */
+  async findNearestSnapshot(timestamp: number): Promise<PositionSnapshot | null> {
+    const row = await this.db.queryOne<PositionSnapshotRow>(
+      `SELECT * FROM ${this.tableName} 
+       WHERE timestamp <= $1 
+       ORDER BY timestamp DESC 
+       LIMIT 1`,
+      [timestamp],
+    );
+
+    return row ? this.mapRowToSnapshot(row) : null;
+  }
+
+  /**
    * Map database row to PositionSnapshot
    */
   private mapRowToSnapshot(row: PositionSnapshotRow): PositionSnapshot {
     // Handle potential string vs object from DB driver
-    // eslint-disable-next-line functional/no-let
     let positions: Position[] = [];
     if (typeof row.positions === 'string') {
       try {

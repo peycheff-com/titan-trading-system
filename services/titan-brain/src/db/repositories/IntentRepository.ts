@@ -30,6 +30,9 @@ interface IntentRow {
   submitted_at: string;
   resolved_at: string | null;
   receipt: IntentReceipt | null;
+  approver_id: string | null;
+  approved_at: string | null;
+  rejection_reason: string | null;
   created_at: string;
 }
 
@@ -57,8 +60,8 @@ export class IntentRepository {
         `INSERT INTO operator_intents (
           id, idempotency_key, version, type, params, operator_id,
           reason, signature, status, ttl_seconds, state_hash,
-          submitted_at, resolved_at, receipt
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+          submitted_at, resolved_at, receipt, approver_id, approved_at, rejection_reason
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
         ON CONFLICT (id) DO NOTHING`,
         [
           record.id,
@@ -75,6 +78,9 @@ export class IntentRepository {
           record.submitted_at,
           record.resolved_at ?? null,
           record.receipt ? JSON.stringify(record.receipt) : null,
+          record.approver_id ?? null,
+          record.approved_at ?? null,
+          record.rejection_reason ?? null,
         ],
       );
     } catch (err) {
@@ -212,6 +218,9 @@ export class IntentRepository {
       submitted_at: row.submitted_at,
       resolved_at: row.resolved_at ?? undefined,
       receipt: typeof row.receipt === 'string' ? JSON.parse(row.receipt) : (row.receipt ?? undefined),
+      approver_id: row.approver_id ?? undefined,
+      approved_at: row.approved_at ?? undefined,
+      rejection_reason: row.rejection_reason ?? undefined,
     };
   }
 }

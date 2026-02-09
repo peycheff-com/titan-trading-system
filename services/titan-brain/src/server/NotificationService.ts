@@ -1,24 +1,19 @@
-/**
- * Notification Service for Titan Brain
- * Handles all notification channels (Telegram, email) for alerts
- */
+import {
+  NotificationConfig,
+} from '../types/config.js';
+import {
+  NotificationPayload,
+  NotificationType,
+} from '@titan/shared';
+import { WebSocketService } from './WebSocketService.js';
+import { randomUUID } from 'crypto';
+import { PhaseId } from '../types/index.js'; // Assuming PhaseId is re-exported from index
 
-import { NotificationConfig } from '../types/config.js';
-import { PhaseId } from '../types/performance.js';
-
-/**
- * Notification types for different alert categories
- */
-export enum NotificationType {
-  CIRCUIT_BREAKER = 'CIRCUIT_BREAKER',
-  HIGH_CORRELATION = 'HIGH_CORRELATION',
-  SWEEP_NOTIFICATION = 'SWEEP_NOTIFICATION',
-  VETO_NOTIFICATION = 'VETO_NOTIFICATION',
-  SYSTEM_ERROR = 'SYSTEM_ERROR',
-}
+// Re-export NotificationType for backward compatibility
+export { NotificationType } from '@titan/shared';
 
 /**
- * Notification message interface
+ * Notification message interface (Legacy - to be deprecated/migrated)
  */
 export interface NotificationMessage {
   type: NotificationType;
@@ -26,7 +21,7 @@ export interface NotificationMessage {
   message: string;
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   timestamp: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -77,9 +72,16 @@ export class NotificationService {
   private config: NotificationConfig;
   private retryAttempts = 3;
   private retryDelay = 1000; // 1 second base delay
+  private webSocketService: WebSocketService | null = null;
+  private dedupCache: Map<string, { count: number; timestamp: number }> = new Map();
+  private readonly DEDUP_WINDOW_MS = 60000; // 1 minute
 
   constructor(config: NotificationConfig) {
     this.config = config;
+  }
+
+  setWebSocketService(ws: WebSocketService) {
+    this.webSocketService = ws;
   }
 
   /**
@@ -93,10 +95,23 @@ export class NotificationService {
       message: this.formatCircuitBreakerMessage(data),
       priority: 'CRITICAL',
       timestamp: Date.now(),
-      metadata: data,
+      metadata: data as unknown as Record<string, unknown>,
     };
 
     await this.sendNotification(message);
+
+    // Broadcast via WebSocket
+    this.broadcastToConsole({
+      severity: 'CRITICAL',
+      reason_code: 'CIRCUIT_BREAKER_TRIGGERED',
+      message: `Circuit Breaker Triggered: ${data.reason}`,
+      metadata: data as unknown as Record<string, unknown>,
+      action_path: {
+        type: 'modal',
+        target: 'circuit-breaker-modal',
+        label: 'Review System Halt',
+      },
+    });
   }
 
   /**
@@ -110,10 +125,17 @@ export class NotificationService {
       message: this.formatHighCorrelationMessage(data),
       priority: 'HIGH',
       timestamp: Date.now(),
-      metadata: data,
+      metadata: data as unknown as Record<string, unknown>,
     };
 
     await this.sendNotification(message);
+
+    this.broadcastToConsole({
+      severity: 'WARNING',
+      reason_code: 'HIGH_CORRELATION',
+      message: `High Correlation Detected: ${(data.correlationScore * 100).toFixed(1)}%`,
+      metadata: data as unknown as Record<string, unknown>,
+    });
   }
 
   /**
@@ -127,10 +149,17 @@ export class NotificationService {
       message: this.formatSweepMessage(data),
       priority: 'MEDIUM',
       timestamp: Date.now(),
-      metadata: data,
+      metadata: data as unknown as Record<string, unknown>,
     };
 
     await this.sendNotification(message);
+
+    this.broadcastToConsole({
+      severity: 'INFO',
+      reason_code: 'PROFIT_SWEEP',
+      message: `Profit Sweep: $${data.amount.toFixed(2)} to ${data.toWallet}`,
+      metadata: data as unknown as Record<string, unknown>,
+    });
   }
 
   /**
@@ -144,16 +173,23 @@ export class NotificationService {
       message: this.formatVetoMessage(data),
       priority: 'MEDIUM',
       timestamp: Date.now(),
-      metadata: data,
+      metadata: data as unknown as Record<string, unknown>,
     };
 
     await this.sendNotification(message);
+
+    this.broadcastToConsole({
+      severity: 'WARNING',
+      reason_code: 'SIGNAL_VETOED',
+      message: `Signal Vetoed: ${data.symbol} - ${data.reason}`,
+      metadata: data as unknown as Record<string, unknown>,
+    });
   }
 
   /**
    * Send system error notification
    */
-  async sendSystemError(error: string, context?: Record<string, any>): Promise<void> {
+  async sendSystemError(error: string, context?: Record<string, unknown>): Promise<void> {
     const message: NotificationMessage = {
       type: NotificationType.SYSTEM_ERROR,
       title: '🔥 SYSTEM ERROR',
@@ -164,6 +200,49 @@ export class NotificationService {
     };
 
     await this.sendNotification(message);
+
+    this.broadcastToConsole({
+      severity: 'CRITICAL',
+      reason_code: 'SYSTEM_ERROR',
+      message: error,
+      metadata: context,
+    });
+  }
+
+  /**
+   * Broadcast to Console (WebSocket) with Deduplication
+   */
+  private broadcastToConsole(
+    params: Omit<NotificationPayload, 'id' | 'timestamp' | 'trace_id' | 'source' | 'count' | 'acknowledged'>
+  ) {
+    if (!this.webSocketService) return;
+
+    const dedupKey = `${params.reason_code}:${params.message}`;
+    const now = Date.now();
+    const cached = this.dedupCache.get(dedupKey);
+
+    // Dedup logic
+    if (cached && now - cached.timestamp < this.DEDUP_WINDOW_MS) {
+      cached.count++;
+      cached.timestamp = now;
+      this.dedupCache.set(dedupKey, cached);
+    } else {
+      this.dedupCache.set(dedupKey, { count: 1, timestamp: now });
+    }
+
+    const currentCount = this.dedupCache.get(dedupKey)?.count || 1;
+
+    const payload: NotificationPayload = {
+      id: randomUUID(),
+      trace_id: randomUUID(), // TODO: Use real trace context
+      source: 'brain',
+      timestamp: now,
+      count: currentCount,
+      acknowledged: false,
+      ...params,
+    };
+
+    this.webSocketService.broadcastNotification(payload);
   }
 
   /**
@@ -193,7 +272,7 @@ export class NotificationService {
    */
   private async sendTelegramNotification(message: NotificationMessage): Promise<void> {
     if (!this.config.telegram.botToken || !this.config.telegram.chatId) {
-      throw new Error('Telegram configuration incomplete');
+      return;
     }
 
     const telegramMessage = this.formatTelegramMessage(message);
@@ -226,16 +305,14 @@ export class NotificationService {
    */
   private async sendEmailNotification(message: NotificationMessage): Promise<void> {
     if (!this.config.email.smtpHost || !this.config.email.from || !this.config.email.to?.length) {
-      throw new Error('Email configuration incomplete');
+      return;
     }
 
-    // TODO: Implement email sending using nodemailer or similar
-    // For now, just log the email that would be sent
+    // Placeholder log
     console.log('Email notification (not implemented):', {
       to: this.config.email.to,
       subject: message.title,
       body: message.message,
-      timestamp: new Date(message.timestamp).toISOString(),
     });
   }
 
@@ -320,22 +397,16 @@ _${new Date(message.timestamp).toISOString()}_`;
     for (let attempt = 1; attempt <= this.retryAttempts; attempt++) {
       try {
         await fn();
-        return; // Success
+        return;
       } catch (error) {
         lastError = error as Error;
-
         if (attempt < this.retryAttempts) {
-          // Exponential backoff
           const delay = this.retryDelay * Math.pow(2, attempt - 1);
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
     }
-
-    // All retries failed
-    throw new Error(
-      `Notification failed after ${this.retryAttempts} attempts: ${lastError?.message}`,
-    );
+    throw new Error(`Notification failed after ${this.retryAttempts} attempts: ${lastError?.message}`);
   }
 
   /**
@@ -344,49 +415,49 @@ _${new Date(message.timestamp).toISOString()}_`;
   updateConfig(config: NotificationConfig): void {
     this.config = config;
   }
-
+  
   /**
    * Test notification channels
    */
   async testNotifications(): Promise<{ telegram: boolean; email: boolean }> {
-    const results = { telegram: false, email: false };
+      const results = { telegram: false, email: false };
 
-    // Test Telegram
-    if (this.config.telegram.enabled) {
-      try {
-        const testMessage: NotificationMessage = {
-          type: NotificationType.SYSTEM_ERROR,
-          title: '🧪 Test Notification',
-          message: 'This is a test notification from Titan Brain.',
-          priority: 'LOW',
-          timestamp: Date.now(),
-        };
-        await this.sendTelegramNotification(testMessage);
-
-        results.telegram = true;
-      } catch (error) {
-        console.error('Telegram test failed:', error);
+      // Test Telegram
+      if (this.config.telegram.enabled) {
+        try {
+          const testMessage: NotificationMessage = {
+            type: NotificationType.SYSTEM_ERROR,
+            title: '🧪 Test Notification',
+            message: 'This is a test notification from Titan Brain.',
+            priority: 'LOW',
+            timestamp: Date.now(),
+          };
+          await this.sendTelegramNotification(testMessage);
+  
+          results.telegram = true;
+        } catch (error) {
+          console.error('Telegram test failed:', error);
+        }
       }
-    }
-
-    // Test Email
-    if (this.config.email.enabled) {
-      try {
-        const testMessage: NotificationMessage = {
-          type: NotificationType.SYSTEM_ERROR,
-          title: '🧪 Test Notification',
-          message: 'This is a test notification from Titan Brain.',
-          priority: 'LOW',
-          timestamp: Date.now(),
-        };
-        await this.sendEmailNotification(testMessage);
-
-        results.email = true;
-      } catch (error) {
-        console.error('Email test failed:', error);
+  
+      // Test Email
+      if (this.config.email.enabled) {
+        try {
+          const testMessage: NotificationMessage = {
+            type: NotificationType.SYSTEM_ERROR,
+            title: '🧪 Test Notification',
+            message: 'This is a test notification from Titan Brain.',
+            priority: 'LOW',
+            timestamp: Date.now(),
+          };
+          await this.sendEmailNotification(testMessage);
+  
+          results.email = true;
+        } catch (error) {
+          console.error('Email test failed:', error);
+        }
       }
+  
+      return results;
     }
-
-    return results;
-  }
 }

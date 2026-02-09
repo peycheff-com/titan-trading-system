@@ -11,6 +11,8 @@ interface WebSocketOptions<T = unknown> {
   maxRetries?: number;
 }
 
+import { useThrottledState } from './useThrottledState';
+
 export function useWebSocket<T = unknown>({
   url = getWsBaseUrl(),
   onMessage,
@@ -19,7 +21,7 @@ export function useWebSocket<T = unknown>({
 }: WebSocketOptions<T> = {}) {
   const [status, setStatus] = useState<ConnectionStatus>('DISCONNECTED');
   const [error, setError] = useState<Error | null>(null);
-  const [lastMessage, setLastMessage] = useState<T | null>(null);
+  const [lastMessage, setLastMessage] = useThrottledState<T | null>(null, 16);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectCountRef = useRef(0);
   const reconnectTimerRef = useRef<NodeJS.Timeout>();

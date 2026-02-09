@@ -1,5 +1,11 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+/**
+ * CommandPalette — ⌘K Global Command Launcher
+ *
+ * Navigation items now switch workspace + tab via WorkspaceContext.
+ * Also includes workspace switching commands and action commands.
+ */
+
+import { useEffect, useState } from 'react';
 import {
   CommandDialog,
   CommandEmpty,
@@ -11,9 +17,30 @@ import {
 } from '@/components/ui/command';
 import { Search, Shield, ShieldOff, Gauge, RefreshCcw, XCircle, AlertTriangle } from 'lucide-react';
 import { NAV_GROUPS } from '@/config/navigation';
-import { compileNLToIntent } from '@/lib/intentCompiler';
+import { WORKSPACES } from '@/config/workspaces';
+import { useWorkspace } from '@/context/WorkspaceContext';
 import { useSafety } from '@/context/SafetyContext';
 import { toast } from 'sonner';
+
+// Reverse path → (workspaceId, tabId) map
+const PATH_MAP: Record<string, { workspaceId: string; tabId: string }> = {};
+for (const ws of WORKSPACES) {
+  for (const tabId of ws.tabs) {
+    // Map using the nav item paths
+    const navPaths: Record<string, string> = {
+      chatops: '/', overview: '/overview', live: '/live', trade: '/trade',
+      risk: '/risk', scavenger: '/phases/scavenger', hunter: '/phases/hunter',
+      sentinel: '/phases/sentinel', brain: '/brain', 'ai-quant': '/ai-quant',
+      execution: '/execution', 'decision-log': '/decision-log', journal: '/journal',
+      history: '/history', alerts: '/alerts', infra: '/infra', powerlaw: '/powerlaw',
+      config: '/config', venues: '/venues', credentials: '/credentials', settings: '/settings',
+    };
+    const path = navPaths[tabId];
+    if (path) {
+      PATH_MAP[path] = { workspaceId: ws.id, tabId };
+    }
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Action commands shown in ⌘K alongside navigation
@@ -29,8 +56,8 @@ interface ActionCommand {
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
-  const navigate = useNavigate();
-  const { armConsole, disarmConsole, isArmed, toggleArmed } = useSafety();
+  const { switchWorkspace, switchTab } = useWorkspace();
+  const { armConsole, disarmConsole, isArmed } = useSafety();
 
   // Build action commands
   const actionCommands: ActionCommand[] = [
@@ -60,7 +87,8 @@ export function CommandPalette() {
       icon: Gauge,
       danger: 'moderate',
       execute: () => {
-        navigate('/');
+        switchWorkspace('command');
+        switchTab('chatops');
         toast.info('Use chat: "throttle scavenger 50%"');
       },
     },
@@ -71,7 +99,8 @@ export function CommandPalette() {
       danger: 'safe',
       execute: () => {
         toast.info('Reconciliation command sent to chat');
-        navigate('/');
+        switchWorkspace('command');
+        switchTab('chatops');
       },
     },
     {
@@ -84,7 +113,8 @@ export function CommandPalette() {
           toast.error('Console must be Armed to execute FLATTEN. Arm first.');
           return;
         }
-        navigate('/');
+        switchWorkspace('command');
+        switchTab('chatops');
         toast.warning('Use chat to confirm: "flatten all"');
       },
     },
@@ -98,7 +128,8 @@ export function CommandPalette() {
           toast.error('Console must be Armed for risk overrides.');
           return;
         }
-        navigate('/');
+        switchWorkspace('command');
+        switchTab('chatops');
         toast.warning('Use chat: "override risk <key> <value>"');
       },
     },
@@ -117,7 +148,16 @@ export function CommandPalette() {
   }, []);
 
   const handleSelect = (path: string) => {
-    navigate(path);
+    const target = PATH_MAP[path];
+    if (target) {
+      switchWorkspace(target.workspaceId);
+      switchTab(target.tabId);
+    }
+    setOpen(false);
+  };
+
+  const handleWorkspaceSelect = (wsId: string) => {
+    switchWorkspace(wsId);
     setOpen(false);
   };
 
@@ -140,7 +180,7 @@ export function CommandPalette() {
       </button>
 
       <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Search pages, commands, actions..." />
+        <CommandInput placeholder="Search pages, commands, workspaces..." />
         <CommandList>
           <CommandEmpty>No results found.</CommandEmpty>
 
@@ -163,6 +203,29 @@ export function CommandPalette() {
                 <span>{cmd.name}</span>
               </CommandItem>
             ))}
+          </CommandGroup>
+
+          <CommandSeparator />
+
+          {/* Workspace switching */}
+          <CommandGroup heading="Workspaces">
+            {WORKSPACES.map((ws) => {
+              const WIcon = ws.icon;
+              return (
+                <CommandItem
+                  key={ws.id}
+                  value={`workspace ${ws.name}`}
+                  onSelect={() => handleWorkspaceSelect(ws.id)}
+                  className="flex items-center gap-2"
+                >
+                  <WIcon className="h-4 w-4 text-muted-foreground" />
+                  <span>{ws.name}</span>
+                  <kbd className="ml-auto rounded border border-border bg-muted px-1 font-mono text-xxs text-muted-foreground">
+                    ⌘{ws.shortcutKey}
+                  </kbd>
+                </CommandItem>
+              );
+            })}
           </CommandGroup>
 
           <CommandSeparator />

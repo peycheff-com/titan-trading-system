@@ -11,6 +11,8 @@ import { useCallback, useEffect, useState } from "react";
 import { getTitanBrainUrl } from "@/lib/api-config";
 import { useAuth } from "@/context/AuthContext";
 
+import { useThrottledState } from "./useThrottledState";
+
 // Types from ConfigRegistry
 export type ConfigSafety =
     | "immutable"
@@ -125,8 +127,8 @@ interface ReceiptsResponse {
 // Hook for fetching config catalog
 export function useConfigCatalog() {
     const { token } = useAuth();
-    const [catalog, setCatalog] = useState<ConfigItem[]>([]);
-    const [grouped, setGrouped] = useState<Record<string, ConfigItem[]>>({});
+    const [catalog, setCatalog] = useThrottledState<ConfigItem[]>([], 50);
+    const [grouped, setGrouped] = useThrottledState<Record<string, ConfigItem[]>>({}, 50);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -160,7 +162,7 @@ export function useConfigCatalog() {
 // Hook for fetching effective configurations
 export function useEffectiveConfig() {
     const { token } = useAuth();
-    const [configs, setConfigs] = useState<EffectiveConfig[]>([]);
+    const [configs, setConfigs] = useThrottledState<EffectiveConfig[]>([], 50);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -193,7 +195,7 @@ export function useEffectiveConfig() {
 // Hook for managing overrides
 export function useConfigOverrides() {
     const { token } = useAuth();
-    const [overrides, setOverrides] = useState<ConfigOverride[]>([]);
+    const [overrides, setOverrides] = useThrottledState<ConfigOverride[]>([], 50);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -294,7 +296,7 @@ export function useConfigOverrides() {
 // Hook for fetching receipts
 export function useConfigReceipts(limit = 50) {
     const { token } = useAuth();
-    const [receipts, setReceipts] = useState<ConfigReceipt[]>([]);
+    const [receipts, setReceipts] = useThrottledState<ConfigReceipt[]>([], 50);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 

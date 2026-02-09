@@ -38,7 +38,7 @@ export default function Overview() {
       regime: string;
       lastOptimizationProposal?: {
         timestamp: number;
-        proposal: any;
+        proposal: unknown;
       };
     };
     truthConfidence?: number;
@@ -53,18 +53,18 @@ export default function Overview() {
     { name: 'Execution', healthy: true }, // Optimistic default until update
   ]);
 
-  const handleWebSocketMessage = useCallback((msg: any) => {
+  const handleWebSocketMessage = useCallback((msg: { type: string; [key: string]: unknown } | null) => {
     if (msg?.type === 'STATE_UPDATE' || msg?.type === 'CONNECTED') {
-      const stateData = msg.state || msg;
-      setData((prev: any) => ({ ...prev, ...stateData }));
+      const stateData = (msg.state as StateData) || msg;
+      setData((prev) => ({ ...prev, ...stateData }));
     } else if (msg?.type === 'SERVICE_STATUS') {
-      setServices(msg.services);
+      setServices(msg.services as { name: string; healthy: boolean }[]);
     }
   }, []);
 
   useEffect(() => {
     if (lastMessage) {
-      handleWebSocketMessage(lastMessage);
+      handleWebSocketMessage(lastMessage as { type: string; [key: string]: unknown });
     }
   }, [lastMessage, handleWebSocketMessage]);
 
@@ -73,12 +73,12 @@ export default function Overview() {
     daily_pnl: data?.daily_pnl || 0,
     daily_pnl_pct: data?.daily_pnl_pct || 0,
     drawdown: data?.drawdown || 0,
-    active_positions: data?.positions?.length || 0,
+    active_positions: (data?.positions as unknown[])?.length || 0,
     phase: 'Hunter',
   };
 
-  const criticalAlerts: any[] = [];
-  const warningAlerts: any[] = [];
+  const criticalAlerts: unknown[] = [];
+  const warningAlerts: unknown[] = [];
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -106,13 +106,13 @@ export default function Overview() {
       {/* PowerLaw Metrics & KPI Grid */}
       <div className="grid gap-4 md:grid-cols-12">
         {/* PowerLaw Widget - Prominent */}
-        <div className="md:col-span-4 lg:col-span-3">
+        <div className="md:col-span-4 lg:col-span-3 3xl:col-span-2">
           <PowerLawMetrics />
         </div>
 
-        <div className="md:col-span-8 lg:col-span-9 space-y-4">
+        <div className="md:col-span-8 lg:col-span-9 3xl:col-span-10 space-y-4">
              {/* KPIs */}
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 grid-cols-2 md:grid-cols-2 lg:grid-cols-4 3xl:grid-cols-6">
               <KpiTile label="Equity" value={formatCurrency(portfolioKPIs.equity || 0)} size="md" />
               <KpiTile
                 label="Daily PnL"
@@ -130,8 +130,8 @@ export default function Overview() {
               <KpiTile label="Phase" value={`Phase ${portfolioKPIs.phase || 1}`} />
             </div>
 
-            {/* PnL Chart */}
-            <div className="rounded-lg border border-border bg-card p-4">
+            {/* PnL Chart - Hidden on mobile, visible on tablet+ */}
+            <div className="hidden md:block rounded-lg border border-border bg-card p-4">
                 <h3 className="text-sm font-semibold text-foreground mb-4">Equity Curve</h3>
                  {/* Mock data for now, real data comes from historical endopint later */}
                 <PnLContextChart
@@ -143,11 +143,16 @@ export default function Overview() {
                     }))}
                 />
             </div>
+            {/* Mobile PnL Placeholder */}
+            <div className="md:hidden rounded-lg border border-border bg-card p-4 flex items-center justify-between">
+                <span className="text-sm font-medium text-muted-foreground">Equity Curve</span>
+                <span className="text-xs text-muted-foreground">View on Desktop</span>
+            </div>
         </div>
       </div>
 
       {/* Risk & Other Widgets */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+      <div className="grid gap-3 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 3xl:grid-cols-9">
         <KpiTile label="Positions" value={portfolioKPIs.active_positions || 0} />
         <div className="col-span-full xl:col-span-2">
           <RiskDashboard
