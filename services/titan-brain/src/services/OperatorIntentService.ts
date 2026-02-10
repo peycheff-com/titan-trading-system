@@ -66,6 +66,16 @@ export interface IntentPreviewResult {
   rbac_allowed: boolean;
 }
 
+export const PERMISSION_MAP: Record<OperatorIntentType, string> = {
+  'ARM': 'safety.arm',
+  'DISARM': 'safety.disarm',
+  'SET_MODE': 'control.set_mode',
+  'THROTTLE_PHASE': 'control.throttle',
+  'FLATTEN': 'risk.flatten',
+  'RUN_RECONCILE': 'control.reconcile',
+  'OVERRIDE_RISK': 'risk.override',
+};
+
 const MAX_INTENTS = 1000;
 const IDEMPOTENCY_TTL_MS = 60 * 60 * 1000; // 1 hour
 const IDEMPOTENCY_CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 min
@@ -277,18 +287,6 @@ export class OperatorIntentService extends EventEmitter {
     // RBAC check
     // We now use granular permissions, but for preview we map the intent to a required permission
     // For now, we still check against valid intent types for roles as a high-level filter
-    // RBAC Check
-    // Map each intent type to a specific Permission
-    const PERMISSION_MAP: Record<OperatorIntentType, string> = {
-      'ARM': 'safety.arm',
-      'DISARM': 'safety.disarm',
-      'SET_MODE': 'control.set_mode',
-      'THROTTLE_PHASE': 'control.throttle',
-      'FLATTEN': 'risk.flatten',
-      'RUN_RECONCILE': 'control.reconcile',
-      'OVERRIDE_RISK': 'risk.override',
-    };
-
     const requiredPermission = PERMISSION_MAP[payload.type];
     if (!requiredPermission) {
        // Fallback for unknown types - should not happen if types are typed
@@ -610,6 +608,7 @@ export class OperatorIntentService extends EventEmitter {
       submitted_at: data.submitted_at,
       resolved_at: status === 'ACCEPTED' ? undefined : new Date().toISOString(),
       state_hash: data.state_hash,
+      causation_id: data.causation_id,
       receipt,
     };
   }

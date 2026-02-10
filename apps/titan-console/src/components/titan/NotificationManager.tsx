@@ -9,8 +9,17 @@ interface WebSocketMessage {
 
 export const NotificationManager = () => {
   const { lastMessage } = useTitanWebSocket();
-  // Keep track of the last processed message ID or timestamp if available to avoid duplicates
-  // For now, we rely on the fact that lastMessage reference changes only on new messages
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    audioRef.current = new Audio('/sounds/alert.mp3');
+  }, []);
+
+  const playSound = () => {
+    if (audioRef.current) {
+      audioRef.current.play().catch((e) => console.warn('Audio play failed', e));
+    }
+  };
 
   useEffect(() => {
     if (!lastMessage) return;
@@ -21,26 +30,36 @@ export const NotificationManager = () => {
 
     switch (msg.type) {
       case 'RISK_ALERT':
+        playSound();
         toast.error('Risk Alert', {
           description: msg.payload?.message || 'Critical risk threshold breached.',
           duration: 5000,
+          action: {
+            label: 'View Risk',
+            onClick: () => window.location.href = '/risk', // Simple nav for now
+          }
         });
         break;
 
       case 'ORDER_FILLED':
         toast.success('Order Filled', {
           description: `${msg.payload?.side} ${msg.payload?.symbol} @ ${msg.payload?.price}`,
+          action: {
+            label: 'View',
+            onClick: () => window.location.href = '/orders',
+          }
         });
-        // Play sound if we were fancy
         break;
 
       case 'ORDER_REJECTED':
+        playSound();
         toast.warning('Order Rejected', {
           description: msg.payload?.reason || 'Order could not be processed.',
         });
         break;
 
       case 'SYSTEM_HALT':
+        playSound();
         toast.error('SYSTEM HALT', {
           description: 'Emergency Halt Triggered. Trading Suspended.',
           duration: Infinity, // Sticky
@@ -52,9 +71,14 @@ export const NotificationManager = () => {
         break;
 
       case 'CIRCUIT_BREAKER_TRIP':
+        playSound();
         toast.error('Circuit Breaker Tripped', {
           description: `System halted due to ${msg.payload?.reason || 'volatility'}.`,
           duration: 10000,
+          action: {
+            label: 'Reset',
+            onClick: () => window.location.href = '/risk',
+          },
         });
         break;
     }

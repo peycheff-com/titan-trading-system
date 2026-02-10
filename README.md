@@ -37,6 +37,7 @@ See `docs/operations/legal-and-compliance.md` for compliance posture, approvals,
 - **Sub-Millisecond Execution**: Rust-based engine (`titan-execution-rs`) for ultra-low latency order routing.
 - **Genetic Optimization**: `titan-ai-quant` utilizing Google Gemini 2.0 Flash for parameter evolution.
 - **Institutional-Grade Risk**: Real-time circuit breakers, drawdown protection, and "Truth Layer" verification.
+- **Identity & Forensics**: RBAC-enforced operations, Time Travel debugging, and immutable audit logs.
 - **Sovereign Infrastructure**: Self-hosted on DigitalOcean with full data ownership and zero external dependencies.
 
 ## Architecture Overview
@@ -292,7 +293,7 @@ This repository maintains Tier-1 production standards via automated enforcement:
 - [Deletion Ledger](docs/REPO_PURGE_LEDGER.md)
 - [Integration Verification](docs/integration-verification.md)
 
-*Last hygiene audit: 2026-02-02*
+*Last hygiene audit: 2026-02-10*
 
 ## License
 

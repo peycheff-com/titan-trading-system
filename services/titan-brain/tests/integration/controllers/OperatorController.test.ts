@@ -16,8 +16,17 @@ import crypto from 'crypto';
 const OPS_SECRET = 'test-ops-secret-32chars!!!!!!!!';
 
 // Stub AuthMiddleware that passes all requests through
+// Stub AuthMiddleware that can inject users via header
 const stubAuthMiddleware = {
-  verifyToken: async () => { /* pass-through */ },
+  verifyToken: async (req: any) => { 
+    if (req.headers['x-mock-user']) {
+      try {
+        req.user = JSON.parse(req.headers['x-mock-user']);
+      } catch (e) {
+        console.error('Failed to parse mock user', e);
+      }
+    }
+  },
 } as any;
 
 // Stub BrainStateManager
@@ -361,6 +370,94 @@ describe('OperatorController Integration', () => {
         url: '/operator/state',
       });
       expect(stateRes.json().posture).toBe('armed');
+    });
+  });
+  // =========================================================================
+  // RBAC Enforcement
+  // =========================================================================
+
+  describe('RBAC Enforcement', () => {
+    it('should block basic user without permissions', async () => {
+      const payload = makeIntentPayload('ARM');
+      const response = await app.inject({
+        method: 'POST',
+        url: '/operator/intents',
+        payload,
+        headers: {
+          'x-mock-user': JSON.stringify({ 
+            operatorId: 'basic-user', 
+            role: 'observer', 
+            permissions: [] 
+          })
+        }
+      });
+      
+      expect(response.statusCode).toBe(403);
+      expect(response.json().error).toBe('INSUFFICIENT_PERMISSIONS');
+    });
+
+    it('should allow user with specific permission', async () => {
+      const payload = makeIntentPayload('ARM');
+      const response = await app.inject({
+        method: 'POST',
+        url: '/operator/intents',
+        payload,
+        headers: {
+          'x-mock-user': JSON.stringify({ 
+            operatorId: 'safety-officer', 
+            role: 'operator', 
+            permissions: ['safety.arm'] 
+          })
+        }
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().status).toBe('ACCEPTED');
+    });
+
+    it('should allow superadmin without specific permission', async () => {
+      const payload = makeIntentPayload('ARM');
+      const response = await app.inject({
+        method: 'POST',
+        url: '/operator/intents',
+        payload,
+        headers: {
+          'x-mock-user': JSON.stringify({ 
+            operatorId: 'god-mode', 
+            role: ['superadmin'], 
+            permissions: [] 
+          })
+        }
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().status).toBe('ACCEPTED');
+    });
+  });
+
+  describe('History Determinism', () => {
+    it('should return identical state for identical timestamps', async () => {
+      // SOTA: Determinism Check
+      const targetTime = new Date().toISOString();
+      const headers = {
+        'x-mock-user': JSON.stringify({ operatorId: 'test-audit', role: 'admin', permissions: [] })
+      };
+
+      const res1 = await app.inject({
+        method: 'GET',
+        url: `/operator/history/state?timestamp=${targetTime}`,
+        headers
+      });
+
+      const res2 = await app.inject({
+        method: 'GET',
+        url: `/operator/history/state?timestamp=${targetTime}`,
+        headers
+      });
+
+      expect(res1.statusCode).toBe(200);
+      expect(res2.statusCode).toBe(200);
+      expect(res1.json()).toEqual(res2.json());
     });
   });
 });

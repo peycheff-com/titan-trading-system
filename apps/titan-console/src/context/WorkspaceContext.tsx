@@ -103,25 +103,48 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       ? state.tabPerWorkspace[workspace.id]
       : workspace.defaultTab;
 
+  // Broadcast channel for multi-window sync
+  const channelRef = React.useRef<BroadcastChannel | null>(null);
+
+  useEffect(() => {
+    const channel = new BroadcastChannel('titan-workspace');
+    channelRef.current = channel;
+
+    channel.onmessage = (event: MessageEvent<PersistedState>) => {
+      // SOTA: Sync state from other windows instantly
+      setState(event.data);
+    };
+
+    return () => {
+      channel.close();
+    };
+  }, []);
+
   const switchWorkspace = useCallback((id: string) => {
     if (!WORKSPACE_MAP.has(id)) return;
-    setState((prev) => ({ ...prev, activeWorkspaceId: id }));
-  }, []);
+    const newState = { ...state, activeWorkspaceId: id };
+    setState(newState);
+    channelRef.current?.postMessage(newState);
+  }, [state]);
 
   const switchTab = useCallback(
     (tabId: string) => {
       if (!workspace.tabs.includes(tabId)) return;
-      setState((prev) => ({
-        ...prev,
-        tabPerWorkspace: { ...prev.tabPerWorkspace, [workspace.id]: tabId },
-      }));
+      const newState = {
+        ...state,
+        tabPerWorkspace: { ...state.tabPerWorkspace, [workspace.id]: tabId },
+      };
+      setState(newState);
+      channelRef.current?.postMessage(newState);
     },
-    [workspace],
+    [workspace, state],
   );
 
   const toggleBottomPanel = useCallback(() => {
-    setState((prev) => ({ ...prev, bottomPanelOpen: !prev.bottomPanelOpen }));
-  }, []);
+    const newState = { ...state, bottomPanelOpen: !state.bottomPanelOpen };
+    setState(newState);
+    channelRef.current?.postMessage(newState);
+  }, [state]);
 
   // -----------------------------------------------------------------------
   // Keyboard shortcuts

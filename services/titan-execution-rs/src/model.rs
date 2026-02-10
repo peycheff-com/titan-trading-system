@@ -139,6 +139,15 @@ pub struct Intent {
     pub position_mode: Option<String>,
 }
 
+impl Intent {
+    pub fn get_side(&self) -> Side {
+        match self.direction {
+            1 => Side::Buy,
+            _ => Side::Sell,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Position {
     pub symbol: String,

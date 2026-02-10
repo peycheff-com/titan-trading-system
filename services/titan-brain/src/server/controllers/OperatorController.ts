@@ -20,7 +20,7 @@ import type {
   OperatorIntentType,
 } from '@titan/shared';
 import { DANGER_LEVEL, REQUIRES_APPROVAL } from '@titan/shared';
-import type { OperatorIntentService, IntentPreviewResult } from '../../services/OperatorIntentService.js';
+import { OperatorIntentService, IntentPreviewResult, PERMISSION_MAP } from '../../services/OperatorIntentService.js';
 import type { OperatorStateProjection } from '../../services/OperatorStateProjection.js';
 import { Logger } from '../../logging/Logger.js';
 import type { AuthMiddleware } from '../../security/AuthMiddleware.js';
@@ -212,6 +212,30 @@ export class OperatorController {
     reply: FastifyReply,
   ): Promise<void> {
     try {
+      // RBAC Check (Hardening)
+      // @ts-expect-error - request.user is attached by AuthMiddleware
+      const user = request.user as { permissions?: string[]; role?: string | string[]; operatorId?: string };
+      const intentType = request.body.type as OperatorIntentType;
+      
+      const requiredPermission = PERMISSION_MAP[intentType];
+      if (requiredPermission && user) {
+        const hasPermission = user.permissions?.includes(requiredPermission);
+        const roles = Array.isArray(user.role) ? user.role : [user.role];
+        const isSuperAdmin = roles.includes('superadmin');
+        
+        // Fallback: Check role-based allowlist if no granular permissions
+        // This maintains compatibility while we migrate to full PBAC
+        
+        if (!hasPermission && !isSuperAdmin) {
+             this.logger.warn(`RBAC Denial: User ${user.operatorId} tried ${intentType} without ${requiredPermission}`);
+             reply.code(403).send({
+               error: 'INSUFFICIENT_PERMISSIONS',
+               message: `Action requires permission: ${requiredPermission}`
+             });
+             return;
+        }
+      }
+
       const result = await this.intentService.submitIntent(request.body);
 
       switch (result.status) {

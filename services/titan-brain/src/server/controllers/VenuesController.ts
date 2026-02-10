@@ -29,7 +29,7 @@ const EXCHANGE_ID_TO_VENUE: Record<string, VenueId> = {
     coinbase: VenueId.COINBASE,
     kraken: VenueId.KRAKEN,
     mexc: VenueId.MEXC,
-    hyperliquid: VenueId.HYPERLIQUID,
+
     deribit: VenueId.DERIBIT,
 };
 
@@ -331,13 +331,7 @@ export class VenuesController {
                 hasFutures: true,
                 hasOptions: false,
             },
-            {
-                id: "hyperliquid",
-                name: "Hyperliquid",
-                hasSpot: false,
-                hasFutures: true,
-                hasOptions: false,
-            },
+
         ];
 
         const statuses: ExchangeStatus[] = [];
@@ -395,12 +389,7 @@ export class VenuesController {
                 options: false,
             },
             mexc: { name: "MEXC", spot: true, futures: true, options: false },
-            hyperliquid: {
-                name: "Hyperliquid",
-                spot: false,
-                futures: true,
-                options: false,
-            },
+
         };
 
         const info = exchangeInfo[exchangeId];
@@ -529,7 +518,7 @@ export class VenuesController {
             coinbase: ["BTC-USD", "ETH-USD", "SOL-USD", "AVAX-USD"],
             kraken: ["XBTUSD", "ETHUSD", "SOLUSD", "DOTUSD"],
             mexc: ["BTCUSDT", "ETHUSDT", "MXUSDT", "KASUSDT"],
-            hyperliquid: ["BTC-PERP", "ETH-PERP", "SOL-PERP"],
+
         };
 
         const symbols = baseConfig[exchangeId as keyof typeof baseConfig] || [];

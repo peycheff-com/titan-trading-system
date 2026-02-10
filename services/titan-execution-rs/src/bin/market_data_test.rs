@@ -1,7 +1,7 @@
 use titan_execution_rs::market_data::binance::connector::BinanceConnector;
 use titan_execution_rs::market_data::bybit::connector::BybitConnector;
 use titan_execution_rs::market_data::connector::{MarketDataConnector, StreamType, Subscription};
-use titan_execution_rs::market_data::hyperliquid::connector::HyperliquidConnector;
+
 use titan_execution_rs::market_data::mexc::connector::MexcConnector;
 
 #[tokio::main]
@@ -105,39 +105,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("[Binance] Done.");
     });
 
-    // Spawn Hyperliquid Task
-    let hl_handle = tokio::spawn(async {
-        let mut connector = HyperliquidConnector::new();
-        println!("[HL] Connecting...");
-        if let Err(e) = connector.connect().await {
-            println!("[HL] Connection failed: {}", e);
-            return;
-        }
 
-        let sub = Subscription {
-            symbol: "BTC".to_string(), // Hyperliquid uses "BTC"
-            stream_type: StreamType::PublicTrade,
-        };
-        if let Err(e) = connector.subscribe(sub).await {
-            println!("[HL] Subscription failed: {}", e);
-            return;
-        }
-        println!("[HL] Subscribed to BTC");
-
-        let mut stream = connector.event_stream();
-        let mut count = 0;
-        while let Some(event) = stream.recv().await {
-            println!("[HL] Event: {:?}", event);
-            count += 1;
-            if count >= 3 {
-                break;
-            }
-        }
-        println!("[HL] Done.");
-    });
 
     // Wait for all
-    let _ = tokio::join!(bybit_handle, mexc_handle, binance_handle, hl_handle);
+    let _ = tokio::join!(bybit_handle, mexc_handle, binance_handle);
     println!("Quad Stream Test Complete!");
     Ok(())
 }

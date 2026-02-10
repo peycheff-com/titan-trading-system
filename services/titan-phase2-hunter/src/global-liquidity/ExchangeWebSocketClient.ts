@@ -20,7 +20,7 @@ export type ExchangeId =
   | 'bybit'
   | 'coinbase'
   | 'deribit'
-  | 'hyperliquid'
+
   | 'kraken'
   | 'mexc';
 
@@ -110,9 +110,7 @@ const EXCHANGE_WS_URLS: Record<ExchangeId, Partial<Record<ProductType, string>>>
   mexc: {
     spot: 'wss://wbs.mexc.com/ws',
   },
-  hyperliquid: {
-    linear: 'wss://api.hyperliquid.xyz/ws',
-  },
+
 };
 
 /**
@@ -353,9 +351,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
       case 'mexc':
         this.subscribeMexc();
         break;
-      case 'hyperliquid':
-        this.subscribeHyperliquid();
-        break;
+
       case 'deribit':
         this.subscribeDeribit();
         break;
@@ -415,30 +411,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
     this.ws?.send(JSON.stringify(subscribeMessage));
   }
 
-  /**
-   * Subscribe to Hyperliquid trade stream (DEX)
-   * Format: { method: "subscribe", subscription: { type: "trades", coin: "BTC" } }
-   */
-  private subscribeHyperliquid(): void {
-    // Hyperliquid uses coin symbols without quote (e.g., "BTC" not "BTCUSDT")
-    for (const symbol of this.config.symbols) {
-      // Strip common quote currencies for Hyperliquid
-      const coin = symbol
-        .replace(/USDT$/, '')
-        .replace(/USD$/, '')
-        .replace(/PERP$/, '')
-        .toUpperCase();
 
-      const subscribeMessage = {
-        method: 'subscribe',
-        subscription: {
-          type: 'trades',
-          coin: coin,
-        },
-      };
-      this.ws?.send(JSON.stringify(subscribeMessage));
-    }
-  }
 
   /**
    * Subscribe to Deribit trade stream (Options/Futures)
@@ -513,8 +486,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
         return this.parseKrakenTrade(message);
       case 'mexc':
         return this.parseMexcTrade(message);
-      case 'hyperliquid':
-        return this.parseHyperliquidTrade(message);
+
       case 'deribit':
         return this.parseDeribitTrade(message);
       default:
@@ -674,36 +646,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
     };
   }
 
-  /**
-   * Parse Hyperliquid trade message (DEX)
-   * Format: { channel: "trades", data: [{ coin, side, px, sz, hash, time, tid, users }] }
-   */
-  private parseHyperliquidTrade(message: any): ExchangeTrade | null {
-    // Subscription response
-    if (message.channel === 'subscriptionResponse') return null;
 
-    // Trade data comes in "trades" channel
-    if (message.channel !== 'trades' || !message.data || !Array.isArray(message.data)) {
-      return null;
-    }
-
-    const trades = message.data;
-    if (trades.length === 0) return null;
-
-    // Process latest trade
-    const trade = trades[trades.length - 1];
-
-    return {
-      exchange: 'hyperliquid',
-      product: this.config.product, // Always 'linear' for Hyperliquid perps
-      symbol: `${trade.coin}USD`, // Normalize to BTCUSD format
-      price: parseFloat(trade.px),
-      quantity: parseFloat(trade.sz),
-      side: trade.side.toLowerCase() as 'buy' | 'sell',
-      timestamp: trade.time,
-      tradeId: trade.hash || `${trade.coin}-${trade.time}-${trade.tid}`,
-    };
-  }
 
   /**
    * Parse Deribit trade message (Options/Futures)

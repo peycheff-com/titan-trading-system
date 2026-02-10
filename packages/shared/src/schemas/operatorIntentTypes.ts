@@ -126,6 +126,7 @@ export const OperatorIntentSchemaV1 = z
 
     // Concurrency
     state_hash: z.string().optional(),
+    causation_id: z.string().optional(),
 
     // Receipt
     receipt: IntentReceiptSchema.optional(),
@@ -152,6 +153,7 @@ export interface OperatorIntentRecord {
   submitted_at: string;
   resolved_at?: string;
   state_hash?: string;
+  causation_id?: string;
   receipt?: IntentReceipt;
   // Approval metadata (populated when status transitions through PENDING_APPROVAL)
   approver_id?: string;

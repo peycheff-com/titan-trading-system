@@ -19,6 +19,7 @@ import {
 } from '@/hooks/useOperatorIntents';
 import { ActionCard } from './ActionCard';
 import { IntentTimeline } from './IntentTimeline';
+import { TypingIndicator } from './TypingIndicator';
 import { A2UIRenderer } from './A2UIRenderer';
 import { MultimodalInput } from './MultimodalInput';
 import { PlaybookAuthorMode } from './PlaybookAuthorMode';
@@ -44,6 +45,7 @@ interface ChatMessage {
   /** Status from SSE stream — never set locally except on submission ack */
   intentStatus?: IntentStatus;
   error?: string;
+  citations?: string[]; // SOTA: Transparency
 }
 
 // ---------------------------------------------------------------------------
@@ -60,6 +62,7 @@ export function ChatTranscript() {
     },
   ]);
   const [isAuthorMode, setIsAuthorMode] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
 
   const stateHashRef = useRef<string | undefined>();
   const [stateHash, setStateHash] = useState<string | undefined>();
@@ -136,14 +139,17 @@ export function ChatTranscript() {
 
       // 2. Mock Analysis for attached files (SOTA: Multimodal Service)
       if (attachments.length > 0) {
+        setIsTyping(true);
         // Mocking the backend response for a screenshot analysis
-        await new Promise(r => setTimeout(r, 1000));
+        await new Promise(r => setTimeout(r, 1500));
+        setIsTyping(false);
         
         const isScan = attachments.some(a => a.file.name.includes('screenshot') || a.file.name.includes('log'));
         if (isScan) {
           addMessage({ 
             role: 'system', 
-            content: "🔍 Analyzed attachment. Detected high latency on **Phase 2**." 
+            content: "🔍 Analyzed attachment. Detected high latency on **Phase 2**.",
+            citations: ['logs/system.err', 'metrics/latency.prom'] // SOTA: Citations
           });
           
           // Propose an intent based on "analysis"
@@ -177,6 +183,11 @@ export function ChatTranscript() {
          return;
       }
       
+      setIsTyping(true);
+      // Simulate <200ms "instant" AI feel but with visual feedback
+      await new Promise(r => setTimeout(r, 600)); 
+      setIsTyping(false);
+
       const result = compileNLToIntent(text, 'operator');
 
       if (result.matched && result.intent) {
@@ -329,7 +340,19 @@ export function ChatTranscript() {
                     <span>{msg.content}</span>
                   </div>
                 ) : (
-                  <p className="text-sm text-foreground/80">{msg.content}</p>
+                  <div className="space-y-1">
+                    <p className="text-sm text-foreground/80">{msg.content}</p>
+                    {/* Citations (SOTA: Transparency) */}
+                    {msg.citations && msg.citations.length > 0 && (
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {msg.citations.map((cite, i) => (
+                          <span key={i} className="inline-flex items-center rounded-sm bg-muted px-1.5 py-0.5 text-xxs text-muted-foreground font-mono" title={cite}>
+                            [Source: {cite.split('/').pop()}]
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 {/* A2UI Spec — declarative component rendering */}
@@ -376,6 +399,16 @@ export function ChatTranscript() {
               </div>
             </div>
           ))}
+
+          {/* Typing Indicator (SOTA: Latency Perception <200ms) */}
+          {isTyping && (
+             <div className="flex items-start gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+               <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-muted">
+                 <Bot className="h-3.5 w-3.5 text-muted-foreground" />
+               </div>
+               <TypingIndicator />
+             </div>
+          )}
         </div>
       </div>
 

@@ -52,8 +52,8 @@ pub const RPC_GET_BALANCES_PREFIX: &str = "titan.rpc.execution.get_balances.v1.>
 pub const REQ_POLICY_HASH: &str = "titan.req.exec.policy_hash.v1";
 
 // SYSTEM EVENTS
-pub const EVT_SYS_HEARTBEAT: &str = "titan.evt.system.heartbeat"; // TODO: Migrate to titan.sys.heartbeat.v1
-pub const EVT_RISK_STATE: &str = "titan.evt.risk.state"; // TODO: Migrate to titan.evt.risk.state.v1
+pub const EVT_SYS_HEARTBEAT: &str = "titan.sys.heartbeat.v1";
+pub const EVT_RISK_STATE: &str = "titan.evt.risk.state.v1";
 
 // LEGACY / COMPATIBILITY
 pub const LEGACY_SIGNAL_CONSTRAINTS_PREFIX: &str = "titan.signal.execution.constraints.v1.>";

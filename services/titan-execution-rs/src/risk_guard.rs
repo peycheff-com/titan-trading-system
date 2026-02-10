@@ -390,7 +390,12 @@ impl RiskGuard {
         // If we have a constraints store, check the symbol-specific constraints
         if let Some(ref constraints_store) = self.constraints_store {
             let venue = intent.exchange.as_deref().unwrap_or("unknown");
-            let account = "main"; // TODO: Get from intent or config
+            let account = intent
+                .metadata
+                .as_ref()
+                .and_then(|m| m.get("account"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("main");
             let constraints = constraints_store.get(venue, account, &intent.symbol);
 
             // Only enforce if mode is ENFORCEMENT (skip for SHADOW/ADVISORY)

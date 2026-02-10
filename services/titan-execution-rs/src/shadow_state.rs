@@ -901,3 +901,69 @@ impl ShadowState {
             .count()
     }
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::context::ExecutionContext;
+    use crate::persistence::redb_store::RedbStore;
+    use crate::persistence::wal::WalManager;
+    use rust_decimal_macros::dec;
+    use uuid::Uuid;
+
+    fn create_test_persistence() -> (Arc<PersistenceStore>, String) {
+        let path = format!("/tmp/test_shadow_{}.redb", Uuid::new_v4());
+        let redb = Arc::new(RedbStore::new(&path).expect("Failed to create RedbStore"));
+        let wal = Arc::new(WalManager::new(redb.clone()));
+        let store = Arc::new(PersistenceStore::new(redb, wal));
+        (store, path)
+    }
+
+    #[test]
+    fn test_shadow_state_hydration() {
+        let (store, path) = create_test_persistence();
+        let ctx = Arc::new(ExecutionContext::new_system());
+
+        // 1. Manually seed persistence
+        let position = Position {
+            symbol: "BTC/USDT".to_string(),
+            side: Side::Long,
+            size: dec!(1.0),
+            entry_price: dec!(50000.0),
+            stop_loss: dec!(45000.0),
+            take_profits: vec![],
+            signal_id: "seed-signal".to_string(),
+            opened_at: Utc::now(),
+            regime_state: None,
+            phase: None,
+            metadata: None,
+            exchange: Some("BYBIT".to_string()),
+            position_mode: None,
+            realized_pnl: dec!(0),
+            unrealized_pnl: dec!(0),
+            fees_paid: dec!(0),
+            funding_paid: dec!(0),
+            last_mark_price: None,
+            last_update_ts: 0,
+        };
+        store
+            .save_position(&position)
+            .expect("Failed to save seed position");
+
+        // 2. Initialize ShadowState (should hydrate)
+        let state = ShadowState::new(store.clone(), ctx.clone(), Some(100000.0));
+
+        // 3. Verify Hydration
+        // Position
+        assert!(state.has_position("BTC/USDT"));
+        let p = state.get_position("BTC/USDT").unwrap();
+        assert_eq!(p.size, dec!(1.0));
+        assert_eq!(p.entry_price, dec!(50000.0));
+
+        // Cash Balance (should be initial since we didn't save metadata overrides, or strict initial)
+        // new() uses initial_balance_f64 if provided and no metadata found.
+        assert_eq!(state.get_cash_balance(), dec!(100000.0));
+
+        // Cleanup
+        std::fs::remove_file(path).unwrap_or(());
+    }
+}

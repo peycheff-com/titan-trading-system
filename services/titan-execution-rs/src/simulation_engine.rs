@@ -1,5 +1,5 @@
 use crate::market_data::engine::MarketDataEngine;
-use crate::model::{FillReport, Intent, Side};
+use crate::model::{FillReport, Intent};
 
 use rust_decimal::Decimal;
 use std::sync::Arc;
@@ -48,11 +48,7 @@ impl SimulationEngine {
         };
 
         // Determine correct Side enum
-        // TODO: Reuse logic from main.rs or move to model impl
-        let side_enum = match intent.direction {
-            1 => Side::Buy,
-            _ => Side::Sell,
-        };
+        let side_enum = intent.get_side();
 
         // 3. Create Shadow/Simulated Fill
         let fill = FillReport {

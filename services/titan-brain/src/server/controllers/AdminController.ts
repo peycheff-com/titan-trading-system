@@ -15,6 +15,8 @@ import {
 } from '../../schemas/apiSchemas.js';
 import { AllocationVector, RiskGuardianConfig } from '../../types/index.js';
 import { AuthMiddleware } from '../../security/AuthMiddleware.js';
+import { ROLE_ALLOWED_INTENTS } from '@titan/shared';
+import { PERMISSION_MAP } from '../../services/OperatorIntentService.js';
 
 export class AdminController {
   constructor(
@@ -155,12 +157,24 @@ export class AdminController {
         return;
       }
 
-      const token = this.auth.generateToken({ operatorId, role: roles });
+      // SOTA: Derive granular permissions from roles
+      const permissions = new Set<string>();
+      roles.forEach((role) => {
+        const allowedIntents = ROLE_ALLOWED_INTENTS[role as keyof typeof ROLE_ALLOWED_INTENTS] || [];
+        allowedIntents.forEach((intent) => {
+          const perm = PERMISSION_MAP[intent];
+          if (perm) permissions.add(perm);
+        });
+      });
+      
+      const permissionArray = Array.from(permissions);
+      const token = this.auth.generateToken({ operatorId, role: roles, permissions: permissionArray });
 
       reply.code(200).send({
         token,
         operatorId,
         roles,
+        permissions: permissionArray,
       });
     } catch (error) {
       reply.status(500).send({ error: 'Login failed' });

@@ -16,6 +16,7 @@ import { TopBar } from './TopBar';
 import { AttentionBanner } from '@/components/titan/AttentionBanner';
 import { NotificationInbox } from '@/components/titan/NotificationInbox';
 import { IncidentTimeline } from '@/components/replay/IncidentTimeline';
+import { ReplayOverlay } from '@/components/replay/ReplayOverlay';
 import { InspectorPanel } from './InspectorPanel';
 import { WorkspaceLayout } from './WorkspaceLayout';
 import { InspectorProvider, useInspector } from '@/context/InspectorContext';
@@ -67,6 +68,9 @@ function AppShellContent() {
 
       {/* Time Travel Timeline Overlay */}
       <IncidentTimeline />
+      
+      {/* Visual Filter for Replay Mode */}
+      <ReplayOverlay />
     </div>
   );
 }

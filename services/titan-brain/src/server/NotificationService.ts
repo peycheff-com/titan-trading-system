@@ -226,6 +226,7 @@ export class NotificationService {
       cached.count++;
       cached.timestamp = now;
       this.dedupCache.set(dedupKey, cached);
+      return; // SOTA: Suppress redundant broadcast
     } else {
       this.dedupCache.set(dedupKey, { count: 1, timestamp: now });
     }

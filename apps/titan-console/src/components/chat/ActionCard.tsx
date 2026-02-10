@@ -326,6 +326,13 @@ export function ActionCard({ intent, onApprove, onReject, disabled, stateHash }:
           </button>
         </div>
       )}
+      
+      {/* Undo/Revert Hint (SOTA: Safety) */}
+      {!decided && isInteractive && (
+         <div className="mt-2 text-xxs text-muted-foreground/50 text-center">
+            You can always undo this action from the <strong>History</strong> panel.
+         </div>
+      )}
     </div>
   );
 }
