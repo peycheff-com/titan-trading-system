@@ -4,7 +4,7 @@ import { program } from "commander";
 import { DoraIncidentSchema, } from "../../packages/shared/src/schemas/DoraIncident";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
-const ARTIFACTS_DIR = "artifacts/compliance/incidents";
+const ARTIFACTS_DIR = ".generated/compliance/incidents";
 program
     .name("report-incident")
     .description("Generate a DORA-compliant incident report")

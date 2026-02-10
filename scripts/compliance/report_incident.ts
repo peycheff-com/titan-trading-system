@@ -9,7 +9,7 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 
-const ARTIFACTS_DIR = "artifacts/compliance/incidents";
+const ARTIFACTS_DIR = ".generated/compliance/incidents";
 
 program
     .name("report-incident")

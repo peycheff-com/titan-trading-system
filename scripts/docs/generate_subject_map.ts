@@ -4,7 +4,7 @@ import { TITAN_SUBJECTS } from "../../packages/shared/src/messaging/titan_subjec
 
 const SOT_PATH = path.join(
     __dirname,
-    "../../docs/canonical/SYSTEM_SOURCE_OF_TRUTH.md",
+    "../../docs/SYSTEM_SOURCE_OF_TRUTH.md",
 );
 const MARKER_START = "<!-- AUTH_SUBJECT_MAP_START -->";
 const MARKER_END = "<!-- AUTH_SUBJECT_MAP_END -->";

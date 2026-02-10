@@ -4,7 +4,7 @@
  * Tier-1 Big Tech Practice: Executable Documentation
  *
  * These tests verify critical system invariants documented in:
- * docs/canonical/SYSTEM_SOURCE_OF_TRUTH.md
+ * docs/SYSTEM_SOURCE_OF_TRUTH.md
  *
  * Tests act as living documentation - if these fail, either the
  * invariant was violated or documentation needs updating.

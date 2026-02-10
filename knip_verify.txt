@@ -1,0 +1,9 @@
+
+> sota:dead
+> bash scripts/sota/check_dead_code.sh
+
+🧟‍♂️ Running Dead Code & Unused Export Scan (Knip)...
+Generating summary...
+Generating summary...
+✅ knip passed (max-issues=0).
+✅ Dead code scan complete. Report saved to knip_report.json

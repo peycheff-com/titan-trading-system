@@ -1,12 +1,17 @@
 # Runbook: Event Bus Backlog (Slow Consumers)
 
+[← Back to Operations](../README.md)
+
+
 **Severity:** High (Performance Degradation)
 **Symptoms:**
+
 - Execution latency spikes (> 500ms).
 - Log warnings: `Slow Consumer Detected`.
 - Memory usage increasing on `titan-nats`.
 
 ## 1. Diagnosis
+
 Identify the lagging consumer:
 
 ```bash
@@ -20,17 +25,24 @@ docker exec titan-nats nats consumer list TITAN_EXECUTION
 ## 2. Mitigation Strategies
 
 ### Scenario A: Database Write Bottleneck (Execution)
+
 If `titan-execution` is lagging because PersistToRedb is slow:
+
 1. **Shed Load:** Stop new orders via Brain.
+
    ```bash
    curl -X POST http://localhost:3100/admin/system/mode/cautious
    ```
+
 2. **Increase Resources:** (Requires restart)
    Bump `titan-execution` CPU limit in `docker-compose.prod.yml`.
 
 ### Scenario B: Zombie Consumer
+
 If a consumer ID exists but service is dead/restarted (Ephemeral consumer leak):
+
 1. **Prune Consumers:**
+
    ```bash
    docker exec titan-nats nats consumer report TITAN_EXECUTION
    # Identify ID with High Pending and No Activity
@@ -38,6 +50,7 @@ If a consumer ID exists but service is dead/restarted (Ephemeral consumer leak):
    ```
 
 ## 3. Emergency Flush (Data Loss Risk)
+
 If system is halted due to full stream (1GB limit hit):
 
 > [!WARNING]
@@ -46,4 +59,5 @@ If system is halted due to full stream (1GB limit hit):
 ```bash
 docker exec titan-nats nats stream purge TITAN_EXECUTION
 ```
+
 *Post-action:* Must run full accounting reconciliation.

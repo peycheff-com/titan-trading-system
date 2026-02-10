@@ -22,8 +22,8 @@ NC='\033[0m'
 # Configuration: doc → code mappings
 # Format: "doc_path:code_path:staleness_threshold_days"
 declare -a DOC_CODE_MAPPINGS=(
-    "docs/canonical/SYSTEM_SOURCE_OF_TRUTH.md:services/titan-execution-rs/src:30"
-    "docs/canonical/SYSTEM_SOURCE_OF_TRUTH.md:services/titan-brain/src:30"
+    "docs/SYSTEM_SOURCE_OF_TRUTH.md:services/titan-execution-rs/src:30"
+    "docs/SYSTEM_SOURCE_OF_TRUTH.md:services/titan-brain/src:30"
     "docs/reference/openapi.yaml:apps/titan-console-api/src/routes:14"
     "docs/api/execution.md:services/titan-execution-rs/src:21"
     "docs/architecture/ARCHITECTURE.md:services:45"

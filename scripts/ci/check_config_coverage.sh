@@ -9,7 +9,7 @@ echo "🔍 Checking Configuration Coverage..."
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ENV_EXAMPLE="$ROOT_DIR/services/titan-brain/.env.example"
-COVERAGE_MAP="$ROOT_DIR/artifacts/console-config/CONFIG_COVERAGE_MAP.md"
+COVERAGE_MAP="$ROOT_DIR/docs/operations/CONFIG_COVERAGE_MAP.md"
 CONFIG_REGISTRY="$ROOT_DIR/services/titan-brain/src/services/config/ConfigRegistry.ts"
 
 # Check if required files exist

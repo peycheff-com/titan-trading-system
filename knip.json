@@ -98,7 +98,8 @@
     "madge",
     "globals",
     "@jest/globals",
-    "@stryker-mutator/api"
+    "@stryker-mutator/api",
+    "markdown-link-check"
   ],
   "workspaces": {
     "apps/titan-console": {

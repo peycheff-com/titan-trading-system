@@ -3,8 +3,16 @@ name: Titan Monorepo CI
 on:
   push:
     branches: [main, develop, 'codex/**']
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'LICENSE'
   pull_request:
     branches: [main, develop]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'LICENSE'
   merge_group:
     types: [checks_requested]
   schedule:
@@ -159,22 +167,22 @@ jobs:
 
       - name: Run full dependency audits
         run: |
-          mkdir -p artifacts/ci
-          npm audit --json > artifacts/ci/npm-audit.json || true
-          (cd services/titan-execution-rs && cargo audit > ../../artifacts/ci/cargo-audit.txt) || true
+          mkdir -p .generated/ci
+          npm audit --json > .generated/ci/npm-audit.json || true
+          (cd services/titan-execution-rs && cargo audit > ../../.generated/ci/cargo-audit.txt) || true
 
       - name: Generate SBOM
         uses: anchore/sbom-action@28d71544de8eaf1b958d335707167c5f783590ad # v0.15.9
         with:
           path: .
           format: cyclonedx-json
-          output-file: artifacts/ci/sbom.cdx.json
+          output-file: .generated/ci/sbom.cdx.json
 
       - name: Upload nightly security artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.3.1
         with:
           name: nightly-security-${{ github.run_id }}
-          path: artifacts/ci
+          path: .generated/ci
 
   status-check:
     name: CI Pipeline Status

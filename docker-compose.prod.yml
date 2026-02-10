@@ -1,502 +1,149 @@
-# Titan Trading System - Production Docker Compose
-# Deploy all services on a single VPS with IPC support
-# CANONICAL VERSION for CI/CD
+name: titan-prod
 
 services:
-  # =============================================================================
-  # REVERSE PROXY
-  # =============================================================================
+  # --- INFRASTRUCTURE ---
   traefik:
-    image: traefik:v3.6
-    container_name: titan-traefik
+    image: traefik:v3.0
+    container_name: traefik
+    restart: always
     command:
-      - --api.dashboard=true
-      - --providers.docker=true
-      - --providers.docker.exposedbydefault=false
-      - --entrypoints.web.address=:80
-      - --entrypoints.websecure.address=:443
-      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
-      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
-      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@example.com}
-      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
-      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - "--api.insecure=false"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
     ports:
-      - '80:80'
-      - '443:443'
+      - "80:80"
+      - "443:443"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - traefik-certs:/letsencrypt
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./data/traefik/acme.json:/acme.json"
     networks:
-      - titan-network
-    environment:
-      - DOCKER_API_VERSION=1.44
-    restart: unless-stopped
+      - titan-net
 
-  # =============================================================================
-  # INFRASTRUCTURE
-  # =============================================================================
   nats:
-    image: nats:2.10.24-alpine
-    container_name: titan-nats
-    entrypoint: ['/entrypoint.sh']
-    volumes:
-      - ${JETSTREAM_VOLUME_PATH:-titan-jetstream-data}:/data/jetstream
-      - ./config/nats.conf.template:/etc/nats/nats.conf.template:ro
-      - ./config/nats-entrypoint.sh:/entrypoint.sh:ro
-    environment:
-      - NATS_SYS_PASSWORD=${NATS_SYS_PASSWORD:?NATS_SYS_PASSWORD required}
-      - NATS_BRAIN_PASSWORD=${NATS_BRAIN_PASSWORD:?NATS_BRAIN_PASSWORD required}
-      - NATS_EXECUTION_PASSWORD=${NATS_EXECUTION_PASSWORD:?NATS_EXECUTION_PASSWORD required}
-      - NATS_SCAVENGER_PASSWORD=${NATS_SCAVENGER_PASSWORD:?NATS_SCAVENGER_PASSWORD required}
-      - NATS_HUNTER_PASSWORD=${NATS_HUNTER_PASSWORD:?NATS_HUNTER_PASSWORD required}
-      - NATS_SENTINEL_PASSWORD=${NATS_SENTINEL_PASSWORD:?NATS_SENTINEL_PASSWORD required}
-      - NATS_POWERLAW_PASSWORD=${NATS_POWERLAW_PASSWORD:?NATS_POWERLAW_PASSWORD required}
-      - NATS_QUANT_PASSWORD=${NATS_QUANT_PASSWORD:?NATS_QUANT_PASSWORD required}
-      - NATS_CONSOLE_PASSWORD=${NATS_CONSOLE_PASSWORD:?NATS_CONSOLE_PASSWORD required}
+    image: nats:2.10.22-alpine
+    container_name: nats
+    restart: always
+    command: "-c /config/nats.conf"
     ports:
-      - '${VPC_IP:-127.0.0.1}:4222:4222'
-      - '${VPC_IP:-127.0.0.1}:8222:8222'
-    networks:
-      - titan-network
-    restart: unless-stopped
-    healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://localhost:8222/healthz']
-      interval: 10s
-      timeout: 5s
-      retries: 3
-
-  # =============================================================================
-  # REDIS - Cache & Message Queue
-  # =============================================================================
-  redis:
-    image: redis:7.4-alpine
-    container_name: titan-redis
-    # NOTE: No host port exposure - internal network only (security hardening)
+      - "4222:4222" # Internal only via firewall, but exposed for monitoring if needed
+      - "8222:8222" # Monitoring
     volumes:
-      - titan-redis-data:/data
+      - "./config/nats.conf:/config/nats.conf:ro"
+      - "./data/nats:/data"
     networks:
-      - titan-network
-    restart: unless-stopped
-    healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
-      interval: 30s
-      timeout: 10s
-      retries: 5
+      - titan-net
 
-  # =============================================================================
-  # POSTGRES - Database
-  # =============================================================================
   postgres:
     image: postgres:16-alpine
-    container_name: titan-postgres
+    container_name: postgres
+    restart: always
     environment:
-      POSTGRES_USER: ${TITAN_DB_USER:-titan}
-      POSTGRES_PASSWORD: ${TITAN_DB_PASSWORD:-titan_secret}
-      POSTGRES_DB: ${TITAN_DB_NAME:-titan_brain}
-    # NOTE: No host port exposure - internal network only (security hardening)
+      POSTGRES_USER: ${POSTGRES_USER:-titan}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-titan_brain}
     volumes:
-      - titan-db-data:/var/lib/postgresql/data
+      - "./data/postgres:/var/lib/postgresql/data"
     networks:
-      - titan-network
-    restart: unless-stopped
-    command: >
-      postgres
-      -c max_connections=100
-      -c shared_buffers=256MB
-      -c effective_cache_size=768MB
-      -c maintenance_work_mem=64MB
-      -c checkpoint_completion_target=0.9
-      -c wal_buffers=16MB
-      -c default_statistics_target=100
-      -c random_page_cost=1.1
-      -c effective_io_concurrency=200
-      -c work_mem=4MB
-      -c min_wal_size=1GB
-      -c max_wal_size=4GB
-    deploy:
-      resources:
-        limits:
-          cpus: '2'
-          memory: 2G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
+      - titan-net
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${TITAN_DB_USER:-titan}']
+      test: ["CMD-SHELL", "pg_isready -U titan"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # =============================================================================
-  # MONITORING
-  # =============================================================================
-  prometheus:
-    image: prom/prometheus:v2.54.1
-    container_name: titan-prometheus
+  redis:
+    image: redis:alpine
+    container_name: redis
+    restart: always
+    command: redis-server --appendonly yes
     volumes:
-      - ./monitoring/prometheus/config/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./monitoring/prometheus/config/alert-rules-comprehensive.yml:/etc/prometheus/alert-rules.yml
-      - titan-prometheus-data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
-      - '--web.console.templates=/usr/share/prometheus/consoles'
-    # NOTE: No host port exposure - access via internal network only
-    # For external access, use Traefik with authentication
+      - "./data/redis:/data"
     networks:
-      - titan-network
-    restart: unless-stopped
-
-  grafana:
-    image: grafana/grafana:11.2.0
-    container_name: titan-grafana
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${TITAN_MASTER_PASSWORD:-admin}
-      - GF_USERS_ALLOW_SIGN_UP=false
-    volumes:
-      - titan-grafana-data:/var/lib/grafana
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
-    # NOTE: No host port exposure - access via internal network only
-    # TODO: Add Traefik route with basic auth for external access
-    networks:
-      - titan-network
-    restart: unless-stopped
-
-  titan-tempo:
-    image: grafana/tempo:2.6.0
-    container_name: titan-tempo
-    user: root
-    command: ['-config.file=/etc/tempo.yaml']
-    volumes:
-      - ./monitoring/tempo/tempo.yaml:/etc/tempo.yaml
-      - titan-tempo-data:/tmp/tempo
-    # NOTE: No host port exposure - internal tracing only (security hardening)
-    networks:
-      - titan-network
-    restart: unless-stopped
-
-  # =============================================================================
-  # TITAN BRAIN - Master Orchestrator
-  # =============================================================================
-  titan-brain:
-    image: ${TITAN_REGISTRY:-ghcr.io/peycheff-com/titan-trading-system}/titan-brain:${IMAGE_TAG:-latest}
-    container_name: titan-brain
-    env_file:
-      - .env.prod
-    environment:
-      - NODE_ENV=production
-      - PORT=3100
-      - HOST=0.0.0.0
-      - TITAN_DB_HOST=titan-postgres
-      - TITAN_DB_PORT=5432
-      - TITAN_DB_NAME=titan_brain
-      - TITAN_DB_USER=titan
-      - TITAN_DB_PASSWORD=titan_secret
-      - DB_HOST=titan-postgres
-      - DB_NAME=titan_brain
-      - DB_USER=titan
-      - DB_PASSWORD=titan_secret
-      - DATABASE_URL=postgres://titan:titan_secret@titan-postgres:5432/titan_brain
-      - REDIS_URL=redis://titan-redis:6379
-      - NATS_URL=nats://nats:4222
-      - NATS_USER=brain
-      - NATS_PASS=${NATS_BRAIN_PASSWORD}
-      - HMAC_SECRET=${HMAC_SECRET}
-      - LOG_LEVEL=info
-      - SERVICE_NAME=titan-brain
-    volumes:
-      - titan-ipc:/tmp
-    networks:
-      - titan-network
-    depends_on:
-      nats:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-    restart: unless-stopped
+      - titan-net
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:3100/health']
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 300s
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 1G
-        reservations:
-          cpus: '0.25'
-          memory: 256M
-
-  # =============================================================================
-  # TITAN EXECUTION (Rust)
-  # =============================================================================
-  titan-execution:
-    image: ${TITAN_REGISTRY:-ghcr.io/peycheff-com/titan-trading-system}/titan-execution-rs:${IMAGE_TAG:-latest}
-    container_name: titan-execution
-    env_file:
-      - .env.prod
-    environment:
-      - RUST_LOG=info
-      - PORT=3002
-      - NATS_URL=nats://nats:4222
-      - NATS_USER=execution
-      - NATS_PASS=${NATS_EXECUTION_PASSWORD}
-      - HMAC_SECRET=${HMAC_SECRET}
-      - BINANCE_API_KEY=${BINANCE_API_KEY}
-      - BINANCE_API_SECRET=${BINANCE_API_SECRET}
-    volumes:
-      - titan-ipc:/tmp
-    networks:
-      - titan-network
-    depends_on:
-      nats:
-        condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:3002/health']
-      interval: 30s
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
       timeout: 5s
       retries: 3
+
+  # --- CORE SERVICES ---
+  execution:
+    image: ghcr.io/peycheff-com/titan-execution-rs:${TITAN_TAG:-latest}
+    container_name: titan-execution
+    restart: always
+    env_file: .env
+    depends_on:
+      nats:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    networks:
+      - titan-net
     deploy:
       resources:
         limits:
           cpus: '1.0'
           memory: 512M
-        reservations:
-          cpus: '0.25'
-          memory: 128M
 
-  # =============================================================================
-  # TITAN CONSOLE
-  # =============================================================================
-  titan-console:
-    image: ${TITAN_REGISTRY:-ghcr.io/peycheff-com/titan-trading-system}/titan-console:${IMAGE_TAG:-latest}
-    container_name: titan-console
-    environment:
-      - NODE_ENV=production
-      - PORT=8080
-      - API_PROXY_TARGET=http://titan-console-api:3000
-    networks:
-      - titan-network
+  brain:
+    image: ghcr.io/peycheff-com/titan-brain:${TITAN_TAG:-latest}
+    container_name: titan-brain
+    restart: always
+    env_file: .env
     depends_on:
-      - titan-console-api
-    restart: unless-stopped
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_started
+    networks:
+      - titan-net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+
+  # --- STRATEGIES ---
+  scavenger:
+    image: ghcr.io/peycheff-com/titan-scavenger:${TITAN_TAG:-latest}
+    restart: always
+    env_file: .env
+    depends_on:
+      - nats
+    networks:
+      - titan-net
+
+  hunter:
+    image: ghcr.io/peycheff-com/titan-hunter:${TITAN_TAG:-latest}
+    restart: always
+    env_file: .env
+    depends_on:
+      - nats
+    networks:
+      - titan-net
+
+  sentinel:
+    image: ghcr.io/peycheff-com/titan-sentinel:${TITAN_TAG:-latest}
+    restart: always
+    env_file: .env
+    depends_on:
+      - nats
+    networks:
+      - titan-net
+
+  # --- UI ---
+  console:
+    image: ghcr.io/peycheff-com/titan-console:${TITAN_TAG:-latest}
+    restart: always
     labels:
-      - traefik.enable=true
-      - traefik.http.routers.console.rule=Host(`${DOMAIN:-localhost}`)
-      - traefik.http.routers.console.entrypoints=websecure
-      - traefik.http.routers.console.tls.certresolver=letsencrypt
-      - traefik.http.services.console.loadbalancer.server.port=8080
-    healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:8080/']
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  titan-console-api:
-    image: ${TITAN_REGISTRY:-ghcr.io/peycheff-com/titan-trading-system}/titan-console-api:${IMAGE_TAG:-latest}
-    container_name: titan-console-api
-    environment:
-      - NODE_ENV=production
-      - PORT=3000
-      - NATS_URL=nats://nats:4222
-      - NATS_USER=console
-      - NATS_PASS=${NATS_CONSOLE_PASSWORD}
-      - JWT_SECRET=${JWT_SECRET}
-      - TITAN_MASTER_PASSWORD=${TITAN_MASTER_PASSWORD}
+      - "traefik.enable=true"
+      - "traefik.http.routers.console.rule=Host(`${DOMAIN_NAME}`)"
+      - "traefik.http.routers.console.entrypoints=websecure"
+      - "traefik.http.routers.console.tls.certresolver=myresolver"
     networks:
-      - titan-network
-    depends_on:
-      nats:
-        condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:3000/health']
-      interval: 30s
-      timeout: 5s
-      retries: 3
+      - titan-net
 
-  titan-opsd:
-    image: ${TITAN_REGISTRY:-ghcr.io/peycheff-com/titan-trading-system}/titan-opsd:${IMAGE_TAG:-latest}
-    container_name: titan-opsd
-    user: root
-    environment:
-      - NODE_ENV=production
-      - NATS_URL=nats://nats:4222
-      - NATS_USER=console
-      - NATS_PASS=${NATS_CONSOLE_PASSWORD}
-      - HMAC_SECRET=${HMAC_SECRET}
-      - OPS_SECRET=${HMAC_SECRET}
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./docker-compose.prod.yml:/app/docker-compose.prod.yml
-    networks:
-      - titan-network
-    depends_on:
-      nats:
-        condition: service_healthy
-    restart: unless-stopped
-
-  # =============================================================================
-  # PHASE 1: SCAVENGER
-  # =============================================================================
-  titan-scavenger:
-    image: ${TITAN_REGISTRY:-ghcr.io/peycheff-com/titan-trading-system}/titan-phase1-scavenger:${IMAGE_TAG:-latest}
-    container_name: titan-scavenger
-    environment:
-      - NODE_ENV=production
-      - PORT=8081
-      - BRAIN_URL=http://titan-brain:3100
-      - SERVICE_NAME=titan-scavenger
-      - BINANCE_API_KEY=${BINANCE_API_KEY}
-      - BINANCE_API_SECRET=${BINANCE_API_SECRET}
-    volumes:
-      - titan-ipc:/tmp
-    networks:
-      - titan-network
-    depends_on:
-      - titan-brain
-    restart: unless-stopped
-    healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://localhost:8081/health']
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  # =============================================================================
-  # PHASE 2: HUNTER
-  # =============================================================================
-  titan-hunter:
-    image: ${TITAN_REGISTRY:-ghcr.io/peycheff-com/titan-trading-system}/titan-phase2-hunter:${IMAGE_TAG:-latest}
-    container_name: titan-hunter
-    environment:
-      - NODE_ENV=production
-      - PORT=8083
-      - BRAIN_URL=http://titan-brain:3100
-      - NATS_URL=nats://nats:4222
-      - NATS_USER=hunter
-      - NATS_PASS=${NATS_HUNTER_PASSWORD}
-      - SERVICE_NAME=titan-hunter
-      - BINANCE_API_KEY=${BINANCE_API_KEY}
-      - BINANCE_API_SECRET=${BINANCE_API_SECRET}
-    volumes:
-      - titan-ipc:/tmp
-    networks:
-      - titan-network
-    depends_on:
-      - titan-brain
-    restart: unless-stopped
-    healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:8083/health']
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  # =============================================================================
-  # PHASE 3: SENTINEL
-  # =============================================================================
-  titan-sentinel:
-    image: ${TITAN_REGISTRY:-ghcr.io/peycheff-com/titan-trading-system}/titan-phase3-sentinel:${IMAGE_TAG:-latest}
-    container_name: titan-sentinel
-    environment:
-      - NODE_ENV=production
-      - PORT=8084
-      - BRAIN_URL=http://titan-brain:3100
-      - SERVICE_NAME=titan-sentinel
-      - BINANCE_API_KEY=${BINANCE_API_KEY}
-      - BINANCE_API_SECRET=${BINANCE_API_SECRET}
-    volumes:
-      - titan-ipc:/tmp
-    networks:
-      - titan-network
-    depends_on:
-      - titan-brain
-    restart: unless-stopped
-    healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:8084/health']
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  # =============================================================================
-  # PHASE 4: AI QUANT
-  # =============================================================================
-  titan-ai-quant:
-    image: ${TITAN_REGISTRY:-ghcr.io/peycheff-com/titan-trading-system}/titan-ai-quant:${IMAGE_TAG:-latest}
-    container_name: titan-ai-quant
-    environment:
-      - NODE_ENV=production
-      - PORT=8082
-      - NATS_URL=nats://nats:4222
-      - NATS_USER=quant
-      - NATS_PASS=${NATS_QUANT_PASSWORD}
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - WEAVIATE_HOST=${WEAVIATE_HOST}
-      - WEAVIATE_SCHEME=${WEAVIATE_SCHEME:-http}
-      - WEAVIATE_API_KEY=${WEAVIATE_API_KEY}
-      - WEAVIATE_GRPC_HOST=${WEAVIATE_GRPC_HOST}
-      - SERVICE_NAME=titan-ai-quant
-    volumes:
-      - titan-ipc:/tmp
-      - titan-ai-data:/app/data
-    networks:
-      - titan-network
-    depends_on:
-      nats:
-        condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:8082/health']
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  # =============================================================================
-  # POWERLAW LAB
-  # =============================================================================
-  titan-powerlaw-lab:
-    image: ${TITAN_REGISTRY:-ghcr.io/peycheff-com/titan-trading-system}/titan-powerlaw-lab:${IMAGE_TAG:-latest}
-    container_name: titan-powerlaw-lab
-    environment:
-      - NODE_ENV=production
-      - NATS_URL=nats://nats:4222
-      - NATS_USER=powerlaw
-      - NATS_PASS=${NATS_POWERLAW_PASSWORD}
-      - SERVICE_NAME=titan-powerlaw-lab
-    networks:
-      - titan-network
-    depends_on:
-      nats:
-        condition: service_healthy
-    restart: unless-stopped
-
-# =============================================================================
-# NETWORKS & VOLUMES
-# =============================================================================
 networks:
-  titan-network:
+  titan-net:
     driver: bridge
-
-volumes:
-  traefik-certs:
-  titan-ipc:
-    driver: local
-  titan-ai-data:
-    driver: local
-  titan-redis-data:
-    driver: local
-  titan-db-data:
-    driver: local
-  titan-prometheus-data:
-    driver: local
-  titan-grafana-data:
-    driver: local
-  titan-tempo-data:
-    driver: local
-  titan-jetstream-data:
-    driver: local

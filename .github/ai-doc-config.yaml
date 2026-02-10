@@ -19,7 +19,7 @@ mcp:
   
   # Files AI should always have context about
   context_paths:
-    - path: "docs/canonical/SYSTEM_SOURCE_OF_TRUTH.md"
+    - path: "docs/SYSTEM_SOURCE_OF_TRUTH.md"
       priority: 1
       description: "Canonical system invariants - MUST be consulted for any system behavior questions"
     

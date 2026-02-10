@@ -23,15 +23,19 @@ The Risk Policy is the immutable constitution of the organism. It defines the bo
 ## 3. The "Immune System" Layers
 
 ### Layer 1: Strategic (Brain)
+
 - **Allocation**: Brain will not allocate capital to a Phase if the budget is exhausted.
 - **Correlation**: Brain checks portfolio correlation. If `Corr(BTC, ETH) > 0.7`, it imposes a `correlationPenalty` (0.5x sizing).
 
 ### Layer 2: Transactional (Execution RiskGuard)
+
 Situated in Rust `services/titan-execution-rs/src/risk_guard.rs`.
+
 - **Pre-Flight Check**: Every command is simulated against the "Shadow State".
 - **Rejection**: If `NewLeverage > MaxLeverage`, the command is rejected with `RISK_VIOLATION`.
 
 ### Layer 3: Reflexive (Circuit Breakers)
+
 See [Circuit Breakers](circuit_breakers.md).
 
 ## 4. Policy Update Protocol
@@ -48,6 +52,7 @@ Changing the policy is a **Nuclear Operation**.
 ## 5. Approved Instruments
 
 **Whitelist Only**:
+
 - `BTC/USDT`
 - `ETH/USDT`
 - `SOL/USDT`

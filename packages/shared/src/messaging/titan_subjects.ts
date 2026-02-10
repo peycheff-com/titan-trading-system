@@ -165,7 +165,7 @@ export const TITAN_SUBJECTS = {
        * Execution Reports (Orders, Trades)
        * Topic: titan.evt.execution.report.v1.{venue}.{account}.{symbol}
        */
-      REPORT: 'titan.evt.exec.report.v1',
+      REPORT: 'titan.evt.execution.report.v1',
       /**
        * Execution Rejections
        * Topic: titan.evt.execution.reject.v1

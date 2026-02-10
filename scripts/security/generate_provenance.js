@@ -7,7 +7,7 @@ import * as os from "os";
  * Generates a SLSA v1.0 Provenance predicate.
  * https://slsa.dev/spec/v1.0/provenance
  */
-const OUTPUT_DIR = "artifacts/provenance";
+const OUTPUT_DIR = ".generated/provenance";
 const OUTPUT_FILE = path.join(OUTPUT_DIR, "provenance.json");
 function getGitCommitHash() {
     try {

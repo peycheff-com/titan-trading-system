@@ -145,8 +145,7 @@ Cargo.lock
 !services/titan-execution-rs/Cargo.lock
 
 # Development artifacts
-artifacts/logs/
-artifacts/antigravity/
+.generated/
 reports/
 .deployment-configs/
 .genkit/

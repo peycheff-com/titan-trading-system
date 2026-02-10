@@ -1,0 +1,30 @@
+
+> sota:zombie
+> python3 scripts/sota/zombie_scan.py
+
+🧟‍♀️ Scanning for Zombie Dependencies (depcheck)...
+
+🔍 Checking titan-ai-quant...
+  ✅ Dependencies Clean
+
+🔍 Checking titan-powerlaw-lab...
+  ✅ Dependencies Clean
+
+🔍 Checking titan-phase1-scavenger...
+  ✅ Dependencies Clean
+
+🔍 Checking titan-phase3-sentinel...
+  ✅ Dependencies Clean
+
+🔍 Checking titan-brain...
+  ✅ Dependencies Clean
+
+🔍 Checking titan-console-api...
+  ✅ Dependencies Clean
+
+🔍 Checking titan-phase2-hunter...
+  ✅ Dependencies Clean
+
+🔍 Checking titan-opsd...
+  ✅ Dependencies Clean
+⏩ Skipping titan-execution-rs (Rust service)

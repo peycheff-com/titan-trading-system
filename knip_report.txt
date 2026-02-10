@@ -1,0 +1,10 @@
+
+> sota:dead
+> bash scripts/sota/check_dead_code.sh
+
+🧟‍♂️ Running Dead Code & Unused Export Scan (Knip)...
+Generating summary...
+Generating summary...
+Unused devDependencies (1)
+markdown-link-check  package.json:101:6
+❌ knip failed (issues > 0).

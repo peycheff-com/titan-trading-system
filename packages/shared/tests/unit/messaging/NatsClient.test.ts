@@ -30,7 +30,7 @@ const TitanSubject = {
     // Legacy
     SIGNALS: "titan.evt.brain.signal.v1",
     EXECUTION_FILL: "titan.evt.exec.fill.v1",
-    EXECUTION_REPORTS: "titan.evt.exec.report.v1",
+    EXECUTION_REPORTS: "titan.evt.execution.report.v1",
     MARKET_DATA: "titan.data.market.ticker",
     AI_OPTIMIZATION_REQUESTS: "titan.cmd.ai.optimize.v1",
     REGIME_UPDATE: "titan.evt.brain.regime.v1",

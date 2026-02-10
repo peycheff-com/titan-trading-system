@@ -139,7 +139,7 @@ export const TITAN_STREAMS = {
     subjects: [
       'titan.evt.execution.fill.v1',
       'titan.evt.execution.shadow_fill.v1',
-      'titan.evt.exec.report.v1',
+      'titan.evt.execution.report.v1',
       'titan.evt.execution.reject.v1',
     ],
     retention: JsRetentionPolicy.Limits,

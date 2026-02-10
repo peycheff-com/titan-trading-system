@@ -47,6 +47,7 @@ If approvals are not complete, restrict usage to research and paper trading.
 ## Audit and Recordkeeping
 
 Maintain audit logs for:
+
 - Configuration changes (who/when/why)
 - Operator actions in the Console
 - Trade decisions, fills, and risk events

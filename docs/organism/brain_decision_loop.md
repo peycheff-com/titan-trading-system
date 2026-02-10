@@ -8,34 +8,43 @@
 The Brain runs a continuous event-driven loop. It does not "poll"; it reacts.
 
 ### Phase 1: Sensing (Input)
-Brain subscribes to `titan.evt.phase.*.signal`.
+
+Brain subscribes to per-phase signal subjects (`titan.evt.scavenger.signal.v1`, `titan.evt.hunter.>`, `titan.evt.sentinel.>`).
+
 - **Input**: `IntentEnvelope<SignalPayload>`
 - **Validation**:
-  - Is the `ts` fresh? (< 5s)
+  - Is the `ts` fresh? (< 5s signal staleness; note: HMAC drift tolerance is separate at 5 min per I-10)
   - Is the `source` authorized?
   - Is `risk_score` within bounds?
 
 ### Phase 2: Perception (State Update)
+
 Brain updates its internal "Belief State" (`MarketRegime`).
+
 - **Volatility Check**: High vol? Shrink allocations.
 - **Budget Check**: Do we have free capital in the `allocation_history`?
 
 ### Phase 3: Action Selection (Policy)
+
 If the signal is **Accepted**:
-1.  **Position Sizing**: Applies Kelly Criterion (modified by volatility).
-2.  **Constraints**: Checks specific `risk_policy.json` limits (e.g., Max Open Orders).
-3.  **Signing**:
+
+1. **Position Sizing**: Applies Kelly Criterion (modified by volatility).
+2. **Constraints**: Checks specific `risk_policy.json` limits (e.g., Max Open Orders).
+3. **Signing**:
     - Generates `titan.cmd.execution.place.v1` payload.
     - Signs payload with `HMAC_SECRET`.
 
 ### Phase 4: Actuation (Output)
+
 Brain publishes the command to NATS. It then spawns a "Pending Expectation":
+
 - *Expectation*: "I expect a Fill Event within 2 seconds."
 - *Timeout*: If no fill arrives, log `TIMEOUT` and check system health.
 
 ## 2. Allocation Logic
 
 Brain allocates capital based on specific "Buckets".
+
 - **Trap Bucket**: For Scavenger. Small, fast turnover.
 - **Trend Bucket**: For Hunter. Large, slow turnover.
 - **Arb Bucket**: For Sentinel. High capacity.

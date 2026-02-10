@@ -20,14 +20,14 @@ const { execSync } = require('child_process');
 
 // Configuration from ai-doc-config.yaml mappings
 const CODE_TO_DOC_MAPPINGS = {
-  'services/titan-execution-rs/src/security.rs': ['docs/canonical/SYSTEM_SOURCE_OF_TRUTH.md', 'docs/security/'],
-  'services/titan-execution-rs/src/nats_engine.rs': ['docs/canonical/SYSTEM_SOURCE_OF_TRUTH.md', 'docs/architecture/'],
-  'services/titan-execution-rs/src/risk_guard.rs': ['docs/canonical/SYSTEM_SOURCE_OF_TRUTH.md'],
-  'services/titan-execution-rs/src/risk_policy.rs': ['docs/canonical/SYSTEM_SOURCE_OF_TRUTH.md'],
-  'packages/shared/src/messaging/': ['docs/connectivity/', 'docs/canonical/SYSTEM_SOURCE_OF_TRUTH.md'],
+  'services/titan-execution-rs/src/security.rs': ['docs/SYSTEM_SOURCE_OF_TRUTH.md', 'docs/security/'],
+  'services/titan-execution-rs/src/nats_engine.rs': ['docs/SYSTEM_SOURCE_OF_TRUTH.md', 'docs/architecture/'],
+  'services/titan-execution-rs/src/risk_guard.rs': ['docs/SYSTEM_SOURCE_OF_TRUTH.md'],
+  'services/titan-execution-rs/src/risk_policy.rs': ['docs/SYSTEM_SOURCE_OF_TRUTH.md'],
+  'packages/shared/src/messaging/': ['docs/connectivity/', 'docs/SYSTEM_SOURCE_OF_TRUTH.md'],
   'apps/titan-console-api/src/routes/': ['docs/reference/openapi.yaml'],
-  'config/nats.conf': ['docs/canonical/SYSTEM_SOURCE_OF_TRUTH.md', 'docs/operations/'],
-  'docker-compose.prod.yml': ['docs/operations/', 'docs/canonical/SYSTEM_SOURCE_OF_TRUTH.md'],
+  'config/nats.conf': ['docs/SYSTEM_SOURCE_OF_TRUTH.md', 'docs/operations/'],
+  'docker-compose.prod.yml': ['docs/operations/', 'docs/SYSTEM_SOURCE_OF_TRUTH.md'],
 };
 
 const INVARIANT_SYMBOLS = [
@@ -83,8 +83,8 @@ class AIDocUpdater {
         const content = this.getFileContent(file);
         for (const symbol of INVARIANT_SYMBOLS) {
           if (content.includes(symbol)) {
-            affectedDocs.add('docs/canonical/SYSTEM_SOURCE_OF_TRUTH.md');
-            codeChanges.push({ file, symbol, affectedDocs: ['docs/canonical/SYSTEM_SOURCE_OF_TRUTH.md'] });
+            affectedDocs.add('docs/SYSTEM_SOURCE_OF_TRUTH.md');
+            codeChanges.push({ file, symbol, affectedDocs: ['docs/SYSTEM_SOURCE_OF_TRUTH.md'] });
           }
         }
       }

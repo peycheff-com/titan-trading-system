@@ -1,0 +1,35 @@
+name: Docs Integrity
+
+on:
+  push:
+    paths:
+      - 'docs/**'
+      - '.github/workflows/docs-lint.yml'
+  pull_request:
+    paths:
+      - 'docs/**'
+      - '.github/workflows/docs-lint.yml'
+
+jobs:
+  lint:
+    name: Markdown Lint & Link Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Tools
+        run: npm install -g markdownlint-cli markdown-link-check
+
+      - name: Run Markdown Lint
+        run: markdownlint 'docs/**/*.md'
+        continue-on-error: true # Warning only for now, strict later
+
+      - name: Run Link Check
+        run: |
+          find docs -name "*.md" -print0 | xargs -0 -n1 markdown-link-check -q
+        continue-on-error: true # Warning only until baseline is clean

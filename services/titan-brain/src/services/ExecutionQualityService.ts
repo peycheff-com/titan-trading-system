@@ -4,6 +4,7 @@ import {
     ExecutionReportSchema,
     type NatsClient,
     TITAN_QUALITY_TOPIC,
+    TITAN_SUBJECTS,
 } from "@titan/shared";
 
 import {
@@ -38,7 +39,7 @@ export class ExecutionQualityService {
 
         // Subscribe to Execution Reports
         this.nc.subscribe(
-            "titan.evt.execution.report",
+            TITAN_SUBJECTS.EVT.EXECUTION.REPORT,
             async (data: unknown) => {
                 try {
                     const report = ExecutionReportSchema.parse(data);

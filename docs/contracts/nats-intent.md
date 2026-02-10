@@ -15,8 +15,8 @@ The authoritative JSON Schema is `docs/contracts/nats-intent.v1.schema.json`.
 
 ## NATS subject
 
-- Commands: `titan.cmd.exec.place.v1.<venue>.<account>.<symbol>`
-- Execution consumes: `titan.cmd.exec.>` (subject segments beyond this are for observability/routing)
+- Commands: `titan.cmd.execution.place.v1.<venue>.<account>.<symbol>`
+- Execution consumes: `titan.cmd.execution.>` (subject segments beyond this are for observability/routing)
 
 ## Optional fields
 

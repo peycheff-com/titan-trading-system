@@ -37,6 +37,7 @@ Baseline retention (adjust to regulatory requirements):
 - **Metrics/telemetry**: 90 days
 
 Archival policy:
+
 - Export long-term records to immutable object storage
 - Encrypt archives at rest with KMS-managed keys
 - Maintain a searchable index for audits

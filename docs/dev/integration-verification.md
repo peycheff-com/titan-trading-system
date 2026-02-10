@@ -3,6 +3,7 @@
 ## Boot Commands Tested
 
 ### Full System Boot (Development)
+
 ```bash
 # Start NATS (required for all services)
 docker compose -f infrastructure/docker/nats/docker-compose.yml up -d
@@ -17,28 +18,32 @@ npm run start:hunter      # Phase 2 execution
 npm run start:console     # Web operator console
 ```
 
-### Verification Result
-```
+### Verification Result (Boot)
+
+```text
 ✅ npm run build → 11/11 turbo tasks pass
-✅ Provenance generated at: artifacts/provenance/provenance.json
+✅ Provenance generated at: .generated/provenance/provenance.json
 ```
 
 ## Test Commands Tested
 
 ### Unit Tests
+
 ```bash
 npm test                  # All service tests
 npm test -w services/titan-phase2-hunter  # Individual service
 ```
 
-### Verification Result
-```
+### Verification Result (Tests)
+
+```text
 ✅ titan-phase2-hunter: 40 suites, 618 tests (609 passed, 9 skipped)
 ✅ titan-brain: All tests pass
 ✅ packages/shared: All tests pass
 ```
 
 ### Static Analysis
+
 ```bash
 npx knip                  # Dead code detection
 npm audit                 # Security vulnerabilities
@@ -46,8 +51,9 @@ npm run sota:zombie       # Zombie dependency check
 npm run sota:circular     # Circular dependency check
 ```
 
-### Verification Result
-```
+### Verification Result (Analysis)
+
+```text
 ✅ knip: 0 unused files
 ✅ npm audit: 0 vulnerabilities
 ✅ sota:zombie: Pass
@@ -57,27 +63,34 @@ npm run sota:circular     # Circular dependency check
 ## CI Checks Run Locally
 
 ### Build Pipeline
+
 ```bash
 npm run build
 ```
+
 Output: `Tasks: 11 successful, 11 total`
 
 ### Security Scan
+
 ```bash
 npm audit --audit-level=high
 ```
+
 Output: `found 0 vulnerabilities`
 
 ### Provenance Generation
+
 ```bash
 npm run sota:provenance
 ```
-Output: `✅ Provenance generated at: artifacts/provenance/provenance.json`
+
+Output: `✅ Provenance generated at: .generated/provenance/provenance.json`
 
 ## Evidence Snippets
 
 ### Turbo Build Output
-```
+
+```text
 titan-backtesting:build: cache hit, replaying logs
 titan-powerlaw-lab:build: cache hit
 @titan/shared:build: cache hit
@@ -92,13 +105,15 @@ titan-console:build: cache hit
 ```
 
 ### npm audit Output
-```
+
+```text
 audited 2826 packages in 3s
 found 0 vulnerabilities
 ```
 
 ### knip Dead Code Output
-```
+
+```text
 Unused files (0)
 Unused exports (some - types only, acceptable)
 ```
@@ -106,6 +121,7 @@ Unused exports (some - types only, acceptable)
 ## NATS Subjects Verification
 
 Canonical subject definitions in `packages/shared/src/messaging/NatsClient.ts`:
+
 - `TitanSubject` enum defines all NATS subjects
 - Used by: titan-brain, titan-execution
 

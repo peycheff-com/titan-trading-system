@@ -29,7 +29,7 @@ Alert rules are defined in `monitoring/prometheus/config/alert-rules-comprehensi
 Distributed tracing is implemented primarily in the **Rust Execution Engine** (`titan-execution-rs`).
 
 - **Protocol**: OTLP/gRPC
-- **Endpoint**: `http://tempo:4317` (Internal Docker Network)
+- **Endpoint**: `http://tempo:4317` (OTLP/gRPC, internal Docker Network)
 - **Standard Tags**:
   - `service.name`: `titan-execution-rs`
   - `service.version`: `0.1.0`
@@ -43,6 +43,7 @@ Grafana dashboards are provisioned from:
 - `monitoring/grafana/dashboards/titan-comprehensive.json`
 
 Use this dashboard for:
+
 - Phase-level signal rates and rejection ratios
 - Execution latency and fill rate
 - Brain risk metrics and drawdown state

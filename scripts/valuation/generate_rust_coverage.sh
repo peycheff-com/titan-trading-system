@@ -4,7 +4,7 @@ set -e
 # Define root directory
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUST_SERVICE_DIR="$ROOT_DIR/services/titan-execution-rs"
-OUTPUT_DIR="$ROOT_DIR/artifacts/valuation/coverage/rust"
+OUTPUT_DIR="$ROOT_DIR/.generated/coverage/rust"
 
 # Ensure output directory exists
 mkdir -p "$OUTPUT_DIR"

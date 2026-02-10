@@ -6,6 +6,7 @@
 The Titan Organism trades through distinct "Phases" or organs. Each Phase has a specific psychological profile, capital mandate, and kill condition.
 
 ## 1. Phase 1: Scavenger (The Trap)
+
 *Detailed in `services/titan-phase1-scavenger`*
 
 - **Profile**: High frequency, low latency, mean reversion.
@@ -15,6 +16,7 @@ The Titan Organism trades through distinct "Phases" or organs. Each Phase has a 
 - **Kill Condition**: consecutive_losses > 5.
 
 ## 2. Phase 2: Hunter (The Eye)
+
 *Detailed in `services/titan-phase2-hunter`*
 
 - **Profile**: Trend following, Breakout, Holographic Support/Resistance.
@@ -24,6 +26,7 @@ The Titan Organism trades through distinct "Phases" or organs. Each Phase has a 
 - **Kill Condition**: Volatility < Threshold (Market is dead).
 
 ## 3. Phase 3: Sentinel (The Shield)
+
 *Detailed in `services/titan-phase3-sentinel`*
 
 - **Profile**: Market Neutral, Basis Arbitrage (Spot vs Perp).
@@ -32,7 +35,8 @@ The Titan Organism trades through distinct "Phases" or organs. Each Phase has a 
 - **Goal**: Yield farming. Fund the other phases.
 - **Kill Condition**: Funding Rate flips negative.
 
-## 4. Phase 5: Brain (The Cortex)
+## 4. The Brain (The Cortex)
+
 *Detailed in `services/titan-brain`*
 
 - **Profile**: Meta-Strategy.
@@ -46,12 +50,12 @@ The Titan Organism trades through distinct "Phases" or organs. Each Phase has a 
 
 All phase services (Scavenger, Hunter, Sentinel) must implement:
 
-1.  **Signal Emission**:
-    - Subject: `titan.evt.{phase}.signal.v1`
+1. **Signal Emission**:
+    - Subject: `titan.evt.<phase_name>.signal.v1` (e.g., `titan.evt.scavenger.signal.v1`)
     - Payload: `IntentEnvelope<SignalPayload>`
-2.  **Telemetry**:
+2. **Telemetry**:
     - Subject: `titan.evt.phase.diagnostics.v1`
     - Rate: 1Hz
-3.  **Command Listener**:
-    - Subject: `titan.cmd.{phase}.config`
+3. **Command Listener**:
+    - Subject: `titan.cmd.<phase_name>.v1.>` (e.g., `titan.cmd.hunter.v1.>`)
     - Action: Update internal parameters (e.g., stop loss width) on the fly.

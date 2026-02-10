@@ -4,7 +4,7 @@
 # =============================================================================
 # Purpose: Regenerates the complete Audit Evidence Bundle (AEB) from scratch
 # Usage:   ./scripts/valuation/generate_valuation.sh
-# Output:  artifacts/valuation/ with all evidence logs, SBOMs, scans, and reports
+# Output:  valuation/ with all evidence logs, SBOMs, scans, and reports
 # =============================================================================
 
 set -euo pipefail
@@ -12,7 +12,7 @@ set -euo pipefail
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-ARTIFACTS_DIR="$REPO_ROOT/artifacts/valuation"
+ARTIFACTS_DIR="$REPO_ROOT/valuation"
 TIMESTAMP=$(TZ="Europe/Sofia" date +"%Y-%m-%dT%H:%M:%S%z")
 COMMIT_HASH=$(git -C "$REPO_ROOT" rev-parse HEAD)
 

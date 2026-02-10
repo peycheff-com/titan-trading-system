@@ -25,11 +25,14 @@ titan/
 ## 2. Boundaries
 
 ### 2.1 Services vs Packages
+
 - **Services** are runnable applications. They define `Dockerfile`. They have a `main()` entrypoint.
 - **Packages** are libraries. They are imported by services. They export `index.ts`.
 
 ### 2.2 Shared Library (`@titan/shared`)
+
 The spine of the repo.
+
 - **What goes here**:
   - TS Interfaces (Schemas).
   - NATS Subject Definitions.

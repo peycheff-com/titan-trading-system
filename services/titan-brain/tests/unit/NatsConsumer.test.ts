@@ -20,7 +20,7 @@ jest.mock("@titan/shared", () => ({
         parse: jest.fn((data) => data),
     },
     TitanSubject: {
-        EXECUTION_REPORTS: "titan.evt.exec.report.v1",
+        EXECUTION_REPORTS: "titan.evt.execution.report.v1",
         EXECUTION_FILL: "titan.evt.exec.fill.v1",
         DASHBOARD_UPDATES: "titan.evt.dashboard.update",
         EVT_REGIME_UPDATE: "titan.evt.regime.update",
@@ -52,7 +52,7 @@ jest.mock("@titan/shared", () => ({
         EVT: {
             EXECUTION: {
                 FILL: "titan.evt.execution.fill.v1",
-                REPORT: "titan.evt.exec.report.v1",
+                REPORT: "titan.evt.execution.report.v1",
             },
         },
         DLQ: {
@@ -193,7 +193,7 @@ describe("NatsConsumer", () => {
 
         it("should subscribe to execution reports", () => {
             expect(mockNatsClient.subscribe).toHaveBeenCalledWith(
-                "titan.evt.exec.report.v1",
+                "titan.evt.execution.report.v1",
                 expect.any(Function),
             );
         });

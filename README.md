@@ -3,17 +3,16 @@
 [![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 [![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen)](https://github.com/peycheff-com/titan-trading-system/actions)
 [![Coverage](https://img.shields.io/badge/Coverage-80%25%2B-brightgreen)](https://github.com/peycheff-com/titan-trading-system/actions)
-[![Valuation](https://img.shields.io/badge/Valuation-%243.8M--%249.0M-blue)](artifacts/valuation/reports/titan_ip_valuation_report.md)
 
 **Bio-Mimetic Trading Organism** — A 5-phase algorithmic trading system.
 
 > [!TIP]
 > **New to Titan? Start Here:**
-> 👉 [**docs/START_HERE.md**](docs/START_HERE.md) — Navigation hub for Devs, Operators, and Researchers.
+> 👉 [**docs/start-here.md**](docs/start-here.md) — Navigation hub for Devs, Operators, and Researchers.
 > 
-> *   [Canonical Source of Truth](docs/canonical/SYSTEM_SOURCE_OF_TRUTH.md)
+> *   [Canonical Source of Truth](docs/system-source-of-truth.md)
 > *   [Incident Runbook](docs/runbooks/incident_response.md)
-> *   [Deployment Standards](docs/operations/deployment-standards.md)
+> *   [Deployment Standard](docs/deployment-standard.md)
 
 ---
 
@@ -28,7 +27,7 @@ Permitted use cases include:
 - Paper trading / sandbox exchange testing
 - Production trading by approved operators within compliant jurisdictions
 
-See `docs/operations/legal-and-compliance.md` for compliance posture, approvals, and jurisdictional considerations.
+See `docs/explanation/legal-and-compliance.md` for compliance posture, approvals, and jurisdictional considerations.
 
 ## Key Features
 
@@ -40,37 +39,9 @@ See `docs/operations/legal-and-compliance.md` for compliance posture, approvals,
 - **Identity & Forensics**: RBAC-enforced operations, Time Travel debugging, and immutable audit logs.
 - **Sovereign Infrastructure**: Self-hosted on DigitalOcean with full data ownership and zero external dependencies.
 
-## Architecture Overview
+## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                       TITAN BRAIN (Phase 5)                     │
-│       Capital Allocation │ Risk Management │ Coordination       │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-         ┌──────────────────────┼──────────────────────┐
-         ▼                      ▼                      ▼
-┌────────────────┐    ┌────────────────┐    ┌────────────────┐
-│   PHASE 1      │    │   PHASE 2      │    │   PHASE 3      │
-│   Scavenger    │    │   Hunter       │    │   Sentinel     │
-│   Trap System  │    │   Holographic  │    │   Basis Arb    │
-└────────────────┘    └────────────────┘    └────────────────┘
-         │                      │                      │
-         └──────────────────────┼──────────────────────┘
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│               TITAN EXECUTION-RS (Rust Engine)                  │
-│     Sub-ms Latency │ Order Routing │ Position Management        │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-         ┌──────────────────────┼──────────────────────┐
-         ▼                      ▼                      ▼
-┌────────────────┐    ┌────────────────┐    ┌────────────────┐
-│   AI QUANT     │    │   CONSOLE      │    │   NATS         │
-│   Gemini AI    │    │   React/Vite   │    │   JetStream    │
-│   Optimizer    │    │   Dashboard    │    │   Event Bus    │
-└────────────────┘    └────────────────┘    └────────────────┘
-```
+See [docs/architecture.md](docs/architecture.md) for the full system topology, bio-mimetic design, and data flow diagrams.
 
 ## Trading Phases
 
@@ -85,23 +56,23 @@ See `docs/operations/legal-and-compliance.md` for compliance posture, approvals,
 ## Research and Strategy Promotion
 
 Strategy research, validation, and rollout follow a documented workflow:
-see `docs/operations/research-workflow.md` for research → backtest → review → rollout
+see `docs/research/workflow.md` for research → backtest → review → rollout
 and AI Quant validation requirements.
 
 ## Services
 
 | Service                   | Description                            | Technology                      | Status |
 | ------------------------- | -------------------------------------- | ------------------------------- | ------ |
-| `titan-brain`             | Master Orchestrator & Risk Guardian    | TS, Fastify, Active Inference   | 🟢 Prod |
-| `titan-execution-rs`      | High-performance Order Engine          | **Rust**, Actix, Redb, NATS     | 🟢 Prod |
-| `titan-phase1-scavenger`  | Trap detection & Signal generation     | TypeScript                      | 🟢 Prod |
-| `titan-phase2-hunter`     | Holographic analysis engine            | TypeScript                      | 🟢 Prod |
-| `titan-phase3-sentinel`   | Basis arbitrage & Market Neutral       | TypeScript                      | 🟢 Prod |
-| `titan-ai-quant`          | AI parameter optimization              | TypeScript, Gemini AI           | 🟢 Prod |
-| `titan-console`           | Operator Control Plane                 | React, Vite, TailwindCSS        | 🟢 Prod |
-| `titan-backtesting`       | Simulation & Strategy Validation       | TypeScript                      | 🟢 Prod |
-| `titan-powerlaw-lab`      | Power Law & Fractal Research           | TypeScript                      | 🟡 Beta |
-| `@titan/shared`           | Common infrastructure library          | TypeScript                      | 🟢 Prod |
+| `titan-brain`             | Master Orchestrator & Risk Guardian    | TS, Fastify, Active Inference   | 🟢 Prod | [Docs](docs/components/titan-brain.md) |
+| `titan-execution-rs`      | High-performance Order Engine          | **Rust**, Actix, Redb, NATS     | 🟢 Prod | [Docs](docs/components/titan-execution-rs.md) |
+| `titan-phase1-scavenger`  | Trap detection & Signal generation     | TypeScript                      | 🟢 Prod | [Docs](docs/components/titan-phase1-scavenger.md) |
+| `titan-phase2-hunter`     | Holographic analysis engine            | TypeScript                      | 🟢 Prod | [Docs](docs/components/titan-phase2-hunter.md) |
+| `titan-phase3-sentinel`   | Basis arbitrage & Market Neutral       | TypeScript                      | 🟢 Prod | [Docs](docs/components/titan-phase3-sentinel.md) |
+| `titan-ai-quant`          | AI parameter optimization              | TypeScript, Gemini AI           | 🟢 Prod | [Docs](docs/components/titan-ai-quant.md) |
+| `titan-console`           | Operator Control Plane                 | React, Vite, TailwindCSS        | 🟢 Prod | [Docs](docs/components/titan-console.md) |
+| `titan-backtesting`       | Simulation & Strategy Validation       | TypeScript                      | 🟢 Prod | |
+| `titan-powerlaw-lab`      | Power Law & Fractal Research           | TypeScript                      | 🟡 Beta | [Docs](docs/components/titan-powerlaw-lab.md) |
+| `@titan/shared`           | Common infrastructure library          | TypeScript                      | 🟢 Prod | [Docs](docs/components/shared.md) |
 
 ## Technology Stack
 
@@ -173,43 +144,11 @@ npm run test:all    # Test all services
 
 ## Configuration
 
-### Environment Variables
-
-Configuration is primarily managed via `.env` files. Access is unified via `@titan/shared`.
-For production, prefer Docker secrets or Vault and use `*_FILE` environment variables
-to load secrets from mounted files (see `docs/operations/secrets-management.md`).
-
-```bash
-# Core
-NODE_ENV=production
-DEPLOYMENT_ENVIRONMENT=production
-
-# Database (Self-Hosted)
-TITAN_DB_HOST=titan-postgres
-TITAN_DB_PORT=5432
-TITAN_DB_NAME=titan_brain
-TITAN_DB_USER=titan
-TITAN_DB_PASSWORD=titan_secret
-
-# NATS
-NATS_URL=nats://localhost:4222
-
-# Security
-HMAC_SECRET=your_webhook_secret
-TITAN_HMAC_SECRET=your_ipc_secret
-
-# Exchange APIs
-BYBIT_API_KEY=your_key
-BYBIT_API_SECRET=your_secret
-```
+See [docs/dev/configuration.md](docs/dev/configuration.md) for the full environment variable catalog, secret management, and config file reference.
 
 ## Security
 
-- **HMAC Authentication** — All webhooks and IPC signed with HMAC-SHA256
-- **Rate Limiting** — Adaptive rate limiting per IP
-- **Input Validation** — Zod schema validation on all inputs
-- **TLS Encryption** — All external traffic encrypted
-- **Visual Confirmation** — "Truth Layer" verification of trade execution
+See [docs/security.md](docs/security.md) for the full threat model, AuthZ policy, secrets management, and security controls.
 
 ## Contracts
 
@@ -218,39 +157,11 @@ BYBIT_API_SECRET=your_secret
 
 ## Monitoring
 
-| Endpoint   | Description            |
-| ---------- | ---------------------- |
-| `/health`  | Service health status  |
-| `/metrics` | Prometheus metrics     |
-| `/status`  | Detailed system status |
+See [docs/operations/README.md](docs/operations/README.md) for dashboards, metrics endpoints, alerting rules, and troubleshooting guides.
 
 ## Deployment
 
-Deployment is managed **manually** on a DigitalOcean Droplet (VPS) using Docker Compose. We have migrated away from DigitalOcean App Platform.
-Production deployment is intended for **authorized operators** only. Ensure compliance review is completed
-before going live (see `docs/operations/legal-and-compliance.md`).
-
-1. **SSH into the server**:
-   ```bash
-   ssh deploy@<droplet-ip>
-   ```
-
-2. **Navigate to project**:
-   ```bash
-   cd /opt/titan
-   ```
-
-3. **Update and Restart**:
-   ```bash
-   git pull origin main
-   docker-compose -f docker-compose.prod.yml up -d --build --remove-orphans
-   ```
-
-Optional secrets overlay:
-
-```bash
-docker compose -f docker-compose.prod.yml -f docker-compose.secrets.yml up -d
-```
+See [docs/deployment-standard.md](docs/deployment-standard.md) for production deployment procedures, platform support, and container configuration.
 
 ## Project Structure
 
@@ -289,9 +200,7 @@ This repository maintains Tier-1 production standards via automated enforcement:
 | Config Validation | ✅ | Runtime config verification |
 
 **Audit Reports:**
-- [Repo Hygiene Report](docs/REPO_PURGE_LEDGER.md)
-- [Deletion Ledger](docs/REPO_PURGE_LEDGER.md)
-- [Integration Verification](docs/integration-verification.md)
+- [Integration Verification](docs/dev/integration-verification.md)
 
 *Last hygiene audit: 2026-02-10*
 
