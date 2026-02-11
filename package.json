@@ -36,7 +36,7 @@
     "sota:zombie": "python3 scripts/sota/zombie_scan.py",
     "sota:secrets": "python3 scripts/sota/secret_scan.py",
     "sota:flake": "bash scripts/sota/check_flakiness.sh",
-    "sota:immutability": "npx eslint -c scripts/sota/immutability.config.mjs \"services/*/src/**/*.{ts,tsx}\"",
+    "sota:immutability": "npx eslint -c scripts/sota/immutability.config.mjs \"services/*/src/**/*.{ts,tsx}\" \"packages/*/src/**/*.{ts,tsx}\"",
     "sota:audit": "npm audit --audit-level=high",
     "sota:license": "bash scripts/sota/check_license.sh",
     "sota:mutation": "npx stryker run stryker.config.mjs",
