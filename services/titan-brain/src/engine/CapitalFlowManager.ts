@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data, functional/no-let -- Stateful runtime: mutations architecturally required */
 /**
  * CapitalFlowManager - Manages profit sweeping from futures to spot wallet
  * Implements ratchet mechanism to lock in profits

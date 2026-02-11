@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTitanStream } from '@/hooks/useTitanStream';
+import { TITAN_SUBJECTS } from '@titan/shared';
 import { Activity, ShieldCheck, ShieldAlert, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -22,9 +23,9 @@ export function TruthStatusBar() {
   useEffect(() => {
     if (!lastMessage) return;
 
-    if (lastMessage.subject === 'titan.sys.heartbeat') {
+    if (lastMessage.subject === TITAN_SUBJECTS.SYS.HEARTBEAT_PREFIX || lastMessage.subject.startsWith(TITAN_SUBJECTS.SYS.HEARTBEAT_PREFIX)) {
       setLastHeartbeat(Date.now());
-    } else if (lastMessage.subject === 'titan.evt.alert.drift' || lastMessage.subject === 'titan.alert.drift') {
+    } else if (lastMessage.subject === TITAN_SUBJECTS.EVT.ALERT.DRIFT || lastMessage.subject === 'titan.alert.drift') {
        // Support both old and new subject styles just in case
        const d = lastMessage.data as any;
        const pct = typeof d === 'number' ? d : (d.driftPct || 0);

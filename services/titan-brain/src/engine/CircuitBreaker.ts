@@ -1,5 +1,4 @@
-/* eslint-disable functional/immutable-data, functional/no-let -- CircuitBreaker is stateful by design */
-
+/* eslint-disable functional/immutable-data, functional/no-let -- Stateful runtime: mutations architecturally required */
 import {
   BreakerAction,
   BreakerCheckInput,
@@ -7,7 +6,6 @@ import {
   BreakerStatus,
   BreakerType,
   CircuitBreakerConfig,
-  Position,
 } from '../types/index.js';
 
 /**
@@ -206,7 +204,7 @@ export class CircuitBreaker {
    * @returns Current breaker status
    */
   checkConditions(input: BreakerCheckInput): BreakerStatus {
-    const { equity, positions, dailyStartEquity, recentTrades } = input;
+    const { equity, positions: _positions, dailyStartEquity, recentTrades } = input;
 
     // Update daily start equity if provided
     if (dailyStartEquity > 0) {

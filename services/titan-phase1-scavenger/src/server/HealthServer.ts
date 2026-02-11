@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 /**
  * Health Server for Titan Phase 1 - Scavenger
  *

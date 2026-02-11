@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data, functional/no-let -- Stateful runtime: mutations architecturally required */
 import { DatabaseManager } from '../db/DatabaseManager.js';
 import { getNatsClient, NatsClient } from '@titan/shared';
 import { TitanEvent, TitanEventSchema } from '../events/EventTypes.js';

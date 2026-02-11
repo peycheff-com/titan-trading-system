@@ -26,7 +26,7 @@ export const RolesMatrix = () => {
   const getDangerColor = (type: OperatorIntentType) => {
     const level = DANGER_LEVEL[type];
     if (level === 'critical') return 'text-red-500';
-    if (level === 'high') return 'text-orange-500';
+    if (level === 'medium') return 'text-orange-500';
     return 'text-green-500';
   };
 

@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data, functional/no-let -- Stateful runtime: mutations architecturally required */
 /**
  * NatsPublisher - Publishes events to NATS for other Titan services
  *

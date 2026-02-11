@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data, functional/no-let -- Stateful runtime: mutations architecturally required */
 /**
  * HMACValidator - HMAC signature verification for webhook security
  *

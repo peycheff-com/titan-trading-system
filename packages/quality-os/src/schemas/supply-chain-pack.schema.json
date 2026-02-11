@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SupplyChainPack",
+  "type": "object",
+  "properties": {
+    "audits": {
+      "type": "object",
+      "properties": {
+        "npm": {
+          "type": "object",
+          "properties": {
+            "vulnerabilities": { "type": "integer" },
+            "high": { "type": "integer" },
+            "critical": { "type": "integer" },
+            "report_path": { "type": "string" }
+          }
+        },
+        "cargo": {
+          "type": "object",
+          "properties": {
+            "vulnerabilities": { "type": "integer" },
+            "ignored": { "type": "integer" },
+            "report_path": { "type": "string" }
+          }
+        }
+      }
+    },
+    "pinning": {
+      "type": "object",
+      "properties": {
+        "github_actions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "file": { "type": "string" },
+              "action": { "type": "string" },
+              "usage": { "type": "string" },
+              "status": { "enum": ["pinned_sha", "unpinned_tag", "mutable_ref"] }
+            }
+          }
+        }
+      }
+    },
+    "sboms": {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "component": { "type": "string" },
+                "format": { "type": "string" },
+                "path": { "type": "string" },
+                "hash": { "type": "string" }
+            }
+        }
+    }
+  }
+}

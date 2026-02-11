@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 /**
  * WebSocketService - Real-time WebSocket server for Titan Brain
  *

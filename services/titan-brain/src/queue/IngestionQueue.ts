@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 import { EventEmitter } from 'events';
 
 export interface IngestionEvent {

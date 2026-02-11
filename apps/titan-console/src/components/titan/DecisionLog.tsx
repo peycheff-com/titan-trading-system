@@ -6,10 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { BrainCircuit } from 'lucide-react';
 import { BrainDecision } from '@/types/index';
 import { DecisionDetails } from './DecisionDetails';
+import { TITAN_SUBJECTS } from '@titan/shared';
 
 export function DecisionLog() {
   // Subscribe specifically to the decision event
-  const { lastMessage } = useTitanStream('titan.evt.brain.decision.v1');
+  const { lastMessage } = useTitanStream(TITAN_SUBJECTS.EVT.BRAIN.DECISION);
   const [logs, setLogs] = useState<BrainDecision[]>([]);
   const [selectedDecision, setSelectedDecision] = useState<BrainDecision | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -17,7 +18,7 @@ export function DecisionLog() {
   useEffect(() => {
     // Check if the message is actually a decision event
     // The subject check ensures we don't process potential cross-talk if the subscription was wider
-    if (lastMessage && (lastMessage.subject === 'titan.evt.brain.decision.v1')) {
+    if (lastMessage && (lastMessage.subject === TITAN_SUBJECTS.EVT.BRAIN.DECISION)) {
        setLogs(prev => [lastMessage.data as BrainDecision, ...prev].slice(0, 50));
     }
   }, [lastMessage]);

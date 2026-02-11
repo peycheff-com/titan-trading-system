@@ -1,0 +1,48 @@
+{
+  "timestamp": "2026-02-11T12:11:47.533Z",
+  "dry_run": true,
+  "verified": true,
+  "fixes": [
+    {
+      "tier": "F0",
+      "description": "eslint --fix",
+      "file": "src/**/*.ts",
+      "applied": false
+    },
+    {
+      "tier": "F0",
+      "description": "prettier --write",
+      "file": "src/**/*.ts",
+      "applied": false
+    },
+    {
+      "tier": "F1",
+      "description": "Remove unused export: RiskTier",
+      "file": "src/core/risk-classifier.ts",
+      "applied": false
+    },
+    {
+      "tier": "F1",
+      "description": "Remove unused export: checkDocLinks",
+      "file": "src/core/hygiene-engine.ts",
+      "applied": false
+    },
+    {
+      "tier": "F1",
+      "description": "Remove unused export: checkSchemaRefs",
+      "file": "src/core/hygiene-engine.ts",
+      "applied": false
+    },
+    {
+      "tier": "F1",
+      "description": "Remove unused export: HygienePack",
+      "file": "src/core/hygiene-engine.ts",
+      "applied": false
+    }
+  ],
+  "summary": {
+    "f0_applied": 0,
+    "f1_suggested": 4,
+    "f2_requires_approval": 0
+  }
+}

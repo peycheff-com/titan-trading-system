@@ -1,15 +1,15 @@
+/* eslint-disable functional/immutable-data, functional/no-let -- Stateful runtime: mutations architecturally required */
 /**
  * Configuration Loader for Titan Brain
  * Handles loading, validation, and merging of configuration independently.
  */
 
-import { existsSync, readFileSync } from "fs";
-import { z } from "zod"; // Added usage of zod
+import { existsSync, readFileSync } from 'fs';
 
-import { TitanBrainConfig, TitanBrainConfigSchema } from "./ConfigSchema.js";
+import { TitanBrainConfig, TitanBrainConfigSchema } from './ConfigSchema.js';
 
 // Re-export types
-export { EquityTier, TitanBrainConfig } from "./ConfigSchema.js";
+export { EquityTier, TitanBrainConfig } from './ConfigSchema.js';
 
 // Default config matching the schema defaults
 // Note: Zod defaults are applied during parsing, but we keep a roughly matching object for reference/fallback
@@ -77,7 +77,7 @@ export const defaultConfig: TitanBrainConfig = {
   capitalFlow: {
     sweepThreshold: 1.2,
     reserveLimit: 200,
-    sweepSchedule: "0 0 * * *",
+    sweepSchedule: '0 0 * * *',
     maxRetries: 3,
     retryBaseDelay: 1000,
   },
@@ -89,23 +89,23 @@ export const defaultConfig: TitanBrainConfig = {
     cooldownMinutes: 30,
   },
   database: {
-    host: "localhost",
+    host: 'localhost',
     port: 5432,
-    database: "titan_brain",
-    user: "postgres",
-    password: "postgres",
+    database: 'titan_brain',
+    user: 'postgres',
+    password: 'postgres',
     maxConnections: 20,
     idleTimeout: 30000,
   },
   redis: {
-    url: "redis://localhost:6379",
+    url: 'redis://localhost:6379',
     maxRetries: 3,
     retryDelay: 1000,
   },
   server: {
-    host: "0.0.0.0",
+    host: '0.0.0.0',
     port: 3100,
-    corsOrigins: ["http://localhost:3000"],
+    corsOrigins: ['http://localhost:3000'],
   },
   notifications: {
     telegram: {
@@ -127,7 +127,7 @@ export const defaultConfig: TitanBrainConfig = {
   },
   reconciliation: {
     intervalMs: 60000,
-    exchanges: ["BYBIT"],
+    exchanges: ['BYBIT'],
   },
   leaderElection: {
     enabled: true,
@@ -169,15 +169,13 @@ export interface ConfigLoaderResult {
 /**
  * Load configuration from a JSON file
  */
-export function loadConfigFromFile(
-  filePath: string,
-): Partial<TitanBrainConfig> {
+export function loadConfigFromFile(filePath: string): Partial<TitanBrainConfig> {
   if (!existsSync(filePath)) {
     throw new Error(`Configuration file not found: ${filePath}`);
   }
 
   try {
-    const content = readFileSync(filePath, "utf-8");
+    const content = readFileSync(filePath, 'utf-8');
     return JSON.parse(content) as Partial<TitanBrainConfig>;
   } catch (error) {
     if (error instanceof SyntaxError) {
@@ -187,7 +185,7 @@ export function loadConfigFromFile(
   }
 }
 
-import { loadConfigFromEnvironment } from "./EnvironmentLoader.js";
+import { loadConfigFromEnvironment } from './EnvironmentLoader.js';
 
 export { loadConfigFromEnvironment };
 
@@ -204,10 +202,10 @@ function mergeConfigSection<T>(target: T, source: Partial<T> | undefined): T {
 
     if (
       sourceValue !== undefined &&
-      typeof sourceValue === "object" &&
+      typeof sourceValue === 'object' &&
       sourceValue !== null &&
       !Array.isArray(sourceValue) &&
-      typeof targetValue === "object" &&
+      typeof targetValue === 'object' &&
       targetValue !== null &&
       !Array.isArray(targetValue)
     ) {
@@ -222,46 +220,22 @@ function mergeConfigSection<T>(target: T, source: Partial<T> | undefined): T {
 /**
  * Deep merge two TitanBrainConfig objects
  */
-function deepMerge(
-  target: TitanBrainConfig,
-  source: Partial<TitanBrainConfig>,
-): TitanBrainConfig {
+function deepMerge(target: TitanBrainConfig, source: Partial<TitanBrainConfig>): TitanBrainConfig {
   return {
     brain: mergeConfigSection(target.brain, source.brain),
-    allocationEngine: mergeConfigSection(
-      target.allocationEngine,
-      source.allocationEngine,
-    ),
-    performanceTracker: mergeConfigSection(
-      target.performanceTracker,
-      source.performanceTracker,
-    ),
+    allocationEngine: mergeConfigSection(target.allocationEngine, source.allocationEngine),
+    performanceTracker: mergeConfigSection(target.performanceTracker, source.performanceTracker),
     riskGuardian: mergeConfigSection(target.riskGuardian, source.riskGuardian),
     capitalFlow: mergeConfigSection(target.capitalFlow, source.capitalFlow),
-    circuitBreaker: mergeConfigSection(
-      target.circuitBreaker,
-      source.circuitBreaker,
-    ),
+    circuitBreaker: mergeConfigSection(target.circuitBreaker, source.circuitBreaker),
     database: mergeConfigSection(target.database, source.database),
     redis: mergeConfigSection(target.redis, source.redis),
     server: mergeConfigSection(target.server, source.server),
-    notifications: mergeConfigSection(
-      target.notifications,
-      source.notifications,
-    ),
-    activeInference: mergeConfigSection(
-      target.activeInference,
-      source.activeInference,
-    ),
+    notifications: mergeConfigSection(target.notifications, source.notifications),
+    activeInference: mergeConfigSection(target.activeInference, source.activeInference),
     services: mergeConfigSection(target.services, source.services),
-    reconciliation: mergeConfigSection(
-      target.reconciliation,
-      source.reconciliation,
-    ),
-    leaderElection: mergeConfigSection(
-      target.leaderElection,
-      source.leaderElection,
-    ),
+    reconciliation: mergeConfigSection(target.reconciliation, source.reconciliation),
+    leaderElection: mergeConfigSection(target.leaderElection, source.leaderElection),
   };
 }
 
@@ -276,9 +250,7 @@ function getFileConfig(configFile: string): {
     const fileConfig = loadConfigFromFile(configFile);
     return { config: fileConfig, source: `file:${configFile}` };
   } catch (error) {
-    console.warn(
-      `Warning: Could not load config file: ${(error as Error).message}`,
-    );
+    console.warn(`Warning: Could not load config file: ${(error as Error).message}`);
     return { config: {}, source: null };
   }
 }
@@ -287,26 +259,22 @@ function getFileConfig(configFile: string): {
  * Load and merge configuration from all sources
  * Priority: Environment variables > Config file > Defaults
  */
-export function loadConfig(
-  options: ConfigLoaderOptions = {},
-): ConfigLoaderResult {
+export function loadConfig(options: ConfigLoaderOptions = {}): ConfigLoaderResult {
   const { configFile, validate = true, throwOnError = false } = options;
 
   // Load from config file if provided
-  const fileRef = configFile
-    ? getFileConfig(configFile)
-    : { config: {}, source: null };
+  const fileRef = configFile ? getFileConfig(configFile) : { config: {}, source: null };
 
   // Load from environment variables (highest priority)
   const envConfig = loadConfigFromEnvironment();
-  const envSource = Object.keys(envConfig).length > 0 ? "environment" : null;
+  const envSource = Object.keys(envConfig).length > 0 ? 'environment' : null;
 
   const mergedConfig = deepMerge(
     deepMerge({ ...defaultConfig }, fileRef.config as any),
     envConfig as any,
   );
 
-  const sources: string[] = ["defaults", fileRef.source, envSource].filter(
+  const sources: string[] = ['defaults', fileRef.source, envSource].filter(
     (s): s is string => s !== null,
   );
 
@@ -316,9 +284,7 @@ export function loadConfig(
     : { valid: true, errors: [], warnings: [] };
 
   if (validate && !validation.valid && throwOnError) {
-    throw new Error(
-      `Configuration validation failed:\n${validation.errors.join("\n")}`,
-    );
+    throw new Error(`Configuration validation failed:\n${validation.errors.join('\n')}`);
   }
 
   return {
@@ -361,11 +327,7 @@ export class ConfigLoader {
   private async load(): Promise<TitanBrainConfig> {
     const result = loadConfig(this.options);
     if (!result.validation.valid && this.options.throwOnError) {
-      throw new Error(
-        `Configuration validation failed:\n${
-          result.validation.errors.join("\\n")
-        }`,
-      );
+      throw new Error(`Configuration validation failed:\n${result.validation.errors.join('\\n')}`);
     }
 
     this.config = result.config;
@@ -379,7 +341,7 @@ export class ConfigLoader {
     if (!this.config) {
       return {
         valid: false,
-        errors: ["Configuration not loaded"],
+        errors: ['Configuration not loaded'],
         warnings: [],
       };
     }
@@ -389,9 +351,7 @@ export class ConfigLoader {
     }
     return {
       valid: false,
-      errors: result.error.errors.map((e) =>
-        `${e.path.join(".")}: ${e.message}`
-      ),
+      errors: result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`),
       warnings: [],
     };
   }
@@ -412,7 +372,7 @@ export class ConfigValidationError extends Error {
 
   constructor(message: string, errors: string[]) {
     super(message);
-    this.name = "ConfigValidationError";
+    this.name = 'ConfigValidationError';
     this.errors = errors;
   }
 }
@@ -425,9 +385,7 @@ function validateMergedConfig(config: TitanBrainConfig): ValidationResult {
   } else {
     return {
       valid: false,
-      errors: result.error.errors.map((e) =>
-        `${e.path.join(".")}: ${e.message}`
-      ),
+      errors: result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`),
       warnings: [],
     };
   }
@@ -443,7 +401,7 @@ export function validateConfig(config: unknown): ValidationResult {
   }
   return {
     valid: false,
-    errors: result.error.errors.map((e) => `${e.path.join(".")}: ${e.message}`),
+    errors: result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`),
     warnings: [],
   };
 }

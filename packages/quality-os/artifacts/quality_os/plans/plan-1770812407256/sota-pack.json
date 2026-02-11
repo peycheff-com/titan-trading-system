@@ -1,0 +1,75 @@
+{
+  "timestamp": "2026-02-11T12:20:16.947Z",
+  "tier": "Low",
+  "total_checks": 6,
+  "results": [
+    {
+      "id": "typecheck",
+      "name": "TypeScript Type Check",
+      "category": "lint",
+      "required": true,
+      "exitCode": 1,
+      "duration": 129,
+      "output": "npm error Lifecycle script `sota:typecheck` failed with error:\nnpm error workspace @titan/quality-os@0.1.0\nnpm error location /Users/ivan/Code/work/trading/titan/packages/quality-os\nnpm error Missing script: \"sota:typecheck\"\nnpm error\nnpm error To see a list of scripts, run:\nnpm error   npm run --workspace=@titan/quality-os@0.1.0\n",
+      "status": "failed"
+    },
+    {
+      "id": "immutability",
+      "name": "Immutability Rules",
+      "category": "lint",
+      "required": true,
+      "exitCode": 1,
+      "duration": 130,
+      "output": "npm error Lifecycle script `sota:immutability` failed with error:\nnpm error workspace @titan/quality-os@0.1.0\nnpm error location /Users/ivan/Code/work/trading/titan/packages/quality-os\nnpm error Missing script: \"sota:immutability\"\nnpm error\nnpm error To see a list of scripts, run:\nnpm error   npm run --workspace=@titan/quality-os@0.1.0\n",
+      "status": "failed"
+    },
+    {
+      "id": "circular",
+      "name": "Circular Dependency Check",
+      "category": "architecture",
+      "required": true,
+      "exitCode": 1,
+      "duration": 149,
+      "output": "npm error Lifecycle script `sota:circular` failed with error:\nnpm error workspace @titan/quality-os@0.1.0\nnpm error location /Users/ivan/Code/work/trading/titan/packages/quality-os\nnpm error Missing script: \"sota:circular\"\nnpm error\nnpm error To see a list of scripts, run:\nnpm error   npm run --workspace=@titan/quality-os@0.1.0\n",
+      "status": "failed"
+    },
+    {
+      "id": "dead-code",
+      "name": "Dead Code Detection",
+      "category": "architecture",
+      "required": true,
+      "exitCode": 1,
+      "duration": 87,
+      "output": "npm error Lifecycle script `sota:dead` failed with error:\nnpm error workspace @titan/quality-os@0.1.0\nnpm error location /Users/ivan/Code/work/trading/titan/packages/quality-os\nnpm error Missing script: \"sota:dead\"\nnpm error\nnpm error To see a list of scripts, run:\nnpm error   npm run --workspace=@titan/quality-os@0.1.0\n",
+      "status": "failed"
+    },
+    {
+      "id": "docs-links",
+      "name": "Documentation Link Integrity",
+      "category": "docs",
+      "required": false,
+      "exitCode": 1,
+      "duration": 88,
+      "output": "npm error Lifecycle script `sota:docs:links` failed with error:\nnpm error workspace @titan/quality-os@0.1.0\nnpm error location /Users/ivan/Code/work/trading/titan/packages/quality-os\nnpm error Missing script: \"sota:docs:links\"\nnpm error\nnpm error To see a list of scripts, run:\nnpm error   npm run --workspace=@titan/quality-os@0.1.0\n",
+      "status": "skipped"
+    },
+    {
+      "id": "secrets",
+      "name": "Secret Scanning",
+      "category": "security",
+      "required": true,
+      "exitCode": 1,
+      "duration": 92,
+      "output": "npm error Lifecycle script `sota:secrets` failed with error:\nnpm error workspace @titan/quality-os@0.1.0\nnpm error location /Users/ivan/Code/work/trading/titan/packages/quality-os\nnpm error Missing script: \"sota:secrets\"\nnpm error\nnpm error To see a list of scripts, run:\nnpm error   npm run --workspace=@titan/quality-os@0.1.0\n",
+      "status": "failed"
+    }
+  ],
+  "summary": {
+    "passed": 0,
+    "failed": 5,
+    "skipped": 1,
+    "required_passed": 0,
+    "required_failed": 5
+  },
+  "pack_hash": "803c7cf2392cde200c0bb6685a45a67dcb1213ad6a75eb3b65411c5b10abc6c7"
+}

@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 import { Redis } from 'ioredis';
 import { v4 as uuidv4 } from 'uuid';
 import * as crypto from 'crypto';

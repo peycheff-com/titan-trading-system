@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "QualityPack",
+  "type": "object",
+  "properties": {
+    "meta": {
+      "type": "object",
+      "properties": {
+        "timestamp": { "type": "string", "format": "date-time" },
+        "commit_sha": { "type": "string" },
+        "plan_hash": { "type": "string" },
+        "toolchain": {
+          "type": "object",
+          "properties": {
+            "node": { "type": "string" },
+            "npm": { "type": "string" },
+            "rust": { "type": "string" }
+          }
+        }
+      },
+      "required": ["timestamp", "commit_sha", "plan_hash"]
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "test_suite": { "type": "string" },
+          "passed": { "type": "integer" },
+          "failed": { "type": "integer" },
+          "skipped": { "type": "integer" },
+          "duration_ms": { "type": "integer" },
+          "coverage_pct": { "type": "number" }
+        },
+        "required": ["test_suite", "passed", "failed"]
+      }
+    },
+    "lint_status": {
+        "type": "object",
+        "properties": {
+            "passed": { "type": "boolean" },
+            "errors": { "type": "integer" },
+            "warnings": { "type": "integer" }
+        }
+    },
+    "determinism_vectors": {
+        "type": "object",
+        "description": "Hashes of build artifacts to prove determinism"
+    }
+  },
+  "required": ["meta", "results"]
+}

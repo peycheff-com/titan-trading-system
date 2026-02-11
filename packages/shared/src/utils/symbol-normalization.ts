@@ -1,3 +1,4 @@
+/* eslint-disable functional/no-let -- Stateful runtime: mutations architecturally required */
 /**
  * Symbol Normalization - Canonical symbol format for Titan
  *

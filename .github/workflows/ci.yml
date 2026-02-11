@@ -93,6 +93,16 @@ jobs:
       node-version: '22.19.0'
       npm-version: '11.6.2'
 
+  quality-gate:
+    name: quality-gate
+    needs: [changes, preflight]
+    if: ${{ github.event_name != 'schedule' }}
+    uses: ./.github/workflows/quality-gate.yml
+    with:
+      node-version: '22.19.0'
+      npm-version: '11.6.2'
+      risk-tier: ${{ needs.changes.outputs.tier }}
+
   rust-services:
     name: titan-execution-rs
     needs: [changes]
@@ -188,7 +198,7 @@ jobs:
     name: CI Pipeline Status
     runs-on: ubuntu-latest
     if: ${{ always() && github.event_name != 'schedule' }}
-    needs: [changes, preflight, node-services, rust-services, security-scan]
+    needs: [changes, preflight, node-services, rust-services, security-scan, quality-gate]
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.1.3

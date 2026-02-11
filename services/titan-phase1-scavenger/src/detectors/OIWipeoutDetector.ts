@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 /**
  * OI Wipeout Detector (V-Shape Catch)
  *

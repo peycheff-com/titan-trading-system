@@ -1,0 +1,50 @@
+{
+  "runtime": {
+    "total_minutes": 0.44,
+    "jobs": [
+      {
+        "name": "typecheck",
+        "minutes": 0.11,
+        "status": "failed"
+      },
+      {
+        "name": "immutability",
+        "minutes": 0.16,
+        "status": "passed"
+      },
+      {
+        "name": "circular",
+        "minutes": 0.04,
+        "status": "passed"
+      },
+      {
+        "name": "dead-code",
+        "minutes": 0.1,
+        "status": "passed"
+      },
+      {
+        "name": "docs-links",
+        "minutes": 0.01,
+        "status": "passed"
+      },
+      {
+        "name": "secrets",
+        "minutes": 0.02,
+        "status": "passed"
+      }
+    ]
+  },
+  "caching": {
+    "hit_rate_pct": 0,
+    "hits": 0,
+    "misses": 0,
+    "size_saved_mb": 0
+  },
+  "justification": {
+    "risk_tier": "Low",
+    "skipped_checks": [
+      "full-integration",
+      "e2e"
+    ]
+  }
+}

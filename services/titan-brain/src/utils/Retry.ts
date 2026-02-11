@@ -1,3 +1,4 @@
+/* eslint-disable functional/no-let -- Stateful runtime: mutations architecturally required */
 import { Logger } from '../logging/Logger.js';
 
 const logger = Logger.getInstance('retry-util');

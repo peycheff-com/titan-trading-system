@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data, functional/no-let -- Stateful runtime: mutations architecturally required */
 /**
  * ServiceClient - Robust HTTP client for inter-service communication
  *

@@ -1,7 +1,7 @@
 /**
  * PM2 Ecosystem Configuration for Titan Trading System
  *
- * Services start in order: titan-core → titan-brain → titan-scavenger
+ * Services start in order: titan-execution → titan-brain → phases (scavenger, hunter, sentinel)
  *
  * Usage:
  *   pm2 start ecosystem.config.js
@@ -58,12 +58,12 @@ module.exports = {
       instances: 1,
       exec_mode: 'fork',
 
-      // Dependency on titan-core
+      // Dependency on execution engine
       wait_ready: true,
       listen_timeout: 15000,
 
-      // Ensure titan-core is running first
-      depends_on: ['titan-core'],
+      // Ensure execution engine is running first
+      depends_on: ['titan-execution'],
 
       // Restart behavior
       autorestart: true,
@@ -112,7 +112,7 @@ module.exports = {
       listen_timeout: 20000,
 
       // Ensure titan-core and titan-brain are running first
-      depends_on: ['titan-core', 'titan-brain'],
+      depends_on: ['titan-execution', 'titan-brain'],
 
       // Restart behavior
       autorestart: true,
@@ -188,7 +188,7 @@ module.exports = {
       name: 'titan-console',
       script: 'npm',
       args: 'run dev',
-      cwd: './services/titan-console',
+      cwd: './apps/titan-console',
       instances: 1,
       exec_mode: 'fork',
 

@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 /**
  * Database Manager for Titan Brain
  * Handles PostgreSQL connection pooling, query execution, and transactions

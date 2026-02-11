@@ -35,13 +35,13 @@ describe('A2UI Validator — root level', () => {
   it('rejects non-object input', () => {
     const result = validateA2UISpec('not-an-object');
     expect(result.valid).toBe(false);
-    if (!result.valid) expect(result.errors).toContain('Root: must be an object');
+    if (!result.valid) expect((result as { valid: false; errors: string[] }).errors).toContain('Root: must be an object');
   });
 
   it('rejects wrong version', () => {
     const result = validateA2UISpec(validSpec({ uiSpecVersion: '2.0' }));
     expect(result.valid).toBe(false);
-    if (!result.valid) expect(result.errors[0]).toContain('uiSpecVersion');
+    if (!result.valid) expect((result as { valid: false; errors: string[] }).errors[0]).toContain('uiSpecVersion');
   });
 
   it('rejects missing model', () => {
@@ -57,7 +57,7 @@ describe('A2UI Validator — root level', () => {
   it('rejects unknown root-level fields', () => {
     const result = validateA2UISpec(validSpec({ extraField: 'bad' }));
     expect(result.valid).toBe(false);
-    if (!result.valid) expect(result.errors[0]).toContain('unknown field "extraField"');
+    if (!result.valid) expect((result as { valid: false; errors: string[] }).errors[0]).toContain('unknown field "extraField"');
   });
 
   it('accepts valid layout values', () => {
@@ -83,7 +83,7 @@ describe('A2UI Validator — components', () => {
       }),
     );
     expect(result.valid).toBe(false);
-    if (!result.valid) expect(result.errors[0]).toContain('unknown component type');
+    if (!result.valid) expect((result as { valid: false; errors: string[] }).errors[0]).toContain('unknown component type');
   });
 
   it('rejects components without type', () => {

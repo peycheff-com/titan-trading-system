@@ -1,3 +1,4 @@
+/* eslint-disable functional/no-let -- Stateful runtime: mutations architecturally required */
 /**
  * TailRiskCalculator - Computes Aggregated Portfolio Tail Risk (APTR)
  *

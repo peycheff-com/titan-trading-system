@@ -1,0 +1,19 @@
+{
+  "runtime": {
+    "total_minutes": 0,
+    "jobs": []
+  },
+  "caching": {
+    "hit_rate_pct": 0,
+    "hits": 0,
+    "misses": 0,
+    "size_saved_mb": 0
+  },
+  "justification": {
+    "risk_tier": "Low",
+    "skipped_checks": [
+      "full-integration",
+      "e2e"
+    ]
+  }
+}

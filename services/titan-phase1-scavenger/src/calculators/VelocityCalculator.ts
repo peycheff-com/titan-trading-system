@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 /**
  * VelocityCalculator - Calculate price velocity for order type selection
  *

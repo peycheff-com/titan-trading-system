@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data, functional/no-let -- Stateful runtime: mutations architecturally required */
 /**
  * OperatorIntentService
  *
@@ -67,13 +68,13 @@ export interface IntentPreviewResult {
 }
 
 export const PERMISSION_MAP: Record<OperatorIntentType, string> = {
-  'ARM': 'safety.arm',
-  'DISARM': 'safety.disarm',
-  'SET_MODE': 'control.set_mode',
-  'THROTTLE_PHASE': 'control.throttle',
-  'FLATTEN': 'risk.flatten',
-  'RUN_RECONCILE': 'control.reconcile',
-  'OVERRIDE_RISK': 'risk.override',
+  ARM: 'safety.arm',
+  DISARM: 'safety.disarm',
+  SET_MODE: 'control.set_mode',
+  THROTTLE_PHASE: 'control.throttle',
+  FLATTEN: 'risk.flatten',
+  RUN_RECONCILE: 'control.reconcile',
+  OVERRIDE_RISK: 'risk.override',
 };
 
 const MAX_INTENTS = 1000;
@@ -81,9 +82,7 @@ const IDEMPOTENCY_TTL_MS = 60 * 60 * 1000; // 1 hour
 const IDEMPOTENCY_CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 min
 
 /** Callback for executing an intent's side-effects and returning a receipt */
-export type IntentExecutor = (
-  intent: OperatorIntentRecord,
-) => Promise<IntentReceipt>;
+export type IntentExecutor = (intent: OperatorIntentRecord) => Promise<IntentReceipt>;
 
 /** Callback for verifying an intent's effect after execution */
 export type IntentVerifier = (
@@ -113,7 +112,10 @@ export class OperatorIntentService extends EventEmitter {
     this.repo = repo ?? null;
 
     // Periodic idempotency key cleanup
-    this.cleanupInterval = setInterval(() => this.cleanupIdempotencyKeys(), IDEMPOTENCY_CLEANUP_INTERVAL_MS);
+    this.cleanupInterval = setInterval(
+      () => this.cleanupIdempotencyKeys(),
+      IDEMPOTENCY_CLEANUP_INTERVAL_MS,
+    );
   }
 
   /**
@@ -188,10 +190,7 @@ export class OperatorIntentService extends EventEmitter {
     const clampedTtl = Math.min(intentData.ttl_seconds ?? defaultTtl, maxTtl);
 
     // 7. Create ACCEPTED record
-    const record = this.createRecord(
-      { ...intentData, ttl_seconds: clampedTtl },
-      'ACCEPTED',
-    );
+    const record = this.createRecord({ ...intentData, ttl_seconds: clampedTtl }, 'ACCEPTED');
     this.storeIntent(record);
 
     // 8. Register idempotency key
@@ -248,7 +247,6 @@ export class OperatorIntentService extends EventEmitter {
     return { intents: result, total };
   }
 
-
   /**
    * Get a single intent by ID.
    */
@@ -289,13 +287,13 @@ export class OperatorIntentService extends EventEmitter {
     // For now, we still check against valid intent types for roles as a high-level filter
     const requiredPermission = PERMISSION_MAP[payload.type];
     if (!requiredPermission) {
-       // Fallback for unknown types - should not happen if types are typed
-       this.logger.warn(`No permission mapping for intent type ${payload.type}`);
+      // Fallback for unknown types - should not happen if types are typed
+      this.logger.warn(`No permission mapping for intent type ${payload.type}`);
     }
 
     // For now, we still check against valid intent types for roles as a high-level filter
     // ideally we would check `operator.hasPermission(requiredPermission)` here.
-    // Since we don't have the full Operator object/context here in preview, 
+    // Since we don't have the full Operator object/context here in preview,
     // we rely on the role-based allowlist which acts as a coarse-grained permission check.
     // TODO: Pass full operator context to previewIntent for fine-grained checks.
     const role = (payload.role ?? 'operator') as keyof typeof ROLE_ALLOWED_INTENTS;
@@ -311,9 +309,8 @@ export class OperatorIntentService extends EventEmitter {
     const affectedPhases = this.computeAffectedPhases(payload.type, payload.params);
     const affectedSymbols = this.computeAffectedSymbols(payload.type, payload.params);
     const postureChange = this.computePostureChange(payload.type);
-    const throttleDelta = payload.type === 'THROTTLE_PHASE'
-      ? (payload.params.pct as number ?? 100) - 100
-      : null;
+    const throttleDelta =
+      payload.type === 'THROTTLE_PHASE' ? ((payload.params.pct as number) ?? 100) - 100 : null;
 
     const allowed = rbacAllowed && stateHashValid && !inFlight;
     let reason = 'Allowed';
@@ -364,7 +361,10 @@ export class OperatorIntentService extends EventEmitter {
   /**
    * Approve a pending intent, triggering execution.
    */
-  async approveIntent(id: string, approverId: string): Promise<{
+  async approveIntent(
+    id: string,
+    approverId: string,
+  ): Promise<{
     success: boolean;
     intent?: OperatorIntentRecord;
     error?: string;
@@ -380,7 +380,7 @@ export class OperatorIntentService extends EventEmitter {
     intent.approved_at = new Date().toISOString();
 
     this.logger.info(`Intent ${id} approved by ${approverId}`);
-    
+
     // Persist status change (and metadata hopefully)
     await this.updateStatus(id, 'ACCEPTED');
 
@@ -395,7 +395,11 @@ export class OperatorIntentService extends EventEmitter {
   /**
    * Reject a pending intent.
    */
-  rejectIntent(id: string, approverId: string, reason: string): {
+  rejectIntent(
+    id: string,
+    approverId: string,
+    reason: string,
+  ): {
     success: boolean;
     intent?: OperatorIntentRecord;
     error?: string;
@@ -531,7 +535,10 @@ export class OperatorIntentService extends EventEmitter {
     // Write-through to DB
     if (this.repo) {
       this.repo.resolve(id, status, receipt, intent.resolved_at!).catch((err) => {
-        this.logger.error(`DB resolve failed for intent ${id}`, err instanceof Error ? err : undefined);
+        this.logger.error(
+          `DB resolve failed for intent ${id}`,
+          err instanceof Error ? err : undefined,
+        );
       });
     }
   }
@@ -554,7 +561,10 @@ export class OperatorIntentService extends EventEmitter {
       // Write-through to DB
       if (this.repo) {
         this.repo.updateStatus(id, status).catch((err) => {
-          this.logger.error(`DB updateStatus failed for intent ${id}`, err instanceof Error ? err : undefined);
+          this.logger.error(
+            `DB updateStatus failed for intent ${id}`,
+            err instanceof Error ? err : undefined,
+          );
         });
       }
     }
@@ -584,7 +594,10 @@ export class OperatorIntentService extends EventEmitter {
     // Write-through to DB
     if (this.repo) {
       this.repo.insert(record).catch((err) => {
-        this.logger.error(`DB insert failed for intent ${record.id}`, err instanceof Error ? err : undefined);
+        this.logger.error(
+          `DB insert failed for intent ${record.id}`,
+          err instanceof Error ? err : undefined,
+        );
       });
     }
   }
@@ -645,7 +658,10 @@ export class OperatorIntentService extends EventEmitter {
   // Risk Delta Helpers (v1: basic analysis)
   // =========================================================================
 
-  private computeAffectedPhases(type: OperatorIntentType, params: Record<string, unknown>): string[] {
+  private computeAffectedPhases(
+    type: OperatorIntentType,
+    params: Record<string, unknown>,
+  ): string[] {
     switch (type) {
       case 'THROTTLE_PHASE':
         return params.phase ? [String(params.phase)] : [];
@@ -660,7 +676,10 @@ export class OperatorIntentService extends EventEmitter {
     }
   }
 
-  private computeAffectedSymbols(type: OperatorIntentType, params: Record<string, unknown>): string[] {
+  private computeAffectedSymbols(
+    type: OperatorIntentType,
+    params: Record<string, unknown>,
+  ): string[] {
     if (type === 'FLATTEN' && params.symbol) {
       return [String(params.symbol)];
     }
@@ -672,10 +691,14 @@ export class OperatorIntentService extends EventEmitter {
 
   private computePostureChange(type: OperatorIntentType): string | null {
     switch (type) {
-      case 'ARM': return 'disarmed → armed';
-      case 'DISARM': return 'armed → disarmed';
-      case 'FLATTEN': return '→ halted';
-      default: return null;
+      case 'ARM':
+        return 'disarmed → armed';
+      case 'DISARM':
+        return 'armed → disarmed';
+      case 'FLATTEN':
+        return '→ halted';
+      default:
+        return null;
     }
   }
 
@@ -698,7 +721,10 @@ export class OperatorIntentService extends EventEmitter {
         this.logger.info(`Hydrated ${records.length} intents from database`);
       }
     } catch (err) {
-      this.logger.error('Failed to hydrate intents from DB, starting with empty buffer', err instanceof Error ? err : undefined);
+      this.logger.error(
+        'Failed to hydrate intents from DB, starting with empty buffer',
+        err instanceof Error ? err : undefined,
+      );
     }
   }
 }

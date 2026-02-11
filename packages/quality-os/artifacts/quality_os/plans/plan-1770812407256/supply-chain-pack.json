@@ -1,0 +1,13 @@
+{
+  "audits": {
+    "npm": {
+      "vulnerabilities": 0,
+      "high": 0,
+      "critical": 0
+    }
+  },
+  "pinning": {
+    "github_actions": []
+  },
+  "sboms": []
+}

@@ -1,0 +1,24 @@
+{
+  "id": "plan-1770810183469",
+  "trigger": "manual",
+  "input_vectors": {
+    "base_sha": "HEAD~1",
+    "head_sha": "HEAD",
+    "changed_files": [
+      "docs/components/titan-ai-quant.md",
+      "docs/reference/api-brain.md"
+    ]
+  },
+  "risk_analysis": {
+    "tier": "Low",
+    "reasons": [
+      "Low: Documentation or minor script change"
+    ]
+  },
+  "execution_plan": {
+    "required_gates": [
+      "Gate A (Lint Only)"
+    ],
+    "matrix": {}
+  }
+}

@@ -1,3 +1,4 @@
+/* eslint-disable functional/no-let -- Stateful runtime: mutations architecturally required */
 /**
  * Position Repository
  * Handles persistence of position snapshots for reconciliation

@@ -15,14 +15,7 @@ import { ConnectionStatus, ExchangeFlow } from '../types';
 /**
  * Supported exchange identifiers
  */
-export type ExchangeId =
-  | 'binance'
-  | 'bybit'
-  | 'coinbase'
-  | 'deribit'
-
-  | 'kraken'
-  | 'mexc';
+export type ExchangeId = 'binance' | 'bybit' | 'coinbase' | 'deribit' | 'kraken' | 'mexc';
 
 /**
  * Supported product types
@@ -110,7 +103,6 @@ const EXCHANGE_WS_URLS: Record<ExchangeId, Partial<Record<ProductType, string>>>
   mexc: {
     spot: 'wss://wbs.mexc.com/ws',
   },
-
 };
 
 /**
@@ -411,8 +403,6 @@ export class ExchangeWebSocketClient extends EventEmitter {
     this.ws?.send(JSON.stringify(subscribeMessage));
   }
 
-
-
   /**
    * Subscribe to Deribit trade stream (Options/Futures)
    * Uses JSON-RPC 2.0 format: { jsonrpc: "2.0", method: "public/subscribe", params: { channels: ["trades.{instrument_name}.raw"] } }
@@ -645,8 +635,6 @@ export class ExchangeWebSocketClient extends EventEmitter {
       tradeId: `${symbol}-${deal.t}-${deal.p}`, // Construct a unique ID as MEXC doesn't provide one per trade in this stream
     };
   }
-
-
 
   /**
    * Parse Deribit trade message (Options/Futures)

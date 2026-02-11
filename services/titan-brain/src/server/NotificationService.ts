@@ -1,10 +1,6 @@
-import {
-  NotificationConfig,
-} from '../types/config.js';
-import {
-  NotificationPayload,
-  NotificationType,
-} from '@titan/shared';
+/* eslint-disable functional/immutable-data, functional/no-let -- Stateful runtime: mutations architecturally required */
+import { NotificationConfig } from '../types/config.js';
+import { NotificationPayload, NotificationType } from '@titan/shared';
 import { WebSocketService } from './WebSocketService.js';
 import { randomUUID } from 'crypto';
 import { PhaseId } from '../types/index.js'; // Assuming PhaseId is re-exported from index
@@ -213,7 +209,10 @@ export class NotificationService {
    * Broadcast to Console (WebSocket) with Deduplication
    */
   private broadcastToConsole(
-    params: Omit<NotificationPayload, 'id' | 'timestamp' | 'trace_id' | 'source' | 'count' | 'acknowledged'>
+    params: Omit<
+      NotificationPayload,
+      'id' | 'timestamp' | 'trace_id' | 'source' | 'count' | 'acknowledged'
+    >,
   ) {
     if (!this.webSocketService) return;
 
@@ -407,7 +406,9 @@ _${new Date(message.timestamp).toISOString()}_`;
         }
       }
     }
-    throw new Error(`Notification failed after ${this.retryAttempts} attempts: ${lastError?.message}`);
+    throw new Error(
+      `Notification failed after ${this.retryAttempts} attempts: ${lastError?.message}`,
+    );
   }
 
   /**
@@ -416,49 +417,49 @@ _${new Date(message.timestamp).toISOString()}_`;
   updateConfig(config: NotificationConfig): void {
     this.config = config;
   }
-  
+
   /**
    * Test notification channels
    */
   async testNotifications(): Promise<{ telegram: boolean; email: boolean }> {
-      const results = { telegram: false, email: false };
+    const results = { telegram: false, email: false };
 
-      // Test Telegram
-      if (this.config.telegram.enabled) {
-        try {
-          const testMessage: NotificationMessage = {
-            type: NotificationType.SYSTEM_ERROR,
-            title: '🧪 Test Notification',
-            message: 'This is a test notification from Titan Brain.',
-            priority: 'LOW',
-            timestamp: Date.now(),
-          };
-          await this.sendTelegramNotification(testMessage);
-  
-          results.telegram = true;
-        } catch (error) {
-          console.error('Telegram test failed:', error);
-        }
+    // Test Telegram
+    if (this.config.telegram.enabled) {
+      try {
+        const testMessage: NotificationMessage = {
+          type: NotificationType.SYSTEM_ERROR,
+          title: '🧪 Test Notification',
+          message: 'This is a test notification from Titan Brain.',
+          priority: 'LOW',
+          timestamp: Date.now(),
+        };
+        await this.sendTelegramNotification(testMessage);
+
+        results.telegram = true;
+      } catch (error) {
+        console.error('Telegram test failed:', error);
       }
-  
-      // Test Email
-      if (this.config.email.enabled) {
-        try {
-          const testMessage: NotificationMessage = {
-            type: NotificationType.SYSTEM_ERROR,
-            title: '🧪 Test Notification',
-            message: 'This is a test notification from Titan Brain.',
-            priority: 'LOW',
-            timestamp: Date.now(),
-          };
-          await this.sendEmailNotification(testMessage);
-  
-          results.email = true;
-        } catch (error) {
-          console.error('Email test failed:', error);
-        }
-      }
-  
-      return results;
     }
+
+    // Test Email
+    if (this.config.email.enabled) {
+      try {
+        const testMessage: NotificationMessage = {
+          type: NotificationType.SYSTEM_ERROR,
+          title: '🧪 Test Notification',
+          message: 'This is a test notification from Titan Brain.',
+          priority: 'LOW',
+          timestamp: Date.now(),
+        };
+        await this.sendEmailNotification(testMessage);
+
+        results.email = true;
+      } catch (error) {
+        console.error('Email test failed:', error);
+      }
+    }
+
+    return results;
+  }
 }

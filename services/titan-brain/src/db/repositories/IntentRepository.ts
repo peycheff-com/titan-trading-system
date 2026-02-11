@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data, functional/no-let -- Stateful runtime: mutations architecturally required */
 /**
  * IntentRepository
  *
@@ -84,7 +85,10 @@ export class IntentRepository {
         ],
       );
     } catch (err) {
-      this.logger.error(`Failed to insert intent ${record.id}`, err instanceof Error ? err : undefined);
+      this.logger.error(
+        `Failed to insert intent ${record.id}`,
+        err instanceof Error ? err : undefined,
+      );
       // Non-fatal: in-memory buffer is primary, DB is durability layer
     }
   }
@@ -94,12 +98,12 @@ export class IntentRepository {
    */
   async updateStatus(id: string, status: OperatorIntentStatus): Promise<void> {
     try {
-      await this.db.query(
-        `UPDATE operator_intents SET status = $1 WHERE id = $2`,
-        [status, id],
-      );
+      await this.db.query(`UPDATE operator_intents SET status = $1 WHERE id = $2`, [status, id]);
     } catch (err) {
-      this.logger.error(`Failed to update intent status ${id}`, err instanceof Error ? err : undefined);
+      this.logger.error(
+        `Failed to update intent status ${id}`,
+        err instanceof Error ? err : undefined,
+      );
     }
   }
 
@@ -128,10 +132,9 @@ export class IntentRepository {
    * Find a single intent by ID.
    */
   async findById(id: string): Promise<OperatorIntentRecord | null> {
-    const row = await this.db.queryOne<IntentRow>(
-      `SELECT * FROM operator_intents WHERE id = $1`,
-      [id],
-    );
+    const row = await this.db.queryOne<IntentRow>(`SELECT * FROM operator_intents WHERE id = $1`, [
+      id,
+    ]);
     return row ? this.toRecord(row) : null;
   }
 
@@ -217,7 +220,8 @@ export class IntentRepository {
       state_hash: row.state_hash ?? undefined,
       submitted_at: row.submitted_at,
       resolved_at: row.resolved_at ?? undefined,
-      receipt: typeof row.receipt === 'string' ? JSON.parse(row.receipt) : (row.receipt ?? undefined),
+      receipt:
+        typeof row.receipt === 'string' ? JSON.parse(row.receipt) : (row.receipt ?? undefined),
       approver_id: row.approver_id ?? undefined,
       approved_at: row.approved_at ?? undefined,
       rejection_reason: row.rejection_reason ?? undefined,

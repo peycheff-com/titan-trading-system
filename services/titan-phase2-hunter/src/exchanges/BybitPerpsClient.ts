@@ -132,7 +132,7 @@ export class BybitPerpsClient {
   private baseUrl = 'https://api.bybit.com';
   private apiKey: string;
   private apiSecret: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   private cache = new Map<string, CacheEntry<any>>();
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
   private readonly REQUEST_TIMEOUT = 10000; // 10 seconds
@@ -673,7 +673,7 @@ export class BybitPerpsClient {
   private async makeRequest(
     method: 'GET' | 'POST',
     endpoint: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     params: any = {},
     signed: boolean = false
   ): Promise<any> {

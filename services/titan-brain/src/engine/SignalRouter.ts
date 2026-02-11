@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 import { BrainDecision, IntentSignal, PhaseId } from '../types/index.js';
 import { SignalProcessor } from './SignalProcessor.js';
 import { Logger } from '@titan/shared';

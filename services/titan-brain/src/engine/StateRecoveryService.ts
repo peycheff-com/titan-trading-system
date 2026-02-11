@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data, functional/no-let -- Stateful runtime: mutations architecturally required */
 /**
  * State Recovery Service
  * Handles loading and recovery of system state on startup
@@ -616,9 +617,7 @@ export class StateRecoveryService {
       }
 
       clearTimers();
-      console.log(
-        `Replay finished. Processed fills: ${processedCount}, reason: ${stopReason}`,
-      );
+      console.log(`Replay finished. Processed fills: ${processedCount}, reason: ${stopReason}`);
     } catch (error) {
       console.error('Failed to replay from JetStream', error);
     }

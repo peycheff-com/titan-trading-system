@@ -1,3 +1,4 @@
+/* eslint-disable functional/no-let -- Stateful runtime: mutations architecturally required */
 import { NatsClient } from './NatsClient.js';
 
 /**
@@ -39,7 +40,7 @@ export async function requestExecutionPolicyHash(
   timeoutMs = 5000,
   retries = 3,
 ): Promise<PolicyHashResponse> {
-  // eslint-disable-next-line functional/no-let
+   
   let lastError: Error | undefined;
 
   for (let attempt = 1; attempt <= retries; attempt++) {

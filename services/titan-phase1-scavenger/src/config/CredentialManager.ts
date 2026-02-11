@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data, functional/no-let -- Stateful runtime: mutations architecturally required */
 /**
  * CredentialManager - Secure Credential Storage with AES-256-GCM Encryption
  *

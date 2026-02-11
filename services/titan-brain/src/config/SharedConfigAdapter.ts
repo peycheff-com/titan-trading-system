@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data, functional/no-let -- Stateful runtime: mutations architecturally required */
 import { EventEmitter } from 'events';
 import { ConfigManager as SharedConfigManager, getConfigManager, Logger } from '@titan/shared';
 import { BrainConfig, ConfigDefaults } from './BrainConfig.js';
@@ -12,7 +13,7 @@ export class SharedConfigAdapter extends EventEmitter {
 
   private readonly logger: Logger;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   constructor(logger?: any) {
     super();
     this.sharedManager = getConfigManager();
@@ -68,7 +69,7 @@ export class SharedConfigAdapter extends EventEmitter {
    * Map shared config objects to local BrainConfig interface
    */
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   private mapToBrainConfig(brainConfig: any, serviceConfig: any): BrainConfig {
     const nodeEnv =
       (process.env.NODE_ENV as 'development' | 'production' | 'test') || 'development';
@@ -86,7 +87,7 @@ export class SharedConfigAdapter extends EventEmitter {
     };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   private mapDatabaseConfig(serviceConfig: any): any {
     const envUrl = process.env.DATABASE_URL;
     const constructedUrl = this.getConstructedUrl();
@@ -120,7 +121,7 @@ export class SharedConfigAdapter extends EventEmitter {
     return `postgres://${user}:${pass}@${host}:${port}/${name}`;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   private getServiceUrl(serviceConfig: any): string | undefined {
     if (!serviceConfig.database) return undefined;
     const db = serviceConfig.database;
@@ -146,7 +147,7 @@ export class SharedConfigAdapter extends EventEmitter {
 
       // Logging
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       logLevel: (serviceConfig.logLevel as any) || defaults.logLevel,
 
       // Rate Limiting
@@ -180,7 +181,7 @@ export class SharedConfigAdapter extends EventEmitter {
     };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   private mapRiskConfig(brainConfig: any, defaults: any): any {
     return {
       maxLeverage: brainConfig.maxTotalLeverage || defaults.risk.maxLeverage,

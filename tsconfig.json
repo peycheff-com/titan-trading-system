@@ -11,6 +11,7 @@
     { "path": "./services/titan-phase2-hunter" },
     { "path": "./services/titan-phase3-sentinel" },
     { "path": "./services/titan-powerlaw-lab" },
+    { "path": "./packages/quality-os" },
     { "path": "./scripts" }
   ],
   "include": [

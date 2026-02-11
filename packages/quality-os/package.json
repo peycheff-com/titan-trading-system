@@ -1,0 +1,29 @@
+{
+  "name": "@titan/quality-os",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Titan Autonomous Quality OS - Kernels, Plans, Schemas",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "lint": "eslint src --ext .ts",
+    "quality:plan": "tsx src/cli.ts plan",
+    "quality:run": "tsx src/cli.ts run",
+    "quality:fix": "tsx src/cli.ts fix"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^11.1.0",
+    "glob": "^10.3.10"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.10",
+    "@types/node": "^20.10.0",
+    "jest": "^29.7.0",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.3.3"
+  }
+}

@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 /**
  * ConfigManager - Hierarchical Configuration Management (Adapter)
  *

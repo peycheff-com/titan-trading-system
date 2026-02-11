@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data, functional/no-let -- Stateful runtime: mutations architecturally required */
 /**
  * WebhookServer - Fastify server for Titan Brain
  * Handles signal reception, health checks, and dashboard data
@@ -5,66 +6,53 @@
  * Requirements: 7.4, 7.5, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7
  */
 
-import Fastify, {
-  FastifyInstance,
-  FastifyReply,
-  FastifyRequest,
-} from "fastify";
-import cors from "@fastify/cors";
-import fastifyRawBody from "fastify-raw-body";
-import { ServerConfig } from "../types/index.js";
-import { TitanBrain } from "../engine/TitanBrain.js";
-import { ISignalQueue } from "./ISignalQueue.js";
-import { DashboardService } from "./DashboardService.js";
+import Fastify, { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import cors from '@fastify/cors';
+import fastifyRawBody from 'fastify-raw-body';
+import { ServerConfig } from '../types/index.js';
+import { TitanBrain } from '../engine/TitanBrain.js';
+import { ISignalQueue } from './ISignalQueue.js';
+import { DashboardService } from './DashboardService.js';
 import {
   ConfigHealthComponent,
   DatabaseHealthComponent,
   HealthManager,
   MemoryHealthComponent,
   RedisHealthComponent,
-} from "../health/HealthManager.js";
-import { DynamicConfigService } from "../services/config/DynamicConfigService.js";
-import {
-  ServiceDiscovery,
-  ServiceDiscoveryDefaults,
-} from "../services/ServiceDiscovery.js";
-import { Logger } from "../logging/Logger.js";
-import { MetricsCollector } from "../metrics/MetricsCollector.js";
-import { MetricsMiddleware } from "../middleware/MetricsMiddleware.js";
-import { CacheManager } from "../cache/CacheManager.js";
-import {
-  correlationPlugin,
-  getCorrelationId,
-} from "../middleware/CorrelationMiddleware.js";
-import { rateLimiterPlugin } from "../middleware/RateLimiter.js";
-import { AuthMiddleware } from "../security/AuthMiddleware.js";
-import { HMACValidator } from "../security/HMACValidator.js";
+} from '../health/HealthManager.js';
+import { DynamicConfigService } from '../services/config/DynamicConfigService.js';
+import { ServiceDiscovery, ServiceDiscoveryDefaults } from '../services/ServiceDiscovery.js';
+import { Logger } from '../logging/Logger.js';
+import { MetricsCollector } from '../metrics/MetricsCollector.js';
+import { MetricsMiddleware } from '../middleware/MetricsMiddleware.js';
+import { CacheManager } from '../cache/CacheManager.js';
+import { correlationPlugin, getCorrelationId } from '../middleware/CorrelationMiddleware.js';
+import { rateLimiterPlugin } from '../middleware/RateLimiter.js';
+import { AuthMiddleware } from '../security/AuthMiddleware.js';
+import { HMACValidator } from '../security/HMACValidator.js';
 
 // Controllers
-import { HealthController } from "./controllers/HealthController.js";
-import { DashboardController } from "./controllers/DashboardController.js";
-import { SignalController } from "./controllers/SignalController.js";
-import { AdminController } from "./controllers/AdminController.js";
-import { LedgerController } from "./controllers/LedgerController.js";
-import { AuditController } from "./controllers/AuditController.js";
-import { LedgerRepository } from "../db/repositories/LedgerRepository.js";
+import { HealthController } from './controllers/HealthController.js';
+import { DashboardController } from './controllers/DashboardController.js';
+import { SignalController } from './controllers/SignalController.js';
+import { AdminController } from './controllers/AdminController.js';
+import { LedgerController } from './controllers/LedgerController.js';
+import { AuditController } from './controllers/AuditController.js';
+import { LedgerRepository } from '../db/repositories/LedgerRepository.js';
 
-import { CanaryMonitor } from "../services/canary/CanaryMonitor.js";
-import { SafetySessionManager } from "../services/SafetySessionManager.js";
-import { SafetyController } from "./controllers/SafetyController.js";
-import { ConfigController } from "./controllers/ConfigController.js";
-import { ConfigRegistry } from "../services/config/ConfigRegistry.js";
-import { VenuesController } from "./controllers/VenuesController.js";
-import {
-  getVenueStatusStore,
-  resetVenueStatusStore,
-} from "../services/venues/index.js";
-import { OperatorController } from "./controllers/OperatorController.js";
-import { OperatorIntentService } from "../services/OperatorIntentService.js";
-import { OperatorStateProjection } from "../services/OperatorStateProjection.js";
-import { IntentRepository } from "../db/repositories/IntentRepository.js";
-import { getNatsPublisher } from "./NatsPublisher.js";
-import { EventReplayService } from "../engine/EventReplayService.js";
+import { CanaryMonitor } from '../services/canary/CanaryMonitor.js';
+import { SafetySessionManager } from '../services/SafetySessionManager.js';
+import { SafetyController } from './controllers/SafetyController.js';
+import { ConfigController } from './controllers/ConfigController.js';
+import { ConfigRegistry } from '../services/config/ConfigRegistry.js';
+import { VenuesController } from './controllers/VenuesController.js';
+import { getVenueStatusStore, resetVenueStatusStore } from '../services/venues/index.js';
+import { OperatorController } from './controllers/OperatorController.js';
+import { OperatorIntentService } from '../services/OperatorIntentService.js';
+import { OperatorStateProjection } from '../services/OperatorStateProjection.js';
+import { IntentRepository } from '../db/repositories/IntentRepository.js';
+import { getNatsPublisher } from './NatsPublisher.js';
+import { EventReplayService } from '../engine/EventReplayService.js';
 
 /**
  * HMAC verification options
@@ -81,7 +69,7 @@ interface HmacOptions {
  */
 export interface WebhookServerConfig extends ServerConfig {
   hmac: HmacOptions;
-  logLevel: "fatal" | "error" | "warn" | "info" | "debug" | "trace";
+  logLevel: 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace';
   /** Skip binding a network listener (useful for tests with app.inject). */
   skipListen?: boolean;
 }
@@ -91,9 +79,9 @@ export interface WebhookServerConfig extends ServerConfig {
  */
 const DEFAULT_HMAC_OPTIONS: HmacOptions = {
   enabled: false,
-  secret: "",
-  headerName: "x-signature",
-  algorithm: "sha256",
+  secret: '',
+  headerName: 'x-signature',
+  algorithm: 'sha256',
 };
 
 /**
@@ -161,21 +149,17 @@ export class WebhookServer {
     });
 
     this.hmacOptions = { ...DEFAULT_HMAC_OPTIONS, ...config.hmac };
-    this.logger = logger ?? Logger.getInstance("webhook-server");
+    this.logger = logger ?? Logger.getInstance('webhook-server');
     this.cacheManager = cacheManager ?? null;
     this.metricsCollector = metricsCollector ?? null;
 
     // Initialize metrics middleware if metrics collector is available
     this.metricsMiddleware = this.metricsCollector
-      ? MetricsMiddleware.createFromEnvironment(
-        this.metricsCollector,
-        this.logger,
-      )
+      ? MetricsMiddleware.createFromEnvironment(this.metricsCollector, this.logger)
       : null;
 
     // Initialize service discovery
-    this.serviceDiscovery = serviceDiscovery ??
-      new ServiceDiscovery(ServiceDiscoveryDefaults);
+    this.serviceDiscovery = serviceDiscovery ?? new ServiceDiscovery(ServiceDiscoveryDefaults);
 
     // Initialize Auth Middleware
     this.authMiddleware = new AuthMiddleware(this.logger);
@@ -187,7 +171,7 @@ export class WebhookServer {
     this.configService = new DynamicConfigService();
     // Start config service (optimistic, don't await in constructor)
     this.configService.start().catch((err) => {
-      this.logger.error("Failed to start config service", err);
+      this.logger.error('Failed to start config service', err);
     });
 
     // Initialize Controllers
@@ -196,27 +180,20 @@ export class WebhookServer {
       this.healthManager,
       this.serviceDiscovery,
     );
-    this.dashboardController = new DashboardController(
-      this.brain,
-      this.dashboardService,
-    );
+    this.dashboardController = new DashboardController(this.brain, this.dashboardService);
     this.signalController = new SignalController(
       this.brain,
       this.signalQueue,
       this.logger,
       this.configService,
     );
-    this.adminController = new AdminController(
-      this.brain,
-      this.logger,
-      this.authMiddleware,
-    );
+    this.adminController = new AdminController(this.brain, this.logger, this.authMiddleware);
     this.auditController = new AuditController(this.brain, this.logger);
 
     // Initialize Ledger Repository & Controller
     const dbManager = this.brain.getDatabaseManager();
     if (!dbManager) {
-      throw new Error("DatabaseManager not initialized");
+      throw new Error('DatabaseManager not initialized');
     }
     const ledgerRepo = new LedgerRepository(dbManager);
     this.ledgerController = new LedgerController(ledgerRepo, this.logger);
@@ -230,20 +207,14 @@ export class WebhookServer {
     this.canaryMonitor.startMonitoring(60000); // Check every minute
 
     // Initialize Safety System
-    const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
     this.safetySessionManager = new SafetySessionManager(redisUrl);
     this.safetyController = new SafetyController(this.safetySessionManager);
 
     // Initialize Config Registry and Controller
     this.configRegistry = new ConfigRegistry(process.env.HMAC_SECRET);
-    this.configController = new ConfigController(
-      this.configRegistry,
-      this.authMiddleware,
-    );
-    this.venuesController = new VenuesController(
-      this.logger,
-      this.authMiddleware,
-    );
+    this.configController = new ConfigController(this.configRegistry, this.authMiddleware);
+    this.venuesController = new VenuesController(this.logger, this.authMiddleware);
 
     // Initialize Operator Command Plane
     const opsSecret = process.env.OPS_SECRET || process.env.HMAC_SECRET || '';
@@ -260,23 +231,29 @@ export class WebhookServer {
     );
     // Hydrate intent buffer from DB (non-blocking)
     this.operatorIntentService.hydrateFromDb().catch((err) => {
-      this.logger.error('Failed to hydrate intents from DB', err instanceof Error ? err : undefined);
+      this.logger.error(
+        'Failed to hydrate intents from DB',
+        err instanceof Error ? err : undefined,
+      );
     });
 
     // Bridge intent events to NATS (non-blocking, fire-and-forget)
     try {
       const natsPublisher = getNatsPublisher();
-      this.operatorIntentService.on('intent:updated', (event: {
-        intent_id: string;
-        status: string;
-        previous_status: string;
-        receipt?: Record<string, unknown>;
-        timestamp: string;
-      }) => {
-        natsPublisher.publishIntentEvent(event).catch(() => {
-          // Silent — NATS is optional for intent lifecycle
-        });
-      });
+      this.operatorIntentService.on(
+        'intent:updated',
+        (event: {
+          intent_id: string;
+          status: string;
+          previous_status: string;
+          receipt?: Record<string, unknown>;
+          timestamp: string;
+        }) => {
+          natsPublisher.publishIntentEvent(event).catch(() => {
+            // Silent — NATS is optional for intent lifecycle
+          });
+        },
+      );
     } catch {
       this.logger.warn('NatsPublisher not available — intent events will not be published to NATS');
     }
@@ -286,11 +263,13 @@ export class WebhookServer {
       this.operatorIntentService,
     );
     this.operatorStateProjection = operatorStateProjection;
-    
+
     // Ensure EventReplayService is available or throw/handle gracefully
     // For now, we allow it to be optional but log if missing when needed by controller
     if (!this.eventReplayService) {
-       this.logger.warn('EventReplayService not provided to WebhookServer. Historical state endpoints will fail.');
+      this.logger.warn(
+        'EventReplayService not provided to WebhookServer. Historical state endpoints will fail.',
+      );
     }
 
     this.operatorController = new OperatorController(
@@ -309,15 +288,10 @@ export class WebhookServer {
 
     try {
       if (this.hmacOptions.secret) {
-        const timestampHeaderName = process.env.HMAC_TIMESTAMP_HEADER ||
-          "x-timestamp";
-        const timestampTolerance = parseInt(
-          process.env.HMAC_TIMESTAMP_TOLERANCE || "300",
-        );
-        const requireTimestamp = process.env.HMAC_REQUIRE_TIMESTAMP !== "false";
-        const algorithm = this.hmacOptions.algorithm === "sha512"
-          ? "sha512"
-          : "sha256";
+        const timestampHeaderName = process.env.HMAC_TIMESTAMP_HEADER || 'x-timestamp';
+        const timestampTolerance = parseInt(process.env.HMAC_TIMESTAMP_TOLERANCE || '300');
+        const requireTimestamp = process.env.HMAC_REQUIRE_TIMESTAMP !== 'false';
+        const algorithm = this.hmacOptions.algorithm === 'sha512' ? 'sha512' : 'sha256';
 
         return new HMACValidator(
           {
@@ -335,7 +309,7 @@ export class WebhookServer {
       return HMACValidator.fromEnvironment(this.logger);
     } catch (error) {
       this.logger.error(
-        "Failed to initialize HMAC validator",
+        'Failed to initialize HMAC validator',
         error instanceof Error ? error : new Error(String(error)),
       );
       return null;
@@ -347,9 +321,7 @@ export class WebhookServer {
    */
   private initializeHealthComponents(): void {
     // Register database health component
-    const databaseComponent = new DatabaseHealthComponent(
-      this.brain.getDatabaseManager(),
-    );
+    const databaseComponent = new DatabaseHealthComponent(this.brain.getDatabaseManager());
     this.healthManager.registerComponent(databaseComponent);
 
     // Register configuration health component
@@ -383,14 +355,14 @@ export class WebhookServer {
     // Register CORS
     await this.server.register(cors, {
       origin: this.config.corsOrigins,
-      methods: ["GET", "POST", "DELETE", "PATCH"],
+      methods: ['GET', 'POST', 'DELETE', 'PATCH'],
     });
 
     // Register raw body parser for HMAC validation
     await this.server.register(fastifyRawBody, {
-      field: "rawBody",
+      field: 'rawBody',
       global: true,
-      encoding: "utf8",
+      encoding: 'utf8',
       runFirst: true,
     });
 
@@ -398,31 +370,23 @@ export class WebhookServer {
     await this.server.register(correlationPlugin, {
       logger: this.logger,
       config: {
-        headerName: "x-correlation-id",
+        headerName: 'x-correlation-id',
         generateIfMissing: true,
         logRequests: true,
         logResponses: true,
-        excludePaths: ["/health", "/status", "/metrics"],
+        excludePaths: ['/health', '/status', '/metrics'],
       },
     });
 
     // Register metrics middleware if metrics collector is available
     if (this.metricsMiddleware) {
-      this.server.addHook(
-        "onRequest",
-        this.metricsMiddleware.getRequestStartHook(),
-      );
-      this.server.addHook(
-        "onResponse",
-        this.metricsMiddleware.getResponseHook(),
-      );
-      this.server.addHook("onError", this.metricsMiddleware.getErrorHook());
+      this.server.addHook('onRequest', this.metricsMiddleware.getRequestStartHook());
+      this.server.addHook('onResponse', this.metricsMiddleware.getResponseHook());
+      this.server.addHook('onError', this.metricsMiddleware.getErrorHook());
 
-      this.logger.info("Metrics collection middleware enabled");
+      this.logger.info('Metrics collection middleware enabled');
     } else {
-      this.logger.warn(
-        "Metrics collection disabled - no metrics collector available",
-      );
+      this.logger.warn('Metrics collection disabled - no metrics collector available');
     }
 
     // Register rate limiting middleware if cache manager is available
@@ -431,42 +395,35 @@ export class WebhookServer {
         cacheManager: this.cacheManager,
         logger: this.logger,
         defaultConfig: {
-          windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "60000"),
-          maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "100"),
+          windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000'),
+          maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'),
         },
       });
 
-      this.logger.info("Rate limiting enabled with cache-based storage");
+      this.logger.info('Rate limiting enabled with cache-based storage');
     } else {
-      this.logger.warn("Rate limiting disabled - no cache manager available");
+      this.logger.warn('Rate limiting disabled - no cache manager available');
     }
 
     // Register Idempotency Middleware if cache manager is available
     if (this.cacheManager) {
-      const { createIdempotencyMiddleware } = await import(
-        "../middleware/IdempotencyMiddleware.js"
-      );
-      const idempotencyMiddleware = createIdempotencyMiddleware(
-        this.cacheManager,
-        this.logger,
-      );
+      const { createIdempotencyMiddleware } =
+        await import('../middleware/IdempotencyMiddleware.js');
+      const idempotencyMiddleware = createIdempotencyMiddleware(this.cacheManager, this.logger);
 
       // Fastify preHandler hook for idempotency
-      this.server.addHook("preHandler", idempotencyMiddleware);
-      this.logger.info("Idempotency middleware enabled");
+      this.server.addHook('preHandler', idempotencyMiddleware);
+      this.logger.info('Idempotency middleware enabled');
     }
 
     // Register HMAC middleware if enabled
-    this.server.addHook("preHandler", async (request, reply) => {
+    this.server.addHook('preHandler', async (request, reply) => {
       if (!this.hmacOptions.enabled) {
         return;
       }
 
       // Skip HMAC validation for health checks and metrics
-      if (
-        request.url === "/health" || request.url === "/status" ||
-        request.url === "/metrics"
-      ) {
+      if (request.url === '/health' || request.url === '/status' || request.url === '/metrics') {
         return;
       }
 
@@ -476,35 +433,28 @@ export class WebhookServer {
 
       if (!this.hmacValidator) {
         reply.status(500).send({
-          error: "HMAC configuration error",
-          message: "HMAC validation enabled but no secret configured",
+          error: 'HMAC configuration error',
+          message: 'HMAC validation enabled but no secret configured',
           timestamp: new Date().toISOString(),
         });
         return;
       }
 
       const correlationId = getCorrelationId(request);
-      const rawBody = (request as any).rawBody ?? request.body ?? "";
-      const body = typeof rawBody === "string"
-        ? rawBody
-        : JSON.stringify(rawBody);
+      const rawBody = (request as any).rawBody ?? request.body ?? '';
+      const body = typeof rawBody === 'string' ? rawBody : JSON.stringify(rawBody);
       const result = this.hmacValidator.validateRequest(body, request.headers);
 
       if (!result.valid) {
-        this.logger.logSecurityEvent(
-          "HMAC validation failed",
-          "high",
-          correlationId,
-          {
-            ip: request.ip,
-            endpoint: request.url,
-            error: result.error,
-            userAgent: request.headers["user-agent"],
-          },
-        );
+        this.logger.logSecurityEvent('HMAC validation failed', 'high', correlationId, {
+          ip: request.ip,
+          endpoint: request.url,
+          error: result.error,
+          userAgent: request.headers['user-agent'],
+        });
 
         reply.status(401).send({
-          error: "Unauthorized",
+          error: 'Unauthorized',
           message: result.error,
           timestamp: new Date().toISOString(),
         });
@@ -515,7 +465,7 @@ export class WebhookServer {
 
       (request as any).hmacValidation = result;
 
-      this.logger.debug("HMAC validation successful", correlationId, {
+      this.logger.debug('HMAC validation successful', correlationId, {
         ip: request.ip,
         endpoint: request.url,
       });
@@ -526,16 +476,13 @@ export class WebhookServer {
     this.serviceDiscovery.startHealthChecking();
 
     // Start venue status subscription if telemetry is enabled
-    if (
-      process.env.VENUES_TELEMETRY_LIVE === "true" ||
-      process.env.VENUES_TELEMETRY_LIVE === "1"
-    ) {
-      getVenueStatusStore().start().catch((err) => {
-        this.logger.warn(
-          `VenueStatusStore failed to start: ${err.message}`,
-        );
-      });
-      this.logger.info("VenueStatusStore started for live venue telemetry");
+    if (process.env.VENUES_TELEMETRY_LIVE === 'true' || process.env.VENUES_TELEMETRY_LIVE === '1') {
+      getVenueStatusStore()
+        .start()
+        .catch((err) => {
+          this.logger.warn(`VenueStatusStore failed to start: ${err.message}`);
+        });
+      this.logger.info('VenueStatusStore started for live venue telemetry');
     }
 
     // Initialize health components
@@ -546,18 +493,13 @@ export class WebhookServer {
 
     if (this.config.skipListen) {
       await this.server.ready();
-      this.logger.info(
-        "Webhook server initialized (listen skipped)",
-        undefined,
-        {
-          host: this.config.host,
-          port: this.config.port,
-          hmacEnabled: !!this.hmacValidator,
-          rateLimitingEnabled: !!this.cacheManager,
-          servicesRegistered:
-            this.serviceDiscovery.getAllServiceStatuses().length,
-        },
-      );
+      this.logger.info('Webhook server initialized (listen skipped)', undefined, {
+        host: this.config.host,
+        port: this.config.port,
+        hmacEnabled: !!this.hmacValidator,
+        rateLimitingEnabled: !!this.cacheManager,
+        servicesRegistered: this.serviceDiscovery.getAllServiceStatuses().length,
+      });
       return;
     }
 
@@ -575,15 +517,9 @@ export class WebhookServer {
       servicesRegistered: this.serviceDiscovery.getAllServiceStatuses().length,
     });
 
-    console.log(
-      `🚀 Webhook server listening on ${this.config.host}:${this.config.port}`,
-    );
-    console.log(
-      `🔐 HMAC validation: ${this.hmacValidator ? "enabled" : "disabled"}`,
-    );
-    console.log(
-      `⚡ Rate limiting: ${this.cacheManager ? "enabled" : "disabled"}`,
-    );
+    console.log(`🚀 Webhook server listening on ${this.config.host}:${this.config.port}`);
+    console.log(`🔐 HMAC validation: ${this.hmacValidator ? 'enabled' : 'disabled'}`);
+    console.log(`⚡ Rate limiting: ${this.cacheManager ? 'enabled' : 'disabled'}`);
     console.log(
       `🔍 Service discovery: ${this.serviceDiscovery.getAllServiceStatuses().length} services registered`,
     );
@@ -603,10 +539,10 @@ export class WebhookServer {
       await this.server.close();
 
       this.server = null;
-      this.logger.info("Webhook server stopped");
+      this.logger.info('Webhook server stopped');
       this.canaryMonitor.stopMonitoring();
       resetVenueStatusStore(); // Stop venue telemetry subscription
-      console.log("🛑 Webhook server stopped");
+      console.log('🛑 Webhook server stopped');
     }
   }
 
@@ -638,19 +574,16 @@ export class WebhookServer {
 
     // Metrics (Inline as it requires metricsCollector from this class, or could move to controller if passed)
     // Keeping inline for now as it's simple
-    this.server.get("/metrics", this.handleMetrics.bind(this));
+    this.server.get('/metrics', this.handleMetrics.bind(this));
   }
 
   /**
    * Handle GET /metrics - Prometheus metrics endpoint
    * Requirements: 6.5 - Prometheus metrics integration
    */
-  private async handleMetrics(
-    _request: FastifyRequest,
-    reply: FastifyReply,
-  ): Promise<void> {
+  private async handleMetrics(_request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
-      let metricsText = "";
+      let metricsText = '';
 
       if (this.metricsCollector) {
         // Use new MetricsCollector
@@ -659,22 +592,21 @@ export class WebhookServer {
         // Fallback to legacy
         // We need to import getMetrics if we want to support legacy fallback
         // But for cleanliness let's assume MetricsCollector is primary
-        metricsText = "# Legacy metrics not available in refactored server";
+        metricsText = '# Legacy metrics not available in refactored server';
       }
 
-      reply.header("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
-        .send(metricsText);
+      reply.header('Content-Type', 'text/plain; version=0.0.4; charset=utf-8').send(metricsText);
     } catch (error) {
-      this.logger.error("Failed to generate metrics", error as Error);
+      this.logger.error('Failed to generate metrics', error as Error);
       reply.status(500).send({
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: error instanceof Error ? error.message : 'Unknown error',
         timestamp: Date.now(),
       });
     }
   }
 
   markStartupComplete(): void {
-    this.healthManager.emit("startup:complete");
+    this.healthManager.emit('startup:complete');
   }
 
   /**
@@ -704,20 +636,42 @@ export class WebhookServer {
   // Operator Intent Executors & Verifiers
   // ---------------------------------------------------------------------------
 
-  private buildIntentExecutors(): Record<string, (intent: { type: string; params: Record<string, unknown> }) => Promise<{ effect?: string; prior_state?: Record<string, unknown>; new_state?: Record<string, unknown>; error?: string }>> {
+  private buildIntentExecutors(): Record<
+    string,
+    (intent: { type: string; params: Record<string, unknown> }) => Promise<{
+      effect?: string;
+      prior_state?: Record<string, unknown>;
+      new_state?: Record<string, unknown>;
+      error?: string;
+    }>
+  > {
     const brain = this.brain;
     const stateManager = brain.getStateManager();
 
     return {
       ARM: async () => {
-        const prior = { armed: stateManager.isArmed(), posture: stateManager.isArmed() ? 'armed' : 'disarmed' };
+        const prior = {
+          armed: stateManager.isArmed(),
+          posture: stateManager.isArmed() ? 'armed' : 'disarmed',
+        };
         stateManager.setArmed(true);
-        return { effect: 'System armed', prior_state: prior, new_state: { armed: true, posture: 'armed' } };
+        return {
+          effect: 'System armed',
+          prior_state: prior,
+          new_state: { armed: true, posture: 'armed' },
+        };
       },
       DISARM: async () => {
-        const prior = { armed: stateManager.isArmed(), posture: stateManager.isArmed() ? 'armed' : 'disarmed' };
+        const prior = {
+          armed: stateManager.isArmed(),
+          posture: stateManager.isArmed() ? 'armed' : 'disarmed',
+        };
         stateManager.setArmed(false);
-        return { effect: 'System disarmed', prior_state: prior, new_state: { armed: false, posture: 'disarmed' } };
+        return {
+          effect: 'System disarmed',
+          prior_state: prior,
+          new_state: { armed: false, posture: 'disarmed' },
+        };
       },
       SET_MODE: async (intent) => {
         const mode = intent.params.mode as string;
@@ -728,7 +682,11 @@ export class WebhookServer {
       THROTTLE_PHASE: async (intent) => {
         const phaseId = intent.params.phase_id as string;
         const action = intent.params.action as string;
-        return { effect: `Phase ${phaseId} ${action}`, prior_state: { phase: phaseId }, new_state: { phase: phaseId, action } };
+        return {
+          effect: `Phase ${phaseId} ${action}`,
+          prior_state: { phase: phaseId },
+          new_state: { phase: phaseId, action },
+        };
       },
       RUN_RECONCILE: async () => {
         const reconciliation = brain.getReconciliationService();
@@ -736,13 +694,20 @@ export class WebhookServer {
           await reconciliation.reconcileAll();
           return { effect: 'Reconciliation completed' };
         }
-        return { effect: 'Reconciliation service not available', error: 'NO_RECONCILIATION_SERVICE' };
+        return {
+          effect: 'Reconciliation service not available',
+          error: 'NO_RECONCILIATION_SERVICE',
+        };
       },
       FLATTEN: async () => {
         const positions = stateManager.getPositions();
         const prior = { open_positions: positions.length };
         await brain.closeAllPositions();
-        return { effect: 'All positions closed', prior_state: prior, new_state: { open_positions: 0 } };
+        return {
+          effect: 'All positions closed',
+          prior_state: prior,
+          new_state: { open_positions: 0 },
+        };
       },
       OVERRIDE_RISK: async (intent) => {
         const durationSec = (intent.params.duration_seconds as number) ?? 300;
@@ -759,7 +724,9 @@ export class WebhookServer {
         // Schedule auto-revert
         setTimeout(() => {
           stateManager.clearRiskOverride();
-          Logger.getInstance('webhook-server').info(`OVERRIDE_RISK auto-reverted after ${durationSec}s`);
+          Logger.getInstance('webhook-server').info(
+            `OVERRIDE_RISK auto-reverted after ${durationSec}s`,
+          );
         }, durationSec * 1000);
 
         return {
@@ -771,7 +738,13 @@ export class WebhookServer {
     };
   }
 
-  private buildIntentVerifiers(): Record<string, (intent: { type: string; params: Record<string, unknown> }) => Promise<{ passed: boolean; error?: string }>> {
+  private buildIntentVerifiers(): Record<
+    string,
+    (intent: {
+      type: string;
+      params: Record<string, unknown>;
+    }) => Promise<{ passed: boolean; error?: string }>
+  > {
     const stateManager = this.brain.getStateManager();
 
     return {

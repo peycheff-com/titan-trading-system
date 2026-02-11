@@ -19,7 +19,7 @@ export class HillEstimator {
       return { alpha: 0, confidence: 0, isHeavyTailed: false };
     }
 
-    const sorted = absReturns.sort((a, b) => b - a); // Descending
+    const sorted = [...absReturns].sort((a, b) => b - a); // Descending
     const k = Math.ceil(sorted.length * (1 - tailPercentile));
 
     if (k < 5 || k >= sorted.length) {
@@ -32,12 +32,7 @@ export class HillEstimator {
 
     const x_min = sorted[k]; // The threshold value
 
-    let sumLogRatio = 0;
-    // Sum for the top k elements (indices 0 to k-1)
-
-    for (let i = 0; i < k; i++) {
-      sumLogRatio += Math.log(sorted[i] / x_min);
-    }
+    const sumLogRatio = sorted.slice(0, k).reduce((sum, val) => sum + Math.log(val / x_min), 0);
 
     if (sumLogRatio === 0) {
       return { alpha: 0, confidence: 0, isHeavyTailed: false };

@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 import { BrainDecision, DashboardData, PhaseId, Position } from '../types/index.js';
 
 export class BrainStateManager {
@@ -266,7 +267,11 @@ export class BrainStateManager {
   /**
    * Set a temporary risk override
    */
-  setRiskOverride(override: { active: boolean; max_drawdown_pct?: number; expires_at: string }): void {
+  setRiskOverride(override: {
+    active: boolean;
+    max_drawdown_pct?: number;
+    expires_at: string;
+  }): void {
     this.riskOverride = override;
   }
 

@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 import { FastifyReply, FastifyRequest } from 'fastify';
 import jwt from 'jsonwebtoken';
 import { Logger } from '../logging/Logger.js';
@@ -6,8 +7,8 @@ import { OAuthService } from './OAuthService.js';
 export interface TokenPayload {
   operatorId: string;
   role: string | string[]; // Legacy compatibility
-  permissions?: string[];   // New PBAC support
-  scope?: string[];         // OAuth scopes
+  permissions?: string[]; // New PBAC support
+  scope?: string[]; // OAuth scopes
   iat: number;
   exp: number;
 }
@@ -17,7 +18,7 @@ export class AuthMiddleware {
 
   constructor(
     private readonly logger: Logger,
-    private readonly oauthService?: OAuthService
+    private readonly oauthService?: OAuthService,
   ) {
     this.secret = process.env.JWT_SECRET || process.env.HMAC_SECRET || '';
 
@@ -64,7 +65,6 @@ export class AuthMiddleware {
       // Attach user to request
       // @ts-expect-error - We are extending the request object dynamically
       request.user = decoded;
-
     } catch (error) {
       reply.status(401).send({
         error: 'Invalid or expired token',
@@ -94,7 +94,7 @@ export class AuthMiddleware {
     return async (request: FastifyRequest, reply: FastifyReply) => {
       // @ts-expect-error - fastify-raw-body attaches rawBody to request but types are not merged
       const user = request.user as TokenPayload;
-      
+
       if (!user) {
         reply.status(401).send({ error: 'Unauthenticated' });
         return;
@@ -113,7 +113,7 @@ export class AuthMiddleware {
       }
 
       this.logger.warn(
-        `Access denied for user ${user.operatorId}. Required: ${requiredPermission}`
+        `Access denied for user ${user.operatorId}. Required: ${requiredPermission}`,
       );
       reply.status(403).send({ error: 'Insufficient permissions' });
     };

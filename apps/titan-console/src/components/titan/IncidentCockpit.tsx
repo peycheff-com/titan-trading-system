@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, ShieldAlert, Activity, CheckCircle, Flame } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { TITAN_SUBJECTS } from '@titan/shared';
 
 interface IncidentEvent {
     id: string;
@@ -17,11 +18,11 @@ interface IncidentEvent {
 export function IncidentCockpit() {
     // We need to monitor multiple streams.
     // In a real app we might multiplex this in a context, but here we use two hooks.
-    const alertStream = useTitanStream('titan.evt.alert.>');
-    const dlqStream = useTitanStream('titan.dlq.>');
+    const alertStream = useTitanStream(TITAN_SUBJECTS.EVT.ALERT.ALL);
+    const dlqStream = useTitanStream(TITAN_SUBJECTS.DLQ.ALL);
     
     // We also monitor heartbeats for system vitality
-    const heartbeatStream = useTitanStream('titan.sys.heartbeat.>');
+    const heartbeatStream = useTitanStream(TITAN_SUBJECTS.SYS.HEARTBEAT_ALL);
 
     const [incidents, setIncidents] = useState<IncidentEvent[]>([]);
     const [systemHealth, setSystemHealth] = useState<Record<string, number>>({});

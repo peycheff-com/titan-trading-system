@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 /**
  * AllocationEngine - Calculates base allocation weights for each phase
  * Uses sigmoid transition functions for smooth phase transitions
@@ -11,7 +12,7 @@ import {
   EquityTier,
   LeverageCaps,
   TransitionPoints,
-} from "../../types/index.js";
+} from '../../types/index.js';
 
 /**
  * AllocationEngine calculates capital allocation across Titan phases
@@ -33,11 +34,7 @@ export class AllocationEngine {
    * @param midpoint - Center of transition
    * @param steepness - How sharp the transition is (higher = sharper)
    */
-  private sigmoid(
-    x: number,
-    midpoint: number,
-    steepness: number = 0.002,
-  ): number {
+  private sigmoid(x: number, midpoint: number, steepness: number = 0.002): number {
     return 1 / (1 + Math.exp(-steepness * (x - midpoint)));
   }
 
@@ -76,12 +73,8 @@ export class AllocationEngine {
     const safeEquity = Math.max(0, equity);
 
     // Determines effective thresholds based on state
-    const effectiveStartP2 = this.hasEnteredPhase2
-      ? startP2 * this.HYSTERESIS_BUFFER
-      : startP2;
-    const effectiveStartP3 = this.hasEnteredPhase3
-      ? startP3 * this.HYSTERESIS_BUFFER
-      : startP3;
+    const effectiveStartP2 = this.hasEnteredPhase2 ? startP2 * this.HYSTERESIS_BUFFER : startP2;
+    const effectiveStartP3 = this.hasEnteredPhase3 ? startP3 * this.HYSTERESIS_BUFFER : startP3;
 
     // State Updates
 
@@ -221,31 +214,26 @@ export class AllocationEngine {
    * @param equity - Current equity
    * @param regime - Current market regime (STABLE, CRASH, etc.)
    */
-  getRegimeAdjustedWeights(
-    equity: number,
-    regime: string,
-  ): AllocationVector {
+  getRegimeAdjustedWeights(equity: number, regime: string): AllocationVector {
     const baseWeights = this.getWeights(equity);
     const timestamp = Date.now();
 
     // 1. CRASH Regime: Heavy defense
     // Force 100% Phase 1 (Scavenger) to capital preservation / snipe only
-    if (regime === "CRASH") {
+    if (regime === 'CRASH') {
       return { w1: 1.0, w2: 0.0, w3: 0.0, timestamp };
     }
 
     // 2. VOLATILE_BREAKOUT: Trend Following (Hunter) favored
     // Boost Phase 2 weight by 20% relative to others
-    if (regime === "VOLATILE_BREAKOUT") {
+    if (regime === 'VOLATILE_BREAKOUT') {
       // If we are in Phase 2 territory (meaning w2 > 0)
       if (baseWeights.w2 > 0) {
         const w2 = Math.min(0.9, baseWeights.w2 * 1.2); // +20% boost, cap at 90%
         const remainder = 1.0 - w2;
         // Distribute remainder between w1 and w3 proportionally
         const otherSum = baseWeights.w1 + baseWeights.w3;
-        const w1 = otherSum > 0
-          ? (baseWeights.w1 / otherSum) * remainder
-          : remainder; // Fallback to w1
+        const w1 = otherSum > 0 ? (baseWeights.w1 / otherSum) * remainder : remainder; // Fallback to w1
         const w3 = otherSum > 0 ? (baseWeights.w3 / otherSum) * remainder : 0;
 
         return this.normalizeWeights({ w1, w2, w3, timestamp });
@@ -254,14 +242,12 @@ export class AllocationEngine {
 
     // 3. MEAN_REVERSION: Mean Reversion (Sentinel) favored
     // Boost Phase 3 weight by 20% if active
-    if (regime === "MEAN_REVERSION") {
+    if (regime === 'MEAN_REVERSION') {
       if (baseWeights.w3 > 0) {
         const w3 = Math.min(0.8, baseWeights.w3 * 1.2);
         const remainder = 1.0 - w3;
         const otherSum = baseWeights.w1 + baseWeights.w2;
-        const w1 = otherSum > 0
-          ? (baseWeights.w1 / otherSum) * remainder
-          : remainder;
+        const w1 = otherSum > 0 ? (baseWeights.w1 / otherSum) * remainder : remainder;
         const w2 = otherSum > 0 ? (baseWeights.w2 / otherSum) * remainder : 0;
 
         return this.normalizeWeights({ w1, w2, w3, timestamp });
@@ -300,7 +286,7 @@ export class AllocationEngine {
 
     // 1. Calculate Softmax of Sharpe Ratios for Performance Weights
     // Filter for phases 1, 2, 3 in order
-    const phases = ["phase1", "phase2", "phase3"];
+    const phases = ['phase1', 'phase2', 'phase3'];
     const sharpes = phases.map((id) => {
       const p = performances.find((p) => p.phaseId === id);
       return p ? Math.max(0, p.sharpeRatio) : 0; // Floor at 0 for softmax

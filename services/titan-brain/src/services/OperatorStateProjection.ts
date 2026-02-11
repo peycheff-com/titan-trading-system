@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 /**
  * OperatorStateProjection
  *
@@ -66,7 +67,9 @@ export class OperatorStateProjection {
   // Private
   // =========================================================================
 
-  private derivePosture(stateManager: ReturnType<TitanBrain['getStateManager']>): 'disarmed' | 'armed' | 'halted' {
+  private derivePosture(
+    stateManager: ReturnType<TitanBrain['getStateManager']>,
+  ): 'disarmed' | 'armed' | 'halted' {
     if (stateManager.isHalted()) return 'halted';
     if (stateManager.isArmed()) return 'armed';
     return 'disarmed';

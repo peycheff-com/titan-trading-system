@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 /**
  * PerformanceTracker - Tracks PnL and calculates rolling Sharpe Ratios
  * Enables performance-based throttling of phase allocations

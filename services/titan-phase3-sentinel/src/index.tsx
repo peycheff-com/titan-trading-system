@@ -82,7 +82,7 @@ async function main() {
     });
 
     // Subscribe to Budget Updates (Truth Layer)
-    nats.subscribe('titan.ai.budget.update', (data: any) => {
+    nats.subscribe(TitanSubject.EVT_BUDGET_UPDATE, (data: any) => {
       // eslint-disable-next-line functional/no-let
       let payload = data;
       if (data && typeof data === 'object' && 'payload' in data) {

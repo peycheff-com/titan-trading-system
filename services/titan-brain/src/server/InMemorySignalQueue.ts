@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data, functional/no-let -- Stateful runtime: mutations architecturally required */
 /**
  * InMemorySignalQueue - In-memory signal queue with priority ordering
  * Drop-in replacement for Redis-based SignalQueue when Redis is unavailable

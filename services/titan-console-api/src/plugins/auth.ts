@@ -20,7 +20,7 @@ export default fp(async function (fastify: FastifyInstance) {
 
       const decoded = jwt.verify(token, secret);
       // Fastify auth boundary: request decoration is required to share claims downstream.
-      // eslint-disable-next-line functional/immutable-data, @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line functional/immutable-data
       (request as any).user = decoded;
     } catch (_err) {
       reply.code(401).send({ error: 'Unauthorized' });

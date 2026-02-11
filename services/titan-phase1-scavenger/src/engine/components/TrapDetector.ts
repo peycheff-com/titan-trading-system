@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data, functional/no-let -- Stateful runtime: mutations architecturally required */
 import { Logger } from '../../logging/Logger.js';
 import { ConfigManager } from '../../config/ConfigManager.js';
 import { EventEmitter } from '../../events/EventEmitter.js';

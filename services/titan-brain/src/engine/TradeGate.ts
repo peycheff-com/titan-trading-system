@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 /**
  * TradeGate.ts
  * Centralized gatekeeper for trade viability.

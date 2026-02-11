@@ -3,8 +3,6 @@ import {
   CreateLedgerTransactionDTO,
   LedgerAccount,
   LedgerAccountType,
-  LedgerDirection,
-  LedgerTransaction,
 } from '../../types/ledger.js';
 import { Logger } from '../../logging/Logger.js';
 

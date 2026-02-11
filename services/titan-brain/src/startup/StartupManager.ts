@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data, functional/no-let -- Stateful runtime: mutations architecturally required */
 /**
  * StartupManager - Reliable service initialization
  *
@@ -17,13 +18,13 @@ import { PlatformFactory } from './platforms/PlatformFactory.js';
  * Startup step status
  */
 export enum StartupStatus {
-  STARTING = "STARTING",
-  RUNNING = "RUNNING",
-  READY = "READY",
-  FAILED = "FAILED",
-  SKIPPED = "SKIPPED",
-  PENDING = "PENDING",
-  COMPLETED = "COMPLETED"
+  STARTING = 'STARTING',
+  RUNNING = 'RUNNING',
+  READY = 'READY',
+  FAILED = 'FAILED',
+  SKIPPED = 'SKIPPED',
+  PENDING = 'PENDING',
+  COMPLETED = 'COMPLETED',
 }
 
 /**
@@ -92,7 +93,7 @@ export class StartupManager extends EventEmitter {
     super();
 
     this.logger = logger ?? Logger.getInstance('startup-manager');
-    
+
     // Initialize Platform Adapter
     this.platform = PlatformFactory.getAdapter();
     this.logger.info(`Initializing StartupManager on platform: ${this.platform.getName()}`);
@@ -599,7 +600,9 @@ export class StartupManager extends EventEmitter {
         process.removeListener(event, handler);
       } catch (error) {
         // Ignore cleanup errors
-        this.logger.debug('Failed to remove signal listener', undefined, { error: error instanceof Error ? error.message : String(error) });
+        this.logger.debug('Failed to remove signal listener', undefined, {
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     }
 

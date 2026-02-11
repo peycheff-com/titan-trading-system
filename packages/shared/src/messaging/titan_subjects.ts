@@ -148,6 +148,7 @@ export const TITAN_SUBJECTS = {
       DRIFT: 'titan.evt.alert.drift.v1',
       INTEGRITY: 'titan.evt.alert.integrity.v1',
       LATENCY: 'titan.evt.alert.latency.v1',
+      ALL: 'titan.evt.alert.>',
     },
 
     EXECUTION: {
@@ -223,6 +224,7 @@ export const TITAN_SUBJECTS = {
       SIGNAL: 'titan.evt.brain.signal.v1',
       DECISION: 'titan.evt.brain.decision.v1',
       REGIME: 'titan.evt.brain.regime.v1',
+      ALL: 'titan.evt.brain.>',
     },
 
     ANALYTICS: {
@@ -245,6 +247,11 @@ export const TITAN_SUBJECTS = {
     RISK: {
       CORRELATION_WARNING: 'titan.evt.risk.correlation_warning.v1',
       STATE: 'titan.evt.risk.state.v1',
+    },
+
+    QUALITY: {
+      /** Execution Quality Score Updates */
+      EXECUTION: 'titan.evt.quality.execution.v1',
     },
 
     SYS: {
@@ -328,6 +335,8 @@ export const TITAN_SUBJECTS = {
      * Topic: titan.sys.heartbeat.v1.{service}
      */
     HEARTBEAT: (service: string) => `titan.sys.heartbeat.v1.${service}`,
+    HEARTBEAT_PREFIX: 'titan.sys.heartbeat.v1',
+    HEARTBEAT_ALL: 'titan.sys.heartbeat.>',
 
     /**
      * Generic RPC / Query namespace (Legacy titan.execution.* pattern)
@@ -357,6 +366,7 @@ export const TITAN_SUBJECTS = {
     EXECUTION: 'titan.dlq.execution.core',
     SYSTEM: 'titan.dlq.system',
     BRAIN: 'titan.dlq.brain.processing',
+    ALL: 'titan.dlq.>',
   },
 
   // ===========================================================================

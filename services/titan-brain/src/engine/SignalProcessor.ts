@@ -1,13 +1,14 @@
-import { getNatsClient, TITAN_SUBJECTS, TitanSubject } from "@titan/shared";
-import { canonicalRiskHash } from "../config/index.js";
-import { Subscription } from "nats";
-import { Logger } from "../logging/Logger.js";
-import { BrainDecision, IntentSignal, RiskDecision } from "../types/index.js";
-import { RiskGuardian } from "../features/Risk/RiskGuardian.js";
-import { AllocationEngine } from "../features/Allocation/AllocationEngine.js";
-import { PerformanceTracker } from "./PerformanceTracker.js";
-import { BrainStateManager } from "./BrainStateManager.js";
-import { CircuitBreaker } from "./CircuitBreaker.js";
+/* eslint-disable functional/no-let -- Stateful runtime: mutations architecturally required */
+import { getNatsClient, TITAN_SUBJECTS, TitanSubject } from '@titan/shared';
+import { canonicalRiskHash } from '../config/index.js';
+import { Subscription } from 'nats';
+import { Logger } from '../logging/Logger.js';
+import { BrainDecision, IntentSignal, RiskDecision } from '../types/index.js';
+import { RiskGuardian } from '../features/Risk/RiskGuardian.js';
+import { AllocationEngine } from '../features/Allocation/AllocationEngine.js';
+import { PerformanceTracker } from './PerformanceTracker.js';
+import { BrainStateManager } from './BrainStateManager.js';
+import { CircuitBreaker } from './CircuitBreaker.js';
 
 // Rust-compatible definitions (Shadow copy since it might not be exported)
 interface RustIntent {
@@ -31,7 +32,7 @@ interface RustIntent {
 
 export class SignalProcessor {
   private nats = getNatsClient();
-  private logger = Logger.getInstance("SignalProcessor");
+  private logger = Logger.getInstance('SignalProcessor');
 
   private subscription: Subscription | null = null;
 
@@ -42,12 +43,12 @@ export class SignalProcessor {
     private stateManager: BrainStateManager,
     private circuitBreaker: CircuitBreaker,
   ) {
-    this.logger.info("Initialized SignalProcessor with full guards");
+    this.logger.info('Initialized SignalProcessor with full guards');
   }
 
   public async start(): Promise<void> {
     if (this.subscription) {
-      this.logger.warn("SignalProcessor already started");
+      this.logger.warn('SignalProcessor already started');
       return;
     }
 
@@ -55,57 +56,48 @@ export class SignalProcessor {
       await this.nats.connect();
     }
 
-    this.logger.info("Subscribing to Signal Submission Channel");
+    this.logger.info('Subscribing to Signal Submission Channel');
 
     // Subscribe to titan.signal.submit.v1
-    // eslint-disable-next-line functional/immutable-data, @typescript-eslint/no-explicit-any
-    this.subscription = this.nats.subscribe(
-      TitanSubject.SIGNAL_SUBMIT,
-      async (data: any) => {
-        try {
-          // Handle envelope or raw payload
-          const signal = data.payload || data;
+    // eslint-disable-next-line functional/immutable-data
+    this.subscription = this.nats.subscribe(TitanSubject.SIGNAL_SUBMIT, async (data: any) => {
+      try {
+        // Handle envelope or raw payload
+        const signal = data.payload || data;
 
-          // Ensure proper ID mapping if needed (NatsClient uses signal_id, IntentSignal expects signalId)
-          // We might need a mapper here.
-          const mappedSignal: IntentSignal = {
-            signalId: signal.signal_id || signal.signalId,
-            symbol: signal.symbol,
-            side: signal.direction === 1
-              ? "BUY"
-              : signal.direction === -1
-              ? "SELL"
-              : signal.side,
-            type: signal.type || "MARKET",
-            confidence: signal.confidence || 1.0,
-            phaseId: signal.source === "scavenger"
-              ? "phase1"
-              : signal.phase_id || "phase1",
-            requestedSize: signal.size || 0,
-            leverage: signal.leverage || 1,
-            timestamp: signal.timestamp || Date.now(),
-            entryPrice: signal.entry_zone?.[0] || signal.entryPrice,
-            stopLossPrice: signal.stop_loss || signal.stopLossPrice,
-            takeProfitPrice: signal.take_profits?.[0] || signal.takeProfitPrice, // Optional mapping
-            // Spread other props just in case
-            ...signal,
-          };
+        // Ensure proper ID mapping if needed (NatsClient uses signal_id, IntentSignal expects signalId)
+        // We might need a mapper here.
+        const mappedSignal: IntentSignal = {
+          signalId: signal.signal_id || signal.signalId,
+          symbol: signal.symbol,
+          side: signal.direction === 1 ? 'BUY' : signal.direction === -1 ? 'SELL' : signal.side,
+          type: signal.type || 'MARKET',
+          confidence: signal.confidence || 1.0,
+          phaseId: signal.source === 'scavenger' ? 'phase1' : signal.phase_id || 'phase1',
+          requestedSize: signal.size || 0,
+          leverage: signal.leverage || 1,
+          timestamp: signal.timestamp || Date.now(),
+          entryPrice: signal.entry_zone?.[0] || signal.entryPrice,
+          stopLossPrice: signal.stop_loss || signal.stopLossPrice,
+          takeProfitPrice: signal.take_profits?.[0] || signal.takeProfitPrice, // Optional mapping
+          // Spread other props just in case
+          ...signal,
+        };
 
-          this.logger.info(
-            `📨 Received Signal from NATS: ${mappedSignal.signalId} (${mappedSignal.phaseId})`,
-          );
+        this.logger.info(
+          `📨 Received Signal from NATS: ${mappedSignal.signalId} (${mappedSignal.phaseId})`,
+        );
 
-          await this.processSignal(mappedSignal);
-        } catch (err) {
-          this.logger.error("Failed to process NATS signal", err as Error);
-        }
-      },
-    );
+        await this.processSignal(mappedSignal);
+      } catch (err) {
+        this.logger.error('Failed to process NATS signal', err as Error);
+      }
+    });
   }
 
   public async stop(): Promise<void> {
     if (this.subscription) {
-      this.logger.info("Stopping SignalProcessor (Unsubscribing)");
+      this.logger.info('Stopping SignalProcessor (Unsubscribing)');
       this.subscription.unsubscribe();
       // eslint-disable-next-line functional/immutable-data
       this.subscription = null;
@@ -128,14 +120,12 @@ export class SignalProcessor {
         signalId,
         approved: false,
         authorizedSize: 0,
-        reason: `Circuit breaker active: ${status.reason || "Unknown"}`,
+        reason: `Circuit breaker active: ${status.reason || 'Unknown'}`,
         allocation: this.allocationEngine.getWeights(equity),
-        performance: await this.performanceTracker.getPhasePerformance(
-          signal.phaseId,
-        ),
+        performance: await this.performanceTracker.getPhasePerformance(signal.phaseId),
         risk: {
           approved: false,
-          reason: "Circuit breaker active",
+          reason: 'Circuit breaker active',
           adjustedSize: 0,
           riskMetrics: this.riskGuardian.getRiskMetrics(positions),
         },
@@ -145,7 +135,7 @@ export class SignalProcessor {
 
     // 0.5 System Armed Check (P2)
     if (!this.stateManager.isArmed()) {
-      const reason = "System Disarmed (Operator Action)";
+      const reason = 'System Disarmed (Operator Action)';
       this.logger.warn(`Signal ${signalId} rejected: ${reason}`);
       return this.finalizeDecision({
         signalId,
@@ -153,9 +143,7 @@ export class SignalProcessor {
         authorizedSize: 0,
         reason,
         allocation: this.allocationEngine.getWeights(equity),
-        performance: await this.performanceTracker.getPhasePerformance(
-          signal.phaseId,
-        ),
+        performance: await this.performanceTracker.getPhasePerformance(signal.phaseId),
         risk: {
           approved: false,
           reason,
@@ -167,24 +155,17 @@ export class SignalProcessor {
     }
 
     // 1. Risk Check
-    const riskDecision: RiskDecision = this.riskGuardian.checkSignal(
-      signal,
-      positions,
-    );
+    const riskDecision: RiskDecision = this.riskGuardian.checkSignal(signal, positions);
 
     if (!riskDecision.approved) {
-      this.logger.warn(
-        `Signal ${signalId} rejected by RiskGuardian: ${riskDecision.reason}`,
-      );
+      this.logger.warn(`Signal ${signalId} rejected by RiskGuardian: ${riskDecision.reason}`);
       return this.finalizeDecision({
         signalId,
         approved: false,
         authorizedSize: 0,
         reason: riskDecision.reason,
         allocation: this.allocationEngine.getWeights(equity),
-        performance: await this.performanceTracker.getPhasePerformance(
-          signal.phaseId,
-        ),
+        performance: await this.performanceTracker.getPhasePerformance(signal.phaseId),
         risk: riskDecision,
         timestamp: Date.now(),
       });
@@ -192,15 +173,10 @@ export class SignalProcessor {
 
     // 2. Allocation
     const currentRegime = this.riskGuardian.getRegimeState();
-    const allocation = this.allocationEngine.getRegimeAdjustedWeights(
-      equity,
-      currentRegime,
-    );
+    const allocation = this.allocationEngine.getRegimeAdjustedWeights(equity, currentRegime);
 
     // 3. Performance
-    const performance = await this.performanceTracker.getPhasePerformance(
-      signal.phaseId,
-    );
+    const performance = await this.performanceTracker.getPhasePerformance(signal.phaseId);
 
     // 4. Authorization
     // Use adjusted size from risk decision if available, else requested
@@ -209,13 +185,13 @@ export class SignalProcessor {
     // Cap size based on allocation weights (Soft Cap per trade)
     let weight = 1.0;
     switch (signal.phaseId) {
-      case "phase1":
+      case 'phase1':
         weight = allocation.w1;
         break;
-      case "phase2":
+      case 'phase2':
         weight = allocation.w2;
         break;
-      case "phase3":
+      case 'phase3':
         weight = allocation.w3;
         break;
       default:
@@ -232,13 +208,13 @@ export class SignalProcessor {
     }
 
     // 5. Construct Intent Envelope
-    const directionInt = side === "BUY" ? 1 : -1;
-    const intentType = side === "BUY" ? "BUY_SETUP" : "SELL_SETUP";
+    const directionInt = side === 'BUY' ? 1 : -1;
+    const intentType = side === 'BUY' ? 'BUY_SETUP' : 'SELL_SETUP';
 
     const payload = {
-      schema_version: "1.0.0",
+      schema_version: '1.0.0',
       signal_id: signalId,
-      source: "brain",
+      source: 'brain',
       symbol: symbol,
       direction: directionInt,
       type: intentType,
@@ -246,7 +222,7 @@ export class SignalProcessor {
       stop_loss: signal.stopLossPrice || 0,
       take_profits: [signal.targetPrice || 0],
       size: authorizedSize,
-      status: "PENDING",
+      status: 'PENDING',
       received_at: new Date().toISOString(),
       t_signal: signal.timestamp,
       timestamp: Date.now(),
@@ -261,12 +237,8 @@ export class SignalProcessor {
     };
 
     // 6. Publish to Execution (HMAC-signed via publishEnvelope)
-    const symbolToken = symbol.replace("/", "_");
-    const subject = TITAN_SUBJECTS.CMD.EXECUTION.PLACE(
-      "auto",
-      "main",
-      symbolToken,
-    );
+    const symbolToken = symbol.replace('/', '_');
+    const subject = TITAN_SUBJECTS.CMD.EXECUTION.PLACE('auto', 'main', symbolToken);
 
     this.logger.info(
       `Approving Signal ${signalId} -> Publishing HMAC-signed Envelope to ${subject} (Size: ${authorizedSize}, Hash: ${canonicalRiskHash})`,
@@ -277,15 +249,12 @@ export class SignalProcessor {
       await this.nats.publishEnvelope(subject, payload, {
         version: 1,
         type: TITAN_SUBJECTS.CMD.EXECUTION.PREFIX,
-        producer: "brain",
+        producer: 'brain',
         correlation_id: signalId,
         idempotency_key: signalId,
       });
     } catch (error) {
-      this.logger.error(
-        `Failed to publish intent for ${signalId}`,
-        error as Error,
-      );
+      this.logger.error(`Failed to publish intent for ${signalId}`, error as Error);
       await this.publishToDLQ(payload, (error as Error).message);
       // Return approved but with error note? Or fail?
       // Since we couldn't execute, it's effectively a failure, but Brain "approved" it.
@@ -296,7 +265,7 @@ export class SignalProcessor {
       signalId,
       approved: true,
       authorizedSize,
-      reason: riskDecision.reason || "Approved",
+      reason: riskDecision.reason || 'Approved',
       allocation,
       performance,
       risk: riskDecision,
@@ -313,17 +282,15 @@ export class SignalProcessor {
       };
       await this.nats.publish(TITAN_SUBJECTS.DLQ.BRAIN, dlqPayload);
     } catch (e) {
-      this.logger.error("Failed to publish to DLQ", e as Error);
+      this.logger.error('Failed to publish to DLQ', e as Error);
     }
   }
 
-  private async finalizeDecision(
-    decision: BrainDecision,
-  ): Promise<BrainDecision> {
+  private async finalizeDecision(decision: BrainDecision): Promise<BrainDecision> {
     try {
       await this.nats.publish(TITAN_SUBJECTS.EVT.BRAIN.DECISION, decision);
     } catch (err) {
-      this.logger.error("Failed to publish Brain Decision event", err as Error);
+      this.logger.error('Failed to publish Brain Decision event', err as Error);
     }
     return decision;
   }

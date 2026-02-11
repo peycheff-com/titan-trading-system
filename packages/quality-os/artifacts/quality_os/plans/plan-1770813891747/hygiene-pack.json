@@ -1,0 +1,12 @@
+{
+  "dead_code": [],
+  "doc_integrity": {
+    "broken_links": [],
+    "duplicates": []
+  },
+  "schema_refs": [],
+  "architecture": {
+    "violations": [],
+    "circular_deps": []
+  }
+}

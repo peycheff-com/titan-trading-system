@@ -1,3 +1,4 @@
+/* eslint-disable functional/no-let -- Stateful runtime: mutations architecturally required */
 /**
  * OperatorController
  *
@@ -9,18 +10,14 @@
  * - GET  /operator/state               — Unified OperatorState
  */
 
-import type {
-  FastifyInstance,
-  FastifyRequest,
-  FastifyReply,
-} from 'fastify';
-import type {
-  OperatorIntentRecord,
-  OperatorIntentStatus,
-  OperatorIntentType,
-} from '@titan/shared';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { OperatorIntentRecord, OperatorIntentStatus, OperatorIntentType } from '@titan/shared';
 import { DANGER_LEVEL, REQUIRES_APPROVAL } from '@titan/shared';
-import { OperatorIntentService, IntentPreviewResult, PERMISSION_MAP } from '../../services/OperatorIntentService.js';
+import {
+  OperatorIntentService,
+  IntentPreviewResult,
+  PERMISSION_MAP,
+} from '../../services/OperatorIntentService.js';
 import type { OperatorStateProjection } from '../../services/OperatorStateProjection.js';
 import { Logger } from '../../logging/Logger.js';
 import type { AuthMiddleware } from '../../security/AuthMiddleware.js';
@@ -157,20 +154,20 @@ export class OperatorController {
   ): Promise<void> {
     try {
       const { timestamp } = request.query;
-      
+
       if (!timestamp) {
-         reply.code(400).send({ error: 'timestamp is required (ISO 8601)' });
-         return;
+        reply.code(400).send({ error: 'timestamp is required (ISO 8601)' });
+        return;
       }
 
       const ts = new Date(timestamp).getTime();
       if (isNaN(ts)) {
-         reply.code(400).send({ error: 'Invalid timestamp format' });
-         return;
+        reply.code(400).send({ error: 'Invalid timestamp format' });
+        return;
       }
-      
+
       const reconstructedState = await this.eventReplayService.reconstructStateAt(ts);
-      
+
       // Serialize Reconstructed State
       // BrainStateManager likely has private fields, so we need a serializer or getters.
       // Assuming we can construct the same object as handleGetState returns.
@@ -178,25 +175,24 @@ export class OperatorController {
       // Ideally we'd use OperatorStateProjection logic on the *reconstructed* state manager.
       // But OperatorStateProjection is bound to the LIVE brain.
       // We can manually construct the response for now matching `handleGetState`.
-      
+
       const payload = {
-         equity: reconstructedState.getEquity(),
-         positions: reconstructedState.getPositions(),
-         allocation: reconstructedState.getAllocation(),
-         mode: reconstructedState.getMode(),
-         armed: reconstructedState.isArmed(),
-         // Add performance/risk if available
+        equity: reconstructedState.getEquity(),
+        positions: reconstructedState.getPositions(),
+        allocation: reconstructedState.getAllocation(),
+        mode: reconstructedState.getMode(),
+        armed: reconstructedState.isArmed(),
+        // Add performance/risk if available
       };
-      
+
       reply.code(200).send({
         meta: {
           requested_time: timestamp,
           actual_time: new Date(ts).toISOString(),
-          is_historical: true
+          is_historical: true,
         },
-        data: payload
+        data: payload,
       });
-
     } catch (error) {
       this.logger.error('Error getting historical state', error as Error);
       reply.code(500).send({ error: 'Internal server error' });
@@ -214,25 +210,31 @@ export class OperatorController {
     try {
       // RBAC Check (Hardening)
       // @ts-expect-error - request.user is attached by AuthMiddleware
-      const user = request.user as { permissions?: string[]; role?: string | string[]; operatorId?: string };
+      const user = request.user as {
+        permissions?: string[];
+        role?: string | string[];
+        operatorId?: string;
+      };
       const intentType = request.body.type as OperatorIntentType;
-      
+
       const requiredPermission = PERMISSION_MAP[intentType];
       if (requiredPermission && user) {
         const hasPermission = user.permissions?.includes(requiredPermission);
         const roles = Array.isArray(user.role) ? user.role : [user.role];
         const isSuperAdmin = roles.includes('superadmin');
-        
+
         // Fallback: Check role-based allowlist if no granular permissions
         // This maintains compatibility while we migrate to full PBAC
-        
+
         if (!hasPermission && !isSuperAdmin) {
-             this.logger.warn(`RBAC Denial: User ${user.operatorId} tried ${intentType} without ${requiredPermission}`);
-             reply.code(403).send({
-               error: 'INSUFFICIENT_PERMISSIONS',
-               message: `Action requires permission: ${requiredPermission}`
-             });
-             return;
+          this.logger.warn(
+            `RBAC Denial: User ${user.operatorId} tried ${intentType} without ${requiredPermission}`,
+          );
+          reply.code(403).send({
+            error: 'INSUFFICIENT_PERMISSIONS',
+            message: `Action requires permission: ${requiredPermission}`,
+          });
+          return;
         }
       }
 
@@ -314,10 +316,7 @@ export class OperatorController {
   // GET /operator/state
   // ---------------------------------------------------------------------------
 
-  private async handleGetState(
-    _request: FastifyRequest,
-    reply: FastifyReply,
-  ): Promise<void> {
+  private async handleGetState(_request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
       const state = this.stateProjection.getState();
       reply.code(200).send(state);
@@ -563,10 +562,7 @@ export class OperatorController {
   // GET /operator/intents/stream (SSE)
   // ---------------------------------------------------------------------------
 
-  private async handleIntentStream(
-    request: FastifyRequest,
-    reply: FastifyReply,
-  ): Promise<void> {
+  private async handleIntentStream(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     // Set SSE headers
     reply.raw.writeHead(200, {
       'Content-Type': 'text/event-stream',

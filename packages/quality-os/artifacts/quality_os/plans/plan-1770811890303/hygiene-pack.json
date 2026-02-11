@@ -1,0 +1,29 @@
+{
+  "dead_code": [
+    {
+      "file": "src/core/risk-classifier.ts",
+      "symbol": "RiskTier",
+      "proof_method": "zero_references"
+    },
+    {
+      "file": "src/core/hygiene-engine.ts",
+      "symbol": "checkDocLinks",
+      "proof_method": "zero_references"
+    },
+    {
+      "file": "src/core/hygiene-engine.ts",
+      "symbol": "checkSchemaRefs",
+      "proof_method": "zero_references"
+    },
+    {
+      "file": "src/core/hygiene-engine.ts",
+      "symbol": "HygienePack",
+      "proof_method": "zero_references"
+    }
+  ],
+  "doc_integrity": {
+    "broken_links": [],
+    "duplicates": []
+  },
+  "schema_refs": []
+}

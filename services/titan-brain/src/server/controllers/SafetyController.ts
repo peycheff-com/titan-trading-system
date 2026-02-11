@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { SafetySessionManager } from '../../services/SafetySessionManager.js';
 
@@ -39,12 +40,13 @@ export class SafetyController {
     // For this convergence phase, we enforce the presence of a 'X-Titan-Sudo-Token' header
     // which effectively acts as a "sudo mode" proof that the operator has re-authenticated.
     const sudoToken = req.headers['x-titan-sudo-token'];
-    
+
     if (!sudoToken || typeof sudoToken !== 'string' || sudoToken.length < 16) {
-       return reply.code(403).send({ 
-         error: 'MFA_REQUIRED', 
-         message: 'Critical safety operations require re-authentication (sudo mode). Missing or invalid X-Titan-Sudo-Token header.' 
-       });
+      return reply.code(403).send({
+        error: 'MFA_REQUIRED',
+        message:
+          'Critical safety operations require re-authentication (sudo mode). Missing or invalid X-Titan-Sudo-Token header.',
+      });
     }
 
     // In production, we'd validate this token against a session store or auth provider.

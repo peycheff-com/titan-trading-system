@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 import { Logger } from '../../logging/Logger.js';
 import { EventEmitter } from 'events';
 import { DefconLevel, SystemHealth } from './types.js';

@@ -1,0 +1,83 @@
+{
+  "id": "plan-1770812577882",
+  "trigger": "manual",
+  "input_vectors": {
+    "base_sha": "origin/main",
+    "head_sha": "HEAD",
+    "changed_files": []
+  },
+  "risk_analysis": {
+    "tier": "Low",
+    "reasons": [
+      "Low: Documentation or minor script change"
+    ]
+  },
+  "execution_plan": {
+    "required_gates": [
+      "Gate A: PR Checks (Lint Only)"
+    ],
+    "matrix": {
+      "include": []
+    },
+    "sota_checks": [
+      {
+        "id": "typecheck",
+        "name": "TypeScript Type Check",
+        "command": "npm run sota:typecheck",
+        "category": "lint",
+        "required": true,
+        "timeout": 120000
+      },
+      {
+        "id": "immutability",
+        "name": "Immutability Rules",
+        "command": "npm run sota:immutability",
+        "category": "lint",
+        "required": true,
+        "timeout": 60000
+      },
+      {
+        "id": "circular",
+        "name": "Circular Dependency Check",
+        "command": "npm run sota:circular",
+        "category": "architecture",
+        "required": true,
+        "timeout": 60000
+      },
+      {
+        "id": "dead-code",
+        "name": "Dead Code Detection",
+        "command": "npm run sota:dead",
+        "category": "architecture",
+        "required": true,
+        "timeout": 120000
+      },
+      {
+        "id": "docs-links",
+        "name": "Documentation Link Integrity",
+        "command": "npm run sota:docs:links",
+        "category": "docs",
+        "required": false,
+        "timeout": 60000
+      },
+      {
+        "id": "secrets",
+        "name": "Secret Scanning",
+        "command": "npm run sota:secrets",
+        "category": "security",
+        "required": true,
+        "timeout": 30000
+      }
+    ],
+    "sota_summary": {
+      "total": 6,
+      "required": 5,
+      "by_category": {
+        "lint": 2,
+        "architecture": 2,
+        "docs": 1,
+        "security": 1
+      }
+    }
+  }
+}

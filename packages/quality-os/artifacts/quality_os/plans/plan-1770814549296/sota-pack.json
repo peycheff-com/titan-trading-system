@@ -1,0 +1,75 @@
+{
+  "timestamp": "2026-02-11T12:56:16.579Z",
+  "tier": "Low",
+  "total_checks": 6,
+  "results": [
+    {
+      "id": "typecheck",
+      "name": "TypeScript Type Check",
+      "category": "lint",
+      "required": true,
+      "exitCode": 0,
+      "duration": 2809,
+      "output": "\n> sota:typecheck\n> tsc -b\n\n",
+      "status": "passed"
+    },
+    {
+      "id": "immutability",
+      "name": "Immutability Rules",
+      "category": "lint",
+      "required": true,
+      "exitCode": 0,
+      "duration": 6575,
+      "output": "\n> sota:immutability\n> npx eslint -c scripts/sota/immutability.config.mjs \"services/*/src/**/*.{ts,tsx}\"\n\n",
+      "status": "passed"
+    },
+    {
+      "id": "circular",
+      "name": "Circular Dependency Check",
+      "category": "architecture",
+      "required": true,
+      "exitCode": 0,
+      "duration": 2197,
+      "output": "\n> sota:circular\n> bash scripts/sota/check_circular.sh\n\n🛡️  Running Circular Dependency Check...\nProcessed 591 files (1.9s) (132 warnings)\n\n\n",
+      "status": "passed"
+    },
+    {
+      "id": "dead-code",
+      "name": "Dead Code Detection",
+      "category": "architecture",
+      "required": true,
+      "exitCode": 0,
+      "duration": 5964,
+      "output": "\n> sota:dead\n> bash scripts/sota/check_dead_code.sh\n\n🧟‍♂️ Running Dead Code & Unused Export Scan (Knip)...\nGenerating summary...\nGenerating summary...\n✅ knip passed (max-issues=0).\n✅ Dead code scan complete. Report saved to knip_report.json\n",
+      "status": "passed"
+    },
+    {
+      "id": "docs-links",
+      "name": "Documentation Link Integrity",
+      "category": "docs",
+      "required": false,
+      "exitCode": 0,
+      "duration": 408,
+      "output": "\n> sota:docs:links\n> npx ts-node --esm scripts/docs/validate_links.ts\n\n🔍 Scanning for broken links in docs/...\n✅ No broken relative links found.\n",
+      "status": "passed"
+    },
+    {
+      "id": "secrets",
+      "name": "Secret Scanning",
+      "category": "security",
+      "required": true,
+      "exitCode": 0,
+      "duration": 1394,
+      "output": "\n> sota:secrets\n> python3 scripts/sota/secret_scan.py\n\n🕵️‍♂️ Scanning for Secrets in codebase...\n\n✅ No secrets found.\n",
+      "status": "passed"
+    }
+  ],
+  "summary": {
+    "passed": 6,
+    "failed": 0,
+    "skipped": 0,
+    "required_passed": 5,
+    "required_failed": 0
+  },
+  "pack_hash": "c57ff4481b9569abe6b7eaa2cac82198b02ab548d9b813dd273161dd09c2d7da"
+}

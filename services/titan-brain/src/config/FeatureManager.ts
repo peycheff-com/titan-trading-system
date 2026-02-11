@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 import { Logger } from '@titan/shared';
 import Redis from 'ioredis';
 import { EventEmitter } from 'events';

@@ -71,7 +71,7 @@ export const TitanSubject = {
 
   // --- SIGNAL FLOW (NEW 2026) ---
   // titan.signal.submit.v1 (Phases -> Brain)
-  SIGNAL_SUBMIT: TITAN_SUBJECTS.EVT.BRAIN.SIGNAL,
+  SIGNAL_SUBMIT: TITAN_SUBJECTS.SIGNAL.SUBMIT,
 
   // --- CANONICAL POWER LAW (JAN 2026) ---
   // titan.signal.powerlaw.metrics.v1.{venue}.{symbol}.{tf}
@@ -80,6 +80,28 @@ export const TitanSubject = {
   SIGNAL_EXECUTION_CONSTRAINTS: TITAN_SUBJECTS.DATA.EXECUTION.PREFIX,
   // titan.evt.powerlaw.impact.v1.{venue}.{symbol}
   EVT_POWERLAW_IMPACT: TITAN_SUBJECTS.EVT.POWERLAW.IMPACT,
+
+  // --- QUALITY ---
+  // titan.evt.quality.execution.v1
+  EVT_QUALITY_EXECUTION: TITAN_SUBJECTS.EVT.QUALITY.EXECUTION,
+
+  // --- ALERTS ---
+  // titan.evt.alert.drift.v1
+  EVT_ALERT_DRIFT: TITAN_SUBJECTS.EVT.ALERT.DRIFT,
+  // titan.evt.alert.>
+  EVT_ALERT_ALL: TITAN_SUBJECTS.EVT.ALERT.ALL,
+
+  // --- BRAIN EVENTS ---
+  // titan.evt.brain.decision.v1
+  EVT_BRAIN_DECISION: TITAN_SUBJECTS.EVT.BRAIN.DECISION,
+
+  // --- SYSTEM ---
+  // titan.sys.heartbeat.>
+  SYS_HEARTBEAT_ALL: TITAN_SUBJECTS.SYS.HEARTBEAT_ALL,
+
+  // --- DLQ ---
+  // titan.dlq.>
+  DLQ_ALL: TITAN_SUBJECTS.DLQ.ALL,
 } as const;
 
 export type TitanSubject = (typeof TitanSubject)[keyof typeof TitanSubject];

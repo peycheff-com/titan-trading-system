@@ -1,0 +1,75 @@
+{
+  "timestamp": "2026-02-11T12:23:31.530Z",
+  "tier": "Low",
+  "total_checks": 6,
+  "results": [
+    {
+      "id": "typecheck",
+      "name": "TypeScript Type Check",
+      "category": "lint",
+      "required": true,
+      "exitCode": 2,
+      "duration": 5817,
+      "output": "Command failed: npm run sota:typecheck\n",
+      "status": "failed"
+    },
+    {
+      "id": "immutability",
+      "name": "Immutability Rules",
+      "category": "lint",
+      "required": true,
+      "exitCode": "ERR_CHILD_PROCESS_STDIO_MAXBUFFER",
+      "duration": 9236,
+      "output": "stdout maxBuffer length exceeded",
+      "status": "failed"
+    },
+    {
+      "id": "circular",
+      "name": "Circular Dependency Check",
+      "category": "architecture",
+      "required": true,
+      "exitCode": 0,
+      "duration": 2348,
+      "output": "\n> sota:circular\n> bash scripts/sota/check_circular.sh\n\n🛡️  Running Circular Dependency Check...\nProcessed 591 files (2s) (132 warnings)\n\n\n",
+      "status": "passed"
+    },
+    {
+      "id": "dead-code",
+      "name": "Dead Code Detection",
+      "category": "architecture",
+      "required": true,
+      "exitCode": 1,
+      "duration": 6236,
+      "output": "Command failed: npm run sota:dead\n",
+      "status": "failed"
+    },
+    {
+      "id": "docs-links",
+      "name": "Documentation Link Integrity",
+      "category": "docs",
+      "required": false,
+      "exitCode": 0,
+      "duration": 465,
+      "output": "\n> sota:docs:links\n> npx ts-node --esm scripts/docs/validate_links.ts\n\n🔍 Scanning for broken links in docs/...\n✅ No broken relative links found.\n",
+      "status": "passed"
+    },
+    {
+      "id": "secrets",
+      "name": "Secret Scanning",
+      "category": "security",
+      "required": true,
+      "exitCode": 0,
+      "duration": 2038,
+      "output": "\n> sota:secrets\n> python3 scripts/sota/secret_scan.py\n\n🕵️‍♂️ Scanning for Secrets in codebase...\n\n✅ No secrets found.\n",
+      "status": "passed"
+    }
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 3,
+    "skipped": 0,
+    "required_passed": 2,
+    "required_failed": 3
+  },
+  "pack_hash": "f015fc302f2f9068192a0b2b0479777d8e0ba042c5ab6f397fac33ab2c4a2dad"
+}

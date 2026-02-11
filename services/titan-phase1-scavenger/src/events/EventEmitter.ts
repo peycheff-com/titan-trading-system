@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 /**
  * EventEmitter
  *
@@ -68,7 +69,7 @@ export type EventType = keyof EventPayloads;
 export type EventHandler<K extends EventType> = (data: EventPayloads[K]) => void;
 
 export class EventEmitter {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   private listeners: Map<EventType, EventHandler<any>[]> = new Map();
 
   /**

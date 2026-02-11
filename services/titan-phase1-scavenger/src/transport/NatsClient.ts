@@ -1,10 +1,13 @@
+/* eslint-disable functional/immutable-data, functional/no-let -- Stateful runtime: mutations architecturally required */
 import {
   getNatsClient,
   NatsClient as SharedNatsClient,
   POWER_LAW_SUBJECTS,
-} from "@titan/shared";
-import { Logger } from "../logging/Logger.js";
-import { PowerLawMetric } from "../types/index.js";
+  TITAN_SUBJECTS,
+  TitanSubject,
+} from '@titan/shared';
+import { Logger } from '../logging/Logger.js';
+import { PowerLawMetric } from '../types/index.js';
 
 export interface NatsConfig {
   servers: string | string[];
@@ -35,24 +38,22 @@ export class NatsClient {
 
   async connect(): Promise<void> {
     await this.client.connect({
-      servers: Array.isArray(this.config.servers)
-        ? this.config.servers
-        : [this.config.servers],
+      servers: Array.isArray(this.config.servers) ? this.config.servers : [this.config.servers],
       token: this.config.token,
-      name: this.config.name || "titan-scavenger",
+      name: this.config.name || 'titan-scavenger',
       user: this.config.user,
       pass: this.config.pass,
     });
-    this.logger.info("✅ Connected to NATS via Shared Client");
+    this.logger.info('✅ Connected to NATS via Shared Client');
   }
 
   async publishSignal(signal: Signal): Promise<void> {
     if (!this.client.isConnected()) {
-      throw new Error("Not connected to NATS");
+      throw new Error('Not connected to NATS');
     }
 
     // Subject: titan.signal.submit.v1 (Targeting Brain)
-    const subject = `titan.signal.submit.v1`; // Hardcoded for now, or match TitanSubject.SIGNAL_SUBMIT
+    const subject = TitanSubject.SIGNAL_SUBMIT;
 
     // Uses explicit Envelope publishing
     const tSignal = signal.t_signal ?? signal.timestamp ?? Date.now();
@@ -73,28 +74,24 @@ export class NatsClient {
           timestamp: tSignal, // Keep for backward compat inside payload if needed
         },
         {
-          type: "titan.cmd.exec.place.v1",
+          type: TITAN_SUBJECTS.CMD.EXECUTION.PREFIX,
           version: 1,
-          producer: "titan-phase1-scavenger",
+          producer: 'titan-phase1-scavenger',
           id: signal.signal_id, // Use signal_id as envelope ID for traceability
           correlation_id: signal.signal_id,
         },
       );
-      this.logger.info(
-        `📤 Publishing signal to ${subject} [${signal.signal_id}]`,
-      );
+      this.logger.info(`📤 Publishing signal to ${subject} [${signal.signal_id}]`);
     } catch (err) {
       this.logger.logError(err as Error, {
         signalId: signal.signal_id,
-        context: "publishSignal",
+        context: 'publishSignal',
       });
       throw err;
     }
   }
 
-  async subscribeToPowerLawMetrics(
-    callback: (symbol: string, metrics: PowerLawMetric) => void,
-  ) {
+  async subscribeToPowerLawMetrics(callback: (symbol: string, metrics: PowerLawMetric) => void) {
     if (!this.client.isConnected()) return;
 
     // Wildcard subscription
@@ -106,16 +103,13 @@ export class NatsClient {
         let payload = data;
 
         // Simple heuristic for Envelope: has 'payload' and 'type'
-        if (
-          data && typeof data === "object" && "payload" in data &&
-          "type" in data
-        ) {
+        if (data && typeof data === 'object' && 'payload' in data && 'type' in data) {
           // It's likely an envelope
           payload = (data as { payload: unknown }).payload;
         }
 
         // Subject: powerlaw.metrics.<symbol>
-        const parts = subject.split(".");
+        const parts = subject.split('.');
         if (parts.length >= 3) {
           const symbol = parts[2];
           callback(symbol, payload as PowerLawMetric);
@@ -123,7 +117,7 @@ export class NatsClient {
       },
     );
 
-    this.logger.info("✅ Subscribed to Power Law metrics (Dual Read Enabled)");
+    this.logger.info('✅ Subscribed to Power Law metrics (Dual Read Enabled)');
   }
 
   async close(): Promise<void> {

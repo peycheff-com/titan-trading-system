@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 /**
  * BayesianCalibrator - Estimates realized probability of success using Beta-Binomial model
  *

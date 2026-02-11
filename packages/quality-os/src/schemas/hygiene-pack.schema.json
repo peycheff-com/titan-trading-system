@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "HygienePack",
+  "type": "object",
+  "properties": {
+    "dead_code": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "string" },
+          "symbol": { "type": "string" },
+          "proof_method": { "enum": ["static_analysis", "compiler_unused", "zero_references"] }
+        },
+        "required": ["file", "symbol"]
+      }
+    },
+    "doc_integrity": {
+      "type": "object",
+      "properties": {
+        "broken_links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "source": { "type": "string" },
+              "target": { "type": "string" },
+              "line": { "type": "integer" }
+            }
+          }
+        },
+        "duplicates": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "canonical": { "type": "string" },
+                    "duplicate": { "type": "string" },
+                    "similarity_score": { "type": "number" }
+                }
+            }
+        }
+      }
+    },
+    "schema_refs": {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "doc_file": { "type": "string" },
+                "schema_target": { "type": "string" },
+                "status": { "enum": ["valid", "missing", "outdated"] }
+            }
+        }
+    }
+  }
+}

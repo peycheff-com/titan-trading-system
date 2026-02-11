@@ -1,6 +1,5 @@
 import { DatabaseManager } from '../DatabaseManager.js';
 import { DriftEvent, ReconciliationRun, TruthConfidence } from '../../types/index.js';
-import { v4 as uuidv4 } from 'uuid';
 
 export class TruthRepository {
   constructor(private db: DatabaseManager) {}

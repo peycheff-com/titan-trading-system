@@ -1,4 +1,4 @@
-import { EquityTier, TitanBrainConfigInput } from "./ConfigSchema.js";
+import { EquityTier, TitanBrainConfigInput } from './ConfigSchema.js';
 
 export function loadConfigFromEnvironment(): Partial<TitanBrainConfigInput> {
   return {
@@ -18,10 +18,7 @@ export function loadConfigFromEnvironment(): Partial<TitanBrainConfigInput> {
 }
 
 function loadBrainConfig(): Partial<TitanBrainConfigInput> {
-  if (
-    process.env.BRAIN_SIGNAL_TIMEOUT ||
-    process.env.BRAIN_METRIC_UPDATE_INTERVAL
-  ) {
+  if (process.env.BRAIN_SIGNAL_TIMEOUT || process.env.BRAIN_METRIC_UPDATE_INTERVAL) {
     return {
       brain: {
         signalTimeout: process.env.BRAIN_SIGNAL_TIMEOUT
@@ -85,10 +82,7 @@ function loadAllocationConfig(): Partial<TitanBrainConfigInput> {
 }
 
 function loadPerformanceConfig(): Partial<TitanBrainConfigInput> {
-  if (
-    process.env.PERFORMANCE_WINDOW_DAYS ||
-    process.env.PERFORMANCE_MIN_TRADE_COUNT
-  ) {
+  if (process.env.PERFORMANCE_WINDOW_DAYS || process.env.PERFORMANCE_MIN_TRADE_COUNT) {
     return {
       performanceTracker: {
         windowDays: process.env.PERFORMANCE_WINDOW_DAYS
@@ -116,10 +110,7 @@ function loadPerformanceConfig(): Partial<TitanBrainConfigInput> {
 }
 
 function loadRiskConfig(): Partial<TitanBrainConfigInput> {
-  if (
-    process.env.RISK_MAX_CORRELATION ||
-    process.env.RISK_CORRELATION_PENALTY
-  ) {
+  if (process.env.RISK_MAX_CORRELATION || process.env.RISK_CORRELATION_PENALTY) {
     return {
       riskGuardian: {
         maxCorrelation: process.env.RISK_MAX_CORRELATION
@@ -144,10 +135,7 @@ function loadRiskConfig(): Partial<TitanBrainConfigInput> {
 }
 
 function loadCapitalConfig(): Partial<TitanBrainConfigInput> {
-  if (
-    process.env.CAPITAL_SWEEP_THRESHOLD ||
-    process.env.CAPITAL_RESERVE_LIMIT
-  ) {
+  if (process.env.CAPITAL_SWEEP_THRESHOLD || process.env.CAPITAL_RESERVE_LIMIT) {
     return {
       capitalFlow: {
         sweepThreshold: process.env.CAPITAL_SWEEP_THRESHOLD
@@ -170,10 +158,7 @@ function loadCapitalConfig(): Partial<TitanBrainConfigInput> {
 }
 
 function loadBreakerConfig(): Partial<TitanBrainConfigInput> {
-  if (
-    process.env.BREAKER_MAX_DAILY_DRAWDOWN ||
-    process.env.BREAKER_MIN_EQUITY
-  ) {
+  if (process.env.BREAKER_MAX_DAILY_DRAWDOWN || process.env.BREAKER_MIN_EQUITY) {
     return {
       circuitBreaker: {
         maxDailyDrawdown: process.env.BREAKER_MAX_DAILY_DRAWDOWN
@@ -240,10 +225,8 @@ function loadServerConfig(): Partial<TitanBrainConfigInput> {
     return {
       server: {
         host: process.env.SERVER_HOST,
-        port: process.env.SERVER_PORT
-          ? parseInt(process.env.SERVER_PORT)
-          : undefined,
-        corsOrigins: process.env.CORS_ORIGINS?.split(","),
+        port: process.env.SERVER_PORT ? parseInt(process.env.SERVER_PORT) : undefined,
+        corsOrigins: process.env.CORS_ORIGINS?.split(','),
       },
     };
   }
@@ -262,11 +245,9 @@ function loadNotificationConfig(): Partial<TitanBrainConfigInput> {
         email: {
           enabled: !!process.env.EMAIL_SMTP_HOST,
           smtpHost: process.env.EMAIL_SMTP_HOST,
-          smtpPort: process.env.EMAIL_SMTP_PORT
-            ? parseInt(process.env.EMAIL_SMTP_PORT)
-            : undefined,
+          smtpPort: process.env.EMAIL_SMTP_PORT ? parseInt(process.env.EMAIL_SMTP_PORT) : undefined,
           from: process.env.EMAIL_FROM,
-          to: process.env.EMAIL_TO?.split(","),
+          to: process.env.EMAIL_TO?.split(','),
         },
       },
     };
@@ -294,16 +275,13 @@ function loadServicesConfig(): Partial<TitanBrainConfigInput> {
 }
 
 function loadReconciliationConfig(): Partial<TitanBrainConfigInput> {
-  if (
-    process.env.RECONCILIATION_INTERVAL ||
-    process.env.RECONCILIATION_EXCHANGES
-  ) {
+  if (process.env.RECONCILIATION_INTERVAL || process.env.RECONCILIATION_EXCHANGES) {
     return {
       reconciliation: {
         intervalMs: process.env.RECONCILIATION_INTERVAL
           ? parseInt(process.env.RECONCILIATION_INTERVAL)
           : undefined,
-        exchanges: process.env.RECONCILIATION_EXCHANGES?.split(","),
+        exchanges: process.env.RECONCILIATION_EXCHANGES?.split(','),
       },
     };
   }

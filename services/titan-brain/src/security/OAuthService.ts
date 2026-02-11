@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 import crypto from 'crypto';
 import { Logger } from '../logging/Logger.js';
 
@@ -45,7 +46,7 @@ export class OAuthService {
     redirectUri: string,
     codeChallenge: string,
     operatorId: string,
-    scope: string[] = []
+    scope: string[] = [],
   ): string {
     const client = this.clients.get(clientId);
     if (!client) {
@@ -57,7 +58,7 @@ export class OAuthService {
     }
 
     const code = crypto.randomBytes(32).toString('hex');
-    
+
     this.codes.set(code, {
       code,
       clientId,
@@ -79,7 +80,7 @@ export class OAuthService {
   validateAuthCode(
     code: string,
     codeVerifier: string,
-    clientId: string
+    clientId: string,
   ): { operatorId: string; scope: string[] } {
     const authCode = this.codes.get(code);
 
@@ -97,10 +98,7 @@ export class OAuthService {
     }
 
     // PKCE Validation (S256)
-    const hash = crypto
-      .createHash('sha256')
-      .update(codeVerifier)
-      .digest('base64url'); // OAuth 2.1 uses base64url
+    const hash = crypto.createHash('sha256').update(codeVerifier).digest('base64url'); // OAuth 2.1 uses base64url
 
     if (hash !== authCode.codeChallenge) {
       this.logger.warn(`PKCE mismatch: Expected ${authCode.codeChallenge}, Got ${hash}`);

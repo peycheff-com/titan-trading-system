@@ -1,4 +1,3 @@
-
 import { DatabaseManager } from '../../db/DatabaseManager.js';
 import { Logger } from '../../logging/Logger.js';
 

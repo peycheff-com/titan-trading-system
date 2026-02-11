@@ -5,7 +5,7 @@
 
 import type { ExecutionEngineClient } from '../types/index.js';
 import { ManualTradeRequestBody } from '../schemas/apiSchemas.js';
-import { IntentSignal, PhaseId } from '../types/index.js';
+import { IntentSignal } from '../types/index.js';
 import { randomUUID } from 'crypto';
 
 export class ManualTradeService {

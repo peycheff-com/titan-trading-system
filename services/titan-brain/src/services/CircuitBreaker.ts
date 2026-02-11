@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 /**
  * CircuitBreaker - Circuit breaker pattern implementation for fault tolerance
  *

@@ -1,0 +1,23 @@
+{
+  "id": "plan-1770811890303",
+  "trigger": "manual",
+  "input_vectors": {
+    "base_sha": "origin/main",
+    "head_sha": "HEAD",
+    "changed_files": []
+  },
+  "risk_analysis": {
+    "tier": "Low",
+    "reasons": [
+      "Low: Documentation or minor script change"
+    ]
+  },
+  "execution_plan": {
+    "required_gates": [
+      "Gate A (Lint Only)"
+    ],
+    "matrix": {
+      "include": []
+    }
+  }
+}

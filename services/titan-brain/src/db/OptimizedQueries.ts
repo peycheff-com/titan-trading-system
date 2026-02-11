@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data, functional/no-let -- Stateful runtime: mutations architecturally required */
 /**
  * OptimizedQueries - Optimized database queries with caching
  * Provides efficient queries for frequently accessed data

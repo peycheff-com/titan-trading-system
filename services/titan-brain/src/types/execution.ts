@@ -1,4 +1,4 @@
-import { IntentSignal, Position } from "./risk.js";
+import { IntentSignal, Position } from './risk.js';
 
 /**
  * Configuration for Execution Engine Client
@@ -23,7 +23,7 @@ export interface FillConfirmation {
   signalId: string;
   orderId: string;
   symbol: string;
-  side: "BUY" | "SELL";
+  side: 'BUY' | 'SELL';
   fillPrice: number;
   fillSize: number;
   requestedSize: number;
@@ -37,7 +37,7 @@ export interface FillConfirmation {
  */
 export interface ExecutionPosition {
   symbol: string;
-  side: "LONG" | "SHORT";
+  side: 'LONG' | 'SHORT';
   size: number; // USD Notional
   entryPrice: number;
   unrealizedPnL: number;

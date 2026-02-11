@@ -134,7 +134,7 @@ const migration004: Migration = {
       client.release();
     }
   },
-  down: async (pool: Pool) => {
+  down: async (_pool: Pool) => {
     /* Skipping down implementation for brevity as it's rarely used in prod fix */
   },
 };
@@ -158,7 +158,7 @@ const migration005: Migration = {
       client.release();
     }
   },
-  down: async (pool: Pool) => {
+  down: async (_pool: Pool) => {
     /* Skipped */
   },
 };
@@ -188,7 +188,7 @@ const migration006: Migration = {
       client.release();
     }
   },
-  down: async (pool: Pool) => {
+  down: async (_pool: Pool) => {
     /* Skipped */
   },
 };
@@ -220,7 +220,7 @@ const migration008: Migration = {
       client.release();
     }
   },
-  down: async (pool: Pool) => {
+  down: async (_pool: Pool) => {
     /* Skipped */
   },
 };
@@ -246,7 +246,7 @@ const migration009: Migration = {
       client.release();
     }
   },
-  down: async (pool: Pool) => {
+  down: async (_pool: Pool) => {
     /* Skipped */
   },
 };
@@ -294,7 +294,7 @@ const migration010: Migration = {
       client.release();
     }
   },
-  down: async (pool: Pool) => {
+  down: async (_pool: Pool) => {
     /* Skipped */
   },
 };
@@ -318,7 +318,7 @@ const migration011: Migration = {
       client.release();
     }
   },
-  down: async (pool: Pool) => {
+  down: async (_pool: Pool) => {
     /* Skipped */
   },
 };
@@ -356,7 +356,7 @@ const migration012: Migration = {
       client.release();
     }
   },
-  down: async (pool: Pool) => {
+  down: async (_pool: Pool) => {
     /* Skipped */
   },
 };

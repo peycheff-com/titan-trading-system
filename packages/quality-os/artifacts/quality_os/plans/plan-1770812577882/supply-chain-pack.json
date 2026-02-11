@@ -1,0 +1,308 @@
+{
+  "audits": {
+    "npm": {
+      "vulnerabilities": 0,
+      "high": 0,
+      "critical": 0
+    }
+  },
+  "pinning": {
+    "github_actions": [
+      {
+        "file": ".github/workflows/reusable-rust.yml",
+        "action": "actions/checkout",
+        "usage": "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/reusable-rust.yml",
+        "action": "dtolnay/rust-toolchain",
+        "usage": "dtolnay/rust-toolchain@f7ccc83f9ed1e5b9c81d8a67d7ad1a747e22a561",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/reusable-rust.yml",
+        "action": "swatinem/rust-cache",
+        "usage": "swatinem/rust-cache@ad397744b0d591a723ab90405b7247fac0e6b8db",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/reusable-node.yml",
+        "action": "actions/checkout",
+        "usage": "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/quality-gate.yml",
+        "action": "actions/checkout",
+        "usage": "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/quality-gate.yml",
+        "action": "actions/upload-artifact",
+        "usage": "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/quality-gate.yml",
+        "action": "actions/checkout",
+        "usage": "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/quality-gate.yml",
+        "action": "actions/download-artifact",
+        "usage": "actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/quality-gate.yml",
+        "action": "actions/upload-artifact",
+        "usage": "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/quality-gate.yml",
+        "action": "actions/checkout",
+        "usage": "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/quality-gate.yml",
+        "action": "actions/upload-artifact",
+        "usage": "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/docs-lint.yml",
+        "action": "actions/checkout",
+        "usage": "actions/checkout@v4",
+        "status": "unpinned_tag"
+      },
+      {
+        "file": ".github/workflows/docs-lint.yml",
+        "action": "actions/setup-node",
+        "usage": "actions/setup-node@v4",
+        "status": "unpinned_tag"
+      },
+      {
+        "file": ".github/workflows/deploy_docs.yml",
+        "action": "actions/checkout",
+        "usage": "actions/checkout@v5",
+        "status": "unpinned_tag"
+      },
+      {
+        "file": ".github/workflows/deploy_docs.yml",
+        "action": "actions/setup-python",
+        "usage": "actions/setup-python@v5",
+        "status": "unpinned_tag"
+      },
+      {
+        "file": ".github/workflows/deploy-prod.yml",
+        "action": "actions/checkout",
+        "usage": "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/deploy-prod.yml",
+        "action": "actions/checkout",
+        "usage": "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/deploy-prod.yml",
+        "action": "docker/setup-buildx-action",
+        "usage": "docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/deploy-prod.yml",
+        "action": "docker/login-action",
+        "usage": "docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/deploy-prod.yml",
+        "action": "docker/metadata-action",
+        "usage": "docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/deploy-prod.yml",
+        "action": "docker/build-push-action",
+        "usage": "docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/deploy-prod.yml",
+        "action": "actions/upload-artifact",
+        "usage": "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/deploy-prod.yml",
+        "action": "actions/checkout",
+        "usage": "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/deploy-prod.yml",
+        "action": "actions/download-artifact",
+        "usage": "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/deploy-prod.yml",
+        "action": "appleboy/scp-action",
+        "usage": "appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/deploy-prod.yml",
+        "action": "appleboy/ssh-action",
+        "usage": "appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/deploy-prod.yml",
+        "action": "actions/upload-artifact",
+        "usage": "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/ci.yml",
+        "action": "actions/checkout",
+        "usage": "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/ci.yml",
+        "action": "actions/checkout",
+        "usage": "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/ci.yml",
+        "action": "actions/checkout",
+        "usage": "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/ci.yml",
+        "action": "dtolnay/rust-toolchain",
+        "usage": "dtolnay/rust-toolchain@f7ccc83f9ed1e5b9c81d8a67d7ad1a747e22a561",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/ci.yml",
+        "action": "actions/cache",
+        "usage": "actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/ci.yml",
+        "action": "actions/checkout",
+        "usage": "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/ci.yml",
+        "action": "dtolnay/rust-toolchain",
+        "usage": "dtolnay/rust-toolchain@f7ccc83f9ed1e5b9c81d8a67d7ad1a747e22a561",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/ci.yml",
+        "action": "actions/cache",
+        "usage": "actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/ci.yml",
+        "action": "anchore/sbom-action",
+        "usage": "anchore/sbom-action@28d71544de8eaf1b958d335707167c5f783590ad",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/ci.yml",
+        "action": "actions/upload-artifact",
+        "usage": "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/ci.yml",
+        "action": "actions/checkout",
+        "usage": "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
+        "status": "pinned_sha"
+      },
+      {
+        "file": ".github/workflows/chaos.yml",
+        "action": "actions/checkout",
+        "usage": "actions/checkout@v3",
+        "status": "unpinned_tag"
+      },
+      {
+        "file": ".github/workflows/chaos.yml",
+        "action": "actions/setup-node",
+        "usage": "actions/setup-node@v3",
+        "status": "unpinned_tag"
+      },
+      {
+        "file": ".github/workflows/autophagy.yml",
+        "action": "actions/checkout",
+        "usage": "actions/checkout@v5",
+        "status": "unpinned_tag"
+      },
+      {
+        "file": ".github/workflows/autophagy.yml",
+        "action": "actions/setup-node",
+        "usage": "actions/setup-node@v4",
+        "status": "unpinned_tag"
+      },
+      {
+        "file": ".github/workflows/autophagy.yml",
+        "action": "actions/upload-artifact",
+        "usage": "actions/upload-artifact@v4",
+        "status": "unpinned_tag"
+      },
+      {
+        "file": ".github/workflows/ai-doc-regen.yml",
+        "action": "actions/checkout",
+        "usage": "actions/checkout@v5",
+        "status": "unpinned_tag"
+      },
+      {
+        "file": ".github/workflows/ai-doc-regen.yml",
+        "action": "actions/setup-node",
+        "usage": "actions/setup-node@v4",
+        "status": "unpinned_tag"
+      },
+      {
+        "file": ".github/workflows/ai-doc-regen.yml",
+        "action": "actions/upload-artifact",
+        "usage": "actions/upload-artifact@v4",
+        "status": "unpinned_tag"
+      },
+      {
+        "file": ".github/workflows/ai-doc-regen.yml",
+        "action": "actions/checkout",
+        "usage": "actions/checkout@v5",
+        "status": "unpinned_tag"
+      },
+      {
+        "file": ".github/workflows/ai-doc-regen.yml",
+        "action": "actions/download-artifact",
+        "usage": "actions/download-artifact@v4",
+        "status": "unpinned_tag"
+      },
+      {
+        "file": ".github/workflows/ai-doc-regen.yml",
+        "action": "actions/checkout",
+        "usage": "actions/checkout@v5",
+        "status": "unpinned_tag"
+      }
+    ]
+  },
+  "sboms": []
+}

@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CostPack",
+  "type": "object",
+  "properties": {
+    "runtime": {
+      "type": "object",
+      "properties": {
+        "total_minutes": { "type": "number" },
+        "jobs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "minutes": { "type": "number" },
+              "status": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "caching": {
+      "type": "object",
+      "properties": {
+        "hit_rate_pct": { "type": "number" },
+        "hits": { "type": "integer" },
+        "misses": { "type": "integer" },
+        "size_saved_mb": { "type": "number" }
+      }
+    },
+    "justification": {
+        "type": "object",
+        "description": "Why we ran what we ran based on the diff",
+        "properties": {
+            "risk_tier": { "enum": ["High", "Medium", "Low"] },
+            "skipped_checks": { "type": "array", "items": { "type": "string" } }
+        }
+    }
+  }
+}

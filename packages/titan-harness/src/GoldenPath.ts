@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 import { getNatsClient, TITAN_SUBJECTS } from "@titan/shared";
 import { v4 as uuidv4 } from "uuid";
 

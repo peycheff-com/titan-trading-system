@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 import { EventEmitter } from 'eventemitter3';
 import { NatsClient } from '../messaging/NatsClient.js';
 import { KV, NatsConnection } from 'nats';

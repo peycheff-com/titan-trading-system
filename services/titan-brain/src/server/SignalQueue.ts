@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data, functional/no-let -- Stateful runtime: mutations architecturally required */
 /**
  * SignalQueue - Redis-based signal queue with priority ordering
  * Implements idempotency checks and priority-based dequeuing

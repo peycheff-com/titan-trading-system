@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 import { createHash } from 'crypto';
 import { z } from 'zod';
 

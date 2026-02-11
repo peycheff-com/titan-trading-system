@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 import { Tripwire } from '../../types/index.js';
 
 export interface VolumeCounter {

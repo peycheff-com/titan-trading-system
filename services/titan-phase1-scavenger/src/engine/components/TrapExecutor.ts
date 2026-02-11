@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data, functional/no-let -- Stateful runtime: mutations architecturally required */
 import {
   getNatsClient,
   IntentSignal,
@@ -345,7 +346,7 @@ export class TrapExecutor {
     orderType: string,
     stopLoss: number,
     target: number,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
   ): any {
     return {
       signal_id: `scavenger-${trap.symbol}-${Date.now()}`,

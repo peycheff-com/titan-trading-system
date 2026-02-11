@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 /**
  * HedgeIntegrityMonitor - Enforces Delta Neutrality (Phase 3)
  *

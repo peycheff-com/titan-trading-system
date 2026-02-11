@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data, functional/no-let -- Stateful runtime: mutations architecturally required */
 import { SurpriseMetric } from './SurpriseMetric.js';
 import { ActiveInferenceConfig } from '../types/index.js';
 

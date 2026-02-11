@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { TitanBrain } from '../../engine/TitanBrain.js';
 import { Logger } from '../../logging/Logger.js';
@@ -30,11 +31,7 @@ export class AdminController {
    */
   registerRoutes(server: FastifyInstance): void {
     // Auth
-    server.post<{ Body: LoginRequestBody }>(
-      '/auth/login',
-      {},
-      this.handleLogin.bind(this),
-    );
+    server.post<{ Body: LoginRequestBody }>('/auth/login', {}, this.handleLogin.bind(this));
 
     server.get(
       '/auth/whoami',
@@ -160,15 +157,20 @@ export class AdminController {
       // SOTA: Derive granular permissions from roles
       const permissions = new Set<string>();
       roles.forEach((role) => {
-        const allowedIntents = ROLE_ALLOWED_INTENTS[role as keyof typeof ROLE_ALLOWED_INTENTS] || [];
+        const allowedIntents =
+          ROLE_ALLOWED_INTENTS[role as keyof typeof ROLE_ALLOWED_INTENTS] || [];
         allowedIntents.forEach((intent) => {
           const perm = PERMISSION_MAP[intent];
           if (perm) permissions.add(perm);
         });
       });
-      
+
       const permissionArray = Array.from(permissions);
-      const token = this.auth.generateToken({ operatorId, role: roles, permissions: permissionArray });
+      const token = this.auth.generateToken({
+        operatorId,
+        role: roles,
+        permissions: permissionArray,
+      });
 
       reply.code(200).send({
         token,

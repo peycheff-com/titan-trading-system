@@ -1,0 +1,117 @@
+name: Quality Gate
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        required: true
+        type: string
+      npm-version:
+        required: true
+        type: string
+      risk-tier:
+        required: false
+        type: string
+        default: 'Low'
+
+jobs:
+  quality-plan:
+    name: quality-plan
+    runs-on: ubuntu-latest
+    outputs:
+      plan-id: ${{ steps.plan.outputs.plan_id }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.1.3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          node-version: ${{ inputs.node-version }}
+          npm-version: ${{ inputs.npm-version }}
+
+      - name: Install Quality OS dependencies
+        working-directory: packages/quality-os
+        run: npm ci
+
+      - name: Generate Quality Plan
+        id: plan
+        working-directory: packages/quality-os
+        run: |
+          npx tsx src/cli.ts plan
+          PLAN_ID=$(ls -t artifacts/quality_os/plans/ | head -1)
+          echo "plan_id=${PLAN_ID}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Plan
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.3.1
+        with:
+          name: quality-plan-${{ github.run_id }}
+          path: packages/quality-os/artifacts/quality_os/plans/
+
+  quality-run:
+    name: quality-run
+    needs: quality-plan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.1.3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          node-version: ${{ inputs.node-version }}
+          npm-version: ${{ inputs.npm-version }}
+
+      - name: Install Quality OS dependencies
+        working-directory: packages/quality-os
+        run: npm ci
+
+      - name: Download Plan
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.1.1
+        with:
+          name: quality-plan-${{ github.run_id }}
+          path: packages/quality-os/artifacts/quality_os/plans/
+
+      - name: Execute Quality Plan
+        working-directory: packages/quality-os
+        run: npx tsx src/cli.ts run
+
+      - name: Upload Evidence Packs
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.3.1
+        with:
+          name: evidence-packs-${{ github.run_id }}
+          path: packages/quality-os/artifacts/quality_os/plans/
+
+  # Gate B: Full Assurance (only on main/develop pushes for High/Medium risk)
+  quality-fix:
+    name: quality-fix-check
+    needs: quality-run
+    if: ${{ inputs.risk-tier == 'High' || inputs.risk-tier == 'Medium' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.1.3
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          node-version: ${{ inputs.node-version }}
+          npm-version: ${{ inputs.npm-version }}
+
+      - name: Install Quality OS dependencies
+        working-directory: packages/quality-os
+        run: npm ci
+
+      - name: Dry-run Fix Check
+        working-directory: packages/quality-os
+        run: npx tsx src/cli.ts fix --dry-run
+
+      - name: Upload Fix Report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.3.1
+        with:
+          name: fix-report-${{ github.run_id }}
+          path: packages/quality-os/artifacts/quality_os/fix-report.json

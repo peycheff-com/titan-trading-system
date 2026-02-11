@@ -1,3 +1,4 @@
+/* eslint-disable functional/no-let -- Stateful runtime: mutations architecturally required */
 import { Tripwire } from '../../types/index.js';
 import { TrapConfig } from '../../config/ConfigManager.js';
 import { Logger } from '../../logging/Logger.js';

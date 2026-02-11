@@ -1,0 +1,21 @@
+{
+  "meta": {
+    "timestamp": "2026-02-11T12:20:15.999Z",
+    "commit_sha": "4570c57a210cf55c7893432159be17acd379ccd3",
+    "plan_hash": "75958e273b9e4f436e61d42ca13f1c16fc40a977ec83f436e6be77b3abec7996",
+    "toolchain": {
+      "node": "v22.19.0",
+      "npm": "11.8.0",
+      "rust": "rustc 1.89.0 (29483883e 2025-08-04)"
+    }
+  },
+  "results": [],
+  "lint_status": {
+    "passed": true,
+    "errors": 0,
+    "warnings": 0
+  },
+  "determinism_vectors": {
+    "pack_hash": "1af4fe7d39f48422ef5e95c9ab2e2d051bcd701324f4590b745fc701567e2d2a"
+  }
+}

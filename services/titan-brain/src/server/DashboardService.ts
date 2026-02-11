@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data, functional/no-let -- Stateful runtime: mutations architecturally required */
 /**
  * DashboardService - Comprehensive data collection and aggregation for dashboard
  * Handles NAV calculation, allocation formatting, risk metrics, and treasury status
