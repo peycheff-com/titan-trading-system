@@ -691,7 +691,7 @@ Content-Disposition: attachment; filename="titan-brain-dashboard-1702500000000.j
 ```
 
 **Response Body:**
-```json
+```jsonc
 {
   "version": "1.0.0",
   "exportedAt": "2024-12-14T10:30:00.000Z",
@@ -861,7 +861,7 @@ Hot-patch risk parameters at runtime.
 ```
 
 **Response:**
-```json
+```jsonc
 {
     "success": true,
     "config": { ... },

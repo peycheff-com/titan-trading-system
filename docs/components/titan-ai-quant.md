@@ -238,7 +238,7 @@ The AI system uses carefully crafted prompts to ensure consistent, actionable ou
 
 ### Proposal Structure
 
-```json
+```jsonc
 {
   "targetKey": "traps.oi_wipeout.stop_loss",
   "currentValue": 0.02,
@@ -254,7 +254,7 @@ The AI system uses carefully crafted prompts to ensure consistent, actionable ou
 
 ### Validation Report
 
-```json
+```jsonc
 {
   "passed": true,
   "backtestPeriod": {
