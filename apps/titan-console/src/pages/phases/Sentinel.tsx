@@ -10,9 +10,25 @@ import { Shield, AlertTriangle, Edit3, ArrowLeftRight, TrendingUp } from 'lucide
 import { useOutletContext } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useSentinelSocket } from '@/hooks/useSentinelSocket';
+import { Position } from '@/types/sentinel';
 
 interface ContextType {
   safetyLocked: boolean;
+}
+
+interface FundingRate {
+    symbol: string;
+    current: number;
+    predicted: number;
+    nextIn: string;
+}
+
+interface BasisTrade {
+    pair: string;
+    currentBasis: number;
+    avgBasis: number;
+    position: number;
+    pnl: number;
 }
 
 const mockDraftConfig = {
@@ -30,15 +46,15 @@ export default function SentinelPhase() {
 
   // Derived Status
   const status = {
-    status: isConnected ? 'online' : 'offline',
+    status: isConnected ? 'healthy' : 'offline',
     enabled: isConnected,
     allocationWeight: 100, // Placeholder
     activeStrategies: 1,
   };
 
   // Maps backend positions to UI format
-  const basisTrades =
-    health?.positions.map((p: any) => ({
+  const basisTrades: BasisTrade[] =
+    health?.positions.map((p: Position) => ({
       pair: p.symbol,
       currentBasis: p.currentBasis,
       avgBasis: p.entryBasis, // approximate
@@ -47,7 +63,7 @@ export default function SentinelPhase() {
     })) || [];
 
   // Placeholder for funding rates if not in health report (often separate stream)
-  const fundingRates: any[] = [];
+  const fundingRates: FundingRate[] = [];
 
   const hedgeStatus = {
     hedgeRatio: 1.0, // active arb aims for 1.0
@@ -79,7 +95,7 @@ export default function SentinelPhase() {
             </p>
           </div>
         </div>
-        <StatusPill status={status.status as any} size="md" />
+        <StatusPill status={status.status as SystemStatus} size="md" />
       </div>
 
       {/* Phase Intent Card */}
@@ -153,7 +169,7 @@ export default function SentinelPhase() {
                 key: 'currentBasis',
                 header: 'Current',
                 align: 'right',
-                render: (t: any) => (
+                render: (t: BasisTrade) => (
                   <span
                     className={cn(
                       'font-mono',
@@ -168,7 +184,7 @@ export default function SentinelPhase() {
                 key: 'avgBasis',
                 header: 'Avg',
                 align: 'right',
-                render: (t: any) => (
+                render: (t: BasisTrade) => (
                   <span className="font-mono text-muted-foreground">
                     {(t.avgBasis * 100).toFixed(3)}%
                   </span>
@@ -178,13 +194,13 @@ export default function SentinelPhase() {
                 key: 'position',
                 header: 'Position',
                 align: 'right',
-                render: (t: any) => formatCurrency(t.position),
+                render: (t: BasisTrade) => formatCurrency(t.position),
               },
               {
                 key: 'pnl',
                 header: 'PnL',
                 align: 'right',
-                render: (t: any) => (
+                render: (t: BasisTrade) => (
                   <span
                     className={cn(
                       'font-mono',
@@ -197,7 +213,7 @@ export default function SentinelPhase() {
               },
             ]}
             data={basisTrades}
-            keyExtractor={(t: any) => t.pair}
+            keyExtractor={(t: BasisTrade) => t.pair}
           />
         </div>
 
@@ -215,7 +231,7 @@ export default function SentinelPhase() {
                 key: 'current',
                 header: 'Current',
                 align: 'right',
-                render: (f: any) => (
+                render: (f: FundingRate) => (
                   <span
                     className={cn(
                       'font-mono',
@@ -230,7 +246,7 @@ export default function SentinelPhase() {
                 key: 'predicted',
                 header: 'Predicted',
                 align: 'right',
-                render: (f: any) => (
+                render: (f: FundingRate) => (
                   <span className="font-mono text-muted-foreground">
                     {formatPercent(f.predicted * 100, 4)}
                   </span>
@@ -239,7 +255,7 @@ export default function SentinelPhase() {
               { key: 'nextIn', header: 'Next In', align: 'right' },
             ]}
             data={fundingRates}
-            keyExtractor={(f: any) => f.symbol}
+            keyExtractor={(f: FundingRate) => f.symbol}
           />
         </div>
       </div>

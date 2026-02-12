@@ -132,40 +132,49 @@ export default function CredentialsPage() {
   );
   const [isLoading, setIsLoading] = useState(true);
 
+  interface CredentialResponse {
+    validationStatus: 'none' | 'pending' | 'valid' | 'invalid';
+    metadata?: {
+      testnet?: boolean;
+    };
+  }
+
   // Fetch existing credentials on mount
   useEffect(() => {
+    const fetchCredentials = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/credentials`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          // Update state with fetched credentials
+          Object.entries(data.credentials || {}).forEach(([provider, creds]) => {
+            const credentialList = creds as CredentialResponse[];
+            const firstCred = credentialList[0];
+            setProviders((prev) => ({
+              ...prev,
+              [provider]: {
+                ...prev[provider],
+                credentials: {
+                  apiKey: '••••••••', // Masked
+                  apiSecret: '••••••••',
+                  testnet: firstCred?.metadata?.testnet || false,
+                },
+                status: firstCred?.validationStatus || 'pending',
+              },
+            }));
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch credentials:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     fetchCredentials();
   }, []);
-
-  const fetchCredentials = async () => {
-    try {
-      const response = await fetch(`${API_BASE}/credentials`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        // Update state with fetched credentials
-        Object.entries(data.credentials || {}).forEach(([provider, creds]) => {
-          setProviders((prev) => ({
-            ...prev,
-            [provider]: {
-              ...prev[provider],
-              credentials: {
-                apiKey: '••••••••', // Masked
-                apiSecret: '••••••••',
-                testnet: (creds as any)[0]?.metadata?.testnet || false,
-              },
-              status: (creds as any)[0]?.validationStatus || 'pending',
-            },
-          }));
-        });
-      }
-    } catch (error) {
-      console.error('Failed to fetch credentials:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const updateProvider = (providerId: string, updates: Partial<ProviderState>) => {
     setProviders((prev) => ({

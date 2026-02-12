@@ -71,7 +71,20 @@ describe("WebhookServer HMAC validation", () => {
         },
         logLevel: "error",
       },
+
       brain,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+
+      {
+        get: jest.fn(),
+        set: jest.fn(),
+      } as any, // Mock Redis
     );
 
     await server.start();

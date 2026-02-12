@@ -1,28 +1,29 @@
 import {
   getNatsClient,
+  Logger,
   OpsCommandSchemaV1,
   type OpsCommandV1,
   OpsReceiptSchemaV1,
   OpsReceiptStatus,
   type OpsReceiptV1,
   TITAN_SUBJECTS,
-  verifyOpsCommand, // Use shared implementation
+  verifyOpsCommand,
 } from '@titan/shared';
 import dotenv from 'dotenv';
 import { CommandExecutor } from './CommandExecutor.js';
-// import { verifySignature } from './security.js'; // Removed
 import { v4 as uuidv4 } from 'uuid';
 import os from 'os';
 
 dotenv.config();
 
 const OPS_SECRET = process.env.OPS_SECRET;
+const log = Logger.getInstance('titan-opsd');
 
 async function main() {
-  console.log('[titan-opsd] Starting (v1.0.0)...');
+  log.info('Starting titan-opsd v1.0.0');
 
   if (!OPS_SECRET) {
-    console.error('[titan-opsd] FATAL: OPS_SECRET env var is missing.');
+    log.fatal('FATAL: OPS_SECRET env var is missing. Exiting.');
     process.exit(1);
   }
 
@@ -35,24 +36,28 @@ async function main() {
       servers: [process.env.NATS_URL || 'nats://localhost:4222'],
     });
 
-    console.log(`[titan-opsd] Connected to NATS. Listening on ${TITAN_SUBJECTS.OPS.COMMAND}...`);
+    log.info(`Connected to NATS. Listening on ${TITAN_SUBJECTS.OPS.COMMAND}`);
 
     nats.subscribe(TITAN_SUBJECTS.OPS.COMMAND, async (data: unknown, subject: string) => {
       const start = Date.now();
-      console.log(`[titan-opsd] Received command on subject: ${subject}`);
+      log.info('Received command', undefined, { subject });
 
       // Validate Schema
-      // NatsClient already decodes JSON, so data should be an object
       const parseResult = OpsCommandSchemaV1.safeParse(data);
       if (!parseResult.success) {
-        console.error('[titan-opsd] Schema validation failed', parseResult.error);
+        log.error('Schema validation failed', undefined, undefined, {
+          error: parseResult.error.message,
+        });
         return;
       }
       const cmd = parseResult.data;
 
       // Verify Signature
       if (!verifyOpsCommand(cmd, OPS_SECRET!)) {
-        console.error(`[titan-opsd] Signature verification failed for cmd ${cmd.id}`);
+        log.error('Signature verification failed', undefined, cmd.id, {
+          command_id: cmd.id,
+          type: cmd.type,
+        });
         await sendReceipt(
           nats,
           cmd,
@@ -66,20 +71,41 @@ async function main() {
 
       // Execute
       try {
-        console.log(`[titan-opsd] Executing ${cmd.type} target=${cmd.target}`);
+        log.info(`Executing ${cmd.type} target=${cmd.target}`, cmd.id, {
+          command_id: cmd.id,
+          type: cmd.type,
+          target: cmd.target,
+        });
         const result = await executor.execute(cmd);
         const duration = Date.now() - start;
         await sendReceipt(nats, cmd, OpsReceiptStatus.SUCCESS, result, undefined, duration);
-        console.log(`[titan-opsd] Command ${cmd.id} executed in ${duration}ms`);
+        log.info(`Command ${cmd.id} completed`, cmd.id, {
+          command_id: cmd.id,
+          duration_ms: duration,
+        });
       } catch (err) {
         const duration = Date.now() - start;
-        const message = err instanceof Error ? err.message : String(err);
-        console.error(`[titan-opsd] Execution failed for ${cmd.id}:`, err);
-        await sendReceipt(nats, cmd, OpsReceiptStatus.FAILURE, undefined, message, duration);
+        const error = err instanceof Error ? err : new Error(String(err));
+        log.error(`Execution failed for ${cmd.id}`, error, cmd.id, {
+          command_id: cmd.id,
+          type: cmd.type,
+          duration_ms: duration,
+        });
+        await sendReceipt(nats, cmd, OpsReceiptStatus.FAILURE, undefined, error.message, duration);
       }
     });
+
+    // Graceful shutdown
+    const shutdown = async () => {
+      log.info('Shutting down titan-opsd...');
+      process.exit(0);
+    };
+
+    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', shutdown);
   } catch (error) {
-    console.error('[titan-opsd] Fatal startup error:', error);
+    const err = error instanceof Error ? error : new Error(String(error));
+    log.fatal('Fatal startup error', err);
     process.exit(1);
   }
 }
@@ -107,12 +133,12 @@ async function sendReceipt(
     },
   };
 
-  // Validate outgoing receipt for strictness
   try {
     const validReceipt = OpsReceiptSchemaV1.parse(receipt);
     await nats.publish(TITAN_SUBJECTS.OPS.RECEIPT, validReceipt);
   } catch (e) {
-    console.error('[titan-opsd] Failed to publish receipt', e);
+    const err = e instanceof Error ? e : new Error(String(e));
+    log.error('Failed to publish receipt', err, cmd.id);
   }
 }
 

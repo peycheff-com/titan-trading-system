@@ -28,11 +28,22 @@ services:
     ports:
       - "4222:4222" # Internal only via firewall, but exposed for monitoring if needed
       - "8222:8222" # Monitoring
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        envsubst < /config/nats.conf.template > /config/nats.conf && exec nats-server -c /config/nats.conf
     volumes:
-      - "./config/nats.conf:/config/nats.conf:ro"
+      - "./config/nats.conf.template:/config/nats.conf.template:ro"
       - "./data/nats:/data"
     networks:
       - titan-net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8222/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   postgres:
     image: postgres:16-alpine
@@ -40,7 +51,7 @@ services:
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-titan}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}
       POSTGRES_DB: ${POSTGRES_DB:-titan_brain}
     volumes:
       - "./data/postgres:/var/lib/postgresql/data"
@@ -56,7 +67,7 @@ services:
     image: redis:alpine
     container_name: redis
     restart: always
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     volumes:
       - "./data/redis:/data"
     networks:
@@ -80,6 +91,11 @@ services:
         condition: service_healthy
     networks:
       - titan-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     deploy:
       resources:
         limits:
@@ -95,9 +111,14 @@ services:
       postgres:
         condition: service_healthy
       nats:
-        condition: service_started
+        condition: service_healthy
     networks:
       - titan-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3100/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     deploy:
       resources:
         limits:
@@ -113,6 +134,11 @@ services:
       - nats
     networks:
       - titan-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   hunter:
     image: ghcr.io/peycheff-com/titan-hunter:${TITAN_TAG:-latest}
@@ -122,6 +148,11 @@ services:
       - nats
     networks:
       - titan-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   sentinel:
     image: ghcr.io/peycheff-com/titan-sentinel:${TITAN_TAG:-latest}
@@ -131,6 +162,11 @@ services:
       - nats
     networks:
       - titan-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   # --- UI ---
   console:
@@ -141,6 +177,11 @@ services:
       - "traefik.http.routers.console.rule=Host(`${DOMAIN_NAME}`)"
       - "traefik.http.routers.console.entrypoints=websecure"
       - "traefik.http.routers.console.tls.certresolver=myresolver"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     networks:
       - titan-net
 

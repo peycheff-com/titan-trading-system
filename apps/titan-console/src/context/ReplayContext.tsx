@@ -14,8 +14,8 @@ import { toast } from 'sonner';
  */
 export interface ReconstructedState {
   equity: number;
-  positions: any[];
-  allocation: any;
+  positions: unknown[];
+  allocation: Record<string, unknown>;
   mode: string;
   armed: boolean;
   meta?: {
@@ -115,10 +115,14 @@ export const ReplayProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
       const data = await response.json();
       setReconstructedState(data.data);
-    } catch (err: any) {
-      if (err.name !== 'AbortError') {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name !== 'AbortError') {
         console.error('Error fetching historical state:', err);
         setError(err);
+        toast.error('Failed to load historical state');
+      } else if (!(err instanceof Error)) {
+        console.error('Error fetching historical state:', err);
+        setError(err instanceof Error ? err : new Error('Unknown error'));
         toast.error('Failed to load historical state');
       }
     } finally {
@@ -204,6 +208,7 @@ export const ReplayProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 /**
  * Hook to use Replay Context
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export const useReplay = () => {
   const context = useContext(ReplayContext);
   if (context === undefined) {

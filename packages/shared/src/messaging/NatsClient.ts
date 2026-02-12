@@ -11,18 +11,17 @@ import {
   QueuedIterator,
   StringCodec,
   Subscription,
+  StreamConfig,
 } from 'nats';
 import { EventEmitter } from 'eventemitter3';
 import { createEnvelope } from '../schemas/envelope.js';
 import { createHmac, randomBytes } from 'crypto';
-import { context, propagation, trace } from '@opentelemetry/api';
-
 import { TITAN_SUBJECTS } from './titan_subjects.js';
 import { TITAN_STREAMS } from './titan_streams.js';
 
 export const TitanSubject = {
   // --- COMMANDS (TITAN_CMD) ---
-  // titan.cmd.exec.place.v1.{venue}.{account}.{symbol}
+  // titan.cmd.execution.place.v1.{venue}.{account}.{symbol}
   CMD_EXEC_PLACE: TITAN_SUBJECTS.CMD.EXECUTION.PREFIX,
   // titan.cmd.sys.halt.v1.{scope}
   CMD_SYS_HALT: TITAN_SUBJECTS.CMD.SYS.HALT,
@@ -34,7 +33,7 @@ export const TitanSubject = {
   CMD_RISK_POLICY: TITAN_SUBJECTS.CMD.RISK.POLICY,
 
   // --- EVENTS (TITAN_EVT) ---
-  // titan.evt.exec.fill.v1.{venue}.{account}.{symbol}
+  // titan.evt.execution.fill.v1.{venue}.{account}.{symbol}
   EVT_EXEC_FILL: TITAN_SUBJECTS.EVT.EXECUTION.FILL,
   // titan.evt.brain.signal.v1.{strategy}
   EVT_BRAIN_SIGNAL: TITAN_SUBJECTS.EVT.BRAIN.SIGNAL,
@@ -200,13 +199,13 @@ export class NatsClient extends EventEmitter {
 
     for (const stream of streams) {
       try {
-        await this.jsm.streams.add(stream as any);
+        await this.jsm.streams.add(stream as unknown as StreamConfig);
         console.log(`Verified JetStream stream: ${stream.name}`);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         if (!msg.includes('already in use')) {
           try {
-            await this.jsm.streams.update(stream.name, stream as any);
+            await this.jsm.streams.update(stream.name, stream as unknown as StreamConfig);
           } catch (updateErr) {
             console.warn(`Failed to create/update stream ${stream.name}:`, updateErr);
           }

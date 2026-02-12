@@ -58,7 +58,7 @@ export function useTitanStream(subjectFilter: string = '>') {
     return () => {
       ws.close();
     };
-  }, [subjectFilter]);
+  }, [subjectFilter, setLastMessage]);
 
   return { lastMessage, isConnected };
 }

@@ -14,6 +14,7 @@ import {
   Position,
   RiskGuardianConfig,
 } from "../../src/types/index";
+import { BayesianCalibrator } from "../../src/features/Risk/BayesianCalibrator";
 
 // Mock TailRiskCalculator module
 jest.mock("../../src/features/Risk/TailRiskCalculator", () => {
@@ -126,10 +127,14 @@ describe("RiskGuardian Unit Tests", () => {
         return a === b ? 1.0 : 0.5;
       });
 
+    // Mock Bayesian Calibrator
+    const mockBayesianCalibrator = new BayesianCalibrator({} as any);
+
     riskGuardian = new RiskGuardian(
       riskConfig,
       allocationEngine,
       governanceEngine,
+      mockBayesianCalibrator,
     );
   });
 
@@ -945,10 +950,14 @@ describe("RiskGuardian Unit Tests", () => {
         },
       };
 
+      // Mock Bayesian Calibrator for policy tests
+      const mockBayesianCalibrator = new BayesianCalibrator({} as any);
+
       policyRiskGuardian = new RiskGuardian(
         restrictiveConfig,
         allocationEngine,
         governanceEngine,
+        mockBayesianCalibrator,
       );
     });
 

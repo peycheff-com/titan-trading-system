@@ -120,22 +120,11 @@ export class DatabaseManager {
     // Prioritize PostgreSQL connection
     // Removed legacy in-memory fallback check to ensure production persistence
 
-    // Try PostgreSQL first, fallback to SQLite
-    try {
-      await this.connectPostgreSQL();
+    // Try PostgreSQL first, fail if unavailable (SOTA: fail fast, no split brain)
+    await this.connectPostgreSQL();
 
-      this.dbType = DatabaseType.POSTGRESQL;
-      console.log('✅ Connected to PostgreSQL database');
-    } catch (error) {
-      console.warn(
-        '⚠️ PostgreSQL connection failed, falling back to SQLite:',
-        (error as Error).message,
-      );
-      await this.connectSQLite();
-
-      this.dbType = DatabaseType.SQLITE;
-      console.log('✅ Connected to SQLite database (fallback mode)');
-    }
+    this.dbType = DatabaseType.POSTGRESQL;
+    console.log('✅ Connected to PostgreSQL database');
   }
 
   /**

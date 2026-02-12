@@ -1,5 +1,8 @@
 import { Trade } from 'titan-phase1-scavenger/dist/exchanges/BinanceSpotClient.js';
 import { EventEmitter } from 'events';
+import { Logger } from '@titan/shared';
+
+const logger = Logger.getInstance('backtesting');
 
 // Mock interface matching the real client's public surface
 export class MockBinanceSpotClient {
@@ -9,7 +12,7 @@ export class MockBinanceSpotClient {
   constructor() {}
 
   async subscribeAggTrades(symbols: string[]): Promise<void> {
-    console.log(`[MockBinance] Subscribed to ${symbols.join(', ')}`);
+    logger.debug(`MockBinance subscribed to ${symbols.join(', ')}`);
   }
 
   onTrade(symbol: string, callback: (trades: Trade[]) => void): void {
@@ -22,7 +25,7 @@ export class MockBinanceSpotClient {
     this.callbacks.delete(symbol);
   }
 
-  async getSpotPrice(symbol: string): Promise<number> {
+  async getSpotPrice(_symbol: string): Promise<number> {
     // This should be driven by the simulation clock/data
     // For now, return a dummy or cached value if set
     return 0;

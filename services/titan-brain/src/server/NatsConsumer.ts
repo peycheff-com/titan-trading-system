@@ -53,7 +53,7 @@ export class NatsConsumer {
     });
 
     // Subscribe to Execution Fills (Wildcard for venues/symbols)
-    // Topic: titan.evt.exec.fill.v1.{venue}.{account}.{symbol}
+    // Topic: titan.evt.execution.fill.v1.{venue}.{account}.{symbol}
     this.nats.subscribe(
       TitanSubject.EXECUTION_FILL + '.*', // Use suffix wildcard
       async (data: any, subject) => {

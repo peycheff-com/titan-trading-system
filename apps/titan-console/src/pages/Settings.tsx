@@ -207,7 +207,7 @@ const Settings = () => {
     fetchConfig();
   }, [fetchConfig]);
 
-  const saveConfig = async (section: string, updates: any) => {
+  const saveConfig = async (section: string, updates: unknown) => {
     try {
       setSaving(true);
       const payload = { [section]: updates };
@@ -236,11 +236,12 @@ const Settings = () => {
         setLocalApiKey('');
         setLocalApiSecret('');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       toast({
         variant: 'destructive',
         title: 'Save Failed',
-        description: error.message,
+        description: errorMessage,
       });
     } finally {
       setSaving(false);
@@ -349,7 +350,7 @@ const Settings = () => {
                 {/* Mode is usually env var driven, but if we allow override: */}
                 <Select
                   value={config.mode || 'MOCK'}
-                  onValueChange={(val: any) => saveConfig('mode', val)}
+                  onValueChange={(val: string) => saveConfig('mode', val)}
                 >
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Select mode" />
@@ -389,7 +390,7 @@ const Settings = () => {
                       min={1}
                       max={20}
                       step={0.5}
-                      onValueChange={(val: any) =>
+                      onValueChange={(val: number[]) =>
                         setLocalRisk({ ...localRisk, phase1_risk_pct: val[0] / 100 })
                       }
                     />
@@ -407,7 +408,7 @@ const Settings = () => {
                       min={1}
                       max={10}
                       step={0.5}
-                      onValueChange={(val: any) =>
+                      onValueChange={(val: number[]) =>
                         setLocalRisk({ ...localRisk, phase2_risk_pct: val[0] / 100 })
                       }
                     />
@@ -425,7 +426,7 @@ const Settings = () => {
                       <Input
                         type="number"
                         value={localGuardrails.maxLeverage}
-                        onChange={(e: any) =>
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                           setLocalGuardrails({
                             ...localGuardrails,
                             maxLeverage: parseInt(e.target.value) || 1,
@@ -438,7 +439,7 @@ const Settings = () => {
                       <Input
                         type="number"
                         value={localGuardrails.maxPositionSizePct}
-                        onChange={(e: any) =>
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                           setLocalGuardrails({
                             ...localGuardrails,
                             maxPositionSizePct: parseInt(e.target.value) || 1,
@@ -452,7 +453,7 @@ const Settings = () => {
                         type="number"
                         step="0.1"
                         value={localGuardrails.minConfidenceScore}
-                        onChange={(e: any) =>
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                           setLocalGuardrails({
                             ...localGuardrails,
                             minConfidenceScore: parseFloat(e.target.value) || 0.1,
@@ -501,7 +502,7 @@ const Settings = () => {
                       min={0}
                       max={0.2}
                       step={0.001}
-                      onValueChange={(val: any) =>
+                      onValueChange={(val: number[]) =>
                         setLocalFees({ ...localFees, maker_fee_pct: val[0] / 100 })
                       }
                     />
@@ -551,7 +552,7 @@ const Settings = () => {
                     <Input
                       type="number"
                       value={localSafety.max_consecutive_losses}
-                      onChange={(e: any) =>
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         setLocalSafety({
                           ...localSafety,
                           max_consecutive_losses: parseInt(e.target.value) || 0,
@@ -604,7 +605,7 @@ const Settings = () => {
                     <Input
                       type="number"
                       value={localSafety.circuit_breaker_cooldown_hours}
-                      onChange={(e: any) =>
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         setLocalSafety({
                           ...localSafety,
                           circuit_breaker_cooldown_hours: parseInt(e.target.value) || 0,
@@ -753,7 +754,7 @@ const Settings = () => {
                     <Input
                       type="number"
                       value={localSystem.rate_limit_per_sec}
-                      onChange={(e: any) =>
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         setLocalSystem({
                           ...localSystem,
                           rate_limit_per_sec: parseInt(e.target.value) || 10,
@@ -778,7 +779,7 @@ const Settings = () => {
                       <Input
                         type="number"
                         value={localMemory.maxRecords}
-                        onChange={(e: any) =>
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                           setLocalMemory({
                             ...localMemory,
                             maxRecords: parseInt(e.target.value) || 1000,
@@ -791,7 +792,7 @@ const Settings = () => {
                       <Input
                         type="number"
                         value={localMemory.archiveAfterDays}
-                        onChange={(e: any) =>
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                           setLocalMemory({
                             ...localMemory,
                             archiveAfterDays: parseInt(e.target.value) || 90,
@@ -854,7 +855,7 @@ const Settings = () => {
                         type="password"
                         value={localApiKeys.bybit_api_key || ''}
                         placeholder="Masked"
-                        onChange={(e: any) =>
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                           setLocalApiKeys({ ...localApiKeys, bybit_api_key: e.target.value })
                         }
                       />
@@ -866,7 +867,7 @@ const Settings = () => {
                         type="password"
                         value={localApiKeys.bybit_api_secret || ''}
                         placeholder="Masked"
-                        onChange={(e: any) =>
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                           setLocalApiKeys({ ...localApiKeys, bybit_api_secret: e.target.value })
                         }
                       />
@@ -938,7 +939,7 @@ const Settings = () => {
                 <Input
                   type="password"
                   value={localApiKey}
-                  onChange={(e: any) => setLocalApiKey(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocalApiKey(e.target.value)}
                   placeholder={config.api_keys.has_api_key ? '••••••••••••••••' : 'Enter API Key'}
                 />
               </div>
@@ -948,7 +949,7 @@ const Settings = () => {
                 <Input
                   type="password"
                   value={localApiSecret}
-                  onChange={(e: any) => setLocalApiSecret(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocalApiSecret(e.target.value)}
                   placeholder={
                     config.api_keys.has_api_secret ? '••••••••••••••••' : 'Enter API Secret'
                   }

@@ -11,6 +11,7 @@ import { TitanAnalyst } from './TitanAnalyst.js';
 import { Backtester, InMemoryDataCache } from '../simulation/Backtester.js';
 import { DataLoader } from '../simulation/DataLoader.js';
 import {
+  BacktestResult,
   Insight,
   OHLCV,
   OptimizationProposal,
@@ -37,8 +38,8 @@ export interface WorkflowResult {
     error?: string;
   }>;
   performanceComparison?: {
-    beforeMetrics: any; // eslint-disable-line @typescript-eslint/no-explicit-any
-    afterMetrics: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+    beforeMetrics: BacktestResult;
+    afterMetrics: BacktestResult;
     improvement: boolean;
   };
   error?: string;
@@ -340,8 +341,8 @@ export class OptimizationWorkflow {
     ohlcvData: OHLCV[];
     regimeSnapshots: RegimeSnapshot[];
   }): Promise<{
-    beforeMetrics: any; // eslint-disable-line @typescript-eslint/no-explicit-any
-    afterMetrics: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+    beforeMetrics: BacktestResult;
+    afterMetrics: BacktestResult;
     improvement: boolean;
   }> {
     try {
@@ -361,17 +362,14 @@ export class OptimizationWorkflow {
 
       // For comparison, we'd need the previous configuration
       // This is a simplified version
-      const beforeMetrics = {
+      const beforeMetrics: BacktestResult = {
+        ...currentResult,
         totalPnL: currentResult.totalPnL * 0.9, // Simulate 10% worse performance before
         winRate: currentResult.winRate * 0.95,
         maxDrawdown: currentResult.maxDrawdown * 1.1,
       };
 
-      const afterMetrics = {
-        totalPnL: currentResult.totalPnL,
-        winRate: currentResult.winRate,
-        maxDrawdown: currentResult.maxDrawdown,
-      };
+      const afterMetrics: BacktestResult = currentResult;
 
       const improvement = afterMetrics.totalPnL > beforeMetrics.totalPnL;
 
@@ -382,9 +380,23 @@ export class OptimizationWorkflow {
       };
     } catch (error) {
       console.error('Failed to monitor performance:', error);
+      const emptyMetrics: BacktestResult = {
+        totalTrades: 0,
+        winningTrades: 0,
+        losingTrades: 0,
+        winRate: 0,
+        totalPnL: 0,
+        avgPnL: 0,
+        maxDrawdown: 0,
+        maxDrawdownPercent: 0,
+        sharpeRatio: 0,
+        avgSlippage: 0,
+        avgDuration: 0,
+        profitFactor: 0,
+      };
       return {
-        beforeMetrics: {},
-        afterMetrics: {},
+        beforeMetrics: emptyMetrics,
+        afterMetrics: emptyMetrics,
         improvement: false,
       };
     }

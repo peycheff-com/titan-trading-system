@@ -14,6 +14,7 @@
 import { EventEmitter } from 'events';
 import { BybitPerpsClient } from '../exchanges/BybitPerpsClient';
 import { Position } from '../types';
+import { getLogger } from '../logging/Logger';
 
 export interface DrawdownProtectorConfig {
   dailyDrawdownThresholds: {
@@ -151,7 +152,7 @@ export class DrawdownProtector extends EventEmitter {
         this.state.startOfDayEquity = currentEquity; // Use the parameter, not the state
         // eslint-disable-next-line functional/immutable-data
         this.state.dailyDrawdown = 0;
-        console.log(
+        getLogger().info(
           `📅 New day detected. Reset daily equity baseline: ${currentEquity.toFixed(2)} USDT`
         );
       }
@@ -174,7 +175,7 @@ export class DrawdownProtector extends EventEmitter {
       if (this.state.dailyDrawdown >= this.config.dailyDrawdownThresholds.level3) {
         // Level 3: 7% - Emergency flatten and pause
         if (!this.state.isEmergencyPaused) {
-          console.log(
+          getLogger().error(
             `🚨 CRITICAL: Daily drawdown ${drawdownPercent.toFixed(2)}% >= 7%. Emergency flatten triggered!`
           );
 
@@ -191,7 +192,7 @@ export class DrawdownProtector extends EventEmitter {
         }
       } else if (this.state.dailyDrawdown >= this.config.dailyDrawdownThresholds.level2) {
         // Level 2: 5% - Halt new entries
-        console.log(
+        getLogger().warn(
           `⚠️ WARNING: Daily drawdown ${drawdownPercent.toFixed(2)}% >= 5%. Halting new entries.`
         );
 
@@ -202,7 +203,7 @@ export class DrawdownProtector extends EventEmitter {
       } else if (this.state.dailyDrawdown >= this.config.dailyDrawdownThresholds.level1) {
         // Level 1: 3% - Reduce position sizes by 50%
         if (this.state.positionSizeReduction === 1.0) {
-          console.log(
+          getLogger().warn(
             `⚠️ WARNING: Daily drawdown ${drawdownPercent.toFixed(2)}% >= 3%. Reducing position sizes by 50%.`
           );
 
@@ -218,7 +219,7 @@ export class DrawdownProtector extends EventEmitter {
         if (this.state.positionSizeReduction < 1.0) {
           // eslint-disable-next-line functional/immutable-data
           this.state.positionSizeReduction = 1.0;
-          console.log(
+          getLogger().info(
             `✅ Daily drawdown improved to ${drawdownPercent.toFixed(2)}%. Position size reduction lifted.`
           );
         }
@@ -226,7 +227,7 @@ export class DrawdownProtector extends EventEmitter {
 
       return null;
     } catch (error) {
-      console.error(`❌ Error checking daily drawdown:`, error);
+      getLogger().error(`❌ Error checking daily drawdown:`, error as Error);
       return null;
     }
   }
@@ -255,7 +256,7 @@ export class DrawdownProtector extends EventEmitter {
         this.state.weeklyDrawdown = 0;
         // eslint-disable-next-line functional/immutable-data
         this.state.maxLeverageReduction = false;
-        console.log(
+        getLogger().info(
           `📅 New week detected. Reset weekly equity baseline: ${currentEquity.toFixed(2)} USDT`
         );
       }
@@ -279,7 +280,7 @@ export class DrawdownProtector extends EventEmitter {
         this.state.weeklyDrawdown >= this.config.weeklyDrawdownThreshold &&
         !this.state.maxLeverageReduction
       ) {
-        console.log(
+        getLogger().warn(
           `⚠️ WARNING: Weekly drawdown ${drawdownPercent.toFixed(2)}% >= 10%. Reducing max leverage from ${this.config.leverageReduction.from}x to ${this.config.leverageReduction.to}x.`
         );
 
@@ -293,7 +294,7 @@ export class DrawdownProtector extends EventEmitter {
 
       return null;
     } catch (error) {
-      console.error(`❌ Error checking weekly drawdown:`, error);
+      getLogger().error(`❌ Error checking weekly drawdown:`, error as Error);
       return null;
     }
   }
@@ -325,7 +326,7 @@ export class DrawdownProtector extends EventEmitter {
 
       // Check threshold
       if (consecutiveLosses >= this.config.consecutiveLossThreshold) {
-        console.log(
+        getLogger().warn(
           `⚠️ WARNING: ${consecutiveLosses} consecutive losses detected. Reducing position sizes by ${this.config.consecutiveLossReduction * 100}% for next 3 trades.`
         );
 
@@ -345,7 +346,7 @@ export class DrawdownProtector extends EventEmitter {
 
       return null;
     } catch (error) {
-      console.error(`❌ Error checking consecutive losses:`, error);
+      getLogger().error(`❌ Error checking consecutive losses:`, error as Error);
       return null;
     }
   }
@@ -376,7 +377,7 @@ export class DrawdownProtector extends EventEmitter {
 
       // Check threshold
       if (winRate < this.config.winRateThreshold) {
-        console.log(
+        getLogger().warn(
           `⚠️ STRATEGY DEGRADATION: Win rate ${(winRate * 100).toFixed(1)}% < ${this.config.winRateThreshold * 100}% over last ${recentTrades.length} trades. Parameter review suggested.`
         );
 
@@ -388,7 +389,7 @@ export class DrawdownProtector extends EventEmitter {
 
       return null;
     } catch (error) {
-      console.error(`❌ Error checking win rate:`, error);
+      getLogger().error(`❌ Error checking win rate:`, error as Error);
       return null;
     }
   }
@@ -400,7 +401,7 @@ export class DrawdownProtector extends EventEmitter {
    */
   public async emergencyFlatten(positions: Position[]): Promise<boolean> {
     try {
-      console.log(`🚨 EMERGENCY FLATTEN: Closing ${positions.length} positions`);
+      getLogger().warn(`🚨 EMERGENCY FLATTEN: Closing ${positions.length} positions`);
 
       // eslint-disable-next-line functional/no-let
       let successCount = 0;
@@ -423,14 +424,14 @@ export class DrawdownProtector extends EventEmitter {
 
           if (result.status === 'FILLED') {
             successCount++;
-            console.log(`✅ Emergency closed: ${position.symbol} at ${result.price}`);
+            getLogger().info(`✅ Emergency closed: ${position.symbol} at ${result.price}`);
           } else {
             failCount++;
-            console.error(`❌ Failed to emergency close: ${position.symbol}`);
+            getLogger().error(`❌ Failed to emergency close: ${position.symbol}`);
           }
         } catch (error) {
           failCount++;
-          console.error(`❌ Error closing position ${position.symbol}:`, error);
+          getLogger().error(`❌ Error closing position ${position.symbol}:`, error as Error);
         }
       }
 
@@ -440,8 +441,10 @@ export class DrawdownProtector extends EventEmitter {
       // eslint-disable-next-line functional/immutable-data
       this.state.emergencyPauseUntil = Date.now() + this.config.emergencyPauseDuration;
 
-      console.log(`🚨 Emergency flatten complete: ${successCount} success, ${failCount} failed`);
-      console.log(
+      getLogger().warn(
+        `🚨 Emergency flatten complete: ${successCount} success, ${failCount} failed`
+      );
+      getLogger().warn(
         `⏸️ Trading paused for ${this.config.emergencyPauseDuration / (1000 * 60 * 60)} hours`
       );
 
@@ -449,7 +452,7 @@ export class DrawdownProtector extends EventEmitter {
 
       return failCount === 0;
     } catch (error) {
-      console.error(`❌ Error in emergency flatten:`, error);
+      getLogger().error(`❌ Error in emergency flatten:`, error as Error);
       return false;
     }
   }
@@ -468,7 +471,7 @@ export class DrawdownProtector extends EventEmitter {
       this.state.recentTrades = this.state.recentTrades.slice(-100);
     }
 
-    console.log(
+    getLogger().info(
       `📊 Trade recorded: ${trade.symbol} ${trade.side} ${trade.isWin ? 'WIN' : 'LOSS'} P&L: ${trade.pnl.toFixed(2)}`
     );
 
@@ -514,7 +517,7 @@ export class DrawdownProtector extends EventEmitter {
       this.state.isEmergencyPaused = false;
       // eslint-disable-next-line functional/immutable-data
       this.state.emergencyPauseUntil = 0;
-      console.log(`✅ Emergency pause lifted. Trading resumed.`);
+      getLogger().info(`✅ Emergency pause lifted. Trading resumed.`);
       this.emit('emergency:resumed', this.state);
     }
 
@@ -566,7 +569,7 @@ export class DrawdownProtector extends EventEmitter {
       await this.updateDrawdownState();
     }, this.MONITORING_FREQUENCY);
 
-    console.log(
+    getLogger().info(
       `🛡️ Drawdown Protector: Started monitoring (${this.MONITORING_FREQUENCY / 1000}s interval)`
     );
   }
@@ -580,7 +583,7 @@ export class DrawdownProtector extends EventEmitter {
       // eslint-disable-next-line functional/immutable-data
       this.monitoringInterval = null;
     }
-    console.log(`🛡️ Drawdown Protector: Stopped monitoring`);
+    getLogger().info(`🛡️ Drawdown Protector: Stopped monitoring`);
   }
 
   /**
@@ -607,7 +610,7 @@ export class DrawdownProtector extends EventEmitter {
       // eslint-disable-next-line functional/immutable-data
       this.state.lastUpdate = Date.now();
     } catch (error) {
-      console.error(`❌ Error updating drawdown state:`, error);
+      getLogger().error(`❌ Error updating drawdown state:`, error as Error);
     }
   }
 
@@ -640,7 +643,7 @@ export class DrawdownProtector extends EventEmitter {
       winRate: this.state.winRate * 100,
     };
 
-    console.log(`🛡️ DRAWDOWN_PROTECTION:`, JSON.stringify(event));
+    getLogger().info(`🛡️ DRAWDOWN_PROTECTION: ${JSON.stringify(event)}`);
     this.emit('protection:activated', this.state, action);
   }
 
@@ -651,7 +654,7 @@ export class DrawdownProtector extends EventEmitter {
   public updateConfig(newConfig: Partial<DrawdownProtectorConfig>): void {
     // eslint-disable-next-line functional/immutable-data
     this.config = { ...this.config, ...newConfig };
-    console.log(`🛡️ Drawdown Protector: Configuration updated`);
+    getLogger().info(`🛡️ Drawdown Protector: Configuration updated`);
   }
 
   /**
@@ -676,7 +679,7 @@ export class DrawdownProtector extends EventEmitter {
       maxLeverageReduction: false,
       lastUpdate: Date.now(),
     };
-    console.log(`🛡️ Drawdown Protector: State reset`);
+    getLogger().info(`🛡️ Drawdown Protector: State reset`);
   }
 
   /**
@@ -715,7 +718,7 @@ export class DrawdownProtector extends EventEmitter {
   public destroy(): void {
     this.stopMonitoring();
     this.removeAllListeners();
-    console.log(`🛡️ Drawdown Protector: Destroyed`);
+    getLogger().info(`🛡️ Drawdown Protector: Destroyed`);
   }
 }
 

@@ -16,8 +16,7 @@ export class NatsAdapter {
   /**
    * Publish regime update
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async publishRegimeUpdate(snapshot: any): Promise<void> {
+  async publishRegimeUpdate(snapshot: unknown): Promise<void> {
     try {
       if (this.nats.isConnected()) {
         const id = crypto.randomUUID();
@@ -37,8 +36,7 @@ export class NatsAdapter {
   /**
    * Publish AI optimization proposal
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async publishAIProposal(proposal: any): Promise<void> {
+  async publishAIProposal(proposal: unknown): Promise<void> {
     try {
       if (this.nats.isConnected()) {
         const id = crypto.randomUUID();

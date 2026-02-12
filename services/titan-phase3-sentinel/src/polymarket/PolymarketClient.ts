@@ -55,7 +55,7 @@ export class PolymarketClient {
         throw new Error(`Polymarket API error: ${response.statusText}`);
       }
        
-      const data = (await response.json()) as any[];
+      const data = (await response.json()) as unknown as Market[];
 
       // Map to our Interface
       return data.map((m) => ({
@@ -100,7 +100,13 @@ export class PolymarketClient {
         throw new Error(`CLOB API error: ${response.statusText}`);
       }
        
-      const data = (await response.json()) as any;
+      // Define partial response shape for CLOB
+      interface ClobResponse {
+          bids: { price: string; size: string }[];
+          asks: { price: string; size: string }[];
+      }
+      
+      const data = (await response.json()) as unknown as ClobResponse;
       return {
         market: tokenId,
         bids: data.bids || [],

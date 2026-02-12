@@ -1,4 +1,3 @@
-/* eslint-disable functional/no-let -- Stateful runtime: mutations architecturally required */
 /**
  * Symbol Normalization - Canonical symbol format for Titan
  *
@@ -294,25 +293,53 @@ function parseGeneric(raw: string, type: InstrumentType): NormalizedSymbol {
     const [base, rest] = raw.split('/');
     const [quote, suffix] = rest.includes(':') ? rest.split(':') : [rest, undefined];
 
-    let symbolType = type;
-    let expiry: string | undefined;
-    let strike: string | undefined;
-    let optionType: 'C' | 'P' | undefined;
+    const { symbolType, expiry, strike, optionType } = (() => {
+      if (!suffix) {
+        return {
+          symbolType: type,
+          expiry: undefined,
+          strike: undefined,
+          optionType: undefined,
+        };
+      }
 
-    if (suffix) {
       if (suffix === 'PERP') {
-        symbolType = InstrumentType.PERP;
-      } else if (suffix.includes('-')) {
+        return {
+          symbolType: InstrumentType.PERP,
+          expiry: undefined,
+          strike: undefined,
+          optionType: undefined,
+        };
+      }
+
+      if (suffix.includes('-')) {
         const parts = suffix.split('-');
         if (parts.length === 3) {
-          [expiry, strike, optionType] = parts as [string, string, 'C' | 'P'];
-          symbolType = InstrumentType.OPTION;
+          return {
+            expiry: parts[0],
+            strike: parts[1],
+            optionType: parts[2] as 'C' | 'P',
+            symbolType: InstrumentType.OPTION,
+          };
         }
-      } else if (/^\d{8}$/.test(suffix)) {
-        expiry = suffix;
-        symbolType = InstrumentType.FUTURE;
       }
-    }
+
+      if (/^\d{8}$/.test(suffix)) {
+        return {
+          expiry: suffix,
+          symbolType: InstrumentType.FUTURE,
+          strike: undefined,
+          optionType: undefined,
+        };
+      }
+
+      return {
+        symbolType: type,
+        expiry: undefined,
+        strike: undefined,
+        optionType: undefined,
+      };
+    })();
 
     return {
       symbol: raw,

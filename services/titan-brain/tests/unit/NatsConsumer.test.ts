@@ -21,7 +21,7 @@ jest.mock("@titan/shared", () => ({
     },
     TitanSubject: {
         EXECUTION_REPORTS: "titan.evt.execution.report.v1",
-        EXECUTION_FILL: "titan.evt.exec.fill.v1",
+        EXECUTION_FILL: "titan.evt.execution.fill.v1",
         DASHBOARD_UPDATES: "titan.evt.dashboard.update",
         EVT_REGIME_UPDATE: "titan.evt.regime.update",
         MARKET_DATA: "titan.evt.market.data",
@@ -200,7 +200,7 @@ describe("NatsConsumer", () => {
 
         it("should subscribe to execution fills with durable consumer", () => {
             expect(mockNatsClient.subscribe).toHaveBeenCalledWith(
-                "titan.evt.exec.fill.v1.*",
+                "titan.evt.execution.fill.v1.*",
                 expect.any(Function),
                 "BRAIN_RISK",
             );

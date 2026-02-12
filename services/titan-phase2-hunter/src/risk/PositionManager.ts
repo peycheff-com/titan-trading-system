@@ -14,11 +14,8 @@
 import { EventEmitter } from 'events';
 import {
   OrderParams,
-  OrderResult,
-  PartialProfitConfig,
   Position,
   PositionUpdate,
-  TrailingStopConfig,
 } from '../types';
 import { BybitPerpsClient } from '../exchanges/BybitPerpsClient';
 import { getLogger, logError, logPositionClose } from '../logging/Logger';
@@ -71,8 +68,6 @@ export class PositionManager extends EventEmitter {
    * @param position - Position to manage
    */
   public addPosition(position: Position): void {
-    // eslint-disable-next-line functional/immutable-data
-    this.positions.set(position.id, { ...position });
     // eslint-disable-next-line functional/immutable-data
     this.positions.set(position.id, { ...position });
     getLogger().info(
@@ -170,8 +165,6 @@ export class PositionManager extends EventEmitter {
         this.positions.set(position.id, position);
         this.emit('position:breakeven', position);
 
-        this.emit('position:breakeven', position);
-
         getLogger().info(`✅ Stop moved to breakeven: ${position.symbol} @ ${position.entryPrice}`);
         return true;
       }
@@ -225,8 +218,6 @@ export class PositionManager extends EventEmitter {
 
         // eslint-disable-next-line functional/immutable-data
         this.positions.set(position.id, position);
-        this.emit('position:partial', position, partialQuantity);
-
         this.emit('position:partial', position, partialQuantity);
 
         getLogger().info(
@@ -293,8 +284,6 @@ export class PositionManager extends EventEmitter {
         this.positions.set(position.id, position);
         this.emit('position:trailing', position, newStopLoss);
 
-        this.emit('position:trailing', position, newStopLoss);
-
         getLogger().info(
           `✅ Trailing stop updated: ${position.symbol} @ ${newStopLoss.toFixed(2)}`
         );
@@ -358,15 +347,12 @@ export class PositionManager extends EventEmitter {
         this.positions.set(position.id, position);
         this.emit('position:tightened', position, newStopLoss);
 
-        this.emit('position:tightened', position, newStopLoss);
-
         getLogger().info(`✅ Stop tightened: ${position.symbol} @ ${newStopLoss.toFixed(2)}`);
         return true;
       }
 
       return false;
     } catch (error) {
-      console.error(`❌ Failed to tighten stop for ${position.symbol}:`, error);
       // Keep compat with emit error but use logger too
       logError('ERROR', `Failed to tighten stop for ${position.symbol}`, {
         error,
@@ -432,8 +418,6 @@ export class PositionManager extends EventEmitter {
         // Remove from active management
         // eslint-disable-next-line functional/immutable-data
         this.positions.delete(position.id);
-        this.emit('position:closed', position, reason);
-
         this.emit('position:closed', position, reason);
 
         getLogger().info(`✅ Position closed: ${position.symbol} at ${result.price} (${reason})`);

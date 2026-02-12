@@ -83,6 +83,13 @@ const executeTasksSequentially = async (
   return [result, ...(await executeTasksSequentially(tail))];
 };
 
+export class QualityGateError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'QualityGateError';
+  }
+}
+
 export class RunCommand {
   private findRepoRoot(): string {
     try {
@@ -92,7 +99,7 @@ export class RunCommand {
     }
   }
 
-  async execute(options: { planId?: string }) {
+  async execute(options: { planId?: string }): Promise<boolean> {
     console.log(chalk.blue('🚀 QualityKernel: Executing Plan...'));
 
     const repoRoot = this.findRepoRoot();
@@ -100,14 +107,12 @@ export class RunCommand {
 
     const planId = options.planId || this.findLatestPlanId();
     if (!planId) {
-      console.error(chalk.red('No plan found. Run "quality:plan" first.'));
-      process.exit(1);
+      throw new QualityGateError('No plan found. Run "quality:plan" first.');
     }
 
     const planPath = path.join(process.cwd(), 'artifacts/quality_os/plans', planId, 'plan.json');
     if (!fs.existsSync(planPath)) {
-      console.error(chalk.red(`Plan file not found at ${planPath}`));
-      process.exit(1);
+      throw new QualityGateError(`Plan file not found at ${planPath}`);
     }
 
     const plan = JSON.parse(fs.readFileSync(planPath, 'utf-8'));
@@ -201,10 +206,11 @@ export class RunCommand {
 
     if (totalFailed > 0) {
       console.log(chalk.red(`\n💥 QUALITY GATE FAILED: ${totalFailed} required check(s) failed.`));
-      process.exit(1);
-    } else {
-      console.log(chalk.green('\n✅ QUALITY GATE PASSED: All required checks passed.'));
+      return false;
     }
+
+    console.log(chalk.green('\n✅ QUALITY GATE PASSED: All required checks passed.'));
+    return true;
   }
 
   private async executeSOTAChecks(

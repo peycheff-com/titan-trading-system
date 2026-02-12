@@ -7,7 +7,10 @@ import { glob } from 'glob';
 // --- Deterministic Hashing ---
 
 export const hashPack = (data: unknown): string => {
-  const canonical = JSON.stringify(data, Object.keys(data as object).sort(), 0);
+  const canonical =
+    data !== null && typeof data === 'object' && !Array.isArray(data)
+      ? JSON.stringify(data, Object.keys(data).sort(), 0)
+      : JSON.stringify(data);
   return crypto.createHash('sha256').update(canonical).digest('hex');
 };
 

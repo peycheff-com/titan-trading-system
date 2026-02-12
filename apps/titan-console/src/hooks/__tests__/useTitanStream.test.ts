@@ -3,7 +3,18 @@ import { vi } from "vitest";
 import { useTitanStream } from "../useTitanStream";
 
 describe("useTitanStream", () => {
-    let mockWebSocket: any;
+    interface MockWebSocket {
+        send: ReturnType<typeof vi.fn>;
+        close: ReturnType<typeof vi.fn>;
+        addEventListener: ReturnType<typeof vi.fn>;
+        removeEventListener: ReturnType<typeof vi.fn>;
+        onopen: (() => void) | null;
+        onmessage: ((event: { data: string }) => void) | null;
+        onclose: (() => void) | null;
+        readyState: number;
+    }
+
+    let mockWebSocket: MockWebSocket;
 
     beforeEach(() => {
         mockWebSocket = {
@@ -19,7 +30,7 @@ describe("useTitanStream", () => {
 
         global.WebSocket = vi.fn(function () {
             return mockWebSocket;
-        }) as any;
+        }) as unknown as typeof WebSocket;
 
         // Mock localStorage
         Object.defineProperty(window, "localStorage", {

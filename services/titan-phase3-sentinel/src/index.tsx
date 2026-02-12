@@ -14,12 +14,14 @@ async function main() {
   // 1. Configuration
   // Dynamic import if needed or use standard import if build allows.
   // Assuming @titan/shared is available as per checking NatsClient
-  const { getConfigManager, TitanSubject, getNatsClient, loadSecretsFromFiles } =
+  const { getConfigManager, TITAN_SUBJECTS, getNatsClient, loadSecretsFromFiles, Logger } =
     await import('@titan/shared');
 
   // Initialize shared manager to load environment variables/files
   loadSecretsFromFiles();
   getConfigManager();
+  
+  const logger = Logger.getInstance('titan-sentinel');
 
   const configManager = {
     get: (key: string) => process.env[key],
@@ -43,7 +45,7 @@ async function main() {
   const bybitSecret = configManager.get('BYBIT_API_SECRET');
 
   if (!binanceKey || !binanceSecret) {
-    console.warn('⚠️ Missing BINANCE_API_KEY or BINANCE_API_SECRET. Gateway may fail.');
+    logger.warn('⚠️ Missing BINANCE_API_KEY or BINANCE_API_SECRET. Gateway may fail.');
   }
 
   // We can check connection status if gateways expose it. Assuming they do or we track it.
@@ -64,9 +66,9 @@ async function main() {
   try {
     nats = await getNatsClient();
     natsConnected = true;
-    console.log('Connected to NATS for Regime & Budget Updates');
+    logger.info('Connected to NATS for Regime & Budget Updates');
 
-    const sub = nats.subscribe(TitanSubject.REGIME_UPDATE, (data: any) => {
+    const sub = nats.subscribe(TITAN_SUBJECTS.EVT.BRAIN.REGIME, (data: any) => {
       // Dual Read Strategy
       // eslint-disable-next-line functional/no-let
       let payload = data;
@@ -77,12 +79,12 @@ async function main() {
       try {
         core.updateRegime(payload.regime, payload.alpha);
       } catch (err) {
-        console.error('Error processing regime update:', err);
+        logger.error('Error processing regime update', err instanceof Error ? err : new Error(String(err)));
       }
     });
 
     // Subscribe to Budget Updates (Truth Layer)
-    nats.subscribe(TitanSubject.EVT_BUDGET_UPDATE, (data: any) => {
+    nats.subscribe(TITAN_SUBJECTS.EVT.BUDGET.UPDATE, (data: any) => {
       // eslint-disable-next-line functional/no-let
       let payload = data;
       if (data && typeof data === 'object' && 'payload' in data) {
@@ -90,12 +92,12 @@ async function main() {
       }
 
       if (payload.phaseId === 'phase3' && payload.allocatedEquity) {
-        console.log(`[Sentinel] Received Budget Update: $${payload.allocatedEquity}`);
+        logger.info(`[Sentinel] Received Budget Update: $${payload.allocatedEquity}`);
         core.updateBudget(payload.allocatedEquity);
       }
     });
   } catch (err) {
-    console.warn('⚠️ Failed to connect to NATS. Sentinel will run in STABLE usage.', err);
+    logger.warn('⚠️ Failed to connect to NATS. Sentinel will run in STABLE usage.', undefined, { error: err });
   }
 
   // 3b. Start Market Monitor (Polymarket)
@@ -145,6 +147,7 @@ async function main() {
 
   // Handle Shutdown
   const shutdown = async () => {
+    logger.info('Shutting down Sentinel...');
     await healthServer.stop();
     await core.stop();
     await marketMonitor.stop();
@@ -158,16 +161,16 @@ async function main() {
       await shutdown();
     });
   } else {
-    console.log('Starting in Headless Mode');
-    core.on('log', (msg) => console.log(`[LOG] ${msg}`));
-    core.on('error', (err) => console.error(`[ERROR] ${err}`));
+    logger.info('Starting in Headless Mode');
+    core.on('log', (msg) => logger.info(`[CORE] ${msg}`));
+    core.on('error', (err) => logger.error(`[CORE ERROR]`, err instanceof Error ? err : new Error(String(err))));
     process.on('SIGINT', shutdown);
   }
 
   try {
     await core.start();
   } catch (e) {
-    console.error('[Sentinel] Fatal Error starting core:', e);
+    logger.error('Fatal Error starting core', e instanceof Error ? e : new Error(String(e)));
     process.exit(1);
   }
 }

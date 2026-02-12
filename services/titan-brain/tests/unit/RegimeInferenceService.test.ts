@@ -27,7 +27,7 @@ describe("RegimeInferenceService", () => {
     it("starts and subscribes to metrics topic", async () => {
         await service.start();
         expect(mockNats.subscribe).toHaveBeenCalledWith(
-            "titan.data.metrics.powerlaw",
+            "titan.data.powerlaw.metrics.v1.>",
             expect.any(Function),
         );
     });
@@ -101,7 +101,7 @@ describe("RegimeInferenceService", () => {
             expect(service.getCurrentRegime()).toBe(RegimeState.CRASH);
 
             expect(mockNats.publish).toHaveBeenCalledWith(
-                "titan.evt.system.regime",
+                "titan.evt.brain.regime.v1",
                 expect.objectContaining({
                     regime: "CRASH",
                     source: "regime-inference-service",

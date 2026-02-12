@@ -16,7 +16,7 @@ If a deployment fails, the pipeline will mark the job as failed. `scripts/ci/dep
 
 ### Common Causes
 
-1. **Migration Failure**: Database migration failed. Check `titan-brain` logs.
+1. **Migration Failure**: Database migration failed. Check `titan-brain` logs. Migrations tracked in `_titan_migrations` table — check for SHA256 drift (changed file after apply). Re-run: `./scripts/ops/run_migrations.sh`.
 2. **Health Verification**: Services didn't start in time. Check `docker compose ps` and `titan-brain` health.
 3. **Policy Hash Parity**: Brain and Execution policy mismatch. Check logs for "Policy hash handshake".
 

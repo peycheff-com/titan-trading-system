@@ -13,7 +13,7 @@ interface MemoryChunk {
   content: string;
   timestamp: string;
   tokens: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // ---------------------------------------------------------------------------
@@ -184,7 +184,7 @@ function MemoryCard({ chunk, onDelete }: { chunk: MemoryChunk; onDelete: (id: st
         {chunk.metadata?.version && (
            <>
              <span>•</span>
-             <span className="text-primary">{chunk.metadata.version}</span>
+             <span className="text-primary">{String(chunk.metadata.version)}</span>
            </>
         )}
       </div>

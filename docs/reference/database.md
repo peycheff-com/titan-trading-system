@@ -43,6 +43,10 @@ All tables have RLS enabled by default to prevent accidental cross-tenant data l
 ## 4. Migrations
 
 Located in: `services/titan-brain/migrations/`.
-Run via: `npm run start:brain` (Auto-migrates on boot in Dev, validated in Prod).
+
+**Runners:**
+- **Dev**: `npm run start:brain` (auto-migrates on boot via `src/db/migrate.ts`)
+- **Production**: `scripts/ops/run_migrations.sh` (idempotent, tracks applied migrations in `_titan_migrations` table with SHA256 hashes, fails closed on drift)
+- **CI**: `scripts/ci/test_fresh_bootstrap.sh` (ephemeral Postgres → migrate → validate → idempotency proof)
 
 **Invariant**: Schema changes must be backward compatible or require a maintenance window.

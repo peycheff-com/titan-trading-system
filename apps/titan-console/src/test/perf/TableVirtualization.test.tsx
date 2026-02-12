@@ -6,8 +6,8 @@ describe('VirtualizedTable Perf', () => {
   it('renders only visible rows for large datasets', async () => {
     const data = Array.from({ length: 10000 }, (_, i) => ({ id: i, name: `Item ${i}` }));
     const columns = [
-      { key: 'id', header: 'ID', cell: (item: any) => item.id },
-      { key: 'name', header: 'Name', cell: (item: any) => item.name },
+      { key: 'id', header: 'ID', cell: (item: { id: number; name: string }) => item.id },
+      { key: 'name', header: 'Name', cell: (item: { id: number; name: string }) => item.name },
     ];
 
     render(<VirtualizedTable data={data} columns={columns} height={400} rowHeight={40} />);

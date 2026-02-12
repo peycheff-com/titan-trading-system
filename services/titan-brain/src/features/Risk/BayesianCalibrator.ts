@@ -35,17 +35,15 @@ export class BayesianCalibrator {
   private readonly PRIOR_ALPHA = 0.5;
   private readonly PRIOR_BETA = 0.5;
 
-  constructor(initialStats?: TrapTypeStats[]) {
+  constructor(redisClient: Redis, initialStats?: TrapTypeStats[]) {
     if (initialStats) {
       initialStats.forEach((s) => this.statsCache.set(s.trapType, s.stats));
     }
+    this.redis = redisClient;
+  }
 
-    if (process.env.REDIS_URL) {
-      this.redis = new Redis(process.env.REDIS_URL);
-      this.loadStats().catch((err) => {
-        this.logger.error('Failed to load Bayesian stats from Redis', err as Error);
-      });
-    }
+  public async init(): Promise<void> {
+    await this.loadStats();
   }
 
   private async loadStats() {

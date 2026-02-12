@@ -28,7 +28,6 @@ const Alert = React.forwardRef<
 
 Alert.displayName = 'Alert';
 
-// eslint-disable-next-line jsx-a11y/heading-has-content
 const AlertTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(
   ({ className, ...props }, ref) => (
     // eslint-disable-next-line jsx-a11y/heading-has-content

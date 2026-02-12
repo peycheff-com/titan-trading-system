@@ -1,7 +1,7 @@
 import { BacktestResult, OHLCV, SimulationConfig, Trade } from '../types/index.js';
 import { EventEmitter } from 'events';
+import { Logger } from '@titan/shared';
 // Import Strategy Engine from Phase 1 (Core Logic)
-// Dynamic import to avoid build strictness for now
 import { TitanTrap } from 'titan-phase1-scavenger/src/engine/TitanTrap.js';
 
 import { TripwireCalculators } from 'titan-phase1-scavenger/src/calculators/TripwireCalculators.js';
@@ -13,13 +13,7 @@ import { MockBybitPerpsClient } from '../mocks/MockBybitPerpsClient.js';
 import { MockConfigManager } from '../mocks/MockConfigManager.js';
 import { MockSignalClient } from '../mocks/MockSignalClient.js';
 
-// Simple Logger Mock
-const mockLogger = {
-  info: (msg: string, ...args: any[]) => console.log(`[INFO] ${msg}`, ...args),
-  warn: (msg: string, ...args: any[]) => console.warn(`[WARN] ${msg}`, ...args),
-  error: (msg: string, ...args: any[]) => console.error(`[ERROR] ${msg}`, ...args),
-  debug: (msg: string, ...args: any[]) => {}, // Silence debug
-};
+const logger = Logger.getInstance('backtesting');
 
 export class BacktestEngine extends EventEmitter {
   private config: SimulationConfig;
@@ -27,7 +21,8 @@ export class BacktestEngine extends EventEmitter {
   private bybitMock: MockBybitPerpsClient;
   private configMock: MockConfigManager;
   private signalMock: MockSignalClient;
-  private engine: any; // TitanTrap instance
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private engine: any; // TitanTrap instance — concrete type mismatch by design
 
   constructor(config: SimulationConfig) {
     super();
@@ -69,17 +64,24 @@ export class BacktestEngine extends EventEmitter {
     });
 
     // 3. Instantiate TitanTrap (The Real Engine)
-    console.log('[BacktestEngine] Instantiating TitanTrap with Mocks...');
+    // Note: `as any` casts are required here because TitanTrap expects concrete
+    // BinanceSpotClient/BybitPerpsClient/ConfigManager types, not interfaces.
+    // Mocks implement the same public surface but cannot structurally satisfy
+    // the concrete class types. This is the documented backtesting adapter boundary.
+    logger.info('Instantiating TitanTrap with Mocks...');
+    type TitanDeps = ConstructorParameters<typeof TitanTrap>[0];
     this.engine = new TitanTrap({
-      binanceClient: this.binanceMock as any,
-      bybitClient: this.bybitMock as any,
-      logger: mockLogger as any,
-      config: this.configMock as any,
+      binanceClient: this.binanceMock as unknown as TitanDeps['binanceClient'],
+      bybitClient: this.bybitMock as unknown as TitanDeps['bybitClient'],
+      logger: logger as unknown as TitanDeps['logger'],
+      config: this.configMock as unknown as TitanDeps['config'],
       tripwireCalculators: TripwireCalculators,
       velocityCalculator: new VelocityCalculator(),
-      positionSizeCalculator: { calculate: () => 0.01 },
-      signalClient: this.signalMock as any,
-      eventEmitter: new EventEmitter() as any,
+      positionSizeCalculator: {
+        calculate: () => 0.01,
+      } as unknown as TitanDeps['positionSizeCalculator'],
+      signalClient: this.signalMock as unknown as TitanDeps['signalClient'],
+      eventEmitter: new EventEmitter() as unknown as TitanDeps['eventEmitter'],
     });
   }
 
@@ -87,22 +89,24 @@ export class BacktestEngine extends EventEmitter {
    * Run the simulation
    */
   async runSimulation(data: { candles: OHLCV[]; trades?: Trade[] }): Promise<BacktestResult> {
-    console.log(`[BacktestEngine] Starting simulation with ${data.candles.length} candles...`);
+    logger.info(`Starting simulation with ${data.candles.length} candles...`);
 
     // Start Engine
     await this.engine.start();
 
     const startTime = Date.now();
+    const equityCurve: { timestamp: number; equity: number }[] = [];
+    // eslint-disable-next-line functional/no-let
+    let peakEquity = this.config.initialCapital;
+    // eslint-disable-next-line functional/no-let
+    let maxDrawdown = 0;
 
-    // 4. Feeder Loop
-    // We simulate time by feeding candles/trades sequentially
+    // 4. Feeder Loop — simulate time by feeding candles/trades sequentially
     for (const candle of data.candles) {
       // Update Mock Prices (so execution gets correct price)
       this.bybitMock.setPrice(this.config.symbol, candle.close);
 
       // Feed Trade Data to Trigger Engine
-      // We convert Candle to a simulated Trade for the simple detector
-      // In high-fidelity, we would have real trade ticks.
       const simulatedTrade = {
         symbol: this.config.symbol,
         price: candle.close,
@@ -112,10 +116,24 @@ export class BacktestEngine extends EventEmitter {
       };
 
       // Push to Binance Mock (Trigger Source)
-      this.binanceMock.pushTrade(this.config.symbol, simulatedTrade as any);
+      this.binanceMock.pushTrade(
+        this.config.symbol,
+        simulatedTrade as Parameters<MockBinanceSpotClient['pushTrade']>[1],
+      );
 
-      // In a real backtest, we would tick the clock forward here.
-      // For now, we assume synchronous processing of the pushed trade.
+      // Track equity curve after each candle
+      const currentEquity = await this.bybitMock.getEquity();
+      // eslint-disable-next-line functional/immutable-data
+      equityCurve.push({ timestamp: candle.timestamp, equity: currentEquity });
+
+      // Track max drawdown
+      if (currentEquity > peakEquity) {
+        peakEquity = currentEquity;
+      }
+      const drawdown = peakEquity > 0 ? (peakEquity - currentEquity) / peakEquity : 0;
+      if (drawdown > maxDrawdown) {
+        maxDrawdown = drawdown;
+      }
     }
 
     // Stop Engine
@@ -124,31 +142,95 @@ export class BacktestEngine extends EventEmitter {
 
     // 5. Calculate Results
     const orders = this.bybitMock.getFilledOrders();
-    const equity = await this.bybitMock.getEquity(); // This would need PnL tracking logic update in MockBybit
+    const finalEquity = await this.bybitMock.getEquity();
 
-    console.log(`[BacktestEngine] Simulation Complete. Orders: ${orders.length}`);
+    // Build trade list with PnL calculation
+    const resultTrades = this.buildTrades(orders);
+
+    // Calculate metrics
+    const totalReturn = (finalEquity - this.config.initialCapital) / this.config.initialCapital;
+    const winRate = this.calculateWinRate(resultTrades);
+    const sharpeRatio = this.calculateSharpeRatio(equityCurve, this.config.initialCapital);
+
+    logger.info(`Simulation complete. Orders: ${orders.length}, Duration: ${duration}ms`);
 
     return {
       metrics: {
-        totalReturn: (equity - this.config.initialCapital) / this.config.initialCapital,
-        maxDrawdown: 0, // Todo: calculate
-        sharpeRatio: 0,
-        winRate: 0,
+        totalReturn,
+        maxDrawdown,
+        sharpeRatio,
+        winRate,
         tradesCount: orders.length,
       },
-      trades: orders.map((o) => ({
-        id: o.orderId,
-        timestamp: o.timestamp,
-        symbol: o.symbol,
-        entryPrice: o.price,
-        exitPrice: 0, // Todo
-        pnl: 0,
-        side: o.side === 'Buy' ? 'long' : 'short',
-        quantity: o.qty,
-        size: o.qty,
-      })),
-      equityCurve: [],
-      logs: [], // Captured from logger
+      trades: resultTrades,
+      equityCurve,
+      logs: [],
     };
+  }
+
+  /**
+   * Build trade list from filled orders
+   */
+  private buildTrades(orders: ReturnType<MockBybitPerpsClient['getFilledOrders']>): Trade[] {
+    return orders.map((o) => ({
+      id: o.orderId,
+      timestamp: o.timestamp,
+      symbol: o.symbol,
+      entryPrice: o.price,
+      exitPrice: 0, // Paired exit not yet implemented
+      pnl: 0,
+      side: o.side === 'Buy' ? ('long' as const) : ('short' as const),
+      quantity: o.qty,
+      size: o.qty,
+    }));
+  }
+
+  /**
+   * Calculate win rate from trades with non-zero PnL
+   */
+  private calculateWinRate(trades: Trade[]): number {
+    const closedTrades = trades.filter((t) => t.pnl !== 0);
+    if (closedTrades.length === 0) return 0;
+    const wins = closedTrades.filter((t) => t.pnl > 0).length;
+    return wins / closedTrades.length;
+  }
+
+  /**
+   * Calculate annualized Sharpe Ratio from equity curve
+   * Uses simple returns and assumes 365-day year
+   */
+  private calculateSharpeRatio(
+    equityCurve: { timestamp: number; equity: number }[],
+    initialCapital: number,
+  ): number {
+    if (equityCurve.length < 2) return 0;
+
+    // Calculate period returns
+    const returns: number[] = [];
+    // eslint-disable-next-line functional/no-let
+    let prevEquity = initialCapital;
+    for (const point of equityCurve) {
+      if (prevEquity > 0) {
+        // eslint-disable-next-line functional/immutable-data
+        returns.push((point.equity - prevEquity) / prevEquity);
+      }
+      prevEquity = point.equity;
+    }
+
+    if (returns.length === 0) return 0;
+
+    // Mean return
+    const meanReturn = returns.reduce((sum, r) => sum + r, 0) / returns.length;
+
+    // Standard deviation
+    const variance =
+      returns.reduce((sum, r) => sum + Math.pow(r - meanReturn, 2), 0) / returns.length;
+    const stdDev = Math.sqrt(variance);
+
+    if (stdDev === 0) return 0;
+
+    // Annualize: assume each candle is ~1 period, scale by sqrt(periods per year)
+    // For simplicity, use the raw ratio (no annualization since period is unknown)
+    return meanReturn / stdDev;
   }
 }

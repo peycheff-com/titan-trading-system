@@ -17,11 +17,15 @@ const mockGateway = {
     transfer: jest.fn(),
     getHealth: jest.fn(),
     subscribePrice: jest.fn(),
+    getBalance: jest.fn().mockResolvedValue(10000),
 };
 
 describe("PortfolioManager", () => {
+    // eslint-disable-next-line functional/no-let
     let manager: PortfolioManager;
+    // eslint-disable-next-line functional/no-let
     let mockRebalancer: any;
+    // eslint-disable-next-line functional/no-let
     let mockTransferManager: any;
 
     beforeEach(() => {
@@ -31,13 +35,13 @@ describe("PortfolioManager", () => {
         manager = new PortfolioManager({ mock: mockGateway as any });
 
         // Get mock instances
-        // @ts-ignore
+        // @ts-expect-error accessing mock instances
         mockRebalancer = Rebalancer.mock.instances[0];
-        // @ts-ignore
+        // @ts-expect-error accessing mock instances
         mockTransferManager = TransferManager.mock.instances[0];
 
         // Setup default mock returns
-        // @ts-ignore
+        // @ts-expect-error accessing private property for test
         manager.tracker.updatePosition.mockResolvedValue({
             symbol: "BTC-USDT",
             unrealizedPnL: 0,
@@ -49,7 +53,7 @@ describe("PortfolioManager", () => {
             currentBasis: 0,
             type: "CORE",
         });
-        // @ts-ignore
+        // @ts-expect-error accessing private property for test
         manager.tracker.getHealthReport.mockReturnValue({});
     });
 
@@ -164,7 +168,7 @@ describe("PortfolioManager", () => {
     describe("checkHealth", () => {
         it("should return health report from tracker", async () => {
             const mockReport = { nav: 10000, positions: [] };
-            // @ts-ignore
+            // @ts-expect-error accessing private property
             manager.tracker.getHealthReport.mockReturnValue(mockReport);
 
             const report = await manager.checkHealth();
@@ -183,7 +187,7 @@ describe("PortfolioManager", () => {
     describe("getHealthReport", () => {
         it("should return tracker health report", () => {
             const mockReport = { nav: 5000, delta: 0 };
-            // @ts-ignore
+            // @ts-expect-error accessing private property
             manager.tracker.getHealthReport.mockReturnValue(mockReport);
 
             const report = manager.getHealthReport();

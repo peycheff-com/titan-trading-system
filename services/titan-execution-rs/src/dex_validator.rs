@@ -69,7 +69,7 @@ impl DexValidator {
             Err(_) => return Err("Invalid tx_hash hex".to_string()),
         };
 
-        if let Err(_) = verifier.verify(&message, &signature) {
+        if verifier.verify(&message, &signature).is_err() {
             return Err("Signature verification failed".to_string());
         }
 

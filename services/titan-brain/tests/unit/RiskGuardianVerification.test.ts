@@ -69,10 +69,17 @@ describe("RiskGuardian Logic Verification", () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        const mockBayesianCalibrator = {
+            getCalibratedProbability: jest.fn().mockReturnValue(0.8),
+            getShrinkageReport: jest.fn().mockReturnValue({}),
+            recordOutcome: jest.fn(),
+        } as any;
+
         riskGuardian = new RiskGuardian(
             baseConfig,
             mockAllocationEngine,
             mockGovernanceEngine,
+            mockBayesianCalibrator,
             mockNatsClient,
         );
         riskGuardian.setEquity(10000); // $10k equity

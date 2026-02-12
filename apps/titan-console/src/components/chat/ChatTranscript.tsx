@@ -128,7 +128,7 @@ export function ChatTranscript() {
   }, []);
 
   const handleMultimodalSend = useCallback(
-    async (text: string, attachments: any[]) => {
+    async (text: string, attachments: { type: string; file: File }[]) => {
       // 1. Display Operator Message with attachments
       const displayContent = [
         text,
@@ -163,11 +163,10 @@ export function ChatTranscript() {
             title: 'Throttle Phase 2'
           };
            
-          // @ts-ignore
           addMessage({
             role: 'system',
             content: `Proposed Action: **Throttle Phase 2**`,
-            // @ts-ignore
+            // @ts-expect-error intent shape differs from CompiledIntent
             intent,
           });
           return;

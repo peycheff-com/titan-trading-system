@@ -16,7 +16,7 @@ module.exports = {
     }]
   },
   moduleNameMapper: {
-    '^@titan/shared$': '<rootDir>/../../services/shared/src/index.ts',
+    '^@titan/shared$': '<rootDir>/../../packages/shared/src/index.ts',
     '^../src/(.*)\\.js$': '<rootDir>/src/$1', // Map ../src/*.js -> src/*
     '^(\\.{1,2}/.*)\\.js$': '$1', // Map relative .js -> no extension
     '^../src/(.*)$': '<rootDir>/src/$1'

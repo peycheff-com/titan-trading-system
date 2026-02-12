@@ -3,6 +3,8 @@ import { Redis } from 'ioredis';
 import { v4 as uuidv4 } from 'uuid';
 import * as crypto from 'crypto';
 
+import { Logger } from '@titan/shared';
+
 export interface SafetySession {
   id: string;
   actorId: string;
@@ -16,16 +18,14 @@ export interface SafetySession {
 
 export class SafetySessionManager {
   private redis: Redis;
+  private logger: Logger;
   private readonly SESSION_PREFIX = 'titan:safety:session:';
   private readonly SECRET = process.env.SAFETY_SECRET || 'dev-secret-do-not-use-in-prod';
   private readonly DEFAULT_TTL_SECONDS = 300; // 5 minutes
 
-  constructor(redisOrUrl: string | Redis) {
-    if (typeof redisOrUrl === 'string') {
-      this.redis = new Redis(redisOrUrl);
-    } else {
-      this.redis = redisOrUrl;
-    }
+  constructor(logger: Logger, redisClient: Redis) {
+    this.logger = logger;
+    this.redis = redisClient;
   }
 
   /**
@@ -67,7 +67,7 @@ export class SafetySessionManager {
       JSON.stringify(session),
     );
 
-    console.log(`[Safety] Console ARMED by ${actorId} (${role}). Session: ${sessionId}`);
+    this.logger.info(`[Safety] Console ARMED by ${actorId} (${role}). Session: ${sessionId}`);
     return session;
   }
 
@@ -86,7 +86,7 @@ export class SafetySessionManager {
       }
       return session;
     } catch (e) {
-      console.error('Failed to parse safety session', e);
+      this.logger.error('Failed to parse safety session', e as Error);
       return null;
     }
   }
@@ -96,7 +96,7 @@ export class SafetySessionManager {
    */
   async disarmConsole(sessionId: string): Promise<void> {
     await this.redis.del(`${this.SESSION_PREFIX}${sessionId}`);
-    console.log(`[Safety] Console DISARMED. Session: ${sessionId}`);
+    this.logger.info(`[Safety] Console DISARMED. Session: ${sessionId}`);
   }
 
   /**

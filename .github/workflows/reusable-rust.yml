@@ -37,3 +37,6 @@ jobs:
           NATS_URL: nats://localhost:4222
           RUST_LOG: info
         run: ./scripts/ci/rust.sh all
+
+      - name: Verify Docker Build
+        run: docker build -t titan-execution-rs:${{ github.sha }} services/titan-execution-rs

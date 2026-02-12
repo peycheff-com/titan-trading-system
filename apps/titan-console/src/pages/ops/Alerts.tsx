@@ -4,7 +4,16 @@ import { cn } from '@/lib/utils';
 import { Bell, Check, AlertTriangle, AlertCircle, Info } from 'lucide-react';
 import { toast } from 'sonner';
 
-const severityConfig: any = {
+import { LucideIcon } from 'lucide-react';
+
+interface SeverityConfigItem {
+  icon: LucideIcon;
+  color: string;
+  bg: string;
+  border: string;
+}
+
+const severityConfig: Record<string, SeverityConfigItem> = {
   info: { icon: Info, color: 'text-primary', bg: 'bg-primary/10', border: 'border-primary/20' },
   warning: {
     icon: AlertTriangle,
@@ -20,8 +29,17 @@ const severityConfig: any = {
   },
 };
 
+interface Alert {
+  id: string;
+  title: string;
+  message: string;
+  severity: 'info' | 'warning' | 'critical';
+  timestamp: number;
+  acknowledged: boolean;
+}
+
 export default function AlertsPage() {
-  const [alertList, setAlertList] = useState<any[]>([]); // Initialize with empty array instead of mock data
+  const [alertList, setAlertList] = useState<Alert[]>([]); // Initialize with empty array instead of mock data
 
   const unacknowledged = alertList.filter((a) => !a.acknowledged);
   const acknowledged = alertList.filter((a) => a.acknowledged);

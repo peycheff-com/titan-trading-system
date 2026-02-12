@@ -37,11 +37,24 @@ export class PortfolioManager {
     // 1. Update Tracker
     const position = await this.tracker.updatePosition(symbol);
 
-    // 2. Get detailed margin state (Mocking real exchange data for now)
-    // In production: await this.gateways[exchange].getAccountInfo()
-    const marginUtil = 0.15; // Mock safe utilization
+    // 2. Get detailed margin state
+    // We use the first gateway as primary for collateral check in this phase
+    const exchangeName = symbol.split('-')[1];
+    const primaryGateway = this.gateways[exchangeName] || Object.values(this.gateways)[0];
+    
+    // Default to a safe fallback if gateway fails, but try to get real balance
+    // eslint-disable-next-line functional/no-let
+    let collateral = 100000;
+    try {
+      if (primaryGateway) {
+         collateral = await primaryGateway.getBalance('USDT');
+      }
+    } catch (err) {
+      console.error(`Failed to fetch balance for ${symbol}:`, err);
+    }
+
+    const marginUtil = 0.15; // Still mocked until simple margin calc is added
     const unrealizedPnL = position.unrealizedPnL;
-    const collateral = 100000; // Mock collateral
 
     // 3. Check for Rebalancing
     const rebalanceAction = this.rebalancer.evaluate(symbol, marginUtil, unrealizedPnL, collateral);

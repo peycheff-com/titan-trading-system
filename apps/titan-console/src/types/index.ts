@@ -1,3 +1,5 @@
+import { RiskState, PhaseStatus, BudgetState } from "@titan/shared";
+
 export type SystemStatus = "healthy" | "degraded" | "critical" | "offline";
 export type Severity = "info" | "warning" | "critical";
 export type Phase = "scavenger" | "hunter" | "sentinel";
@@ -44,28 +46,52 @@ export function formatNumber(value: number, decimals = 2): string {
   }).format(value);
 }
 
+export interface TreasuryState {
+  balance: number;
+  currency: string;
+  pnl_24h: number;
+}
+
+export interface CircuitBreakerState {
+  status: RiskState;
+  triggered_at?: number;
+  reset_at?: number;
+}
+
+export interface ManualOverride {
+  active: boolean;
+  operator_id?: string;
+  reason?: string;
+}
+
+export interface OptimizationProposal {
+    id: string;
+    changes: Record<string, unknown>;
+    impact_score: number;
+}
+
 export interface DashboardData {
   nav: number;
-  allocation: any; // Using any for brevity or specific types if available
-  phaseEquity: any;
+  allocation: Record<string, number>;
+  phaseEquity: Record<string, number>;
   riskMetrics: {
     globalLeverage: number;
     netDelta: number;
     correlationScore: number;
     portfolioBeta: number;
   };
-  treasury: any;
-  circuitBreaker: any;
-  recentDecisions: any[];
+  treasury: TreasuryState;
+  circuitBreaker: CircuitBreakerState;
+  recentDecisions: BrainDecision[];
   lastUpdated: number;
-  manualOverride?: any;
+  manualOverride?: ManualOverride;
   warningBannerActive?: boolean;
   aiState?: {
     cortisol: number;
     regime: string;
     lastOptimizationProposal?: {
       timestamp: number;
-      proposal: any;
+      proposal: OptimizationProposal;
     };
   };
 }
@@ -122,7 +148,10 @@ export interface BrainDecision {
   authorizedSize: number;
   reason: string;
   allocation: AllocationVector;
-  performance: any; // Simplified for console
+  performance: {
+    pnl: number;
+    drawdown: number;
+  };
   risk: RiskDecision;
   context?: {
     signal: IntentSignal;

@@ -16,7 +16,13 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const standbyConfig: any = {
+interface StandbyConfigItem {
+  color: string;
+  bg: string;
+  label: string;
+}
+
+const standbyConfig: Record<string, StandbyConfigItem> = {
   ready: { color: 'text-status-healthy', bg: 'bg-status-healthy/10', label: 'Ready' },
   syncing: { color: 'text-warning', bg: 'bg-warning/10', label: 'Syncing' },
   stale: { color: 'text-status-critical', bg: 'bg-status-critical/10', label: 'Stale' },

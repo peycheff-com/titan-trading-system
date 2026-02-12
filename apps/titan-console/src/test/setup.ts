@@ -29,6 +29,7 @@ if (!global.PointerEvent) {
     pointerType = 'mouse';
     isPrimary = false;
   }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   global.PointerEvent = PointerEventMock as any;
 }
 

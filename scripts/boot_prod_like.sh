@@ -106,7 +106,7 @@ health_check() {
         log "  Health check attempt $attempt/$max_attempts"
         
         # Check Brain health
-        if curl -sf http://localhost:3000/health > /dev/null 2>&1; then
+        if curl -sf http://localhost:3100/health > /dev/null 2>&1; then
             log "  ✓ Brain: healthy"
             break
         fi
@@ -135,15 +135,15 @@ print_status() {
     docker compose ps 2>/dev/null || true
     echo ""
     echo "Endpoints:"
-    echo "  Brain:      http://localhost:3000"
+    echo "  Brain:      http://localhost:3100"
     echo "  Execution:  http://localhost:8080"
     echo "  Metrics:    http://localhost:9090"
     echo ""
     echo "To arm the system:"
-    echo "  curl -X POST http://localhost:3000/api/arm"
+    echo "  curl -X POST http://localhost:3100/api/arm"
     echo ""
     echo "To halt:"
-    echo "  curl -X POST http://localhost:3000/api/halt"
+    echo "  curl -X POST http://localhost:3100/api/halt"
     echo ""
     echo "To stop:"
     echo "  docker compose down"

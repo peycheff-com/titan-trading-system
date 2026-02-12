@@ -2,6 +2,9 @@
 set -e
 
 # 06 Dull Deployment Standard implementation
+# Strategy: Stop → Migrate → Start (sequential, with downtime window)
+# This is NOT blue/green. Accepted trade-off: brief downtime during deploy.
+# Rollback: automated stop + restart on smoke failure.
 # Usage: ./scripts/deploy_prod.sh [GIT_SHA]
 
 TAG=${1:-latest}
@@ -12,6 +15,10 @@ if [ ! -f .env ]; then
     echo "❌ FATAL: .env file missing!"
     exit 1
 fi
+
+# 1.5. Environment Validation
+echo "🔍 Validating environment..."
+./scripts/ops/validate_prod_env.sh .env
 
 # 2. Export Tag
 export TITAN_TAG=$TAG
@@ -24,10 +31,8 @@ docker compose -f docker-compose.prod.yml pull
 echo "🛑 Stopping services..."
 docker compose -f docker-compose.prod.yml stop
 
-# 5. Database Migrations (Ephemeral)
+# 5. Database Migrations (Idempotent — tracked via _titan_migrations table)
 echo "📦 Running migrations..."
-# Assuming brain container has migration capability. 
-# In a real scenario, we might run a one-off container.
 docker compose -f docker-compose.prod.yml run --rm brain npm run db:migrate
 
 # 6. Start
@@ -44,8 +49,9 @@ if [ $? -eq 0 ]; then
     echo "$(date): $TAG SUCCESS" >> deployment_log.txt
 else
     echo "🚨 SMOKE TEST FAILED! ROLLING BACK..."
-    # Automatic Rollback Logic could go here
-    # For now, we just alert
-    echo "$(date): $TAG FAILED" >> deployment_log.txt
+    echo "🔄 Rolling back to previous state..."
+    docker compose -f docker-compose.prod.yml stop
+    docker compose -f docker-compose.prod.yml up -d
+    echo "$(date): $TAG FAILED — rollback executed" >> deployment_log.txt
     exit 1
 fi

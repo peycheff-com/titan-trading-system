@@ -7,7 +7,16 @@ import { cn } from '@/lib/utils';
 import { Cpu, Check, X, AlertTriangle, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { toast } from 'sonner';
 
-const backtestConfig: any = {
+import { LucideIcon } from 'lucide-react';
+
+interface BacktestConfigItem {
+  icon: LucideIcon;
+  color: string;
+  bg: string;
+  label: string;
+}
+
+const backtestConfig: Record<string, BacktestConfigItem> = {
   improved: {
     icon: TrendingUp,
     color: 'text-pnl-positive',
@@ -23,8 +32,20 @@ const backtestConfig: any = {
   },
 };
 
+interface Proposal {
+  id: string;
+  hypothesis: string;
+  createdAt: number;
+  backtestResult: string;
+  sharpeImprovement: number;
+  drawdownChange: number;
+  guardrailWarnings: string[];
+  configDiff: { before: Record<string, unknown>; after: Record<string, unknown> };
+  status: 'pending' | 'approved' | 'rejected';
+}
+
 export default function AIQuantPage() {
-  const [proposals, setProposals] = useState<any[]>([]); // Default empty
+  const [proposals, setProposals] = useState<Proposal[]>([]); // Default empty
   const [selectedProposal, setSelectedProposal] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirmAction, setConfirmAction] = useState<'approve' | 'reject'>('approve');

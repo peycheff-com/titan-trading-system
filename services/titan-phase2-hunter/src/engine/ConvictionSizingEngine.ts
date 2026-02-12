@@ -21,8 +21,8 @@ import {
   FlowValidation,
   GlobalCVDData,
   OracleScore,
-  TrapRecommendation,
 } from '../types';
+import { getLogger } from '../logging/Logger';
 
 /**
  * Position sizing configuration
@@ -480,20 +480,21 @@ export class ConvictionSizingEngine extends EventEmitter {
    * Requirement 7.7: Position sizing calculation logging
    */
   private logSizingCalculation(sizing: ConvictionSizing): void {
-    console.log('📊 Position Sizing Calculation:');
-    console.log(`   Base Size: $${sizing.baseSize.toFixed(2)}`);
-    console.log(`   Oracle Multiplier: ${sizing.oracleMultiplier.toFixed(2)}x`);
-    console.log(`   Flow Multiplier: ${sizing.flowMultiplier.toFixed(2)}x`);
-    console.log(`   Trap Reduction: ${sizing.trapReduction.toFixed(2)}x`);
-    console.log(`   Global CVD Multiplier: ${sizing.globalCVDMultiplier.toFixed(2)}x`);
-    console.log(`   Event Risk Multiplier: ${sizing.eventRiskMultiplier.toFixed(2)}x`);
-    console.log(`   Final Size: $${sizing.finalSize.toFixed(2)}`);
-    console.log(`   Capped At: ${sizing.cappedAt}x`);
+    const logger = getLogger();
+    logger.info('📊 Position Sizing Calculation:');
+    logger.info(`   Base Size: $${sizing.baseSize.toFixed(2)}`);
+    logger.info(`   Oracle Multiplier: ${sizing.oracleMultiplier.toFixed(2)}x`);
+    logger.info(`   Flow Multiplier: ${sizing.flowMultiplier.toFixed(2)}x`);
+    logger.info(`   Trap Reduction: ${sizing.trapReduction.toFixed(2)}x`);
+    logger.info(`   Global CVD Multiplier: ${sizing.globalCVDMultiplier.toFixed(2)}x`);
+    logger.info(`   Event Risk Multiplier: ${sizing.eventRiskMultiplier.toFixed(2)}x`);
+    logger.info(`   Final Size: $${sizing.finalSize.toFixed(2)}`);
+    logger.info(`   Capped At: ${sizing.cappedAt}x`);
 
     if (sizing.reasoning.length > 0) {
-      console.log('   Reasoning:');
+      logger.info('   Reasoning:');
       for (const reason of sizing.reasoning) {
-        console.log(`     - ${reason}`);
+        logger.info(`     - ${reason}`);
       }
     }
   }

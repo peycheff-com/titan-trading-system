@@ -59,6 +59,7 @@ export function DensityProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useDensity() {
   const ctx = useContext(DensityContext);
   if (!ctx) throw new Error('useDensity must be used within DensityProvider');

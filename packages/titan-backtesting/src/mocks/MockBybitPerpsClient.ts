@@ -1,4 +1,7 @@
+import { Logger } from '@titan/shared';
 import { OHLCV, OrderParams, OrderResult } from 'titan-phase1-scavenger/dist/types/index.js';
+
+const logger = Logger.getInstance('backtesting');
 
 export class MockBybitPerpsClient {
   private equity: number = 10000;
@@ -19,7 +22,7 @@ export class MockBybitPerpsClient {
     return this.currentPrices.get(symbol) || 0;
   }
 
-  async getOpenInterest(symbol: string): Promise<number> {
+  async getOpenInterest(_symbol: string): Promise<number> {
     return 1000000; // Mock stable OI
   }
 
@@ -36,21 +39,21 @@ export class MockBybitPerpsClient {
 
     // eslint-disable-next-line functional/immutable-data
     this.orders.push(order);
-    console.log(
-      `[MockBybit] Order Placed: ${params.side} ${params.qty} ${params.symbol} @ ${order.price}`,
+    logger.debug(
+      `MockBybit order placed: ${params.side} ${params.qty} ${params.symbol} @ ${order.price}`,
     );
     return order;
   }
 
-  async get24hVolume(symbol: string): Promise<number> {
+  async get24hVolume(_symbol: string): Promise<number> {
     return 50000000;
   }
 
-  async getFundingRate(symbol: string): Promise<number> {
+  async getFundingRate(_symbol: string): Promise<number> {
     return 0.0001;
   }
 
-  async fetchOHLCV(symbol: string, interval: string, limit: number): Promise<OHLCV[]> {
+  async fetchOHLCV(_symbol: string, _interval: string, _limit: number): Promise<OHLCV[]> {
     return []; // Should be injected or handled by data engine if needed
   }
 

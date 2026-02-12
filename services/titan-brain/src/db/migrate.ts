@@ -409,6 +409,48 @@ const migration013: Migration = {
   },
 };
 
+const migration015: Migration = {
+  version: 15,
+  name: 'approval_metadata',
+  up: async (pool: Pool) => {
+    // Inline implementation of migration015 to match runner interface
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(`
+        ALTER TABLE operator_intents
+        ADD COLUMN IF NOT EXISTS approver_id TEXT,
+        ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS rejection_reason TEXT
+      `);
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+  },
+  down: async (pool: Pool) => {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(`
+        ALTER TABLE operator_intents
+        DROP COLUMN IF NOT EXISTS approver_id,
+        DROP COLUMN IF NOT EXISTS approved_at,
+        DROP COLUMN IF NOT EXISTS rejection_reason
+      `);
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+  },
+};
+
 // --- RUNNER ---
 
 const migrations: Migration[] = [
@@ -423,6 +465,7 @@ const migrations: Migration[] = [
   migration011,
   migration012,
   migration013,
+  migration015,
 ];
 
 export async function runMigrations(db: DatabaseManager): Promise<void> {

@@ -1,7 +1,24 @@
-import { OpsCommandType, OpsCommandV1 } from '@titan/shared';
+import { Logger, OpsCommandType, OpsCommandV1 } from '@titan/shared';
 import { spawn } from 'child_process';
 import { Readable } from 'stream';
 import { text as readText } from 'node:stream/consumers';
+
+const log = Logger.getInstance('titan-opsd');
+
+/**
+ * Allowlist of services that can be targeted by restart and deploy commands.
+ * Adding a new service requires a code change + deploy.
+ */
+const ALLOWED_SERVICES = [
+  'titan-brain',
+  'titan-execution-rs',
+  'titan-scavenger',
+  'titan-hunter',
+  'titan-sentinel',
+  'titan-ai-quant',
+  'titan-powerlaw-lab',
+  'titan-console-api',
+] as const;
 
 export class CommandExecutor {
   async execute(cmd: OpsCommandV1): Promise<Record<string, unknown>> {
@@ -19,10 +36,14 @@ export class CommandExecutor {
     }
   }
 
+  private validateTarget(service: string): void {
+    if (service !== 'all' && !ALLOWED_SERVICES.includes(service as (typeof ALLOWED_SERVICES)[number])) {
+      throw new Error(`Service ${service} not in allowlist`);
+    }
+  }
+
   private async handleExportEvidence(): Promise<Record<string, unknown>> {
-    // Mock implementation for MVP
-    // In reality, this would zip /artifacts and return a signed URL
-    console.log('Generating Evidence Pack...');
+    log.info('Generating Evidence Pack...');
     return {
       status: 'success',
       url: 'https://titan-console.infra/evidence/pack-latest.zip',
@@ -37,11 +58,7 @@ export class CommandExecutor {
     const service = cmd.target;
     if (!service) throw new Error('Target service required for restart');
 
-    // Safety check: allowlist of services
-    const ALLOWED = ['titan-brain', 'titan-execution-rs', 'titan-scavenger', 'titan-hunter'];
-    if (service !== 'all' && !ALLOWED.includes(service)) {
-      throw new Error(`Service ${service} not allowed for restart`);
-    }
+    this.validateTarget(service);
 
     const args =
       service === 'all'
@@ -52,9 +69,10 @@ export class CommandExecutor {
   }
 
   private async handleDeploy(cmd: OpsCommandV1): Promise<Record<string, unknown>> {
-    // Deploy implies pull + up -d
     const service = cmd.target;
-    // Similar safety checks...
+    if (!service) throw new Error('Target service required for deploy');
+
+    this.validateTarget(service);
 
     // Pull
     await this.runDocker(['compose', '-f', 'docker-compose.prod.yml', 'pull', service]);
@@ -71,12 +89,12 @@ export class CommandExecutor {
   }
 
   private async handleHalt(): Promise<Record<string, unknown>> {
-    // Emergency stop
+    log.warn('Emergency halt initiated — stopping ALL services');
     const output = await this.runDocker(['compose', '-f', 'docker-compose.prod.yml', 'stop']);
     return { output };
   }
 
-  private runDocker(args: string[]): Promise<string> {
+  protected runDocker(args: string[]): Promise<string> {
     return new Promise((resolve, reject) => {
       const child = spawn('docker', args);
       const stdoutPromise = this.readStream(child.stdout);

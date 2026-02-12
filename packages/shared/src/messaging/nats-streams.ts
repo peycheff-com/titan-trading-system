@@ -105,9 +105,9 @@ export const TITAN_STREAMS = {
     subjects: ['titan.data.venues.trades.v1.>'],
     retention: JsRetentionPolicy.Limits,
     storage: JsStorageType.File,
-    max_msgs: 1_000_000,
+    max_msgs: 10_000_000,
     max_age_ns: 7 * 24 * 60 * 60 * 1_000_000_000, // 7 days in nanoseconds
-    max_bytes: 10 * 1024 * 1024 * 1024, // 10GB
+    max_bytes: 20 * 1024 * 1024 * 1024, // 20GB
     discard: JsDiscardPolicy.Old,
     num_replicas: 1,
     description: 'Normalized market trade events from all venues',

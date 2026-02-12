@@ -30,10 +30,10 @@ import { BybitPerpsClient } from './exchanges/BybitPerpsClient';
 import { BinanceSpotClient } from './exchanges/BinanceSpotClient';
 // Console components loaded dynamically only in non-headless mode
 import { hunterEvents } from './events';
-import { POI, SignalData } from './types';
+import { SignalData } from './types';
 import { HunterStateManager } from './state/HunterState';
 import { getLogger, logError } from './logging/Logger';
-/* eslint-disable functional/immutable-data, functional/no-let */
+/* eslint-disable functional/no-let */
 import {
   getNatsClient,
   type IntentSignal,
@@ -118,7 +118,7 @@ class HunterApplication {
   private logEvent(
     level: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG' | 'CRITICAL',
     message: string,
-    data?: any
+    data?: unknown
   ): void {
     if (this.stateManager.headlessMode) {
       console.log(
@@ -126,7 +126,7 @@ class HunterApplication {
           timestamp: new Date().toISOString(),
           level,
           message,
-          ...data,
+          data,
         })
       );
     } else {
@@ -218,7 +218,7 @@ class HunterApplication {
 
       this.logEvent(
         'ERROR',
-        `${severityIcon} Error in ${payload.component}: ${payload.error.message}`,
+        `${icon} Error in ${payload.component}: ${payload.error.message}`,
         {
           severity: payload.severity,
           component: payload.component,
@@ -292,7 +292,7 @@ class HunterApplication {
 
       // Initialize IPC connection to execution engine
       this.logEvent('INFO', '🔗 Connecting to execution engine via NATS... VERIFIED UPDATE');
-      console.log('DEBUG: Env Check', {
+      this.logEvent('DEBUG', 'Env Check', {
         USER: process.env.NATS_USER,
         PASS: process.env.NATS_PASS ? 'YES' : 'NO',
         URL: process.env.NATS_URL,
@@ -312,9 +312,13 @@ class HunterApplication {
       if (!nats.isConnected()) {
         await nats.connect();
       }
-      nats.subscribe(TitanSubject.EVT_REGIME_UPDATE, (data: any) => {
+      nats.subscribe(TitanSubject.EVT_REGIME_UPDATE, (data: unknown) => {
         // Dual Read Strategy
-        const payload = data && typeof data === 'object' && 'payload' in data ? data.payload : data;
+        const payload = (
+          data && typeof data === 'object' && 'payload' in data
+            ? (data as { readonly payload: any }).payload
+            : data
+        ) as { readonly regime: string; readonly alpha: number };
 
         this.logEvent('INFO', `🧠 Market Regime Update: ${payload.regime} (α=${payload.alpha})`);
         this.hologramEngine.updateMarketRegime(payload.regime, payload.alpha);
@@ -322,8 +326,12 @@ class HunterApplication {
 
       // Initialize NATS subscription for Budget updates
       this.logEvent('INFO', '🔗 Subscribing to Budget updates...');
-      nats.subscribe(TitanSubject.EVT_BUDGET_UPDATE, (data: any) => {
-        const payload = data && typeof data === 'object' && 'payload' in data ? data.payload : data;
+      nats.subscribe(TitanSubject.EVT_BUDGET_UPDATE, (data: unknown) => {
+        const payload = (
+          data && typeof data === 'object' && 'payload' in data
+            ? (data as { readonly payload: any }).payload
+            : data
+        ) as { readonly phaseId: string; readonly allocatedEquity?: number };
 
         if (payload.phaseId === 'phase2' && payload.allocatedEquity) {
           this.logEvent('INFO', `💰 Budget Updated: $${payload.allocatedEquity.toFixed(2)}`);
@@ -473,40 +481,43 @@ class HunterApplication {
       }
 
       this.logEvent('INFO', '🎯 Running POI detection...');
-      const newPOIs: POI[] = [];
 
       // Analyze top 5 symbols for POIs
       const topSymbols = this.stateManager.currentHolograms.slice(0, 5);
 
-      for (const hologram of topSymbols) {
-        try {
-          // Fetch recent candles for POI detection
-          const candles = await this.bybitClient.fetchOHLCV(hologram.symbol, '15m', 100);
+      const newPOIsNested = await Promise.all(
+        topSymbols.map(async hologram => {
+          try {
+            // Fetch recent candles for POI detection
+            const candles = await this.bybitClient.fetchOHLCV(hologram.symbol, '15m', 100);
 
-          // Detect FVGs
-          const fvgs = this.inefficiencyMapper.detectFVG(candles);
-          newPOIs.push(...fvgs);
+            // Detect FVGs
+            const fvgs = this.inefficiencyMapper.detectFVG(candles);
 
-          // Detect Order Blocks
-          const orderBlocks = this.inefficiencyMapper.detectOrderBlock(candles, hologram.m15.bos);
-          newPOIs.push(...orderBlocks);
+            // Detect Order Blocks
+            const orderBlocks = this.inefficiencyMapper.detectOrderBlock(candles, hologram.m15.bos);
 
-          // Detect Liquidity Pools
-          const liquidityPools = this.inefficiencyMapper.detectLiquidityPools(
-            candles,
-            hologram.m15.fractals
-          );
-          newPOIs.push(...liquidityPools);
-        } catch (error) {
-          this.logEvent('ERROR', `❌ POI detection failed for ${hologram.symbol}:`, { error });
-          this.logger.logError('WARNING', `POI detection failed for ${hologram.symbol}`, {
-            symbol: hologram.symbol,
-            component: 'InefficiencyMapper',
-            function: 'runPOIDetection',
-            stack: (error as Error).stack,
-          });
-        }
-      }
+            // Detect Liquidity Pools
+            const liquidityPools = this.inefficiencyMapper.detectLiquidityPools(
+              candles,
+              hologram.m15.fractals
+            );
+
+            return [...fvgs, ...orderBlocks, ...liquidityPools];
+          } catch (error) {
+            this.logEvent('ERROR', `❌ POI detection failed for ${hologram.symbol}:`, { error });
+            this.logger.logError('WARNING', `POI detection failed for ${hologram.symbol}`, {
+              symbol: hologram.symbol,
+              component: 'InefficiencyMapper',
+              function: 'runPOIDetection',
+              stack: (error as Error).stack,
+            });
+            return [];
+          }
+        })
+      );
+
+      const newPOIs = newPOIsNested.flat();
 
       // Update active POIs
       this.stateManager.updatePOIs(newPOIs);
@@ -794,7 +805,7 @@ class HunterApplication {
       },
       timestamp: Date.now(),
     };
-    nats.publish(`${TitanSubject.EVT_PHASE_DIAGNOSTICS}.hunter`, diagnosticsPayload);
+    nats.publish(`${TitanSubject.EVT_PHASE_DIAGNOSTICS as string}.hunter`, diagnosticsPayload);
   }
 
   /**

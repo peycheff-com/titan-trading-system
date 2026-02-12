@@ -6,25 +6,38 @@ import { formatCurrency, formatPercent } from '@/types';
 import { cn } from '@/lib/utils';
 import { Brain, Shield, AlertTriangle, Activity } from 'lucide-react';
 
-const phaseColors: any = {
+const phaseColors: Record<string, string> = {
   scavenger: 'bg-phase-scavenger',
   hunter: 'bg-phase-hunter',
   sentinel: 'bg-phase-sentinel',
 };
 
-const circuitBreakerConfig: any = {
+interface CircuitBreakerConfigItem {
+  color: string;
+  bg: string;
+  label: string;
+}
+
+const circuitBreakerConfig: Record<string, CircuitBreakerConfigItem> = {
   OK: { color: 'text-status-healthy', bg: 'bg-status-healthy/10', label: 'Normal' },
   Armed: { color: 'text-warning', bg: 'bg-warning/10', label: 'Armed' },
   Tripped: { color: 'text-status-critical', bg: 'bg-status-critical/10', label: 'Tripped' },
   Cooldown: { color: 'text-primary', bg: 'bg-primary/10', label: 'Cooldown' },
 };
 
+interface PhaseAllocation {
+  phase: string;
+  current: number;
+  target: number;
+  allocated: number;
+}
+
 export default function BrainPage() {
   // Default empty state until backend integration
   const brainAllocation = {
-    phases: [] as any[],
+    phases: [] as PhaseAllocation[],
     riskMetrics: { portfolioBeta: 0, correlationBTC: 0, valueAtRisk: 0, expectedShortfall: 0 },
-    circuitBreaker: { state: 'OK', currentDrawdown: 0, drawdownThreshold: 5, lastTripped: null },
+    circuitBreaker: { state: 'OK', currentDrawdown: 0, drawdownThreshold: 5, lastTripped: null as string | null },
   };
   const correlationMatrix = { assets: [], data: [] };
 

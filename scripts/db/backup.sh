@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 # Titan Trading System - Database Backup Script
 # Usage: ./backup.sh

@@ -179,6 +179,7 @@ export function InspectorProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useInspector() {
   const ctx = useContext(InspectorContext);
   if (!ctx) throw new Error('useInspector must be used within InspectorProvider');

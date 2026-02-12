@@ -86,7 +86,7 @@ describe("Order Lifecycle E2E", () => {
 
         const envelope: TitanEnvelope = {
             id: `env-${Date.now()}`,
-            type: "titan.cmd.exec.place.v1",
+            type: "titan.cmd.execution.place.v1",
             version: 1,
             producer: "titan-brain",
             ts: Date.now(),
@@ -94,7 +94,7 @@ describe("Order Lifecycle E2E", () => {
         };
 
         // Validate envelope structure
-        expect(envelope.type).toBe("titan.cmd.exec.place.v1");
+        expect(envelope.type).toBe("titan.cmd.execution.place.v1");
         expect(envelope.version).toBe(1);
         expect(envelope.producer).toBe("titan-brain");
         expect(envelope.payload.symbol).toBe("BTC/USDT");
@@ -114,7 +114,7 @@ describe("Order Lifecycle E2E", () => {
 
         const envelope: TitanEnvelope = {
             id: `env-${Date.now()}`,
-            type: "titan.cmd.exec.place.v1",
+            type: "titan.cmd.execution.place.v1",
             version: 1,
             producer: "titan-brain",
             ts: Date.now(),
@@ -122,7 +122,7 @@ describe("Order Lifecycle E2E", () => {
         };
 
         // Simulate publishing
-        const subject = "titan.cmd.exec.place.v1.bybit.main.ETHUSDT";
+        const subject = "titan.cmd.execution.place.v1.bybit.main.ETHUSDT";
         await mockNatsClient.publish(subject, envelope);
 
         // Verify

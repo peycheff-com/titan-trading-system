@@ -20,8 +20,17 @@ import {
 } from '@/components/ui/card';
 import { AlertTriangle } from 'lucide-react';
 
+interface OrderSubmission {
+  symbol: string;
+  side: 'Buy' | 'Sell';
+  type: 'Market' | 'Limit';
+  price: number | null;
+  size: number;
+  timestamp: number;
+}
+
 interface OrderFormProps {
-  onPlaceOrder: (order: any) => void;
+  onPlaceOrder: (order: OrderSubmission) => void;
   symbols: string[];
 }
 

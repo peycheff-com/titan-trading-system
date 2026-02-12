@@ -7,7 +7,7 @@ console.log('Titan Console: API_BASE is', API_BASE);
 
 interface ApiOptions {
   method?: 'GET' | 'POST' | 'DELETE' | 'PUT';
-  body?: any;
+  body?: unknown;
 }
 
 export function useTitanData() {

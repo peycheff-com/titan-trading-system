@@ -40,7 +40,6 @@ export async function requestExecutionPolicyHash(
   timeoutMs = 5000,
   retries = 3,
 ): Promise<PolicyHashResponse> {
-   
   let lastError: Error | undefined;
 
   for (let attempt = 1; attempt <= retries; attempt++) {

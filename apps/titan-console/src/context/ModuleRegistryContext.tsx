@@ -17,6 +17,7 @@ export function ModuleRegistryProvider({
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useModuleRegistry() {
   const context = useContext(ModuleRegistryContext);
   if (!context) {

@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 
 interface WebSocketMessage {
   type: string;
-  payload?: any;
+  payload?: Record<string, unknown>;
 }
 
 export const NotificationManager = () => {
@@ -32,7 +32,7 @@ export const NotificationManager = () => {
       case 'RISK_ALERT':
         playSound();
         toast.error('Risk Alert', {
-          description: msg.payload?.message || 'Critical risk threshold breached.',
+          description: String(msg.payload?.message || 'Critical risk threshold breached.'),
           duration: 5000,
           action: {
             label: 'View Risk',
@@ -43,7 +43,7 @@ export const NotificationManager = () => {
 
       case 'ORDER_FILLED':
         toast.success('Order Filled', {
-          description: `${msg.payload?.side} ${msg.payload?.symbol} @ ${msg.payload?.price}`,
+          description: `${String(msg.payload?.side ?? '')} ${String(msg.payload?.symbol ?? '')} @ ${String(msg.payload?.price ?? '')}`,
           action: {
             label: 'View',
             onClick: () => window.location.href = '/orders',
@@ -54,7 +54,7 @@ export const NotificationManager = () => {
       case 'ORDER_REJECTED':
         playSound();
         toast.warning('Order Rejected', {
-          description: msg.payload?.reason || 'Order could not be processed.',
+          description: String(msg.payload?.reason || 'Order could not be processed.'),
         });
         break;
 
@@ -73,7 +73,7 @@ export const NotificationManager = () => {
       case 'CIRCUIT_BREAKER_TRIP':
         playSound();
         toast.error('Circuit Breaker Tripped', {
-          description: `System halted due to ${msg.payload?.reason || 'volatility'}.`,
+          description: `System halted due to ${String(msg.payload?.reason || 'volatility')}.`,
           duration: 10000,
           action: {
             label: 'Reset',

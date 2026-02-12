@@ -4,7 +4,7 @@
 services:
   # Core Services
   postgres:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     container_name: titan-postgres
     environment:
       POSTGRES_USER: postgres

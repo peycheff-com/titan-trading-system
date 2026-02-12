@@ -9,13 +9,13 @@ export interface FeatureRecord {
 }
 
 export class FeatureStoreClient {
-  private redis: any; // Use any to bypass TS namespace errors with ioredis
+  private redis: Redis;
   private logger: Logger;
   private readonly PREFIX = 'titan:features:';
 
-  constructor(logger: Logger, redisUrl: string) {
+  constructor(logger: Logger, redisClient: Redis) {
     this.logger = logger;
-    this.redis = new (Redis as any)(redisUrl);
+    this.redis = redisClient;
   }
 
   public async put(
@@ -55,6 +55,6 @@ export class FeatureStoreClient {
   }
 
   public async disconnect(): Promise<void> {
-    await this.redis.quit();
+    // No-op: Redis lifecycle managed by RedisFactory
   }
 }

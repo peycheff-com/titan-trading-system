@@ -5,12 +5,12 @@ set -e
 # Usage: ./scripts/smoke_prod.sh
 
 # 1. Check if containers are running
-if [ $(docker ps | grep "titan-brain" | wc -l) -eq 0 ]; then
+if ! docker ps | grep -q "titan-brain"; then
     echo "❌ Brain is not running!"
     exit 1
 fi
 
-if [ $(docker ps | grep "titan-execution" | wc -l) -eq 0 ]; then
+if ! docker ps | grep -q "titan-execution"; then
     echo "❌ Execution is not running!"
     exit 1
 fi

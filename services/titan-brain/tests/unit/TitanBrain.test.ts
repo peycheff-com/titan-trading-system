@@ -222,10 +222,20 @@ function createTitanBrain(): TitanBrain {
     emit: jest.fn(),
   } as unknown as GovernanceEngine;
 
+  // Mock BayesianCalibrator
+  const mockBayesianCalibrator = {
+      getCalibratedProbability: jest.fn().mockReturnValue(0.8),
+      getShrinkageReport: jest.fn().mockReturnValue({}),
+      recordOutcome: jest.fn(),
+      init: jest.fn().mockResolvedValue(undefined),
+  } as any;
+
   const riskGuardian = new RiskGuardian(
     riskConfig,
     allocationEngine,
     governanceEngine,
+    mockBayesianCalibrator,
+    mockNatsClient as any,
   );
   const capitalFlowManager = new CapitalFlowManager(capitalFlowConfig);
   const circuitBreaker = new CircuitBreaker(circuitBreakerConfig);

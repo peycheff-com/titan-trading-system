@@ -9,6 +9,7 @@
 
 import WebSocket from 'ws';
 import { Trade } from '../types';
+import { getLogger } from '../logging/Logger';
 
 // Use require for node-fetch to avoid ES modules issues in Jest
 import fetch from 'node-fetch';
@@ -67,7 +68,7 @@ export class BinanceSpotClient {
     }
 
     try {
-      console.log('📡 Initializing Binance Spot Client...');
+      getLogger().info('📡 Initializing Binance Spot Client...');
 
       // Test connection by fetching server time
       const response = await fetch(`${this.baseUrl}/api/v3/time`);
@@ -77,9 +78,9 @@ export class BinanceSpotClient {
 
       // eslint-disable-next-line functional/immutable-data
       this.isInitialized = true;
-      console.log('✅ Binance Spot Client initialized');
+      getLogger().info('✅ Binance Spot Client initialized');
     } catch (error) {
-      console.error('❌ Failed to initialize Binance client:', error);
+      getLogger().error('❌ Failed to initialize Binance client:', error as Error);
       throw error;
     }
   }
@@ -93,7 +94,7 @@ export class BinanceSpotClient {
     }
 
     try {
-      console.log('📡 Disconnecting Binance Spot Client...');
+      getLogger().info('📡 Disconnecting Binance Spot Client...');
 
       // Close WebSocket connection
       if (this.ws) {
@@ -119,9 +120,9 @@ export class BinanceSpotClient {
 
       // eslint-disable-next-line functional/immutable-data
       this.isInitialized = false;
-      console.log('✅ Binance Spot Client disconnected');
+      getLogger().info('✅ Binance Spot Client disconnected');
     } catch (error) {
-      console.error('❌ Error disconnecting Binance client:', error);
+      getLogger().error('❌ Error disconnecting Binance client:', error as Error);
       throw error;
     }
   }
@@ -334,7 +335,7 @@ export class BinanceSpotClient {
       this.lastPongTime = Date.now();
 
       this.ws.on('open', () => {
-        console.log('🔗 Binance WebSocket connected');
+        getLogger().info('🔗 Binance WebSocket connected');
         // eslint-disable-next-line functional/immutable-data
         this.reconnectAttempts = 0;
         // eslint-disable-next-line functional/immutable-data
@@ -368,12 +369,12 @@ export class BinanceSpotClient {
       });
 
       this.ws.on('error', (error: Error) => {
-        console.error('❌ Binance WebSocket error:', error.message);
+        getLogger().error('❌ Binance WebSocket error:', error);
         this.emitError(error);
       });
 
       this.ws.on('close', (code: number, reason: Buffer) => {
-        console.log(`🔌 Binance WebSocket closed: ${code} ${reason.toString()}`);
+        getLogger().info(`🔌 Binance WebSocket closed: ${code} ${reason.toString()}`);
         // eslint-disable-next-line functional/immutable-data
         this.ws = null;
 
@@ -441,9 +442,10 @@ export class BinanceSpotClient {
   /**
    * Handle incoming WebSocket messages
    */
-  private handleMessage(message: any): void {
+  private handleMessage(message: unknown): void {
+    const msg = message as { e?: string; result?: string | null; id?: number; error?: { msg: string } };
     // Handle aggregate trade data
-    if (message.e === 'aggTrade') {
+    if (msg.e === 'aggTrade') {
       const aggTrade = message as BinanceAggTrade;
       const trade: Trade = {
         price: parseFloat(aggTrade.p),
@@ -471,11 +473,11 @@ export class BinanceSpotClient {
     }
 
     // Handle subscription confirmations and errors
-    if (message.result === null && message.id) {
+    if (msg.result === null && msg.id) {
       // Subscription successful
-      console.log(`✅ Binance subscription confirmed: ${message.id}`);
-    } else if (message.error) {
-      this.emitError(new Error(`Binance WebSocket error: ${message.error.msg}`));
+      getLogger().info(`✅ Binance subscription confirmed: ${msg.id}`);
+    } else if (msg.error) {
+      this.emitError(new Error(`Binance WebSocket error: ${msg.error.msg}`)); // msg.error.msg is safe here
     }
   }
 
@@ -498,7 +500,7 @@ export class BinanceSpotClient {
     this.reconnectAttempts++;
 
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1); // Exponential backoff
-    console.log(
+    getLogger().info(
       `🔄 Attempting to reconnect to Binance WebSocket (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}) in ${delay}ms`
     );
 
@@ -519,7 +521,7 @@ export class BinanceSpotClient {
         const timeSinceLastPong = Date.now() - this.lastPongTime;
         if (timeSinceLastPong > 30000) {
           // 30 seconds timeout
-          console.warn('⚠️ Binance WebSocket heartbeat timeout, closing connection');
+          getLogger().warn('⚠️ Binance WebSocket heartbeat timeout, closing connection');
           this.ws.close();
           return;
         }
@@ -538,7 +540,7 @@ export class BinanceSpotClient {
       try {
         callback(error);
       } catch (callbackError) {
-        console.error('Error in error callback:', callbackError);
+        getLogger().error('Error in error callback:', callbackError as Error);
       }
     });
   }
@@ -551,7 +553,7 @@ export class BinanceSpotClient {
       try {
         callback();
       } catch (callbackError) {
-        console.error('Error in reconnect callback:', callbackError);
+        getLogger().error('Error in reconnect callback:', callbackError as Error);
       }
     });
   }

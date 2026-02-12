@@ -9,12 +9,12 @@ global.fetch = mockFetch;
 
 // Mock child components to simplify test (optional but cleaner)
 vi.mock('@/components/ui/card', () => ({
-  Card: ({ children }: any) => <div data-testid="card">{children}</div>,
-  CardHeader: ({ children }: any) => <div>{children}</div>,
-  CardTitle: ({ children }: any) => <div>{children}</div>,
-  CardDescription: ({ children }: any) => <div>{children}</div>,
-  CardContent: ({ children }: any) => <div>{children}</div>,
-  CardFooter: ({ children }: any) => <div>{children}</div>,
+  Card: ({ children }: { children: React.ReactNode }) => <div data-testid="card">{children}</div>,
+  CardHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  CardTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  CardDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  CardContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  CardFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 vi.mock('@/hooks/use-toast', () => ({

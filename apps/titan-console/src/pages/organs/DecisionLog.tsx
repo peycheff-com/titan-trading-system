@@ -16,6 +16,19 @@ interface OperatorAction {
   operatorId: string;
 }
 
+interface TitanEvent {
+  id: string;
+  type: string;
+  metadata?: {
+    timestamp?: string;
+    actor?: string;
+  };
+  payload?: {
+    reason?: string;
+    operatorId?: string;
+  };
+}
+
 export default function DecisionLog() {
   const { token } = useAuth();
   // Mock AI Data (keep for now)
@@ -44,7 +57,7 @@ export default function DecisionLog() {
           if (data.data) {
             // Map TitanEvent to OperatorAction
             const mapped = data.data
-              .filter((e: any) =>
+              .filter((e: TitanEvent) =>
                 [
                   'SYSTEM_HALT',
                   'MANUAL_OVERRIDE',
@@ -53,12 +66,12 @@ export default function DecisionLog() {
                   'RISK_CONFIG_UPDATE',
                 ].includes(e.type),
               )
-              .map((e: any) => ({
+              .map((e: TitanEvent) => ({
                 id: e.id,
                 timestamp: new Date(e.metadata?.timestamp || Date.now()).getTime(),
                 action: e.type,
                 reason: e.payload?.reason || 'No reason provided',
-                status: 'EXECUTED', // Default since event log implies executed/recorded
+                status: 'EXECUTED' as const, // Default since event log implies executed/recorded
                 operatorId: e.payload?.operatorId || e.metadata?.actor || 'unknown',
               }));
             setAuditLogs(mapped);

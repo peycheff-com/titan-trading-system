@@ -10,6 +10,7 @@
 import { EventEmitter } from 'events';
 import { Position, OHLCV } from '../types';
 import { BybitPerpsClient } from '../exchanges/BybitPerpsClient';
+import { getLogger } from '../logging/Logger';
 
 export interface CorrelationData {
   symbol1: string;
@@ -105,7 +106,7 @@ export class CorrelationManager extends EventEmitter {
       ]);
 
       if (data1.length < 24 || data2.length < 24) {
-        console.warn(
+        getLogger().warn(
           `⚠️ Insufficient data for correlation: ${symbol1} (${data1.length}), ${symbol2} (${data2.length})`
         );
         return 0;
@@ -114,7 +115,9 @@ export class CorrelationManager extends EventEmitter {
       // Align data by timestamp and calculate returns
       const alignedData = this.alignPriceData(data1, data2);
       if (alignedData.length < 20) {
-        console.warn(`⚠️ Insufficient aligned data for correlation: ${alignedData.length} points`);
+        getLogger().warn(
+          `⚠️ Insufficient aligned data for correlation: ${alignedData.length} points`
+        );
         return 0;
       }
 
@@ -130,7 +133,10 @@ export class CorrelationManager extends EventEmitter {
 
       return correlation;
     } catch (error) {
-      console.error(`❌ Failed to calculate correlation between ${symbol1} and ${symbol2}:`, error);
+      getLogger().error(
+        `❌ Failed to calculate correlation between ${symbol1} and ${symbol2}:`,
+        error as Error
+      );
       return 0;
     }
   }
@@ -168,7 +174,7 @@ export class CorrelationManager extends EventEmitter {
       // Check rejection threshold (0.85)
       if (maxCorrelation >= this.config.rejectThreshold) {
         this.emit('correlation:reject', candidateSymbol, maxCorrelation, conflictSymbol);
-        console.log(
+        getLogger().info(
           `🚫 Signal rejected: ${candidateSymbol} correlation ${maxCorrelation.toFixed(3)} with ${conflictSymbol} exceeds ${this.config.rejectThreshold}`
         );
 
@@ -189,7 +195,7 @@ export class CorrelationManager extends EventEmitter {
           proposedSize,
           adjustedSize
         );
-        console.log(
+        getLogger().info(
           `📉 Position size reduced: ${candidateSymbol} ${proposedSize} → ${adjustedSize} (correlation ${maxCorrelation.toFixed(3)} with ${conflictSymbol})`
         );
 
@@ -207,7 +213,10 @@ export class CorrelationManager extends EventEmitter {
         correlation: maxCorrelation,
       };
     } catch (error) {
-      console.error(`❌ Failed to check correlation limit for ${candidateSymbol}:`, error);
+      getLogger().error(
+        `❌ Failed to check correlation limit for ${candidateSymbol}:`,
+        error as Error
+      );
       return { allowed: true }; // Allow on error to avoid blocking trades
     }
   }
@@ -287,14 +296,14 @@ export class CorrelationManager extends EventEmitter {
 
       if (exposurePercentage > maxExposure) {
         this.emit('correlation:exposure_limit', exposurePercentage, maxExposure);
-        console.warn(
+        getLogger().warn(
           `⚠️ Correlated exposure ${(exposurePercentage * 100).toFixed(1)}% exceeds limit ${(maxExposure * 100).toFixed(1)}%`
         );
       }
 
       return exposurePercentage;
     } catch (error) {
-      console.error(`❌ Failed to calculate total correlated exposure:`, error);
+      getLogger().error(`❌ Failed to calculate total correlated exposure:`, error as Error);
       return 0;
     }
   }
@@ -346,11 +355,11 @@ export class CorrelationManager extends EventEmitter {
         this.emit('correlation:high_beta', highBetaState);
 
         if (isHighBeta) {
-          console.warn(
+          getLogger().warn(
             `🔴 HIGH BETA market detected: BTC correlation ${avgBtcCorrelation.toFixed(3)}, ${affectedSymbols.length} symbols affected`
           );
         } else {
-          console.log(
+          getLogger().info(
             `🟢 Normal market conditions: BTC correlation ${avgBtcCorrelation.toFixed(3)}`
           );
         }
@@ -358,7 +367,7 @@ export class CorrelationManager extends EventEmitter {
 
       return highBetaState;
     } catch (error) {
-      console.error(`❌ Failed to detect high beta conditions:`, error);
+      getLogger().error(`❌ Failed to detect high beta conditions:`, error as Error);
       return {
         isHighBeta: false,
         btcCorrelation: 0,
@@ -410,7 +419,7 @@ export class CorrelationManager extends EventEmitter {
       this.emit('correlation:updated', correlationMatrix);
       return correlationMatrix;
     } catch (error) {
-      console.error(`❌ Failed to generate correlation matrix:`, error);
+      getLogger().error(`❌ Failed to generate correlation matrix:`, error as Error);
       return {
         symbols: [],
         matrix: [],
@@ -444,7 +453,7 @@ export class CorrelationManager extends EventEmitter {
 
       return data;
     } catch (error) {
-      console.error(`❌ Failed to get price history for ${symbol}:`, error);
+      getLogger().error(`❌ Failed to get price history for ${symbol}:`, error as Error);
       return [];
     }
   }
@@ -592,7 +601,7 @@ export class CorrelationManager extends EventEmitter {
       await this.updateCorrelations();
     }, this.config.updateIntervalMs);
 
-    console.log(
+    getLogger().info(
       `📊 Correlation Manager: Started monitoring (${this.config.updateIntervalMs / 1000}s interval)`
     );
   }
@@ -606,7 +615,7 @@ export class CorrelationManager extends EventEmitter {
       // eslint-disable-next-line functional/immutable-data
       this.updateInterval = null;
     }
-    console.log(`📊 Correlation Manager: Stopped monitoring`);
+    getLogger().info(`📊 Correlation Manager: Stopped monitoring`);
   }
 
   /**
@@ -640,11 +649,11 @@ export class CorrelationManager extends EventEmitter {
         }
       }
 
-      console.log(
+      getLogger().info(
         `📊 Correlation cache updated: ${this.correlationCache.size} pairs, ${this.priceHistory.size} symbols`
       );
     } catch (error) {
-      console.error(`❌ Failed to update correlations:`, error);
+      getLogger().error(`❌ Failed to update correlations:`, error as Error);
     }
   }
 
@@ -681,7 +690,7 @@ export class CorrelationManager extends EventEmitter {
   public updateConfig(newConfig: Partial<CorrelationManagerConfig>): void {
     // eslint-disable-next-line functional/immutable-data
     this.config = { ...this.config, ...newConfig };
-    console.log(`📊 Correlation Manager: Configuration updated`);
+    getLogger().info(`📊 Correlation Manager: Configuration updated`);
   }
 
   /**
@@ -694,7 +703,7 @@ export class CorrelationManager extends EventEmitter {
     this.priceHistory.clear();
     // eslint-disable-next-line functional/immutable-data
     this.highBetaState = null;
-    console.log(`📊 Correlation Manager: Cache cleared`);
+    getLogger().info(`📊 Correlation Manager: Cache cleared`);
   }
 
   /**
@@ -704,7 +713,7 @@ export class CorrelationManager extends EventEmitter {
     this.stopMonitoring();
     this.clearCache();
     this.removeAllListeners();
-    console.log(`📊 Correlation Manager: Destroyed`);
+    getLogger().info(`📊 Correlation Manager: Destroyed`);
   }
 }
 

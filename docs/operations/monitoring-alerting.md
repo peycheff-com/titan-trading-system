@@ -40,7 +40,7 @@ Traces allow visualization of the "Message-to-Fill" lifecycle across the NATS bu
 
 Grafana dashboards are provisioned from:
 
-- `monitoring/grafana/dashboards/titan-comprehensive.json`
+- `services/titan-brain/monitoring/grafana-dashboard-comprehensive.json`
 
 Use this dashboard for:
 

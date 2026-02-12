@@ -18,8 +18,8 @@ interface SimulationResult {
     timestamp: string;
   }[];
   stateDiff?: {
-    before: Record<string, any>;
-    after: Record<string, any>;
+    before: Record<string, unknown>;
+    after: Record<string, unknown>;
   };
 }
 
@@ -53,6 +53,7 @@ export function SimulationPanel({ onRun, isSimulating, result }: SimulationPanel
       {/* Controls */}
       <div className="p-4 border-b border-border space-y-3">
         <div className="space-y-1.5">
+          {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- select is the associated control */}
           <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
             <Clock className="h-3.5 w-3.5" />
             Time Travel (Historical State)

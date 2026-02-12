@@ -9,6 +9,7 @@
 
 import { createHmac } from 'crypto';
 import { OHLCV, OrderParams, OrderResult, OrderStatus } from '../types';
+import { getLogger } from '../logging/Logger';
 
 export interface BybitSymbolInfo {
   symbol: string;
@@ -29,6 +30,14 @@ export interface BybitSymbolInfo {
     maxPrice: string;
     tickSize: string;
   };
+}
+
+interface BybitApiResponse<T = unknown> {
+  retCode: number;
+  retMsg: string;
+  result: T;
+  retExtInfo: unknown;
+  time: number;
 }
 
 export interface BybitTickerInfo {
@@ -132,8 +141,7 @@ export class BybitPerpsClient {
   private baseUrl = 'https://api.bybit.com';
   private apiKey: string;
   private apiSecret: string;
-   
-  private cache = new Map<string, CacheEntry<any>>();
+  private cache = new Map<string, CacheEntry<unknown>>();
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
   private readonly REQUEST_TIMEOUT = 10000; // 10 seconds
   private readonly RETRY_ATTEMPTS = 3;
@@ -155,7 +163,7 @@ export class BybitPerpsClient {
     }
 
     try {
-      console.log('📡 Initializing Bybit Perps Client...');
+      getLogger().info('📡 Initializing Bybit Perps Client...');
 
       // Test connection by fetching server time
       await this.makeRequest('GET', '/v5/market/time');
@@ -164,19 +172,19 @@ export class BybitPerpsClient {
       if (this.apiKey && this.apiSecret) {
         try {
           await this.getEquity();
-          console.log('✅ Bybit authentication successful');
-        } catch (error) {
-          console.warn('⚠️ Bybit authentication failed, continuing in read-only mode');
+          getLogger().info('✅ Bybit authentication successful');
+        } catch {
+          getLogger().warn('⚠️ Bybit authentication failed, continuing in read-only mode');
         }
       } else {
-        console.log('ℹ️ Bybit running in read-only mode (no API keys)');
+        getLogger().info('ℹ️ Bybit running in read-only mode (no API keys)');
       }
 
       // eslint-disable-next-line functional/immutable-data
       this.isInitialized = true;
-      console.log('✅ Bybit Perps Client initialized');
+      getLogger().info('✅ Bybit Perps Client initialized');
     } catch (error) {
-      console.error('❌ Failed to initialize Bybit client:', error);
+      getLogger().error('❌ Failed to initialize Bybit client:', error as Error);
       throw error;
     }
   }
@@ -190,7 +198,7 @@ export class BybitPerpsClient {
     }
 
     try {
-      console.log('📡 Disconnecting Bybit Perps Client...');
+      getLogger().info('📡 Disconnecting Bybit Perps Client...');
 
       // Clear cache
       // eslint-disable-next-line functional/immutable-data
@@ -198,9 +206,9 @@ export class BybitPerpsClient {
 
       // eslint-disable-next-line functional/immutable-data
       this.isInitialized = false;
-      console.log('✅ Bybit Perps Client disconnected');
+      getLogger().info('✅ Bybit Perps Client disconnected');
     } catch (error) {
-      console.error('❌ Error disconnecting Bybit client:', error);
+      getLogger().error('❌ Error disconnecting Bybit client:', error as Error);
       throw error;
     }
   }
@@ -215,16 +223,18 @@ export class BybitPerpsClient {
     if (cached) return cached;
 
     try {
-      const response = await this.makeRequest('GET', '/v5/market/tickers', {
-        category: 'linear',
-      });
+      const response = await this.makeRequest<{ list: BybitTickerInfo[] }>(
+        'GET',
+        '/v5/market/tickers',
+        { category: 'linear' }
+      );
 
       if (response.retCode !== 0) {
         throw new Error(`Bybit API error: ${response.retMsg}`);
       }
 
       // Sort by 24h volume and take top 100
-      const tickers = response.result.list as BybitTickerInfo[];
+      const tickers = response.result.list;
       const sortedSymbols = tickers
         .filter(ticker => ticker.symbol.endsWith('USDT'))
         .sort((a, b) => parseFloat(b.turnover24h) - parseFloat(a.turnover24h))
@@ -256,7 +266,7 @@ export class BybitPerpsClient {
       // Convert interval to Bybit format
       const bybitInterval = this.convertInterval(interval);
 
-      const response = await this.makeRequest('GET', '/v5/market/kline', {
+      const response = await this.makeRequest<BybitKlineData>('GET', '/v5/market/kline', {
         category: 'linear',
         symbol: symbol.toUpperCase(),
         interval: bybitInterval,
@@ -267,7 +277,7 @@ export class BybitPerpsClient {
         throw new Error(`Bybit API error: ${response.retMsg}`);
       }
 
-      const klineData = response.result as BybitKlineData;
+      const klineData = response.result;
       const ohlcv: OHLCV[] = klineData.list.map(candle => ({
         timestamp: parseInt(candle[0]),
         open: parseFloat(candle[1]),
@@ -299,7 +309,7 @@ export class BybitPerpsClient {
    */
   public async getCurrentPrice(symbol: string): Promise<number> {
     try {
-      const response = await this.makeRequest('GET', '/v5/market/tickers', {
+      const response = await this.makeRequest<{ list: BybitTickerInfo[] }>('GET', '/v5/market/tickers', {
         category: 'linear',
         symbol: symbol.toUpperCase(),
       });
@@ -308,7 +318,7 @@ export class BybitPerpsClient {
         throw new Error(`Bybit API error: ${response.retMsg}`);
       }
 
-      const ticker = response.result.list[0] as BybitTickerInfo;
+      const ticker = response.result.list[0];
       if (!ticker) {
         throw new Error(`No ticker data found for ${symbol}`);
       }
@@ -329,7 +339,7 @@ export class BybitPerpsClient {
    */
   public async getEquity(): Promise<number> {
     try {
-      const response = await this.makeRequest(
+      const response = await this.makeRequest<{ list: BybitAccountInfo[] }>(
         'GET',
         '/v5/account/wallet-balance',
         {
@@ -342,7 +352,7 @@ export class BybitPerpsClient {
         throw new Error(`Bybit API error: ${response.retMsg}`);
       }
 
-      const account = response.result.list[0] as BybitAccountInfo;
+      const account = response.result.list[0];
       if (!account) {
         throw new Error('No account data found');
       }
@@ -391,13 +401,18 @@ export class BybitPerpsClient {
         orderParams.takeProfit = params.takeProfit.toString();
       }
 
-      const response = await this.makeRequest('POST', '/v5/order/create', orderParams, true);
+      const response = await this.makeRequest<BybitOrderResponse>(
+        'POST',
+        '/v5/order/create',
+        orderParams,
+        true
+      );
 
       if (response.retCode !== 0) {
         throw new Error(`Bybit API error: ${response.retMsg}`);
       }
 
-      const orderData = response.result as BybitOrderResponse;
+      const orderData = response.result;
 
       return {
         orderId: orderData.orderId,
@@ -444,7 +459,9 @@ export class BybitPerpsClient {
         lastError = error instanceof Error ? error : new Error('Unknown error');
 
         if (attempt < maxRetries) {
-          console.warn(`⚠️ Order attempt ${attempt + 1} failed, retrying: ${lastError.message}`);
+          getLogger().warn(
+            `⚠️ Order attempt ${attempt + 1} failed, retrying: ${lastError.message}`
+          );
           await this.sleep(this.RETRY_DELAY);
         }
       }
@@ -573,7 +590,7 @@ export class BybitPerpsClient {
    */
   public async getOrderStatus(orderId: string, symbol: string): Promise<OrderStatus> {
     try {
-      const response = await this.makeRequest(
+      const response = await this.makeRequest<{ list: BybitOrderResponse[] }>(
         'GET',
         '/v5/order/realtime',
         {
@@ -588,7 +605,7 @@ export class BybitPerpsClient {
         throw new Error(`Bybit API error: ${response.retMsg}`);
       }
 
-      const orders = response.result.list as BybitOrderResponse[];
+      const orders = response.result.list;
       if (orders.length === 0) {
         throw new Error(`Order ${orderId} not found`);
       }
@@ -639,7 +656,7 @@ export class BybitPerpsClient {
    */
   public async getPositionInfo(symbol: string): Promise<BybitPositionInfo | null> {
     try {
-      const response = await this.makeRequest(
+      const response = await this.makeRequest<{ list: BybitPositionInfo[] }>(
         'GET',
         '/v5/position/list',
         {
@@ -653,7 +670,7 @@ export class BybitPerpsClient {
         throw new Error(`Bybit API error: ${response.retMsg}`);
       }
 
-      const positions = response.result.list as BybitPositionInfo[];
+      const positions = response.result.list;
       return positions.length > 0 ? positions[0] : null;
     } catch (error) {
       throw new Error(
@@ -670,13 +687,12 @@ export class BybitPerpsClient {
    * @param signed - Whether to sign the request
    * @returns Promise with API response
    */
-  private async makeRequest(
+  private async makeRequest<T = unknown>(
     method: 'GET' | 'POST',
     endpoint: string,
-     
-    params: any = {},
-    signed: boolean = false
-  ): Promise<any> {
+    params: Record<string, unknown> = {},
+    signed = false
+  ): Promise<BybitApiResponse<T>> {
     const timestamp = Date.now().toString();
     // eslint-disable-next-line functional/no-let
     let url = `${this.baseUrl}${endpoint}`;
@@ -696,8 +712,16 @@ export class BybitPerpsClient {
     }
 
     // Prepare request data
+    // eslint-disable-next-line functional/no-let
+    let queryString = '';
     if (method === 'GET') {
-      const queryString = new URLSearchParams(params).toString();
+      const searchParams = new URLSearchParams();
+      for (const [key, value] of Object.entries(params)) {
+        if (value !== undefined && value !== null) {
+          searchParams.append(key, String(value));
+        }
+      }
+      queryString = searchParams.toString();
       if (queryString) {
         url += `?${queryString}`;
       }
@@ -708,10 +732,7 @@ export class BybitPerpsClient {
     // Generate signature for authenticated requests
     if (signed) {
       const signaturePayload =
-        timestamp +
-        this.apiKey +
-        '5000' +
-        (method === 'GET' ? new URLSearchParams(params).toString() : body);
+        timestamp + this.apiKey + '5000' + (method === 'GET' ? queryString : body);
       // eslint-disable-next-line functional/immutable-data
       headers['X-BAPI-SIGN'] = createHmac('sha256', this.apiSecret)
         .update(signaturePayload)
@@ -735,7 +756,7 @@ export class BybitPerpsClient {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      return await response.json();
+      return (await response.json()) as BybitApiResponse<T>;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');

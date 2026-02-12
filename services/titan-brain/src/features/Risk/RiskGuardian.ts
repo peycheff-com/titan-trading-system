@@ -100,15 +100,16 @@ export class RiskGuardian {
     config: RiskGuardianConfig,
     allocationEngine: AllocationEngine,
     governanceEngine: GovernanceEngine,
+    bayesianCalibrator: BayesianCalibrator,
     natsClient?: NatsClient,
   ) {
     this.config = config;
     this.allocationEngine = allocationEngine;
     this.governanceEngine = governanceEngine;
+    this.bayesianCalibrator = bayesianCalibrator;
     this.natsClient = natsClient;
     this.changePointDetector = new ChangePointDetector();
     this.tailRiskCalculator = new TailRiskCalculator();
-    this.bayesianCalibrator = new BayesianCalibrator();
 
     // Listener moved to NatsConsumer -> TitanBrain -> RiskGuardian
     // if (this.natsClient) {

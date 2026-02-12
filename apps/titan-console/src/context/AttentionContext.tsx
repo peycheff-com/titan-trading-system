@@ -78,8 +78,9 @@ export const AttentionProvider: React.FC<{ children: ReactNode }> = ({ children 
     // broadcastNotification(payload) sends object with type: 'NOTIFICATION', ...payload
     
     // So lastMessage will have type: 'NOTIFICATION' and the rest properties
-    if (lastMessage.type === 'NOTIFICATION' || lastMessage.type === NotificationType.SYSTEM_ERROR /* Legacy compat? */) { 
-       const payload = lastMessage as NotificationPayload; // It has type, id, etc. directly on it based on verified implementation
+    const msg = lastMessage as Record<string, unknown>;
+    if (msg.type === 'NOTIFICATION' || msg.type === NotificationType.SYSTEM_ERROR /* Legacy compat? */) { 
+       const payload = msg as unknown as NotificationPayload; // It has type, id, etc. directly on it based on verified implementation
        
        // Add to state
        setNotifications(prev => {
@@ -137,6 +138,7 @@ export const AttentionProvider: React.FC<{ children: ReactNode }> = ({ children 
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAttention = () => {
   const context = useContext(AttentionContext);
   if (context === undefined) {

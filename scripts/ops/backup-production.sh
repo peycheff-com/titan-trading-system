@@ -1,7 +1,7 @@
 #!/bin/bash
 # JetStream and PostgreSQL Backup Script for Production
 # Part of INV-02: JetStream Durability invariant
-set -e
+set -euo pipefail
 
 # Colors
 GREEN='\033[0;32m'

@@ -10,15 +10,15 @@ export interface FeatureFlags {
 export class FeatureManager extends EventEmitter {
   private static instance: FeatureManager;
   private logger: Logger;
-  private redis: any; // Use any to bypass TS namespace errors with ioredis
+  private redis: Redis;
   private flags: FeatureFlags = {};
   private pollInterval: NodeJS.Timeout | null = null;
   private readonly FLAG_KEY = 'titan:features';
 
-  private constructor(logger: Logger, redisUrl: string) {
+  private constructor(logger: Logger, redisClient: Redis) {
     super();
     this.logger = logger;
-    this.redis = new (Redis as any)(redisUrl);
+    this.redis = redisClient;
 
     // Default flags
     this.flags = {
@@ -27,9 +27,9 @@ export class FeatureManager extends EventEmitter {
     };
   }
 
-  public static getInstance(logger: Logger, redisUrl: string): FeatureManager {
+  public static getInstance(logger: Logger, redisClient: Redis): FeatureManager {
     if (!FeatureManager.instance) {
-      FeatureManager.instance = new FeatureManager(logger, redisUrl);
+      FeatureManager.instance = new FeatureManager(logger, redisClient);
     }
     return FeatureManager.instance;
   }
@@ -46,10 +46,9 @@ export class FeatureManager extends EventEmitter {
   public stop(): void {
     if (this.pollInterval) {
       clearInterval(this.pollInterval);
-
       this.pollInterval = null;
     }
-    this.redis.disconnect();
+    // Redis lifecycle managed by factory
   }
 
   public get(key: string, defaultValue: boolean | string | number): boolean | string | number {

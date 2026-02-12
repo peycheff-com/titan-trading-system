@@ -1,7 +1,7 @@
 /* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 import { EventEmitter } from 'eventemitter3';
 import { NatsClient } from '../messaging/NatsClient.js';
-import { KV, NatsConnection } from 'nats';
+import { KV } from 'nats';
 import { Logger } from '../logger/Logger.js';
 
 export interface LeaderElectorConfig {
@@ -144,7 +144,6 @@ export class LeaderElector extends EventEmitter {
 
     try {
       const entry = await this.kv.get(this.config.key);
-      const now = Date.now();
 
       if (!entry) {
         // No leader, try to acquire
@@ -166,10 +165,10 @@ export class LeaderElector extends EventEmitter {
           }
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       // CASE: Key might not exist (handled by !entry usually, but KV errs on get sometimes if 404 depending on client ver)
       // If err is 'wrong last sequence' (CAS fail), we lost race.
-      if (err.message?.includes('wrong last sequence')) {
+      if (err instanceof Error && err.message?.includes('wrong last sequence')) {
         return;
       }
 

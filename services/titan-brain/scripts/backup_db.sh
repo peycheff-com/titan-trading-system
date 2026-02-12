@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 # Configuration
 DB_HOST=${DB_HOST:-localhost}

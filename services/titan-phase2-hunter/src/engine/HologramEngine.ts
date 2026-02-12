@@ -122,10 +122,17 @@ export class HologramEngine extends EventEmitter {
   }
 
   public updateMarketRegime(regime: string, alpha: number): void {
+    const prevRegime = this.currentRegime;
+    const prevAlpha = this.currentAlpha;
     // eslint-disable-next-line functional/immutable-data
     this.currentRegime = regime;
     // eslint-disable-next-line functional/immutable-data
     this.currentAlpha = alpha;
+    if (prevRegime !== regime || prevAlpha !== alpha) {
+      this.logger.info(
+        `Regime transition: ${prevRegime}(α=${prevAlpha?.toFixed(3)}) → ${regime}(α=${alpha.toFixed(3)})`
+      );
+    }
   }
 
   // ============================================================================

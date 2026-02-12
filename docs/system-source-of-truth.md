@@ -319,8 +319,9 @@ npm run start:prod  # Runs scrip../start_production.sh
 | Aspect            | Value                                          |
 | ----------------- | ---------------------------------------------- |
 | **Location**      | `services/titan-brain/migrations/`             |
-| **System**        | Custom (defined in `src/db/migrate.ts`)        |
+| **System**        | Idempotent runner (`scripts/ops/run_migrations.sh`) with `_titan_migrations` tracking table (SHA256 drift detection) |
 | **Current Schema**| `services/titan-brain/src/db/schema.sql`       |
+| **CI Validation** | `scripts/ci/test_fresh_bootstrap.sh` (ephemeral Postgres → migrate → validate → idempotency proof) |
 
 ### 7.3 Migrations
 
@@ -589,7 +590,7 @@ if secret.is_empty() {
 | ---- | ---------------------------------------------------------- | ---------------------------------------------------- | --------- |
 | D-01 | Two risk_policy.json files exist                           | Files are **byte-identical** (same SHA256)           | RESOLVED  |
 | D-02 | Legacy NATS subjects (`titan.data.*`) vs new (`titan.data.*`) | Migration map exists; both active during transition | DOCUMENTED |
-| D-03 | `docker compose config` requires NATS_SYS_PASSWORD         | Environment variable must be set in production       | DOCUMENTED |
+| D-03 | `docker compose config` requires NATS_SYS_PASSWORD         | `validate_prod_env.sh` checks all required vars pre-deploy; `:?` fail-fast syntax in compose | **RESOLVED** |
 
 **Dual Truth Verification:**
 
@@ -617,8 +618,8 @@ shasum -a 256 packages/shared/risk_policy.json services/titan-execution-rs/src/r
 
 | Service                         | Path                                    | Status      | Action      |
 | ------------------------------- | --------------------------------------- | ----------- | ----------- |
-| `canonical-powerlaw-service`    | `services/canonical-powerlaw-service/`  | Migrated    | Remove      |
-| `titan-memory`                  | `services/titan-memory/`                | Unused      | Archive     |
+| `canonical-powerlaw-service`    | `services/canonical-powerlaw-service/`  | **Deleted** | ✅ Removed  |
+| `titan-memory`                  | `services/titan-memory/`                | **Deleted** | ✅ Removed  |
 
 ### 13.3 Legacy NATS Subjects
 
@@ -667,7 +668,7 @@ shasum -a 256 <file>
 | C-02 | Add missing binaries (`tsx`, `ts-node`, `python3`) to package.json   | Low      | Knip unlisted binaries warning                  |
 | C-05 | Complete NATS subject migration from `titan.data.*` to `titan.data.*` | High  | `powerlaw_subjects.ts:77` deprecation notice    |
 | C-06 | Review 220 unused exports identified by Knip                         | Low      | Knip unused exports output                      |
-| C-07 | Set `NATS_SYS_PASSWORD` environment variable for production          | Critical | `docker compose config` error                   |
+| C-07 | Set `NATS_SYS_PASSWORD` environment variable for production          | **RESOLVED** | `validate_prod_env.sh` + fail-fast `:?` syntax |
 
 ---
 
@@ -704,7 +705,8 @@ sota:audit, sota:license, ... (60+ scripts)
 ### 16.4 docker compose config
 
 ```text
-Error: NATS_SYS_PASSWORD required (expected in production .env)
+Passes when .env contains all required variables.
+validate_prod_env.sh enforces 14 required vars + rejects known defaults.
 ```
 
 ### 16.5 cargo metadata

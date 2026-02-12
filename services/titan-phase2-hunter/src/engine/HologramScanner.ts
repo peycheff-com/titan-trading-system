@@ -15,7 +15,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { HologramState, HologramStatus } from '../types';
+import { HologramState } from '../types';
 import { HologramEngine } from './HologramEngine';
 import { BybitPerpsClient } from '../exchanges/BybitPerpsClient';
 import { InstitutionalFlowClassifier } from '../flow/InstitutionalFlowClassifier';
@@ -223,7 +223,7 @@ export class HologramScanner extends EventEmitter {
     }
 
     // If we don't have 20 tradeable symbols, take the best available
-    console.warn(
+    getLogger().warn(
       `⚠️ Only ${tradeableSymbols.length} tradeable symbols found, selecting top 20 overall`
     );
     return rankedSymbols.slice(0, 20);
@@ -268,7 +268,7 @@ export class HologramScanner extends EventEmitter {
     for (let i = 0; i < symbols.length; i += this.MAX_PARALLEL_REQUESTS) {
       const batch = symbols.slice(i, i + this.MAX_PARALLEL_REQUESTS);
 
-      console.log(
+      getLogger().debug(
         `📈 Analyzing batch ${Math.floor(i / this.MAX_PARALLEL_REQUESTS) + 1}/${Math.ceil(
           symbols.length / this.MAX_PARALLEL_REQUESTS
         )} (${batch.length} symbols)`
@@ -313,10 +313,10 @@ export class HologramScanner extends EventEmitter {
 
     // Log errors if any
     if (errors.length > 0) {
-      console.warn(`⚠️ ${errors.length} symbols failed analysis:`);
-      errors.slice(0, 5).forEach(error => console.warn(`  - ${error}`));
+      getLogger().warn(`⚠️ ${errors.length} symbols failed analysis:`);
+      errors.slice(0, 5).forEach(error => getLogger().warn(`  - ${error}`));
       if (errors.length > 5) {
-        console.warn(`  ... and ${errors.length - 5} more`);
+        getLogger().warn(`  ... and ${errors.length - 5} more`);
       }
     }
 

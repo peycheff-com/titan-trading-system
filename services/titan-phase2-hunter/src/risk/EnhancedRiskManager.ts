@@ -16,12 +16,11 @@ import {
   BotTrapAnalysis,
   ConnectionStatus,
   EmergencyState,
-  EmergencyType,
   GlobalCVDData,
   ImpactLevel,
   OracleScore,
-  PredictionMarketEvent,
 } from '../types';
+import { getLogger } from '../logging/Logger';
 
 // ============================================================================
 // INTERFACES
@@ -231,7 +230,7 @@ export class EnhancedRiskManager extends EventEmitter {
       }
       return true;
     } catch (error) {
-      console.error('Failed to initialize EnhancedRiskManager:', error);
+      getLogger().error('Failed to initialize EnhancedRiskManager:', error as Error);
       return false;
     }
   }
@@ -865,7 +864,7 @@ export class EnhancedRiskManager extends EventEmitter {
       this.emit('monitoring:update', this.getState());
     }, this.config.monitoringInterval);
 
-    console.log(
+    getLogger().info(
       `🛡️ Enhanced Risk Manager: Started monitoring (${this.config.monitoringInterval}ms interval)`
     );
   }
@@ -879,7 +878,7 @@ export class EnhancedRiskManager extends EventEmitter {
       // eslint-disable-next-line functional/immutable-data
       this.monitoringInterval = null;
     }
-    console.log(`🛡️ Enhanced Risk Manager: Stopped monitoring`);
+    getLogger().info(`🛡️ Enhanced Risk Manager: Stopped monitoring`);
   }
 
   // ============================================================================
@@ -905,7 +904,12 @@ export class EnhancedRiskManager extends EventEmitter {
       aggregatedAdjustments: this.state.aggregatedAdjustments,
     };
 
-    console.log(`🛡️ ENHANCED_RISK_${action}:`, JSON.stringify(logEntry));
+    const message = `🛡️ ENHANCED_RISK_${action}: ${JSON.stringify(logEntry)}`;
+    if (logEntry.condition.severity === 'critical') {
+      getLogger().warn(message);
+    } else {
+      getLogger().info(message);
+    }
   }
 
   // ============================================================================
@@ -925,7 +929,7 @@ export class EnhancedRiskManager extends EventEmitter {
       this.startMonitoring();
     }
 
-    console.log(`🛡️ Enhanced Risk Manager: Configuration updated`);
+    getLogger().info(`🛡️ Enhanced Risk Manager: Configuration updated`);
   }
 
   /**

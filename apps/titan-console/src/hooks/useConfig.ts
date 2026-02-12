@@ -150,7 +150,7 @@ export function useConfigCatalog() {
         } finally {
             setLoading(false);
         }
-    }, [token]);
+    }, [token, setCatalog, setGrouped]);
 
     useEffect(() => {
         if (token) fetchCatalog();
@@ -183,7 +183,7 @@ export function useEffectiveConfig() {
         } finally {
             setLoading(false);
         }
-    }, [token]);
+    }, [token, setConfigs]);
 
     useEffect(() => {
         if (token) fetchEffective();
@@ -216,7 +216,7 @@ export function useConfigOverrides() {
         } finally {
             setLoading(false);
         }
-    }, [token]);
+    }, [token, setOverrides]);
 
     const createOverride = useCallback(async (
         key: string,
@@ -320,7 +320,7 @@ export function useConfigReceipts(limit = 50) {
         } finally {
             setLoading(false);
         }
-    }, [token, limit]);
+    }, [token, limit, setReceipts]);
 
     useEffect(() => {
         if (token) fetchReceipts();

@@ -79,7 +79,7 @@ export function useWebSocket<T = unknown>({
       setStatus('DISCONNECTED');
       setError(e instanceof Error ? e : new Error('Unknown error'));
     }
-  }, [url, onMessage, reconnectInterval, maxRetries]);
+  }, [url, onMessage, reconnectInterval, maxRetries, setLastMessage]);
 
   useEffect(() => {
     connect();

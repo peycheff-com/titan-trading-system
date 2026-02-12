@@ -38,7 +38,15 @@ export default function TradeControl() {
 
   const [showHaltModal, setShowHaltModal] = useState(false);
 
-  const handlePlaceOrder = (order: any) => {
+interface OrderPayload {
+    side: string;
+    symbol: string;
+    size?: number;
+    price?: number;
+    type?: string;
+  }
+
+  const handlePlaceOrder = (order: OrderPayload) => {
     console.log('Placing order:', order);
     sendMessage({ type: 'PLACE_ORDER', payload: order });
     toast.success(`Order sent: ${order.side} ${order.symbol}`);

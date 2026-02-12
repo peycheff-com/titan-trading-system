@@ -52,13 +52,32 @@ interface HunterConfig {
   maxConvictionMultiplier: number;
 }
 
+interface Hologram {
+  symbol: string;
+  alignment: string;
+  score: number;
+  oracleScore: {
+    sentiment: number;
+    confidence: number;
+    convictionMultiplier: number;
+  };
+  globalCVD: {
+    consensus: string;
+    manipulation: {
+      detected: boolean;
+    };
+  };
+  status?: string;
+  timestamp: number;
+}
+
 export default function HunterPhase() {
   const { safetyLocked } = useOutletContext<ContextType>();
   const [hasDraft, setHasDraft] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [selectedTimeframe, setSelectedTimeframe] = useState('all');
   const [enhancedMode, setEnhancedMode] = useState(false);
-  const [holograms, setHolograms] = useState<any[]>([]);
+  const [holograms, setHolograms] = useState<Hologram[]>([]);
 
   // Configuration State
   const [config, setConfig] = useState<HunterConfig>({
@@ -130,7 +149,7 @@ export default function HunterPhase() {
         {
           key: 'alignment',
           header: 'Align',
-          render: (item: any) => (
+          render: (item: Hologram) => (
             <span
               className={cn(
                 'font-mono font-bold',
@@ -146,7 +165,7 @@ export default function HunterPhase() {
         {
           key: 'score',
           header: 'Score',
-          render: (item: any) => (
+          render: (item: Hologram) => (
             <div className="flex flex-col">
               <span className="font-mono text-xs">{item.score.toFixed(2)}</span>
               <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
@@ -168,7 +187,7 @@ export default function HunterPhase() {
         {
           key: 'oracle',
           header: 'Oracle',
-          render: (item: any) => (
+          render: (item: Hologram) => (
             <div className="flex items-center gap-2">
               <Brain
                 className={cn(
@@ -187,7 +206,7 @@ export default function HunterPhase() {
         {
           key: 'flow',
           header: 'Global CVD',
-          render: (item: any) => (
+          render: (item: Hologram) => (
             <div className="flex items-center gap-2">
               <TrendingUp
                 className={cn(
@@ -209,7 +228,7 @@ export default function HunterPhase() {
           key: 'conviction',
           header: 'Mult',
           align: 'right' as const,
-          render: (item: any) => (
+          render: (item: Hologram) => (
             <span
               className={cn(
                 'font-mono text-xs',
@@ -230,7 +249,7 @@ export default function HunterPhase() {
         {
           key: 'status',
           header: 'Status',
-          render: (item: any) => (
+          render: (item: Hologram) => (
             <StatusPill
               status={
                 item.status === 'A+' ? 'healthy' : item.status === 'B' ? 'degraded' : 'offline'
@@ -243,13 +262,13 @@ export default function HunterPhase() {
           key: 'score',
           header: 'Score',
           align: 'right' as const,
-          render: (item: any) => item.score.toFixed(2),
+          render: (item: Hologram) => item.score.toFixed(2),
         },
         {
           key: 'timestamp',
           header: 'Updated',
           align: 'right' as const,
-          render: (item: any) => new Date(item.timestamp).toLocaleTimeString(),
+          render: (item: Hologram) => new Date(item.timestamp).toLocaleTimeString(),
         },
       ];
 

@@ -7,6 +7,7 @@ module.exports = {
       testEnvironment: 'node',
       testMatch: ['<rootDir>/tests/unit/**/*.test.ts'],
       setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+      testTimeout: 10000, // Unit tests must be fast
     },
     {
       displayName: 'integration', 
@@ -16,6 +17,7 @@ module.exports = {
       setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
       globalSetup: '<rootDir>/tests/globalSetup.ts',
       globalTeardown: '<rootDir>/tests/globalTeardown.ts',
+      testTimeout: 30000, // Integration tests need more time
     },
     {
       displayName: 'property',
@@ -23,6 +25,7 @@ module.exports = {
       testEnvironment: 'node',
       testMatch: ['<rootDir>/tests/property/**/*.property.test.ts'],
       setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+      testTimeout: 60000, // Property tests are computationally expensive
     },
     {
       displayName: 'console',
@@ -120,7 +123,7 @@ module.exports = {
   // Environment-specific configuration
   bail: process.env.CI ? 1 : 0, // Fail fast in CI
   detectOpenHandles: !process.env.CI, // Skip in CI to avoid flaky tests
-  forceExit: false, // Let tests exit naturally to catch resource leaks
+  forceExit: !!process.env.CI, // Force exit in CI to prevent hangs; allow leak detection locally
   maxWorkers: process.env.CI ? 2 : '50%',
   
   // Improved error reporting and notifications
@@ -173,5 +176,5 @@ module.exports = {
   updateSnapshot: process.env.UPDATE_SNAPSHOTS === 'true',
   
   // Default timeout
-  testTimeout: 20000
+  testTimeout: 15000
 };

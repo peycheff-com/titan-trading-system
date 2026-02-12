@@ -68,6 +68,7 @@ export const SafetyProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useSafety = () => {
   const context = useContext(SafetyContext);
   if (context === undefined) {

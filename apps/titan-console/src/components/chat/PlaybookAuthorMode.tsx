@@ -62,12 +62,18 @@ export function PlaybookAuthorMode({ onExit }: { onExit: () => void }) {
     { role: 'system', content: 'Playbook Construction Mode. Describe the automation logic you want to build.' }
   ]);
   const [input, setInput] = useState('');
-  const [currentAST, setCurrentAST] = useState<Record<string, any> | null>(null);
+  const [currentAST, setCurrentAST] = useState<Record<string, unknown> | null>(null);
   const [activeTab, setActiveTab] = useState<'ast' | 'simulation'>('ast');
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulationResult, setSimulationResult] = useState<typeof MOCK_SIMULATION_RESULT | undefined>(undefined);
   
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-focus input on mount (accessibility: manual focus is preferred over autoFocus)
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
   // Auto-scroll chat
   useEffect(() => {
@@ -156,12 +162,12 @@ export function PlaybookAuthorMode({ onExit }: { onExit: () => void }) {
         <div className="p-4 border-t border-border bg-card">
           <form onSubmit={handleSend} className="relative">
             <input
+              ref={inputRef}
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Describe automation logic (e.g. 'If latency > 500ms...')"
               className="w-full rounded-md border border-border bg-background pl-4 pr-10 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
-              autoFocus
             />
             <button 
               type="submit" 

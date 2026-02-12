@@ -13,7 +13,8 @@
  */
 
 import { EventEmitter } from 'events';
-import { Position, SignalData, HologramState, PhaseConfig } from '../types';
+import { Position, SignalData, HologramState } from '../types';
+import { getLogger } from '../logging/Logger';
 
 export interface PortfolioState {
   totalEquity: number;
@@ -121,7 +122,7 @@ export class PortfolioManager extends EventEmitter {
 
     if (exposurePercentage > maxExposure) {
       this.emit('portfolio:exposure_limit', exposurePercentage, maxExposure);
-      console.warn(
+      getLogger().warn(
         `⚠️ Total exposure ${(exposurePercentage * 100).toFixed(1)}% exceeds limit ${(maxExposure * 100).toFixed(1)}%`
       );
     }
@@ -140,7 +141,7 @@ export class PortfolioManager extends EventEmitter {
 
     if (openPositions.length >= maxPositions) {
       this.emit('portfolio:position_limit', openPositions.length, maxPositions);
-      console.warn(
+      getLogger().warn(
         `⚠️ Position limit reached: ${openPositions.length}/${maxPositions} positions open`
       );
       return false;
@@ -179,7 +180,7 @@ export class PortfolioManager extends EventEmitter {
 
     this.emit('portfolio:risk_allocated', allocation);
 
-    console.log(
+    getLogger().info(
       `💰 Risk allocation: ${(adjustedRiskPerTrade * 100).toFixed(2)}% per trade, max size ${maxPositionSize.toFixed(0)}, leverage ${recommendedLeverage.toFixed(1)}x`
     );
 
@@ -233,9 +234,9 @@ export class PortfolioManager extends EventEmitter {
 
     this.emit('portfolio:signal_ranked', top3);
 
-    console.log(`📊 Ranked ${signals.length} signals, selected top ${top3.length}:`);
+    getLogger().info(`📊 Ranked ${signals.length} signals, selected top ${top3.length}:`);
     top3.forEach(rs => {
-      console.log(
+      getLogger().info(
         `  ${rs.rank}. ${rs.signal.symbol} (${rs.signal.direction}): Score ${rs.compositeScore.toFixed(3)} (A:${rs.hologramState.alignmentScore}, RS:${rs.hologramState.rsScore.toFixed(3)})`
       );
     });
@@ -266,7 +267,7 @@ export class PortfolioManager extends EventEmitter {
 
     if (portfolioHeat > maxHeat) {
       this.emit('portfolio:heat_limit', portfolioHeat, maxHeat);
-      console.warn(
+      getLogger().warn(
         `🔥 Portfolio heat ${(portfolioHeat * 100).toFixed(1)}% exceeds limit ${(maxHeat * 100).toFixed(1)}%`
       );
       return false;
@@ -327,7 +328,7 @@ export class PortfolioManager extends EventEmitter {
       adjustedSize = basePositionSize * (1 - this.config.directionalBiasReduction);
 
       this.emit('portfolio:directional_bias', directionalBias, biasPercentage);
-      console.log(
+      getLogger().info(
         `⚖️ Directional bias detected: ${directionalBias} ${(biasPercentage * 100).toFixed(1)}%, reducing ${proposedDirection} position by ${(this.config.directionalBiasReduction * 100).toFixed(0)}%`
       );
     }
@@ -493,7 +494,7 @@ export class PortfolioManager extends EventEmitter {
   public updateConfig(newConfig: Partial<PortfolioManagerConfig>): void {
     // eslint-disable-next-line functional/immutable-data
     this.config = { ...this.config, ...newConfig };
-    console.log(`📊 Portfolio Manager: Configuration updated`);
+    getLogger().info(`📊 Portfolio Manager: Configuration updated`);
   }
 
   /**
@@ -503,7 +504,7 @@ export class PortfolioManager extends EventEmitter {
   public addPosition(position: Position): void {
     // eslint-disable-next-line functional/immutable-data
     this.positions.set(position.id, position);
-    console.log(
+    getLogger().info(
       `📊 Portfolio Manager: Added position ${position.id} (${position.symbol} ${position.side})`
     );
   }
@@ -515,7 +516,7 @@ export class PortfolioManager extends EventEmitter {
   public removePosition(positionId: string): void {
     // eslint-disable-next-line functional/immutable-data
     if (this.positions.delete(positionId)) {
-      console.log(`📊 Portfolio Manager: Removed position ${positionId}`);
+      getLogger().info(`📊 Portfolio Manager: Removed position ${positionId}`);
     }
   }
 
@@ -562,7 +563,7 @@ export class PortfolioManager extends EventEmitter {
     this.positions.clear();
     // eslint-disable-next-line functional/immutable-data
     this.portfolioState.openPositions = [];
-    console.log(`📊 Portfolio Manager: All positions cleared`);
+    getLogger().info(`📊 Portfolio Manager: All positions cleared`);
   }
 
   /**
@@ -572,7 +573,7 @@ export class PortfolioManager extends EventEmitter {
     // eslint-disable-next-line functional/immutable-data
     this.positions.clear();
     this.removeAllListeners();
-    console.log(`📊 Portfolio Manager: Destroyed`);
+    getLogger().info(`📊 Portfolio Manager: Destroyed`);
   }
 }
 

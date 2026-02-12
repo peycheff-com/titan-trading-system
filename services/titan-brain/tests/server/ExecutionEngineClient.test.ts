@@ -20,7 +20,7 @@ jest.mock("@titan/shared", () => ({
     request: mockRequest,
   })),
   TitanSubject: {
-    CMD_EXEC_PLACE: "titan.cmd.exec.place.v1",
+    CMD_EXEC_PLACE: "titan.cmd.execution.place.v1",
     CMD_RISK_POLICY: "titan.cmd.risk.policy.v1",
     POSITION_QUERY: "titan.query.positions.v1",
     EQUITY_QUERY: "titan.query.equity.v1",

@@ -83,7 +83,7 @@ export function useSentinelSocket() {
       console.error('WS Connection failed', error);
       reconnectTimeoutRef.current = setTimeout(connect, 3000);
     }
-  }, []);
+  }, [setState]);
 
   useEffect(() => {
     connect();

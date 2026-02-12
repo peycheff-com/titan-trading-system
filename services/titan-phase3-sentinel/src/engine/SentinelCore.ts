@@ -10,7 +10,7 @@ import type { Signal } from '../types/signals.js';
 import type { IExchangeGateway } from '../exchanges/interfaces.js';
 import { DEFAULT_SIGNAL_THRESHOLDS } from '../types/signals.js';
 import type { HealthReport, PerformanceMetrics } from '../types/portfolio.js';
-import { getNatsClient, type IntentSignal, SignalClient, TitanSubject } from '@titan/shared';
+import { getNatsClient, type IntentSignal, SignalClient, TITAN_SUBJECTS } from '@titan/shared';
 
 export interface SentinelConfig {
   updateIntervalMs: number;
@@ -55,6 +55,12 @@ export class SentinelCore extends EventEmitter {
     // eslint-disable-next-line functional/immutable-data
     this.allocatedEquity = equity;
     this.emit('log', `💰 Budget Updated: $${equity.toFixed(2)}`);
+
+    if (equity <= 0) {
+      this.emit('log', '🚨 CRITICAL: Equity <= 0. Solvency Breach. Initiating Hard Stop.');
+      this.stop();
+      process.exit(1); // Fail-fast: process death is the only safe state
+    }
   }
 
   public getRegime(): string {
@@ -296,7 +302,7 @@ export class SentinelCore extends EventEmitter {
       },
       timestamp: Date.now(),
     };
-    nats.publish(`${TitanSubject.EVT_PHASE_POSTURE}.sentinel`, posturePayload);
+    nats.publish(`${TITAN_SUBJECTS.EVT.PHASE.POSTURE}.sentinel`, posturePayload);
 
     // Publish Diagnostics
     const diagnosticsPayload = {
@@ -309,7 +315,7 @@ export class SentinelCore extends EventEmitter {
       },
       timestamp: Date.now(),
     };
-    nats.publish(`${TitanSubject.EVT_PHASE_DIAGNOSTICS}.sentinel`, diagnosticsPayload);
+    nats.publish(`${TITAN_SUBJECTS.EVT.PHASE.DIAGNOSTICS}.sentinel`, diagnosticsPayload);
   }
 
   private async executeSignal(signal: Signal): Promise<void> {
@@ -322,11 +328,11 @@ export class SentinelCore extends EventEmitter {
     // VOLATILE: 5% of capital per trade
     // CRASH: 0% (Handled by regime rejection earlier, but safe to default 0)
 
-    // eslint-disable-next-line functional/no-let
-    let sizingPercentage = 0.1;
-    if (this.currentRegime === 'VOLATILE') {
-      sizingPercentage = 0.05;
-    }
+    // STABLE: 10% of capital per trade
+    // VOLATILE: 5% of capital per trade
+    // CRASH: 0% (Handled by regime rejection earlier, but safe to default 0)
+
+    const sizingPercentage = this.currentRegime === 'VOLATILE' ? 0.05 : 0.1;
 
     const calculatedSize = capitalBase * sizingPercentage;
 

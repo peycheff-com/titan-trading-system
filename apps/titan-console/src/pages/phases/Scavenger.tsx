@@ -5,7 +5,7 @@ import { DenseTable } from '@/components/titan/DenseTable';
 import { DiffViewer } from '@/components/titan/DiffViewer';
 import { ConfirmModal } from '@/components/titan/ConfirmModal';
 import { TrapMapCanvas } from '@/components/scavenger/TrapMapCanvas';
-import { useScavengerSocket } from '@/hooks/useScavengerSocket';
+import { useScavengerSocket, ScavengerTrap } from '@/hooks/useScavengerSocket';
 import { cn } from '@/lib/utils';
 import { Bug, AlertTriangle, Edit3, Wifi, Activity, RotateCcw } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
@@ -41,8 +41,8 @@ export default function ScavengerPhase() {
   // Hook into Real-time Data
   const { isConnected, trapMap, sensorStatus } = useScavengerSocket();
 
-  const armedTripwires = trapMap.filter((t: any) => t.proximity < 0.1); // Consider <10% as "Armed/Watching"
-  const criticalTripwires = trapMap.filter((t: any) => t.proximity < 0.02); // <2% is Critical
+  const armedTripwires = trapMap.filter((t: ScavengerTrap) => t.proximity < 0.1); // Consider <10% as "Armed/Watching"
+  const criticalTripwires = trapMap.filter((t: ScavengerTrap) => t.proximity < 0.02); // <2% is Critical
 
   const getBaseUrl = () => getTitanBrainUrl();
 
@@ -239,13 +239,13 @@ export default function ScavengerPhase() {
               {
                 key: 'triggerPrice',
                 header: 'Trigger',
-                render: (tw) => <span className="font-mono">{tw.triggerPrice.toFixed(4)}</span>,
+                render: (tw: ScavengerTrap) => <span className="font-mono">{tw.triggerPrice.toFixed(4)}</span>,
               },
               {
                 key: 'proximity',
                 header: 'Proximity',
                 align: 'right',
-                render: (tw) => (
+                render: (tw: ScavengerTrap) => (
                   <span
                     className={cn(
                       'font-mono',
@@ -262,11 +262,11 @@ export default function ScavengerPhase() {
                 key: 'confidence',
                 header: 'Conf.',
                 align: 'right',
-                render: (tw) => <span className="font-mono text-xs">{tw.confidence}%</span>,
+                render: (tw: ScavengerTrap) => <span className="font-mono text-xs">{tw.confidence}%</span>,
               },
             ]}
             data={trapMap}
-            keyExtractor={(tw) => tw.symbol + tw.trapType}
+            keyExtractor={(tw: ScavengerTrap) => tw.symbol + tw.trapType}
             maxHeight="320px"
           />
         </div>

@@ -6,17 +6,35 @@ import { useTitanData } from '@/hooks/useTitanData';
 import { cn } from '@/lib/utils';
 import { BookOpen, Filter, Tag } from 'lucide-react';
 
-const typeConfig: any = {
+interface TypeConfigItem {
+  color: string;
+  bg: string;
+}
+
+const typeConfig: Record<string, TypeConfigItem> = {
   trade: { color: 'text-primary', bg: 'bg-primary/10' },
   system: { color: 'text-muted-foreground', bg: 'bg-muted' },
   incident: { color: 'text-status-critical', bg: 'bg-status-critical/10' },
 };
 
+interface JournalEntry {
+  id: string;
+  timestamp: number;
+  type: string;
+  symbol?: string;
+  action: string;
+  price?: number;
+  qty?: number;
+  pnl?: number | null;
+  notes: string;
+  tags: string[];
+}
+
 export default function JournalPage() {
-  const [selectedEntry, setSelectedEntry] = useState<any | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [typeFilter, setTypeFilter] = useState('all');
-  const [journalEntries, setJournalEntries] = useState<any[]>([]);
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   // In a real implementation, we would fetch from /api/console/trades or /api/console/journal
 
   useEffect(() => {
@@ -28,7 +46,7 @@ export default function JournalPage() {
   const filteredEntries =
     typeFilter === 'all' ? journalEntries : journalEntries.filter((e) => e.type === typeFilter);
 
-  const handleRowClick = (entry: any) => {
+  const handleRowClick = (entry: JournalEntry) => {
     setSelectedEntry(entry);
     setDrawerOpen(true);
   };

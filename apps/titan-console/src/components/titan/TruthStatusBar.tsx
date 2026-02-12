@@ -27,8 +27,8 @@ export function TruthStatusBar() {
       setLastHeartbeat(Date.now());
     } else if (lastMessage.subject === TITAN_SUBJECTS.EVT.ALERT.DRIFT || lastMessage.subject === 'titan.alert.drift') {
        // Support both old and new subject styles just in case
-       const d = lastMessage.data as any;
-       const pct = typeof d === 'number' ? d : (d.driftPct || 0);
+       const d = lastMessage.data as Record<string, unknown>;
+       const pct = typeof d === 'number' ? d : ((d as { driftPct?: number }).driftPct || 0);
        const status = pct > 0.05 ? 'critical' : pct > 0.01 ? 'warning' : 'safe';
        setDrift({ pct, status });
     }

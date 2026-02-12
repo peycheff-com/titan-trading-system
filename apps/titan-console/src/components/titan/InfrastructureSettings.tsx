@@ -80,7 +80,7 @@ export const InfrastructureSettings = () => {
     // Poll every 30s
     const interval = setInterval(fetchStatus, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchStatus]);
 
   const handleFailover = async () => {
     if (

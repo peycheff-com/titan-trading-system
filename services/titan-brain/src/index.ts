@@ -20,7 +20,9 @@ import { StartupManager } from './startup/StartupManager.js';
 import { FeatureManager } from './config/FeatureManager.js';
 import { BrainConfig } from './config/BrainConfig.js';
 import { SharedConfigAdapter as ConfigManager } from './config/SharedConfigAdapter.js';
+import { RedisFactory } from './infrastructure/RedisFactory.js';
 import Redis from 'ioredis';
+import { BayesianCalibrator } from './features/Risk/BayesianCalibrator.js';
 
 function parsePositiveMs(value: string | undefined, fallback: number): number {
   if (!value) return fallback;
@@ -248,9 +250,24 @@ async function main(): Promise<void> {
       const brainConfig = await configManager!.loadConfig();
 
       // Initialize FeatureManager
+      const redisFactory = RedisFactory.getInstance();
+      const redisConfig = brainConfig.redis
+        ? {
+            url: brainConfig.redis.url,
+            maxRetries: brainConfig.redis.maxRetries || 3,
+            retryDelay: brainConfig.redis.retryDelay || 1000,
+          }
+        : {
+            url: brainConfig.redisUrl || 'redis://localhost:6379',
+            maxRetries: 3,
+            retryDelay: 1000,
+          };
+
+      const featureRedis = redisFactory.createClient(redisConfig, 'feature-manager');
+
       const featureManager = FeatureManager.getInstance(
         logger as unknown as Logger,
-        brainConfig.redisUrl || 'redis://localhost:6379',
+        featureRedis,
       );
       await featureManager.start();
       // eslint-disable-next-line functional/immutable-data
@@ -293,10 +310,16 @@ async function main(): Promise<void> {
       } else {
         try {
           const brainConfig = configManager!.getConfig();
+          
+          // Construct Redis config for SignalQueue
+          const signalQueueRedisUrl = brainConfig.redis?.url || brainConfig.redisUrl || 'redis://localhost:6379';
+          const maxRetries = brainConfig.redis?.maxRetries || 3;
+          const retryDelay = brainConfig.redis?.retryDelay || 1000;
+
           signalQueue = new SignalQueue({
-            url: brainConfig.redisUrl!,
-            maxRetries: 3,
-            retryDelay: 1000,
+            url: signalQueueRedisUrl,
+            maxRetries,
+            retryDelay,
             keyPrefix: 'titan:brain:signals',
             idempotencyTTL: 3600,
             maxQueueSize: 10000,
@@ -357,12 +380,34 @@ async function main(): Promise<void> {
       const governanceEngine = new GovernanceEngine();
       logger.info('   ✅ GovernanceEngine initialized');
 
-      const riskGuardian = new RiskGuardian(
-        config.riskGuardian,
-        allocationEngine,
-        governanceEngine,
-        getNatsClient(),
-      );
+        const redisFactory = RedisFactory.getInstance();
+        
+        // This 'config' comes from loadConfig() above, which matches ConfigSchema
+        // We need to map it to allow RedisFactory usage if needed, OR use brainConfig from ConfigManager
+        // Let's use brainConfig for consistency as it is the new standard
+        const brainConfigRedis = brainConfig.redis
+          ? {
+              url: brainConfig.redis.url,
+              maxRetries: brainConfig.redis.maxRetries || 3,
+              retryDelay: brainConfig.redis.retryDelay || 1000,
+            }
+          : {
+              url: brainConfig.redisUrl || 'redis://localhost:6379',
+              maxRetries: 3,
+              retryDelay: 1000,
+            };
+
+        const bayesianRedis = redisFactory.createClient(brainConfigRedis, 'risk-bayesian');
+        const bayesianCalibrator = new BayesianCalibrator(bayesianRedis);
+        await bayesianCalibrator.init(); // Prevent race conditions
+
+        const riskGuardian = new RiskGuardian(
+          config.riskGuardian,
+          allocationEngine,
+          governanceEngine,
+          bayesianCalibrator,
+          getNatsClient(),
+        );
 
       // Wire up Hot Risk Configuration
       if (brainConfig.featureManager) {
@@ -378,10 +423,25 @@ async function main(): Promise<void> {
       const circuitBreaker = new CircuitBreaker(config.circuitBreaker);
 
       // Wire up persistence for Circuit Breaker
-      if (process.env.REDIS_DISABLED !== 'true' && brainConfig.redisUrl) {
+      if (process.env.REDIS_DISABLED !== 'true' && (brainConfig.redisUrl || brainConfig.redis)) {
         logger.info('   🔌 Wiring Circuit Breaker persistence to Redis...');
         try {
-          const persistenceRedis = new (Redis as any)(brainConfig.redisUrl);
+          const redisFactory = RedisFactory.getInstance();
+          
+          const redisConfig = brainConfig.redis
+            ? {
+                url: brainConfig.redis.url,
+                maxRetries: brainConfig.redis.maxRetries || 3,
+                retryDelay: brainConfig.redis.retryDelay || 1000,
+              }
+            : {
+                url: brainConfig.redisUrl || 'redis://localhost:6379',
+                maxRetries: 3,
+                retryDelay: 1000,
+              };
+
+          const persistenceRedis = redisFactory.createClient(redisConfig, 'circuit-breaker');
+          
           circuitBreaker.setStateStore({
             save: async (key: string, value: string) => {
               await persistenceRedis.set(key, value);
@@ -623,6 +683,21 @@ async function main(): Promise<void> {
         undefined, // CacheManager
         undefined, // MetricsCollector
         eventReplayService!, // EventReplayService
+        ((): Redis => {
+            const factory = RedisFactory.getInstance();
+            const redisConfig = brainConfig.redis
+            ? {
+                url: brainConfig.redis.url,
+                maxRetries: brainConfig.redis.maxRetries || 3,
+                retryDelay: brainConfig.redis.retryDelay || 1000,
+              }
+            : {
+                url: brainConfig.redisUrl || 'redis://localhost:6379',
+                maxRetries: 3,
+                retryDelay: 1000,
+              };
+            return factory.createClient(redisConfig, 'webhook-server');
+        })(),
       );
 
       await webhookServer.start();

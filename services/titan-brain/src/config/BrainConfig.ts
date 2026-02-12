@@ -30,7 +30,8 @@ export interface BrainConfig {
   databasePoolMax: number;
 
   // Redis configuration (optional)
-  redisUrl?: string;
+  redisUrl?: string; // Legacy
+  redis?: RedisConfig;
 
   // NATS configuration
   natsUrl?: string;
@@ -85,8 +86,9 @@ export interface DatabaseConfig {
  * Redis configuration subset
  */
 export interface RedisConfig {
-  url?: string;
-  enabled: boolean;
+  url: string;
+  maxRetries?: number;
+  retryDelay?: number;
 }
 
 /**

@@ -8,7 +8,7 @@ interface AIStateWidgetProps {
     regime: string;
     lastOptimizationProposal?: {
       timestamp: number;
-      proposal: any;
+      proposal: Record<string, unknown>;
     };
   };
   className?: string;
@@ -70,7 +70,7 @@ export function AIStateWidget({ aiState, className }: AIStateWidgetProps) {
                 {formatTimeAgo(aiState.lastOptimizationProposal.timestamp)}
               </p>
               <div className="mt-1 text-xs font-mono text-muted-foreground bg-muted/50 p-1.5 rounded">
-                Target: {aiState.lastOptimizationProposal.proposal.target || 'Unknown'}
+                Target: {String(aiState.lastOptimizationProposal.proposal.target || 'Unknown')}
               </div>
             </div>
           </div>

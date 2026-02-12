@@ -51,10 +51,10 @@ export interface ValidationResult {
  * Configuration change event
  */
 export interface ConfigChangeEvent {
-  section: keyof Phase2Config | 'all';
-  oldValue: any;
-  newValue: any;
-  timestamp: number;
+  readonly section: keyof Phase2Config | 'all';
+  readonly oldValue: unknown;
+  readonly newValue: unknown;
+  readonly timestamp: number;
 }
 
 /**

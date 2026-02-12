@@ -8,23 +8,55 @@ import { cn } from '@/lib/utils';
 import { Zap, Check, AlertTriangle, Clock } from 'lucide-react';
 import { useTitanData } from '@/hooks/useTitanData';
 
-const statusConfig: any = {
+interface StatusConfigItem {
+  color: string;
+  bg: string;
+}
+
+const statusConfig: Record<string, StatusConfigItem> = {
   FILLED: { color: 'text-status-healthy', bg: 'bg-status-healthy/10' },
   PARTIAL: { color: 'text-warning', bg: 'bg-warning/10' },
   OPEN: { color: 'text-primary', bg: 'bg-primary/10' },
   CANCELLED: { color: 'text-muted-foreground', bg: 'bg-muted' },
 };
 
-const phaseColors: any = {
+const phaseColors: Record<string, string> = {
   scavenger: 'bg-phase-scavenger/10 text-phase-scavenger',
   hunter: 'bg-phase-hunter/10 text-phase-hunter',
   sentinel: 'bg-phase-sentinel/10 text-phase-sentinel',
 };
 
+interface Order {
+  id: string;
+  timestamp: number;
+  symbol: string;
+  side: string;
+  type: string;
+  price: number;
+  qty: number;
+  filled: number;
+  phase: string;
+  status: string;
+  latency?: number;
+}
+
+interface TradeResponse {
+  id?: string;
+  trade_id?: string;
+  timestamp: number;
+  size: number;
+  entry_price?: number;
+  price?: number;
+  phase?: string;
+  symbol: string;
+  side: string;
+  type?: string;
+}
+
 export default function ExecutionPage() {
   const { request } = useTitanData();
-  const [orders, setOrders] = useState<any[]>([]);
-  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -33,13 +65,13 @@ export default function ExecutionPage() {
         const response = await request('/api/console/trades?limit=50');
         if (response && response.success) {
           // Normalize trades to match order view
-          const normalized = (response.data.trades || []).map((t: any) => ({
+          const normalized: Order[] = (response.data.trades || []).map((t: TradeResponse) => ({
             ...t,
             id: t.id || t.trade_id || `t-${t.timestamp}`,
             status: 'FILLED', // Historical trades are filled
             qty: t.size,
             filled: t.size,
-            price: t.entry_price || t.price,
+            price: t.entry_price || t.price || 0,
             phase: t.phase || 'scavenger',
           }));
           setOrders(normalized);
@@ -54,7 +86,7 @@ export default function ExecutionPage() {
     return () => clearInterval(interval);
   }, [request]);
 
-  const handleRowClick = (order: any) => {
+  const handleRowClick = (order: Order) => {
     setSelectedOrder(order);
     setDrawerOpen(true);
   };

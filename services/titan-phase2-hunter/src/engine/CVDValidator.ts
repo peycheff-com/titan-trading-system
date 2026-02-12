@@ -15,6 +15,7 @@
 
 import { EventEmitter } from 'events';
 import { Absorption, Distribution, POI } from '../types';
+import { getLogger } from '../logging/Logger';
 
 export interface CVDTrade {
   symbol: string;
@@ -28,6 +29,8 @@ export class CVDValidator extends EventEmitter {
   private tradeHistory: Map<string, CVDTrade[]> = new Map();
   private readonly HISTORY_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
   private readonly CVD_WINDOW_MS = 5 * 60 * 1000; // 5 minutes for CVD calculation
+  private static readonly MAX_TRADES_PER_SYMBOL = 50_000;
+  private static readonly MAX_SYMBOLS = 200;
 
   constructor() {
     super();
@@ -97,7 +100,7 @@ export class CVDValidator extends EventEmitter {
       const cvdRise = Math.abs((cvd3 - cvd2) / Math.max(Math.abs(cvd2), 1));
       const strength = Math.min(100, (priceDrop + cvdRise) * 50);
 
-      console.log(
+      getLogger().info(
         `🔍 CVD Absorption detected: Price LL ${p3.toFixed(2)}, CVD HL ${cvd3.toFixed(
           0
         )}, Strength: ${strength.toFixed(1)}`
@@ -154,7 +157,7 @@ export class CVDValidator extends EventEmitter {
       const cvdDrop = Math.abs((cvd2 - cvd3) / Math.max(Math.abs(cvd2), 1));
       const strength = Math.min(100, (priceRise + cvdDrop) * 50);
 
-      console.log(
+      getLogger().info(
         `🔍 CVD Distribution detected: Price HH ${p3.toFixed(2)}, CVD LH ${cvd3.toFixed(
           0
         )}, Strength: ${strength.toFixed(1)}`
@@ -200,11 +203,11 @@ export class CVDValidator extends EventEmitter {
         if (absorption) {
           // Bullish POI + CVD Absorption = Strong confirmation
           confidenceAdjustment += 30;
-          console.log(`✅ CVD validates Bullish POI: +30 confidence`);
+          getLogger().info(`✅ CVD validates Bullish POI: +30 confidence`);
         } else if (distribution) {
           // Bullish POI + CVD Distribution = Conflicting signal
           confidenceAdjustment -= 20;
-          console.log(`❌ CVD conflicts with Bullish POI: -20 confidence`);
+          getLogger().info(`❌ CVD conflicts with Bullish POI: -20 confidence`);
         }
       }
 
@@ -213,11 +216,11 @@ export class CVDValidator extends EventEmitter {
         if (distribution) {
           // Bearish POI + CVD Distribution = Strong confirmation
           confidenceAdjustment += 30;
-          console.log(`✅ CVD validates Bearish POI: +30 confidence`);
+          getLogger().info(`✅ CVD validates Bearish POI: +30 confidence`);
         } else if (absorption) {
           // Bearish POI + CVD Absorption = Conflicting signal
           confidenceAdjustment -= 20;
-          console.log(`❌ CVD conflicts with Bearish POI: -20 confidence`);
+          getLogger().info(`❌ CVD conflicts with Bearish POI: -20 confidence`);
         }
       }
     }
@@ -225,7 +228,7 @@ export class CVDValidator extends EventEmitter {
     // For Liquidity Pools, any CVD divergence adds confidence
     if ('strength' in poi && (absorption || distribution)) {
       confidenceAdjustment += 15;
-      console.log(`✅ CVD confirms Liquidity Pool: +15 confidence`);
+      getLogger().info(`✅ CVD confirms Liquidity Pool: +15 confidence`);
     }
 
     return confidenceAdjustment;
@@ -238,6 +241,21 @@ export class CVDValidator extends EventEmitter {
    * @param trade - Trade data to record
    */
   recordTrade(trade: CVDTrade): void {
+    // Enforce symbol count limit — evict oldest symbol if at capacity
+    if (
+      !this.tradeHistory.has(trade.symbol) &&
+      this.tradeHistory.size >= CVDValidator.MAX_SYMBOLS
+    ) {
+      const oldestSymbol = this.tradeHistory.keys().next().value;
+      if (oldestSymbol) {
+        // eslint-disable-next-line functional/immutable-data
+        this.tradeHistory.delete(oldestSymbol);
+        getLogger().warn(
+          `CVDValidator: evicted oldest symbol ${oldestSymbol} (MAX_SYMBOLS=${CVDValidator.MAX_SYMBOLS})`
+        );
+      }
+    }
+
     if (!this.tradeHistory.has(trade.symbol)) {
       // eslint-disable-next-line functional/immutable-data
       this.tradeHistory.set(trade.symbol, []);
@@ -249,15 +267,19 @@ export class CVDValidator extends EventEmitter {
 
     // Keep only trades within the history window (10 minutes)
     const cutoff = Date.now() - this.HISTORY_WINDOW_MS;
-    const filteredHistory = history.filter(t => t.time > cutoff);
+    // eslint-disable-next-line functional/no-let
+    let filteredHistory = history.filter(t => t.time > cutoff);
+
+    // Hard cap: truncate to MAX_TRADES_PER_SYMBOL if still too large
+    if (filteredHistory.length > CVDValidator.MAX_TRADES_PER_SYMBOL) {
+      filteredHistory = filteredHistory.slice(-CVDValidator.MAX_TRADES_PER_SYMBOL);
+      getLogger().warn(
+        `CVDValidator: truncated ${trade.symbol} history to ${CVDValidator.MAX_TRADES_PER_SYMBOL} trades`
+      );
+    }
 
     // eslint-disable-next-line functional/immutable-data
     this.tradeHistory.set(trade.symbol, filteredHistory);
-
-    // Log if history is getting large (performance monitoring)
-    if (filteredHistory.length > 10000) {
-      // console.warn(`⚠️ Large trade history for ${trade.symbol}: ${filteredHistory.length} trades`);
-    }
   }
 
   /**

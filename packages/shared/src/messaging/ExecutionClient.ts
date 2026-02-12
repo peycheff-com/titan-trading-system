@@ -27,7 +27,7 @@ interface RustIntent {
   t_signal: number;
   timestamp?: number;
   t_exchange?: number;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 export class ExecutionClient extends EventEmitter {
@@ -141,8 +141,8 @@ export class ExecutionClient extends EventEmitter {
     }
 
     // Publish to NATS
-    // Subject: titan.cmd.exec.place.v1.<venue>.<account>.<symbol>
-    // Rust subscribes to `titan.cmd.exec.>`
+    // Subject: titan.cmd.execution.place.v1.<venue>.<account>.<symbol>
+    // Rust subscribes to `titan.cmd.execution.>`
     const symbolToken = signal.symbol.replace('/', '_');
     const venue = 'auto';
     const account = 'main';
@@ -164,8 +164,9 @@ export class ExecutionClient extends EventEmitter {
         // fill_price is unknown in async NATS flow currently
         fill_price: (signal.entry_zone.min + signal.entry_zone.max) / 2,
       };
-    } catch (e: any) {
-      return { executed: false, reason: e.message };
+    } catch (e: unknown) {
+      const reason = e instanceof Error ? e.message : String(e);
+      return { executed: false, reason };
     }
   }
 
@@ -190,7 +191,7 @@ export class ExecutionClient extends EventEmitter {
   }
 
   // Compatibility methods
-  getMetrics(): any {
+  getMetrics(): Record<string, unknown> {
     return {
       messagesSent: 0,
       messagesReceived: 0,
@@ -199,7 +200,7 @@ export class ExecutionClient extends EventEmitter {
     };
   }
 
-  getStatus(): any {
+  getStatus(): Record<string, unknown> {
     return {
       connectionState: this.getConnectionState(),
       socketPath: 'nats://' + (this.nats.isConnected() ? 'connected' : 'disconnected'),

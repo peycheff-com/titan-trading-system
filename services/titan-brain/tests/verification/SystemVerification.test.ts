@@ -17,9 +17,17 @@ describe("System Verification", () => {
     describe("SafetySessionManager", () => {
         let sessionManager: SafetySessionManager;
 
+        const mockLogger = {
+            info: jest.fn(),
+            error: jest.fn(),
+            warn: jest.fn(),
+            debug: jest.fn(),
+            logSecurityEvent: jest.fn(),
+        } as any;
+
         beforeEach(() => {
             // Constructor accepts Redis instance or URL string
-            sessionManager = new SafetySessionManager(mockRedis);
+            sessionManager = new SafetySessionManager(mockLogger, mockRedis);
             jest.clearAllMocks();
         });
 

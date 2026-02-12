@@ -14,11 +14,13 @@ import {
   BacktestResult,
   Config,
   Insight,
+  OHLCV,
   OptimizationProposal,
   RegimeSnapshot,
   Trade,
   ValidationReport,
 } from '../types/index.js';
+import { Backtester } from '../simulation/Backtester.js';
 import { GeminiClient, GeminiClientConfig } from './GeminiClient.js';
 import { Journal } from './Journal.js';
 import { Guardrails } from './Guardrails.js';
@@ -247,10 +249,10 @@ export class TitanAnalyst {
    */
   async validateProposal(
     proposal: OptimizationProposal,
-    backtester?: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+    backtester?: Backtester,
     historicalData?: {
       trades: Trade[];
-      ohlcvData: any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
+      ohlcvData: OHLCV[];
       regimeSnapshots: RegimeSnapshot[];
     },
   ): Promise<ValidationReport> {

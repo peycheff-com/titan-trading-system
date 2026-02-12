@@ -60,7 +60,7 @@ export class AccountingService {
     );
 
     // Subscribe to Fills (from Execution Service)
-    // Subject: titan.evt.exec.fill.v1.<venue>.<account>.<symbol>
+    // Subject: titan.evt.execution.fill.v1.<venue>.<account>.<symbol>
     await this.nats.subscribe<FillReport>(
       `${TITAN_SUBJECTS.EVT.EXECUTION.FILL}.>`,
       async (fill: FillReport, subject: string) => {

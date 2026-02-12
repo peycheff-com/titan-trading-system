@@ -111,10 +111,17 @@ describe("Gate Ordering Invariant", () => {
             setOverride: jest.fn(),
         } as unknown as GovernanceEngine;
 
+        const mockBayesianCalibrator = {
+            getCalibratedProbability: jest.fn().mockReturnValue(0.8),
+            getShrinkageReport: jest.fn().mockReturnValue({}),
+            recordOutcome: jest.fn(),
+        } as any;
+
         riskGuardian = new RiskGuardian(
             riskConfig,
             allocationEngine,
             governanceEngine,
+            mockBayesianCalibrator,
         );
         riskGuardian.setEquity(10000);
     });

@@ -7,7 +7,7 @@ import { ChevronDown, ChevronRight, AlertTriangle, CheckCircle, Zap, Shield, Eye
 // ---------------------------------------------------------------------------
 
 interface ASTViewerProps {
-  ast: Record<string, any>;
+  ast: Record<string, unknown>;
   readOnly?: boolean;
 }
 
@@ -15,7 +15,7 @@ interface ASTViewerProps {
 // Helper Components
 // ---------------------------------------------------------------------------
 
-function JSONNode({ label, value, level = 0, danger = false }: { label: string; value: any; level?: number; danger?: boolean }) {
+function JSONNode({ label, value, level = 0, danger = false }: { label: string; value: unknown; level?: number; danger?: boolean }) {
   const [expanded, setExpanded] = useState(true);
   const isObject = typeof value === 'object' && value !== null;
   const isArray = Array.isArray(value);
@@ -68,7 +68,7 @@ function JSONNode({ label, value, level = 0, danger = false }: { label: string; 
 // ---------------------------------------------------------------------------
 
 export function ASTViewer({ ast, readOnly = true }: ASTViewerProps) {
-  const safetyScore = ast.safetyScore || 100; // Mock score if not present
+  const safetyScore = (typeof ast.safetyScore === 'number' ? ast.safetyScore : 100); // Mock score if not present
   const isSafe = safetyScore > 80;
 
   return (
@@ -96,11 +96,11 @@ export function ASTViewer({ ast, readOnly = true }: ASTViewerProps) {
            <div className="space-y-1">
              <div className="flex items-center justify-between text-xs px-2 py-1 bg-muted/20 rounded">
                <span className="text-muted-foreground">ID</span>
-               <span className="font-mono text-foreground">{ast.id || 'N/A'}</span>
+               <span className="font-mono text-foreground">{String(ast.id || 'N/A')}</span>
              </div>
              <div className="flex items-center justify-between text-xs px-2 py-1 bg-muted/20 rounded">
                <span className="text-muted-foreground">Version</span>
-               <span className="font-mono text-foreground">{ast.version || '1.0.0'}</span>
+               <span className="font-mono text-foreground">{String(ast.version || '1.0.0')}</span>
              </div>
            </div>
          </div>

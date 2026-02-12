@@ -2,7 +2,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { PlanCommand } from './commands/plan';
-import { RunCommand } from './commands/run';
+import { RunCommand, QualityGateError } from './commands/run';
 import { FixCommand } from './commands/fix';
 
 const program = new Command();
@@ -21,9 +21,18 @@ program
   .command('run')
   .description('Execute the generated plan and produce EvidencePacks')
   .option('--plan <path>', 'Path to plan.json')
-  .action((options) => {
+  .action(async (options) => {
     console.log(chalk.blue('⚙️ QualityKernel: Executing...'));
-    new RunCommand().execute(options);
+    try {
+      const passed = await new RunCommand().execute(options);
+      if (!passed) process.exit(1);
+    } catch (err) {
+      if (err instanceof QualityGateError) {
+        console.error(chalk.red(err.message));
+        process.exit(1);
+      }
+      throw err;
+    }
   });
 
 program

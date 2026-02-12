@@ -7,8 +7,8 @@ async function main() {
     console.log(`✅ Connected to NATS at ${natsUrl}`);
     const js = nc.jetstream();
     // Subscribe to placement commands
-    const sub = nc.subscribe("titan.cmd.exec.place.>");
-    console.log("🎧 Listening for execution commands on titan.cmd.exec.place.>");
+    const sub = nc.subscribe("titan.cmd.execution.place.>");
+    console.log("🎧 Listening for execution commands on titan.cmd.execution.place.>");
     (async () => {
         for await (const msg of sub) {
             try {

@@ -8,6 +8,7 @@
 
 import Fastify, { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
+import Redis from 'ioredis';
 import fastifyRawBody from 'fastify-raw-body';
 import { ServerConfig } from '../types/index.js';
 import { TitanBrain } from '../engine/TitanBrain.js';
@@ -133,7 +134,11 @@ export class WebhookServer {
     cacheManager?: CacheManager,
     metricsCollector?: MetricsCollector,
     eventReplayService?: EventReplayService,
+    redisClient?: Redis,
   ) {
+    if (!redisClient) {
+        throw new Error("Redis client is required for WebhookServer");
+    }
     this.config = config;
     this.brain = brain;
     this.signalQueue = signalQueue ?? null;
@@ -207,8 +212,7 @@ export class WebhookServer {
     this.canaryMonitor.startMonitoring(60000); // Check every minute
 
     // Initialize Safety System
-    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-    this.safetySessionManager = new SafetySessionManager(redisUrl);
+    this.safetySessionManager = new SafetySessionManager(this.logger, redisClient);
     this.safetyController = new SafetyController(this.safetySessionManager);
 
     // Initialize Config Registry and Controller

@@ -9,7 +9,7 @@ export interface HealthCheckResult {
   status: HealthStatus;
   message?: string;
   latency?: number; // ms
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   timestamp: string;
 }
 
@@ -53,10 +53,10 @@ export class HealthMonitor {
           } else if (comp.critical && result.status === 'degraded' && overallStatus === 'healthy') {
             overallStatus = 'degraded';
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
           results[comp.name] = {
             status: 'unhealthy',
-            message: err.message || String(err),
+            message: err instanceof Error ? err.message : String(err),
             timestamp: new Date().toISOString(),
           };
           if (comp.critical) overallStatus = 'unhealthy';

@@ -1089,7 +1089,7 @@ async fn publish_dlq(
 }
 
 /// Publish rejection telemetry event for observability and alerting
-/// Subject: titan.evt.exec.reject.v1
+/// Subject: titan.evt.execution.reject.v1
 async fn publish_rejection_event(
     client: &async_nats::Client,
     reason: &str,

@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 # Configuration
 BACKUP_DIR="${BACKUP_DIR:-./backups}"

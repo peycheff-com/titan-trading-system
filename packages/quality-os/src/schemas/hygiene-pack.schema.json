@@ -10,7 +10,7 @@
         "properties": {
           "file": { "type": "string" },
           "symbol": { "type": "string" },
-          "proof_method": { "enum": ["static_analysis", "compiler_unused", "zero_references"] }
+          "proof_method": { "enum": ["knip", "zero_references"] }
         },
         "required": ["file", "symbol"]
       }

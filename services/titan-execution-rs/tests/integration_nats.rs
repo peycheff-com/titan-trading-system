@@ -141,7 +141,7 @@ async fn test_full_execution_flow() {
 
     // 4. Test Subscription (Listen for Fills + DLQ)
     let mut fills_sub = client
-        .subscribe("titan.evt.exec.fill.v1.binance.main.>")
+        .subscribe("titan.evt.execution.fill.v1.binance.main.>")
         .await
         .unwrap();
     let mut dlq_sub = client.subscribe("titan.dlq.execution.core").await.unwrap();
@@ -178,7 +178,7 @@ async fn test_full_execution_flow() {
     let sig = hex::encode(mac.finalize().into_bytes());
 
     let envelope = serde_json::json!({
-        "type": "titan.cmd.exec.place.v1",
+        "type": "titan.cmd.execution.place.v1",
         "version": 1,
         "producer": "test-suite",
         "ts": ts,
@@ -189,7 +189,7 @@ async fn test_full_execution_flow() {
     });
 
     let payload = serde_json::to_vec(&envelope).unwrap();
-    let intent_subject = format!("titan.cmd.exec.place.v1.binance.main.{}", symbol_token);
+    let intent_subject = format!("titan.cmd.execution.place.v1.binance.main.{}", symbol_token);
     client
         .publish(intent_subject, payload.into())
         .await
@@ -252,7 +252,7 @@ async fn test_full_execution_flow() {
 
     client
         .publish(
-            format!("titan.cmd.exec.place.v1.binance.main.{}", symbol_token),
+            format!("titan.cmd.execution.place.v1.binance.main.{}", symbol_token),
             serde_json::to_vec(&invalid_payload).unwrap().into(),
         )
         .await

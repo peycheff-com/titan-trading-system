@@ -35,7 +35,7 @@ interface ScavengerState {
 // In a real app, these would be assets, but we'll synthesize them for now or use placeholders
 const playTrapSprungSound = () => {
   try {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
 
@@ -157,7 +157,7 @@ export function useScavengerSocket() {
       console.error('WS Connection failed', error);
       reconnectTimeoutRef.current = setTimeout(connect, 3000);
     }
-  }, []);
+  }, [setState]);
 
   // Initial connection
   useEffect(() => {
