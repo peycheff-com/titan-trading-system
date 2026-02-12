@@ -168,6 +168,20 @@ services:
       timeout: 5s
       retries: 3
 
+  ai-quant:
+    image: ghcr.io/peycheff-com/titan-ai-quant:${TITAN_TAG:-latest}
+    restart: always
+    env_file: .env
+    depends_on:
+      - nats
+    networks:
+      - titan-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # --- UI ---
   console:
     image: ghcr.io/peycheff-com/titan-console:${TITAN_TAG:-latest}
