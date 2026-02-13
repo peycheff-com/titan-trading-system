@@ -46,7 +46,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 2  # Need previous commit for diff
 
@@ -80,7 +80,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Download analysis
         uses: actions/download-artifact@v4
@@ -122,7 +122,7 @@ jobs:
   #   runs-on: ubuntu-latest
   #   steps:
   #     - name: Checkout
-  #       uses: actions/checkout@v5
+  #       uses: actions/checkout@v6
   #     - name: Create branch and PR
   #       run: |
   #         git checkout -b docs/ai-update-$(date +%Y%m%d)
