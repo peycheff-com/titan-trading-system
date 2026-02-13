@@ -4,7 +4,7 @@
 # ============================================================================
 
 # Stage 1: Build
-FROM node:22-alpine AS builder
+FROM node:25-alpine AS builder
 
 WORKDIR /app
 
@@ -38,7 +38,7 @@ RUN npm prune --omit=dev --workspaces
 RUN mkdir -p /app/services/titan-phase1-scavenger/node_modules /app/packages/shared/node_modules
 
 # Stage 2: Production
-FROM node:22-alpine AS production
+FROM node:25-alpine AS production
 
 WORKDIR /app
 
