@@ -107,6 +107,8 @@ services:
       - RUST_LOG=info
       - PORT=3002
       - NATS_URL=nats://nats:4222
+      - REDIS_URL=redis://redis:6379
+      - HMAC_SECRET=${HMAC_SECRET:-dev_hmac_secret}
       - BINANCE_API_KEY=${BINANCE_API_KEY}
       - BINANCE_API_SECRET=${BINANCE_API_SECRET}
     ports:
@@ -128,7 +130,7 @@ services:
   titan-console:
     build:
       context: .
-      dockerfile: services/titan-console/Dockerfile
+      dockerfile: apps/titan-console/Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:3100}
     container_name: titan-dev-console

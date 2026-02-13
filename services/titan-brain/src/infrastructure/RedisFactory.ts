@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Stateful connection pool: singleton + map mutations required */
 import Redis, { RedisOptions } from 'ioredis';
 import { Logger } from '@titan/shared';
 import { TitanBrainConfig } from '../config/ConfigSchema';

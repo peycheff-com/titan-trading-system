@@ -24,7 +24,6 @@ services:
     image: nats:2.10.22-alpine
     container_name: nats
     restart: always
-    command: "-c /config/nats.conf"
     ports:
       - "4222:4222" # Internal only via firewall, but exposed for monitoring if needed
       - "8222:8222" # Monitoring
@@ -32,9 +31,9 @@ services:
       - /bin/sh
       - -c
       - |
-        envsubst < /config/nats.conf.template > /config/nats.conf && exec nats-server -c /config/nats.conf
+        envsubst < /config/nats.conf > /tmp/nats-resolved.conf && exec nats-server -c /tmp/nats-resolved.conf
     volumes:
-      - "./config/nats.conf.template:/config/nats.conf.template:ro"
+      - "./config/nats.conf:/config/nats.conf:ro"
       - "./data/nats:/data"
     networks:
       - titan-net
@@ -73,17 +72,17 @@ services:
     networks:
       - titan-net
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep -q PONG"]
       interval: 10s
       timeout: 5s
       retries: 3
 
   # --- CORE SERVICES ---
-  execution:
+  titan-execution:
     image: ghcr.io/peycheff-com/titan-execution-rs:${TITAN_TAG:-latest}
     container_name: titan-execution
     restart: always
-    env_file: .env
+    env_file: .env.prod
     depends_on:
       nats:
         condition: service_started
@@ -102,11 +101,11 @@ services:
           cpus: '1.0'
           memory: 512M
 
-  brain:
+  titan-brain:
     image: ghcr.io/peycheff-com/titan-brain:${TITAN_TAG:-latest}
     container_name: titan-brain
     restart: always
-    env_file: .env
+    env_file: .env.prod
     depends_on:
       postgres:
         condition: service_healthy
@@ -126,10 +125,10 @@ services:
           memory: 1G
 
   # --- STRATEGIES ---
-  scavenger:
+  titan-scavenger:
     image: ghcr.io/peycheff-com/titan-scavenger:${TITAN_TAG:-latest}
     restart: always
-    env_file: .env
+    env_file: .env.prod
     depends_on:
       - nats
     networks:
@@ -140,10 +139,10 @@ services:
       timeout: 5s
       retries: 3
 
-  hunter:
+  titan-hunter:
     image: ghcr.io/peycheff-com/titan-hunter:${TITAN_TAG:-latest}
     restart: always
-    env_file: .env
+    env_file: .env.prod
     depends_on:
       - nats
     networks:
@@ -154,10 +153,10 @@ services:
       timeout: 5s
       retries: 3
 
-  sentinel:
+  titan-sentinel:
     image: ghcr.io/peycheff-com/titan-sentinel:${TITAN_TAG:-latest}
     restart: always
-    env_file: .env
+    env_file: .env.prod
     depends_on:
       - nats
     networks:
@@ -168,10 +167,10 @@ services:
       timeout: 5s
       retries: 3
 
-  ai-quant:
+  titan-ai-quant:
     image: ghcr.io/peycheff-com/titan-ai-quant:${TITAN_TAG:-latest}
     restart: always
-    env_file: .env
+    env_file: .env.prod
     depends_on:
       - nats
     networks:
@@ -183,7 +182,7 @@ services:
       retries: 3
 
   # --- UI ---
-  console:
+  titan-console:
     image: ghcr.io/peycheff-com/titan-console:${TITAN_TAG:-latest}
     restart: always
     labels:

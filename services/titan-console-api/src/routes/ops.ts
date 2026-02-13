@@ -11,11 +11,9 @@ const logger = Logger.getInstance('console-api:ops');
 
 export default async function opsRoutes(fastify: FastifyInstance) {
   fastify.post('/ops/command', { onRequest: [fastify.authenticate] }, async (request, reply) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const user = (request as any).user;
     logger.info(`[titan-console-api] Command initiated by ${user?.id}`);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const body = request.body as any;
 
     // Construct Command
@@ -43,7 +41,6 @@ export default async function opsRoutes(fastify: FastifyInstance) {
       meta: {
         ...unsignedCmd.meta,
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         signature: calculateOpsSignature(unsignedCmd as any, secret),
       },
     };

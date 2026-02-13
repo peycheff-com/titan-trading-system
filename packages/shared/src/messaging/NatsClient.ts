@@ -119,9 +119,16 @@ export class NatsClient extends EventEmitter {
   private js: JetStreamClient | null = null;
   private jsm: JetStreamManager | null = null;
   private readonly kvBuckets: Map<string, KV> = new Map();
+  private readonly durableSubscriptions: Map<string, { drain: () => Promise<void> }> = new Map();
   private jc = JSONCodec();
   private sc = StringCodec();
   private static instance: NatsClient;
+
+  /**
+   * Deadline for titan.signal.* deprecation.
+   * After this date, usage escalates from warn → error.
+   */
+  private static readonly SIGNAL_DEPRECATION_DEADLINE = new Date('2026-02-28T00:00:00Z');
 
   private readonly STREAM_PREFIXES = ['titan.cmd.', 'titan.evt.', 'titan.data.', 'titan.signal.'];
 
@@ -228,9 +235,7 @@ export class NatsClient extends EventEmitter {
     if (this.js) {
       if (typeof subject === 'string') {
         if (subject.startsWith('titan.signal.')) {
-          console.warn(
-            `[DEPRECATION] Publishing to '${subject}' is deprecated. Migration deadline: Feb 28, 2026. Use 'titan.data.*' instead.`,
-          );
+          this.emitDeprecationWarning('publish', subject);
         }
         for (const prefix of this.STREAM_PREFIXES) {
           if (subject.startsWith(prefix)) {
@@ -344,9 +349,7 @@ export class NatsClient extends EventEmitter {
     let isJetStream = false;
     if (this.js && typeof subject === 'string') {
       if (subject.startsWith('titan.signal.')) {
-        console.warn(
-          `[DEPRECATION] Subscribing to '${subject}' is deprecated. Migration deadline: Feb 28, 2026. Use 'titan.data.*' instead.`,
-        );
+        this.emitDeprecationWarning('subscribe', subject);
       }
       for (const prefix of this.STREAM_PREFIXES) {
         if (subject.startsWith(prefix)) {
@@ -363,9 +366,18 @@ export class NatsClient extends EventEmitter {
       opts.ackExplicit();
       // opts.deliverTo(durableName + '_DELIVERY'); // Optional
 
+      // Store a drain handle so we can clean up on close()
+      const drainHandle = { drain: async () => {} };
+      // eslint-disable-next-line functional/immutable-data
+      this.durableSubscriptions.set(durableName, drainHandle);
+
       (async () => {
         try {
           const sub = await this.js!.subscribe(subject, opts);
+          // Wire the real drain into our handle
+          // eslint-disable-next-line functional/immutable-data
+          drainHandle.drain = () => sub.drain();
+
           for await (const m of sub) {
             try {
               // eslint-disable-next-line functional/no-let
@@ -388,13 +400,18 @@ export class NatsClient extends EventEmitter {
         }
       })();
 
-      // Return a dummy subscription
+      // Return a facade that delegates to the real JetStream subscription
       return {
-        unsubscribe: () =>
-          console.warn('Unsubscribing from durable JS subscription not fully supported'),
+        unsubscribe: () => {
+          drainHandle.drain().catch((e) => console.error('Durable unsubscribe error:', e));
+          this.durableSubscriptions.delete(durableName);
+        },
         closed: Promise.resolve(undefined),
-        drain: () => Promise.resolve(),
-        isClosed: () => false,
+        drain: () => {
+          this.durableSubscriptions.delete(durableName);
+          return drainHandle.drain();
+        },
+        isClosed: () => !this.durableSubscriptions.has(durableName),
         getSubject: () => subject,
         getReceived: () => 0,
         getProcessed: () => 0,
@@ -428,6 +445,16 @@ export class NatsClient extends EventEmitter {
 
   public async close(): Promise<void> {
     if (this.nc) {
+      // Drain all durable subscriptions before closing
+      for (const [name, handle] of this.durableSubscriptions.entries()) {
+        try {
+          await handle.drain();
+        } catch (err) {
+          console.warn(`Failed to drain durable subscription '${name}':`, err);
+        }
+      }
+      this.durableSubscriptions.clear();
+
       await this.nc.drain();
       await this.nc.close();
       // eslint-disable-next-line functional/immutable-data
@@ -436,6 +463,23 @@ export class NatsClient extends EventEmitter {
       this.js = null;
       // eslint-disable-next-line functional/immutable-data
       this.jsm = null;
+    }
+  }
+
+  /**
+   * Emit deprecation warning for titan.signal.* subjects.
+   * After the deadline (Feb 28, 2026), escalates to error-level with stack trace.
+   */
+  private emitDeprecationWarning(action: string, subject: string): void {
+    const now = new Date();
+    const past = now >= NatsClient.SIGNAL_DEPRECATION_DEADLINE;
+    const msg = `[DEPRECATION] ${past ? 'OVERDUE — ' : ''}${action} on '${subject}' is deprecated. Deadline: Feb 28, 2026. Use 'titan.data.*' or 'titan.evt.*' instead.`;
+
+    if (past) {
+      console.error(msg);
+      console.error(new Error('Deprecated subject usage stack trace').stack);
+    } else {
+      console.warn(msg);
     }
   }
 

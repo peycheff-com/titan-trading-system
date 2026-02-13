@@ -10,3 +10,9 @@ CREATE INDEX IF NOT EXISTS idx_phase_performance_cache_lookup
 ON phase_performance_cache (phase_id, timestamp DESC);
 
 COMMIT;
+
+-- DOWN (revert)
+-- BEGIN;
+-- DROP INDEX IF EXISTS idx_phase_performance_cache_lookup;
+-- ALTER TABLE phase_performance_cache RENAME TO phase_performance;
+-- COMMIT;

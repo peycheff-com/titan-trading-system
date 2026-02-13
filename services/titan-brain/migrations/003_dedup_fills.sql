@@ -17,3 +17,8 @@ BEGIN;
 ALTER TABLE fills ADD CONSTRAINT fills_fill_id_unique UNIQUE (fill_id);
 
 COMMIT;
+
+-- DOWN (revert)
+-- BEGIN;
+-- ALTER TABLE fills DROP CONSTRAINT IF EXISTS fills_fill_id_unique;
+-- COMMIT;

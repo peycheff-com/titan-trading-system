@@ -36,3 +36,9 @@ CREATE TABLE IF NOT EXISTS canary_rollouts (
 
 -- Indexes for performance
 CREATE INDEX idx_canary_active ON canary_rollouts(parameter_name) WHERE is_active = TRUE;
+
+-- DOWN (revert)
+-- DROP INDEX IF EXISTS idx_canary_active;
+-- DROP TABLE IF EXISTS canary_rollouts;
+-- DROP TABLE IF EXISTS parameter_versions;
+-- DROP TABLE IF EXISTS parameter_configs;

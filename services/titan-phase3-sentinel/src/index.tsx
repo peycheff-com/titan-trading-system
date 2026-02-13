@@ -1,3 +1,4 @@
+/* eslint-disable functional/no-let, functional/immutable-data -- Startup entrypoint: NATS connection state requires let + mutations */
 import React from 'react';
 import { render } from 'ink';
 import { Dashboard } from './dashboard/Dashboard.js';
@@ -34,9 +35,7 @@ async function main() {
   };
 
   // 2. Connect to NATS (Critical for Execution)
-  // eslint-disable-next-line functional/no-let
   let nats: any = null;
-  // eslint-disable-next-line functional/no-let
   let natsConnected = false;
 
   try {

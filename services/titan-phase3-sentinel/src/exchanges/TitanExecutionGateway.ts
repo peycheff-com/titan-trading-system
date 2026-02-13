@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data, functional/no-let -- Stateful gateway: price cache + event subscriptions require mutations */
 import { IExchangeGateway } from './interfaces.js';
 import { Order, OrderResult } from '../types/orders.js';
 import { NatsConnection, Msg, JSONCodec } from 'nats';

@@ -1,3 +1,4 @@
+/* eslint-disable functional/immutable-data -- Singleton pattern: static instance mutation required */
 /**
  * Logger - Scavenger Wrapper
  *

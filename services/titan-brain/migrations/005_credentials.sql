@@ -58,3 +58,11 @@ CREATE TRIGGER trg_credentials_updated
   BEFORE UPDATE ON user_credentials
   FOR EACH ROW
   EXECUTE FUNCTION update_credential_timestamp();
+
+-- DOWN (revert)
+-- DROP TRIGGER IF EXISTS trg_credentials_updated ON user_credentials;
+-- DROP FUNCTION IF EXISTS update_credential_timestamp;
+-- ALTER TABLE credential_audit_log DISABLE ROW LEVEL SECURITY;
+-- ALTER TABLE user_credentials DISABLE ROW LEVEL SECURITY;
+-- DROP TABLE IF EXISTS credential_audit_log;
+-- DROP TABLE IF EXISTS user_credentials;

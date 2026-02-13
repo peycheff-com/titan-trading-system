@@ -56,6 +56,21 @@ interface CorrelationCacheEntry {
 }
 
 /**
+ * Mutable context threaded through the risk guard pipeline
+ */
+interface SignalCheckContext {
+  readonly signal: IntentSignal;
+  readonly currentPositions: Position[];
+  effectiveSize: number;
+  effectiveConfidence: number;
+  currentLeverage: number;
+  projectedLeverage: number;
+  portfolioDelta: number;
+  portfolioBeta: number;
+  maxCorrelation: number;
+}
+
+/**
  * RiskGuardian monitors portfolio-level risk metrics and enforces
  * correlation guards and leverage limits on incoming signals.
  */
@@ -440,400 +455,61 @@ export class RiskGuardian {
   }
 
   /**
-   * Check a signal against risk rules
-   *
-   * Validation steps:
-   * 1. Check if Phase 3 hedge that reduces delta (auto-approve)
-   * 2. Calculate projected leverage
-   * 3. Check leverage cap for equity tier
-   * 4. Check correlation with existing positions
-   * 5. Apply size reduction if high correlation
-   *
-   * @param signal - Intent signal from a phase
-   * @param currentPositions - Array of current open positions
-   * @returns RiskDecision with approval status and metrics
+   * Mutable context threaded through the risk guard pipeline.
+   * Carries computed values and the effective (possibly reduced) size.
    */
+  private buildCheckContext(
+    signal: IntentSignal,
+    currentPositions: Position[],
+  ): SignalCheckContext {
+    return {
+      signal,
+      currentPositions,
+      effectiveSize: signal.requestedSize,
+      effectiveConfidence: signal.confidence ?? 80,
+      currentLeverage: 0,
+      projectedLeverage: 0,
+      portfolioDelta: 0,
+      portfolioBeta: 0,
+      maxCorrelation: 0,
+    };
+  }
+
   /**
-   * Check a signal against risk rules
+   * Check a signal against risk rules.
    *
-   * Validation steps:
-   * 1. Check if Phase 3 hedge that reduces delta (auto-approve)
-   * 2. Calculate projected leverage
-   * 3. Check leverage cap for equity tier
-   * 4. Check correlation with existing positions
-   * 5. Apply size reduction if high correlation
+   * Runs a pipeline of named guards. Each returns RiskDecision|null:
+   * - non-null → reject immediately
+   * - null     → passed, continue to next guard
    *
    * @param signal - Intent signal from a phase
    * @param currentPositions - Array of current open positions
    * @returns RiskDecision with approval status and metrics
    */
   checkSignal(signal: IntentSignal, currentPositions: Position[]): RiskDecision {
-    // 0. Governance & Regime Gating
-    const defcon = this.governanceEngine.getDefconLevel();
-
-    // 0a. Governance Check (Defcon)
-    if (!this.governanceEngine.canOpenNewPosition(signal.phaseId)) {
-      return {
-        approved: false,
-        reason: `GOVERNANCE_LOCKDOWN: ${defcon} rejects ${signal.phaseId}`,
-        riskMetrics: this.getRiskMetrics(currentPositions),
-      };
-    }
-
-    // 0a.1 Whitelist Check
-    const symbolToken = signal.symbol.replace('/', '_');
-    if (
-      this.config.symbolWhitelist &&
-      this.config.symbolWhitelist.length > 0 &&
-      !this.config.symbolWhitelist.includes(symbolToken)
-    ) {
-      return {
-        approved: false,
-        reason: `Symbol not whitelisted: ${signal.symbol}`,
-        riskMetrics: this.getRiskMetrics(currentPositions),
-      };
-    }
-
-    // 0a.1 Truth Layer Gating
-    if (!this.checkTruthGate()) {
-      return {
-        approved: false,
-        reason: `TRUTH_VETO: Confidence Score ${this.confidenceScore.toFixed(2)} < 0.8`,
-        riskMetrics: this.getRiskMetrics(currentPositions),
-      };
-    }
-
-    // 0a.2 Max Position Notional Check (Policy V1)
-    if (
-      this.config.maxPositionNotional &&
-      this.config.maxPositionNotional > 0 &&
-      signal.requestedSize > this.config.maxPositionNotional
-    ) {
-      return {
-        approved: false,
-        reason: `Max Position Notional Exceeded: ${signal.requestedSize} > ${this.config.maxPositionNotional}`,
-        riskMetrics: this.getRiskMetrics(currentPositions),
-      };
-    }
-
-    // 0a.2 Execution Quality Gating (Gate 2)
-    if (this.executionQualityScore < 0.7) {
-      return {
-        approved: false,
-        reason: `EXECUTION_QUALITY_VETO: Score ${this.executionQualityScore.toFixed(2)} < 0.7`,
-        riskMetrics: this.getRiskMetrics(currentPositions),
-      };
-    }
-
-    // 0b. Regime Check
-    if (this.currentRegime === RegimeState.CRASH) {
-      // Strict veto for new risk in CRASH
-      return {
-        approved: false,
-        reason: 'REGIME_CRASH_RISK_AVERSION: All new signals rejected',
-        riskMetrics: this.getRiskMetrics(currentPositions),
-      };
-    }
+    const ctx = this.buildCheckContext(signal, currentPositions);
 
     try {
-      // 0c. Survival Mode Check (Tail Risk)
-      // Calculate APTR for current + signal
-      const alphas = new Map<string, number>();
-
-      this.powerLawMetrics.forEach((m, s) => alphas.set(s, m.tailExponent));
-
-      if (!alphas.has(signal.symbol)) alphas.set(signal.symbol, 2.0);
-
-      const currentAPTR = this.tailRiskCalculator.calculateAPTR(currentPositions, alphas);
-      const criticalThreshold = 0.5; // 50% max equity @ 20% crash
-
-      if (
-        this.tailRiskCalculator.isRiskCritical(currentAPTR, this.currentEquity, criticalThreshold)
-      ) {
-        if (defcon !== DefconLevel.DEFENSIVE && defcon !== DefconLevel.EMERGENCY) {
-          logger.warn(
-            `[RiskGuardian] APTR Critical (${currentAPTR.toFixed(2)}). Triggering Survival Mode.`,
-          );
-          this.governanceEngine.setOverride(DefconLevel.DEFENSIVE);
-        }
-
-        return {
-          approved: false,
-          reason: `SURVIVAL_MODE: APTR Critical (${currentAPTR.toFixed(2)} > ${(
-            this.currentEquity * criticalThreshold
-          ).toFixed(2)})`,
-          riskMetrics: this.getRiskMetrics(currentPositions),
-        };
-      }
-
-      // 0e. Bayesian Confidence Calibration
-      // Replaces raw confidence with evidential probability
-
-      let effectiveConfidence = signal.confidence ?? 80;
-      if (signal.phaseId === 'phase1' && signal.type !== 'MANUAL') {
-        const trapType = (signal as any).trap_type || 'UNKNOWN';
-        const calibratedProb = this.bayesianCalibrator.getCalibratedProbability(
-          trapType,
-          effectiveConfidence,
-        );
-        // Map back to 0-100 scale for legacy compatibility
-        effectiveConfidence = calibratedProb * 100;
-        logger.info(
-          `[RiskGuardian] ${this.bayesianCalibrator.getShrinkageReport(
-            trapType,
-            signal.confidence ?? 80,
-          )}`,
-        );
-      }
-
-      // Update confidence check
-      if (effectiveConfidence / 100 < this.config.minConfidenceScore) {
-        return {
-          approved: false,
-          reason: `CONFIDENCE_VETO: Calibrated ${effectiveConfidence.toFixed(
-            2,
-          )}% < ${this.config.minConfidenceScore * 100}%`,
-          riskMetrics: this.getRiskMetrics(currentPositions),
-        };
-      }
-
-      // Initial signal size
-
-      let effectiveSize = signal.requestedSize;
-
-      // 0f. Fractal Phase Risk Constraints
-      if (this.config.fractal && this.config.fractal[signal.phaseId]) {
-        const constraints = this.config.fractal[signal.phaseId];
-        const phasePositions = currentPositions.filter((p) => p.phaseId === signal.phaseId);
-        const phaseNotional = phasePositions.reduce((sum, p) => sum + p.size, 0) + effectiveSize;
-        const phaseLeverage = phaseNotional / this.currentEquity;
-
-        if (phaseLeverage > constraints.maxLeverage) {
-          return {
-            approved: false,
-            reason: `FRACTAL_VETO: ${signal.phaseId} leverage ${phaseLeverage.toFixed(
-              2,
-            )}x > max ${constraints.maxLeverage}x`,
-            riskMetrics: this.getRiskMetrics(currentPositions),
-          };
-        }
-
-        if (phaseNotional > this.currentEquity * constraints.maxAllocation) {
-          return {
-            approved: false,
-            reason: `FRACTAL_VETO: ${signal.phaseId} allocation ${(
-              (phaseNotional / this.currentEquity) *
-              100
-            ).toFixed(1)}% > max ${constraints.maxAllocation * 100}%`,
-            riskMetrics: this.getRiskMetrics(currentPositions),
-          };
-        }
-      }
-
-      const currentLeverage = this.calculateCombinedLeverage(currentPositions);
-      const portfolioDelta = this.calculatePortfolioDelta(currentPositions);
-      const portfolioBeta = this.getPortfolioBeta(currentPositions);
-
-      // Requirement: Latency Feedback Loop
-      if (signal.latencyProfile && signal.latencyProfile.endToEnd > 200) {
-        if (signal.latencyProfile.endToEnd > 500) {
-          return {
-            approved: false,
-            reason: `LATENCY_VETO: System lag ${signal.latencyProfile.endToEnd}ms > 500ms`,
-            riskMetrics: this.getRiskMetrics(currentPositions),
-          };
-        }
-        const penalty = 0.25;
-        effectiveSize = signal.requestedSize * (1 - penalty);
-        logger.warn(
-          `[RiskGuardian] High Latency (${signal.latencyProfile.endToEnd}ms) - Penalizing size by 25%`,
-        );
-      }
-
-      const projectedLeverage = this.calculateProjectedLeverage(
-        { ...signal, requestedSize: effectiveSize },
-        currentPositions,
+      return (
+        this.guardGovernance(ctx) ??
+        this.guardWhitelist(ctx) ??
+        this.guardTruthLayer(ctx) ??
+        this.guardMaxNotional(ctx) ??
+        this.guardExecQuality(ctx) ??
+        this.guardRegimeCrash(ctx) ??
+        this.guardSurvivalMode(ctx) ??
+        this.guardBayesianConfidence(ctx) ??
+        this.guardFractalPhase(ctx) ??
+        this.guardLatency(ctx) ??
+        this.guardPowerLaw(ctx) ??
+        this.guardCostVeto(ctx) ??
+        this.guardHedgeAutoApprove(ctx) ??
+        this.guardStopDistance(ctx) ??
+        this.guardPositionNotional(ctx) ??
+        this.guardLeverage(ctx) ??
+        this.guardCorrelation(ctx) ??
+        this.approveSignal(ctx)
       );
-
-      // 0d. PowerLaw Regime Gates & Continuous Throttling
-      const plMetrics =
-        this.powerLawMetrics.get(signal.symbol) ?? this.powerLawMetrics.get('BTCUSDT');
-      if (plMetrics) {
-        // Rule 1: Extreme Tail Risk Gating
-        if (plMetrics.tailExponent < 2.0 && projectedLeverage > 5) {
-          return {
-            approved: false,
-            reason: `TAIL_RISK_VETO: Extreme tail risk (α=${plMetrics.tailExponent.toFixed(
-              2,
-            )}) prohibits leverage > 5x`,
-            riskMetrics: this.getRiskMetrics(currentPositions),
-          };
-        }
-
-        // Rule 2: Volatility Cluster Gating
-        if (plMetrics.volatilityCluster.state === 'expanding' && signal.phaseId === 'phase1') {
-          return {
-            approved: false,
-            reason: `REGIME_VETO: Expanding volatility rejects Phase 1 scalps`,
-            riskMetrics: this.getRiskMetrics(currentPositions),
-          };
-        }
-
-        // Rule 3: Continuous Alpha Throttling
-        // Apply size reduction based on heavy tails
-        // Multiplier = Min(1.0, (Alpha - 1.0) / 2.0)
-        // Alpha 3.0 -> 1.0 (No penalty)
-        // Alpha 2.0 -> 0.5 (50% size detection)
-        // Alpha 1.5 -> 0.25
-        const alphaThrottle = this.getAlphaThrottle(plMetrics.tailExponent);
-        if (alphaThrottle < 1.0 && signal.phaseId !== 'phase3') {
-          effectiveSize = effectiveSize * alphaThrottle;
-          logger.warn(
-            `[RiskGuardian] Alpha Throttling (α=${plMetrics.tailExponent.toFixed(
-              2,
-            )}) -> Scaling size by ${(alphaThrottle * 100).toFixed(0)}%`,
-          );
-        }
-      }
-
-      // Cost-Aware Veto (Expectancy Check)
-      if (this.config.costVeto?.enabled) {
-        const expectancy = this.checkExpectancy(signal, effectiveConfidence / 100);
-        if (!expectancy.passed) {
-          return {
-            approved: false,
-            reason: `COST_AWARE_VETO: ${expectancy.reason}`,
-            riskMetrics: this.getRiskMetrics(currentPositions),
-          };
-        }
-      }
-
-      // Calculate correlation with existing positions
-      const maxCorrelation = this.calculateMaxCorrelationWithPositions(signal, currentPositions);
-
-      const riskMetrics: RiskMetrics = {
-        currentLeverage,
-        projectedLeverage,
-        correlation: maxCorrelation,
-        portfolioDelta,
-        portfolioBeta,
-      };
-
-      // Requirement 3.5: Phase 3 hedge auto-approval
-      if (this.isPhase3HedgeThatReducesDelta(signal, portfolioDelta)) {
-        return {
-          approved: true,
-          reason: 'Phase 3 hedge approved: reduces global delta',
-          adjustedSize: signal.requestedSize,
-          riskMetrics,
-        };
-      }
-
-      // Requirement 3.8: Check minimum stop distance
-      const entryPrice = signal.entryPrice ?? this.getSignalPrice(signal);
-
-      if (signal.stopLossPrice && entryPrice) {
-        const volatility = signal.volatility ?? this.calculateVolatility(signal.symbol);
-        const stopDistance = Math.abs(entryPrice - signal.stopLossPrice);
-        const minDistance = volatility * this.config.minStopDistanceMultiplier;
-
-        if (stopDistance < minDistance) {
-          return {
-            approved: false,
-            reason: `Stop distance too tight: ${stopDistance.toFixed(2)} < ${minDistance.toFixed(
-              2,
-            )} (${this.config.minStopDistanceMultiplier}x ATR)`,
-            riskMetrics,
-          };
-        }
-      }
-
-      // Requirement 3.9: Max Position Notional Check (Policy V1)
-      if (this.config.maxPositionNotional > 0) {
-        const currentPos = currentPositions.find((p) => p.symbol === signal.symbol);
-        const currentSize = currentPos ? Math.abs(currentPos.size) : 0;
-        let projectedSize = currentSize;
-
-        // If same side (Long+Buy or Short+Sell), add size
-        // If opposite side (Long+Sell or Short+Buy), subtract/net size
-        // Note: signal.side is "BUY"/"SELL", currentPos.side is "LONG"/"SHORT"
-        const isSameSide = currentPos
-          ? (currentPos.side === 'LONG' && signal.side === 'BUY') ||
-            (currentPos.side === 'SHORT' && signal.side === 'SELL')
-          : true;
-
-        if (isSameSide) {
-          projectedSize = currentSize + effectiveSize;
-        } else {
-          projectedSize = Math.max(0, currentSize - effectiveSize);
-        }
-
-        if (projectedSize > this.config.maxPositionNotional) {
-          return {
-            approved: false,
-            reason: `Max Position Notional Exceeded: ${projectedSize} > ${this.config.maxPositionNotional}`,
-            riskMetrics,
-          };
-        }
-      }
-
-      // Requirement 3.3: Check leverage cap
-      const govMultiplier = this.governanceEngine.getLeverageMultiplier();
-      const maxLeverage = this.allocationEngine.getMaxLeverage(this.currentEquity) * govMultiplier;
-      if (projectedLeverage > maxLeverage) {
-        return {
-          approved: false,
-          reason: `Leverage cap exceeded: projected ${projectedLeverage.toFixed(
-            2,
-          )}x > max ${maxLeverage}x`,
-          riskMetrics,
-        };
-      }
-
-      // Requirement 3.7: High correlation check
-      if (maxCorrelation > this.config.maxCorrelation) {
-        if (this.correlationNotifier) {
-          const affectedPositions = this.getCorrelatedPositions(signal, currentPositions);
-          this.correlationNotifier
-            .sendHighCorrelationWarning(
-              maxCorrelation,
-              this.config.maxCorrelation,
-              affectedPositions,
-            )
-            .catch((error) => {
-              logger.error('Failed to send high correlation warning:', error);
-            });
-        }
-
-        const hasCorrelatedSameDirection = this.hasCorrelatedSameDirectionPosition(
-          signal,
-          currentPositions,
-        );
-
-        if (hasCorrelatedSameDirection) {
-          effectiveSize = effectiveSize * (1 - this.config.correlationPenalty);
-
-          return {
-            approved: true,
-            reason: `High correlation (${maxCorrelation.toFixed(
-              2,
-            )}) with same direction: size reduced by ${this.config.correlationPenalty * 100}%`,
-            adjustedSize: effectiveSize,
-            riskMetrics,
-          };
-        }
-      }
-
-      const wasAdjusted = effectiveSize !== signal.requestedSize;
-
-      return {
-        approved: true,
-        reason: wasAdjusted
-          ? 'Signal approved with size adjustment: Risk/Latency/Alpha'
-          : 'Signal approved: within risk limits',
-        adjustedSize: effectiveSize,
-        riskMetrics,
-      };
     } catch (err: any) {
       logger.error('[RiskGuardian] Risk check failed:', err);
       return {
@@ -842,6 +518,408 @@ export class RiskGuardian {
         riskMetrics: this.getRiskMetrics(currentPositions),
       };
     }
+  }
+
+  // ============ Signal Check Guards ============
+
+  private guardGovernance(ctx: SignalCheckContext): RiskDecision | null {
+    const defcon = this.governanceEngine.getDefconLevel();
+    if (!this.governanceEngine.canOpenNewPosition(ctx.signal.phaseId)) {
+      return {
+        approved: false,
+        reason: `GOVERNANCE_LOCKDOWN: ${defcon} rejects ${ctx.signal.phaseId}`,
+        riskMetrics: this.getRiskMetrics(ctx.currentPositions),
+      };
+    }
+    return null;
+  }
+
+  private guardWhitelist(ctx: SignalCheckContext): RiskDecision | null {
+    const symbolToken = ctx.signal.symbol.replace('/', '_');
+    if (
+      this.config.symbolWhitelist &&
+      this.config.symbolWhitelist.length > 0 &&
+      !this.config.symbolWhitelist.includes(symbolToken)
+    ) {
+      return {
+        approved: false,
+        reason: `Symbol not whitelisted: ${ctx.signal.symbol}`,
+        riskMetrics: this.getRiskMetrics(ctx.currentPositions),
+      };
+    }
+    return null;
+  }
+
+  private guardTruthLayer(ctx: SignalCheckContext): RiskDecision | null {
+    if (!this.checkTruthGate()) {
+      return {
+        approved: false,
+        reason: `TRUTH_VETO: Confidence Score ${this.confidenceScore.toFixed(2)} < 0.8`,
+        riskMetrics: this.getRiskMetrics(ctx.currentPositions),
+      };
+    }
+    return null;
+  }
+
+  private guardMaxNotional(ctx: SignalCheckContext): RiskDecision | null {
+    if (
+      this.config.maxPositionNotional &&
+      this.config.maxPositionNotional > 0 &&
+      ctx.signal.requestedSize > this.config.maxPositionNotional
+    ) {
+      return {
+        approved: false,
+        reason: `Max Position Notional Exceeded: ${ctx.signal.requestedSize} > ${this.config.maxPositionNotional}`,
+        riskMetrics: this.getRiskMetrics(ctx.currentPositions),
+      };
+    }
+    return null;
+  }
+
+  private guardExecQuality(ctx: SignalCheckContext): RiskDecision | null {
+    if (this.executionQualityScore < 0.7) {
+      return {
+        approved: false,
+        reason: `EXECUTION_QUALITY_VETO: Score ${this.executionQualityScore.toFixed(2)} < 0.7`,
+        riskMetrics: this.getRiskMetrics(ctx.currentPositions),
+      };
+    }
+    return null;
+  }
+
+  private guardRegimeCrash(ctx: SignalCheckContext): RiskDecision | null {
+    if (this.currentRegime === RegimeState.CRASH) {
+      return {
+        approved: false,
+        reason: 'REGIME_CRASH_RISK_AVERSION: All new signals rejected',
+        riskMetrics: this.getRiskMetrics(ctx.currentPositions),
+      };
+    }
+    return null;
+  }
+
+  private guardSurvivalMode(ctx: SignalCheckContext): RiskDecision | null {
+    const defcon = this.governanceEngine.getDefconLevel();
+    const alphas = new Map<string, number>();
+    this.powerLawMetrics.forEach((m, s) => alphas.set(s, m.tailExponent));
+    if (!alphas.has(ctx.signal.symbol)) alphas.set(ctx.signal.symbol, 2.0);
+
+    const currentAPTR = this.tailRiskCalculator.calculateAPTR(ctx.currentPositions, alphas);
+    const criticalThreshold = 0.5;
+
+    if (
+      this.tailRiskCalculator.isRiskCritical(currentAPTR, this.currentEquity, criticalThreshold)
+    ) {
+      if (defcon !== DefconLevel.DEFENSIVE && defcon !== DefconLevel.EMERGENCY) {
+        logger.warn(
+          `[RiskGuardian] APTR Critical (${currentAPTR.toFixed(2)}). Triggering Survival Mode.`,
+        );
+        this.governanceEngine.setOverride(DefconLevel.DEFENSIVE);
+      }
+
+      return {
+        approved: false,
+        reason: `SURVIVAL_MODE: APTR Critical (${currentAPTR.toFixed(2)} > ${(
+          this.currentEquity * criticalThreshold
+        ).toFixed(2)})`,
+        riskMetrics: this.getRiskMetrics(ctx.currentPositions),
+      };
+    }
+    return null;
+  }
+
+  private guardBayesianConfidence(ctx: SignalCheckContext): RiskDecision | null {
+    if (ctx.signal.phaseId === 'phase1' && ctx.signal.type !== 'MANUAL') {
+      const trapType = (ctx.signal as any).trap_type || 'UNKNOWN';
+      const calibratedProb = this.bayesianCalibrator.getCalibratedProbability(
+        trapType,
+        ctx.effectiveConfidence,
+      );
+      ctx.effectiveConfidence = calibratedProb * 100;
+      logger.info(
+        `[RiskGuardian] ${this.bayesianCalibrator.getShrinkageReport(
+          trapType,
+          ctx.signal.confidence ?? 80,
+        )}`,
+      );
+    }
+
+    if (ctx.effectiveConfidence / 100 < this.config.minConfidenceScore) {
+      return {
+        approved: false,
+        reason: `CONFIDENCE_VETO: Calibrated ${ctx.effectiveConfidence.toFixed(
+          2,
+        )}% < ${this.config.minConfidenceScore * 100}%`,
+        riskMetrics: this.getRiskMetrics(ctx.currentPositions),
+      };
+    }
+    return null;
+  }
+
+  private guardFractalPhase(ctx: SignalCheckContext): RiskDecision | null {
+    if (this.config.fractal && this.config.fractal[ctx.signal.phaseId]) {
+      const constraints = this.config.fractal[ctx.signal.phaseId];
+      const phasePositions = ctx.currentPositions.filter((p) => p.phaseId === ctx.signal.phaseId);
+      const phaseNotional =
+        phasePositions.reduce((sum, p) => sum + p.size, 0) + ctx.effectiveSize;
+      const phaseLeverage = phaseNotional / this.currentEquity;
+
+      if (phaseLeverage > constraints.maxLeverage) {
+        return {
+          approved: false,
+          reason: `FRACTAL_VETO: ${ctx.signal.phaseId} leverage ${phaseLeverage.toFixed(
+            2,
+          )}x > max ${constraints.maxLeverage}x`,
+          riskMetrics: this.getRiskMetrics(ctx.currentPositions),
+        };
+      }
+
+      if (phaseNotional > this.currentEquity * constraints.maxAllocation) {
+        return {
+          approved: false,
+          reason: `FRACTAL_VETO: ${ctx.signal.phaseId} allocation ${(
+            (phaseNotional / this.currentEquity) *
+            100
+          ).toFixed(1)}% > max ${constraints.maxAllocation * 100}%`,
+          riskMetrics: this.getRiskMetrics(ctx.currentPositions),
+        };
+      }
+    }
+    return null;
+  }
+
+  private guardLatency(ctx: SignalCheckContext): RiskDecision | null {
+    if (ctx.signal.latencyProfile && ctx.signal.latencyProfile.endToEnd > 200) {
+      if (ctx.signal.latencyProfile.endToEnd > 500) {
+        return {
+          approved: false,
+          reason: `LATENCY_VETO: System lag ${ctx.signal.latencyProfile.endToEnd}ms > 500ms`,
+          riskMetrics: this.getRiskMetrics(ctx.currentPositions),
+        };
+      }
+      const penalty = 0.25;
+      ctx.effectiveSize = ctx.signal.requestedSize * (1 - penalty);
+      logger.warn(
+        `[RiskGuardian] High Latency (${ctx.signal.latencyProfile.endToEnd}ms) - Penalizing size by 25%`,
+      );
+    }
+
+    // Compute portfolio metrics now that effectiveSize is finalized for latency
+    ctx.currentLeverage = this.calculateCombinedLeverage(ctx.currentPositions);
+    ctx.portfolioDelta = this.calculatePortfolioDelta(ctx.currentPositions);
+    ctx.portfolioBeta = this.getPortfolioBeta(ctx.currentPositions);
+    ctx.projectedLeverage = this.calculateProjectedLeverage(
+      { ...ctx.signal, requestedSize: ctx.effectiveSize },
+      ctx.currentPositions,
+    );
+
+    return null;
+  }
+
+  private guardPowerLaw(ctx: SignalCheckContext): RiskDecision | null {
+    const plMetrics =
+      this.powerLawMetrics.get(ctx.signal.symbol) ?? this.powerLawMetrics.get('BTCUSDT');
+    if (plMetrics) {
+      // Extreme tail risk gating
+      if (plMetrics.tailExponent < 2.0 && ctx.projectedLeverage > 5) {
+        return {
+          approved: false,
+          reason: `TAIL_RISK_VETO: Extreme tail risk (α=${plMetrics.tailExponent.toFixed(
+            2,
+          )}) prohibits leverage > 5x`,
+          riskMetrics: this.getRiskMetrics(ctx.currentPositions),
+        };
+      }
+
+      // Volatility cluster gating
+      if (plMetrics.volatilityCluster.state === 'expanding' && ctx.signal.phaseId === 'phase1') {
+        return {
+          approved: false,
+          reason: `REGIME_VETO: Expanding volatility rejects Phase 1 scalps`,
+          riskMetrics: this.getRiskMetrics(ctx.currentPositions),
+        };
+      }
+
+      // Continuous alpha throttling
+      const alphaThrottle = this.getAlphaThrottle(plMetrics.tailExponent);
+      if (alphaThrottle < 1.0 && ctx.signal.phaseId !== 'phase3') {
+        ctx.effectiveSize = ctx.effectiveSize * alphaThrottle;
+        logger.warn(
+          `[RiskGuardian] Alpha Throttling (α=${plMetrics.tailExponent.toFixed(
+            2,
+          )}) -> Scaling size by ${(alphaThrottle * 100).toFixed(0)}%`,
+        );
+      }
+    }
+    return null;
+  }
+
+  private guardCostVeto(ctx: SignalCheckContext): RiskDecision | null {
+    if (this.config.costVeto?.enabled) {
+      const expectancy = this.checkExpectancy(ctx.signal, ctx.effectiveConfidence / 100);
+      if (!expectancy.passed) {
+        return {
+          approved: false,
+          reason: `COST_AWARE_VETO: ${expectancy.reason}`,
+          riskMetrics: this.getRiskMetrics(ctx.currentPositions),
+        };
+      }
+    }
+    return null;
+  }
+
+  private guardHedgeAutoApprove(ctx: SignalCheckContext): RiskDecision | null {
+    ctx.maxCorrelation = this.calculateMaxCorrelationWithPositions(
+      ctx.signal,
+      ctx.currentPositions,
+    );
+
+    const riskMetrics: RiskMetrics = {
+      currentLeverage: ctx.currentLeverage,
+      projectedLeverage: ctx.projectedLeverage,
+      correlation: ctx.maxCorrelation,
+      portfolioDelta: ctx.portfolioDelta,
+      portfolioBeta: ctx.portfolioBeta,
+    };
+
+    if (this.isPhase3HedgeThatReducesDelta(ctx.signal, ctx.portfolioDelta)) {
+      return {
+        approved: true,
+        reason: 'Phase 3 hedge approved: reduces global delta',
+        adjustedSize: ctx.signal.requestedSize,
+        riskMetrics,
+      };
+    }
+    return null;
+  }
+
+  private guardStopDistance(ctx: SignalCheckContext): RiskDecision | null {
+    const entryPrice = ctx.signal.entryPrice ?? this.getSignalPrice(ctx.signal);
+    const riskMetrics = this.buildRiskMetrics(ctx);
+
+    if (ctx.signal.stopLossPrice && entryPrice) {
+      const volatility = ctx.signal.volatility ?? this.calculateVolatility(ctx.signal.symbol);
+      const stopDistance = Math.abs(entryPrice - ctx.signal.stopLossPrice);
+      const minDistance = volatility * this.config.minStopDistanceMultiplier;
+
+      if (stopDistance < minDistance) {
+        return {
+          approved: false,
+          reason: `Stop distance too tight: ${stopDistance.toFixed(2)} < ${minDistance.toFixed(
+            2,
+          )} (${this.config.minStopDistanceMultiplier}x ATR)`,
+          riskMetrics,
+        };
+      }
+    }
+    return null;
+  }
+
+  private guardPositionNotional(ctx: SignalCheckContext): RiskDecision | null {
+    const riskMetrics = this.buildRiskMetrics(ctx);
+
+    if (this.config.maxPositionNotional > 0) {
+      const currentPos = ctx.currentPositions.find((p) => p.symbol === ctx.signal.symbol);
+      const currentSize = currentPos ? Math.abs(currentPos.size) : 0;
+      let projectedSize = currentSize;
+
+      const isSameSide = currentPos
+        ? (currentPos.side === 'LONG' && ctx.signal.side === 'BUY') ||
+          (currentPos.side === 'SHORT' && ctx.signal.side === 'SELL')
+        : true;
+
+      if (isSameSide) {
+        projectedSize = currentSize + ctx.effectiveSize;
+      } else {
+        projectedSize = Math.max(0, currentSize - ctx.effectiveSize);
+      }
+
+      if (projectedSize > this.config.maxPositionNotional) {
+        return {
+          approved: false,
+          reason: `Max Position Notional Exceeded: ${projectedSize} > ${this.config.maxPositionNotional}`,
+          riskMetrics,
+        };
+      }
+    }
+    return null;
+  }
+
+  private guardLeverage(ctx: SignalCheckContext): RiskDecision | null {
+    const govMultiplier = this.governanceEngine.getLeverageMultiplier();
+    const maxLeverage = this.allocationEngine.getMaxLeverage(this.currentEquity) * govMultiplier;
+    const riskMetrics = this.buildRiskMetrics(ctx);
+
+    if (ctx.projectedLeverage > maxLeverage) {
+      return {
+        approved: false,
+        reason: `Leverage cap exceeded: projected ${ctx.projectedLeverage.toFixed(
+          2,
+        )}x > max ${maxLeverage}x`,
+        riskMetrics,
+      };
+    }
+    return null;
+  }
+
+  private guardCorrelation(ctx: SignalCheckContext): RiskDecision | null {
+    const riskMetrics = this.buildRiskMetrics(ctx);
+
+    if (ctx.maxCorrelation > this.config.maxCorrelation) {
+      if (this.correlationNotifier) {
+        const affectedPositions = this.getCorrelatedPositions(ctx.signal, ctx.currentPositions);
+        this.correlationNotifier
+          .sendHighCorrelationWarning(
+            ctx.maxCorrelation,
+            this.config.maxCorrelation,
+            affectedPositions,
+          )
+          .catch((error) => {
+            logger.error('Failed to send high correlation warning:', error);
+          });
+      }
+
+      const hasCorrelatedSameDirection = this.hasCorrelatedSameDirectionPosition(
+        ctx.signal,
+        ctx.currentPositions,
+      );
+
+      if (hasCorrelatedSameDirection) {
+        ctx.effectiveSize = ctx.effectiveSize * (1 - this.config.correlationPenalty);
+
+        return {
+          approved: true,
+          reason: `High correlation (${ctx.maxCorrelation.toFixed(
+            2,
+          )}) with same direction: size reduced by ${this.config.correlationPenalty * 100}%`,
+          adjustedSize: ctx.effectiveSize,
+          riskMetrics,
+        };
+      }
+    }
+    return null;
+  }
+
+  private approveSignal(ctx: SignalCheckContext): RiskDecision {
+    const wasAdjusted = ctx.effectiveSize !== ctx.signal.requestedSize;
+    return {
+      approved: true,
+      reason: wasAdjusted
+        ? 'Signal approved with size adjustment: Risk/Latency/Alpha'
+        : 'Signal approved: within risk limits',
+      adjustedSize: ctx.effectiveSize,
+      riskMetrics: this.buildRiskMetrics(ctx),
+    };
+  }
+
+  private buildRiskMetrics(ctx: SignalCheckContext): RiskMetrics {
+    return {
+      currentLeverage: ctx.currentLeverage,
+      projectedLeverage: ctx.projectedLeverage,
+      correlation: ctx.maxCorrelation,
+      portfolioDelta: ctx.portfolioDelta,
+      portfolioBeta: ctx.portfolioBeta,
+    };
   }
 
   /**

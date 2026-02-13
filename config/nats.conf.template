@@ -1,6 +1,9 @@
-# Titan NATS Configuration Template
+# Titan NATS Configuration Template (HARDENED)
 # Passwords injected via environment variables at container startup
 # DO NOT hardcode passwords in this file
+#
+# IMPORTANT: This template mirrors the ACLs in nats.conf.
+# If you need to change permissions, update BOTH files.
 
 port: 4222
 http_port: 8222
@@ -11,13 +14,16 @@ jetstream {
     max_file: 20G
 }
 
-# Service Authorization (flat user list - no accounts for simpler auth)
+# Service Authorization — Least-Privilege ACLs
+# Each service can only publish/subscribe to its own namespace.
+# The "phases cannot execute" invariant is enforced here:
+# scavenger/hunter/sentinel can publish signals but NOT execution commands.
 authorization {
     users = [
-        # System user
+        # System user (admin only)
         { user: "sys", password: "$NATS_SYS_PASSWORD", permissions: { publish: ">", subscribe: ">" } },
         
-        # Brain: Master Orchestrator (Full Access)
+        # Brain: Master Orchestrator (Full Access — it IS the decision maker)
         { user: "brain", password: "$NATS_BRAIN_PASSWORD", permissions: { publish: ">", subscribe: ">" } },
         
         # Execution: Can Publish Fills, Subscribe to Commands
@@ -25,38 +31,38 @@ authorization {
             user: "execution", 
             password: "$NATS_EXECUTION_PASSWORD", 
             permissions: { 
-                publish: ">", 
-                subscribe: ">" 
+                publish: ["titan.evt.execution.fill.v1", "titan.evt.execution.>", "$JS.API.>", "titan.execution.>", "titan.evt.phase.>"], 
+                subscribe: ["titan.cmd.execution.place.v1.>", "_INBOX.>", "titan.execution.>", "titan.data.market.>", "titan.cmd.sys.halt.v1", "titan.cmd.risk.>"] 
             } 
         },
         
-        # Scavenger (Phase 1): Can Publish Signals
+        # Scavenger (Phase 1): Can Publish Signals, CANNOT Execute
         { 
             user: "scavenger", 
             password: "$NATS_SCAVENGER_PASSWORD", 
             permissions: { 
-                publish: ">",
-                subscribe: ">" 
+                publish: ["titan.evt.scavenger.signal.v1", "$JS.API.>", "titan.evt.phase.>"], 
+                subscribe: ["_INBOX.>", "powerlaw.metrics.>", "titan.evt.budget.update.v1"] 
             } 
         },
 
-        # Hunter (Phase 2)
+        # Hunter (Phase 2): Can Publish Signals, CANNOT Execute
         { 
             user: "hunter", 
             password: "$NATS_HUNTER_PASSWORD", 
             permissions: { 
-                publish: ">",
-                subscribe: ">"
+                publish: ["titan.evt.hunter.>", "$JS.API.>", "titan.evt.phase.>"], 
+                subscribe: ["titan.cmd.hunter.>", "_INBOX.>", "powerlaw.metrics.>", "titan.ai.>"]
             } 
         },
 
-        # Sentinel (Phase 3)
+        # Sentinel (Phase 3): Can Publish Signals, CANNOT Execute
         { 
             user: "sentinel", 
             password: "$NATS_SENTINEL_PASSWORD", 
             permissions: { 
-                publish: ">",
-                subscribe: ">" 
+                publish: ["titan.evt.sentinel.>", "$JS.API.>", "titan.evt.phase.>"], 
+                subscribe: ["titan.cmd.sentinel.>", "_INBOX.>", "powerlaw.metrics.>"] 
             } 
         },
 
@@ -65,8 +71,8 @@ authorization {
             user: "powerlaw", 
             password: "$NATS_POWERLAW_PASSWORD", 
             permissions: { 
-                publish: ">",
-                subscribe: ">" 
+                publish: ["titan.evt.powerlaw.>", "titan.data.powerlaw.>", "$JS.API.>", "titan.ai.>"], 
+                subscribe: ["_INBOX.>", "titan.data.market.>", "titan.market.ticker.>", "titan.evt.>"] 
             } 
         },
 
@@ -75,18 +81,18 @@ authorization {
             user: "quant", 
             password: "$NATS_QUANT_PASSWORD", 
             permissions: { 
-                publish: ">",
-                subscribe: ">" 
+                publish: ["titan.evt.quant.>", "titan.cmd.ai.>", "$JS.API.>"], 
+                subscribe: ["titan.cmd.ai.>", "titan.evt.>", "_INBOX.>", "titan.data.powerlaw.>"] 
             } 
         },
 
-        # Console (Least-Privilege)
+        # Console (Read-Only Visualization)
         { 
             user: "console", 
             password: "$NATS_CONSOLE_PASSWORD", 
             permissions: { 
-                publish: ">",
-                subscribe: ">" 
+                publish: ["$JS.API.>"],
+                subscribe: ["titan.data.>", "titan.evt.>", "_INBOX.>"] 
             } 
         }
     ]
