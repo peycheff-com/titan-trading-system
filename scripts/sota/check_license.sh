@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # Check licenses
 echo "📜 Scanning Licenses..."
 npx license-checker --summary --failOn "GPL;AGPL;LGPL"

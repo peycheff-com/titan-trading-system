@@ -26,6 +26,8 @@ import {
   TITAN_SUBJECTS,
   validateIntentPayload,
 } from '@titan/shared';
+import { Logger } from '@titan/shared';
+const logger = Logger.getInstance('brain:ExecutionEngineClient');
 
 /**
  * ExecutionEngineClient handles communication with the Titan Execution Engine via NATS
@@ -45,19 +47,19 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
    * Initialize the client
    */
   async initialize(): Promise<void> {
-    console.log('🔗 Connecting to Execution Engine (NATS)...');
+    logger.info('🔗 Connecting to Execution Engine (NATS)...');
 
     // We assume NATS is already connected by shared lib or we wait for it
     // The shared getNatsClient() returns a singleton that should be connected by Brain's startup
     try {
       this.connected = this.nats.isConnected();
       if (this.connected) {
-        console.log('✅ Execution Engine NATS client ready');
+        logger.info('✅ Execution Engine NATS client ready');
       } else {
-        console.warn('⚠️ NATS not connected yet, will retry on use');
+        logger.warn('⚠️ NATS not connected yet, will retry on use');
       }
     } catch (error) {
-      console.error('❌ Failed to initialize NATS client:', error);
+      logger.error('❌ Failed to initialize NATS client:', error);
     }
   }
 
@@ -66,7 +68,7 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
    */
   async shutdown(): Promise<void> {
     this.connected = false;
-    console.log('🔌 Execution Engine client disconnected');
+    logger.info('🔌 Execution Engine client disconnected');
   }
 
   /**
@@ -137,7 +139,7 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
       });
 
       const latency = Date.now() - startTime;
-      console.log(
+      logger.info(
         `📤 Signal forwarded to Execution Engine via NATS: ${signal.signalId} (${latency}ms)`,
       );
 
@@ -149,7 +151,7 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
         latency,
       });
     } catch (error) {
-      console.error(`❌ Failed to forward signal ${signal.signalId} to NATS:`, error);
+      logger.error(`❌ Failed to forward signal ${signal.signalId} to NATS:`, error);
 
       this.emit('signal:forward_failed', {
         signalId: signal.signalId,
@@ -167,7 +169,7 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
    */
   async publishRiskPolicy(policy: any): Promise<void> {
     if (!this.connected) {
-      console.warn('⚠️ Execution Engine not connected, cannot push risk policy');
+      logger.warn('⚠️ Execution Engine not connected, cannot push risk policy');
       // We might still want to proceed if NATS is temporarily down, but better to warn
     }
 
@@ -188,9 +190,9 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
           idempotency_key: `risk-update-${Date.now()}`,
         },
       );
-      console.log('✅ Risk policy update published to NATS');
+      logger.info('✅ Risk policy update published to NATS');
     } catch (error) {
-      console.error('❌ Failed to publish risk policy:', error);
+      logger.error('❌ Failed to publish risk policy:', error);
       throw error;
     }
   }
@@ -200,7 +202,7 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
    * Called by Circuit Breaker for emergency flatten
    */
   async closeAllPositions(): Promise<void> {
-    console.log('🚨 Requesting emergency position closure from Execution Engine...');
+    logger.info('🚨 Requesting emergency position closure from Execution Engine...');
 
     try {
       const subject = TITAN_SUBJECTS.CMD.RISK.FLATTEN;
@@ -216,7 +218,7 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
 
       await this.nats.publish(subject, payload);
 
-      console.log(`✅ Emergency flatten request published to ${subject}`);
+      logger.info(`✅ Emergency flatten request published to ${subject}`);
 
       this.emit('positions:flattened', {
         closedCount: -1, // Unknown async
@@ -224,7 +226,7 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
         timestamp: Date.now(),
       });
     } catch (error) {
-      console.error('❌ Failed to publish close all positions:', error);
+      logger.error('❌ Failed to publish close all positions:', error);
       throw error;
     }
   }
@@ -234,7 +236,7 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
    * Stops all new orders in Execution Engine
    */
   async haltSystem(reason: string): Promise<void> {
-    console.log(`🚨 Triggering SYSTEM HALT: ${reason}`);
+    logger.info(`🚨 Triggering SYSTEM HALT: ${reason}`);
     try {
       const subject = TITAN_SUBJECTS.CMD.SYS.HALT;
       const payload = {
@@ -247,7 +249,7 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
       await this.nats.publish(subject, payload);
       this.emit('system:halted', { reason, timestamp: Date.now() });
     } catch (error) {
-      console.error('❌ Failed to broadcast system halt:', error);
+      logger.error('❌ Failed to broadcast system halt:', error);
       throw error;
     }
   }
@@ -258,7 +260,7 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
    */
   async getPositions(): Promise<Position[]> {
     // TODO: Implement NATS request-reply for positions when supported by Rust
-    console.warn('⚠️ getPositions not implemented for NATS yet');
+    logger.warn('⚠️ getPositions not implemented for NATS yet');
     return [];
   }
 
@@ -271,7 +273,7 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
       const usdt = balances.find((b) => b.currency === 'USDT');
       return usdt ? usdt.total : 0;
     } catch (error) {
-      console.error('❌ Failed to fetch equity via NATS:', error);
+      logger.error('❌ Failed to fetch equity via NATS:', error);
       return 0;
     }
   }
@@ -309,7 +311,7 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
       await this.nats.publish(TITAN_SUBJECTS.DLQ.EXECUTION, dlqPayload);
       await this.nats.publish(TITAN_SUBJECTS.LEGACY.DLQ_EXECUTION_V0, dlqPayload); // Legacy
     } catch (error) {
-      console.error('❌ Failed to publish to DLQ:', error);
+      logger.error('❌ Failed to publish to DLQ:', error);
     }
   }
 
@@ -318,7 +320,7 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
    * This is now likely called by NatsConsumer/Brain when a fill arrives
    */
   handleFillConfirmation(fill: FillConfirmation): void {
-    console.log(`✅ Fill confirmed: ${fill.signalId} @ ${fill.fillPrice}`);
+    logger.info(`✅ Fill confirmed: ${fill.signalId} @ ${fill.fillPrice}`);
     this.emit('fill:confirmed', fill);
   }
 
@@ -352,7 +354,7 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
       const response = await this.nats.request(subject, {}, { timeout: 5000 });
       return (response as { balances: ExchangeBalance[] }).balances || [];
     } catch (error) {
-      console.error(
+      logger.error(
         `❌ Failed to fetch balances for ${exchange}:`,
         error instanceof Error ? error.message : String(error),
       );
@@ -375,12 +377,12 @@ export class ExecutionEngineClient extends EventEmitter implements IExecutionEng
 
       const response = await this.nats.request(subject, {}, { timeout: 5000 });
       return (response as { positions: ExecutionPosition[] }).positions || [];
-      // console.warn(
+      // logger.warn(
       //   "⚠️ fetchExchangePositions not implemented for NATS yet (simulated)",
       // );
       // return [];
     } catch (error) {
-      console.error(
+      logger.error(
         `❌ Failed to fetch positions for ${exchange}:`,
         error instanceof Error ? error.message : String(error),
       );

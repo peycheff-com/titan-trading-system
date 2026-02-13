@@ -8,15 +8,20 @@ echo "::group::Security Scans"
 
 # NPM Audit
 echo "Running NPM audit..."
-# Audit only production deps, high/critical
-npm audit --audit-level=high --production || echo "::warning::NPM audit found issues (non-blocking for now)"
+npm audit --audit-level=high --production || {
+  echo "::error::NPM audit found high/critical vulnerabilities"
+  exit 1
+}
 
 # Cargo Audit
 if command -v cargo &> /dev/null; then
+  echo "Installing cargo-audit..."
+  cargo install cargo-audit --locked 2>/dev/null || true
   echo "Running Cargo audit..."
-  # cargo audit || echo "::warning::Cargo audit found issues"
-  # Skipping for now as it might need installation/caching
-  echo "Skipping cargo audit (requires binary install)"
+  (cd services/titan-execution-rs && cargo audit) || {
+    echo "::error::Cargo audit found vulnerabilities"
+    exit 1
+  }
 else
   echo "Cargo not found, skipping cargo audit."
 fi

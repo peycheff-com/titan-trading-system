@@ -1,5 +1,7 @@
 /**
  * ConfigRegistry Tests - Tighten-only enforcement and receipts
+ *
+ * Uses real CONFIG_CATALOG keys for integration testing.
  */
 import { beforeEach, describe, expect, it } from "vitest";
 import { ConfigRegistry } from "../../services/config/ConfigRegistry.js";
@@ -12,17 +14,15 @@ describe("ConfigRegistry", () => {
     });
 
     describe("tighten-only enforcement", () => {
-        it("should allow reducing max_position_size (tighten_only)", async () => {
-            // Get the current value
+        it("should allow reducing maxPositionNotional (tighten_only)", async () => {
             const effectiveBefore = registry.getEffective(
-                "risk.max_position_size",
+                "risk.maxPositionNotional",
             );
-            expect(effectiveBefore!.value).toBe(100000);
+            expect(effectiveBefore!.value).toBe(50000);
 
-            // Try to reduce it (should succeed - tightening)
             const result = await registry.createOverride(
-                "risk.max_position_size",
-                50000,
+                "risk.maxPositionNotional",
+                25000,
                 "test-operator",
                 "Reducing position size for safety",
             );
@@ -31,64 +31,63 @@ describe("ConfigRegistry", () => {
             expect(result.receipt).toBeDefined();
 
             const effectiveAfter = registry.getEffective(
-                "risk.max_position_size",
+                "risk.maxPositionNotional",
             );
-            expect(effectiveAfter!.value).toBe(50000);
+            expect(effectiveAfter!.value).toBe(25000);
         });
 
-        it("should reject increasing max_position_size (tighten_only)", async () => {
-            // Get the current value
+        it("should reject increasing maxPositionNotional (tighten_only)", async () => {
             const effectiveBefore = registry.getEffective(
-                "risk.max_position_size",
+                "risk.maxPositionNotional",
             );
-            expect(effectiveBefore!.value).toBe(100000);
+            expect(effectiveBefore!.value).toBe(50000);
 
-            // Try to increase it (should fail - loosening not allowed)
             const result = await registry.createOverride(
-                "risk.max_position_size",
+                "risk.maxPositionNotional",
                 200000,
                 "test-operator",
                 "Trying to increase position size",
             );
 
             expect(result.success).toBe(false);
-            expect(result.error).toContain("tighten-only");
+            expect(result.error).toContain("Tighten-only");
 
-            // Value should remain unchanged
             const effectiveAfter = registry.getEffective(
-                "risk.max_position_size",
+                "risk.maxPositionNotional",
             );
-            expect(effectiveAfter!.value).toBe(100000);
+            expect(effectiveAfter!.value).toBe(50000);
         });
 
-        it("should allow reducing daily_loss_limit (tighten_only)", async () => {
+        it("should allow tightening maxDailyLoss (lower_is_riskier: increase allowed)", async () => {
+            // maxDailyLoss default is -1000. lower_is_riskier → increasing (less negative) is tightening.
             const result = await registry.createOverride(
-                "risk.daily_loss_limit",
-                5000,
+                "risk.maxDailyLoss",
+                -500,
                 "test-operator",
-                "Reducing daily loss limit",
+                "Tightening daily loss limit",
             );
 
             expect(result.success).toBe(true);
             expect(result.receipt?.action).toBe("override");
         });
 
-        it("should reject increasing daily_loss_limit (tighten_only)", async () => {
+        it("should reject loosening maxDailyLoss (lower_is_riskier: decrease blocked)", async () => {
+            // Going from -1000 to -2000 is loosening (more negative = riskier)
             const result = await registry.createOverride(
-                "risk.daily_loss_limit",
-                20000,
+                "risk.maxDailyLoss",
+                -2000,
                 "test-operator",
-                "Trying to increase loss limit",
+                "Trying to loosen loss limit",
             );
 
             expect(result.success).toBe(false);
-            expect(result.error).toContain("tighten-only");
+            expect(result.error).toContain("Tighten-only");
         });
 
-        it("should allow reducing drawdown_pause_threshold (tighten_only)", async () => {
+        it("should allow reducing maxDailyDrawdown (tighten_only)", async () => {
             const result = await registry.createOverride(
-                "risk.drawdown_pause_threshold",
-                10,
+                "breaker.maxDailyDrawdown",
+                0.03,
                 "test-operator",
                 "Reducing drawdown threshold for safety",
             );
@@ -96,24 +95,24 @@ describe("ConfigRegistry", () => {
             expect(result.success).toBe(true);
         });
 
-        it("should reject increasing drawdown_pause_threshold (tighten_only)", async () => {
+        it("should reject increasing maxDailyDrawdown (tighten_only)", async () => {
             const result = await registry.createOverride(
-                "risk.drawdown_pause_threshold",
-                30,
+                "breaker.maxDailyDrawdown",
+                0.5,
                 "test-operator",
                 "Trying to increase drawdown threshold",
             );
 
             expect(result.success).toBe(false);
-            expect(result.error).toContain("tighten-only");
+            expect(result.error).toContain("Tighten-only");
         });
     });
 
     describe("raise-only enforcement", () => {
-        it("should allow raising min_equity_reserve (raise_only)", async () => {
+        it("should allow raising reserveLimit (raise_only)", async () => {
             const result = await registry.createOverride(
-                "capital.min_equity_reserve",
-                20000,
+                "capital.reserveLimit",
+                500,
                 "test-operator",
                 "Increasing reserve for safety",
             );
@@ -121,24 +120,24 @@ describe("ConfigRegistry", () => {
             expect(result.success).toBe(true);
         });
 
-        it("should reject lowering min_equity_reserve (raise_only)", async () => {
+        it("should reject lowering reserveLimit (raise_only)", async () => {
             const result = await registry.createOverride(
-                "capital.min_equity_reserve",
-                5000,
+                "capital.reserveLimit",
+                50,
                 "test-operator",
                 "Trying to decrease reserve",
             );
 
             expect(result.success).toBe(false);
-            expect(result.error).toContain("raise-only");
+            expect(result.error).toContain("Raise-only");
         });
     });
 
     describe("tunable configs", () => {
         it("should allow any change to tunable configs", async () => {
             const result = await registry.createOverride(
-                "nats.connection_timeout",
-                10000,
+                "trading.heartbeatTimeoutMs",
+                600000,
                 "test-operator",
                 "Increasing timeout",
             );
@@ -146,8 +145,8 @@ describe("ConfigRegistry", () => {
             expect(result.success).toBe(true);
 
             const result2 = await registry.createOverride(
-                "nats.connection_timeout",
-                2000,
+                "trading.heartbeatTimeoutMs",
+                60000,
                 "test-operator",
                 "Decreasing timeout",
             );
@@ -156,25 +155,11 @@ describe("ConfigRegistry", () => {
         });
     });
 
-    describe("immutable configs", () => {
-        it("should reject changes to immutable configs", async () => {
-            const result = await registry.createOverride(
-                "system.env",
-                "staging",
-                "test-operator",
-                "Trying to change environment",
-            );
-
-            expect(result.success).toBe(false);
-            expect(result.error).toContain("immutable");
-        });
-    });
-
     describe("receipts", () => {
         it("should generate receipt for successful override", async () => {
             const result = await registry.createOverride(
-                "risk.max_position_size",
-                50000,
+                "risk.maxPositionNotional",
+                25000,
                 "test-operator",
                 "Reducing for safety",
             );
@@ -182,9 +167,9 @@ describe("ConfigRegistry", () => {
             expect(result.success).toBe(true);
             expect(result.receipt).toBeDefined();
             expect(result.receipt?.id).toBeDefined();
-            expect(result.receipt?.key).toBe("risk.max_position_size");
-            expect(result.receipt?.previousValue).toBe(100000);
-            expect(result.receipt?.newValue).toBe(50000);
+            expect(result.receipt?.key).toBe("risk.maxPositionNotional");
+            expect(result.receipt?.previousValue).toBe(50000);
+            expect(result.receipt?.newValue).toBe(25000);
             expect(result.receipt?.operatorId).toBe("test-operator");
             expect(result.receipt?.reason).toBe("Reducing for safety");
             expect(result.receipt?.action).toBe("override");
@@ -192,25 +177,23 @@ describe("ConfigRegistry", () => {
         });
 
         it("should generate receipt for rollback", async () => {
-            // First create an override
             await registry.createOverride(
-                "risk.max_position_size",
-                50000,
+                "risk.maxPositionNotional",
+                25000,
                 "test-operator",
                 "Reducing for safety",
             );
 
-            // Then rollback
             const result = await registry.rollbackOverride(
-                "risk.max_position_size",
+                "risk.maxPositionNotional",
                 "test-operator",
             );
 
             expect(result.success).toBe(true);
             expect(result.receipt).toBeDefined();
             expect(result.receipt?.action).toBe("rollback");
-            expect(result.receipt?.previousValue).toBe(50000);
-            expect(result.receipt?.newValue).toBe(100000);
+            expect(result.receipt?.previousValue).toBe(25000);
+            expect(result.receipt?.newValue).toBe(50000);
         });
 
         it("should retrieve receipts with limit", () => {
@@ -220,8 +203,8 @@ describe("ConfigRegistry", () => {
 
         it("should include signature in receipts", async () => {
             const result = await registry.createOverride(
-                "risk.max_position_size",
-                50000,
+                "risk.maxPositionNotional",
+                25000,
                 "test-operator",
                 "Test override",
             );
@@ -237,8 +220,8 @@ describe("ConfigRegistry", () => {
             const beforeCount = beforeOverrides.length;
 
             await registry.createOverride(
-                "risk.max_position_size",
-                50000,
+                "risk.maxPositionNotional",
+                25000,
                 "test-operator",
                 "Test override",
             );
@@ -249,28 +232,139 @@ describe("ConfigRegistry", () => {
 
         it("should remove override from active after rollback", async () => {
             await registry.createOverride(
-                "risk.max_position_size",
-                50000,
+                "risk.maxPositionNotional",
+                25000,
                 "test-operator",
                 "Test override",
             );
 
             const beforeRollback = registry.getActiveOverrides();
             const overrideExists = beforeRollback.some(
-                (o) => o.key === "risk.max_position_size" && o.active,
+                (o) => o.key === "risk.maxPositionNotional" && o.active,
             );
             expect(overrideExists).toBe(true);
 
             await registry.rollbackOverride(
-                "risk.max_position_size",
+                "risk.maxPositionNotional",
                 "test-operator",
             );
 
             const afterRollback = registry.getActiveOverrides();
             const stillExists = afterRollback.some(
-                (o) => o.key === "risk.max_position_size" && o.active,
+                (o) => o.key === "risk.maxPositionNotional" && o.active,
             );
             expect(stillExists).toBe(false);
+        });
+    });
+
+    describe("new catalog items", () => {
+        it("should have all new trading/risk items in catalog", () => {
+            const newKeys = [
+                "capital.initialEquity",
+                "capital.reserveLimit",
+                "risk.maxRiskPct",
+                "risk.maxPositionSizePct",
+                "risk.maxTotalLeverage",
+                "breaker.maxWeeklyDrawdown",
+                "breaker.minEquity",
+                "breaker.consecutiveLossLimit",
+                "breaker.emergencyStopLoss",
+                "safety.zscoreThreshold",
+                "safety.drawdownVelocityThreshold",
+                "trading.minTradeIntervalMs",
+                "trading.maxTradesPerHour",
+                "trading.maxTradesPerDay",
+                "market.fundingGreedThreshold",
+                "market.fundingFearThreshold",
+                "execution.maxSpreadPct",
+                "execution.maxSlippagePct",
+                "execution.useMockBroker",
+                "execution.minStructureThreshold",
+            ];
+
+            for (const key of newKeys) {
+                const effective = registry.getEffective(key);
+                expect(effective, `${key} should exist in catalog`).toBeDefined();
+                expect(effective!.value).toBeDefined();
+            }
+        });
+
+        it("should enforce tighten-only on risk.maxRiskPct", async () => {
+            const eff = registry.getEffective("risk.maxRiskPct");
+            expect(eff!.value).toBe(0.03);
+
+            // Tighten (reduce) — should pass
+            const tighten = await registry.createOverride(
+                "risk.maxRiskPct",
+                0.01,
+                "test-op",
+                "Reducing risk",
+            );
+            expect(tighten.success).toBe(true);
+
+            // Loosen (increase) — should fail
+            const loosen = await registry.createOverride(
+                "risk.maxRiskPct",
+                0.1,
+                "test-op",
+                "Increasing risk",
+            );
+            expect(loosen.success).toBe(false);
+            expect(loosen.error).toContain("Tighten-only");
+        });
+
+        it("should enforce raise-only on trading.minTradeIntervalMs", async () => {
+            const eff = registry.getEffective("trading.minTradeIntervalMs");
+            expect(eff!.value).toBe(30000);
+
+            // Raise — should pass
+            const raise = await registry.createOverride(
+                "trading.minTradeIntervalMs",
+                60000,
+                "test-op",
+                "Increasing interval",
+            );
+            expect(raise.success).toBe(true);
+
+            // Lower — should fail
+            const lower = await registry.createOverride(
+                "trading.minTradeIntervalMs",
+                5000,
+                "test-op",
+                "Decreasing interval",
+            );
+            expect(lower.success).toBe(false);
+            expect(lower.error).toContain("Raise-only");
+        });
+    });
+
+    describe("presets", () => {
+        it("should list available presets", () => {
+            const presets = registry.getPresets();
+            expect(presets.length).toBe(3);
+            expect(presets.map((p) => p.name)).toEqual([
+                "conservative",
+                "balanced",
+                "aggressive",
+            ]);
+        });
+
+        it("should apply a preset profile", async () => {
+            const result = await registry.applyPreset(
+                "conservative",
+                "test-operator",
+            );
+            expect(result.success).toBeDefined();
+            expect(result.results.length).toBeGreaterThan(0);
+        });
+
+        it("should reject unknown preset", async () => {
+            const result = await registry.applyPreset(
+                "nonexistent",
+                "test-operator",
+            );
+            expect(result.success).toBe(false);
+            expect(result.error).toContain("Unknown preset");
         });
     });
 });

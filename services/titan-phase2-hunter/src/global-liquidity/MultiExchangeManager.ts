@@ -14,13 +14,15 @@ import {
   ExchangeWebSocketClient,
 } from './ExchangeWebSocketClient';
 import { ConnectionStatus, ExchangeFlow } from '../types';
+import { Logger } from '@titan/shared';
+const logger = Logger.getInstance('hunter:MultiExchangeManager');
 
 /**
  * Multi-exchange manager configuration
  */
 export interface MultiExchangeManagerConfig {
   symbols: string[];
-  exchanges: ('binance' | 'coinbase' | 'kraken' | 'mexc')[];
+  exchanges: ('binance' | 'coinbase' | 'kraken' | 'mexc' | 'okx')[];
   reconnectInterval: number;
   maxReconnectAttempts: number;
   heartbeatInterval: number;
@@ -35,6 +37,7 @@ export interface ExchangeStatusSummary {
   coinbase: ConnectionStatus;
   kraken: ConnectionStatus;
   mexc: ConnectionStatus;
+  okx: ConnectionStatus;
   connectedCount: number;
   totalExchanges: number;
   allConnected: boolean;
@@ -46,7 +49,7 @@ export interface ExchangeStatusSummary {
  */
 const DEFAULT_CONFIG: MultiExchangeManagerConfig = {
   symbols: ['BTCUSDT'],
-  exchanges: ['binance', 'coinbase', 'kraken', 'mexc'],
+  exchanges: ['binance', 'coinbase', 'kraken', 'mexc', 'okx'],
   reconnectInterval: 5000,
   maxReconnectAttempts: 10,
   heartbeatInterval: 30000,
@@ -67,9 +70,9 @@ const DEFAULT_CONFIG: MultiExchangeManagerConfig = {
  */
 export class MultiExchangeManager extends EventEmitter {
   private config: MultiExchangeManagerConfig;
-  private clients: Map<'binance' | 'coinbase' | 'kraken' | 'mexc', ExchangeWebSocketClient> =
+  private clients: Map<'binance' | 'coinbase' | 'kraken' | 'mexc' | 'okx', ExchangeWebSocketClient> =
     new Map();
-  private healthMetrics: Map<'binance' | 'coinbase' | 'kraken' | 'mexc', ConnectionHealth> =
+  private healthMetrics: Map<'binance' | 'coinbase' | 'kraken' | 'mexc' | 'okx', ConnectionHealth> =
     new Map();
   private isInitialized: boolean = false;
 
@@ -84,13 +87,13 @@ export class MultiExchangeManager extends EventEmitter {
    */
   async initialize(): Promise<void> {
     if (this.isInitialized) {
-      console.log('⚠️ MultiExchangeManager already initialized');
+      logger.info('⚠️ MultiExchangeManager already initialized');
       return;
     }
 
-    console.log('🌐 Initializing Multi-Exchange Manager...');
-    console.log(`📊 Exchanges: ${this.config.exchanges.join(', ')}`);
-    console.log(`📈 Symbols: ${this.config.symbols.join(', ')}`);
+    logger.info('🌐 Initializing Multi-Exchange Manager...');
+    logger.info(`📊 Exchanges: ${this.config.exchanges.join(', ')}`);
+    logger.info(`📈 Symbols: ${this.config.symbols.join(', ')}`);
 
     // Create clients for each exchange
     for (const exchange of this.config.exchanges) {
@@ -115,7 +118,7 @@ export class MultiExchangeManager extends EventEmitter {
           await client.connect();
           return { exchange, success: true };
         } catch (error) {
-          console.error(`❌ Failed to connect to ${exchange}:`, error);
+          logger.error(`❌ Failed to connect to ${exchange}:`, error);
           return { exchange, success: false, error };
         }
       }
@@ -124,7 +127,7 @@ export class MultiExchangeManager extends EventEmitter {
     const results = await Promise.all(connectionPromises);
     const successCount = results.filter(r => r.success).length;
 
-    console.log(`✅ Connected to ${successCount}/${this.config.exchanges.length} exchanges`);
+    logger.info(`✅ Connected to ${successCount}/${this.config.exchanges.length} exchanges`);
 
     // eslint-disable-next-line functional/immutable-data
     this.isInitialized = true;
@@ -140,7 +143,7 @@ export class MultiExchangeManager extends EventEmitter {
    * Disconnect from all exchanges
    */
   async disconnect(): Promise<void> {
-    console.log('🔌 Disconnecting from all exchanges...');
+    logger.info('🔌 Disconnecting from all exchanges...');
 
     const disconnectPromises = Array.from(this.clients.values()).map(client => client.disconnect());
 
@@ -153,7 +156,7 @@ export class MultiExchangeManager extends EventEmitter {
     // eslint-disable-next-line functional/immutable-data
     this.isInitialized = false;
 
-    console.log('✅ Disconnected from all exchanges');
+    logger.info('✅ Disconnected from all exchanges');
   }
 
   /**
@@ -161,11 +164,12 @@ export class MultiExchangeManager extends EventEmitter {
    * Requirement 4.6: Add connection health monitoring and status reporting
    */
   getStatus(): ExchangeStatusSummary {
-    const statuses: Record<'binance' | 'coinbase' | 'kraken' | 'mexc', ConnectionStatus> = {
+    const statuses: Record<'binance' | 'coinbase' | 'kraken' | 'mexc' | 'okx', ConnectionStatus> = {
       binance: ConnectionStatus.DISCONNECTED,
       coinbase: ConnectionStatus.DISCONNECTED,
       kraken: ConnectionStatus.DISCONNECTED,
       mexc: ConnectionStatus.DISCONNECTED,
+      okx: ConnectionStatus.DISCONNECTED,
     };
 
     // eslint-disable-next-line functional/no-let
@@ -192,8 +196,8 @@ export class MultiExchangeManager extends EventEmitter {
   /**
    * Get health metrics for all exchanges
    */
-  getHealthMetrics(): Map<'binance' | 'coinbase' | 'kraken' | 'mexc', ConnectionHealth> {
-    const metrics = new Map<'binance' | 'coinbase' | 'kraken' | 'mexc', ConnectionHealth>();
+  getHealthMetrics(): Map<'binance' | 'coinbase' | 'kraken' | 'mexc' | 'okx', ConnectionHealth> {
+    const metrics = new Map<'binance' | 'coinbase' | 'kraken' | 'mexc' | 'okx', ConnectionHealth>();
 
     for (const [exchange, client] of this.clients) {
       // eslint-disable-next-line functional/immutable-data
@@ -206,7 +210,7 @@ export class MultiExchangeManager extends EventEmitter {
   /**
    * Get health for a specific exchange
    */
-  getExchangeHealth(exchange: 'binance' | 'coinbase' | 'kraken' | 'mexc'): ConnectionHealth | null {
+  getExchangeHealth(exchange: 'binance' | 'coinbase' | 'kraken' | 'mexc' | 'okx'): ConnectionHealth | null {
     const client = this.clients.get(exchange);
     return client ? client.getHealth() : null;
   }
@@ -214,7 +218,7 @@ export class MultiExchangeManager extends EventEmitter {
   /**
    * Check if a specific exchange is connected
    */
-  isExchangeConnected(exchange: 'binance' | 'coinbase' | 'kraken' | 'mexc'): boolean {
+  isExchangeConnected(exchange: 'binance' | 'coinbase' | 'kraken' | 'mexc' | 'okx'): boolean {
     const client = this.clients.get(exchange);
     return client ? client.getStatus() === ConnectionStatus.CONNECTED : false;
   }
@@ -222,8 +226,8 @@ export class MultiExchangeManager extends EventEmitter {
   /**
    * Get list of connected exchanges
    */
-  getConnectedExchanges(): ('binance' | 'coinbase' | 'kraken' | 'mexc')[] {
-    const connected: ('binance' | 'coinbase' | 'kraken' | 'mexc')[] = [];
+  getConnectedExchanges(): ('binance' | 'coinbase' | 'kraken' | 'mexc' | 'okx')[] {
+    const connected: ('binance' | 'coinbase' | 'kraken' | 'mexc' | 'okx')[] = [];
 
     for (const [exchange, client] of this.clients) {
       if (client.getStatus() === ConnectionStatus.CONNECTED) {
@@ -259,7 +263,7 @@ export class MultiExchangeManager extends EventEmitter {
    */
   private setupClientListeners(
     client: ExchangeWebSocketClient,
-    exchange: 'binance' | 'coinbase' | 'kraken' | 'mexc'
+    exchange: 'binance' | 'coinbase' | 'kraken' | 'mexc' | 'okx'
   ): void {
     // Forward trade events
     client.on('trade', (trade: ExchangeTrade) => {
@@ -268,7 +272,7 @@ export class MultiExchangeManager extends EventEmitter {
 
     // Handle connection events
     client.on('connected', () => {
-      console.log(`✅ ${exchange.toUpperCase()} connected`);
+      logger.info(`✅ ${exchange.toUpperCase()} connected`);
       this.emit('exchangeConnected', exchange);
       this.emitStatusChange();
 
@@ -279,7 +283,7 @@ export class MultiExchangeManager extends EventEmitter {
     });
 
     client.on('disconnected', () => {
-      console.log(`🔌 ${exchange.toUpperCase()} disconnected`);
+      logger.info(`🔌 ${exchange.toUpperCase()} disconnected`);
       this.emit('exchangeDisconnected', exchange);
       this.emit('connectionLost', {
         exchange,
@@ -289,11 +293,11 @@ export class MultiExchangeManager extends EventEmitter {
     });
 
     client.on('reconnecting', (data: { exchange: string; attempt: number }) => {
-      console.log(`🔄 ${exchange.toUpperCase()} reconnecting (attempt ${data.attempt})`);
+      logger.info(`🔄 ${exchange.toUpperCase()} reconnecting (attempt ${data.attempt})`);
     });
 
     client.on('error', (data: { exchange: string; error: Error }) => {
-      console.error(`❌ ${exchange.toUpperCase()} error:`, data.error.message);
+      logger.error(`❌ ${exchange.toUpperCase()} error:`, data.error.message);
     });
 
     // Handle health updates

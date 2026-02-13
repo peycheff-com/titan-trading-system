@@ -1,7 +1,7 @@
 /**
  * TitanAnalyst - AI Engine
  *
- * Uses Gemini 1.5 Flash to analyze trade patterns
+ * Uses Gemini 3 Flash to analyze trade patterns
  * and generate optimization proposals.
  *
  * Requirements: 1.3, 2.1, 2.2
@@ -9,7 +9,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-const baseDir = path.join(process.cwd(), 'src/ai');
+import { Logger } from '@titan/shared';
 import {
   BacktestResult,
   Config,
@@ -24,6 +24,16 @@ import { Backtester } from '../simulation/Backtester.js';
 import { GeminiClient, GeminiClientConfig } from './GeminiClient.js';
 import { Journal } from './Journal.js';
 import { Guardrails } from './Guardrails.js';
+
+// Lazy-init to avoid circular import with @titan/shared at module load time
+// eslint-disable-next-line functional/no-let
+let _logger: ReturnType<typeof Logger.getInstance> | null = null;
+function getLogger() {
+  if (!_logger) _logger = Logger.getInstance('ai-quant:TitanAnalyst');
+  return _logger;
+}
+
+const baseDir = path.join(process.cwd(), 'src/ai');
 
 /**
  * AI response structure for analysis
@@ -173,7 +183,7 @@ export class TitanAnalyst {
       return this.parseAnalysisResponse(response);
     } catch (error) {
       // Return empty insights on error - don't crash the system
-      console.error('TitanAnalyst.analyzeFailures error:', error);
+      getLogger().error('TitanAnalyst.analyzeFailures error:', error);
       return [];
     }
   }
@@ -536,7 +546,9 @@ export class TitanAnalyst {
         maxOutputTokens: 2048,
       });
     } catch (error) {
-      console.warn('Deep think failed, proceeding without it:', error);
+      getLogger().warn(
+        `Deep think failed, proceeding without it: ${error instanceof Error ? error.message : String(error)}`,
+      );
       return 'Analysis skipped due to error.';
     }
   }
@@ -790,7 +802,9 @@ Provide a concise reasoning paragraph (plain text).`;
         return JSON.parse(configContent);
       }
     } catch (error) {
-      console.warn('Failed to load current config, using defaults:', error);
+      getLogger().warn(
+        `Failed to load current config, using defaults: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
 
     // Return default configuration if file doesn't exist

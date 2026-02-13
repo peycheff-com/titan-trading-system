@@ -1,7 +1,7 @@
 # NATS Intent Contract (v1)
 
 This document defines the v1 Intent payload schema sent over NATS for Brain → Execution.
-The authoritative JSON Schema is `docs/contracts/nats-intent.v1.schema.json`.
+The authoritative JSON Schema is [contracts/nats/nats-intent.v1.schema.json](../../contracts/nats/nats-intent.v1.schema.json).
 
 ## Required fields
 

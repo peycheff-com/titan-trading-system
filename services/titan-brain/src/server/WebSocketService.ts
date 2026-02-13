@@ -175,7 +175,7 @@ export class WebSocketService {
     this.startStateUpdateInterval();
 
     this.logger.info(`WebSocket service listening on ws://${host}:${port}`);
-    console.log(`📡 WebSocket server listening on ws://${host}:${port}`);
+    this.logger.info(`📡 WebSocket server listening on ws://${host}:${port}`);
   }
 
   /**

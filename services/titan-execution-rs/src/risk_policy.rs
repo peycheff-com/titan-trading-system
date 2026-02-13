@@ -129,9 +129,13 @@ impl RiskPolicy {
     }
 
     /// Returns the SHA256 hash of the canonical policy JSON.
+    /// Parses and re-serializes to compact JSON to match TypeScript's JSON.stringify().
     pub fn get_hash() -> String {
+        let value: serde_json::Value = serde_json::from_str(RISK_POLICY_JSON)
+            .expect("Failed to parse embedded risk_policy.json");
+        let compact = serde_json::to_string(&value).expect("Failed to serialize to compact JSON");
         let mut hasher = Sha256::new();
-        hasher.update(RISK_POLICY_JSON);
+        hasher.update(compact.as_bytes());
         hex::encode(hasher.finalize())
     }
 

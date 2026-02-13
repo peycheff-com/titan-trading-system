@@ -36,12 +36,12 @@ impl MexcAdapter {
         let api_key = config
             .and_then(|c| c.get_api_key())
             .or_else(|| env::var("MEXC_API_KEY").ok())
-            .ok_or_else(|| ExchangeError::Config("MEXC_API_KEY not set".to_string()))?;
+            .ok_or_else(|| ExchangeError::Configuration("MEXC_API_KEY not set".to_string()))?;
 
         let api_secret = config
             .and_then(|c| c.get_secret_key())
             .or_else(|| env::var("MEXC_SECRET_KEY").ok())
-            .ok_or_else(|| ExchangeError::Config("MEXC_SECRET_KEY not set".to_string()))?;
+            .ok_or_else(|| ExchangeError::Configuration("MEXC_SECRET_KEY not set".to_string()))?;
 
         Ok(Self {
             client: Client::new(),
@@ -156,7 +156,7 @@ impl ExchangeAdapter for MexcAdapter {
             OrderType::Limit => 1,  // Limit
             OrderType::Market => 5, // Market
             _ => {
-                return Err(ExchangeError::Config(
+                return Err(ExchangeError::Configuration(
                     "Unsupported order type for MEXC".into(),
                 ))
             }
@@ -265,8 +265,78 @@ impl ExchangeAdapter for MexcAdapter {
     }
 
     async fn get_positions(&self) -> Result<Vec<Position>, ExchangeError> {
-        // Stub for now
-        Ok(Vec::new())
+        // GET /api/v1/private/position/open_positions
+        let resp: serde_json::Value = self
+            .request(Method::GET, "/api/v1/private/position/open_positions", None)
+            .await?;
+
+        // Response format is effectively the data field from MexcBaseResponse
+        // But request() returns T, which is MexcBaseResponse.data
+        // So resp is the data.
+        // It should be an array of positions?
+        // Actually for this endpoint, data is usually an array.
+
+        let mut positions = Vec::new();
+
+        if let Some(list) = resp.as_array() {
+            for item in list {
+                let symbol = item["symbol"].as_str().unwrap_or("").to_string();
+                let pos_type = item["positionType"].as_i64().unwrap_or(1); // 1: Long, 2: Short
+                let hold_vol = item["holdVol"].as_f64().unwrap_or(0.0); // quantity
+                let hold_vol_dec = Decimal::from_f64_retain(hold_vol).unwrap_or(Decimal::ZERO);
+
+                if hold_vol_dec <= Decimal::ZERO {
+                    continue;
+                }
+
+                let side = if pos_type == 1 {
+                    Side::Long
+                } else {
+                    Side::Short
+                };
+
+                // Entry price
+                let entry_price = item["entryPrice"].as_f64().unwrap_or(0.0);
+                let entry_price_dec =
+                    Decimal::from_f64_retain(entry_price).unwrap_or(Decimal::ZERO);
+
+                // Unrealized PNL
+                // Should calculate or use from response if available?
+                // MEXC V1 doesn't always return detailed PnL in open_positions efficiently?
+                // But let's check field. "realised" (realized PnL)?
+                // "unrealised"?
+
+                // For now use defaults if not found.
+
+                positions.push(Position {
+                    symbol,
+                    side,
+                    size: hold_vol_dec,
+                    entry_price: entry_price_dec,
+                    stop_loss: Decimal::ZERO,
+                    take_profits: vec![],
+                    signal_id: "MEXC_FETCHED".to_string(),
+                    opened_at: chrono::Utc::now(),
+                    regime_state: None,
+                    phase: None,
+                    metadata: None,
+                    exchange: Some("MEXC".to_string()),
+                    position_mode: Some(if item["openType"].as_i64().unwrap_or(2) == 1 {
+                        "ISOLATED".to_string()
+                    } else {
+                        "CROSS".to_string()
+                    }),
+                    realized_pnl: Decimal::ZERO,
+                    unrealized_pnl: Decimal::ZERO,
+                    fees_paid: Decimal::ZERO,
+                    funding_paid: Decimal::ZERO,
+                    last_mark_price: None,
+                    last_update_ts: chrono::Utc::now().timestamp_millis(),
+                });
+            }
+        }
+
+        Ok(positions)
     }
 }
 

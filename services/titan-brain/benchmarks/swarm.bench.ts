@@ -7,12 +7,15 @@
  * @module titan-brain/benchmarks
  */
 
-import { performance } from "perf_hooks";
+import { performance } from 'perf_hooks';
+import { Logger } from '@titan/shared';
 import {
-    type MarketAnalysisTask,
-    SwarmChangePointIntegration,
-    SwarmOrchestrator,
-} from "../src/services/swarm/index.js";
+  type MarketAnalysisTask,
+  SwarmChangePointIntegration,
+  SwarmOrchestrator,
+} from '../src/services/swarm/index.js';
+
+const logger = Logger.getInstance('brain:swarm.bench');
 
 // ============================================================================
 // Types
@@ -70,12 +73,12 @@ async function runBenchmark(
 }
 
 function printResult(result: BenchmarkResult): void {
-    console.log(`\n📊 ${result.name}`);
-    console.log(`   Iterations: ${result.iterations}`);
-    console.log(`   Average:    ${result.avgMs.toFixed(3)}ms`);
-    console.log(`   Min:        ${result.minMs.toFixed(3)}ms`);
-    console.log(`   Max:        ${result.maxMs.toFixed(3)}ms`);
-    console.log(`   Ops/sec:    ${result.opsPerSec.toFixed(2)}`);
+    logger.info(`\n📊 ${result.name}`);
+    logger.info(`   Iterations: ${result.iterations}`);
+    logger.info(`   Average:    ${result.avgMs.toFixed(3)}ms`);
+    logger.info(`   Min:        ${result.minMs.toFixed(3)}ms`);
+    logger.info(`   Max:        ${result.maxMs.toFixed(3)}ms`);
+    logger.info(`   Ops/sec:    ${result.opsPerSec.toFixed(2)}`);
 }
 
 // ============================================================================
@@ -196,9 +199,9 @@ async function benchmarkConsensusCalculation(): Promise<BenchmarkResult> {
 // ============================================================================
 
 async function main(): Promise<void> {
-    console.log("=".repeat(60));
-    console.log("🚀 Titan Swarm Benchmarks");
-    console.log("=".repeat(60));
+    logger.info("=".repeat(60));
+    logger.info("🚀 Titan Swarm Benchmarks");
+    logger.info("=".repeat(60));
 
     const results: BenchmarkResult[] = [];
 
@@ -215,21 +218,21 @@ async function main(): Promise<void> {
         results.push(await benchmarkConsensusCalculation());
         printResult(results[results.length - 1]);
 
-        console.log("\n" + "=".repeat(60));
-        console.log("📋 Summary");
-        console.log("=".repeat(60));
+        logger.info("\n" + "=".repeat(60));
+        logger.info("📋 Summary");
+        logger.info("=".repeat(60));
 
-        console.log("\n| Benchmark | Avg (ms) | Ops/sec |");
-        console.log("|-----------|----------|---------|");
+        logger.info("\n| Benchmark | Avg (ms) | Ops/sec |");
+        logger.info("|-----------|----------|---------|");
         for (const r of results) {
-            console.log(
+            logger.info(
                 `| ${r.name.substring(0, 40).padEnd(40)} | ${
                     r.avgMs.toFixed(3).padStart(8)
                 } | ${r.opsPerSec.toFixed(0).padStart(7)} |`,
             );
         }
     } catch (error) {
-        console.error("Benchmark failed:", error);
+        logger.error("Benchmark failed:", error);
         process.exit(1);
     }
 }

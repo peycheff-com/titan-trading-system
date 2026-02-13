@@ -31,6 +31,8 @@ import { CVDValidator } from '../engine/CVDValidator';
 import { Oracle } from '../oracle/Oracle';
 import { GlobalLiquidityAggregator } from '../global-liquidity/GlobalLiquidityAggregator';
 import { getLogger, logError, logSignal } from '../logging/Logger';
+import { Logger } from '@titan/shared';
+const logger = Logger.getInstance('hunter:SignalGenerator');
 
 export interface SignalGeneratorConfig {
   minAlignmentScore: number; // Minimum alignment score for B signals (default: 60)
@@ -744,7 +746,7 @@ export class SignalGenerator {
   updateConfig(newConfig: Partial<SignalGeneratorConfig>): void {
     // eslint-disable-next-line functional/immutable-data
     this.config = { ...this.config, ...newConfig };
-    console.log('📝 SignalGenerator configuration updated');
+    logger.info('📝 SignalGenerator configuration updated');
   }
 
   /**

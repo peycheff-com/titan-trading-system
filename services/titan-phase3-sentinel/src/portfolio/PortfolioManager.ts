@@ -3,6 +3,9 @@ import { PositionTracker } from './PositionTracker.js';
 import { TransferManager } from './TransferManager.js';
 import { Rebalancer } from './Rebalancer.js';
 import { DEFAULT_MARGIN_THRESHOLDS, type HealthReport } from '../types/portfolio.js';
+import { Logger } from '@titan/shared';
+
+const logger = Logger.getInstance('sentinel:PortfolioManager');
 
 export class PortfolioManager {
   private tracker: PositionTracker;
@@ -50,7 +53,7 @@ export class PortfolioManager {
          collateral = await primaryGateway.getBalance('USDT');
       }
     } catch (err) {
-      console.error(`Failed to fetch balance for ${symbol}:`, err);
+      logger.error(`Failed to fetch balance for ${symbol}:`, err);
     }
 
     const marginUtil = 0.15; // Still mocked until simple margin calc is added
@@ -60,7 +63,7 @@ export class PortfolioManager {
     const rebalanceAction = this.rebalancer.evaluate(symbol, marginUtil, unrealizedPnL, collateral);
 
     if (rebalanceAction) {
-      console.log(`⚖️ Rebalance Triggered: ${rebalanceAction.action}`);
+      logger.info(`⚖️ Rebalance Triggered: ${rebalanceAction.action}`);
 
       // Execute Transfer via TransferManager
       try {
@@ -71,10 +74,10 @@ export class PortfolioManager {
           rebalanceAction.action === 'HARD_COMPOUND'
         ) {
           // Logic for withdrawal/compounding would go here
-          console.log('Compounding not yet implemented in TransferManager');
+          logger.info('Compounding not yet implemented in TransferManager');
         }
       } catch (error) {
-        console.error(`❌ Rebalance Failed: ${error}`);
+        logger.error(`❌ Rebalance Failed: ${error}`);
       }
     }
 

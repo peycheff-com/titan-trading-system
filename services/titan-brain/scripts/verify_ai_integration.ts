@@ -9,16 +9,18 @@ import {
     MarketState,
 } from "../src/engine/ActiveInferenceEngine.js";
 import { loadConfigFromEnvironment } from "../src/config/ConfigLoader.js";
+import { Logger } from '@titan/shared';
+const logger = Logger.getInstance('brain:verify_ai_integration');
 
 async function main() {
-    console.log("Starting Active Inference Integration Verification...");
+    logger.info("Starting Active Inference Integration Verification...");
 
     // 1. Load Config
     process.env.BRAIN_SIGNAL_TIMEOUT = "100";
     process.env.BRAIN_AI_WINDOW_SIZE = "50";
     process.env.BRAIN_AI_SENSITIVITY = "5.0";
     const config = loadConfigFromEnvironment();
-    console.log(
+    logger.info(
         "Config loaded:",
         JSON.stringify(config.brain?.activeInference, null, 2),
     );
@@ -29,10 +31,10 @@ async function main() {
 
     // 2. Initialize Engine
     const engine = new ActiveInferenceEngine(config.brain.activeInference);
-    console.log("ActiveInferenceEngine initialized.");
+    logger.info("ActiveInferenceEngine initialized.");
 
     // 3. Simulate Market Data
-    console.log("Simulating market data...");
+    logger.info("Simulating market data...");
     const basePrice = 50000;
 
     for (let i = 0; i < 60; i++) {
@@ -48,11 +50,11 @@ async function main() {
         engine.processUpdate(state);
         if (i % 10 === 0) process.stdout.write(".");
     }
-    console.log("\nMarket data simulation complete.");
+    logger.info("\nMarket data simulation complete.");
 
     // 4. Verify Metrics
     const metrics = engine.getState();
-    console.log("Engine Metrics:", JSON.stringify(metrics, null, 2));
+    logger.info("Engine Metrics:", JSON.stringify(metrics, null, 2));
 
     if (metrics.historySize < 50) {
         throw new Error(
@@ -65,7 +67,7 @@ async function main() {
     if (!state) {
         throw new Error("Engine state is null");
     }
-    console.log(
+    logger.info(
         "Final Inference State:",
         JSON.stringify(
             {
@@ -77,10 +79,10 @@ async function main() {
         ),
     );
 
-    console.log("VERIFICATION SUCCESSFUL");
+    logger.info("VERIFICATION SUCCESSFUL");
 }
 
 main().catch((err) => {
-    console.error("VERIFICATION FAILED:", err);
+    logger.error("VERIFICATION FAILED:", err);
     process.exit(1);
 });

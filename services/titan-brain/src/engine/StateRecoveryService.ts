@@ -24,6 +24,8 @@ import { FillConfirmation } from '../types/execution.js';
 import { FileSystemBackupService } from '../services/backup/FileSystemBackupService.js';
 import { RiskGuardian } from '../features/Risk/RiskGuardian.js';
 import { RecoveredState, RecoveryConfig } from './stateRecoveryTypes.js';
+import { Logger } from '@titan/shared';
+const logger = Logger.getInstance('brain:StateRecoveryService');
 
 // Re-export for backward compatibility
 export type { RecoveredState, RecoveryConfig } from './stateRecoveryTypes.js';
@@ -66,7 +68,7 @@ export class StateRecoveryService {
    * Requirement 9.5: Support manual state restoration
    */
   async restoreFromBackup(backupId: string): Promise<RecoveredState> {
-    console.log(`[StateRecoveryService] Restoring from backup: ${backupId}`);
+    logger.info(`[StateRecoveryService] Restoring from backup: ${backupId}`);
     try {
       const state = await this.backupService.loadBackup(backupId);
 
@@ -78,10 +80,10 @@ export class StateRecoveryService {
       // Persist the restored state to DB to make it current
       await this.persistState(state);
 
-      console.log(`[StateRecoveryService] Backup ${backupId} restored successfully.`);
+      logger.info(`[StateRecoveryService] Backup ${backupId} restored successfully.`);
       return state;
     } catch (error) {
-      console.error(`[StateRecoveryService] Failed to restore backup ${backupId}:`, error);
+      logger.error(`[StateRecoveryService] Failed to restore backup ${backupId}:`, error);
       throw error;
     }
   }
@@ -97,36 +99,36 @@ export class StateRecoveryService {
    * @returns RecoveredState with all loaded data
    */
   async recoverState(): Promise<RecoveredState> {
-    console.log('Starting state recovery...');
+    logger.info('Starting state recovery...');
 
     // Load allocation vector
     const allocation = await this.loadAllocationVector();
-    console.log('Loaded allocation vector:', allocation);
+    logger.info('Loaded allocation vector:', { allocation });
 
     // Load performance metrics for all phases
     const performance = await this.loadPerformanceMetrics();
-    console.log('Loaded performance metrics for phases:', Object.keys(performance));
+    logger.info('Loaded performance metrics for phases', { phases: Object.keys(performance) });
 
     // Load high watermark
     const highWatermark = await this.loadHighWatermark();
-    console.log('Loaded high watermark:', highWatermark);
+    logger.info('Loaded high watermark:', { highWatermark });
 
     // Load latest risk metrics (will be recalculated with current positions)
     const riskMetrics = await this.loadRiskMetrics();
-    console.log('Loaded risk metrics:', riskMetrics ? 'available' : 'none');
+    logger.info(`Loaded risk metrics: ${riskMetrics ? 'available' : 'none'}`);
 
     // Recover positions from stream if possible
     let positions: Position[] = [];
     if (this.natsClient) {
       try {
         positions = await this.recoverPositionsFromStream();
-        console.log(`Recovered ${positions.length} positions from stream`);
+        logger.info(`Recovered ${positions.length} positions from stream`);
       } catch (err) {
-        console.error('Failed to recover positions from stream', err);
+        logger.error('Failed to recover positions from stream', err);
       }
     }
 
-    console.log('State recovery completed successfully');
+    logger.info('State recovery completed successfully');
 
     return {
       allocation,
@@ -143,7 +145,7 @@ export class StateRecoveryService {
    * Persist current system state
    */
   async persistState(state: RecoveredState): Promise<void> {
-    console.log('Persisting system state...');
+    logger.info('Persisting system state...');
 
     try {
       // 1. Create a filesystem snapshot for disaster recovery
@@ -177,9 +179,9 @@ export class StateRecoveryService {
         });
       }
 
-      console.log('State persisted successfully');
+      logger.info('State persisted successfully');
     } catch (err) {
-      console.error('Failed to persist state:', err);
+      logger.error('Failed to persist state:', err);
     }
   }
 
@@ -197,17 +199,17 @@ export class StateRecoveryService {
         // Validate allocation vector (weights should sum to 1.0)
         const sum = latestAllocation.w1 + latestAllocation.w2 + latestAllocation.w3;
         if (Math.abs(sum - 1.0) > 0.001) {
-          console.warn(`Invalid allocation vector sum: ${sum}, using default`);
+          logger.warn(`Invalid allocation vector sum: ${sum}, using default`);
           return this.config.defaultAllocation;
         }
 
         return latestAllocation;
       }
 
-      console.log('No allocation vector found in database, using default');
+      logger.info('No allocation vector found in database, using default');
       return this.config.defaultAllocation;
     } catch (error) {
-      console.error('Error loading allocation vector:', error);
+      logger.error('Error loading allocation vector:', error);
       return this.config.defaultAllocation;
     }
   }
@@ -234,7 +236,7 @@ export class StateRecoveryService {
         const trades = await this.performanceRepo.getTradesInWindow(phaseId, windowMs);
 
         if (trades.length === 0) {
-          console.log(`No recent trades found for ${phaseId}, using defaults`);
+          logger.info(`No recent trades found for ${phaseId}, using defaults`);
           continue;
         }
 
@@ -271,13 +273,13 @@ export class StateRecoveryService {
           modifier,
         };
 
-        console.log(
+        logger.info(
           `Loaded performance for ${phaseId}: Sharpe=${sharpeRatio.toFixed(
             2,
           )}, Trades=${trades.length}, Modifier=${modifier.toFixed(2)}`,
         );
       } catch (error) {
-        console.error(`Error loading performance for ${phaseId}:`, error);
+        logger.error(`Error loading performance for ${phaseId}:`, error);
         // Keep default performance for this phase
       }
     }
@@ -297,13 +299,13 @@ export class StateRecoveryService {
 
       // Validate high watermark (should be positive)
       if (highWatermark <= 0) {
-        console.warn(`Invalid high watermark: ${highWatermark}, using default`);
+        logger.warn(`Invalid high watermark: ${highWatermark}, using default`);
         return this.config.defaultHighWatermark;
       }
 
       return highWatermark;
     } catch (error) {
-      console.error('Error loading high watermark:', error);
+      logger.error('Error loading high watermark:', error);
       return this.config.defaultHighWatermark;
     }
   }
@@ -327,7 +329,7 @@ export class StateRecoveryService {
           }
         : null;
     } catch (error) {
-      console.error('Error loading risk metrics:', error);
+      logger.error('Error loading risk metrics:', error);
       return null;
     }
   }
@@ -361,7 +363,7 @@ export class StateRecoveryService {
       portfolioBeta: 0, // Fallback to safe 0
     };
 
-    console.log('Recalculated risk metrics (Fallback):', riskMetrics);
+    logger.info('Recalculated risk metrics (Fallback):', riskMetrics);
     return riskMetrics;
   }
 
@@ -376,21 +378,21 @@ export class StateRecoveryService {
     if (state.allocation) {
       const sum = state.allocation.w1 + state.allocation.w2 + state.allocation.w3;
       if (Math.abs(sum - 1.0) > 0.001) {
-        console.error('Invalid allocation vector sum:', sum);
+        logger.error('Invalid allocation vector sum:', sum);
         return false;
       }
     }
 
     // Validate high watermark
     if (state.highWatermark <= 0) {
-      console.error('Invalid high watermark:', state.highWatermark);
+      logger.error('Invalid high watermark:', state.highWatermark);
       return false;
     }
 
     // Validate performance metrics
     for (const [phaseId, perf] of Object.entries(state.performance)) {
       if (perf.modifier < 0.5 || perf.modifier > 1.2) {
-        console.error(`Invalid performance modifier for ${phaseId}:`, perf.modifier);
+        logger.error(`Invalid performance modifier for ${phaseId}:`, perf.modifier);
         return false;
       }
     }
@@ -456,10 +458,10 @@ export class StateRecoveryService {
    * Requirement 9.4: Rebuild state from event log
    */
   async recoverPositionsFromStream(): Promise<Position[]> {
-    console.log('🔄 Replaying execution history to rebuild positions...');
+    logger.info('🔄 Replaying execution history to rebuild positions...');
 
     if (!this.natsClient) {
-      console.warn(
+      logger.warn(
         '⚠️ NATS Client not provided to StateRecoveryService, skipping JetStream replay.',
       );
       return [];
@@ -469,7 +471,7 @@ export class StateRecoveryService {
     const jsm = this.natsClient.getJetStreamManager();
 
     if (!js || !jsm) {
-      console.warn('⚠️ JetStream context not available.');
+      logger.warn('⚠️ JetStream context not available.');
       return [];
     }
 
@@ -479,9 +481,9 @@ export class StateRecoveryService {
     try {
       const si = await jsm.streams.info('TITAN_EVT');
       lastSeq = si.state.last_seq;
-      console.log(`Stream TITAN_TRADING last sequence: ${lastSeq}`);
+      logger.info(`Stream TITAN_TRADING last sequence: ${lastSeq}`);
     } catch (e) {
-      console.error('Failed to get stream info:', e);
+      logger.error('Failed to get stream info:', e);
       return [];
     }
 
@@ -504,7 +506,7 @@ export class StateRecoveryService {
       opts.orderedConsumer();
 
       const sub = await js.subscribe(TitanSubject.EVT_EXEC_FILL + '.>', opts);
-      console.log('Started replaying fills...');
+      logger.info('Started replaying fills...');
       let processedCount = 0;
       let stopReason = 'stream_tail_reached';
       let idleTimer: ReturnType<typeof setTimeout> | null = null;
@@ -607,7 +609,7 @@ export class StateRecoveryService {
           positions.set(fill.symbol, pos);
           processedCount++;
         } catch (err) {
-          console.error('Error processing message:', err);
+          logger.error('Error processing message:', err);
         }
 
         if (m.info.streamSequence >= lastSeq) {
@@ -617,9 +619,9 @@ export class StateRecoveryService {
       }
 
       clearTimers();
-      console.log(`Replay finished. Processed fills: ${processedCount}, reason: ${stopReason}`);
+      logger.info(`Replay finished. Processed fills: ${processedCount}, reason: ${stopReason}`);
     } catch (error) {
-      console.error('Failed to replay from JetStream', error);
+      logger.error('Failed to replay from JetStream', error);
     }
 
     return Array.from(positions.values());

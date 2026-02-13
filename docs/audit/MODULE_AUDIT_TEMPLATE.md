@@ -2,7 +2,7 @@
 
 > **Canon**: If it is not in `artifacts/module_audit/…`, it did not happen.
 > **No parallel truth**: extend existing repo structures — never create duplicate doc systems.
-> **SOTA baseline**: [system-source-of-truth.md](file:///Users/ivan/Code/work/trading/titan/docs/system-source-of-truth.md) + [architecture.md](file:///Users/ivan/Code/work/trading/titan/docs/architecture.md)
+> **SOTA baseline**: [system-source-of-truth.md](../system-source-of-truth.md) + [architecture.md](../architecture.md)
 > **Domain**: Autonomous Trading Organism — survival-first, profit-second.
 
 ---
@@ -113,16 +113,16 @@ Pin the exact standards being measured. Reference, don't reinvent:
 
 | Dimension | Standard | Canonical Source |
 |-----------|----------|------------------|
-| Invariants | System Invariants I-01 through I-20 | [system-source-of-truth.md §2](file:///Users/ivan/Code/work/trading/titan/docs/system-source-of-truth.md) |
-| Risk Policy | Canonical risk parameters, hash-verified cross-language | [risk_policy.json](file:///Users/ivan/Code/work/trading/titan/packages/shared/risk_policy.json) |
-| HMAC Security | Fail-closed signing, envelope validation | [security.md §3](file:///Users/ivan/Code/work/trading/titan/docs/security.md) |
-| Circuit Breakers | Normal → Cautious → Defensive → Emergency | [circuit_breakers.md](file:///Users/ivan/Code/work/trading/titan/docs/risk/circuit_breakers.md) |
-| NATS ACLs | Per-service publish/subscribe isolation | [nats.conf](file:///Users/ivan/Code/work/trading/titan/config/nats.conf) |
-| Reconciliation | Shadow State vs Exchange State every 1 min | [system-source-of-truth.md §10.6](file:///Users/ivan/Code/work/trading/titan/docs/system-source-of-truth.md) |
-| Observability | SLOs, metrics, tracing per [slos.yaml](file:///Users/ivan/Code/work/trading/titan/monitoring/slos.yaml) | [metrics-catalog.md](file:///Users/ivan/Code/work/trading/titan/docs/operations/metrics-catalog.md) |
-| Data Integrity | RLS, partitioned tables, fill dedup | [schema.sql](file:///Users/ivan/Code/work/trading/titan/services/titan-brain/src/db/schema.sql) |
-| Quality Gates | CI pipeline (7 jobs), SOTA checks | [ci.yml](file:///Users/ivan/Code/work/trading/titan/.github/workflows/ci.yml) |
-| Idempotency | Redis signal cache, nonce tracking, fill dedup | [system-source-of-truth.md §9.4](file:///Users/ivan/Code/work/trading/titan/docs/system-source-of-truth.md) |
+| Invariants | System Invariants I-01 through I-20 | [system-source-of-truth.md §2](../system-source-of-truth.md) |
+| Risk Policy | Canonical risk parameters, hash-verified cross-language | [risk_policy.json](../../packages/shared/risk_policy.json) |
+| HMAC Security | Fail-closed signing, envelope validation | [security.md §3](../security.md) |
+| Circuit Breakers | Normal → Cautious → Defensive → Emergency | [circuit_breakers.md](../risk/circuit_breakers.md) |
+| NATS ACLs | Per-service publish/subscribe isolation | [nats.conf](../../config/nats.conf) |
+| Reconciliation | Shadow State vs Exchange State every 1 min | [system-source-of-truth.md §10.6](../system-source-of-truth.md) |
+| Observability | SLOs, metrics, tracing per [slos.yaml](../../monitoring/slos.yaml) | [metrics-catalog.md](../operations/metrics-catalog.md) |
+| Data Integrity | RLS, partitioned tables, fill dedup | [schema.sql](../../services/titan-brain/src/db/schema.sql) |
+| Quality Gates | CI pipeline (7 jobs), SOTA checks | [ci.yml](../../.github/workflows/ci.yml) |
+| Idempotency | Redis signal cache, nonce tracking, fill dedup | [system-source-of-truth.md §9.4](../system-source-of-truth.md) |
 
 ---
 
@@ -223,7 +223,7 @@ Copy the structure below for every module under `modules/<MODULE_ID>/`.
 
 ### D) Invariants (`03_INVARIANTS.md`)
 
-> Cross-reference system invariants I-01 through I-20 from [system-source-of-truth.md](file:///Users/ivan/Code/work/trading/titan/docs/system-source-of-truth.md).
+> Cross-reference system invariants I-01 through I-20 from [system-source-of-truth.md](../system-source-of-truth.md).
 
 ```markdown
 ## Control Loop (Cybernetics Lens)
@@ -357,7 +357,7 @@ Copy the structure below for every module under `modules/<MODULE_ID>/`.
 
 ### H) Security Posture (`07_SECURITY.md`)
 
-Reference existing: [security.md](file:///Users/ivan/Code/work/trading/titan/docs/security.md)
+Reference existing: [security.md](../security.md)
 
 ```markdown
 ## Threat Model Summary (top threats for this module)
@@ -458,7 +458,7 @@ Reference existing: [security.md](file:///Users/ivan/Code/work/trading/titan/doc
 
 ## Schema Drift Detection
 - DB schema: `services/titan-brain/src/db/schema.sql`
-- NATS intent schema: `docs/contracts/nats-intent.v1.schema.json`
+- NATS intent schema: `contracts/nats/nats-intent.v1.schema.json`
 - Enforcement: `contract-check` CI job
 
 ## Exchange Adapter Versioning

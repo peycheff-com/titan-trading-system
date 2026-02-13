@@ -23,6 +23,8 @@ import { Journal } from '../ai/Journal.js';
 import { TitanAnalyst } from '../ai/TitanAnalyst.js';
 import { StrategicMemory } from '../ai/StrategicMemory.js';
 import { Backtester, InMemoryDataCache } from '../simulation/Backtester.js';
+import { Logger } from '@titan/shared';
+const logger = Logger.getInstance('ai-quant:NightlyOptimize');
 
 export interface NightlyOptimizeConfig {
   /** Cron schedule expression (default: '0 0 * * *' = 00:00 UTC) */
@@ -98,11 +100,11 @@ export class NightlyOptimize {
       try {
         await this.runOptimization();
       } catch (error) {
-        console.error('NightlyOptimize job failed:', error);
+        logger.error('NightlyOptimize job failed:', error);
       }
     });
 
-    console.log(`NightlyOptimize scheduled with cron: ${this.config.schedule}`);
+    logger.info(`NightlyOptimize scheduled with cron: ${this.config.schedule}`);
   }
 
   /**
@@ -113,7 +115,7 @@ export class NightlyOptimize {
       this.job.cancel();
       // eslint-disable-next-line functional/immutable-data
       this.job = null;
-      console.log('NightlyOptimize job stopped');
+      logger.info('NightlyOptimize job stopped');
     }
   }
 
@@ -138,7 +140,7 @@ export class NightlyOptimize {
    * Requirement 6.5: Store insights in strategic memory for future context
    */
   async runOptimization(): Promise<MorningBriefing> {
-    console.log('Starting nightly optimization cycle...');
+    logger.info('Starting nightly optimization cycle...');
     const startTime = Date.now();
 
     // 1. Ingest last 24 hours of trades
@@ -146,14 +148,14 @@ export class NightlyOptimize {
     const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
     const recentTrades = trades.filter((t) => t.timestamp >= oneDayAgo);
 
-    console.log(`Ingested ${recentTrades.length} trades from last 24 hours`);
+    logger.info(`Ingested ${recentTrades.length} trades from last 24 hours`);
 
     // 2. Load regime snapshots for context
     const regimeSnapshots = this.journal.getRegimeSnapshots();
 
     // 3. Analyze failures to identify patterns
     const insights = await this.analyst.analyzeFailures(recentTrades, regimeSnapshots);
-    console.log(`Generated ${insights.length} insights`);
+    logger.info(`Generated ${insights.length} insights`);
 
     // 4. Store insights in strategic memory
     for (const insight of insights) {
@@ -187,10 +189,10 @@ export class NightlyOptimize {
 
           // eslint-disable-next-line functional/immutable-data
           proposals.push({ proposal, validation });
-          console.log(`Generated proposal for: ${proposal.targetKey}`);
+          logger.info(`Generated proposal for: ${proposal.targetKey}`);
         }
       } catch (error) {
-        console.error(`Failed to generate proposal for insight: ${insight.topic}`, error);
+        logger.error(`Failed to generate proposal for insight: ${insight.topic}`, error);
       }
     }
 
@@ -201,7 +203,7 @@ export class NightlyOptimize {
     this.saveBriefing(briefing);
 
     const duration = Date.now() - startTime;
-    console.log(`Nightly optimization completed in ${duration}ms`);
+    logger.info(`Nightly optimization completed in ${duration}ms`);
 
     return briefing;
   }
@@ -275,7 +277,7 @@ export class NightlyOptimize {
         return JSON.parse(content) as Config;
       }
     } catch (error) {
-      console.error('Failed to load config:', error);
+      logger.error('Failed to load config:', error);
     }
 
     // Return default config if file doesn't exist or is invalid
@@ -352,9 +354,9 @@ export class NightlyOptimize {
       }
 
       fs.writeFileSync(this.config.briefingFilePath, JSON.stringify(briefing, null, 2), 'utf-8');
-      console.log(`Morning briefing saved to: ${this.config.briefingFilePath}`);
+      logger.info(`Morning briefing saved to: ${this.config.briefingFilePath}`);
     } catch (error) {
-      console.error('Failed to save briefing:', error);
+      logger.error('Failed to save briefing:', error);
     }
   }
 

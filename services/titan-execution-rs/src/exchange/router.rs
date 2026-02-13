@@ -270,7 +270,7 @@ impl ExecutionRouter {
         if let Some(adapter) = self.get_adapter(exchange) {
             adapter.get_positions().await
         } else {
-            Err(ExchangeError::Config(format!(
+            Err(ExchangeError::Configuration(format!(
                 "Exchange '{}' not found",
                 exchange
             )))

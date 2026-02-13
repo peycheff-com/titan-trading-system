@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 # check-links.sh - 2026 SOTA Link Rot Detection
 #
 # Tier-1 Practice: Validate all documentation links

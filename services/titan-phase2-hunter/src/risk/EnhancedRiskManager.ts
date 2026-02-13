@@ -21,6 +21,8 @@ import {
   OracleScore,
 } from '../types';
 import { getLogger } from '../logging/Logger';
+import { Logger } from '@titan/shared';
+const logger = Logger.getInstance('hunter:EnhancedRiskManager');
 
 // ============================================================================
 // INTERFACES
@@ -1001,7 +1003,7 @@ export class EnhancedRiskManager extends EventEmitter {
     // eslint-disable-next-line functional/immutable-data
     this.recentSignals = [];
     this.initializeExchangeStatuses();
-    console.log(`🛡️ Enhanced Risk Manager: State reset`);
+    logger.info(`🛡️ Enhanced Risk Manager: State reset`);
   }
 
   /**
@@ -1010,7 +1012,7 @@ export class EnhancedRiskManager extends EventEmitter {
   destroy(): void {
     this.stopMonitoring();
     this.removeAllListeners();
-    console.log(`🛡️ Enhanced Risk Manager: Destroyed`);
+    logger.info(`🛡️ Enhanced Risk Manager: Destroyed`);
   }
 }
 

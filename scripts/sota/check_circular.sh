@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # Check for circular dependencies using Madge
 # Target all services (ts files)
 echo "🛡️  Running Circular Dependency Check..."

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 # detect-staleness.sh - 2026 SOTA Documentation Staleness Detection
 # 
 # Tier-1 Practice: Time-based drift detection

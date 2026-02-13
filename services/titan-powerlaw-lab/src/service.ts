@@ -1,6 +1,9 @@
 import { connect, StringCodec } from 'nats';
 import { TITAN_SUBJECTS } from '@titan/shared';
 import { PowerLawEstimator } from './estimator.js';
+import { Logger } from '@titan/shared';
+
+const logger = Logger.getInstance('powerlaw:service');
 
 export class PowerLawService {
   private estimator: PowerLawEstimator;
@@ -10,7 +13,7 @@ export class PowerLawService {
   }
 
   async start() {
-    console.log('Starting Titan Power Law Lab Service...');
+    logger.info('Starting Titan Power Law Lab Service...');
 
     // Connect estimator (it manages its own publishing connection)
     await this.estimator.connect();
@@ -22,7 +25,7 @@ export class PowerLawService {
       pass: process.env.NATS_PASS,
       name: 'titan-powerlaw-lab-listener',
     });
-    console.log(`Deep-Listening to NATS at ${nc.getServer()}`);
+    logger.info(`Deep-Listening to NATS at ${nc.getServer()}`);
 
     const sc = StringCodec();
 
@@ -30,7 +33,7 @@ export class PowerLawService {
     // Subject: titan.data.market.ticker.v1.{venue}.{symbol}
     const subject = TITAN_SUBJECTS.DATA.MARKET.ALL;
     const sub = nc.subscribe(subject);
-    console.log(`Subscribed to ${subject}`);
+    logger.info(`Subscribed to ${subject}`);
 
     // Process loop
     (async () => {
@@ -53,11 +56,11 @@ export class PowerLawService {
           if (price) {
             // Fire and forget processing to keep up with stream
             this.estimator.onTick(venue, symbol, Number(price)).catch((err) => {
-              console.error(`Error processing tick for ${venue}.${symbol}:`, err);
+              logger.error(`Error processing tick for ${venue}.${symbol}:`, err);
             });
           }
         } catch {
-          // console.error("Error decoding market data:", err);
+          // logger.error("Error decoding market data:", err);
         }
       }
     })();

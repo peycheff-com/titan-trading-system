@@ -13,6 +13,8 @@ import {
   TradeRecord,
 } from '../types/index.js';
 import { DatabaseManager } from '../db/DatabaseManager.js';
+import { Logger } from '@titan/shared';
+const logger = Logger.getInstance('brain:PerformanceTracker');
 
 /** Milliseconds per day */
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -90,7 +92,7 @@ export class PerformanceTracker {
     const performance = await this.getPhasePerformance(phaseId);
     await this.persistPerformanceSnapshot(phaseId);
 
-    console.log(
+    logger.info(
       `[PerformanceTracker] Rebuilt history for ${phaseId}: PnL=${totalPnL}, Sharpe=${sharpe.toFixed(
         2,
       )}`,

@@ -4,8 +4,11 @@ import { NotificationPayload, NotificationType } from '@titan/shared';
 import { WebSocketService } from './WebSocketService.js';
 import { randomUUID } from 'crypto';
 import { PhaseId } from '../types/index.js'; // Assuming PhaseId is re-exported from index
+import { Logger } from '@titan/shared';
 
 // Re-export NotificationType for backward compatibility
+const logger = Logger.getInstance('brain:NotificationService');
+
 export { NotificationType } from '@titan/shared';
 
 /**
@@ -309,7 +312,7 @@ export class NotificationService {
     }
 
     // Placeholder log
-    console.log('Email notification (not implemented):', {
+    logger.info('Email notification (not implemented):', {
       to: this.config.email.to,
       subject: message.title,
       body: message.message,
@@ -438,7 +441,7 @@ _${new Date(message.timestamp).toISOString()}_`;
 
         results.telegram = true;
       } catch (error) {
-        console.error('Telegram test failed:', error);
+        logger.error('Telegram test failed:', error);
       }
     }
 
@@ -456,7 +459,7 @@ _${new Date(message.timestamp).toISOString()}_`;
 
         results.email = true;
       } catch (error) {
-        console.error('Email test failed:', error);
+        logger.error('Email test failed:', error);
       }
     }
 

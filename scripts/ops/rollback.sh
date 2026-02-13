@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # Titan Emergency Rollback Script
 # 
 # Usage: ./scripts/ops/rollback.sh [version]

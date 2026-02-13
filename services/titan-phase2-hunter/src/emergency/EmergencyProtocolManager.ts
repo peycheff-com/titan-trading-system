@@ -11,16 +11,19 @@
  */
 
 import { EventEmitter } from 'events';
+import { Logger } from '@titan/shared';
 import {
-  EmergencyType,
-  EmergencyState,
-  DegradationLevel,
-  OracleScore,
-  GlobalCVDData,
   BotTrapAnalysis,
   ConnectionStatus,
+  DegradationLevel,
+  EmergencyState,
+  EmergencyType,
+  GlobalCVDData,
   ImpactLevel,
+  OracleScore,
 } from '../types';
+
+const logger = Logger.getInstance('hunter:EmergencyProtocolManager');
 
 // ============================================================================
 // INTERFACES
@@ -228,10 +231,10 @@ export class EmergencyProtocolManager extends EventEmitter {
       }
 
       this.logEmergencyEvent('TRIGGER', null, 'info', 'Emergency Protocol Manager initialized');
-      console.log('🚨 Emergency Protocol Manager: Initialized');
+      logger.info('🚨 Emergency Protocol Manager: Initialized');
       return true;
     } catch (error) {
-      console.error('Failed to initialize EmergencyProtocolManager:', error);
+      logger.error('Failed to initialize EmergencyProtocolManager:', error);
       return false;
     }
   }
@@ -888,9 +891,9 @@ export class EmergencyProtocolManager extends EventEmitter {
 
     // Console output for immediate visibility
     const severityEmoji = severity === 'emergency' ? '🚨' : severity === 'critical' ? '⚠️' : '⚡';
-    console.log(`${severityEmoji} EMERGENCY NOTIFICATION: ${title}`);
-    console.log(`   ${message}`);
-    console.log(`   Actions: ${actions.join(', ')}`);
+    logger.info(`${severityEmoji} EMERGENCY NOTIFICATION: ${title}`);
+    logger.info(`   ${message}`);
+    logger.info(`   Actions: ${actions.join(', ')}`);
   }
 
   /**
@@ -932,7 +935,7 @@ export class EmergencyProtocolManager extends EventEmitter {
 
     // Console output
     const timestamp = entry.timestamp.toISOString();
-    console.log(`🚨 [${timestamp}] ${type}: ${message}`);
+    logger.info(`🚨 [${timestamp}] ${type}: ${message}`);
   }
 
   /**
@@ -1203,7 +1206,7 @@ export class EmergencyProtocolManager extends EventEmitter {
       this.assessSystemHealth();
     }, this.config.degradationCheckInterval);
 
-    console.log(
+    logger.info(
       `🚨 Emergency Protocol Manager: Started health checks (${this.config.degradationCheckInterval}ms interval)`
     );
   }
@@ -1257,7 +1260,7 @@ export class EmergencyProtocolManager extends EventEmitter {
       this.startHealthChecks();
     }
 
-    console.log('🚨 Emergency Protocol Manager: Configuration updated');
+    logger.info('🚨 Emergency Protocol Manager: Configuration updated');
   }
 
   /**
@@ -1318,7 +1321,7 @@ export class EmergencyProtocolManager extends EventEmitter {
     this.initializeComponentHealth();
     this.initializeExchangeStatuses();
 
-    console.log('🚨 Emergency Protocol Manager: State reset');
+    logger.info('🚨 Emergency Protocol Manager: State reset');
   }
 
   /**
@@ -1327,7 +1330,7 @@ export class EmergencyProtocolManager extends EventEmitter {
   destroy(): void {
     this.stopHealthChecks();
     this.removeAllListeners();
-    console.log('🚨 Emergency Protocol Manager: Destroyed');
+    logger.info('🚨 Emergency Protocol Manager: Destroyed');
   }
 }
 

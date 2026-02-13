@@ -1,8 +1,11 @@
 import type { IExchangeGateway } from '../exchanges/interfaces.js';
+import { Logger } from '@titan/shared';
 
 /**
  * Manages capital transfers between accounts (Spot <-> Margin/Perp)
  */
+const logger = Logger.getInstance('sentinel:TransferManager');
+
 export class TransferManager {
   private gateway: IExchangeGateway;
 
@@ -19,7 +22,7 @@ export class TransferManager {
     if (amount <= 0) return false;
     if (from === to) return true;
 
-    console.log(`[TransferManager] Transferring ${amount} USD from ${from} to ${to}`);
+    logger.info(`[TransferManager] Transferring ${amount} USD from ${from} to ${to}`);
 
     // In reality: await this.gateway.transfer(...)
     // For now, assume success

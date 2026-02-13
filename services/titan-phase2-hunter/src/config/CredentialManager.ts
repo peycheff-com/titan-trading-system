@@ -11,10 +11,13 @@ import { createCipheriv, createDecipheriv, pbkdf2Sync, randomBytes } from 'crypt
 import { existsSync, mkdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
+import { Logger } from '@titan/shared';
 
 /**
  * Exchange credentials interface
  */
+const logger = Logger.getInstance('hunter:CredentialManager');
+
 export interface ExchangeCredentials {
   binance: {
     apiKey: string;
@@ -132,9 +135,9 @@ export class CredentialManager {
         mode: 0o600, // Read/write for owner only
       });
 
-      console.log('🔐 Credentials saved successfully');
+      logger.info('🔐 Credentials saved successfully');
     } catch (error) {
-      console.error('❌ Failed to save credentials:', error);
+      logger.error('❌ Failed to save credentials:', error);
       throw error;
     }
   }
@@ -181,10 +184,10 @@ export class CredentialManager {
         throw new Error(`Corrupted credentials: ${validation.errors.join(', ')}`);
       }
 
-      console.log('🔓 Credentials loaded successfully');
+      logger.info('🔓 Credentials loaded successfully');
       return credentials;
     } catch (error: any) {
-      console.error('❌ Failed to load credentials:', error);
+      logger.error('❌ Failed to load credentials:', error);
       throw new Error(
         `Failed to decrypt credentials at ${this.credentialsPath}. MasterPW set? ${!!this
           .masterPassword}. Inner: ${error.message}`
@@ -213,9 +216,9 @@ export class CredentialManager {
         // Delete file
         unlinkSync(this.credentialsPath);
 
-        console.log('🗑️ Credentials deleted successfully');
+        logger.info('🗑️ Credentials deleted successfully');
       } catch (error) {
-        console.error('❌ Failed to delete credentials:', error);
+        logger.error('❌ Failed to delete credentials:', error);
         throw error;
       }
     }
@@ -398,7 +401,7 @@ export class CredentialManager {
     try {
       // Save with new password
       this.saveCredentials(credentials);
-      console.log('🔐 Master password changed successfully');
+      logger.info('🔐 Master password changed successfully');
     } catch (error) {
       // Restore old password on failure
       // eslint-disable-next-line functional/immutable-data

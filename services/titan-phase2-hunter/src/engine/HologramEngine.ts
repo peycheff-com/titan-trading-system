@@ -83,7 +83,7 @@ export class HologramEngine extends EventEmitter {
     super();
     this.bybitClient = bybitClient;
     this.flowClassifier = flowClassifier;
-    this.logger = logger || new Logger({ enableConsoleOutput: true });
+    this.logger = logger || Logger.getInstance();
 
     // Initialize Enhancement Engines
     this.scoringEngine = new ScoringEngine();

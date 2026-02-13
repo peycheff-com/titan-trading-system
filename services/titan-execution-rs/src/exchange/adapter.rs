@@ -1,4 +1,4 @@
-use crate::model::{OrderType, Position, Side};
+pub use crate::model::{OrderType, Position, Side};
 use async_trait::async_trait;
 use rust_decimal::Decimal;
 use thiserror::Error;
@@ -12,7 +12,13 @@ pub enum ExchangeError {
     #[error("Signing error: {0}")]
     Signing(String),
     #[error("Configuration error: {0}")]
-    Config(String),
+    Configuration(String),
+    #[error("Order rejected: {0}")]
+    OrderRejected(String),
+    #[error("Not implemented: {0}")]
+    NotImplemented(String),
+    #[error("Parse error: {0}")]
+    Parse(String),
 }
 
 #[derive(Debug, Clone)]

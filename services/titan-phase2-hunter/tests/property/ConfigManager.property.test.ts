@@ -16,6 +16,14 @@ import { ConfigManager as Enhanced2026ConfigManager } from "../../src/config/Con
 
 // Mock @titan/shared to avoid crypto/environment issues in ConfigVersionHistory
 jest.mock("@titan/shared", () => {
+    const mockLogger = {
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        fatal: jest.fn(),
+    };
+
     const mockSharedManager = {
         loadPhaseConfig: jest.fn().mockResolvedValue(undefined),
         getPhaseConfig: jest.fn().mockReturnValue({}),
@@ -27,6 +35,9 @@ jest.mock("@titan/shared", () => {
         getConfigManager: jest.fn().mockReturnValue(mockSharedManager),
         ConfigManager: jest.fn(),
         PhaseConfig: {},
+        Logger: {
+            getInstance: jest.fn(() => mockLogger),
+        },
     };
 });
 

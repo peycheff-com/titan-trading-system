@@ -1,12 +1,12 @@
 import fc from "fast-check";
 import { PositionTracker } from "../../src/portfolio/PositionTracker";
-import { BinanceGateway } from "../../src/exchanges/BinanceGateway"; // Use stub
+import type { IExchangeGateway } from "../../src/exchanges/interfaces";
 
 describe("Portfolio Manager Property Tests", () => {
-    describe("PositionTracker Aggregation", () => {
-        it("should correctly aggregate NAV from individual positions", async () => {
-            await fc.assert(
-                fc.asyncProperty(
+	    describe("PositionTracker Aggregation", () => {
+	        it("should correctly aggregate NAV from individual positions", async () => {
+	            await fc.assert(
+	                fc.asyncProperty(
                     fc.array(
                         fc.record({
                             spotSize: fc.double({
@@ -37,22 +37,29 @@ describe("Portfolio Manager Property Tests", () => {
                         }),
                         { minLength: 1, maxLength: 5 },
                     ),
-                    async (trades) => {
-                        const gateway = new BinanceGateway(
-                            "key",
-                            "secret",
-                            true,
-                        );
+	                    async (trades) => {
+	                        const gateway: IExchangeGateway = {
+	                            name: "binance",
+	                            initialize: async () => {},
+	                            executeOrder: async () => ({
+	                                orderId: "",
+	                                status: "PENDING",
+	                                filledSize: 0,
+	                                avgPrice: 0,
+	                                fees: 0,
+	                                timestamp: Date.now(),
+	                            }),
+	                            getPrice: async () => 0,
+	                            getTicker: async () => ({ price: 0, bid: 0, ask: 0 }),
+	                            getBalance: async () => 0,
+	                        };
                         const tracker = new PositionTracker({
-                            "BINANCE": gateway,
-                        });
+	                            "BINANCE": gateway,
+	                        });
 
-                        // Manually inject positions via updateSize to simulate state
-                        let expectedNav = 0;
-
-                        for (let i = 0; i < trades.length; i++) {
-                            const trade = trades[i];
-                            const symbol = `SYM${i}`;
+	                        for (let i = 0; i < trades.length; i++) {
+	                            const trade = trades[i];
+	                            const symbol = `SYM${i}`;
 
                             tracker.updateSize(
                                 symbol,
@@ -60,27 +67,9 @@ describe("Portfolio Manager Property Tests", () => {
                                 trade.perpSize,
                                 trade.price,
                             );
-                            // Note: updateSize logic in class calculates average entry.
-                            // But here we set initial size directly basically.
-                            // Let's refine: The tracker logic calculates PnL based on current price vs entry.
-                            // We need to 'updatePosition' to set the current market price for PnL calc.
-
-                            // Mock gateway response for getPrice if we were using updatePosition fully.
-                            // Instead, let's manually calculate what we expect PnL to be based on the Tracker's internal logic
-                            // which we are testing.
-
-                            // We need to inject the "current price" into the tracker to update PnL.
-                            // The tracker has updatePosition() which calls gateway.getPrice().
-                            // Since we can't easily mock gateway per call in this property test structure without more setup,
-                            // we might need to rely on the fact that updatePosition sets the current price.
-
-                            // Actually, let's just test that IF we have positions, getHealthReport sums them up correctly.
-                        }
-
-                        // To test PnL calculation specifically, we'd need to mock the price retrieval.
-                        // Let's simplify: Test that if we add positions, the sum of their individual PnLs matches total NAV.
-
-                        const report = tracker.getHealthReport();
+	                        }
+	
+	                        const report = tracker.getHealthReport();
 
                         let sumPnL = 0;
                         for (const pos of report.positions) {

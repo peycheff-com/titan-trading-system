@@ -89,16 +89,20 @@ describe("Market Data Ingestion Integration", () => {
         await natsConsumer.start();
 
         // Verify subscription
+        const marketSubject = `${TitanSubject.MARKET_DATA}.>`;
         expect(mockNatsClient.subscribe).toHaveBeenCalledWith(
-            TitanSubject.MARKET_DATA, // Use enum to verify shared lib update
+            marketSubject, // Prefix subscription must use multi-token wildcard for venue/symbol
             expect.any(Function),
         );
 
         // Extract callback
         const calls = mockNatsClient.subscribe.mock.calls;
         const marketDataCall = calls.find((c: any[]) =>
-            c[0] === TitanSubject.MARKET_DATA
+            c[0] === marketSubject
         );
+        if (!marketDataCall) {
+            throw new Error(`Market data subscription not found for subject: ${marketSubject}`);
+        }
         const callback = marketDataCall[1];
 
         // Simulate Message
@@ -107,7 +111,7 @@ describe("Market Data Ingestion Integration", () => {
             price: 50000,
             timestamp: 1234567890,
         };
-        await callback(testTick, TitanSubject.MARKET_DATA);
+        await callback(testTick, marketSubject);
 
         // Use Brain Mock to verify call
         expect(brainMock.handleMarketData).toHaveBeenCalledWith({

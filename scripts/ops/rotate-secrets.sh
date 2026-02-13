@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # Secret Rotation Runbook - Titan Trading System
 # This script guides operators through rotating secrets safely
 # MUST be run in a maintenance window with trading DISARMED

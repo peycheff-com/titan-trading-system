@@ -30,12 +30,12 @@ impl BybitAdapter {
         let api_key = config
             .and_then(|c| c.get_api_key())
             .or_else(|| env::var("BYBIT_API_KEY").ok())
-            .ok_or_else(|| ExchangeError::Config("BYBIT_API_KEY not set".to_string()))?;
+            .ok_or_else(|| ExchangeError::Configuration("BYBIT_API_KEY not set".to_string()))?;
 
         let api_secret = config
             .and_then(|c| c.get_secret_key())
             .or_else(|| env::var("BYBIT_SECRET_KEY").ok())
-            .ok_or_else(|| ExchangeError::Config("BYBIT_SECRET_KEY not set".to_string()))?;
+            .ok_or_else(|| ExchangeError::Configuration("BYBIT_SECRET_KEY not set".to_string()))?;
 
         let order_rps = env::var("BYBIT_ORDER_RPS")
             .unwrap_or("10".to_string())
@@ -219,7 +219,7 @@ impl ExchangeAdapter for BybitAdapter {
     async fn place_order(&self, order: OrderRequest) -> Result<OrderResponse, ExchangeError> {
         let payload = build_order_payload(&order);
         if payload.get("error").is_some() {
-            return Err(ExchangeError::Config(
+            return Err(ExchangeError::Configuration(
                 "Unsupported order type for Bybit".into(),
             ));
         }
@@ -281,7 +281,7 @@ impl ExchangeAdapter for BybitAdapter {
         // Actually, we can use POST to /v5/account/wallet-balance? No, it's GET.
 
         if asset.is_empty() {
-            return Err(ExchangeError::Config(
+            return Err(ExchangeError::Configuration(
                 "Bybit get_balance requires an asset symbol".to_string(),
             ));
         }

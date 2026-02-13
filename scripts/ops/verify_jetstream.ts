@@ -1,5 +1,5 @@
 import { connect, JetStreamManager, StreamInfo } from 'nats';
-import { TITAN_STREAMS } from '../../packages/shared/src/messaging/nats-streams.js';
+import { TITAN_STREAMS, type TitanStreamConfig } from '../../packages/shared/src/messaging/nats-streams.js';
 
 async function verifyJetStream() {
   const natsUrl = process.env.NATS_URL || 'nats://localhost:4222';
@@ -10,7 +10,7 @@ async function verifyJetStream() {
     const jsm = await nc.jetstreamManager();
     console.log('✅ Connected.');
 
-    const streams = Object.values(TITAN_STREAMS);
+    const streams: TitanStreamConfig[] = Object.values(TITAN_STREAMS) as TitanStreamConfig[];
     console.log(`\n🔍 Verifying ${streams.length} streams defined in code...`);
 
     let driftCount = 0;
@@ -19,7 +19,7 @@ async function verifyJetStream() {
       console.log(`\nChecking Stream: ${streamConfig.name}`);
       try {
         const info: StreamInfo = await jsm.streams.info(streamConfig.name);
-        const config = info.config;
+        const config = info.config as any;
 
         // Check Max Messages
         if (config.max_msgs !== streamConfig.max_msgs) {
@@ -30,11 +30,14 @@ async function verifyJetStream() {
         }
 
         // Check Max Bytes
-        if (streamConfig.max_bytes && config.max_bytes !== streamConfig.max_bytes) {
-          console.error(`❌ DRIFT [max_bytes]: Expected ${streamConfig.max_bytes}, Got ${config.max_bytes}`);
+        const actualMaxBytes = config.max_bytes as number | undefined;
+        if (streamConfig.max_bytes && actualMaxBytes !== streamConfig.max_bytes) {
+          console.error(
+            `❌ DRIFT [max_bytes]: Expected ${streamConfig.max_bytes}, Got ${actualMaxBytes}`,
+          );
           driftCount++;
         } else if (streamConfig.max_bytes) {
-            console.log(`✅ max_bytes: ${config.max_bytes}`);
+            console.log(`✅ max_bytes: ${actualMaxBytes}`);
         }
 
         // Check Max Age

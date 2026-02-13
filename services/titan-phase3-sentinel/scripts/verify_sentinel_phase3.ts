@@ -2,9 +2,12 @@ import { RiskManager } from "../src/risk/RiskManager.js";
 import { VacuumMonitor } from "../src/vacuum/VacuumMonitor.js";
 import { SignalGenerator } from "../src/engine/StatEngine.js";
 import { OrderBook } from "../src/types/statistics.js";
+import { Logger } from '@titan/shared';
+
+const logger = Logger.getInstance('sentinel:verify_sentinel_phase3');
 
 async function verifyRiskManager() {
-    console.log("\n--- Verifying Risk Manager Dynamic Leverage ---");
+    logger.info("\n--- Verifying Risk Manager Dynamic Leverage ---");
     const riskManager = new RiskManager({
         maxPositionSize: 100000,
         criticalDrawdown: 0.15,
@@ -24,19 +27,19 @@ async function verifyRiskManager() {
     };
 
     // 1. Normal Conditions
-    console.log("Test 1: Normal Conditions (Vol=20, Liq=100)");
+    logger.info("Test 1: Normal Conditions (Vol=20, Liq=100)");
     let status = riskManager.evaluate(health as any, 10000, 0, 20, 100);
-    console.log(
+    logger.info(
         `Leverage: ${
             status.leverage.toFixed(2)
         }, Allowed: ${status.withinLimits}`,
     );
     if (!status.withinLimits) {
-        console.error("FAILED: Should be allowed in normal conditions");
+        logger.error("FAILED: Should be allowed in normal conditions");
     }
 
     // 2. High Volatility (Should cut max leverage to 5x)
-    console.log("Test 2: High Volatility (Vol=90, Liq=100)");
+    logger.info("Test 2: High Volatility (Vol=90, Liq=100)");
     // Position is 5x. Max becomes 10 * 0.5 = 5x. Should be barely allowed or strict?
     // If leverage > effectiveMax, it fails. 5.0 > 5.0 is False, so it passes.
     // Let's increase position slightly to 5.1x to fail
@@ -45,40 +48,40 @@ async function verifyRiskManager() {
         positions: [{ spotSize: 0.51, perpSize: -0.51, spotEntry: 50000 }],
     }; // $51k / 10k = 5.1x
     status = riskManager.evaluate(healthRisky as any, 10000, 0, 90, 100);
-    console.log(
+    logger.info(
         `Leverage: 5.1, Limit Should be 5.0. Allowed: ${status.withinLimits}`,
     );
     if (status.withinLimits) {
-        console.error("FAILED: Should be blocked by High Volatility limit");
+        logger.error("FAILED: Should be blocked by High Volatility limit");
     }
 
     // 3. Low Liquidity (Should cut max leverage to 5x)
-    console.log("Test 3: Low Liquidity (Vol=20, Liq=10)");
+    logger.info("Test 3: Low Liquidity (Vol=20, Liq=10)");
     status = riskManager.evaluate(healthRisky as any, 10000, 0, 20, 10);
-    console.log(
+    logger.info(
         `Leverage: 5.1, Limit Should be 5.0. Allowed: ${status.withinLimits}`,
     );
     if (status.withinLimits) {
-        console.error("FAILED: Should be blocked by Low Liquidity limit");
+        logger.error("FAILED: Should be blocked by Low Liquidity limit");
     }
 
     // 4. Both Bad (Should cut max leverage to 2.5x)
-    console.log("Test 4: High Vol + Low Liq (Vol=90, Liq=10)");
+    logger.info("Test 4: High Vol + Low Liq (Vol=90, Liq=10)");
     const healthSmall = {
         ...health,
         positions: [{ spotSize: 0.3, perpSize: -0.3, spotEntry: 50000 }],
     }; // $30k / 10k = 3x
     status = riskManager.evaluate(healthSmall as any, 10000, 0, 90, 10);
-    console.log(
+    logger.info(
         `Leverage: 3.0, Limit Should be 2.5 (10 * 0.5 * 0.5). Allowed: ${status.withinLimits}`,
     );
     if (status.withinLimits) {
-        console.error("FAILED: Should be blocked by combined limits");
+        logger.error("FAILED: Should be blocked by combined limits");
     }
 }
 
 async function verifyVacuumMonitor() {
-    console.log("\n--- Verifying Vacuum Monitor Liquidity Health ---");
+    logger.info("\n--- Verifying Vacuum Monitor Liquidity Health ---");
     const mockSigGen = {} as SignalGenerator;
     const monitor = new VacuumMonitor(mockSigGen);
 
@@ -107,12 +110,12 @@ async function verifyVacuumMonitor() {
         spotPrice * 0.99,
         thickBook,
     );
-    console.log(
+    logger.info(
         "Test 1: Thick Book (> $50k). Opportunity found:",
         opp1 !== null,
     );
     if (opp1 === null) {
-        console.error(
+        logger.error(
             "FAILED: Should find opportunity with liquidations + thick book",
         );
     }
@@ -133,12 +136,12 @@ async function verifyVacuumMonitor() {
         spotPrice * 0.99,
         thinBook,
     );
-    console.log(
+    logger.info(
         "Test 2: Thin Book (< $50k). Opportunity found:",
         opp2 !== null,
     );
     if (opp2 !== null) {
-        console.error("FAILED: Should be blocked by Low Liquidity");
+        logger.error("FAILED: Should be blocked by Low Liquidity");
     }
 }
 

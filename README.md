@@ -152,7 +152,7 @@ See [docs/security.md](docs/security.md) for the full threat model, AuthZ policy
 
 ## Contracts
 
-- NATS Intent Schema (v1): `docs/contracts/nats-intent.v1.schema.json`
+- NATS Intent Schema (v1): `contracts/nats/nats-intent.v1.schema.json`
 - Contract overview: `docs/contracts/nats-intent.md`
 
 ## Monitoring

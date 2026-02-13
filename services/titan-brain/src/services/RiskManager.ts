@@ -16,6 +16,9 @@
 import * as crypto from 'crypto';
 import { NatsPublisher } from '../server/NatsPublisher.js';
 import { BrainConfig } from '../config/BrainConfig.js';
+import { Logger } from '@titan/shared';
+
+const logger = Logger.getInstance('brain:RiskManager');
 
 export interface RiskState {
   tailIndex: number; // Current estimated tail index (alpha)
@@ -79,7 +82,7 @@ export class RiskManager {
     const signature = this.signString(sigString);
     const command = { ...payload, signature };
 
-    console.log('[RiskManager] Emitting HALT:', command);
+    logger.info('[RiskManager] Emitting HALT:', command);
     await this.natsPublisher.publishRiskCommand(command);
   }
 
@@ -108,7 +111,7 @@ export class RiskManager {
     const signature = this.signString(sigString);
     const command = { ...payload, signature };
 
-    console.log('[RiskManager] Emitting OVERRIDE:', command);
+    logger.info('[RiskManager] Emitting OVERRIDE:', command);
     await this.natsPublisher.publishRiskCommand(command);
   }
 

@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # =============================================================================
 # Titan AI GPU Droplet Provisioning Script
 # Deploy self-hosted Kimi K2.5 inference on DigitalOcean L40S GPU

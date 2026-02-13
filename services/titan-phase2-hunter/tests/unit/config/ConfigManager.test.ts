@@ -15,6 +15,17 @@ jest.mock("@titan/shared", () => ({
         on: mockOn,
         removeAllListeners: mockRemoveAllListeners,
     })),
+    Logger: {
+        // Called at import-time by src/config/ConfigManager.ts, so avoid referencing
+        // any top-level variables that may not be initialized yet (Jest mock hoisting).
+        getInstance: jest.fn(() => ({
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+            fatal: jest.fn(),
+        })),
+    },
 }));
 
 describe("ConfigManager", () => {

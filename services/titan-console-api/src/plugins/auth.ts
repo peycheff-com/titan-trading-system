@@ -16,7 +16,11 @@ export default fp(async function (fastify: FastifyInstance) {
         throw new Error('No authorization header');
       }
       const token = authHeader.replace('Bearer ', '');
-      const secret = process.env.JWT_SECRET || 'dev-secret';
+      const secret = process.env.JWT_SECRET;
+      if (!secret) {
+        reply.code(500).send({ error: 'JWT_SECRET not configured' });
+        return;
+      }
 
       const decoded = jwt.verify(token, secret);
       // Fastify auth boundary: request decoration is required to share claims downstream.

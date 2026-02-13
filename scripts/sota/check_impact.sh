@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # Impact Analysis / Smart Testing
 # Identifies which services have changed and runs tests only for them.
 

@@ -21,9 +21,23 @@ jest.mock("@titan/shared", () => {
         getMetrics: jest.fn().mockReturnValue({ requests: 0 }),
         on: jest.fn(),
     };
+
+    // FastPathOrderExecutor grabs the logger at module-load time.
+    // If we don't provide Logger.getInstance here, imports will crash.
+    const mockLogger = {
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        fatal: jest.fn(),
+    };
     return {
         FastPathClient: jest.fn().mockImplementation(() => mockClient),
+        Logger: {
+            getInstance: jest.fn(() => mockLogger),
+        },
         __mockClient: mockClient,
+        __mockLogger: mockLogger,
     };
 });
 

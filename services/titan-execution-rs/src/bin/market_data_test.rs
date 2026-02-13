@@ -105,8 +105,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("[Binance] Done.");
     });
 
-
-
     // Wait for all
     let _ = tokio::join!(bybit_handle, mexc_handle, binance_handle);
     println!("Quad Stream Test Complete!");

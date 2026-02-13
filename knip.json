@@ -42,6 +42,7 @@
     "services/titan-phase1-scavenger/src/monitoring/PrometheusMetrics.ts",
     "services/titan-console-api/src/services/config/ConfigRegistry.ts",
     "services/titan-console-api/src/services/OperatorIntentService.ts",
+    "services/titan-console-api/src/server.ts",
     "services/titan-brain/src/**/*.ts",
     "services/titan-brain/src/services/powerlaw/index.ts",
     "services/titan-brain/src/services/ServiceClient.ts",
@@ -116,7 +117,7 @@
       "project": ["src/**/*.ts"]
     },
     "services/titan-console-api": {
-      "entry": ["src/index.ts"],
+      "entry": ["src/index.ts", "src/server.ts"],
       "project": ["src/**/*.ts"]
     },
     "services/titan-opsd": {
@@ -134,8 +135,8 @@
     },
 
     ".": {
-      "entry": ["scripts/**/*.ts"],
-      "project": ["scripts/**/*.ts"]
+      "entry": ["scripts/**/*.ts", "tests/perf/latency.bench.ts"],
+      "project": ["scripts/**/*.ts", "tests/perf/**/*.ts"]
     }
   },
   "ignoreBinaries": ["tsx", "ts-node",    "python3",

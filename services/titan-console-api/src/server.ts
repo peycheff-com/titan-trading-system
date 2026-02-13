@@ -1,11 +1,14 @@
 import { buildApp } from './index.js';
+import { Logger } from '@titan/shared';
+
+const logger = Logger.getInstance('console-api:server');
 
 async function main() {
   const app = await buildApp();
-  const port = Number(process.env.PORT) || 3001;
+  const port = Number(process.env.PORT) || 3000;
   try {
     await app.listen({ port, host: '0.0.0.0' });
-    console.log(`[titan-console-api] Listening on port ${port}`);
+    logger.info(`[titan-console-api] Listening on port ${port}`);
   } catch (err) {
     app.log.error(err);
     process.exit(1);

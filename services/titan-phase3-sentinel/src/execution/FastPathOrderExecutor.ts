@@ -8,10 +8,13 @@
 import type { Order, OrderResult } from '../types/orders.js';
 import type { IOrderExecutor } from './interfaces.js';
 import { FastPathClient, type IntentSignal } from '@titan/shared';
+import { Logger } from '@titan/shared';
 
 /**
  * FastPathOrderExecutor Configuration
  */
+const logger = Logger.getInstance('sentinel:FastPathOrderExecutor');
+
 export interface FastPathExecutorConfig {
   socketPath?: string;
   hmacSecret?: string;
@@ -35,12 +38,12 @@ export class FastPathOrderExecutor implements IOrderExecutor {
     // CRITICAL: Handle error events to prevent Node.js crash
     // The EventEmitter 'error' event will crash the process if unhandled
     this.client.on('error', (error: Error) => {
-      console.warn(`⚠️ [Sentinel FastPath] IPC error (non-fatal): ${error.message}`);
+      logger.warn(`⚠️ [Sentinel FastPath] IPC error (non-fatal): ${error.message}`);
       // IPC is optional in cloud deployments - service continues without it
     });
 
     this.client.on('maxReconnectAttemptsReached', () => {
-      console.warn('⚠️ [Sentinel FastPath] Max reconnect attempts reached - IPC disabled');
+      logger.warn('⚠️ [Sentinel FastPath] Max reconnect attempts reached - IPC disabled');
     });
   }
 

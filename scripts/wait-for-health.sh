@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # Wait for all services to be healthy
 # Usage: ./scripts/wait-for-health.sh [TIMEOUT_SECONDS]
 

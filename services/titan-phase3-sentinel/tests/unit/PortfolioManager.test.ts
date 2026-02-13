@@ -94,10 +94,10 @@ describe("PortfolioManager", () => {
             );
         });
 
-        it("should handle COMPOUND action", async () => {
-            const consoleSpy = jest.spyOn(console, "log").mockImplementation(
-                () => {},
-            );
+	    it("should handle COMPOUND action", async () => {
+	        const consoleSpy = jest.spyOn(console, "info").mockImplementation(
+	            () => {},
+	        );
             mockRebalancer.evaluate.mockReturnValue({
                 action: "COMPOUND",
                 symbol: "BTC-USDT",
@@ -109,11 +109,11 @@ describe("PortfolioManager", () => {
             await manager.update("BTC-USDT");
 
             expect(mockTransferManager.executeTopUp).not.toHaveBeenCalled();
-            expect(consoleSpy).toHaveBeenCalledWith(
-                expect.stringContaining("Compounding not yet implemented"),
-            );
-            consoleSpy.mockRestore();
-        });
+	        expect(consoleSpy).toHaveBeenCalledWith(
+	            expect.stringContaining("Compounding not yet implemented"),
+	        );
+	        consoleSpy.mockRestore();
+	    });
 
         it("should handle HARD_COMPOUND action", async () => {
             const consoleSpy = jest.spyOn(console, "log").mockImplementation(

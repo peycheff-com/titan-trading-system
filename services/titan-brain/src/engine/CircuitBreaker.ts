@@ -7,6 +7,8 @@ import {
   BreakerType,
   CircuitBreakerConfig,
 } from '../types/index.js';
+import { Logger } from '@titan/shared';
+const logger = Logger.getInstance('brain:CircuitBreaker');
 
 /**
  * Interface for position closure callback
@@ -145,7 +147,7 @@ export class CircuitBreaker {
       };
       await this.stateStore.save(this.STATE_KEY, JSON.stringify(state));
     } catch (error) {
-      console.error('Failed to persist breaker state:', error);
+      logger.error('Failed to persist breaker state:', error);
     }
   }
 
@@ -175,10 +177,10 @@ export class CircuitBreaker {
         this.tripCount = state.tripCount;
 
         this.lastTripTime = state.lastTripTime;
-        console.log('✅ Circuit Breaker state restored from persistence');
+        logger.info('✅ Circuit Breaker state restored from persistence');
       }
     } catch (error) {
-      console.error('Failed to load breaker state:', error);
+      logger.error('Failed to load breaker state:', error);
     }
   }
 
@@ -303,7 +305,7 @@ export class CircuitBreaker {
         await this.positionHandler.closeAllPositions();
       } catch (error) {
         // Log error but don't prevent breaker activation
-        console.error('Failed to close positions during circuit breaker trigger:', error);
+        logger.error('Failed to close positions during circuit breaker trigger:', error);
       }
     }
 
@@ -312,7 +314,7 @@ export class CircuitBreaker {
       try {
         await this.notificationHandler.sendEmergencyNotification(reason, this.dailyStartEquity);
       } catch (error) {
-        console.error('Failed to send emergency notification:', error);
+        logger.error('Failed to send emergency notification:', error);
       }
     }
 
@@ -332,7 +334,7 @@ export class CircuitBreaker {
       try {
         await this.eventPersistence.persistEvent(event);
       } catch (error) {
-        console.error('Failed to persist breaker event:', error);
+        logger.error('Failed to persist breaker event:', error);
       }
     }
 
@@ -345,9 +347,9 @@ export class CircuitBreaker {
           tripCount: this.tripCount,
           dailyDrawdown: this.calculateDailyDrawdown(this.dailyStartEquity),
         });
-        console.log('🚨 HALT published to Execution Engine');
+        logger.info('🚨 HALT published to Execution Engine');
       } catch (error) {
-        console.error('Failed to publish halt to NATS:', error);
+        logger.error('Failed to publish halt to NATS:', error);
       }
     }
   }
@@ -404,7 +406,7 @@ export class CircuitBreaker {
       try {
         await this.eventPersistence.persistEvent(event);
       } catch (error) {
-        console.error('Failed to persist soft pause event:', error);
+        logger.error('Failed to persist soft pause event:', error);
       }
     }
   }
@@ -459,7 +461,7 @@ export class CircuitBreaker {
       try {
         await this.eventPersistence.persistEvent(event);
       } catch (error) {
-        console.error('Failed to persist reset event:', error);
+        logger.error('Failed to persist reset event:', error);
       }
     }
   }
@@ -596,7 +598,7 @@ export class CircuitBreaker {
       this.triggeredAt = undefined;
 
       this.cooldownEndsAt = undefined;
-      this.persistState().catch((err) => console.error('Failed to persist state check', err));
+      this.persistState().catch((err) => logger.error('Failed to persist state check', err));
     }
   }
   /**

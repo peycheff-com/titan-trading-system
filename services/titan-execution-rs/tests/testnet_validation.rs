@@ -19,8 +19,7 @@ mod testnet_tests {
 
     // Helper to check if testnet credentials are available
     fn testnet_configured() -> bool {
-        env::var("BYBIT_TESTNET_API_KEY").is_ok()
-            && env::var("BYBIT_TESTNET_API_SECRET").is_ok()
+        env::var("BYBIT_TESTNET_API_KEY").is_ok() && env::var("BYBIT_TESTNET_API_SECRET").is_ok()
     }
 
     #[tokio::test]

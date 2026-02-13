@@ -27,6 +27,9 @@
  */
 
 import { Tripwire } from '../types/index.js';
+import { Logger } from '@titan/shared';
+
+const logger = Logger.getInstance('scavenger:OIWipeoutDetector');
 
 interface OIHistoryPoint {
   oi: number;
@@ -122,11 +125,11 @@ export class OIWipeoutDetector {
       const dumpSize = priceStart - currentPrice;
       const targetPrice = currentPrice + dumpSize * 0.5;
 
-      console.log(`💀 OI WIPEOUT DETECTED: ${symbol}`);
-      console.log(`   Price Drop: ${(priceDrop * 100).toFixed(1)}%`);
-      console.log(`   OI Drop: ${(oiDrop * 100).toFixed(1)}%`);
-      console.log(`   CVD: ${cvd > 0 ? 'GREEN' : 'RED'}`);
-      console.log(
+      logger.info(`💀 OI WIPEOUT DETECTED: ${symbol}`);
+      logger.info(`   Price Drop: ${(priceDrop * 100).toFixed(1)}%`);
+      logger.info(`   OI Drop: ${(oiDrop * 100).toFixed(1)}%`);
+      logger.info(`   CVD: ${cvd > 0 ? 'GREEN' : 'RED'}`);
+      logger.info(
         `   Target: ${targetPrice.toFixed(2)} (+${((targetPrice / currentPrice - 1) * 100).toFixed(
           1,
         )}%)`,
@@ -149,7 +152,7 @@ export class OIWipeoutDetector {
       const err = error as { message?: string };
       if (err && (err.message || '').includes('403')) {
         if (!this.isGeoBlocked) {
-          console.warn(
+          logger.warn(
             `⛔ Geo-blocking detected for ${symbol} (HTTP 403). Disabling OIWipeoutDetector.`,
           );
           this.isGeoBlocked = true;
@@ -157,7 +160,7 @@ export class OIWipeoutDetector {
         return null;
       }
 
-      console.error(`Error detecting OI wipeout for ${symbol}:`, error);
+      logger.error(`Error detecting OI wipeout for ${symbol}:`, error);
       return null;
     }
   }

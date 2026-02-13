@@ -48,6 +48,9 @@ import {
 config();
 loadSecretsFromFiles();
 
+// Module-level logger for use outside class methods
+const logger = getLogger();
+
 /**
  * Main Hunter Application Class
  * Orchestrates all components and manages the application lifecycle
@@ -121,7 +124,7 @@ class HunterApplication {
     data?: unknown
   ): void {
     if (this.stateManager.headlessMode) {
-      console.log(
+      logger.info(
         JSON.stringify({
           timestamp: new Date().toISOString(),
           level,
@@ -134,16 +137,16 @@ class HunterApplication {
       switch (level) {
         case 'ERROR':
         case 'CRITICAL':
-          console.error(message);
+          logger.error(message);
           break;
         case 'WARN':
-          console.warn(message);
+          logger.warn(message);
           break;
         case 'DEBUG':
           console.debug(message);
           break;
         default:
-          console.log(message);
+          logger.info(message);
       }
     }
   }
@@ -345,7 +348,7 @@ class HunterApplication {
       // Start configuration watching
       // await this.configManager.startWatching(); - Deprecated
       await this.configManager.initialize();
-      console.log('✅ Configuration initialized and validated');
+      logger.info('✅ Configuration initialized and validated');
 
       this.logEvent('INFO', '✅ All components initialized successfully');
     } catch (error) {
@@ -689,10 +692,10 @@ class HunterApplication {
       this.logEvent('INFO', '🚀 Hunter started successfully!');
 
       if (!this.stateManager.headlessMode) {
-        console.log('');
-        console.log('Keyboard Controls:');
-        console.log('[F1] CONFIG  [F2] VIEW  [SPACE] PAUSE  [Q] QUIT');
-        console.log('');
+        logger.info('');
+        logger.info('Keyboard Controls:');
+        logger.info('[F1] CONFIG  [F2] VIEW  [SPACE] PAUSE  [Q] QUIT');
+        logger.info('');
 
         // Start the Hunter HUD dashboard
         this.renderHunterHUD();
@@ -815,7 +818,7 @@ class HunterApplication {
   private async renderHunterHUD(): Promise<void> {
     if (this.stateManager.headlessMode) return;
 
-    console.log('🖥️ Rendering Hunter HUD dashboard...');
+    logger.info('🖥️ Rendering Hunter HUD dashboard...');
 
     // Dynamically load console components (ink/react) only when not headless
     // Use eval-based import to completely bypass TypeScript module resolution
@@ -827,7 +830,7 @@ class HunterApplication {
       const { startHunterApp } = await dynamicImport('./console/HunterApp.js');
       startHunterApp();
     } catch (error) {
-      console.warn('⚠️ Failed to load console UI:', (error as Error).message);
+      logger.warn('⚠️ Failed to load console UI:', (error as Error).message);
     }
   }
 
@@ -938,7 +941,7 @@ async function main(): Promise<void> {
     hunterApp = new HunterApplication();
     await hunterApp.start();
   } catch (error) {
-    console.error('❌ Failed to start Hunter:', error);
+    logger.error('❌ Failed to start Hunter:', error);
     logError('CRITICAL', 'Failed to start Hunter in main', {
       component: 'main',
       function: 'main',
@@ -950,7 +953,7 @@ async function main(): Promise<void> {
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error: Error) => {
-  console.error('❌ Uncaught Exception:', error);
+  logger.error('❌ Uncaught Exception:', error);
   logError('CRITICAL', 'Uncaught Exception', {
     component: 'process',
     stack: error.stack,
@@ -963,7 +966,7 @@ process.on('uncaughtException', (error: Error) => {
 });
 
 process.on('unhandledRejection', (reason: unknown) => {
-  console.error('❌ Unhandled Rejection:', reason);
+  logger.error('❌ Unhandled Rejection:', reason);
   logError('CRITICAL', 'Unhandled Rejection', {
     component: 'process',
     data: reason,
@@ -977,7 +980,7 @@ process.on('unhandledRejection', (reason: unknown) => {
 
 // Handle graceful shutdown
 process.on('SIGINT', () => {
-  console.log('\n🛑 Received SIGINT, shutting down gracefully...');
+  logger.info('\n🛑 Received SIGINT, shutting down gracefully...');
   if (hunterApp) {
     hunterApp.shutdown();
   } else {
@@ -986,7 +989,7 @@ process.on('SIGINT', () => {
 });
 
 process.on('SIGTERM', () => {
-  console.log('\n🛑 Received SIGTERM, shutting down gracefully...');
+  logger.info('\n🛑 Received SIGTERM, shutting down gracefully...');
   if (hunterApp) {
     hunterApp.shutdown();
   } else {

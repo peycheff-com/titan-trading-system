@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 # validate-codeblocks.sh - 2026 SOTA Code Block Validation
 #
 # Tier-1 Practice: Validate embedded code examples in documentation

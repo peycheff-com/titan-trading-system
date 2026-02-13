@@ -1,4 +1,4 @@
-/* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
+/* eslint-disable functional/immutable-data -- Stateful runtime: mutations in Redis ops */
 import { Redis } from 'ioredis';
 import { v4 as uuidv4 } from 'uuid';
 import * as crypto from 'crypto';
@@ -20,12 +20,18 @@ export class SafetySessionManager {
   private redis: Redis;
   private logger: Logger;
   private readonly SESSION_PREFIX = 'titan:safety:session:';
-  private readonly SECRET = process.env.SAFETY_SECRET || 'dev-secret-do-not-use-in-prod';
+  private readonly SECRET: string;
+
   private readonly DEFAULT_TTL_SECONDS = 300; // 5 minutes
 
   constructor(logger: Logger, redisClient: Redis) {
     this.logger = logger;
     this.redis = redisClient;
+    const secret = process.env.SAFETY_SECRET;
+    if (!secret) {
+      throw new Error('SAFETY_SECRET environment variable is required');
+    }
+    this.SECRET = secret;
   }
 
   /**

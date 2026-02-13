@@ -10,7 +10,18 @@
 - `src/index.ts`: Entry point. Starts Fastify and NATS.
 - `src/flow/Signalprocessor.ts`: Core logic for handling incoming phase signals.
 - `src/risk/CircuitBreaker.ts`: System-wide safety switch.
+- `src/services/config/ConfigRegistry.ts`: Runtime configuration catalog with safety enforcement, overrides, and audit receipts.
+- `src/server/controllers/ConfigController.ts`: REST API for configuration management (catalog, overrides, presets).
 - `src/db/`: Database schema and migrations (PostgreSQL).
+
+## Configuration Management
+
+The Brain hosts the `ConfigRegistry` — a catalog-based runtime configuration system. See [Configuration](../dev/configuration.md#5-runtime-configuration-configregistry) for full details.
+
+- **Catalog**: All tunable parameters defined in `CONFIG_CATALOG` with safety constraints and schemas.
+- **Overrides**: Runtime overrides via `POST /config/override` with tighten-only / raise-only enforcement.
+- **Presets**: Three built-in profiles (Conservative, Balanced, Aggressive) via `POST /config/preset/:name`.
+- **Receipts**: HMAC-signed audit trail for all configuration changes.
 
 ## Dependencies
 

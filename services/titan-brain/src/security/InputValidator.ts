@@ -9,10 +9,13 @@
  */
 
 import { PhaseId } from '../types/index.js';
+import { Logger } from '@titan/shared';
 
 /**
  * Validation result
  */
+const logger = Logger.getInstance('brain:InputValidator');
+
 export interface ValidationResult {
   isValid: boolean;
   errors: string[];
@@ -565,7 +568,7 @@ export class SecurityAuditLogger {
       severity: 'WARNING',
     };
 
-    console.warn('SECURITY_AUDIT:', JSON.stringify(auditEvent));
+    logger.warn('SECURITY_AUDIT:', JSON.stringify(auditEvent));
   }
 
   /**
@@ -587,7 +590,7 @@ export class SecurityAuditLogger {
       severity: 'CRITICAL',
     };
 
-    console.error('SECURITY_THREAT:', JSON.stringify(auditEvent));
+    logger.error('SECURITY_THREAT:', JSON.stringify(auditEvent));
   }
 
   /**
@@ -603,6 +606,6 @@ export class SecurityAuditLogger {
       severity: 'WARNING',
     };
 
-    console.warn('AUTH_AUDIT:', JSON.stringify(auditEvent));
+    logger.warn('AUTH_AUDIT:', JSON.stringify(auditEvent));
   }
 }

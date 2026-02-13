@@ -20,6 +20,8 @@ import {
 } from './ConsensusValidator';
 import { ConnectionStatus, EnhancedErrorType, GlobalCVDData } from '../types';
 import { Logger } from '../logging/Logger';
+import { Logger as SharedLogger } from '@titan/shared';
+const logger = SharedLogger.getInstance('hunter:GlobalLiquidityAggregator');
 
 /**
  * Global Liquidity Aggregator configuration
@@ -125,7 +127,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
   constructor(config: Partial<GlobalLiquidityAggregatorConfig> = {}, logger?: Logger) {
     super();
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.logger = logger || new Logger({ enableConsoleOutput: true });
+    this.logger = logger || Logger.getInstance();
 
     // Initialize components
     this.exchangeManager = new MultiExchangeManager({
@@ -157,16 +159,16 @@ export class GlobalLiquidityAggregator extends EventEmitter {
    */
   async initialize(): Promise<void> {
     if (this.isInitialized) {
-      console.log('⚠️ GlobalLiquidityAggregator already initialized');
+      logger.info('⚠️ GlobalLiquidityAggregator already initialized');
       return;
     }
 
     if (!this.config.enabled) {
-      console.log('⚠️ GlobalLiquidityAggregator is disabled');
+      logger.info('⚠️ GlobalLiquidityAggregator is disabled');
       return;
     }
 
-    console.log('🌐 Initializing Global Liquidity Aggregator...');
+    logger.info('🌐 Initializing Global Liquidity Aggregator...');
     this.logInfo('Initializing Global Liquidity Aggregator');
 
     try {
@@ -181,11 +183,11 @@ export class GlobalLiquidityAggregator extends EventEmitter {
 
       // eslint-disable-next-line functional/immutable-data
       this.isInitialized = true;
-      console.log('✅ Global Liquidity Aggregator initialized');
+      logger.info('✅ Global Liquidity Aggregator initialized');
       this.logInfo('Global Liquidity Aggregator initialized successfully');
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      console.error('❌ Failed to initialize Global Liquidity Aggregator:', errorMsg);
+      logger.error('❌ Failed to initialize Global Liquidity Aggregator:', errorMsg);
       this.logError('Failed to initialize Global Liquidity Aggregator', errorMsg);
       this.emit('error', {
         type: EnhancedErrorType.EXCHANGE_CONNECTION_LOST,
@@ -199,7 +201,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
    * Shutdown the Global Liquidity Aggregator
    */
   async shutdown(): Promise<void> {
-    console.log('🔌 Shutting down Global Liquidity Aggregator...');
+    logger.info('🔌 Shutting down Global Liquidity Aggregator...');
 
     // Stop periodic updates
     this.stopPeriodicUpdates();
@@ -212,7 +214,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
 
     // eslint-disable-next-line functional/immutable-data
     this.isInitialized = false;
-    console.log('✅ Global Liquidity Aggregator shutdown complete');
+    logger.info('✅ Global Liquidity Aggregator shutdown complete');
   }
 
   /**
@@ -426,7 +428,7 @@ export class GlobalLiquidityAggregator extends EventEmitter {
    */
   private handleStatusChange(status: ExchangeStatusSummary): void {
     // Log status change
-    console.log(`📊 Exchange status: ${status.connectedCount}/${status.totalExchanges} connected`);
+    logger.info(`📊 Exchange status: ${status.connectedCount}/${status.totalExchanges} connected`);
 
     // Check if we need to activate fallback
     if (status.connectedCount < 2 && this.config.fallbackToSingleExchange) {
@@ -582,19 +584,19 @@ export class GlobalLiquidityAggregator extends EventEmitter {
   ): void {
     const { consensusResult, recommendation, adjustedConfidence } = response;
 
-    console.log(`📊 Global CVD Validation: ${symbol} ${direction}`);
-    console.log(
+    logger.info(`📊 Global CVD Validation: ${symbol} ${direction}`);
+    logger.info(
       `   Consensus: ${consensusResult.consensusDirection} (${consensusResult.confidence.toFixed(
         0
       )}%)`
     );
-    console.log(`   Agreement: ${(consensusResult.agreementRatio * 100).toFixed(0)}%`);
-    console.log(`   Recommendation: ${recommendation}`);
-    console.log(`   Adjusted Confidence: ${adjustedConfidence.toFixed(0)}%`);
+    logger.info(`   Agreement: ${(consensusResult.agreementRatio * 100).toFixed(0)}%`);
+    logger.info(`   Recommendation: ${recommendation}`);
+    logger.info(`   Adjusted Confidence: ${adjustedConfidence.toFixed(0)}%`);
 
     // Log individual exchange votes
     for (const vote of consensusResult.votes) {
-      console.log(`   ${vote.exchange}: ${vote.direction} (CVD: ${vote.cvd.toFixed(0)})`);
+      logger.info(`   ${vote.exchange}: ${vote.direction} (CVD: ${vote.cvd.toFixed(0)})`);
     }
   }
 

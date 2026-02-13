@@ -139,7 +139,6 @@ export class EventMonitor extends EventEmitter {
     const upcomingEvents = this.getUpcomingHighImpactEvents(windowMinutes);
     // eslint-disable-next-line functional/no-let
     let totalImpactScore = 0;
-    const maxVolatility = 0;
 
     for (const event of upcomingEvents) {
       // Base impact score
@@ -181,7 +180,7 @@ export class EventMonitor extends EventEmitter {
       const prevEvent = this.previousEvents.get(currentEvent.id);
       if (!prevEvent) continue;
 
-      // Flash Crash Pattern: >15% drop followed by >10% recovery (simulated check based on simple volatility for now)
+      // Flash Crash Pattern: >15% drop followed by >10% recovery (heuristic check based on simple volatility for now)
       // Real detection would need tick history. Here we check specific rapid large moves.
       const probChange = currentEvent.probability - prevEvent.probability;
 

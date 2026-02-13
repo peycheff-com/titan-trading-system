@@ -15,6 +15,11 @@
         "version": {
           "type": "integer"
         },
+        "schema_version": {
+          "type": "integer",
+          "default": 1,
+          "description": "Envelope schema version for backwards-compatibility enforcement"
+        },
         "ts": {
           "type": "integer",
           "default": 0
@@ -52,6 +57,7 @@
       "required": [
         "type",
         "version",
+        "schema_version",
         "producer",
         "payload"
       ],

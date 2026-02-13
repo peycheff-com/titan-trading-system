@@ -15,8 +15,16 @@ use titan_execution_rs::drift_detector::DriftDetector;
 use titan_execution_rs::exchange::adapter::ExchangeAdapter;
 use titan_execution_rs::exchange::binance::BinanceAdapter;
 use titan_execution_rs::exchange::bybit::BybitAdapter;
+use titan_execution_rs::exchange::coinbase::CoinbaseAdapter;
+use titan_execution_rs::exchange::cryptocom::CryptoComAdapter;
+use titan_execution_rs::exchange::dydx::DydxAdapter;
+use titan_execution_rs::exchange::gateio::GateIoAdapter;
+use titan_execution_rs::exchange::kraken::KrakenAdapter;
+use titan_execution_rs::exchange::kucoin::KucoinAdapter;
 use titan_execution_rs::exchange::mexc::MexcAdapter;
+use titan_execution_rs::exchange::okx::OkxAdapter;
 use titan_execution_rs::exchange::router::ExecutionRouter;
+use titan_execution_rs::exchange::uniswap::UniswapAdapter;
 use titan_execution_rs::execution_constraints::ConstraintsStore;
 use titan_execution_rs::market_data::engine::MarketDataEngine;
 use titan_execution_rs::nats_engine;
@@ -105,6 +113,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     info!("║               High Performance Execution Engine               ║");
     info!("╚═══════════════════════════════════════════════════════════════╝");
 
+    // Load environment variables from .env BEFORE checking secrets
+    dotenv::dotenv().ok();
+
     // =========================================================================
     // FAIL-CLOSED SECURITY CHECK: Validate HMAC_SECRET before ANY network ops
     // =========================================================================
@@ -126,9 +137,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             info!("🔐 HMAC_SECRET configured ({}  bytes)", hmac_secret.len());
         }
     }
-
-    // Load environment variables
-    dotenv::dotenv().ok();
 
     // Initialize Prometheus Metrics
     let registry = prometheus::default_registry().clone();
@@ -373,6 +381,150 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         }
     } else {
         info!("🚫 MEXC disabled or missing in config");
+    }
+
+    // 4. OKX
+    let okx_config = exchanges.and_then(|e| e.okx.as_ref());
+    if okx_config.map(|c| c.enabled).unwrap_or(false) {
+        match OkxAdapter::new(okx_config) {
+            Ok(adapter) => {
+                let okx_adapter = Arc::new(adapter);
+                if (okx_adapter.init().await).is_ok() {
+                    router.register("okx", okx_adapter);
+                } else {
+                    error!("❌ Failed to initialize OKX adapter/ping");
+                }
+            }
+            Err(e) => error!("❌ Failed to create OKX adapter: {}", e),
+        }
+    } else {
+        info!("🚫 OKX disabled or missing in config");
+    }
+
+    // 5. Coinbase
+    let coinbase_config = exchanges.and_then(|e| e.coinbase.as_ref());
+    if coinbase_config.map(|c| c.enabled).unwrap_or(false) {
+        match CoinbaseAdapter::new(coinbase_config) {
+            Ok(adapter) => {
+                let coinbase_adapter = Arc::new(adapter);
+                if (coinbase_adapter.init().await).is_ok() {
+                    router.register("coinbase", coinbase_adapter);
+                } else {
+                    error!("❌ Failed to initialize Coinbase adapter/ping");
+                }
+            }
+            Err(e) => error!("❌ Failed to create Coinbase adapter: {}", e),
+        }
+    } else {
+        info!("🚫 Coinbase disabled or missing in config");
+    }
+
+    // 6. Kraken
+    let kraken_config = exchanges.and_then(|e| e.kraken.as_ref());
+    if kraken_config.map(|c| c.enabled).unwrap_or(false) {
+        match KrakenAdapter::new(kraken_config) {
+            Ok(adapter) => {
+                let kraken_adapter = Arc::new(adapter);
+                if (kraken_adapter.init().await).is_ok() {
+                    router.register("kraken", kraken_adapter);
+                } else {
+                    error!("❌ Failed to initialize Kraken adapter/ping");
+                }
+            }
+            Err(e) => error!("❌ Failed to create Kraken adapter: {}", e),
+        }
+    } else {
+        info!("🚫 Kraken disabled or missing in config");
+    }
+
+    // 7. KuCoin
+    let kucoin_config = exchanges.and_then(|e| e.kucoin.as_ref());
+    if kucoin_config.map(|c| c.enabled).unwrap_or(false) {
+        match KucoinAdapter::new(kucoin_config) {
+            Ok(adapter) => {
+                let kucoin_adapter = Arc::new(adapter);
+                if (kucoin_adapter.init().await).is_ok() {
+                    router.register("kucoin", kucoin_adapter);
+                } else {
+                    error!("❌ Failed to initialize KuCoin adapter/ping");
+                }
+            }
+            Err(e) => error!("❌ Failed to create KuCoin adapter: {}", e),
+        }
+    } else {
+        info!("🚫 KuCoin disabled or missing in config");
+    }
+
+    // 8. Gate.io
+    let gateio_config = exchanges.and_then(|e| e.gateio.as_ref());
+    if gateio_config.map(|c| c.enabled).unwrap_or(false) {
+        match GateIoAdapter::new(gateio_config) {
+            Ok(adapter) => {
+                let gateio_adapter = Arc::new(adapter);
+                if (gateio_adapter.init().await).is_ok() {
+                    router.register("gateio", gateio_adapter);
+                } else {
+                    error!("❌ Failed to initialize Gate.io adapter/ping");
+                }
+            }
+            Err(e) => error!("❌ Failed to create Gate.io adapter: {}", e),
+        }
+    } else {
+        info!("🚫 Gate.io disabled or missing in config");
+    }
+
+    // 9. Crypto.com
+    let cryptocom_config = exchanges.and_then(|e| e.cryptocom.as_ref());
+    if cryptocom_config.map(|c| c.enabled).unwrap_or(false) {
+        match CryptoComAdapter::new(cryptocom_config) {
+            Ok(adapter) => {
+                let cryptocom_adapter = Arc::new(adapter);
+                if (cryptocom_adapter.init().await).is_ok() {
+                    router.register("cryptocom", cryptocom_adapter);
+                } else {
+                    error!("❌ Failed to initialize Crypto.com adapter/ping");
+                }
+            }
+            Err(e) => error!("❌ Failed to create Crypto.com adapter: {}", e),
+        }
+    } else {
+        info!("🚫 Crypto.com disabled or missing in config");
+    }
+
+    // 10. dYdX
+    let dydx_config = exchanges.and_then(|e| e.dydx.as_ref());
+    if dydx_config.map(|c| c.enabled).unwrap_or(false) {
+        match DydxAdapter::new(dydx_config) {
+            Ok(adapter) => {
+                let dydx_adapter = Arc::new(adapter);
+                if (dydx_adapter.init().await).is_ok() {
+                    router.register("dydx", dydx_adapter);
+                } else {
+                    error!("❌ Failed to initialize dYdX adapter/ping");
+                }
+            }
+            Err(e) => error!("❌ Failed to create dYdX adapter: {}", e),
+        }
+    } else {
+        info!("🚫 dYdX disabled or missing in config");
+    }
+
+    // 11. Uniswap
+    let uniswap_config = exchanges.and_then(|e| e.uniswap.as_ref());
+    if uniswap_config.map(|c| c.enabled).unwrap_or(false) {
+        match UniswapAdapter::new(uniswap_config) {
+            Ok(adapter) => {
+                let uniswap_adapter = Arc::new(adapter);
+                if (uniswap_adapter.init().await).is_ok() {
+                    router.register("uniswap", uniswap_adapter);
+                } else {
+                    error!("❌ Failed to initialize Uniswap adapter/ping");
+                }
+            }
+            Err(e) => error!("❌ Failed to create Uniswap adapter: {}", e),
+        }
+    } else {
+        info!("🚫 Uniswap disabled or missing in config");
     }
 
     // --- Start NATS Engine ---

@@ -15,10 +15,13 @@
  */
 
 import WebSocket from 'ws';
+import { Logger } from '@titan/shared';
 
 /**
  * Trade data structure from Binance AggTrades stream
  */
+const logger = Logger.getInstance('scavenger:BinanceSpotClient');
+
 export interface Trade {
   symbol: string;
   price: number;
@@ -90,7 +93,7 @@ export class BinanceSpotClient {
     this.ws = new WebSocket(this.WS_URL);
 
     this.ws.on('open', () => {
-      console.log(`✅ Binance WebSocket connected`);
+      logger.info(`✅ Binance WebSocket connected`);
       this.reconnectAttempts = 0; // Reset on successful connection
       this.reconnectDelay = 1000; // Reset delay on successful connection
       this.isReconnecting = false;
@@ -110,7 +113,7 @@ export class BinanceSpotClient {
       };
 
       this.ws!.send(JSON.stringify(subscribeMsg));
-      console.log(`✅ Subscribed to Binance Spot: ${symbols.length} symbols`);
+      logger.info(`✅ Subscribed to Binance Spot: ${symbols.length} symbols`);
     });
 
     this.ws.on('message', (data: Buffer) => {
@@ -134,17 +137,17 @@ export class BinanceSpotClient {
           }
         }
       } catch (error) {
-        console.error('❌ Error parsing Binance message:', error);
+        logger.error('❌ Error parsing Binance message:', error);
       }
     });
 
     this.ws.on('pong', () => {
       // Connection is alive
-      console.log('🏓 Binance pong received');
+      logger.info('🏓 Binance pong received');
     });
 
     this.ws.on('error', (error) => {
-      console.error('❌ Binance WebSocket error:', error);
+      logger.error('❌ Binance WebSocket error:', error);
     });
 
     this.ws.on('close', () => {
@@ -161,7 +164,7 @@ export class BinanceSpotClient {
         this.isReconnecting = true;
         this.reconnectAttempts++;
 
-        console.warn(
+        logger.warn(
           `⚠️ Reconnecting in ${this.reconnectDelay / 1000}s... ` +
             `(Attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`,
         );
@@ -176,7 +179,7 @@ export class BinanceSpotClient {
           this.maxReconnectDelay,
         );
       } else if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-        console.error(
+        logger.error(
           `❌ Max reconnection attempts (${this.maxReconnectAttempts}) reached. ` +
             `Manual intervention required.`,
         );
@@ -227,7 +230,7 @@ export class BinanceSpotClient {
       const data = (await response.json()) as { price: string };
       return parseFloat(data.price);
     } catch (error) {
-      console.error(`❌ Failed to get spot price for ${symbol}:`, error);
+      logger.error(`❌ Failed to get spot price for ${symbol}:`, error);
       throw error;
     }
   }

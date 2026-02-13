@@ -27,6 +27,9 @@
  */
 
 import { Tripwire } from '../types/index.js';
+import { Logger } from '@titan/shared';
+
+const logger = Logger.getInstance('scavenger:FundingSqueezeDetector');
 
 interface OHLCV {
   timestamp: number;
@@ -80,7 +83,7 @@ export class FundingSqueezeDetector {
         return null;
       }
 
-      console.log(
+      logger.info(
         `🔍 Checking funding squeeze: ${symbol} (Funding: ${(fundingRate * 100).toFixed(3)}%)`,
       );
 
@@ -115,15 +118,15 @@ export class FundingSqueezeDetector {
       // 6. Calculate stop loss (below recent low)
       const stopLoss = recentLows[2] * 0.995; // -0.5% below recent low
 
-      console.log(`⚡ FUNDING SQUEEZE DETECTED: ${symbol}`);
-      console.log(`   Funding Rate: ${(fundingRate * 100).toFixed(3)}%`);
-      console.log(
+      logger.info(`⚡ FUNDING SQUEEZE DETECTED: ${symbol}`);
+      logger.info(`   Funding Rate: ${(fundingRate * 100).toFixed(3)}%`);
+      logger.info(
         `   Higher Low: YES (${recentLows[0].toFixed(2)} → ${recentLows[1].toFixed(
           2,
         )} → ${recentLows[2].toFixed(2)})`,
       );
-      console.log(`   CVD Rising: YES (${previousCVD.toFixed(0)} → ${cvd.toFixed(0)})`);
-      console.log(
+      logger.info(`   CVD Rising: YES (${previousCVD.toFixed(0)} → ${cvd.toFixed(0)})`);
+      logger.info(
         `   Target: ${liquidationTarget.toFixed(2)} (+${(
           (liquidationTarget / currentPrice - 1) *
           100
@@ -147,7 +150,7 @@ export class FundingSqueezeDetector {
       const err = error as { message?: string };
       if (err && (err.message || '').includes('403')) {
         if (!this.isGeoBlocked) {
-          console.warn(
+          logger.warn(
             `⛔ Geo-blocking detected for ${symbol} (HTTP 403). Disabling FundingSqueezeDetector.`,
           );
           this.isGeoBlocked = true;
@@ -155,7 +158,7 @@ export class FundingSqueezeDetector {
         return null;
       }
 
-      console.error(`Error detecting funding squeeze for ${symbol}:`, error);
+      logger.error(`Error detecting funding squeeze for ${symbol}:`, error);
       return null;
     }
   }

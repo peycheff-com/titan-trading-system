@@ -1,6 +1,9 @@
 import { DatabaseManager } from '../DatabaseManager.js';
 import { ExecutionReport } from '../../types/index.js';
 import { PoolClient } from 'pg';
+import { Logger } from '@titan/shared';
+
+const logger = Logger.getInstance('brain:FillsRepository');
 
 export class FillsRepository {
   constructor(private db: DatabaseManager) {}
@@ -13,7 +16,7 @@ export class FillsRepository {
     const fillId = fill.fillId || fill.executionId;
 
     if (!fillId) {
-      console.warn(
+      logger.warn(
         '⚠️ Skipping fill persistence: No fillId/executionId provided - cannot guarantee idempotency',
         fill,
       );
@@ -86,7 +89,7 @@ export class FillsRepository {
     for (const fill of fills) {
       const fillId = fill.fillId || fill.executionId;
       if (!fillId) {
-        console.warn('⚠️ Skipping fill in batch: Missing upstream ID', fill);
+        logger.warn('⚠️ Skipping fill in batch: Missing upstream ID', fill);
         continue;
       }
 

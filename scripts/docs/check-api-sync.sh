@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 # check-api-sync.sh - 2026 SOTA API-to-OpenAPI Sync Detection
 #
 # Tier-1 Practice: Verify OpenAPI spec matches actual implementations

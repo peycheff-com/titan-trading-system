@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 set -e
 
 # Titan Trading System - Database Maintenance Script

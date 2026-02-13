@@ -1,4 +1,5 @@
 use crate::model::{Intent, Position, TradeRecord};
+use crate::order_fsm::OrderFsm;
 use crate::persistence::redb_store::{RedbStore, StoreError};
 use crate::persistence::wal::{WalEntry, WalManager};
 use redb::{ReadableTable, TableDefinition};
@@ -9,6 +10,7 @@ const POSITIONS_TABLE: TableDefinition<&str, Vec<u8>> = TableDefinition::new("po
 const INTENTS_TABLE: TableDefinition<&str, Vec<u8>> = TableDefinition::new("intents");
 const TRADES_TABLE: TableDefinition<&str, Vec<u8>> = TableDefinition::new("trades");
 const METADATA_TABLE: TableDefinition<&str, Vec<u8>> = TableDefinition::new("metadata");
+const FSM_TABLE: TableDefinition<&str, Vec<u8>> = TableDefinition::new("order_fsm");
 
 pub struct PersistenceStore {
     store: Arc<RedbStore>,
@@ -195,5 +197,63 @@ impl PersistenceStore {
 
     pub fn set_idempotency(&self, key: &str, ttl_ms: i64) -> Result<(), StoreError> {
         self.store.set_idempotency(key, ttl_ms)
+    }
+
+    /// Persist an OrderFsm to Redb for crash recovery (Phase 3.3)
+    pub fn save_fsm(&self, fsm: &OrderFsm) -> Result<(), StoreError> {
+        // WAL first
+        self.wal.append(&WalEntry::ExecutionReport {
+            signal_id: fsm.signal_id.clone(),
+            fill_id: format!("fsm_{}", fsm.state),
+            payload: serde_json::to_value(fsm)?,
+        })?;
+
+        // State update
+        let txn = self.store.begin_write()?;
+        {
+            let mut table = txn.open_table(FSM_TABLE)?;
+            let data = serde_json::to_vec(fsm)?;
+            table.insert(fsm.signal_id.as_str(), data)?;
+        }
+        txn.commit()?;
+        Ok(())
+    }
+
+    /// Load an OrderFsm by signal_id for crash recovery
+    pub fn load_fsm(&self, signal_id: &str) -> Result<Option<OrderFsm>, StoreError> {
+        let txn = self.store.begin_read()?;
+        let table = txn.open_table(FSM_TABLE)?;
+        let maybe_guard = table.get(signal_id)?;
+        let maybe_fsm = maybe_guard
+            .map(|v| serde_json::from_slice::<OrderFsm>(&v.value()))
+            .transpose()?;
+
+        Ok(maybe_fsm)
+    }
+
+    /// Load all non-terminal FSMs (for crash recovery on startup)
+    pub fn load_active_fsms(&self) -> Result<Vec<OrderFsm>, StoreError> {
+        let txn = self.store.begin_read()?;
+        let table = txn.open_table(FSM_TABLE)?;
+        let mut items = Vec::new();
+        for res in table.range::<&str>(..)? {
+            let (_, v) = res?;
+            let fsm: OrderFsm = serde_json::from_slice(&v.value())?;
+            if !fsm.is_terminal() {
+                items.push(fsm);
+            }
+        }
+        Ok(items)
+    }
+
+    /// Delete a completed FSM from Redb (cleanup after reconciliation)
+    pub fn delete_fsm(&self, signal_id: &str) -> Result<(), StoreError> {
+        let txn = self.store.begin_write()?;
+        {
+            let mut table = txn.open_table(FSM_TABLE)?;
+            table.remove(signal_id)?;
+        }
+        txn.commit()?;
+        Ok(())
     }
 }

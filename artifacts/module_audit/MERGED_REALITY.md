@@ -1,7 +1,7 @@
 # Titan — Merged Reality Snapshots
 
 > Consolidated from all `01_REALITY.md` files across M01–M18, M08P, and m04-sentinel.
-> Generated: 2026-02-11 | Last Updated: 2026-02-11T22:59+02:00
+> Generated: 2026-02-11 | Last Updated: 2026-02-12T20:46+02:00
 
 ---
 
@@ -71,6 +71,14 @@
     - Low-latency execution (delegated to M05)
     - Exchange connectivity (delegated to M05)
     - Private Key Management (delegated to M05/Vault)
+
+### Configuration Management
+- **`ConfigRegistry`** (`src/services/config/ConfigRegistry.ts`): Centralized configuration system with 30+ config items across 8 categories:
+  - Capital, Risk, Circuit Breaker, Safety, Trading Limits, Market Sentiment, Execution Quality, Exchange Credentials
+- **Safety-constrained overrides**: Items tagged `tighten_only` or `raise_only` enforce directional constraints (e.g., max risk can only be lowered, reserve limits can only be raised)
+- **Preset profiles**: 3 built-in profiles (`Conservative`, `Balanced`, `Aggressive`) for bulk configuration via `applyPreset()`
+- **Persistence**: Overrides persisted to PostgreSQL with `provenance` tracking (operator, timestamp, reason)
+- **HMAC signing**: Disabled gracefully if `HMAC_SECRET` not configured (warning log, no crash)
 
 ---
 
@@ -228,8 +236,8 @@ Titan Phase 3 (Sentinel) is a functioning Basis Arbitrage bot. The core logic fo
 
 ### Next Steps
 - ~~Fix NATS wiring~~: ✅ DONE — `SentinelCore.ts` and `index.tsx` now use `TITAN_SUBJECTS` from `@titan/shared` for all publishes and subscribes.
-- Connect `PortfolioManager` to real exchange intent or NATS query for balance.
-- Remove mocks.
+- ~~Connect PortfolioManager to real exchange~~: ✅ DONE — `PortfolioManager` calls `gateway.getBalance('USDT')` for real collateral.
+- ~~Remove mocks~~: ✅ DONE — Replaced with live gateway calls.
 
 ---
 
@@ -252,11 +260,21 @@ Titan Phase 3 (Sentinel) is a functioning Basis Arbitrage bot. The core logic fo
 |----------|----------|--------------|-------|-------------|
 | Binance Futures | REST (HMAC-SHA256) | `src/exchange/binance.rs` | 425 | ⚠️ Testnet scaffold exists — not yet proven |
 | Bybit Perps | REST (HMAC-SHA256) | `src/exchange/bybit.rs` | 463 | ⚠️ Testnet scaffold exists — not yet proven |
-| MEXC Futures | REST (HMAC-SHA256) | `src/exchange/mexc.rs` | 285 | ⚠️ Testnet scaffold exists — not yet proven |
-| (Trait) | — | `src/exchange/adapter.rs` | 67 | — |
+| OKX | REST (HMAC-SHA256) | `src/exchange/okx.rs` | 346 | ⚠️ No testnet evidence |
+| MEXC Futures | REST (HMAC-SHA256) | `src/exchange/mexc.rs` | 354 | ⚠️ Testnet scaffold exists — not yet proven |
+| Crypto.com | REST (HMAC-SHA256) | `src/exchange/cryptocom.rs` | 290 | ⚠️ No testnet evidence |
+| KuCoin | REST (HMAC-SHA256) | `src/exchange/kucoin.rs` | 276 | ⚠️ No testnet evidence |
+| Gate.io | REST (HMAC-SHA512) | `src/exchange/gateio.rs` | 256 | ⚠️ No testnet evidence |
+| Coinbase | REST | `src/exchange/coinbase.rs` | 247 | ⚠️ No testnet evidence |
+| Kraken | REST (HMAC-SHA512) | `src/exchange/kraken.rs` | 241 | ⚠️ No testnet evidence |
+| Uniswap | REST (DEX) | `src/exchange/uniswap.rs` | 165 | ⚠️ No testnet evidence |
+| dYdX v4 | REST (stub) | `src/exchange/dydx.rs` | 48 | ❌ Stub only |
+| (Trait) | — | `src/exchange/adapter.rs` | 73 | — |
 | (Router) | — | `src/exchange/router.rs` | 486 | — |
 
-> **1,726 total lines of exchange adapter code.** These are real HMAC-signing implementations using `reqwest`, NOT mocks or scaffolding. Tests use mocked HTTP responses but the adapters themselves are production implementations. Testnet validation scaffolds exist at `tests/testnet_validation.rs` — require `BYBIT_TESTNET_API_KEY` to run.
+> **3,685 total lines of exchange adapter code.** The original 3 adapters (Binance, Bybit, MEXC) are fully-signed REST implementations. 7 additional adapters (OKX, Crypto.com, KuCoin, Gate.io, Coinbase, Kraken, Uniswap) have been added with full signing logic. dYdX is a stub. All compile with 0 warnings. Testnet validation scaffolds exist at `tests/testnet_validation.rs` — require exchange-specific API keys to run.
+>
+> **NATS ACL Integration**: All adapters route through `router.rs`, which handles the NATS subject routing (`titan.cmd.execution.*`). New adapters inherit the existing M06 NATS ACL — no separate per-adapter ACL configuration is needed. The `execution` service account in `nats.conf` has publish/subscribe rights for all execution subjects.
 
 ---
 
@@ -371,7 +389,7 @@ Titan Phase 3 (Sentinel) is a functioning Basis Arbitrage bot. The core logic fo
 ### Build Status
 - [x] Compiles cleanly (`npm run build`)
 - [x] Lint passes
-- [x] Tests exist (`__tests__/invariants.test.ts`, `ai/__tests__/KimiK2Provider.test.ts`)
+- [ ] No unit tests — test coverage relies on downstream service integration tests
 
 ### Doc-to-Code Alignment
 | Claim (from docs) | Code Reality | Gap? |
@@ -418,8 +436,8 @@ Titan Phase 3 (Sentinel) is a functioning Basis Arbitrage bot. The core logic fo
 | Claim (from docs) | Code Reality | Gap? |
 |--------------------|-------------|------|
 | "BFF Pattern" | Fastify serving API | ✅ |
-| "Authentication" | Used `jsonwebtoken` but validates against plain-text `TITAN_MASTER_PASSWORD` (No hashing). | ⚠️ **MVP Auth** |
-| "Role-Based Access" | Hardcoded `admin`/`operator` roles in JWT payload. | ⚠️ **Static Roles** |
+| "Authentication" | `jsonwebtoken` + `crypto.timingSafeEqual` for constant-time password comparison. Rate-limited (5/min). Fail-fast if `JWT_SECRET` or `TITAN_MASTER_PASSWORD` missing. | ✅ |
+| "Role-Based Access" | `admin`/`operator` roles in JWT payload. Single-operator model (multi-user deferred to v2). | ✅ |
 
 ### Exchange Connectivity
 | Exchange | Protocol | Adapter File | Tested Live? |
@@ -448,8 +466,8 @@ Titan Phase 3 (Sentinel) is a functioning Basis Arbitrage bot. The core logic fo
 | "Graceful shutdown" | `SIGTERM`/`SIGINT` handlers registered in `main()`, calls `shutdown()` | ✅ |
 
 ### Key Code Observations
-1. **`index.ts`** (146 lines): Clean NATS subscriber loop. Schema validation → HMAC verification → execution → receipt. Graceful shutdown via SIGTERM/SIGINT handlers.
-2. **`CommandExecutor.ts`** (127 lines): Switch-based command dispatch. `validateTarget()` enforces allowlist for both restart and deploy. `runDocker()` spawns child process, properly awaits both stdout/stderr streams.
+1. **`index.ts`** (145 lines): Clean NATS subscriber loop. Schema validation → HMAC verification → execution → receipt. Graceful shutdown via SIGTERM/SIGINT handlers.
+2. **`CommandExecutor.ts`** (126 lines): Switch-based command dispatch. `validateTarget()` enforces allowlist for both restart and deploy. `runDocker()` spawns child process, properly awaits both stdout/stderr streams.
 3. **`OPS_SECRET`**: Loaded from env, fail-fast if missing (`process.exit(1)`).
 4. **Allowlist**: Hardcoded (not configurable), contains 8 services. Adding a new service requires a code change + deploy.
 
@@ -493,7 +511,7 @@ Titan Phase 3 (Sentinel) is a functioning Basis Arbitrage bot. The core logic fo
 ### Build Status
 - [x] Compiles cleanly — `tsc --noEmit` passes for both `titan-backtesting` and `titan-harness`
 - [x] Lint passes — no ESLint errors (eslint-disable comments present for functional/immutable-data)
-- [x] Tests pass — 2/2 in `BacktestEngine.test.ts`
+- [x] Tests pass — `BacktestEngine.test.ts` (2 tests), `ShippingGate.test.ts`, `GoldenPath.test.ts`
 
 ### Doc-to-Code Alignment
 | Claim (from docs) | Code Reality | Gap? |
@@ -511,7 +529,7 @@ Titan Phase 3 (Sentinel) is a functioning Basis Arbitrage bot. The core logic fo
 1. **BacktestEngine metrics are real** — `maxDrawdown`, `sharpeRatio`, `winRate` all computed from simulation data. `equityCurve` populated per-candle.
 2. **`as unknown as TitanDeps[...]` casts** — BacktestEngine uses typed reinterpretation casts (not `as any`) for mock injection. This is the documented backtesting adapter boundary.
 3. **Uses shared Logger** — `Logger.getInstance('backtesting')` replaces previous `console.log` usage.
-4. **No GoldenPath tests** — `titan-harness` has no unit tests and relies on live NATS for integration testing.
+4. **GoldenPath tested** — `titan-harness/tests/GoldenPath.test.ts` exists with unit tests.
 
 ### Exchange Connectivity
 | Exchange | Protocol | Adapter File | Tested Live? |
@@ -542,7 +560,7 @@ Titan Phase 3 (Sentinel) is a functioning Basis Arbitrage bot. The core logic fo
 | "Alerting" | Alert rules defined (6 groups), Alertmanager config dir exists | ✅ Aligned |
 | "SLOs" | `monitoring/slos.yaml` covers availability, latency, freshness | ✅ Aligned |
 | "All services scraped" | `infra/monitoring/prometheus.yml` has 7 scrape jobs (brain, execution, scavenger, hunter, sentinel, console-api, self) | ✅ Aligned |
-| "Dashboard from `monitoring/grafana/dashboards/`" (docs) | Actual location: `services/titan-brain/monitoring/` | ⚠️ Path mismatch in docs |
+| "Dashboard from `monitoring/grafana/dashboards/`" (docs) | ✅ FIXED — Actual location: `services/titan-brain/monitoring/grafana-dashboard-comprehensive.json` | ✅ Fixed |
 
 ### Key Findings
 1. **Prometheus config consolidated**: `infra/monitoring/prometheus.yml` is comprehensive (7 targets with relabel configs and per-job scrape intervals).
@@ -591,7 +609,7 @@ Titan Phase 3 (Sentinel) is a functioning Basis Arbitrage bot. The core logic fo
 
 ### Build Status
 - [x] Cron defined (`titan-backups.cron`) — 5 jobs
-- [x] Main backup script (`backup-production.sh`) — 221 lines, handles JetStream/Postgres/Redis/verify
+- [x] Main backup script (`scripts/ops/backup-production.sh`) — 220 lines, handles JetStream/Postgres/Redis/verify
 - [x] Exchange whitelist check (`verify-exchange-whitelist.sh`) — Binance/Bybit/MEXC
 - [x] Restore drill scripts exist (JetStream + DB)
 - [x] In-app state backup (`FileSystemBackupService.ts`) — with directory traversal protection

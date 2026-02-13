@@ -19,6 +19,8 @@ import {
 } from '../types';
 import { BybitPerpsClient } from '../exchanges/BybitPerpsClient';
 import { getLogger, logError, logPositionClose } from '../logging/Logger';
+import { Logger } from '@titan/shared';
+const logger = Logger.getInstance('hunter:PositionManager');
 
 export interface PositionManagerConfig {
   breakevenRLevel: number; // R level to move stop to breakeven (default: 1.5)
@@ -427,7 +429,7 @@ export class PositionManager extends EventEmitter {
       return false;
     } catch (error) {
       // console.error already replaced by logError below in original code logic?
-      // Original: console.error(...); logError(...);
+      // Original: logger.error(...); logError(...);
       // We remove the console.error.
       logError('ERROR', `Failed to close position ${position.symbol}`, {
         symbol: position.symbol,

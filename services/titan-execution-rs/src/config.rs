@@ -14,6 +14,14 @@ pub struct Exchanges {
     pub binance: Option<ExchangeConfig>,
     pub bybit: Option<ExchangeConfig>,
     pub mexc: Option<ExchangeConfig>,
+    pub okx: Option<ExchangeConfig>,
+    pub coinbase: Option<ExchangeConfig>,
+    pub kraken: Option<ExchangeConfig>,
+    pub kucoin: Option<ExchangeConfig>,
+    pub gateio: Option<ExchangeConfig>,
+    pub cryptocom: Option<ExchangeConfig>,
+    pub dydx: Option<ExchangeConfig>,
+    pub uniswap: Option<ExchangeConfig>,
     #[serde(flatten)]
     pub others: HashMap<String, ExchangeConfig>,
 }
@@ -167,6 +175,14 @@ impl Settings {
             validate_exchange("binance", &exchanges.binance)?;
             validate_exchange("bybit", &exchanges.bybit)?;
             validate_exchange("mexc", &exchanges.mexc)?;
+            validate_exchange("okx", &exchanges.okx)?;
+            validate_exchange("coinbase", &exchanges.coinbase)?;
+            validate_exchange("kraken", &exchanges.kraken)?;
+            validate_exchange("kucoin", &exchanges.kucoin)?;
+            validate_exchange("gateio", &exchanges.gateio)?;
+            validate_exchange("cryptocom", &exchanges.cryptocom)?;
+            validate_exchange("dydx", &exchanges.dydx)?;
+            validate_exchange("uniswap", &exchanges.uniswap)?;
 
             for (name, config) in &exchanges.others {
                 validate_exchange(name, &Some(config.clone()))?;
@@ -248,10 +264,8 @@ mod tests {
         );
 
         let exchanges = Exchanges {
-            binance: None,
-            bybit: None,
-            mexc: None,
             others: map,
+            ..Default::default()
         };
 
         assert!(exchanges.others.contains_key("test"));
@@ -293,10 +307,8 @@ mod tests {
             },
         );
         settings.exchanges = Some(Exchanges {
-            binance: None,
-            bybit: None,
-            mexc: None,
             others: map,
+            ..Default::default()
         });
 
         let result = settings.validate();

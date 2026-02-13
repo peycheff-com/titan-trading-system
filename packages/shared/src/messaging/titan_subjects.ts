@@ -57,9 +57,9 @@ export const TITAN_SUBJECTS = {
 
       /**
        * Emergency Flatten Command
-       * Topic: titan.cmd.risk.flatten
+       * Topic: titan.cmd.risk.flatten.v1
        */
-      FLATTEN: 'titan.cmd.risk.flatten',
+      FLATTEN: 'titan.cmd.risk.flatten.v1',
 
       /**
        * Update Risk Policy
@@ -177,6 +177,11 @@ export const TITAN_SUBJECTS = {
        * Topic: titan.evt.execution.balance
        */
       BALANCE: 'titan.evt.execution.balance',
+      /**
+       * Funding Rate Events
+       * Topic: titan.evt.execution.funding.v1
+       */
+      FUNDING: 'titan.evt.execution.funding.v1',
       /**
        * Truth Snapshot (Periodic State Broadcast)
        * Topic: titan.evt.execution.truth.v1
@@ -339,12 +344,15 @@ export const TITAN_SUBJECTS = {
     HEARTBEAT_ALL: 'titan.sys.heartbeat.>',
 
     /**
-     * Generic RPC / Query namespace (Legacy titan.execution.* pattern)
-     * Planning to migrate to titan.sys.rpc.* or similar.
+     * RPC / Query namespace — canonical form aligned with Rust.
+     * Used for request-reply patterns.
      */
     RPC: {
-      GET_POSITIONS: (venue: string) => `titan.execution.get_positions.${venue}`,
-      GET_BALANCES: (venue: string) => `titan.execution.get_balances.${venue}`,
+      GET_POSITIONS: (venue: string) => `titan.rpc.execution.get_positions.v1.${venue}`,
+      GET_POSITIONS_PREFIX: 'titan.rpc.execution.get_positions.v1',
+      GET_BALANCES: (venue: string) => `titan.rpc.execution.get_balances.v1.${venue}`,
+      GET_BALANCES_PREFIX: 'titan.rpc.execution.get_balances.v1',
+      POLICY_HASH: 'titan.req.exec.policy_hash.v1',
     },
   },
 

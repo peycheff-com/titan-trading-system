@@ -33,7 +33,20 @@ const validatedPolicy = RiskPolicySchemaV1.parse(riskPolicyJson);
  * This ensures that the policy used by the application matches the source of truth.
  */
 export function getCanonicalRiskPolicy() {
-  const policyString = JSON.stringify(riskPolicyJson);
+  // Canonicalize JSON (sort keys recursively) so TS and Rust compute identical hashes.
+  const canonicalize = (obj: unknown): unknown => {
+    if (typeof obj !== 'object' || obj === null) return obj;
+    if (Array.isArray(obj)) return obj.map(canonicalize);
+    return Object.keys(obj as object)
+      .sort()
+      .reduce((sorted: Record<string, unknown>, key) => {
+        // eslint-disable-next-line functional/immutable-data
+        sorted[key] = canonicalize((obj as Record<string, unknown>)[key]);
+        return sorted;
+      }, {});
+  };
+
+  const policyString = JSON.stringify(canonicalize(riskPolicyJson));
   const hash = createHash('sha256').update(policyString).digest('hex');
 
   return {

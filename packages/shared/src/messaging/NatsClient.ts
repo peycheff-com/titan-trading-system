@@ -1,6 +1,7 @@
 import {
   connect,
   consumerOpts,
+  headers,
   JetStreamClient,
   JetStreamManager,
   JSONCodec,
@@ -214,7 +215,7 @@ export class NatsClient extends EventEmitter {
     }
   }
 
-  public async publish<T>(subject: TitanSubject | string, data: T): Promise<void> {
+  public async publish<T>(subject: TitanSubject | string, data: T, msgId?: string): Promise<void> {
     if (!this.nc) {
       throw new Error('NATS client not connected');
     }
@@ -241,10 +242,14 @@ export class NatsClient extends EventEmitter {
     }
 
     if (isJetStream && this.js) {
-      // Create headers
-      // const h = headers();
-      // propagation.inject(context.active(), h, { set: (h, k, v) => h.set(k, v) });
-      await this.js.publish(subject, payload);
+      // Set Nats-Msg-Id header for JetStream deduplication
+      if (msgId) {
+        const h = headers();
+        h.set('Nats-Msg-Id', msgId);
+        await this.js.publish(subject, payload, { headers: h });
+      } else {
+        await this.js.publish(subject, payload);
+      }
     } else {
       this.nc.publish(subject, payload);
     }
@@ -312,7 +317,7 @@ export class NatsClient extends EventEmitter {
       envelope.key_id = keyId;
     }
 
-    await this.publish(subject, envelope);
+    await this.publish(subject, envelope, envelope.idempotency_key ?? envelope.id);
   }
 
   public subscribe<T>(

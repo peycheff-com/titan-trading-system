@@ -12,10 +12,13 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { Logger } from '@titan/shared';
 
 /**
  * Error codes for categorization
  */
+const logger = Logger.getInstance('ai-quant:ErrorHandler');
+
 export enum ErrorCode {
   // AI API Errors
   RATE_LIMIT = 'RATE_LIMIT',
@@ -430,7 +433,7 @@ export class ErrorLogger {
       fs.appendFileSync(this.config.logPath, logLine, 'utf-8');
     } catch {
       // Fallback to console if file write fails
-      console.error('[ErrorLogger] Failed to write to log file:', logEntry);
+      logger.error('[ErrorLogger] Failed to write to log file:', logEntry);
     }
   }
 
@@ -454,7 +457,7 @@ export class ErrorLogger {
     try {
       fs.appendFileSync(this.config.logPath, logLine, 'utf-8');
     } catch {
-      console.error(`[${level.toUpperCase()}] ${message}`, context);
+      logger.error(`[${level.toUpperCase()}] ${message}`, context);
     }
   }
 

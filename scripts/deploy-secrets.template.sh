@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # ============================================================================
 # TITAN DEPLOYMENT SECRETS TEMPLATE
 # Usage:

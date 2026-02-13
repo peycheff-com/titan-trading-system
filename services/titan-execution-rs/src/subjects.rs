@@ -11,7 +11,7 @@ pub const CMD_SYS_HALT: &str = "titan.cmd.sys.halt.v1";
 
 // Risk Control
 pub const CMD_RISK_CONTROL: &str = "titan.cmd.risk.control.v1";
-pub const CMD_RISK_FLATTEN: &str = "titan.cmd.risk.flatten";
+pub const CMD_RISK_FLATTEN: &str = "titan.cmd.risk.flatten.v1";
 pub const CMD_RISK_POLICY: &str = "titan.cmd.risk.policy.v1";
 
 // Operator Control
@@ -46,7 +46,7 @@ pub const EVT_WILDCARD: &str = "titan.evt.>";
 // DATA
 pub const DATA_MARKET_TICKER_PREFIX: &str = "titan.data.market.ticker.v1.>";
 
-// RPC / REQUESTS
+// RPC / REQUESTS (canonical form — matches titan_subjects.ts)
 pub const RPC_GET_POSITIONS_PREFIX: &str = "titan.rpc.execution.get_positions.v1.>";
 pub const RPC_GET_BALANCES_PREFIX: &str = "titan.rpc.execution.get_balances.v1.>";
 pub const REQ_POLICY_HASH: &str = "titan.req.exec.policy_hash.v1";

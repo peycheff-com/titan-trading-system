@@ -10,9 +10,12 @@
 
 import { EventEmitter } from 'events';
 import { ConfigManager as SharedConfigManager, getConfigManager } from '@titan/shared';
+import { Logger } from '@titan/shared';
 
 // Define the Scavenger-specific config interfaces
 // These match the previous logic to ensure TitanTrap engine compatibility.
+
+const logger = Logger.getInstance('scavenger:ConfigManager');
 
 export interface TrapConfig {
   // Pre-Computation Settings
@@ -148,7 +151,7 @@ export class ConfigManager extends EventEmitter {
 
     // If config is empty/missing, apply defaults
     if (!phaseConfig || Object.keys(phaseConfig).length === 0) {
-      console.log('📝 Initializing default configuration for Scavenger...');
+      logger.info('📝 Initializing default configuration for Scavenger...');
       await this.savePhaseConfig(this.getDefaultConfig());
     } else {
       this.updateLocalState();
@@ -163,7 +166,7 @@ export class ConfigManager extends EventEmitter {
       this.handleSharedConfigChange(event);
     });
 
-    console.log('✅ ConfigManager Adapter initialized via @titan/shared');
+    logger.info('✅ ConfigManager Adapter initialized via @titan/shared');
   }
 
   private handleSharedConfigChange(event: {
@@ -281,7 +284,7 @@ export class ConfigManager extends EventEmitter {
     // In Shared architecture, Brain overrides are managed by Brain Service.
     // Scavenger shouldn't update Brain overrides directly usually.
     // But for compatibility we can log a warning or attempt to update local mock.
-    console.warn(
+    logger.warn(
       '⚠️ updateBrainOverrides is deprecated in Shared Architecture. Brain Service manages overrides.',
     );
   }

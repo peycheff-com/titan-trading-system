@@ -1,3 +1,4 @@
+import { Logger } from '@titan/shared';
 /* eslint-disable functional/immutable-data -- Stateful runtime: mutations architecturally required */
 /**
  * EventEmitter
@@ -14,6 +15,8 @@
  * Requirement 7.5: Emit TRAP_MAP_UPDATED event
  * Requirement 1.7: Emit RESOURCE_WARNING event
  */
+
+const logger = Logger.getInstance('scavenger:EventEmitter');
 
 export interface EventPayloads {
   TRAP_MAP_UPDATED: {
@@ -107,7 +110,7 @@ export class EventEmitter {
       try {
         handler(data);
       } catch (error) {
-        console.error(`❌ Event handler error (${event}):`, error);
+        logger.error(`❌ Event handler error (${event}):`, error);
       }
     }
   }

@@ -33,7 +33,7 @@ export class NatsClient {
 
   constructor(private config: NatsConfig) {
     this.client = getNatsClient();
-    this.logger = new Logger();
+    this.logger = Logger.getInstance();
   }
 
   async connect(): Promise<void> {

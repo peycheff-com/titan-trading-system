@@ -9,6 +9,9 @@
 import { DatabaseManager } from '../DatabaseManager.js';
 import { BaseRepository } from './BaseRepository.js';
 import { Position } from '../../types/index.js';
+import { Logger } from '@titan/shared';
+
+const logger = Logger.getInstance('brain:PositionRepository');
 
 interface PositionSnapshotRow {
   id: string; // BIGSERIAL returns as string
@@ -108,7 +111,7 @@ export class PositionRepository extends BaseRepository<PositionSnapshotRow> {
       try {
         positions = JSON.parse(row.positions);
       } catch (e) {
-        console.error('Failed to parse positions JSON from DB', e);
+        logger.error('Failed to parse positions JSON from DB', e);
       }
     } else {
       positions = row.positions;

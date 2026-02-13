@@ -1,5 +1,15 @@
 import { jest } from '@jest/globals';
 
+export const Logger = {
+  getInstance: jest.fn(() => ({
+    debug: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    fatal: jest.fn(),
+  })),
+};
+
 export const getNatsClient = jest.fn(() => ({
   connect: jest.fn().mockImplementation(() => Promise.resolve()),
   publish: jest.fn().mockImplementation(() => Promise.resolve()),

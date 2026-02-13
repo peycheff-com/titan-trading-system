@@ -1,8 +1,9 @@
 /**
- * Gemini 3.0 Flash Client
+ * Gemini Client (auto-current)
  *
  * Wrapper around Google's Generative AI SDK with rate limiting
  * and error handling for the Titan AI Quant system.
+ * Default model uses Google's `-latest` alias so it never goes stale.
  */
 
 import { GenerationConfig, GenerativeModel, GoogleGenerativeAI } from '@google/generative-ai';
@@ -42,7 +43,7 @@ export class GeminiClient {
 
     this.client = new GoogleGenerativeAI(apiKey);
     this.model = this.client.getGenerativeModel({
-      model: config.modelName ?? 'gemini-3.0-flash',
+      model: config.modelName ?? process.env.GEMINI_MODEL ?? 'gemini-flash-latest',
     });
 
     this.rateLimiter = new RateLimiter({

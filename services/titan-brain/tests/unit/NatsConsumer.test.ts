@@ -22,12 +22,12 @@ jest.mock("@titan/shared", () => ({
     TitanSubject: {
         EXECUTION_REPORTS: "titan.evt.execution.report.v1",
         EXECUTION_FILL: "titan.evt.execution.fill.v1",
-        DASHBOARD_UPDATES: "titan.evt.dashboard.update",
-        EVT_REGIME_UPDATE: "titan.evt.regime.update",
-        MARKET_DATA: "titan.evt.market.data",
-        EVT_PHASE_POSTURE: "titan.evt.phase.posture",
-        EVT_PHASE_DIAGNOSTICS: "titan.evt.phase.diagnostics",
-        CMD_AI_OPTIMIZE_PROPOSAL: "titan.cmd.ai.optimize.proposal",
+        DASHBOARD_UPDATES: "titan.data.dashboard.update.v1",
+        EVT_REGIME_UPDATE: "titan.evt.brain.regime.v1",
+        MARKET_DATA: "titan.data.market.ticker.v1",
+        EVT_PHASE_POSTURE: "titan.evt.phase.posture.v1",
+        EVT_PHASE_DIAGNOSTICS: "titan.evt.phase.diagnostics.v1",
+        CMD_AI_OPTIMIZE_PROPOSAL: "titan.cmd.ai.optimize.proposal.v1",
     },
     TITAN_SUBJECTS: {
         CMD: {
@@ -62,9 +62,9 @@ jest.mock("@titan/shared", () => ({
         SYS: {
             RPC: {
                 GET_POSITIONS: (venue: string) =>
-                    `titan.execution.get_positions.${venue}`,
+                    `titan.rpc.execution.get_positions.v1.${venue}`,
                 GET_BALANCES: (venue: string) =>
-                    `titan.execution.get_balances.${venue}`,
+                    `titan.rpc.execution.get_balances.v1.${venue}`,
             },
         },
         LEGACY: {
@@ -200,7 +200,7 @@ describe("NatsConsumer", () => {
 
         it("should subscribe to execution fills with durable consumer", () => {
             expect(mockNatsClient.subscribe).toHaveBeenCalledWith(
-                "titan.evt.execution.fill.v1.*",
+                "titan.evt.execution.fill.v1.>",
                 expect.any(Function),
                 "BRAIN_RISK",
             );
@@ -208,28 +208,28 @@ describe("NatsConsumer", () => {
 
         it("should subscribe to dashboard updates", () => {
             expect(mockNatsClient.subscribe).toHaveBeenCalledWith(
-                "titan.evt.dashboard.update",
+                "titan.data.dashboard.update.v1",
                 expect.any(Function),
             );
         });
 
         it("should subscribe to PowerLaw updates", () => {
             expect(mockNatsClient.subscribe).toHaveBeenCalledWith(
-                "titan.evt.regime.update",
+                "titan.evt.brain.regime.v1",
                 expect.any(Function),
             );
         });
 
         it("should subscribe to market data", () => {
             expect(mockNatsClient.subscribe).toHaveBeenCalledWith(
-                "titan.evt.market.data",
+                "titan.data.market.ticker.v1.>",
                 expect.any(Function),
             );
         });
 
         it("should subscribe to AI optimization proposals with durable consumer", () => {
             expect(mockNatsClient.subscribe).toHaveBeenCalledWith(
-                "titan.cmd.ai.optimize.proposal",
+                "titan.cmd.ai.optimize.proposal.v1",
                 expect.any(Function),
                 "BRAIN_GOVERNANCE",
             );
@@ -245,14 +245,14 @@ describe("NatsConsumer", () => {
 
         it("should subscribe to phase posture events", () => {
             expect(mockNatsClient.subscribe).toHaveBeenCalledWith(
-                "titan.evt.phase.posture.*",
+                "titan.evt.phase.posture.v1.*",
                 expect.any(Function),
             );
         });
 
         it("should subscribe to phase diagnostics events", () => {
             expect(mockNatsClient.subscribe).toHaveBeenCalledWith(
-                "titan.evt.phase.diagnostics.*",
+                "titan.evt.phase.diagnostics.v1.*",
                 expect.any(Function),
             );
         });

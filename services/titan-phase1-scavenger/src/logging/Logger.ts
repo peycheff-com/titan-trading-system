@@ -13,6 +13,18 @@ import * as path from 'path';
 export type LogEntry = TradeLogEntry;
 
 export class Logger extends SharedLogger {
+  private static _instance: Logger | null = null;
+
+  /**
+   * Get the singleton Logger instance (preferred over new Logger())
+   */
+  static getInstance(): Logger {
+    if (!Logger._instance) {
+      Logger._instance = new Logger();
+    }
+    return Logger._instance;
+  }
+
   constructor(logDir?: string) {
     // Determine configuration based on legacy logDir argument
     const homeDir = process.env.HOME || process.env.USERPROFILE || '.';

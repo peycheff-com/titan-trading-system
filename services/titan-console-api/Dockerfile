@@ -47,4 +47,4 @@ RUN apk add --no-cache curl
 
 EXPOSE 3000
 
-CMD ["node", "dist/src/index.js"]
+CMD ["node", "dist/server.js"]

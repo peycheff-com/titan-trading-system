@@ -1,44 +1,45 @@
-import { BinanceGateway } from "../../src/exchanges/BinanceGateway";
-import { BybitGateway } from "../../src/exchanges/BybitGateway";
+import { JSONCodec } from "nats";
+
+import { TitanExecutionGateway } from "../../src/exchanges/TitanExecutionGateway";
 
 describe("Exchange Gateways", () => {
-    describe("BinanceGateway", () => {
-        it("should implement initialize", async () => {
-            const gateway = new BinanceGateway("key", "secret");
-            await expect(gateway.initialize()).resolves.not.toThrow();
-        });
+    const createMockNats = () => {
+        const jc = JSONCodec();
 
-        it("should execute order (stub)", async () => {
-            const gateway = new BinanceGateway("key", "secret");
-            await gateway.initialize();
-            const result = await gateway.executeOrder({
-                symbol: "BTCUSDT",
-                side: "BUY",
-                type: "MARKET",
-                size: 1,
-            });
-            expect(result.status).toBe("FILLED");
-            expect(result.filledSize).toBe(1);
-        });
+        return {
+            subscribe: jest.fn(() => (async function* () {})()),
+            publish: jest.fn(),
+            request: jest.fn().mockResolvedValue({
+                data: jc.encode({ balances: [] }),
+            }),
+        } as any;
+    };
+
+    it("should initialize and subscribe to tickers", async () => {
+        const nats = createMockNats();
+        const gateway = new TitanExecutionGateway("binance", nats, "test-secret");
+
+        await expect(gateway.initialize()).resolves.not.toThrow();
+        expect(nats.subscribe).toHaveBeenCalledWith("titan.market.ticker.binance.>");
     });
 
-    describe("BybitGateway", () => {
-        it("should implement initialize", async () => {
-            const gateway = new BybitGateway("key", "secret");
-            await expect(gateway.initialize()).resolves.not.toThrow();
+    it("should publish an intent on executeOrder and return PENDING", async () => {
+        const nats = createMockNats();
+        const gateway = new TitanExecutionGateway("bybit", nats, "test-secret");
+
+        const result = await gateway.executeOrder({
+            symbol: "BTCUSDT",
+            side: "BUY",
+            type: "MARKET",
+            size: 1,
         });
 
-        it("should execute order (stub)", async () => {
-            const gateway = new BybitGateway("key", "secret");
-            await gateway.initialize();
-            const result = await gateway.executeOrder({
-                symbol: "BTCUSDT",
-                side: "BUY",
-                type: "MARKET",
-                size: 1,
-            });
-            expect(result.status).toBe("FILLED");
-            expect(result.filledSize).toBe(1);
-        });
+        expect(result.status).toBe("PENDING");
+        expect(result.orderId).toEqual(expect.any(String));
+        expect(nats.publish).toHaveBeenCalledWith(
+            "titan.cmd.execution",
+            expect.any(Uint8Array),
+        );
     });
 });
+

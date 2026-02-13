@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # Exchange IP Whitelist Verification
 # Verifies that the current external IP is whitelisted on all enabled exchanges
 # Run this BEFORE production deployment to avoid API access issues

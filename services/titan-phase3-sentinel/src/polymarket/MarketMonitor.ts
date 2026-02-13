@@ -1,7 +1,10 @@
 import { Market, PolymarketClient } from './PolymarketClient.js';
 import { ArbEngine, ArbSignal } from './ArbEngine.js';
 import { SignalClient } from '@titan/shared';
+import { Logger } from '@titan/shared';
 // import { v4 as uuidv4 } from 'uuid';
+
+const logger = Logger.getInstance('sentinel:MarketMonitor');
 
 export class MarketMonitor {
   private client: PolymarketClient;
@@ -20,7 +23,7 @@ export class MarketMonitor {
     if (this.isRunning) return;
     // eslint-disable-next-line functional/immutable-data
     this.isRunning = true;
-    console.log('Starting Market Monitor...');
+    logger.info('Starting Market Monitor...');
 
     this.poll(); // Initial poll
     // eslint-disable-next-line functional/immutable-data
@@ -35,7 +38,7 @@ export class MarketMonitor {
       // eslint-disable-next-line functional/immutable-data
       this.pollingInterval = null;
     }
-    console.log('Market Monitor stopped.');
+    logger.info('Market Monitor stopped.');
   }
 
   private async poll() {
@@ -53,7 +56,7 @@ export class MarketMonitor {
         }
       }
     } catch (error) {
-      console.error('Error in poll loop:', error);
+      logger.error('Error in poll loop:', error);
     }
   }
 
@@ -64,7 +67,7 @@ export class MarketMonitor {
     }
 
     for (const signal of signals) {
-      console.log(`[SIGNAL] ${signal.type} on ${market.slug} (${signal.outcomeId})`);
+      logger.info(`[SIGNAL] ${signal.type} on ${market.slug} (${signal.outcomeId})`);
 
       // Dispatch to Titan Brain via SignalClient
       // signal_id generation can be handled here or in client
@@ -93,12 +96,12 @@ export class MarketMonitor {
       if (prepareResp.prepared) {
         const confirmResp = await this.signalClient.sendConfirm(signalId);
         if (confirmResp.executed) {
-          console.log('  > Dispatched to Titan Brain (SignalClient) ✓');
+          logger.info('  > Dispatched to Titan Brain (SignalClient) ✓');
         } else {
-          console.log('  > Brain Rejected ✗: ' + confirmResp.reason);
+          logger.info('  > Brain Rejected ✗: ' + confirmResp.reason);
         }
       } else {
-        console.log('  > Prepare FAILED ✗: ' + prepareResp.reason);
+        logger.info('  > Prepare FAILED ✗: ' + prepareResp.reason);
       }
     }
   }

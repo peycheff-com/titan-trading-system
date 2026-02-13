@@ -258,7 +258,7 @@ impl RiskGuard {
     }
 
     pub fn get_current_policy_hash(&self) -> String {
-        self.policy.read().compute_hash()
+        RiskPolicy::get_hash()
     }
 
     /// Validates an Intent BEFORE it enters the Order Manager.
@@ -289,7 +289,8 @@ impl RiskGuard {
 
         // 0.5. Check Policy Hash (Final Veto)
         if let Some(ref intent_hash) = intent.policy_hash {
-            let current_hash = policy.compute_hash();
+            // Must match Brain's canonical policy hash (NOT runtime state like current_state).
+            let current_hash = self.get_current_policy_hash();
             if *intent_hash != current_hash {
                 warn!(
                     signal_id = %intent.signal_id,

@@ -19,10 +19,13 @@ import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { Logger } from '@titan/shared';
 
 /**
  * Exchange credentials structure
  */
+const logger = Logger.getInstance('scavenger:CredentialManager');
+
 export interface ExchangeCredentials {
   binance: {
     apiKey: string;
@@ -79,7 +82,7 @@ export class CredentialManager {
   private ensureCredentialsDir(): void {
     if (!fs.existsSync(this.credentialsDir)) {
       fs.mkdirSync(this.credentialsDir, { recursive: true, mode: 0o700 });
-      console.log(`✅ Created credentials directory: ${this.credentialsDir}`);
+      logger.info(`✅ Created credentials directory: ${this.credentialsDir}`);
     }
   }
 
@@ -165,11 +168,11 @@ export class CredentialManager {
         { mode: 0o600 }, // Read/write for owner only
       );
 
-      console.log('✅ Credentials encrypted and saved');
-      console.log(`🔒 Location: ${this.credentialsPath}`);
-      console.log(`🔐 Encryption: AES-256-GCM with PBKDF2 (${this.PBKDF2_ITERATIONS} iterations)`);
+      logger.info('✅ Credentials encrypted and saved');
+      logger.info(`🔒 Location: ${this.credentialsPath}`);
+      logger.info(`🔐 Encryption: AES-256-GCM with PBKDF2 (${this.PBKDF2_ITERATIONS} iterations)`);
     } catch (error) {
-      console.error(
+      logger.error(
         `❌ Failed to save credentials: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
       throw error;
@@ -188,7 +191,7 @@ export class CredentialManager {
       // Check if credentials file exists
       if (!fs.existsSync(this.credentialsPath)) {
         // Fallback to environment variables for production deployment
-        console.log('🔄 Credentials file not found, falling back to environment variables...');
+        logger.info('🔄 Credentials file not found, falling back to environment variables...');
         return this.loadCredentialsFromEnv();
       }
 
@@ -226,7 +229,7 @@ export class CredentialManager {
       // Parse JSON
       const credentials: ExchangeCredentials = JSON.parse(decrypted);
 
-      console.log('✅ Credentials decrypted successfully');
+      logger.info('✅ Credentials decrypted successfully');
 
       return credentials;
     } catch (error) {
@@ -240,7 +243,7 @@ export class CredentialManager {
         }
       }
 
-      console.error(
+      logger.error(
         `❌ Failed to load credentials: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
       throw error;
@@ -291,7 +294,7 @@ export class CredentialManager {
       },
     };
 
-    console.log('✅ Credentials loaded from environment variables');
+    logger.info('✅ Credentials loaded from environment variables');
 
     return credentials;
   }
@@ -314,12 +317,12 @@ export class CredentialManager {
     try {
       if (fs.existsSync(this.credentialsPath)) {
         fs.unlinkSync(this.credentialsPath);
-        console.log('✅ Credentials file deleted');
+        logger.info('✅ Credentials file deleted');
         return true;
       }
       return false;
     } catch (error) {
-      console.error(
+      logger.error(
         `❌ Failed to delete credentials: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
       throw error;
@@ -441,7 +444,7 @@ export class CredentialManager {
     }
 
     this.saveCredentials(credentials);
-    console.log(`✅ ${exchange.toUpperCase()} credentials updated`);
+    logger.info(`✅ ${exchange.toUpperCase()} credentials updated`);
   }
 
   /**
@@ -465,7 +468,7 @@ export class CredentialManager {
     try {
       // Save with new password
       this.saveCredentials(credentials);
-      console.log('✅ Master password changed successfully');
+      logger.info('✅ Master password changed successfully');
     } catch (error) {
       // Restore old password on failure
       process.env.TITAN_MASTER_PASSWORD = oldPassword;

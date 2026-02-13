@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # Titan Production Startup Script
 # Dependency-aware startup with health gating
 #

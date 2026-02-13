@@ -11,12 +11,15 @@
 import { z } from 'zod';
 import { OptimizationProposal } from '../types/index.js';
 import { ConfigSchema } from '../config/ConfigSchema.js';
+import { Logger } from '@titan/shared';
 
 /**
  * Parameter bounds for safety validation
  * Requirements: 2.5 - Maximum leverage of 20, maximum stop loss of 0.05,
  * and maximum risk per trade of 0.05
  */
+const logger = Logger.getInstance('ai-quant:Guardrails');
+
 export const PARAMETER_BOUNDS: Record<string, { min: number; max: number }> = {
   max_leverage: { min: 1, max: 20 },
   stop_loss: { min: 0.001, max: 0.05 },
@@ -106,7 +109,7 @@ export class Guardrails {
   validateProposal(proposal: OptimizationProposal): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
-    console.log('DEBUG: Validating proposal:', JSON.stringify(proposal));
+    logger.info('DEBUG: Validating proposal:', JSON.stringify(proposal));
 
     // Check required fields exist
     if (!proposal.targetKey) {

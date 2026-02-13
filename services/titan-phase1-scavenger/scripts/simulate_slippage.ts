@@ -1,8 +1,11 @@
 import { TitanTrap } from "../src/engine/TitanTrap.js";
 import { EventEmitter } from "events";
 import { Tripwire } from "../src/types/index.js";
+import { Logger } from '@titan/shared';
 
 // Mock Dependencies
+const logger = Logger.getInstance('scavenger:simulate_slippage');
+
 const mockEventEmitter = new EventEmitter();
 const mockLogger = console;
 const mockConfig = {
@@ -27,7 +30,7 @@ const mockSignalClient = {
     disconnect: async () => {},
     sendPrepare: async () => ({ prepared: true, signal_id: "mock-sig" }),
     sendConfirm: async (signalId: string) => {
-        console.log(
+        logger.info(
             "MOCK Signal Client Confirmed:",
             signalId,
         );
@@ -68,7 +71,7 @@ const mockTrapStateManager = {
 let GLOBAL_INTENT: any = null;
 
 async function runSimulation() {
-    console.log("--- Simulating Scavenger Execution with Slippage Guards ---");
+    logger.info("--- Simulating Scavenger Execution with Slippage Guards ---");
 
     const trap = new TitanTrap({
         binanceClient: mockBinanceClient,
@@ -103,12 +106,12 @@ async function runSimulation() {
         estimatedCascadeSize: 0.05,
     };
 
-    console.log("\nTest 1: Firing Trap...");
+    logger.info("\nTest 1: Firing Trap...");
     try {
         await (trap as any).executor.fire(tripwire, 50, 100);
-        console.log("SUCCESS: Trap fired and routed to SignalClient");
+        logger.info("SUCCESS: Trap fired and routed to SignalClient");
     } catch (e) {
-        console.error("FAILED to fire trap:", e);
+        logger.error("FAILED to fire trap:", e);
     }
 
     await trap.stop();

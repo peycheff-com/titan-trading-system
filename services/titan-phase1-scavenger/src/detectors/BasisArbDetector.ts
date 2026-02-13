@@ -27,6 +27,9 @@
  */
 
 import { Tripwire } from '../types/index.js';
+import { Logger } from '@titan/shared';
+
+const logger = Logger.getInstance('scavenger:BasisArbDetector');
 
 interface BinanceClient {
   getSpotPrice(symbol: string): Promise<number>;
@@ -75,7 +78,7 @@ export class BasisArbDetector {
         return null;
       }
 
-      console.log(`🔍 Checking basis arb: ${symbol} (Basis: ${(basis * 100).toFixed(2)}%)`);
+      logger.info(`🔍 Checking basis arb: ${symbol} (Basis: ${(basis * 100).toFixed(2)}%)`);
 
       // 5. Validate with volume (ensure it's not a dead market)
       const volume = await this.bybitClient.get24hVolume(symbol);
@@ -90,12 +93,12 @@ export class BasisArbDetector {
       // 7. Calculate stop loss (tight stop for arb)
       const stopLoss = perpPrice * 0.995; // -0.5% stop
 
-      console.log(`🎯 BASIS ARB DETECTED: ${symbol}`);
-      console.log(`   Spot: ${spotPrice.toFixed(2)}`);
-      console.log(`   Perp: ${perpPrice.toFixed(2)}`);
-      console.log(`   Basis: ${(basis * 100).toFixed(2)}%`);
-      console.log(`   Volume: $${(volume / 1000000).toFixed(1)}M`);
-      console.log(
+      logger.info(`🎯 BASIS ARB DETECTED: ${symbol}`);
+      logger.info(`   Spot: ${spotPrice.toFixed(2)}`);
+      logger.info(`   Perp: ${perpPrice.toFixed(2)}`);
+      logger.info(`   Basis: ${(basis * 100).toFixed(2)}%`);
+      logger.info(`   Volume: $${(volume / 1000000).toFixed(1)}M`);
+      logger.info(
         `   Target: ${targetPrice.toFixed(2)} (+${((targetPrice / perpPrice - 1) * 100).toFixed(
           1,
         )}%)`,
@@ -118,7 +121,7 @@ export class BasisArbDetector {
       const err = error as { message?: string };
       if (err && (err.message || '').includes('403')) {
         if (!this.isGeoBlocked) {
-          console.warn(
+          logger.warn(
             `⛔ Geo-blocking detected for ${symbol} (HTTP 403). Disabling BasisArbDetector.`,
           );
           this.isGeoBlocked = true;
@@ -126,7 +129,7 @@ export class BasisArbDetector {
         return null;
       }
 
-      console.error(`Error detecting basis arb for ${symbol}:`, error);
+      logger.error(`Error detecting basis arb for ${symbol}:`, error);
       return null;
     }
   }

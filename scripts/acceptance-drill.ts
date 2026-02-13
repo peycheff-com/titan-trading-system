@@ -1,4 +1,3 @@
-import fetch from "node-fetch";
 // Note: The UI uses 'useTitanWebSocket' which likely uses native WebSocket.
 import WebSocket from "ws";
 

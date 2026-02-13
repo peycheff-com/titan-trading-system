@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # Toggle live trading mode by publishing canonical operator actions to NATS.
 #
 # Usage:

@@ -221,9 +221,9 @@ describe("EventEmitter", () => {
 
       expect(throwingHandler).toHaveBeenCalled();
       expect(normalHandler).toHaveBeenCalled();
+      // Shared logger writes a single JSON string to console.error().
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         expect.stringContaining("Event handler error"),
-        expect.any(Error),
       );
 
       consoleErrorSpy.mockRestore();

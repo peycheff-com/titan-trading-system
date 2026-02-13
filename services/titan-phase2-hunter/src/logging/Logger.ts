@@ -186,6 +186,13 @@ export interface LoggerConfig {
 export class Logger extends SharedLogger {
   private localConfig: LoggerConfig; // Keep for backward compat access
 
+  /**
+   * Get the singleton Logger instance (preferred over new Logger())
+   */
+  static getInstance(): Logger {
+    return getLogger();
+  }
+
   constructor(config?: Partial<LoggerConfig>) {
     // Determine configuration based on legacy arguments
     const logDir = config?.logDir || path.join(process.cwd(), 'logs');

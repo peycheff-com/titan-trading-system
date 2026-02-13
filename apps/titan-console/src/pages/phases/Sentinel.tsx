@@ -4,7 +4,7 @@ import { StatusPill } from '@/components/titan/StatusPill';
 import { DenseTable } from '@/components/titan/DenseTable';
 import { DiffViewer } from '@/components/titan/DiffViewer';
 import { ConfirmModal } from '@/components/titan/ConfirmModal';
-import { formatCurrency, formatPercent } from '@/types';
+import { formatCurrency, formatPercent, type SystemStatus } from '@/types';
 import { cn } from '@/lib/utils';
 import { Shield, AlertTriangle, Edit3, ArrowLeftRight, TrendingUp } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';

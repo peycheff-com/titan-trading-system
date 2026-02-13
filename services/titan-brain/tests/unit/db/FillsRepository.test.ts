@@ -60,10 +60,12 @@ describe("FillsRepository", () => {
         await repo.createFill(invalidFill);
 
         expect(mockQuery).not.toHaveBeenCalled();
-        expect(consoleSpy).toHaveBeenCalledWith(
-            expect.stringContaining("Skipping fill persistence"),
-            expect.anything(),
-        );
+        expect(consoleSpy).toHaveBeenCalledTimes(1);
+
+        const logOutput = consoleSpy.mock.calls[0][0] as string;
+        const parsed = JSON.parse(logOutput);
+        expect(parsed.message).toContain("Skipping fill persistence");
+        expect(parsed.metadata).toBeDefined();
 
         consoleSpy.mockRestore();
     });

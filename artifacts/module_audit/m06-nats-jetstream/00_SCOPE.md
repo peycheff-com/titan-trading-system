@@ -13,7 +13,7 @@
 
 ### Contracts & Documentation
 - [x] `docs/contracts/nats-intent.md`: Intent schema.
-- [x] `docs/contracts/nats-intent.v1.schema.json`: JSON Schema for intents.
+- [x] `contracts/nats/nats-intent.v1.schema.json`: JSON Schema for intents.
 
 ### Operational Tools
 - [x] `scripts/ops/check_nats.js`: Basic NATS library check script (needs improvement).

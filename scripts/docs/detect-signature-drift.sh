@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 # detect-signature-drift.sh - 2026 SOTA Signature Drift Detection
 #
 # Tier-1 Practice: Compare documented function signatures to actual code

@@ -12,10 +12,13 @@ import { EventEmitter } from 'events';
 import { createHmac } from 'crypto';
 import { IntentSignal, PhaseId } from '../types/index.js';
 import { PhaseNotifier } from '../engine/TitanBrain.js';
+import { Logger } from '@titan/shared';
 
 /**
  * Configuration for Phase Integration Service
  */
+const logger = Logger.getInstance('brain:PhaseIntegrationService');
+
 export interface PhaseIntegrationConfig {
   /** Phase 1 (Scavenger) webhook URL for notifications */
   phase1WebhookUrl?: string;
@@ -150,13 +153,13 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
    * Initialize the service and start health checks
    */
   async initialize(): Promise<void> {
-    console.log('🔗 Initializing Phase Integration Service...');
+    logger.info('🔗 Initializing Phase Integration Service...');
 
     // Test connections to configured phases
     for (const [phaseId, webhook] of this.phaseWebhooks) {
       if (webhook.enabled) {
         const healthy = await this.checkPhaseHealth(phaseId);
-        console.log(`  ${phaseId}: ${healthy ? '✅ Connected' : '⚠️ Not available'}`);
+        logger.info(`  ${phaseId}: ${healthy ? '✅ Connected' : '⚠️ Not available'}`);
       }
     }
 
@@ -166,7 +169,7 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
       await this.checkAllPhasesHealth();
     }, 60000); // Every 60 seconds
 
-    console.log('✅ Phase Integration Service initialized');
+    logger.info('✅ Phase Integration Service initialized');
   }
 
   /**
@@ -178,7 +181,7 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
 
       this.healthCheckInterval = null;
     }
-    console.log('🔌 Phase Integration Service shutdown');
+    logger.info('🔌 Phase Integration Service shutdown');
   }
 
   /**
@@ -237,7 +240,7 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
     const webhook = this.phaseWebhooks.get(phaseId);
 
     if (!webhook || !webhook.enabled) {
-      console.log(
+      logger.info(
         `📢 Veto notification for ${phaseId} (no webhook configured): ${signalId} - ${reason}`,
       );
       return;
@@ -254,11 +257,11 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
 
     try {
       await this.sendNotification(webhook.url, '/brain/veto', notification);
-      console.log(`📢 Veto notification sent to ${phaseId}: ${signalId}`);
+      logger.info(`📢 Veto notification sent to ${phaseId}: ${signalId}`);
 
       this.emit('veto:sent', notification);
     } catch (error) {
-      console.error(`❌ Failed to send veto notification to ${phaseId}:`, error);
+      logger.error(`❌ Failed to send veto notification to ${phaseId}:`, error);
       this.emit('veto:failed', { ...notification, error });
     }
   }
@@ -275,9 +278,9 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
 
     try {
       await this.sendNotification(webhook.url, '/brain/status', update);
-      console.log(`📊 Status update sent to ${update.phaseId}: ${update.status}`);
+      logger.info(`📊 Status update sent to ${update.phaseId}: ${update.status}`);
     } catch (error) {
-      console.error(`❌ Failed to send status update to ${update.phaseId}:`, error);
+      logger.error(`❌ Failed to send status update to ${update.phaseId}:`, error);
     }
   }
 
@@ -330,13 +333,13 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
 
     try {
       await this.sendNotification(webhook.url, '/brain/allocation', notification);
-      console.log(
+      logger.info(
         `📊 Allocation change notification sent to ${phaseId}: ${(newAllocation * 100).toFixed(
           1,
         )}%`,
       );
     } catch (error) {
-      console.error(`❌ Failed to send allocation notification to ${phaseId}:`, error);
+      logger.error(`❌ Failed to send allocation notification to ${phaseId}:`, error);
     }
   }
 
@@ -355,9 +358,9 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
       if (webhook.enabled) {
         try {
           await this.sendNotification(webhook.url, '/brain/circuit-breaker', notification);
-          console.log(`🚨 Circuit breaker notification sent to ${phaseId}`);
+          logger.info(`🚨 Circuit breaker notification sent to ${phaseId}`);
         } catch (error) {
-          console.error(`❌ Failed to send circuit breaker notification to ${phaseId}:`, error);
+          logger.error(`❌ Failed to send circuit breaker notification to ${phaseId}:`, error);
         }
       }
     }
@@ -433,7 +436,7 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
       lastContact: 0,
       healthy: false,
     });
-    console.log(`📝 Registered webhook for ${phaseId}: ${url}`);
+    logger.info(`📝 Registered webhook for ${phaseId}: ${url}`);
   }
 
   /**
@@ -441,7 +444,7 @@ export class PhaseIntegrationService extends EventEmitter implements PhaseNotifi
    */
   unregisterPhaseWebhook(phaseId: PhaseId): void {
     this.phaseWebhooks.delete(phaseId);
-    console.log(`📝 Unregistered webhook for ${phaseId}`);
+    logger.info(`📝 Unregistered webhook for ${phaseId}`);
   }
 
   /**

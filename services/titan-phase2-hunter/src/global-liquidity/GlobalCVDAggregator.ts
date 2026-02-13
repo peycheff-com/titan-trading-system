@@ -10,10 +10,13 @@
 import { EventEmitter } from 'events';
 import { ExchangeId, ExchangeTrade } from './ExchangeWebSocketClient';
 import { ConnectionStatus, ExchangeFlow, GlobalCVDData, ManipulationAnalysis } from '../types';
+import { Logger } from '@titan/shared';
 
 /**
  * CVD calculation window configuration
  */
+const logger = Logger.getInstance('hunter:GlobalCVDAggregator');
+
 export interface CVDWindowConfig {
   shortWindow: number; // 1 minute
   mediumWindow: number; // 5 minutes
@@ -155,7 +158,7 @@ export class GlobalCVDAggregator extends EventEmitter {
       this.calculateAndEmitGlobalCVD();
     }, this.config.updateInterval);
 
-    console.log('📊 Global CVD Aggregator started');
+    logger.info('📊 Global CVD Aggregator started');
   }
 
   /**
@@ -168,7 +171,7 @@ export class GlobalCVDAggregator extends EventEmitter {
       this.updateTimer = null;
     }
 
-    console.log('📊 Global CVD Aggregator stopped');
+    logger.info('📊 Global CVD Aggregator stopped');
   }
 
   /**
@@ -567,7 +570,7 @@ export class GlobalCVDAggregator extends EventEmitter {
     // Validate weights sum to 100
     const total = Object.values(this.config.exchangeWeights).reduce((a, b) => a + b, 0);
     if (Math.abs(total - 100) > 0.1) {
-      console.warn(`⚠️ Exchange weights sum to ${total}%, should be 100%`);
+      logger.warn(`⚠️ Exchange weights sum to ${total}%, should be 100%`);
     }
   }
 

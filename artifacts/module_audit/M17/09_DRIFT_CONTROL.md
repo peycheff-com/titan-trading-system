@@ -25,7 +25,7 @@
 
 ## Schema Drift Detection
 - DB schema: `services/titan-brain/src/db/schema.sql`
-- NATS intent schema: `docs/contracts/nats-intent.v1.schema.json`
+- NATS intent schema: `contracts/nats/nats-intent.v1.schema.json`
 - Enforcement: `contract-check` CI job
 
 ## GitHub Actions Version Pinning

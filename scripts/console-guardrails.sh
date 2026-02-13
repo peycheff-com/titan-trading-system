@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 # console-guardrails.sh
 #
 # Permanent CI guard against legacy API resurgence, redundancy, and dead code.

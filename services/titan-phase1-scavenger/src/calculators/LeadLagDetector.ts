@@ -1,3 +1,4 @@
+import { Logger } from '@titan/shared';
 /* eslint-disable functional/immutable-data, functional/no-let -- Stateful runtime: mutations architecturally required */
 /**
  * Lead/Lag Detector
@@ -7,6 +8,8 @@
  *
  * Requirements: 2.1 (Remove hardcoded "Spot leads Perps")
  */
+const logger = Logger.getInstance('scavenger:LeadLagDetector');
+
 export class LeadLagDetector {
   // Map<Symbol, Map<TimestampBucket, Price>>
   private binancePrices: Map<string, Map<number, number>> = new Map();
@@ -119,7 +122,7 @@ export class LeadLagDetector {
     // Simple heuristic
     if (rPlus > rMinus && rPlus > r0) {
       if (this.currentLeader.get(symbol) !== 'BINANCE') {
-        console.log(
+        logger.info(
           `📡 Lead/Lag Flip [${symbol}]: BINANCE is leading (R+=${rPlus.toFixed(
             3,
           )} vs R-=${rMinus.toFixed(3)})`,
@@ -128,7 +131,7 @@ export class LeadLagDetector {
       }
     } else if (rMinus > rPlus && rMinus > r0) {
       if (this.currentLeader.get(symbol) !== 'BYBIT') {
-        console.log(
+        logger.info(
           `📡 Lead/Lag Flip [${symbol}]: BYBIT is leading (R-=${rMinus.toFixed(
             3,
           )} vs R+=${rPlus.toFixed(3)})`,

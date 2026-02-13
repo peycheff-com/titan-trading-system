@@ -7,11 +7,14 @@
  */
 
 import { IntentSignal, PhaseId } from '../types/index.js';
+import { Logger } from '@titan/shared';
 
 /**
  * Phase priority for signal processing
  * Requirement 7.1: P3 > P2 > P1
  */
+const logger = Logger.getInstance('brain:InMemorySignalQueue');
+
 const PHASE_PRIORITY: Record<PhaseId, number> = {
   phase3: 3,
   phase2: 2,
@@ -79,7 +82,7 @@ export class InMemorySignalQueue {
       this.cleanupExpired();
     }, 60000); // Every minute
 
-    console.log('✅ Signal queue initialized (in-memory mode)');
+    logger.info('✅ Signal queue initialized (in-memory mode)');
   }
 
   /**
@@ -91,7 +94,7 @@ export class InMemorySignalQueue {
 
       this.cleanupInterval = null;
     }
-    console.log('🛑 Signal queue disconnected (in-memory mode)');
+    logger.info('🛑 Signal queue disconnected (in-memory mode)');
   }
 
   /**

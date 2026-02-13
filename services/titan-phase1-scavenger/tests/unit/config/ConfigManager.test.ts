@@ -17,6 +17,16 @@ jest.mock("@titan/shared", () => ({
         removeAllListeners: mockRemoveAllListeners,
         getBrainConfig: jest.fn().mockReturnValue({}),
     })),
+    ConfigManager: jest.fn(),
+    Logger: {
+        getInstance: jest.fn(() => ({
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+            fatal: jest.fn(),
+        })),
+    },
 }));
 
 describe("ConfigManager", () => {

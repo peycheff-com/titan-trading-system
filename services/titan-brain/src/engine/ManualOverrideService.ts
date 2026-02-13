@@ -9,6 +9,9 @@
 import { AllocationVector } from '../types/index.js';
 import { DatabaseManager } from '../db/DatabaseManager.js';
 import bcrypt from 'bcrypt';
+import { Logger, NatsClient, TITAN_SUBJECTS } from '@titan/shared';
+
+const logger = Logger.getInstance('brain:ManualOverrideService');
 
 export interface ManualOverride {
   id?: number;
@@ -47,12 +50,14 @@ export interface ManualOverrideConfig {
 export class ManualOverrideService {
   private readonly db: DatabaseManager;
   private readonly config: ManualOverrideConfig;
+  private readonly nats?: NatsClient;
   private currentOverride: ManualOverride | null = null;
   private warningBannerActive: boolean = false;
 
-  constructor(db: DatabaseManager, config: ManualOverrideConfig) {
+  constructor(db: DatabaseManager, config: ManualOverrideConfig, nats?: NatsClient) {
     this.db = db;
     this.config = config;
+    this.nats = nats;
   }
 
   /**
@@ -60,7 +65,7 @@ export class ManualOverrideService {
    */
   async initialize(): Promise<void> {
     await this.loadActiveOverride();
-    console.log('Manual Override Service initialized');
+    logger.info('Manual Override Service initialized');
   }
 
   /**
@@ -75,14 +80,14 @@ export class ManualOverrideService {
     try {
       const credentials = await this.getOperatorCredentials(operatorId);
       if (!credentials) {
-        console.warn(`Authentication failed: operator ${operatorId} not found`);
+        logger.warn(`Authentication failed: operator ${operatorId} not found`);
         return false;
       }
 
       // Use bcrypt for password verification
       const isValid = await bcrypt.compare(password, credentials.hashedPassword);
       if (!isValid) {
-        console.warn(`Authentication failed: invalid password for operator ${operatorId}`);
+        logger.warn(`Authentication failed: invalid password for operator ${operatorId}`);
         return false;
       }
 
@@ -92,17 +97,17 @@ export class ManualOverrideService {
       );
 
       if (!hasRequiredPermissions) {
-        console.warn(`Authentication failed: operator ${operatorId} lacks required permissions`);
+        logger.warn(`Authentication failed: operator ${operatorId} lacks required permissions`);
         return false;
       }
 
       // Update last login
       await this.updateLastLogin(operatorId);
 
-      console.log(`Operator ${operatorId} authenticated successfully`);
+      logger.info(`Operator ${operatorId} authenticated successfully`);
       return true;
     } catch (error) {
-      console.error('Error authenticating operator:', error);
+      logger.error('Error authenticating operator:', error);
       return false;
     }
   }
@@ -155,15 +160,23 @@ export class ManualOverrideService {
       // Activate warning banner
       this.activateWarningBanner();
 
-      console.log(`Manual override created by operator ${request.operatorId}`);
-      console.log(
+      logger.info(`Manual override created by operator ${request.operatorId}`);
+      logger.info(
         `Override allocation: w1=${request.allocation.w1}, w2=${request.allocation.w2}, w3=${request.allocation.w3}`,
       );
-      console.log(`Expires at: ${new Date(expiresAt).toISOString()}`);
+      logger.info(`Expires at: ${new Date(expiresAt).toISOString()}`);
+
+      // Publish audit event to NATS (5.6)
+      await this.publishAuditEvent('OVERRIDE_CREATED', request.operatorId, {
+        override_id: savedOverride.id,
+        reason: request.reason,
+        allocation: request.allocation,
+        expires_at: expiresAt,
+      });
 
       return savedOverride;
     } catch (error) {
-      console.error('Error creating manual override:', error);
+      logger.error('Error creating manual override:', error);
       return null;
     }
   }
@@ -177,11 +190,12 @@ export class ManualOverrideService {
   async deactivateOverride(operatorId: string): Promise<boolean> {
     try {
       if (!this.currentOverride || !this.currentOverride.active) {
-        console.warn('No active override to deactivate');
+        logger.warn('No active override to deactivate');
         return false;
       }
 
       // Update override status in database
+      const savedOverrideId = this.currentOverride.id;
       await this.db.query(
         `UPDATE manual_overrides SET active = false, deactivated_by = $1, deactivated_at = $2 WHERE id = $3`,
         [operatorId, Date.now(), this.currentOverride.id],
@@ -196,10 +210,16 @@ export class ManualOverrideService {
       // Deactivate warning banner
       this.deactivateWarningBanner();
 
-      console.log(`Manual override deactivated by operator ${operatorId}`);
+      logger.info(`Manual override deactivated by operator ${operatorId}`);
+
+      // Publish audit event to NATS (5.6)
+      await this.publishAuditEvent('OVERRIDE_DEACTIVATED', operatorId, {
+        override_id: savedOverrideId,
+      });
+
       return true;
     } catch (error) {
-      console.error('Error deactivating manual override:', error);
+      logger.error('Error deactivating manual override:', error);
       return false;
     }
   }
@@ -233,7 +253,7 @@ export class ManualOverrideService {
     const override = this.getCurrentOverride();
 
     if (override && override.active) {
-      console.log('Using manual override allocation');
+      logger.info('Using manual override allocation');
       return override.overrideAllocation;
     }
 
@@ -275,7 +295,7 @@ export class ManualOverrideService {
       const rows = await this.db.queryAll<any>(query, params);
       return rows.map((row) => this.mapRowToOverride(row));
     } catch (error) {
-      console.error('Error getting override history:', error);
+      logger.error('Error getting override history:', error);
       return [];
     }
   }
@@ -332,7 +352,7 @@ export class ManualOverrideService {
         topOperators,
       };
     } catch (error) {
-      console.error('Error getting override stats:', error);
+      logger.error('Error getting override stats:', error);
       return {
         totalOverrides: 0,
         activeOverrides: 0,
@@ -364,10 +384,10 @@ export class ManualOverrideService {
         [operatorId, hashedPassword, JSON.stringify(permissions), Date.now()],
       );
 
-      console.log(`Operator ${operatorId} created with permissions:`, permissions);
+      logger.info(`Operator ${operatorId} created with permissions:`, permissions);
       return true;
     } catch (error) {
-      console.error('Error creating operator:', error);
+      logger.error('Error creating operator:', error);
       return false;
     }
   }
@@ -391,11 +411,11 @@ export class ManualOverrideService {
           await this.expireOverride();
         } else {
           this.activateWarningBanner();
-          console.log(`Loaded active override by operator ${this.currentOverride.operatorId}`);
+          logger.info(`Loaded active override by operator ${this.currentOverride.operatorId}`);
         }
       }
     } catch (error) {
-      console.error('Error loading active override:', error);
+      logger.error('Error loading active override:', error);
     }
   }
 
@@ -417,7 +437,7 @@ export class ManualOverrideService {
         lastLogin: row.last_login ? parseInt(row.last_login, 10) : undefined,
       };
     } catch (error) {
-      console.error('Error getting operator credentials:', error);
+      logger.error('Error getting operator credentials:', error);
       return null;
     }
   }
@@ -432,7 +452,7 @@ export class ManualOverrideService {
         operatorId,
       ]);
     } catch (error) {
-      console.error('Error updating last login:', error);
+      logger.error('Error updating last login:', error);
     }
   }
 
@@ -462,7 +482,7 @@ export class ManualOverrideService {
         timestamp: Date.now(),
       };
     } catch (error) {
-      console.error('Error getting current allocation:', error);
+      logger.error('Error getting current allocation:', error);
       // Return default allocation
       return {
         w1: 1.0,
@@ -532,7 +552,7 @@ export class ManualOverrideService {
 
     this.currentOverride = null;
     this.deactivateWarningBanner();
-    console.log('Manual override expired');
+    logger.info('Manual override expired');
   }
 
   /**
@@ -565,5 +585,36 @@ export class ManualOverrideService {
   private hashPassword(password: string): string {
     const SALT_ROUNDS = 12;
     return bcrypt.hashSync(password, SALT_ROUNDS);
+  }
+
+  /**
+   * Publish override audit event to NATS (Phase 5.6)
+   */
+  private async publishAuditEvent(
+    action: string,
+    operatorId: string,
+    details: Record<string, unknown>,
+  ): Promise<void> {
+    if (!this.nats) return;
+
+    try {
+      await this.nats.publishEnvelope(
+        TITAN_SUBJECTS.EVT.AUDIT.OPERATOR,
+        {
+          action,
+          operator_id: operatorId,
+          timestamp: Date.now(),
+          details,
+        },
+        {
+          type: TITAN_SUBJECTS.EVT.AUDIT.OPERATOR,
+          version: 1,
+          producer: 'titan-brain',
+        },
+      );
+      logger.info(`Audit event published: ${action} by ${operatorId}`);
+    } catch (error) {
+      logger.error('Failed to publish audit event:', error);
+    }
   }
 }

@@ -11,6 +11,7 @@ use crate::exchange::router::ExecutionRouter;
 use crate::metrics;
 use crate::model::TradeRecord;
 use crate::model::{FillReport, Intent, IntentType, Side};
+use crate::order_fsm::{OrderFsm, OrderLifecycleState};
 use crate::order_manager::OrderManager;
 use crate::risk_guard::RiskGuard;
 use crate::shadow_state::{ExecutionEvent, ShadowState};
@@ -38,6 +39,8 @@ pub struct PipelineResult {
     pub events: Vec<ExecutionEvent>,
     pub exposure: Option<ExposureMetrics>,
     pub fill_reports: Vec<(String, FillReport)>, // Exchange -> Report
+    pub fsm: Option<OrderFsm>,
+    pub drift_detected: bool,
 }
 
 impl ExecutionPipeline {
@@ -70,11 +73,16 @@ impl ExecutionPipeline {
         intent: Intent,
         correlation_id: String,
     ) -> Result<PipelineResult, String> {
+        let now_ms = self.ctx.time.now_millis();
+        let mut fsm = OrderFsm::new(intent.signal_id.clone(), intent.symbol.clone());
+
         let mut pipeline_result = PipelineResult {
             shadow_fill: None,
             events: Vec::new(),
             exposure: None,
             fill_reports: Vec::new(),
+            fsm: None,
+            drift_detected: false,
         };
 
         // --- RISK GUARD CHECK ---
@@ -82,7 +90,22 @@ impl ExecutionPipeline {
             let msg = format!("❌ RISK REJECTION: {}", reason);
             error!(correlation_id = %correlation_id, signal_id = %intent.signal_id, "{}", msg);
             metrics::inc_risk_rejections();
+            let _ = fsm.transition(
+                OrderLifecycleState::Rejected,
+                now_ms,
+                Some(format!("{:?}", reason)),
+            );
+            pipeline_result.fsm = Some(fsm.clone());
+            {
+                let state = self.shadow_state.read();
+                state.save_fsm(&fsm);
+            }
             return Err(msg);
+        }
+
+        // FSM: Validated (passed risk guard)
+        if let Err(e) = fsm.transition(OrderLifecycleState::Validated, now_ms, None) {
+            warn!("FSM transition error: {}", e);
         }
 
         // Lock state for writing
@@ -100,6 +123,14 @@ impl ExecutionPipeline {
             );
             error!("❌ {}. Dropping.", msg);
             metrics::inc_expired_intents();
+            let _ = fsm.transition(
+                OrderLifecycleState::Failed,
+                now_ms,
+                Some(format!(
+                    "Expired: {} ms latency",
+                    now - processed_intent.t_signal
+                )),
+            );
             {
                 let mut state = self.shadow_state.write();
                 state.expire_intent(
@@ -107,7 +138,17 @@ impl ExecutionPipeline {
                     format!("Latency {} ms", now - processed_intent.t_signal),
                 );
             }
+            pipeline_result.fsm = Some(fsm.clone());
+            {
+                let state = self.shadow_state.read();
+                state.save_fsm(&fsm);
+            }
             return Err(msg);
+        }
+
+        // FSM: Accepted (passed freshness, ready for execution)
+        if let Err(e) = fsm.transition(OrderLifecycleState::Accepted, now_ms, None) {
+            warn!("FSM transition error: {}", e);
         }
 
         // --- SHADOW EXECUTION (Concurrent side-effect) ---
@@ -157,6 +198,11 @@ impl ExecutionPipeline {
             order_req.price
         );
 
+        // FSM: Sent (order dispatched to exchange)
+        if let Err(e) = fsm.transition(OrderLifecycleState::Sent, now_ms, None) {
+            warn!("FSM transition error: {}", e);
+        }
+
         let results = self
             .router
             .execute(&processed_intent, order_req.clone())
@@ -183,6 +229,9 @@ impl ExecutionPipeline {
                             request.quantity, // We record Attempted Quantity (Child Size)
                         );
                     }
+
+                    // FSM: Acked (exchange acknowledged the order)
+                    let _ = fsm.transition(OrderLifecycleState::Acked, now_ms, None);
 
                     let fill_price = response
                         .avg_price
@@ -265,6 +314,9 @@ impl ExecutionPipeline {
                         .fill_reports
                         .push((exchange_name, fill_report));
 
+                    // FSM: Filled (confirmed execution)
+                    let _ = fsm.transition(OrderLifecycleState::Filled, now_ms, None);
+
                     // --- METRICS RECORDING (Phase 3) ---
                     // 1. End-to-End Latency
                     let now = self.ctx.time.now_millis();
@@ -314,14 +366,27 @@ impl ExecutionPipeline {
                         .analyze(&processed_intent, &trade_record);
                     for drift in drifts {
                         warn!("🚨 DRIFT DETECTED: {:?}", drift);
-                        // Potential: Publish to Drift Topic
+                        metrics::inc_reconciliation_drift();
+                        pipeline_result.drift_detected = true;
                     }
                 }
                 Err(e) => {
                     error!("❌ [{}] Execution Failed: {}", exchange_name, e);
+                    let _ = fsm.transition(
+                        OrderLifecycleState::Failed,
+                        now_ms,
+                        Some(format!("Exchange error: {}", e)),
+                    );
                 }
             }
         }
+
+        // Persist FSM state to Redb for crash recovery
+        {
+            let state = self.shadow_state.read();
+            state.save_fsm(&fsm);
+        }
+        pipeline_result.fsm = Some(fsm);
 
         Ok(pipeline_result)
     }

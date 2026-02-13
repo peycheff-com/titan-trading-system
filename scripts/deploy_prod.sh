@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 set -e
 
 # 06 Dull Deployment Standard implementation

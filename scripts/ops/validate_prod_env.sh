@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # =============================================================================
 # validate_prod_env.sh — Pre-deploy environment validation
 # =============================================================================
@@ -37,6 +38,8 @@ REQUIRED_VARS=(
     "NATS_QUANT_PASSWORD"
     "NATS_CONSOLE_PASSWORD"
     "HMAC_SECRET"
+    "JWT_SECRET"
+    "SAFETY_SECRET"
     "DOMAIN_NAME"
     "GRAFANA_ADMIN_PASSWORD"
 )
@@ -57,6 +60,8 @@ DEFAULTS_CHECK=(
     "HMAC_SECRET:titan_dev_hmac_secret"
     "HMAC_SECRET:changeme"
     "GRAFANA_ADMIN_PASSWORD:admin"
+    "JWT_SECRET:dev-secret"
+    "SAFETY_SECRET:dev-secret-do-not-use-in-prod"
     "NATS_SYS_PASSWORD:sys_password"
     "NATS_SYS_PASSWORD:__CHANGE_ME__"
     "NATS_SYS_PASSWORD:mock"

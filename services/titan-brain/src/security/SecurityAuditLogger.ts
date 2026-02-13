@@ -513,7 +513,7 @@ export class SecurityAuditLogger {
     });
 
     // In production, this would integrate with alerting systems like PagerDuty, Slack, etc.
-    console.error(`🚨 SECURITY ALERT: ${alertType}`, details);
+    this.logger.error(`🚨 SECURITY ALERT: ${alertType}`, details);
   }
 
   /**

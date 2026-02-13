@@ -13,6 +13,7 @@
 
 import { EventEmitter } from 'events';
 import { BotTrapAnalysis, GlobalCVDData, OracleScore, TechnicalSignal } from '../types';
+import { Logger } from '@titan/shared';
 
 // ============================================================================
 // INTERFACES
@@ -21,6 +22,8 @@ import { BotTrapAnalysis, GlobalCVDData, OracleScore, TechnicalSignal } from '..
 /**
  * Trade record with enhancement data
  */
+const logger = Logger.getInstance('hunter:PerformanceAnalytics');
+
 export interface EnhancedTradeRecord {
   id: string;
   symbol: string;
@@ -313,7 +316,7 @@ export class PerformanceAnalytics extends EventEmitter {
     this.pendingSignals.delete(trade.id);
 
     if (this.config.enableDetailedLogging) {
-      console.log(
+      logger.info(
         `📊 Trade recorded: ${trade.symbol} ${trade.direction} - PnL: ${trade.pnlPercent.toFixed(
           2
         )}%`
@@ -348,7 +351,7 @@ export class PerformanceAnalytics extends EventEmitter {
     this.emit('signalVetoed', record);
 
     if (this.config.enableDetailedLogging) {
-      console.log(
+      logger.info(
         `🚫 Signal vetoed: ${record.symbol} ${record.direction} - Reason: ${record.vetoReason}`
       );
     }

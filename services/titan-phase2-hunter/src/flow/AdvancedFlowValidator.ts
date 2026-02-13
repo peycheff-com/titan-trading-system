@@ -30,6 +30,8 @@ import { SweepDetectionResult, SweepDetector } from './SweepDetector';
 import { IcebergDetector, OrderBlockLiquidityResult } from './IcebergDetector';
 import { InstitutionalFlowClassifier } from './InstitutionalFlowClassifier';
 import { CVDIntegrationResult, FlowClassificationResult } from '../types';
+import { Logger } from '@titan/shared';
+const logger = Logger.getInstance('hunter:AdvancedFlowValidator');
 
 // ============================================================================
 // INTERFACES
@@ -524,14 +526,14 @@ export class AdvancedFlowValidator extends EventEmitter {
     this.emit('flowValidated', event);
 
     // Log validation
-    console.log(
+    logger.info(
       `🔍 Flow Validation [${symbol}]: ${result.flowValidation.flowType} ` +
         `(${result.confidence.toFixed(1)}% confidence, ` +
         `${result.flowValidation.institutionalProbability.toFixed(1)}% institutional)`
     );
 
     if (result.veto.vetoed) {
-      console.log(`⛔ VETO: ${result.veto.reason}`);
+      logger.info(`⛔ VETO: ${result.veto.reason}`);
       this.emit('flowVeto', {
         symbol,
         reason: result.veto.reason,

@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # Titan Trading System - VPS Setup Script
 # Run as root on a fresh Ubuntu 24.04 VPS
 

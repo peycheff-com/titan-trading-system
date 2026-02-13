@@ -55,7 +55,7 @@ export class NatsConsumer {
     // Subscribe to Execution Fills (Wildcard for venues/symbols)
     // Topic: titan.evt.execution.fill.v1.{venue}.{account}.{symbol}
     this.nats.subscribe(
-      TitanSubject.EXECUTION_FILL + '.*', // Use suffix wildcard
+      TitanSubject.EXECUTION_FILL + '.>', // Multi-token wildcard for {venue}.{account}.{symbol}
       async (data: any, subject) => {
         this.handleExecutionReport(data);
       },
@@ -107,7 +107,7 @@ export class NatsConsumer {
 
     // Subscribe to Market Data
     this.nats.subscribe(
-      TitanSubject.MARKET_DATA,
+      TitanSubject.MARKET_DATA + '.>',
       async (data: any, subject) => {
         try {
           if (data.symbol && data.price) {

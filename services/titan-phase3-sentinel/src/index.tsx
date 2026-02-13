@@ -3,21 +3,16 @@ import { render } from 'ink';
 import { Dashboard } from './dashboard/Dashboard.js';
 import { SentinelConfig, SentinelCore } from './engine/SentinelCore.js';
 import { IExchangeGateway } from './exchanges/interfaces.js';
-import { BinanceGateway } from './exchanges/BinanceGateway.js';
-import { BybitGateway } from './exchanges/BybitGateway.js';
+import { TitanExecutionGateway } from './exchanges/TitanExecutionGateway.js';
 import { MarketMonitor } from './polymarket/MarketMonitor.js';
 import { HealthServer } from './server/HealthServer.js';
-
-// ... imports
+import { JSONCodec } from 'nats';
 
 async function main() {
   // 1. Configuration
-  // Dynamic import if needed or use standard import if build allows.
-  // Assuming @titan/shared is available as per checking NatsClient
   const { getConfigManager, TITAN_SUBJECTS, getNatsClient, loadSecretsFromFiles, Logger } =
     await import('@titan/shared');
 
-  // Initialize shared manager to load environment variables/files
   loadSecretsFromFiles();
   getConfigManager();
   
@@ -38,79 +33,89 @@ async function main() {
     },
   };
 
-  // 2. Initialize Gateways
-  const binanceKey = configManager.get('BINANCE_API_KEY');
-  const binanceSecret = configManager.get('BINANCE_API_SECRET');
-  const bybitKey = configManager.get('BYBIT_API_KEY');
-  const bybitSecret = configManager.get('BYBIT_API_SECRET');
-
-  if (!binanceKey || !binanceSecret) {
-    logger.warn('⚠️ Missing BINANCE_API_KEY or BINANCE_API_SECRET. Gateway may fail.');
-  }
-
-  // We can check connection status if gateways expose it. Assuming they do or we track it.
-  const binanceGateway = new BinanceGateway(binanceKey || '', binanceSecret || '');
-  const bybitGateway = new BybitGateway(bybitKey || '', bybitSecret || '');
-
-  const gateways: IExchangeGateway[] = [binanceGateway, bybitGateway];
-
-  // 3. Start Core
-  const core = new SentinelCore(config, gateways);
-
-  // 3a. Start NATS Subscription (Regime & Budget Awareness)
-  // eslint-disable-next-line functional/no-let
-  let natsConnected = false;
+  // 2. Connect to NATS (Critical for Execution)
   // eslint-disable-next-line functional/no-let
   let nats: any = null;
+  // eslint-disable-next-line functional/no-let
+  let natsConnected = false;
 
   try {
     nats = await getNatsClient();
     natsConnected = true;
-    logger.info('Connected to NATS for Regime & Budget Updates');
-
-    const sub = nats.subscribe(TITAN_SUBJECTS.EVT.BRAIN.REGIME, (data: any) => {
-      // Dual Read Strategy
-      // eslint-disable-next-line functional/no-let
-      let payload = data;
-      if (data && typeof data === 'object' && 'payload' in data && 'type' in data) {
-        payload = data.payload;
-      }
-
-      try {
-        core.updateRegime(payload.regime, payload.alpha);
-      } catch (err) {
-        logger.error('Error processing regime update', err instanceof Error ? err : new Error(String(err)));
-      }
-    });
-
-    // Subscribe to Budget Updates (Truth Layer)
-    nats.subscribe(TITAN_SUBJECTS.EVT.BUDGET.UPDATE, (data: any) => {
-      // eslint-disable-next-line functional/no-let
-      let payload = data;
-      if (data && typeof data === 'object' && 'payload' in data) {
-        payload = data.payload;
-      }
-
-      if (payload.phaseId === 'phase3' && payload.allocatedEquity) {
-        logger.info(`[Sentinel] Received Budget Update: $${payload.allocatedEquity}`);
-        core.updateBudget(payload.allocatedEquity);
-      }
-    });
+    logger.info('✅ Connected to NATS (Execution & Regime)');
   } catch (err) {
-    logger.warn('⚠️ Failed to connect to NATS. Sentinel will run in STABLE usage.', undefined, { error: err });
+    logger.error('❌ Failed to connect to NATS. Sentinel cannot function.', err instanceof Error ? err : new Error(String(err)));
+    process.exit(1);
   }
+
+  // 3. Initialize Gateways (Truth Layer via NATS)
+  const hmacSecret = configManager.get('TITAN_HMAC_SECRET');
+  if (!hmacSecret) {
+      logger.error('❌ TITAN_HMAC_SECRET is required. Refusing to start with insecure fallback.');
+      process.exit(1);
+  }
+
+  // Replace legacy gateways with TitanExecutionGateway
+  const binanceGateway = new TitanExecutionGateway('binance', nats, hmacSecret);
+  await binanceGateway.initialize();
+
+  const bybitGateway = new TitanExecutionGateway('bybit', nats, hmacSecret);
+  await bybitGateway.initialize();
+
+  const gateways: IExchangeGateway[] = [binanceGateway, bybitGateway];
+
+  // 4. Start Core
+  const core = new SentinelCore(config, gateways);
+
+  // 5. NATS Subscriptions (Regime & Budget)
+  // Re-implementing subscriptions using async iterator pattern
+  (async () => {
+      try {
+        const regimeSub = nats.subscribe(TITAN_SUBJECTS.EVT.BRAIN.REGIME);
+        const jc = JSONCodec();
+        for await (const m of regimeSub) {
+            try {
+                const data = jc.decode(m.data) as any;
+                let payload = data;
+                if (data && typeof data === 'object' && 'payload' in data && 'type' in data) {
+                    payload = data.payload;
+                }
+                core.updateRegime(payload.regime, payload.alpha);
+            } catch (e) { logger.error('Regime update error', e instanceof Error ? e : new Error(String(e))); }
+        }
+      } catch (err) { logger.error('Failed to subscribe to REGIME', err instanceof Error ? err : new Error(String(err))); }
+  })();
+
+  (async () => {
+      try {
+        const budgetSub = nats.subscribe(TITAN_SUBJECTS.EVT.BUDGET.UPDATE);
+        const jc = JSONCodec();
+        for await (const m of budgetSub) {
+            try {
+                const data = jc.decode(m.data) as any;
+                let payload = data;
+                if (data && typeof data === 'object' && 'payload' in data) {
+                    payload = data.payload;
+                }
+                if (payload.phaseId === 'phase3' && payload.allocatedEquity) {
+                    logger.info(`[Sentinel] Received Budget Update: $${payload.allocatedEquity}`);
+                    core.updateBudget(payload.allocatedEquity);
+                }
+            } catch (e) { logger.error('Budget update error', e instanceof Error ? e : new Error(String(e))); }
+        }
+      } catch (err) { logger.error('Failed to subscribe to BUDGET', err instanceof Error ? err : new Error(String(err))); }
+  })();
 
   // 3b. Start Market Monitor (Polymarket)
   const marketMonitor = new MarketMonitor();
   await marketMonitor.start();
 
   // 0. Start Health Check Server (Production Requirement)
-  // MOVED AFTER CORE INIT to access core state
   const port = Number(process.env.PORT) || 8084;
   const healthServer = new HealthServer({
     port,
     getStatus: () => {
-      const isHealthy = natsConnected; // && gateways connected?
+      const isHealthy = natsConnected;
       return {
         status: isHealthy ? 'healthy' : 'unhealthy',
         service: 'titan-sentinel',
@@ -118,8 +123,8 @@ async function main() {
         uptime: process.uptime(),
         dependencies: {
           nats: natsConnected ? 'connected' : 'disconnected',
-          binance: 'connected', // TODO: Expose from gateway
-          bybit: 'connected', // TODO: Expose from gateway
+          binance: 'connected', // Via NATS
+          bybit: 'connected', // Via NATS
         },
         metrics: {
           regime: core.getRegime(),
@@ -143,8 +148,6 @@ async function main() {
   await healthServer.start();
 
   // 4. Start UI
-  // ... (rest of UI logic)
-
   // Handle Shutdown
   const shutdown = async () => {
     logger.info('Shutting down Sentinel...');

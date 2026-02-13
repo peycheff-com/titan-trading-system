@@ -10,7 +10,7 @@ use crate::context::ExecutionContext;
 use crate::drift_detector::DriftDetector;
 use crate::exchange::adapter::OrderRequest;
 use crate::exchange::router::ExecutionRouter;
-use crate::execution_constraints::{ConstraintsStore, ExecutionConstraints};
+use crate::execution_constraints::ConstraintsStore;
 use crate::intent_validation::validate_intent_payload;
 use crate::metrics;
 use crate::model::IntentType;
@@ -36,7 +36,7 @@ pub async fn start_nats_engine(
     ctx: Arc<ExecutionContext>,
     freshness_threshold: u64,
     drift_detector: Arc<DriftDetector>,
-    constraints_store: Arc<ConstraintsStore>,
+    _constraints_store: Arc<ConstraintsStore>,
 ) -> Result<tokio::task::JoinHandle<()>, Box<dyn std::error::Error + Send + Sync>> {
     // --- System Halt Listener (Core NATS) ---
     // ... (unchanged)
@@ -127,14 +127,6 @@ pub async fn start_nats_engine(
                     }
                     continue;
                 }
-
-                // Fallback for Legacy Payload { "active": true, ... }
-                let active = v.get("active").and_then(|b| b.as_bool()).unwrap_or(false);
-                let reason = v
-                    .get("reason")
-                    .and_then(|s| s.as_str())
-                    .unwrap_or("Legacy Command");
-                halt_state_clone.set_halt(active, reason);
             } else {
                 warn!("Received malformed system.halt payload");
             }
@@ -303,7 +295,7 @@ pub async fn start_nats_engine(
                     reduce_only: true, // Important: Reduce Only to avoid flipping if async race
                 };
 
-                // We mock an intent for the router (Router requires intent for logging/metadata usually?
+                // We create a synthetic intent for the router
                 // Wait, router.execute takes &Intent and OrderRequest.
                 // We need a dummy intent.
                 let dummy_intent = crate::model::Intent {
@@ -458,36 +450,9 @@ pub async fn start_nats_engine(
         }
     });
 
-    // --- Execution Constraints Listener (PowerLaw) ---
-    // Subject: titan.signal.execution.constraints.v1.{venue}.{account}.{symbol}
-    let mut constraints_sub = client
-        .subscribe(subjects::LEGACY_SIGNAL_CONSTRAINTS_PREFIX)
-        .await
-        .map_err(|e| {
-            error!("❌ Failed to subscribe to execution constraints: {}", e);
-            e
-        })?;
-    let constraints_store_for_sub = constraints_store.clone();
-
-    tokio::spawn(async move {
-        info!("👂 Listening for execution constraints (PowerLaw)...");
-        while let Some(msg) = constraints_sub.next().await {
-            match serde_json::from_slice::<ExecutionConstraints>(&msg.payload) {
-                Ok(constraints) => {
-                    info!(
-                        symbol = %constraints.symbol,
-                        risk_mode = ?constraints.risk_mode,
-                        mode = ?constraints.mode,
-                        "RECV: Execution constraints update"
-                    );
-                    constraints_store_for_sub.update(constraints);
-                }
-                Err(e) => {
-                    error!("❌ Failed to parse execution constraints: {}", e);
-                }
-            }
-        }
-    });
+    // --- Legacy Execution Constraints Listener (REMOVED) ---
+    // The legacy "PowerLaw" constraints listener has been removed as part of production hardening.
+    // Constraints are now managed via the standard Risk Policy and Configuration.
 
     // --- JetStream Setup (Manifest 2.0) ---
     let jetstream = async_nats::jetstream::new(client.clone());
@@ -798,6 +763,7 @@ pub async fn start_nats_engine(
                                     // ACK at end...
 
                                     // --- EXECUTION PIPELINE ---
+                                    metrics::inc_nats_consume(subjects::CMD_EXECUTION_PLACE_PREFIX);
                                     let result = pipeline.process_intent(intent.clone(), correlation_id.clone()).await;
 
                                     match result {
@@ -906,6 +872,12 @@ pub async fn start_nats_engine(
                                                 error!("❌ Failed to ACK message: {}", e);
                                             } else {
                                                 info!(correlation_id = %correlation_id, "ACKed intent {}", intent.signal_id);
+                                            }
+
+                                            // G4: Drift → Halt Protocol
+                                            if pipeline_result.drift_detected {
+                                                error!("🚨 DRIFT → HALT: Reconciliation drift detected, activating global halt");
+                                                global_halt.set_halt(true, "Reconciliation drift detected");
                                             }
                                         }
                                         Err(reason) => {

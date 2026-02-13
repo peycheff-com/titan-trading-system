@@ -38,7 +38,7 @@ export default function Overview() {
       regime: string;
       lastOptimizationProposal?: {
         timestamp: number;
-        proposal: unknown;
+        proposal: Record<string, unknown>;
       };
     };
     truthConfidence?: number;
@@ -80,13 +80,21 @@ export default function Overview() {
   const criticalAlerts: unknown[] = [];
   const warningAlerts: unknown[] = [];
 
+  const lastSyncTime =
+    typeof lastMessage === 'object' &&
+    lastMessage !== null &&
+    'timestamp' in (lastMessage as Record<string, unknown>) &&
+    typeof (lastMessage as Record<string, unknown>).timestamp === 'number'
+      ? ((lastMessage as Record<string, unknown>).timestamp as number)
+      : Date.now();
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Page Header */}
       <SystemStatusBanner
         services={services}
         exchangeConnected={true} // TODO: Derive from sensorStatus if available
-        lastSyncTime={lastMessage?.timestamp || Date.now()}
+        lastSyncTime={lastSyncTime}
         truthConfidence={data?.truthConfidence}
       />
 

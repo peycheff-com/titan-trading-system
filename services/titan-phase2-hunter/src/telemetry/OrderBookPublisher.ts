@@ -10,6 +10,8 @@ import {
   VenueId,
 } from '@titan/shared';
 import { v4 as uuidv4 } from 'uuid';
+import { Logger } from '@titan/shared';
+const logger = Logger.getInstance('hunter:OrderBookPublisher');
 
 /**
  * Configuration for orderbook publisher
@@ -62,11 +64,11 @@ export class OrderBookPublisher extends EventEmitter {
   start(): void {
     if (this.state.flushTimer) return;
 
-    console.log(`[OrderBookPublisher] Starting (flush=${this.config.flushIntervalMs}ms)`);
+    logger.info(`[OrderBookPublisher] Starting (flush=${this.config.flushIntervalMs}ms)`);
 
     const timer = setInterval(() => {
       this.flushBuffer().catch(err => {
-        console.error('[OrderBookPublisher] Flush error:', err);
+        logger.error('[OrderBookPublisher] Flush error:', err);
         this.emit('error', err);
       });
     }, this.config.flushIntervalMs);
@@ -82,7 +84,7 @@ export class OrderBookPublisher extends EventEmitter {
       this.state = { ...this.state, flushTimer: null };
     }
     this.flushBuffer().catch(console.error);
-    console.log(`[OrderBookPublisher] Stopped (published=${this.state.deltasPublished})`);
+    logger.info(`[OrderBookPublisher] Stopped (published=${this.state.deltasPublished})`);
   }
 
   /**

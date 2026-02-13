@@ -134,6 +134,19 @@ module.exports = {
         '^.+\\.ts$': ['ts-jest', tsJestConfig]
       },
       setupFilesAfterEnv: ['<rootDir>/tests/setup.ts']
+    },
+    {
+      displayName: 'contract',
+      preset: 'ts-jest',
+      testEnvironment: 'node',
+      testMatch: ['<rootDir>/tests/contract/**/*.test.ts'],
+      moduleNameMapper: {
+        '^(\\.{1,2}/.*)\\.js$': '$1'
+      },
+      transform: {
+        '^.+\\.ts$': ['ts-jest', tsJestConfig]
+      },
+      setupFilesAfterEnv: ['<rootDir>/tests/setup.ts']
     }
   ]
 };

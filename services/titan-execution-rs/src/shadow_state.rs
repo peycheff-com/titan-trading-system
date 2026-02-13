@@ -900,6 +900,13 @@ impl ShadowState {
             .filter(|i| i.symbol == symbol && i.status.is_active())
             .count()
     }
+
+    /// Persist an OrderFsm to Redb (delegates to PersistenceStore)
+    pub fn save_fsm(&self, fsm: &crate::order_fsm::OrderFsm) {
+        if let Err(e) = self.persistence.save_fsm(fsm) {
+            error!("Failed to persist FSM for {}: {}", fsm.signal_id, e);
+        }
+    }
 }
 #[cfg(test)]
 mod tests {

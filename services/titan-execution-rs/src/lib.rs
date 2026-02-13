@@ -16,6 +16,7 @@ pub mod market_data;
 pub mod metrics;
 pub mod model;
 pub mod nats_engine;
+pub mod order_fsm;
 pub mod order_manager;
 pub mod performance;
 pub mod persistence;

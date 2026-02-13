@@ -7,9 +7,14 @@
 import { existsSync, readFileSync } from 'fs';
 
 import { TitanBrainConfig, TitanBrainConfigSchema } from './ConfigSchema.js';
+import { loadConfigFromEnvironment } from './EnvironmentLoader.js';
+import { Logger } from '@titan/shared';
 
 // Re-export types
+const logger = Logger.getInstance('brain:ConfigLoader');
+
 export { EquityTier, TitanBrainConfig } from './ConfigSchema.js';
+export { loadConfigFromEnvironment };
 
 // Default config matching the schema defaults
 // Note: Zod defaults are applied during parsing, but we keep a roughly matching object for reference/fallback
@@ -185,10 +190,6 @@ export function loadConfigFromFile(filePath: string): Partial<TitanBrainConfig> 
   }
 }
 
-import { loadConfigFromEnvironment } from './EnvironmentLoader.js';
-
-export { loadConfigFromEnvironment };
-
 /**
  * Deep merge configuration objects
  */
@@ -250,7 +251,7 @@ function getFileConfig(configFile: string): {
     const fileConfig = loadConfigFromFile(configFile);
     return { config: fileConfig, source: `file:${configFile}` };
   } catch (error) {
-    console.warn(`Warning: Could not load config file: ${(error as Error).message}`);
+    logger.warn(`Warning: Could not load config file: ${(error as Error).message}`);
     return { config: {}, source: null };
   }
 }

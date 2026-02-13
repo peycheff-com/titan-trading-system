@@ -2,11 +2,14 @@ import { EventEmitter } from 'events';
 import type { SignalGenerator } from '../engine/StatEngine.js';
 import type { LiquidationEvent, VacuumOpportunity } from './interfaces.js';
 import type { OrderBook } from '../types/statistics.js';
+import { Logger } from '@titan/shared';
 
 /**
  * Monitors market for Vacuum Arbitrage opportunities
  * Typically triggered by cascading liquidations causing temporary price dislocation
  */
+const logger = Logger.getInstance('sentinel:VacuumMonitor');
+
 export class VacuumMonitor extends EventEmitter {
   private signalGenerator: SignalGenerator;
   private recentLiquidations: ReadonlyArray<LiquidationEvent> = [];
@@ -56,7 +59,7 @@ export class VacuumMonitor extends EventEmitter {
     // 1. Data Latency Check
     const latency = Date.now() - orderBook.timestamp;
     if (latency > this.MAX_DATA_LATENCY) {
-      // console.warn(`[VACUUM_SKIP] Data Latency High: ${latency}ms`);
+      // logger.warn(`[VACUUM_SKIP] Data Latency High: ${latency}ms`);
       return false;
     }
 
@@ -118,7 +121,7 @@ export class VacuumMonitor extends EventEmitter {
   ): Promise<VacuumOpportunity | null> {
     // 1. Safety Check: Liquidity Health
     if (!this.checkLiquidityHealth(spotPrice, orderBook)) {
-      // console.warn(`[VACUUM_SKIP] Low Liquidity for ${symbol}`);
+      // logger.warn(`[VACUUM_SKIP] Low Liquidity for ${symbol}`);
       return null;
     }
 

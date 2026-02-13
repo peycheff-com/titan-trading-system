@@ -11,10 +11,13 @@ import { Pool, PoolClient, PoolConfig, QueryResult, QueryResultRow } from 'pg';
 import { DatabaseConfig } from '../types/index.js';
 import * as fs from 'fs';
 import * as path from 'path';
+import { Logger } from '@titan/shared';
 
 /**
  * Database type enum
  */
+const logger = Logger.getInstance('brain:DatabaseManager');
+
 export enum DatabaseType {
   POSTGRESQL = 'postgresql',
   SQLITE = 'sqlite',
@@ -124,7 +127,7 @@ export class DatabaseManager {
     await this.connectPostgreSQL();
 
     this.dbType = DatabaseType.POSTGRESQL;
-    console.log('✅ Connected to PostgreSQL database');
+    logger.info('✅ Connected to PostgreSQL database');
   }
 
   /**
@@ -158,7 +161,7 @@ export class DatabaseManager {
 
     // Handle pool errors
     this.pool.on('error', (err) => {
-      console.error('Unexpected database pool error:', err);
+      logger.error('Unexpected database pool error:', err);
     });
 
     // Test connection with retry logic
@@ -781,7 +784,7 @@ export class DatabaseManager {
       this.slowQueries.splice(0, this.slowQueries.length - 100);
     }
 
-    console.warn(`🐌 Slow query detected (${duration}ms): ${query.substring(0, 100)}...`);
+    logger.warn(`🐌 Slow query detected (${duration}ms): ${query.substring(0, 100)}...`);
   }
 
   /**
@@ -796,7 +799,7 @@ export class DatabaseManager {
    */
   clearCache(): void {
     this.queryCache.clear();
-    console.log('🧹 Query cache cleared');
+    logger.info('🧹 Query cache cleared');
   }
 
   /**
@@ -814,9 +817,9 @@ export class DatabaseManager {
       // Run VACUUM to reclaim space (non-blocking)
       await this.pool.query('VACUUM (ANALYZE)');
 
-      console.log('✅ Database optimization completed');
+      logger.info('✅ Database optimization completed');
     } catch (error) {
-      console.error('❌ Database optimization failed:', error);
+      logger.error('❌ Database optimization failed:', error);
       throw new DatabaseError(
         'Database optimization failed',
         'OPTIMIZATION_FAILED',
@@ -844,10 +847,10 @@ export class DatabaseManager {
     for (const indexQuery of indexes) {
       try {
         await this.pool.query(indexQuery);
-        console.log(`✅ Created index: ${indexQuery.split(' ')[5]}`);
+        logger.info(`✅ Created index: ${indexQuery.split(' ')[5]}`);
       } catch (error) {
         // Index might already exist, log but don't fail
-        console.warn(`⚠️ Index creation warning: ${(error as Error).message}`);
+        logger.warn(`⚠️ Index creation warning: ${(error as Error).message}`);
       }
     }
   }

@@ -1,6 +1,9 @@
 /* eslint-disable functional/immutable-data, functional/no-let -- Stateful runtime: mutations architecturally required */
 import { SurpriseMetric } from './SurpriseMetric.js';
 import { ActiveInferenceConfig } from '../types/index.js';
+import { Logger } from '@titan/shared';
+
+const logger = Logger.getInstance('brain:ActiveInferenceEngine');
 
 export interface MarketState {
   price: number;
@@ -78,7 +81,7 @@ export class ActiveInferenceEngine {
 
       return this.cortisolLevel;
     } catch (error) {
-      console.error('Active Inference Failed', {
+      logger.error('Active Inference Failed', {
         error,
       });
       return 1.0; // Fail safe to high anxiety

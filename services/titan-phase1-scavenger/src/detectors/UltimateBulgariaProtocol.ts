@@ -178,7 +178,7 @@ export class UltimateBulgariaProtocol {
         // This filters out market-wide crashes (beta) and finds liquidation cascades (alpha)
         if (drop > dropThreshold && btcDrop < 0.005) {
           crashes.push(symbol);
-          console.log(
+          this.logger.info(
             `💀 Idiosyncratic crash detected: ${symbol} (-${(drop * 100).toFixed(
               1,
             )}%) vs BTC (-${(btcDrop * 100).toFixed(1)}%) | Regime: ${

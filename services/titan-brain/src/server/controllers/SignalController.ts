@@ -245,6 +245,7 @@ export class SignalController {
       signal.metadata = {
         ...signal.metadata,
         _config_version: riskConfig.versionId,
+        _model_version: process.env.TITAN_MODEL_VERSION ?? 'unknown',
         _is_canary: riskConfig.isCanary,
         _risk_override: riskConfig.value,
       };
@@ -322,7 +323,7 @@ export class SignalController {
       }
 
       const body = parseResult.data;
-      console.log(`📝 Phase ${body.phaseId} registered webhook: ${body.webhookUrl}`);
+      this.logger.info(`📝 Phase ${body.phaseId} registered webhook: ${body.webhookUrl}`);
 
       reply.send({
         success: true,

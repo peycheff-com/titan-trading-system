@@ -9,7 +9,10 @@
  */
 
 import http from 'http';
+import { Logger } from '@titan/shared';
 // import { NatsClient } from '@titan/shared'; // Assuming shared NATS client wrapper available or similar
+
+const logger = Logger.getInstance('sentinel:HealthServer');
 
 export interface HealthStatus {
   status: 'healthy' | 'degraded' | 'unhealthy';
@@ -63,7 +66,7 @@ export class HealthServer {
 
       this.server.on('error', (error: NodeJS.ErrnoException) => {
         if (error.code === 'EADDRINUSE') {
-          console.warn(`⚠️ Health server port ${this.config.port} already in use`);
+          logger.warn(`⚠️ Health server port ${this.config.port} already in use`);
           resolve(); // Don't fail startup if port is in use
         } else {
           reject(error);
@@ -71,7 +74,7 @@ export class HealthServer {
       });
 
       this.server.listen(this.config.port, () => {
-        console.log(`✅ Health server listening on port ${this.config.port}`);
+        logger.info(`✅ Health server listening on port ${this.config.port}`);
         resolve();
       });
     });
@@ -84,7 +87,7 @@ export class HealthServer {
     return new Promise((resolve) => {
       if (this.server) {
         this.server.close(() => {
-          console.log('✅ Health server stopped');
+          logger.info('✅ Health server stopped');
           resolve();
         });
       } else {

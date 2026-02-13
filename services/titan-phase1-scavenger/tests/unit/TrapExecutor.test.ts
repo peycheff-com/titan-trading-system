@@ -26,6 +26,14 @@ const mockNatsClient = {
 };
 
 jest.mock("@titan/shared", () => {
+    const mockSharedLogger = {
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        fatal: jest.fn(),
+    };
+
     return {
         SignalClient: jest.fn(),
         getNatsClient: jest.fn(() => mockNatsClient),
@@ -33,6 +41,9 @@ jest.mock("@titan/shared", () => {
             EVT_BUDGET_UPDATE: "EVT_BUDGET_UPDATE",
         },
         PhaseBudget: jest.fn(),
+        Logger: {
+            getInstance: jest.fn(() => mockSharedLogger),
+        },
     };
 });
 

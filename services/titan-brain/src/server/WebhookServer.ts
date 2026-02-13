@@ -521,10 +521,10 @@ export class WebhookServer {
       servicesRegistered: this.serviceDiscovery.getAllServiceStatuses().length,
     });
 
-    console.log(`🚀 Webhook server listening on ${this.config.host}:${this.config.port}`);
-    console.log(`🔐 HMAC validation: ${this.hmacValidator ? 'enabled' : 'disabled'}`);
-    console.log(`⚡ Rate limiting: ${this.cacheManager ? 'enabled' : 'disabled'}`);
-    console.log(
+    this.logger.info(`🚀 Webhook server listening on ${this.config.host}:${this.config.port}`);
+    this.logger.info(`🔐 HMAC validation: ${this.hmacValidator ? 'enabled' : 'disabled'}`);
+    this.logger.info(`⚡ Rate limiting: ${this.cacheManager ? 'enabled' : 'disabled'}`);
+    this.logger.info(
       `🔍 Service discovery: ${this.serviceDiscovery.getAllServiceStatuses().length} services registered`,
     );
   }
@@ -546,7 +546,7 @@ export class WebhookServer {
       this.logger.info('Webhook server stopped');
       this.canaryMonitor.stopMonitoring();
       resetVenueStatusStore(); // Stop venue telemetry subscription
-      console.log('🛑 Webhook server stopped');
+      this.logger.info('🛑 Webhook server stopped');
     }
   }
 

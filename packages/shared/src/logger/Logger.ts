@@ -307,34 +307,90 @@ export class Logger {
     return level >= this.config.level;
   }
 
-  debug(message: string, correlationId?: string, metadata?: Record<string, any>): void {
+  private normalizeError(err: unknown): Error | undefined {
+    if (!err) return undefined;
+    if (err instanceof Error) return err;
+    if (typeof err === 'string') return new Error(err);
+    try {
+      return new Error(JSON.stringify(err));
+    } catch {
+      return new Error(String(err));
+    }
+  }
+
+  debug(message: string, correlationId?: string, metadata?: Record<string, any>): void;
+  debug(message: string, metadata?: Record<string, any>): void;
+  debug(
+    message: string,
+    arg2?: string | Record<string, any>,
+    arg3?: Record<string, any>,
+  ): void {
     if (!this.shouldLog(LogLevel.DEBUG)) return;
+    const correlationId = typeof arg2 === 'string' ? arg2 : undefined;
+    const metadata =
+      typeof arg2 === 'string'
+        ? arg3
+        : // Support legacy call style: logger.debug(msg, undefined, metadata)
+          (arg2 ?? arg3);
     this.writeLog(
       this.createLogEntry(LogLevel.DEBUG, message, correlationId, undefined, undefined, metadata),
     );
   }
 
-  info(message: string, correlationId?: string, metadata?: Record<string, any>): void {
+  info(message: string, correlationId?: string, metadata?: Record<string, any>): void;
+  info(message: string, metadata?: Record<string, any>): void;
+  info(
+    message: string,
+    arg2?: string | Record<string, any>,
+    arg3?: Record<string, any>,
+  ): void {
     if (!this.shouldLog(LogLevel.INFO)) return;
+    const correlationId = typeof arg2 === 'string' ? arg2 : undefined;
+    const metadata =
+      typeof arg2 === 'string'
+        ? arg3
+        : // Support legacy call style: logger.info(msg, undefined, metadata)
+          (arg2 ?? arg3);
     this.writeLog(
       this.createLogEntry(LogLevel.INFO, message, correlationId, undefined, undefined, metadata),
     );
   }
 
-  warn(message: string, correlationId?: string, metadata?: Record<string, any>): void {
+  warn(message: string, correlationId?: string, metadata?: Record<string, any>): void;
+  warn(message: string, metadata?: Record<string, any>): void;
+  warn(
+    message: string,
+    arg2?: string | Record<string, any>,
+    arg3?: Record<string, any>,
+  ): void {
     if (!this.shouldLog(LogLevel.WARN)) return;
+    const correlationId = typeof arg2 === 'string' ? arg2 : undefined;
+    const metadata =
+      typeof arg2 === 'string'
+        ? arg3
+        : // Support legacy call style: logger.warn(msg, undefined, metadata)
+          (arg2 ?? arg3);
     this.writeLog(
       this.createLogEntry(LogLevel.WARN, message, correlationId, undefined, undefined, metadata),
     );
   }
 
+  error(message: string, error?: unknown, correlationId?: string, metadata?: Record<string, any>): void;
+  error(message: string, error?: unknown, metadata?: Record<string, any>): void;
   error(
     message: string,
-    error?: Error,
-    correlationId?: string,
-    metadata?: Record<string, any>,
+    error?: unknown,
+    arg3?: string | Record<string, any>,
+    arg4?: Record<string, any>,
   ): void {
     if (!this.shouldLog(LogLevel.ERROR)) return;
+    const correlationId = typeof arg3 === 'string' ? arg3 : undefined;
+    const metadata =
+      typeof arg3 === 'string'
+        ? arg4
+        : // Support legacy call style: logger.error(msg, err, undefined, metadata)
+          (arg3 ?? arg4);
+    const normalizedError = this.normalizeError(error);
     this.writeLog(
       this.createLogEntry(
         LogLevel.ERROR,
@@ -343,18 +399,27 @@ export class Logger {
         undefined,
         undefined,
         metadata,
-        error,
+        normalizedError,
       ),
     );
   }
 
+  fatal(message: string, error?: unknown, correlationId?: string, metadata?: Record<string, any>): void;
+  fatal(message: string, error?: unknown, metadata?: Record<string, any>): void;
   fatal(
     message: string,
-    error?: Error,
-    correlationId?: string,
-    metadata?: Record<string, any>,
+    error?: unknown,
+    arg3?: string | Record<string, any>,
+    arg4?: Record<string, any>,
   ): void {
     if (!this.shouldLog(LogLevel.FATAL)) return;
+    const correlationId = typeof arg3 === 'string' ? arg3 : undefined;
+    const metadata =
+      typeof arg3 === 'string'
+        ? arg4
+        : // Support legacy call style: logger.fatal(msg, err, undefined, metadata)
+          (arg3 ?? arg4);
+    const normalizedError = this.normalizeError(error);
     this.writeLog(
       this.createLogEntry(
         LogLevel.FATAL,
@@ -363,7 +428,7 @@ export class Logger {
         undefined,
         undefined,
         metadata,
-        error,
+        normalizedError,
       ),
     );
   }

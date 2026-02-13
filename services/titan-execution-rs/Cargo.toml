@@ -23,12 +23,15 @@ async-trait = "0.1"
 tokio-tungstenite = { version = "0.21", features = ["native-tls"] }
 redb = "1.5.0"
 
-reqwest = "0.13.1"
+reqwest = { version = "0.11", features = ["json", "blocking"] }
 hmac = "0.12.1"
 sha2 = "0.10.9"
 rust_decimal_macros = "1.33"
 hex = "0.4.3"
 ed25519-dalek = { version = "2.1", features = ["rand_core"] }
+dydx = "0.3.0"
+base64 = "0.22"
+ethers = { version = "2.0", features = ["ws", "rustls"] }
 url = "2.5.8"
 dashmap = "5.5"
 parking_lot = "0.12"
@@ -47,6 +50,7 @@ opentelemetry_sdk = { version = "0.21", features = ["rt-tokio"] }
 opentelemetry-otlp = { version = "0.14", features = ["grpc-tonic"] }
 tracing-opentelemetry = "0.22"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+serde_urlencoded = "0.7.1"
 
 [dev-dependencies]
 tokio-test = "0.4"

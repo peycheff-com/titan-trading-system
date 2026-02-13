@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # JetStream Restore Drill - INV-02 Validation Procedure
 # This is a FIRST-CLASS procedure, run QUARTERLY
 # 

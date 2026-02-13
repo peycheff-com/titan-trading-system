@@ -9,6 +9,9 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { DatabaseManager } from './DatabaseManager.js';
+import { Logger } from '@titan/shared';
+
+const logger = Logger.getInstance('brain:migrate');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -43,7 +46,7 @@ const migration001: Migration = {
         [Date.now()],
       );
     } catch (e) {
-      console.error('Error reading schema.sql', e);
+      logger.error('Error reading schema.sql', e);
       throw e;
     }
   },
@@ -76,7 +79,7 @@ const migration003: Migration = {
       try {
         await pool.query(`ALTER TABLE ${table} DISABLE ROW LEVEL SECURITY;`);
       } catch (e) {
-        console.warn(`Could not disable RLS for ${table}: ${(e as Error).message}`);
+        logger.warn(`Could not disable RLS for ${table}: ${(e as Error).message}`);
       }
     }
   },
@@ -483,31 +486,31 @@ export async function runMigrations(db: DatabaseManager): Promise<void> {
 
     for (const migration of migrations) {
       if (!appliedVersions.has(migration.version)) {
-        console.log(`Running migration ${migration.version}: ${migration.name}`);
+        logger.info(`Running migration ${migration.version}: ${migration.name}`);
         await migration.up(pool);
         await pool.query('INSERT INTO migrations (version, name) VALUES ($1, $2)', [
           migration.version,
           migration.name,
         ]);
-        console.log(`Migration ${migration.version} completed`);
+        logger.info(`Migration ${migration.version} completed`);
       }
     }
-    console.log('All migrations completed');
+    logger.info('All migrations completed');
     return;
   }
 
   // SQLite path (Fallback)
   if (db.isConnected()) {
-    console.log('Running in SQLite/Fallback mode');
+    logger.info('Running in SQLite/Fallback mode');
     await runMigrationSQL(db, 1); // Simplistic fallback
-    console.log('SQLite migrations init completed');
+    logger.info('SQLite migrations init completed');
   }
 }
 
 export async function rollbackMigration(db: DatabaseManager): Promise<void> {
   const pool = db.getPool();
   if (!pool) {
-    console.log('Rollback only supported on Postgres in this environment');
+    logger.info('Rollback only supported on Postgres in this environment');
     return;
   }
 
@@ -516,13 +519,13 @@ export async function rollbackMigration(db: DatabaseManager): Promise<void> {
   );
 
   if (result.rows.length === 0) {
-    console.log('No migrations to rollback');
+    logger.info('No migrations to rollback');
     return;
   }
 
   const lastVersion = result.rows[0].version;
   // Stub implementation - we don't need real down() loops for fixing start-up
-  console.log(
+  logger.info(
     `Rolling back migration ${lastVersion} (Stub implementation - recording removal only)`,
   );
   await pool.query('DELETE FROM migrations WHERE version = $1', [lastVersion]);
@@ -532,7 +535,7 @@ async function runMigrationSQL(db: DatabaseManager, version: number): Promise<vo
   // Only basic support for SQLite fallback
   if (version === 1) {
     // ... (SQLite init logic could go here)
-    console.warn(
+    logger.warn(
       'SQLite migration fallback triggered - check implementation if using SQLite locally',
     );
   }
@@ -541,5 +544,5 @@ async function runMigrationSQL(db: DatabaseManager, version: number): Promise<vo
 // CLI
 if (process.argv[1]?.endsWith('migrate.js')) {
   // CLI logic would go here
-  console.log('Migration CLI loaded');
+  logger.info('Migration CLI loaded');
 }

@@ -24,6 +24,8 @@ import { FeatureManager } from '../../config/FeatureManager.js';
 import { TailRiskCalculator } from './TailRiskCalculator.js';
 import { BayesianCalibrator } from './BayesianCalibrator.js';
 import { NatsClient, RegimeState, RiskState, TITAN_SUBJECTS } from '@titan/shared';
+import { Logger } from '@titan/shared';
+const logger = Logger.getInstance('brain:RiskGuardian');
 
 /**
  * Interface for high correlation notification callback
@@ -137,7 +139,7 @@ export class RiskGuardian {
             state: this.currentRiskState,
             regime: this.currentRegime,
           })
-          .catch((err) => console.error('Failed to pulse heartbeat', err));
+          .catch((err) => logger.error('Failed to pulse heartbeat', err));
       }
     }, 1000);
   }
@@ -187,14 +189,14 @@ export class RiskGuardian {
     const newState = this.deriveRiskState();
 
     if (newState !== this.currentRiskState) {
-      console.warn(`[RiskGuardian] State Transition: ${this.currentRiskState} -> ${newState}`);
+      logger.warn(`[RiskGuardian] State Transition: ${this.currentRiskState} -> ${newState}`);
 
       this.currentRiskState = newState;
 
       if (this.natsClient) {
         this.natsClient
           .publish(TITAN_SUBJECTS.EVT.RISK.STATE, JSON.stringify(newState))
-          .catch((err) => console.error('Failed to publish risk state', err));
+          .catch((err) => logger.error('Failed to publish risk state', err));
       }
     }
   }
@@ -211,13 +213,13 @@ export class RiskGuardian {
 
   async tripCircuitBreaker(reason: string) {
     this.confidenceScore = 0.0;
-    console.warn(`🚨 RiskGuardian Circuit Breaker TRIPPED: ${reason}`);
+    logger.warn(`🚨 RiskGuardian Circuit Breaker TRIPPED: ${reason}`);
 
     if (this.executionClient && typeof this.executionClient.haltSystem === 'function') {
       try {
         await this.executionClient.haltSystem(reason);
       } catch (e) {
-        console.error('Failed to halt system via execution client', e);
+        logger.error('Failed to halt system via execution client', e);
       }
     }
 
@@ -225,7 +227,7 @@ export class RiskGuardian {
   }
 
   resetCircuitBreaker(reason: string) {
-    console.log(`✅ RiskGuardian Circuit Breaker RESET: ${reason}`);
+    logger.info(`✅ RiskGuardian Circuit Breaker RESET: ${reason}`);
     this.confidenceScore = 1.0;
     this.updateAndPublishRiskState();
   }
@@ -271,7 +273,7 @@ export class RiskGuardian {
     }
 
     if (updated) {
-      console.log('⚙️  RiskGuardian configuration updated dynamically');
+      logger.info('⚙️  RiskGuardian configuration updated dynamically');
       // Re-evaluate state
       this.updateAndPublishRiskState();
     }
@@ -300,7 +302,7 @@ export class RiskGuardian {
    */
   setRegimeState(regime: RegimeState): void {
     if (this.currentRegime !== regime) {
-      console.log(`[RiskGuardian] Regime updated: ${this.currentRegime} -> ${regime}`);
+      logger.info(`[RiskGuardian] Regime updated: ${this.currentRegime} -> ${regime}`);
       this.currentRegime = regime;
       this.updateAndPublishRiskState();
     }
@@ -395,7 +397,7 @@ export class RiskGuardian {
       // Hard penalty on drift
       const penalty = 0.2; // -20%
       this.confidenceScore = Math.max(0, this.confidenceScore - penalty);
-      console.warn(
+      logger.warn(
         `[RiskGuardian] Confidence degraded to ${this.confidenceScore.toFixed(3)} due to DRIFT`,
       );
     } else {
@@ -415,7 +417,7 @@ export class RiskGuardian {
   updateExecutionQuality(score: number): void {
     this.executionQualityScore = score;
     if (score < 0.7) {
-      console.warn(`[RiskGuardian] Execution Quality degraded to ${score.toFixed(2)}`);
+      logger.warn(`[RiskGuardian] Execution Quality degraded to ${score.toFixed(2)}`);
       this.updateAndPublishRiskState();
     }
   }
@@ -549,7 +551,7 @@ export class RiskGuardian {
         this.tailRiskCalculator.isRiskCritical(currentAPTR, this.currentEquity, criticalThreshold)
       ) {
         if (defcon !== DefconLevel.DEFENSIVE && defcon !== DefconLevel.EMERGENCY) {
-          console.warn(
+          logger.warn(
             `[RiskGuardian] APTR Critical (${currentAPTR.toFixed(2)}). Triggering Survival Mode.`,
           );
           this.governanceEngine.setOverride(DefconLevel.DEFENSIVE);
@@ -576,7 +578,7 @@ export class RiskGuardian {
         );
         // Map back to 0-100 scale for legacy compatibility
         effectiveConfidence = calibratedProb * 100;
-        console.log(
+        logger.info(
           `[RiskGuardian] ${this.bayesianCalibrator.getShrinkageReport(
             trapType,
             signal.confidence ?? 80,
@@ -643,7 +645,7 @@ export class RiskGuardian {
         }
         const penalty = 0.25;
         effectiveSize = signal.requestedSize * (1 - penalty);
-        console.warn(
+        logger.warn(
           `[RiskGuardian] High Latency (${signal.latencyProfile.endToEnd}ms) - Penalizing size by 25%`,
         );
       }
@@ -686,7 +688,7 @@ export class RiskGuardian {
         const alphaThrottle = this.getAlphaThrottle(plMetrics.tailExponent);
         if (alphaThrottle < 1.0 && signal.phaseId !== 'phase3') {
           effectiveSize = effectiveSize * alphaThrottle;
-          console.warn(
+          logger.warn(
             `[RiskGuardian] Alpha Throttling (α=${plMetrics.tailExponent.toFixed(
               2,
             )}) -> Scaling size by ${(alphaThrottle * 100).toFixed(0)}%`,
@@ -799,7 +801,7 @@ export class RiskGuardian {
               affectedPositions,
             )
             .catch((error) => {
-              console.error('Failed to send high correlation warning:', error);
+              logger.error('Failed to send high correlation warning:', error);
             });
         }
 
@@ -833,7 +835,7 @@ export class RiskGuardian {
         riskMetrics,
       };
     } catch (err: any) {
-      console.error('[RiskGuardian] Risk check failed:', err);
+      logger.error('[RiskGuardian] Risk check failed:', err);
       return {
         approved: false,
         reason: `RISK_CHECK_ERROR: ${err.message}`,
@@ -1119,7 +1121,7 @@ export class RiskGuardian {
     if (referenceAssets.includes(symbol)) {
       const detection = this.changePointDetector.update(price, timestamp ?? Date.now());
       if (detection.regime !== this.currentRegime) {
-        console.log(
+        logger.info(
           `RiskGuardian: Regime change detected for ${symbol}: ${this.currentRegime} -> ${detection.regime}`,
         );
 
@@ -1166,7 +1168,7 @@ export class RiskGuardian {
    */
   updateConfig(newConfig: Partial<RiskGuardianConfig>): void {
     Object.assign(this.config, newConfig);
-    console.log('[RiskGuardian] Configuration updated:', newConfig);
+    logger.info('[RiskGuardian] Configuration updated:', newConfig);
   }
 
   // ============ Private Helper Methods ============

@@ -70,6 +70,8 @@ export interface TitanConsumerConfig {
   deliver_policy: 'all' | 'last' | 'new' | 'by_start_sequence' | 'by_start_time';
   max_deliver: number;
   ack_wait_ns: number;
+  /** Explicit backoff schedule (nanoseconds). If set, overrides linear ack_wait for redelivery. */
+  backoff_ns?: readonly number[];
 }
 
 // =============================================================================
@@ -208,6 +210,25 @@ export const TITAN_KV_BUCKETS = {
  */
 export const TITAN_CONSUMERS = {
   /**
+   * Execution Core Consumer (mirrors Rust EXECUTION_CORE)
+   * Durable consumer for intent command processing with exponential backoff
+   */
+  EXECUTION_CORE: {
+    durable_name: 'EXECUTION_CORE',
+    filter_subject: 'titan.cmd.execution.>',
+    ack_policy: 'explicit',
+    deliver_policy: 'all',
+    max_deliver: 5,
+    ack_wait_ns: 30 * 1_000_000_000, // 30 seconds
+    backoff_ns: [
+      1 * 1_000_000_000, // 1s
+      5 * 1_000_000_000, // 5s
+      15 * 1_000_000_000, // 15s
+      30 * 1_000_000_000, // 30s
+    ],
+  } satisfies TitanConsumerConfig,
+
+  /**
    * Brain Venue Status Consumer
    * Durable consumer for Brain service to process venue status
    */
@@ -231,6 +252,19 @@ export const TITAN_CONSUMERS = {
     deliver_policy: 'new',
     max_deliver: 3,
     ack_wait_ns: 60 * 1_000_000_000, // 60 seconds
+  } satisfies TitanConsumerConfig,
+
+  /**
+   * DLQ Monitor Consumer
+   * Durable consumer for ops/alerting on dead-lettered messages
+   */
+  DLQ_MONITOR: {
+    durable_name: 'dlq-monitor',
+    filter_subject: 'titan.dlq.>',
+    ack_policy: 'explicit',
+    deliver_policy: 'new',
+    max_deliver: 1,
+    ack_wait_ns: 120 * 1_000_000_000, // 2 minutes
   } satisfies TitanConsumerConfig,
 } as const;
 

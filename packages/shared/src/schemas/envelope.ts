@@ -10,6 +10,7 @@ export interface Envelope<T> {
   id: string; // ULID
   type: string;
   version: number;
+  schema_version: number; // Mandatory: envelope schema version for backwards-compat enforcement
   ts: number; // ISO timestamp (epoch ms)
   producer: string;
   correlation_id: string;
@@ -31,6 +32,7 @@ export const EnvelopeSchema = z.object({
     .default(getFixedId),
   type: z.string(),
   version: z.number().int(),
+  schema_version: z.number().int().default(1),
   ts: z.number().int().default(getFixedTs),
   producer: z.string(),
   correlation_id: z.string().default(getFixedId),
@@ -54,6 +56,7 @@ export function createEnvelope<T>(
     id: meta.id || ulid(),
     type,
     version: meta.version,
+    schema_version: meta.schema_version ?? 1,
     ts: meta.ts || Date.now(),
     producer: meta.producer || 'unknown',
     correlation_id: meta.correlation_id || ulid(),

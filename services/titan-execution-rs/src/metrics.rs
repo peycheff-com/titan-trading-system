@@ -1,6 +1,7 @@
 use once_cell::sync::Lazy;
 use prometheus::{
-    register_histogram, register_int_counter, register_int_gauge, Histogram, IntCounter, IntGauge,
+    register_histogram, register_int_counter, register_int_counter_vec, register_int_gauge,
+    Histogram, IntCounter, IntCounterVec, IntGauge,
 };
 
 // --- Execution Metrics (Phase 2 Remediation) ---
@@ -223,4 +224,44 @@ pub fn set_active_positions(count: i64) {
 
 pub fn inc_filled_orders() {
     FILLED_ORDERS.inc();
+}
+
+// --- Per-Subject NATS Rate Metrics (P2 Observability) ---
+
+pub static NATS_PUBLISH_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "titan_nats_publish_total",
+        "Total messages published per NATS subject",
+        &["subject"]
+    )
+    .expect("nats_publish_total counter_vec")
+});
+
+pub static NATS_CONSUME_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "titan_nats_consume_total",
+        "Total messages consumed per NATS subject",
+        &["subject"]
+    )
+    .expect("nats_consume_total counter_vec")
+});
+
+pub static RECONCILIATION_DRIFT: Lazy<IntCounter> = Lazy::new(|| {
+    register_int_counter!(
+        "titan_reconciliation_drift_detected_total",
+        "Total reconciliation drift events detected"
+    )
+    .expect("reconciliation_drift counter")
+});
+
+pub fn inc_nats_publish(subject: &str) {
+    NATS_PUBLISH_TOTAL.with_label_values(&[subject]).inc();
+}
+
+pub fn inc_nats_consume(subject: &str) {
+    NATS_CONSUME_TOTAL.with_label_values(&[subject]).inc();
+}
+
+pub fn inc_reconciliation_drift() {
+    RECONCILIATION_DRIFT.inc();
 }

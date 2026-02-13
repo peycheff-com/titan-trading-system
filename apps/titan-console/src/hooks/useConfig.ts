@@ -395,3 +395,92 @@ export function useConfigStream(onUpdate?: (data: ConfigStreamData) => void) {
 
     return { connected, lastUpdate, error };
 }
+
+// Types for presets
+export interface PresetProfile {
+    name: string;
+    label: string;
+    description: string;
+    overrides: Record<string, unknown>;
+}
+
+interface PresetsResponse {
+    presets: PresetProfile[];
+    count: number;
+    timestamp: number;
+}
+
+// Hook for preset profiles
+export function useConfigPresets() {
+    const { token } = useAuth();
+    const [presets, setPresets] = useState<PresetProfile[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [applying, setApplying] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchPresets = useCallback(async () => {
+        try {
+            setLoading(true);
+            const res = await fetch(`${getTitanBrainUrl()}/config/presets`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            if (!res.ok) throw new Error("Failed to fetch presets");
+            const data: PresetsResponse = await res.json();
+            setPresets(data.presets);
+            setError(null);
+        } catch (e) {
+            setError((e as Error).message);
+        } finally {
+            setLoading(false);
+        }
+    }, [token]);
+
+    const applyPreset = useCallback(
+        async (
+            name: string,
+        ): Promise<{
+            success: boolean;
+            results?: Array<{
+                key: string;
+                success: boolean;
+                error?: string;
+            }>;
+            error?: string;
+        }> => {
+            try {
+                setApplying(true);
+                const res = await fetch(
+                    `${getTitanBrainUrl()}/config/preset/${name}`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${token}`,
+                        },
+                    },
+                );
+                const data = await res.json();
+                if (!res.ok) {
+                    return {
+                        success: false,
+                        error: data.error || "Failed to apply preset",
+                    };
+                }
+                return { success: true, results: data.results };
+            } catch (e) {
+                return { success: false, error: (e as Error).message };
+            } finally {
+                setApplying(false);
+            }
+        },
+        [token],
+    );
+
+    useEffect(() => {
+        if (token) fetchPresets();
+    }, [token, fetchPresets]);
+
+    return { presets, loading, applying, error, applyPreset, refetch: fetchPresets };
+}

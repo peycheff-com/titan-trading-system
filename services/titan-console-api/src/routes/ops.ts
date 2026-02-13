@@ -6,12 +6,14 @@ import {
   TITAN_SUBJECTS,
 } from '@titan/shared';
 import { v4 as uuidv4 } from 'uuid';
+import { Logger } from '@titan/shared';
+const logger = Logger.getInstance('console-api:ops');
 
 export default async function opsRoutes(fastify: FastifyInstance) {
   fastify.post('/ops/command', { onRequest: [fastify.authenticate] }, async (request, reply) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const user = (request as any).user;
-    console.log(`[titan-console-api] Command initiated by ${user?.id}`);
+    logger.info(`[titan-console-api] Command initiated by ${user?.id}`);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const body = request.body as any;

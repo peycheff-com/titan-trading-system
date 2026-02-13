@@ -11,11 +11,14 @@
 import { EventEmitter } from 'events';
 import WebSocket from 'ws';
 import { ConnectionStatus, ExchangeFlow } from '../types';
+import { Logger } from '@titan/shared';
 
 /**
  * Supported exchange identifiers
  */
-export type ExchangeId = 'binance' | 'bybit' | 'coinbase' | 'deribit' | 'kraken' | 'mexc';
+const logger = Logger.getInstance('hunter:ExchangeWebSocketClient');
+
+export type ExchangeId = 'binance' | 'bybit' | 'coinbase' | 'deribit' | 'kraken' | 'mexc' | 'okx';
 
 /**
  * Supported product types
@@ -103,6 +106,12 @@ const EXCHANGE_WS_URLS: Record<ExchangeId, Partial<Record<ProductType, string>>>
   mexc: {
     spot: 'wss://wbs.mexc.com/ws',
   },
+  okx: {
+    spot: 'wss://ws.okx.com:8443/ws/v5/public',
+    linear: 'wss://ws.okx.com:8443/ws/v5/public',
+    inverse: 'wss://ws.okx.com:8443/ws/v5/public',
+    option: 'wss://ws.okx.com:8443/ws/v5/public',
+  },
 };
 
 /**
@@ -164,7 +173,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
         this.connectionStartTime = Date.now();
 
         this.ws.on('open', () => {
-          console.log(`🔗 ${this.config.exchange.toUpperCase()} WebSocket connected`);
+          logger.info(`🔗 ${this.config.exchange.toUpperCase()} WebSocket connected`);
           // eslint-disable-next-line functional/immutable-data
           this.reconnectAttempts = 0;
           // eslint-disable-next-line functional/immutable-data
@@ -192,7 +201,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
         });
 
         this.ws.on('error', (error: Error) => {
-          console.error(`❌ ${this.config.exchange.toUpperCase()} WebSocket error:`, error.message);
+          logger.error(`❌ ${this.config.exchange.toUpperCase()} WebSocket error:`, error.message);
           this.emit('error', { exchange: this.config.exchange, error });
           if (!this.isReconnecting && this.reconnectAttempts === 0) {
             reject(error);
@@ -200,7 +209,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
         });
 
         this.ws.on('close', (code: number, reason: Buffer) => {
-          console.log(
+          logger.info(
             `🔌 ${this.config.exchange.toUpperCase()} WebSocket closed: ${code} ${reason.toString()}`
           );
           this.stopHeartbeat();
@@ -316,6 +325,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
       case 'coinbase':
       case 'kraken':
       case 'mexc':
+      case 'okx':
         // These exchanges subscribe after connection
         return baseUrl;
 
@@ -346,6 +356,10 @@ export class ExchangeWebSocketClient extends EventEmitter {
 
       case 'deribit':
         this.subscribeDeribit();
+        break;
+
+      case 'okx':
+        this.subscribeOkx();
         break;
       // Binance subscribes via URL
     }
@@ -441,6 +455,28 @@ export class ExchangeWebSocketClient extends EventEmitter {
   }
 
   /**
+   * Subscribe to OKX trade stream
+   */
+  private subscribeOkx(): void {
+    const args = this.config.symbols.map(symbol => {
+      // Normalize symbol to OKX format
+      // eslint-disable-next-line functional/no-let
+      let instId = symbol;
+      if (this.config.product === 'spot') {
+        instId = symbol.replace('USDT', '-USDT').replace('USD', '-USD');
+      } else if (this.config.product === 'linear') {
+        instId = symbol.replace('USDT', '-USDT') + '-SWAP';
+      }
+      return {
+        channel: 'trades',
+        instId: instId,
+      };
+    });
+    const subscribeMessage = { op: 'subscribe', args: args };
+    this.ws?.send(JSON.stringify(subscribeMessage));
+  }
+
+  /**
    * Handle incoming WebSocket message
    */
   private handleMessage(data: WebSocket.Data): void {
@@ -479,6 +515,8 @@ export class ExchangeWebSocketClient extends EventEmitter {
 
       case 'deribit':
         return this.parseDeribitTrade(message);
+      case 'okx':
+        return this.parseOkxTrade(message);
       default:
         return null;
     }
@@ -677,6 +715,33 @@ export class ExchangeWebSocketClient extends EventEmitter {
   }
 
   /**
+   * Parse OKX trade message
+   */
+  private parseOkxTrade(message: any): ExchangeTrade | null {
+    // OKX Format: { arg: { channel: 'trades', instId: 'BTC-USDT' }, data: [ { instId, tradeId, px, sz, side, ts } ] }
+    if (!message.data || !Array.isArray(message.data) || message.data.length === 0) {
+      return null;
+    }
+
+    // Process most recent trade
+    const trade = message.data[message.data.length - 1];
+
+    // Normalize symbol to standard format (remove dashes)
+    const symbol = trade.instId.replace(/-/g, '').replace('SWAP', '');
+
+    return {
+      exchange: 'okx',
+      product: this.config.product,
+      symbol: symbol,
+      price: parseFloat(trade.px),
+      quantity: parseFloat(trade.sz),
+      side: trade.side as 'buy' | 'sell',
+      timestamp: parseInt(trade.ts, 10),
+      tradeId: trade.tradeId,
+    };
+  }
+
+  /**
    * Convert symbol to Coinbase format (BTCUSDT -> BTC-USD)
    */
   private convertSymbolToCoinbase(symbol: string): string {
@@ -737,7 +802,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
 
         // Check for stale connection
         if (Date.now() - this.lastMessageTime > this.config.messageTimeout) {
-          console.warn(
+          logger.warn(
             `⚠️ ${this.config.exchange.toUpperCase()} connection stale, reconnecting...`
           );
           this.ws.close();
@@ -766,7 +831,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
   private attemptReconnect(): void {
     if (this.isReconnecting || this.isClosing) return;
     if (this.reconnectAttempts >= this.config.maxReconnectAttempts) {
-      console.error(`❌ ${this.config.exchange.toUpperCase()} max reconnect attempts reached`);
+      logger.error(`❌ ${this.config.exchange.toUpperCase()} max reconnect attempts reached`);
       this.emit('error', {
         exchange: this.config.exchange,
         error: new Error('Max reconnect attempts reached'),
@@ -784,7 +849,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
       60000 // Max 60 seconds
     );
 
-    console.log(
+    logger.info(
       `🔄 ${this.config.exchange.toUpperCase()} reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.config.maxReconnectAttempts})`
     );
 
@@ -797,7 +862,7 @@ export class ExchangeWebSocketClient extends EventEmitter {
       try {
         await this.connect();
       } catch (error) {
-        console.error(`❌ ${this.config.exchange.toUpperCase()} reconnect failed:`, error);
+        logger.error(`❌ ${this.config.exchange.toUpperCase()} reconnect failed:`, error);
         // eslint-disable-next-line functional/immutable-data
         this.isReconnecting = false;
         this.attemptReconnect();

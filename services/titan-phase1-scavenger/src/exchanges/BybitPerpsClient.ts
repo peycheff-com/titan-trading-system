@@ -15,6 +15,9 @@ import { OHLCV, OrderParams, OrderResult, OrderStatus } from '../types/index.js'
 // Import fetch with proper typing for Jest compatibility
 import fetch from 'node-fetch';
 import WebSocket from 'ws';
+import { Logger } from '@titan/shared';
+
+const logger = Logger.getInstance('scavenger:BybitPerpsClient');
 
 export interface BybitTickerUpdate {
   topic: string;
@@ -194,7 +197,7 @@ export class BybitPerpsClient {
     this.ws = new WebSocket(this.WS_URL);
 
     this.ws.on('open', () => {
-      console.log('✅ Bybit WebSocket connected');
+      logger.info('✅ Bybit WebSocket connected');
 
       // Send subscription
       const args = symbols.map((s) => `tickers.${s.toUpperCase()}`);
@@ -229,18 +232,18 @@ export class BybitPerpsClient {
           }
         }
       } catch (err) {
-        console.error('❌ Error parsing Bybit WS message', err);
+        logger.error('❌ Error parsing Bybit WS message', err);
       }
     });
 
     this.ws.on('close', () => {
-      console.warn('⚠️ Bybit WebSocket closed. Reconnecting...');
+      logger.warn('⚠️ Bybit WebSocket closed. Reconnecting...');
       if (this.wsPingInterval) clearInterval(this.wsPingInterval);
       setTimeout(() => this.connectWebSocket(symbols), 2000);
     });
 
     this.ws.on('error', (err) => {
-      console.error('❌ Bybit WebSocket error:', err);
+      logger.error('❌ Bybit WebSocket error:', err);
     });
   }
 
@@ -517,7 +520,7 @@ export class BybitPerpsClient {
         lastError = error instanceof Error ? error : new Error('Unknown error');
 
         if (attempt < maxRetries) {
-          console.warn(`⚠️ Order attempt ${attempt + 1} failed, retrying: ${lastError.message}`);
+          logger.warn(`⚠️ Order attempt ${attempt + 1} failed, retrying: ${lastError.message}`);
           await this.sleep(this.RETRY_DELAY);
         }
       }

@@ -21,6 +21,8 @@ import { getNatsClient, RegimeState, TitanSubject } from '@titan/shared';
 import { TitanBrain } from '../engine/TitanBrain.js';
 import { DatabaseManager } from '../db/DatabaseManager.js';
 import { PowerLawMetrics } from '../types/index.js';
+import { Logger } from '@titan/shared';
+const logger = Logger.getInstance('brain:DashboardService');
 
 /**
  * Extended dashboard data with additional metrics
@@ -145,7 +147,7 @@ export class DashboardService {
           });
         }
       } catch (err) {
-        console.error('Failed to publish dashboard update:', err);
+        logger.error('Failed to publish dashboard update:', err);
       }
     }, intervalMs);
   }
@@ -175,7 +177,7 @@ export class DashboardService {
     // Collect balances from all registered providers
     const providerPromises = Array.from(this.walletProviders.values()).map((p) =>
       p().catch((err) => {
-        console.error('Error fetching balances:', err);
+        logger.error('Error fetching balances:', err);
         return [] as WalletBalance[];
       }),
     );
@@ -604,7 +606,7 @@ export class DashboardService {
         return Date.now() - result.rows[0].last_profit_time;
       }
     } catch (error) {
-      console.error('Error fetching last profit time:', error);
+      logger.error('Error fetching last profit time:', error);
     }
 
     return null;

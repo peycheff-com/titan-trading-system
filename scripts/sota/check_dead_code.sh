@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # Check for dead code, unused exports, and unused files using Knip
 echo "🧟‍♂️ Running Dead Code & Unused Export Scan (Knip)..."
 

@@ -20,6 +20,8 @@ import {
   ValidationReport,
 } from '../types/index.js';
 import { ErrorCode, logError, TitanError } from '../utils/ErrorHandler.js';
+import { Logger } from '@titan/shared';
+const logger = Logger.getInstance('ai-quant:OptimizationWorkflow');
 
 export interface WorkflowConfig {
   backtestPeriodDays?: number;
@@ -88,7 +90,7 @@ export class OptimizationWorkflow {
    */
   async executeWorkflow(): Promise<WorkflowResult> {
     try {
-      console.log('Starting optimization workflow...');
+      logger.info('Starting optimization workflow...');
 
       // Step 1: Load historical data
       const historicalData = await this.loadHistoricalData();
@@ -102,7 +104,7 @@ export class OptimizationWorkflow {
         };
       }
 
-      console.log(`Loaded ${historicalData.trades.length} trades for analysis`);
+      logger.info(`Loaded ${historicalData.trades.length} trades for analysis`);
 
       // Step 2: Analyze failed trades
       const insights = await this.analyst.analyzeFailures(
@@ -110,7 +112,7 @@ export class OptimizationWorkflow {
         historicalData.regimeSnapshots,
       );
 
-      console.log(`Generated ${insights.length} insights`);
+      logger.info(`Generated ${insights.length} insights`);
 
       if (insights.length === 0) {
         return {
@@ -123,12 +125,12 @@ export class OptimizationWorkflow {
       // Step 3: Generate and validate proposals
       const proposalResults = await this.processProposals(insights, historicalData);
 
-      console.log(`Processed ${proposalResults.length} proposals`);
+      logger.info(`Processed ${proposalResults.length} proposals`);
 
       // Step 4: Apply approved proposals
       const appliedProposals = await this.applyApprovedProposals(proposalResults);
 
-      console.log(`Applied ${appliedProposals.length} proposals`);
+      logger.info(`Applied ${appliedProposals.length} proposals`);
 
       // Step 5: Performance monitoring (if any proposals were applied)
       // eslint-disable-next-line functional/no-let
@@ -184,7 +186,15 @@ export class OptimizationWorkflow {
           ohlcvData = ohlcvData.concat(symbolOHLCV);
           regimeSnapshots = regimeSnapshots.concat(symbolRegimes);
         } catch (error) {
-          console.warn(`Failed to load data for ${symbol}:`, error);
+          logger.warn(
+            `Failed to load data for ${symbol}: ${error instanceof Error ? error.message : String(error)}`,
+            {
+              error:
+                error instanceof Error
+                  ? { name: error.name, message: error.message, stack: error.stack }
+                  : error,
+            },
+          );
         }
       }
 
@@ -231,7 +241,7 @@ export class OptimizationWorkflow {
         // Generate optimization proposal
         const proposal = await this.analyst.proposeOptimization(insight, currentConfig);
 
-        console.log(`Generated proposal for insight: ${insight.topic}`);
+        logger.info(`Generated proposal for insight: ${insight.topic}`);
 
         // Validate proposal through backtesting
         const validation = await this.analyst.validateProposal(
@@ -240,7 +250,7 @@ export class OptimizationWorkflow {
           historicalData,
         );
 
-        console.log(
+        logger.info(
           `Validation result: ${validation.recommendation} (confidence: ${validation.confidenceScore.toFixed(
             2,
           )})`,
@@ -253,7 +263,7 @@ export class OptimizationWorkflow {
           applied: false,
         });
       } catch (error) {
-        console.error(`Failed to process insight "${insight.topic}":`, error);
+        logger.error(`Failed to process insight "${insight.topic}":`, error);
         // eslint-disable-next-line functional/immutable-data
         results.push({
           proposal: {} as OptimizationProposal,
@@ -301,7 +311,7 @@ export class OptimizationWorkflow {
 
       if (shouldAutoApply) {
         try {
-          console.log(`Auto-applying proposal: ${proposal.targetKey}`);
+          logger.info(`Auto-applying proposal: ${proposal.targetKey}`);
 
           const applyResult = await this.analyst.applyProposal(proposal, validation);
 
@@ -310,19 +320,19 @@ export class OptimizationWorkflow {
             result.applied = true;
             // eslint-disable-next-line functional/immutable-data
             appliedProposals.push(result);
-            console.log(`Successfully applied proposal: ${proposal.targetKey}`);
+            logger.info(`Successfully applied proposal: ${proposal.targetKey}`);
           } else {
             // eslint-disable-next-line functional/immutable-data
             result.error = applyResult.error;
-            console.error(`Failed to apply proposal: ${applyResult.error}`);
+            logger.error(`Failed to apply proposal: ${applyResult.error}`);
           }
         } catch (error) {
           // eslint-disable-next-line functional/immutable-data
           result.error = error instanceof Error ? error.message : 'Unknown error';
-          console.error(`Error applying proposal:`, error);
+          logger.error(`Error applying proposal:`, error);
         }
       } else {
-        console.log(
+        logger.info(
           `Proposal requires manual review: ${proposal.targetKey} (${validation.recommendation}, confidence: ${validation.confidenceScore.toFixed(
             2,
           )})`,
@@ -379,7 +389,7 @@ export class OptimizationWorkflow {
         improvement,
       };
     } catch (error) {
-      console.error('Failed to monitor performance:', error);
+      logger.error('Failed to monitor performance:', error);
       const emptyMetrics: BacktestResult = {
         totalTrades: 0,
         winningTrades: 0,

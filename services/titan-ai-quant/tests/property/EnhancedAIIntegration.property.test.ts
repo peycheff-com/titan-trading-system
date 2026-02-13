@@ -22,6 +22,15 @@ import { Config, OHLCV, RegimeSnapshot, Trade } from "../../src/types";
 // Mock dependencies
 jest.mock("@titan/shared", () => ({
   __esModule: true,
+  Logger: {
+    getInstance: jest.fn(() => ({
+      debug: jest.fn(),
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      fatal: jest.fn(),
+    })),
+  },
   getWebSocketManager: jest.fn(() => ({
     on: jest.fn(),
     removeAllListeners: jest.fn(),

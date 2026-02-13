@@ -4,6 +4,8 @@ import {
     getNatsPublisher,
 } from "../src/server/NatsPublisher.js";
 import { EnvelopeSchema, getNatsClient, TitanSubject } from "@titan/shared";
+import { Logger } from '@titan/shared';
+const logger = Logger.getInstance('brain:verify_envelope_compliance');
 
 async function verify() {
     const nats = getNatsClient();
@@ -12,25 +14,25 @@ async function verify() {
     await nats.connect();
     await publisher.connect();
 
-    console.log("Connected to NATS...");
+    logger.info("Connected to NATS...");
 
     // Subscribe to verify
     const _sub = nats.subscribe(
         TitanSubject.AI_OPTIMIZATION_REQUESTS,
         (data: unknown, subject) => {
-            console.log(
+            logger.info(
                 `Received message on ${subject}:`,
                 JSON.stringify(data, null, 2),
             );
 
             try {
                 const parsed = EnvelopeSchema.parse(data);
-                console.log("✅ Message is a VALID Envelope!");
-                console.log(`   Type: ${parsed.type}`);
-                console.log(`   Version: ${parsed.version}`);
-                console.log(`   Detailed Validation Passed.`);
+                logger.info("✅ Message is a VALID Envelope!");
+                logger.info(`   Type: ${parsed.type}`);
+                logger.info(`   Version: ${parsed.version}`);
+                logger.info(`   Detailed Validation Passed.`);
             } catch (e) {
-                console.error("❌ Message is NOT a valid Envelope:", e);
+                logger.error("❌ Message is NOT a valid Envelope:", e);
                 // Log validation errors
             }
 
@@ -42,7 +44,7 @@ async function verify() {
         },
     );
 
-    console.log("Publishing AI Optimization Request...");
+    logger.info("Publishing AI Optimization Request...");
     const request: AIOptimizationRequest = {
         reason: "Verification Test",
         triggeredBy: "verify-script",
@@ -56,6 +58,6 @@ async function verify() {
 }
 
 verify().catch((e) => {
-    console.error(e);
+    logger.error(e);
     process.exit(1);
 });

@@ -63,7 +63,7 @@ export class ConfigController {
     );
     server.get('/config/overrides', operatorGuard, this.handleGetOverrides.bind(this));
 
-    // SSE stream for real-time updates
+    // SSE stream for real-time config updates
     server.get('/config/stream', operatorGuard, this.handleStream.bind(this));
 
     // Write endpoints (admin access)
@@ -76,6 +76,19 @@ export class ConfigController {
       '/config/override',
       adminGuard,
       this.handleRollbackOverride.bind(this),
+    );
+    server.post<{ Body: { overrides: OverrideBody[] } }>(
+      '/config/bulk',
+      adminGuard,
+      this.handleBulkOverride.bind(this),
+    );
+
+    // Preset endpoints
+    server.get('/config/presets', operatorGuard, this.handleGetPresets.bind(this));
+    server.post<{ Params: { name: string } }>(
+      '/config/preset/:name',
+      adminGuard,
+      this.handleApplyPreset.bind(this),
     );
   }
 
@@ -111,6 +124,17 @@ export class ConfigController {
   }
 
   /**
+   * Helper to mask sensitive values in API responses
+   */
+  private maskSensitive(effective: any): any {
+    const item = this.registry.getItem(effective.key);
+    if (item?.schema?.secret) {
+      return { ...effective, value: '*****', provenance: effective.provenance.map((p: any) => ({ ...p, value: '*****' })) };
+    }
+    return effective;
+  }
+
+  /**
    * GET /config/effective - Get effective values with provenance
    */
   async handleGetEffective(
@@ -130,14 +154,15 @@ export class ConfigController {
           return;
         }
         reply.send({
-          config: effective,
+          config: this.maskSensitive(effective),
           timestamp: Date.now(),
         });
       } else {
         const allEffective = this.registry.getAllEffective();
+        const masked = allEffective.map(e => this.maskSensitive(e));
         reply.send({
-          configs: allEffective,
-          count: allEffective.length,
+          configs: masked,
+          count: masked.length,
           timestamp: Date.now(),
         });
       }
@@ -166,6 +191,19 @@ export class ConfigController {
           timestamp: Date.now(),
         });
         return;
+      }
+
+      // Skip if value is masked secret (no change)
+      if (value === '*****') {
+        const item = this.registry.getItem(key);
+        if (item?.schema?.secret) {
+           reply.send({
+            success: true,
+            message: `Ignored masked update for ${key}`,
+            timestamp: Date.now(),
+          });
+          return;
+        }
       }
 
       // Get operator ID from auth token
@@ -360,5 +398,128 @@ export class ConfigController {
       clearInterval(pollInterval);
       this.logger.info('Config SSE stream closed', undefined, {});
     });
+  }
+
+  /**
+   * POST /config/bulk - Create/update multiple overrides
+   */
+  async handleBulkOverride(
+    request: FastifyRequest<{ Body: { overrides: OverrideBody[] } }>,
+    reply: FastifyReply,
+  ): Promise<void> {
+    try {
+      const { overrides } = request.body;
+      if (!Array.isArray(overrides)) {
+        reply.status(400).send({ error: 'overrides must be an array' });
+        return;
+      }
+
+      const operatorId = (request as any).user?.sub || 'unknown';
+      const results = [];
+
+      for (const override of overrides) {
+        const { key, value, reason, expiresInHours } = override;
+        if (!key || value === undefined || !reason) {
+          results.push({ key, success: false, error: 'Missing fields' });
+          continue;
+        }
+
+        // Skip masked values
+        if (value === '*****') {
+          const item = this.registry.getItem(key);
+          if (item?.schema?.secret) {
+            results.push({ key, success: true, message: 'Ignored masked update' });
+            continue;
+          }
+        }
+
+        const result = await this.registry.createOverride(
+          key,
+          value,
+          operatorId,
+          reason,
+          expiresInHours,
+        );
+        results.push({ key, ...result });
+      }
+
+      reply.send({
+        success: true,
+        results,
+        count: results.length,
+        timestamp: Date.now(),
+      });
+    } catch (error) {
+      this.logger.error('Failed to process bulk overrides', error as Error);
+      reply.status(500).send({
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: Date.now(),
+      });
+    }
+  }
+
+  /**
+   * GET /config/presets - Get available preset profiles
+   */
+  async handleGetPresets(_request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const presets = this.registry.getPresets();
+      reply.send({
+        presets,
+        count: presets.length,
+        timestamp: Date.now(),
+      });
+    } catch (error) {
+      this.logger.error('Failed to get presets', error as Error);
+      reply.status(500).send({
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: Date.now(),
+      });
+    }
+  }
+
+  /**
+   * POST /config/preset/:name - Apply a named preset profile
+   */
+  async handleApplyPreset(
+    request: FastifyRequest<{ Params: { name: string } }>,
+    reply: FastifyReply,
+  ): Promise<void> {
+    try {
+      const { name } = request.params;
+      const operatorId = (request as any).user?.sub || 'unknown';
+
+      const result = await this.registry.applyPreset(name, operatorId);
+
+      if (result.success) {
+        this.logger.info('Preset applied via API', undefined, {
+          preset: name,
+          operatorId,
+          applied: result.results.filter((r) => r.success).length,
+          skipped: result.results.filter((r) => !r.success).length,
+        });
+
+        reply.send({
+          success: true,
+          preset: name,
+          results: result.results,
+          timestamp: Date.now(),
+        });
+      } else {
+        reply.status(207).send({
+          success: false,
+          preset: name,
+          error: result.error,
+          results: result.results,
+          timestamp: Date.now(),
+        });
+      }
+    } catch (error) {
+      this.logger.error('Failed to apply preset', error as Error);
+      reply.status(500).send({
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: Date.now(),
+      });
+    }
   }
 }

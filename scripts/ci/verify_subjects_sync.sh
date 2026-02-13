@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # =============================================================================
 # verify_subjects_sync.sh — Cross-check Rust ↔ TypeScript subject catalogs
 # =============================================================================

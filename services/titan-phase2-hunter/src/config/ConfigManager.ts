@@ -15,6 +15,8 @@ import {
 } from '@titan/shared';
 import { HunterConfig, HunterConfigSchema } from './schema';
 import { EventCategory } from '../types';
+import { Logger } from '@titan/shared';
+const logger = Logger.getInstance('hunter:ConfigManager');
 
 /**
  * Complete Phase 2 configuration
@@ -211,12 +213,12 @@ export class ConfigManager extends EventEmitter {
     );
 
     if (!rawPhaseConfig || Object.keys(rawPhaseConfig).length === 0) {
-      console.log('📋 Initializing default configuration for Hunter...');
+      logger.info('📋 Initializing default configuration for Hunter...');
       await this.saveConfig(pendingConfig); // Save defaults (also validates)
     } else {
       this.updateLocalState(pendingConfig);
 
-      console.log('✅ Configuration loaded and validated successfully via Zod');
+      logger.info('✅ Configuration loaded and validated successfully via Zod');
     }
 
     // Setup Event Listeners
@@ -246,7 +248,7 @@ export class ConfigManager extends EventEmitter {
       } as ConfigChangeEvent);
     });
 
-    console.log('✅ ConfigManager Adapter initialized via @titan/shared + Zod Rule Engine');
+    logger.info('✅ ConfigManager Adapter initialized via @titan/shared + Zod Rule Engine');
   }
 
   private updateLocalState(forceConfig?: Phase2Config) {
@@ -263,7 +265,7 @@ export class ConfigManager extends EventEmitter {
       // Validate merged config using Zod
       const result = HunterConfigSchema.safeParse(merged);
       if (!result.success) {
-        console.error('❌ Configuration validation failed after reload:', result.error.format());
+        logger.error('❌ Configuration validation failed after reload:', result.error.format());
         // Fallback or throw? For now, we keep the old config or warn
         // In production, invalid config on reload should probably be rejected
         return;
@@ -312,7 +314,7 @@ export class ConfigManager extends EventEmitter {
         timestamp: Date.now(),
       } as ConfigChangeEvent);
     } catch (error) {
-      console.error('❌ Failed to save configuration:', error);
+      logger.error('❌ Failed to save configuration:', error);
       throw error;
     }
   }
@@ -438,7 +440,7 @@ export class ConfigManager extends EventEmitter {
    * Deprecated: Watch mechanism handled by SharedConfigManager
    */
   startWatching(): void {
-    // console.log('👁️ startWatching is managed by SharedConfigManager (noop)');
+    // logger.info('👁️ startWatching is managed by SharedConfigManager (noop)');
   }
 
   stopWatching(): void {
@@ -514,7 +516,7 @@ export class ConfigManager extends EventEmitter {
    * Reset configuration to defaults
    */
   resetToDefaults(): void {
-    console.log('🔄 Resetting configuration to defaults');
+    logger.info('🔄 Resetting configuration to defaults');
     this.saveConfig({ ...DEFAULT_CONFIG });
   }
 

@@ -14,6 +14,8 @@ import {
   TreasuryStatus,
 } from '../types/index.js';
 import { DatabaseManager } from '../db/DatabaseManager.js';
+import { Logger } from '@titan/shared';
+const logger = Logger.getInstance('brain:CapitalFlowManager');
 
 /**
  * Exchange API interface for wallet operations
@@ -142,7 +144,7 @@ export class CapitalFlowManager {
    */
   async setHighWatermark(value: number): Promise<void> {
     if (value <= 0) {
-      console.warn(`Invalid high watermark value: ${value}`);
+      logger.warn(`Invalid high watermark value: ${value}`);
       return;
     }
 
@@ -156,7 +158,7 @@ export class CapitalFlowManager {
       ]);
     }
 
-    console.log(`High watermark set to $${value}`);
+    logger.info(`High watermark set to $${value}`);
   }
 
   /**
@@ -329,7 +331,7 @@ export class CapitalFlowManager {
                 newBalance,
               );
             } catch (error) {
-              console.error('Failed to send sweep notification:', error);
+              logger.error('Failed to send sweep notification:', error);
             }
           }
 

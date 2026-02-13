@@ -508,6 +508,27 @@ export class TitanBrain implements PositionClosureHandler, BreakerEventPersisten
     signal: IntentSignal,
     decision: BrainDecision,
   ): Promise<void> {
+    // Structured decision trace for auditability (Phase 4)
+    logger.info('decision_trace', undefined, {
+      signal_id: decision.signalId,
+      phase_id: signal.phaseId,
+      symbol: signal.symbol,
+      approved: decision.approved,
+      reason: decision.reason,
+      authorized_size: decision.authorizedSize,
+      config_version: signal.metadata?._config_version ?? 'unknown',
+      model_version: signal.metadata?._model_version ?? 'unknown',
+      allocation: decision.allocation,
+      risk_decision: decision.risk ? {
+        approved: decision.risk.approved,
+        reason: decision.risk.reason,
+        adjusted_size: decision.risk.adjustedSize,
+        risk_metrics: decision.risk.riskMetrics,
+      } : null,
+      regime: decision.context?.governance?.defcon ?? 'unknown',
+      market_state: decision.context?.marketState ?? null,
+    });
+
     // Record decision in state manager
     this.stateManager.addDecision(decision);
     this.stateManager.updateSignalStats(signal.phaseId, decision.approved);

@@ -28,7 +28,7 @@ impl BinanceAdapter {
             .and_then(|c| c.get_api_key())
             .or_else(|| env::var("BINANCE_API_KEY").ok())
             .ok_or_else(|| {
-                ExchangeError::Config(
+                ExchangeError::Configuration(
                     "BINANCE_API_KEY not set (check config.json or env)".to_string(),
                 )
             })?;
@@ -37,7 +37,7 @@ impl BinanceAdapter {
             .and_then(|c| c.get_secret_key())
             .or_else(|| env::var("BINANCE_SECRET_KEY").ok())
             .ok_or_else(|| {
-                ExchangeError::Config(
+                ExchangeError::Configuration(
                     "BINANCE_SECRET_KEY not set (check config.json or env)".to_string(),
                 )
             })?;

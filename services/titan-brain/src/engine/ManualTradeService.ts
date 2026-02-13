@@ -7,6 +7,9 @@ import type { ExecutionEngineClient } from '../types/index.js';
 import { ManualTradeRequestBody } from '../schemas/apiSchemas.js';
 import { IntentSignal } from '../types/index.js';
 import { randomUUID } from 'crypto';
+import { Logger } from '@titan/shared';
+
+const logger = Logger.getInstance('brain:ManualTradeService');
 
 export class ManualTradeService {
   private readonly getExecutionClient: () => ExecutionEngineClient | null;
@@ -40,7 +43,7 @@ export class ManualTradeService {
       // Manual trades don't have expected edge or stop loss by default
     };
 
-    console.log(
+    logger.info(
       `[ManualTradeService] Executing manual trade: ${signal.signalId} ${signal.side} ${signal.symbol} size=${signal.requestedSize}`,
     );
 
@@ -48,7 +51,7 @@ export class ManualTradeService {
       await client.forwardSignal(signal, request.size);
       return signalId;
     } catch (error) {
-      console.error(`[ManualTradeService] Failed to execute trade:`, error);
+      logger.error(`[ManualTradeService] Failed to execute trade:`, error);
       throw error;
     }
   }
@@ -57,7 +60,7 @@ export class ManualTradeService {
    * Cancel all open positions (Panic Button)
    */
   async cancelAllTrades(): Promise<void> {
-    console.warn(`[ManualTradeService] PANIC BUTTON TRIGGERED: Closing all positions`);
+    logger.warn(`[ManualTradeService] PANIC BUTTON TRIGGERED: Closing all positions`);
     const client = this.getExecutionClient();
     if (!client) {
       throw new Error('Execution Engine not connected - cannot close positions');
@@ -65,9 +68,9 @@ export class ManualTradeService {
 
     try {
       await client.closeAllPositions();
-      console.log(`[ManualTradeService] Successfully requested close all positions`);
+      logger.info(`[ManualTradeService] Successfully requested close all positions`);
     } catch (error) {
-      console.error(`[ManualTradeService] Failed to close all positions:`, error);
+      logger.error(`[ManualTradeService] Failed to close all positions:`, error);
       throw error;
     }
   }

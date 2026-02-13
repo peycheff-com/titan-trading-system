@@ -38,6 +38,9 @@ import { HealthServer, type HealthStatus } from './server/HealthServer.js';
 
 loadSecretsFromFiles();
 
+// Module-level logger for use outside class methods
+const logger = Logger.getInstance();
+
 /**
  * Application state
  */
@@ -152,7 +155,7 @@ class TitanScavengerApp {
   async initialize(): Promise<void> {
     // 1. Initialize logger first
     // eslint-disable-next-line functional/immutable-data
-    this.logger = new Logger();
+    this.logger = Logger.getInstance();
     this.logger.info('🚀 Initializing Titan Phase 1 - Scavenger (Predestination Engine)...\n');
 
     try {
@@ -782,11 +785,11 @@ async function main() {
   const { headless } = parseArgs();
 
   if (headless) {
-    console.log('🤖 Running in headless mode (default)');
-    console.log('📺 Monitor via Console at http://localhost:3000');
+    logger.info('🤖 Running in headless mode (default)');
+    logger.info('📺 Monitor via Console at http://localhost:3000');
   } else {
-    console.log('🖥️ Running with Ink UI (legacy mode)');
-    console.log('💡 Tip: Use headless mode (default) for production');
+    logger.info('🖥️ Running with Ink UI (legacy mode)');
+    logger.info('💡 Tip: Use headless mode (default) for production');
   }
 
   const app = new TitanScavengerApp(headless);
@@ -798,13 +801,13 @@ async function main() {
     // Start the application
     await app.start();
   } catch (error) {
-    console.error('\n❌ Fatal error:', error);
+    logger.error('\n❌ Fatal error:', error);
     process.exit(1);
   }
 }
 
 // Run the application
 main().catch((error) => {
-  console.error('❌ Unhandled error:', error);
+  logger.error('❌ Unhandled error:', error);
   process.exit(1);
 });

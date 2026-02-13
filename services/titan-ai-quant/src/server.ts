@@ -1,12 +1,9 @@
 import http from 'http';
 import { NightlyOptimize } from './cron/NightlyOptimize.js';
 import { NatsAdapter } from './messaging/NatsAdapter.js';
-
-const logger = console;
-
 import { configManager } from './config/ConfigManager.js';
 
-// ... imports
+const logger = console;
 
 async function main() {
   logger.log('🚀 Starting Titan AI Quant Service...');
@@ -123,6 +120,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('❌ Fatal Error:', err);
+  logger.error('❌ Fatal Error:', err);
   process.exit(1);
 });

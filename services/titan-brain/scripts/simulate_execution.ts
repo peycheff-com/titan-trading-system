@@ -1,9 +1,12 @@
 import { getNatsClient, TITAN_SUBJECTS } from "@titan/shared";
+import { Logger } from '@titan/shared';
+
+const logger = Logger.getInstance('brain:simulate_execution');
 
 const nc = getNatsClient();
 
 async function main() {
-    console.log('🏛️  Starting "The Bulgaria Tax" Execution Simulator...');
+    logger.info('🏛️  Starting "The Bulgaria Tax" Execution Simulator...');
     // Connect to NATS (using shared client wrapper pattern if needed, or direct)
     // But since we use getNatsClient(), it returns the singleton wrapper.
     const natsUrl = process.env.NATS_URL || "nats://localhost:4222";
@@ -12,7 +15,7 @@ async function main() {
         user: process.env.NATS_USER,
         pass: process.env.NATS_PASS,
     });
-    console.log(`✅ Connected to NATS at ${natsUrl}`);
+    logger.info(`✅ Connected to NATS at ${natsUrl}`);
 
     // Subscribe to placement commands
     await nc.subscribe(
@@ -20,7 +23,7 @@ async function main() {
         async (data: any, _subject: string) => {
             try {
                 const payload = data;
-                console.log(
+                logger.info(
                     `\n📩 Received Order: ${payload.symbol} ${payload.type} Size: ${payload.size}`,
                 );
 
@@ -54,16 +57,16 @@ async function main() {
                 );
                 nc.publish(subject, fillPayload);
 
-                console.log(
+                logger.info(
                     `✅ Filled ${payload.symbol}: ${fillPayload.fillSize} @ ${fillPayload.fillPrice} (Latency: ${latency}ms)`,
                 );
             } catch (err) {
-                console.error("❌ Error processing message:", err);
+                logger.error("❌ Error processing message:", err);
             }
         },
     );
 
-    console.log(
+    logger.info(
         `🎧 Listening for execution commands on ${TITAN_SUBJECTS.CMD.EXECUTION.ALL}`,
     );
 }

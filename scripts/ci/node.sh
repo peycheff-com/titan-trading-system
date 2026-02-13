@@ -51,6 +51,13 @@ if [[ "${1:-}" == "test" ]] || [[ "${1:-}" == "all" ]]; then
     npm run test
     npm run build
   fi
+
+  # GoldenPath E2E Integration Test (Ship Gate)
+  echo "Running GoldenPath Integration Test..."
+  npx vitest run services/titan-brain/tests/integration/GoldenPath.integration.test.ts --reporter=verbose 2>&1 || {
+    echo "::error::GoldenPath Integration Test FAILED - this is a ship gate"
+    exit 1
+  }
 fi
 
 echo "Node.js tasks complete."

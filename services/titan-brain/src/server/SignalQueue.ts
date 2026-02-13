@@ -8,11 +8,14 @@
 
 import { createClient } from 'redis';
 import { IntentSignal, PhaseId, RedisConfig } from '../types/index.js';
+import { Logger } from '@titan/shared';
 
 /**
  * Phase priority for signal processing
  * Requirement 7.1: P3 > P2 > P1
  */
+const logger = Logger.getInstance('brain:SignalQueue');
+
 const PHASE_PRIORITY: Record<PhaseId, number> = {
   phase3: 3,
   phase2: 2,
@@ -81,17 +84,17 @@ export class SignalQueue {
     });
 
     this.client.on('error', (err: any) => {
-      console.error('Redis client error:', err);
+      logger.error('Redis client error:', err);
     });
 
     this.client.on('reconnecting', () => {
-      console.log('Redis client reconnecting...');
+      logger.info('Redis client reconnecting...');
     });
 
     await this.client.connect();
 
     this.connected = true;
-    console.log('✅ Signal queue connected to Redis');
+    logger.info('✅ Signal queue connected to Redis');
   }
 
   /**
@@ -104,7 +107,7 @@ export class SignalQueue {
       this.connected = false;
 
       this.client = null;
-      console.log('🛑 Signal queue disconnected from Redis');
+      logger.info('🛑 Signal queue disconnected from Redis');
     }
   }
 
@@ -190,7 +193,7 @@ export class SignalQueue {
       const entry: QueuedSignalEntry = JSON.parse(result.value);
       return entry.signal;
     } catch (error) {
-      console.error('Failed to parse queued signal:', error);
+      logger.error('Failed to parse queued signal:', error);
       return null;
     }
   }
@@ -216,7 +219,7 @@ export class SignalQueue {
       const entry: QueuedSignalEntry = JSON.parse(result[0]);
       return entry.signal;
     } catch (error) {
-      console.error('Failed to parse queued signal:', error);
+      logger.error('Failed to parse queued signal:', error);
       return null;
     }
   }

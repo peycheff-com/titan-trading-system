@@ -1,4 +1,7 @@
 import { fetch } from 'undici';
+import { Logger } from '@titan/shared';
+
+const logger = Logger.getInstance('sentinel:PolymarketClient');
 
 export interface PolymarketConfig {
   apiKey?: string; // Optional for public data
@@ -73,7 +76,7 @@ export class PolymarketClient {
         tokens: m.tokens || [],
       }));
     } catch (error) {
-      console.error('Failed to fetch markets:', error);
+      logger.error('Failed to fetch markets:', error);
       throw error;
     }
   }
@@ -114,7 +117,7 @@ export class PolymarketClient {
         timestamp: new Date().toISOString(), // API doesn't always return ts, so we add it
       };
     } catch (error) {
-      console.error(`Failed to fetch orderbook for ${tokenId}:`, error);
+      logger.error(`Failed to fetch orderbook for ${tokenId}:`, error);
       throw error;
     }
   }

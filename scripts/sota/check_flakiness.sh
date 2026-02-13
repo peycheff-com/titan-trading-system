@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # Run tests multiple times to detect flakiness
 COUNT=${1:-10}
 echo "❄️ Running Flakiness Detector ($COUNT runs)..."

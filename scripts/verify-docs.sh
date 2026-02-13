@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 # verify-docs.sh - Big Tech Documentation Verification Gate
 # Tier-1 Practice: Symbol-based evidence validation
 #

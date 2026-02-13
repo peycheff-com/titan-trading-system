@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # Usage: ./scripts/rollback.sh [PREVIOUS_TAG]
 
 PREV_TAG=${1:-stable}

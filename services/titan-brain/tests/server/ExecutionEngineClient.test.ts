@@ -19,6 +19,15 @@ jest.mock("@titan/shared", () => ({
     isConnected: mockIsConnected,
     request: mockRequest,
   })),
+  Logger: {
+    getInstance: jest.fn(() => ({
+      debug: jest.fn(),
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      fatal: jest.fn(),
+    })),
+  },
   TitanSubject: {
     CMD_EXEC_PLACE: "titan.cmd.execution.place.v1",
     CMD_RISK_POLICY: "titan.cmd.risk.policy.v1",
@@ -51,9 +60,9 @@ jest.mock("@titan/shared", () => ({
     SYS: {
       RPC: {
         GET_POSITIONS: (venue: string) =>
-          `titan.execution.get_positions.${venue}`,
+          `titan.rpc.execution.get_positions.v1.${venue}`,
         GET_BALANCES: (venue: string) =>
-          `titan.execution.get_balances.${venue}`,
+          `titan.rpc.execution.get_balances.v1.${venue}`,
       },
     },
     LEGACY: {
@@ -61,7 +70,7 @@ jest.mock("@titan/shared", () => ({
     },
   },
   validateIntentPayload: jest.fn(() => ({ valid: true, errors: [] })),
-  getCanonicalRiskPolicy: jest.fn(() => ({})),
+  getCanonicalRiskPolicy: jest.fn(() => ({ hash: "test-policy-hash" })),
 }));
 
 describe("ExecutionEngineClient", () => {

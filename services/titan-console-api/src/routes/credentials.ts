@@ -9,6 +9,7 @@
 
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { Pool } from 'pg';
+import { z } from 'zod';
 import {
   CredentialProvider,
   CredentialType,
@@ -23,6 +24,36 @@ const pool = new Pool({
 interface AuthenticatedRequest extends FastifyRequest {
   user?: { id: string };
 }
+
+const ProviderSchema = z.enum(['bybit', 'binance', 'deribit', 'hyperliquid', 'gemini']);
+
+const ProviderParamsSchema = z.object({
+  provider: ProviderSchema,
+});
+
+const CredentialsBodySchema = z
+  .object({
+    provider: ProviderSchema,
+    credentials: z.object({
+      apiKey: z.string().min(1).optional(),
+      apiSecret: z.string().min(1).optional(),
+    }),
+    metadata: z
+      .object({
+        testnet: z.boolean().optional(),
+        category: z.string().min(1).optional(),
+      })
+      .optional(),
+  })
+  .refine((v) => v.credentials.apiKey || v.credentials.apiSecret, {
+    message: 'At least one credential (apiKey/apiSecret) is required',
+    path: ['credentials'],
+  });
+
+const InternalHeadersSchema = z.object({
+  'x-internal-auth': z.string().min(1),
+  'x-operator-id': z.string().min(1),
+});
 
 interface CredentialBody {
   provider: CredentialProvider;
@@ -69,8 +100,14 @@ async function logAudit(
 
 export default async function credentialsRoutes(fastify: FastifyInstance) {
   // List all credentials for the user (redacted)
-  fastify.get('/api/credentials', async (request: FastifyRequest, _reply: FastifyReply) => {
-    const userId = (request as AuthenticatedRequest).user?.id || 'default-user';
+  fastify.get(
+    '/api/credentials',
+    { onRequest: [fastify.authenticate] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = (request as AuthenticatedRequest).user?.id;
+      if (!userId) {
+        return reply.status(401).send({ error: 'Unauthorized' });
+      }
     const vault = getCredentialVault();
 
     const result = await pool.query(
@@ -114,15 +151,20 @@ export default async function credentialsRoutes(fastify: FastifyInstance) {
     );
 
     return { credentials: grouped };
-  });
+    },
+  );
 
   // Add or update credentials for a provider
-  fastify.post(
+  fastify.post<{ Body: CredentialBody }>(
     '/api/credentials',
-    async (request: FastifyRequest<{ Body: CredentialBody }>, reply: FastifyReply) => {
-      const userId = (request as AuthenticatedRequest).user?.id || 'default-user';
+    { onRequest: [fastify.authenticate] },
+    async (request, reply: FastifyReply) => {
+      const userId = (request as AuthenticatedRequest).user?.id;
+      if (!userId) {
+        return reply.status(401).send({ error: 'Unauthorized' });
+      }
       const vault = getCredentialVault();
-      const { provider, credentials, metadata = {} } = request.body;
+      const { provider, credentials, metadata = {} } = CredentialsBodySchema.parse(request.body);
 
       if (!provider || !credentials) {
         return reply.status(400).send({
@@ -196,11 +238,15 @@ export default async function credentialsRoutes(fastify: FastifyInstance) {
   );
 
   // Delete credentials for a provider
-  fastify.delete(
+  fastify.delete<{ Params: { provider: string } }>(
     '/api/credentials/:provider',
-    async (request: FastifyRequest<{ Params: { provider: string } }>, _reply: FastifyReply) => {
-      const userId = (request as AuthenticatedRequest).user?.id || 'default-user';
-      const { provider } = request.params;
+    { onRequest: [fastify.authenticate] },
+    async (request, reply: FastifyReply) => {
+      const userId = (request as AuthenticatedRequest).user?.id;
+      if (!userId) {
+        return reply.status(401).send({ error: 'Unauthorized' });
+      }
+      const { provider } = ProviderParamsSchema.parse(request.params);
 
       // Get credential IDs for audit
       const existing = await pool.query(
@@ -238,12 +284,16 @@ export default async function credentialsRoutes(fastify: FastifyInstance) {
   );
 
   // Test connection for a provider
-  fastify.post(
+  fastify.post<{ Params: { provider: string } }>(
     '/api/credentials/:provider/test',
-    async (request: FastifyRequest<{ Params: { provider: string } }>, reply: FastifyReply) => {
-      const userId = (request as AuthenticatedRequest).user?.id || 'default-user';
+    { onRequest: [fastify.authenticate] },
+    async (request, reply: FastifyReply) => {
+      const userId = (request as AuthenticatedRequest).user?.id;
+      if (!userId) {
+        return reply.status(401).send({ error: 'Unauthorized' });
+      }
       const vault = getCredentialVault();
-      const { provider } = request.params;
+      const { provider } = ProviderParamsSchema.parse(request.params);
 
       // Fetch credentials
       const result = await pool.query(
@@ -329,18 +379,24 @@ export default async function credentialsRoutes(fastify: FastifyInstance) {
   );
 
   // Get credentials for service (internal, via NATS usually)
-  fastify.get(
+  fastify.get<{ Params: { provider: string } }>(
     '/api/credentials/:provider/internal',
-    async (request: FastifyRequest<{ Params: { provider: string } }>, reply: FastifyReply) => {
-      const userId = (request as AuthenticatedRequest).user?.id || 'default-user';
-      const vault = getCredentialVault();
-      const { provider } = request.params;
+    async (request, reply: FastifyReply) => {
+      const { provider } = ProviderParamsSchema.parse(request.params);
+
+      const headersParse = InternalHeadersSchema.safeParse(request.headers);
+      if (!headersParse.success) {
+        return reply.status(400).send({ error: 'Missing internal auth headers' });
+      }
 
       // Verify internal call (should be via NATS or internal service)
-      const authHeader = request.headers['x-internal-auth'];
-      if (authHeader !== process.env.INTERNAL_AUTH_SECRET) {
+      const internalAuth = headersParse.data['x-internal-auth'];
+      if (internalAuth !== process.env.INTERNAL_AUTH_SECRET) {
         return reply.status(403).send({ error: 'Forbidden' });
       }
+
+      const userId = headersParse.data['x-operator-id'];
+      const vault = getCredentialVault();
 
       const result = await pool.query(
         `SELECT credential_type, encrypted_value, iv, auth_tag, metadata

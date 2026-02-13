@@ -6,6 +6,9 @@ import { VolatilityClusterDetector } from './volatility-cluster.js';
 import { TitanSubject } from '@titan/shared';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { Logger } from '@titan/shared';
+
+const logger = Logger.getInstance('powerlaw:estimator');
 
 export interface PowerLawMetrics {
   symbol: string;
@@ -48,7 +51,7 @@ export class PowerLawEstimator {
       });
 
       this.js = this.nats.jetstream();
-      console.log(`Connected to NATS at ${this.natsUrl}`);
+      logger.info(`Connected to NATS at ${this.natsUrl}`);
 
       // Start periodic persistence (every 60s)
 
@@ -62,7 +65,7 @@ export class PowerLawEstimator {
       process.on('SIGINT', exitHandler);
       process.on('SIGTERM', exitHandler);
     } catch (error) {
-      console.error('Failed to connect to NATS:', error);
+      logger.error('Failed to connect to NATS:', error);
       throw error;
     }
   }
@@ -78,7 +81,7 @@ export class PowerLawEstimator {
       await this.nats.drain();
       await this.nats.close();
     }
-    console.log('PowerLawEstimator stopped cleanly.');
+    logger.info('PowerLawEstimator stopped cleanly.');
   }
 
   /**
@@ -153,9 +156,9 @@ export class PowerLawEstimator {
       await fs.mkdir(this.DATA_DIR, { recursive: true });
 
       await fs.writeFile(filePath, JSON.stringify(data), 'utf-8');
-      console.log(`[PowerLaw] State saved to ${filePath} (${this.histories.size} symbols)`);
+      logger.info(`[PowerLaw] State saved to ${filePath} (${this.histories.size} symbols)`);
     } catch (error) {
-      console.error('[PowerLaw] Failed to save state:', error);
+      logger.error('[PowerLaw] Failed to save state:', error);
     }
   }
 
@@ -166,7 +169,7 @@ export class PowerLawEstimator {
       try {
         await fs.access(filePath);
       } catch {
-        console.log('[PowerLaw] No existing state file found. Starting fresh.');
+        logger.info('[PowerLaw] No existing state file found. Starting fresh.');
         return;
       }
 
@@ -176,9 +179,9 @@ export class PowerLawEstimator {
       const validEntries = Object.entries(data).filter(([, history]) => Array.isArray(history));
       this.histories = new Map(validEntries);
       const loadedSymbols = validEntries.length;
-      console.log(`[PowerLaw] State loaded from ${filePath} (${loadedSymbols} symbols)`);
+      logger.info(`[PowerLaw] State loaded from ${filePath} (${loadedSymbols} symbols)`);
     } catch (error) {
-      console.error('[PowerLaw] Failed to load state:', error);
+      logger.error('[PowerLaw] Failed to load state:', error);
     }
   }
 }
