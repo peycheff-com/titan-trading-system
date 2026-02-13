@@ -18,6 +18,7 @@ pub struct OkxAdapter {
     secret_key: String,
     passphrase: String,
     base_url: String,
+    simulated_trading: bool,
     client: Client,
     http_limiter: TokenBucket,
 }
@@ -47,17 +48,10 @@ impl OkxAdapter {
             ExchangeError::Configuration("OKX_PASSPHRASE not set (check env)".to_string())
         })?;
 
-        let base_url = env::var("OKX_BASE_URL").unwrap_or_else(|_| {
-            if config.map(|c| c.testnet).unwrap_or(false) {
-                // OKX Demo Trading URL (simulated) or just use mainnet with test flag?
-                // OKX uses the same URL for testnet usually but with header?
-                // Actually OKX has a separate URL for demo trading sometimes, or just a flag.
-                // For now, default to mainnet URL:
-                "https://www.okx.com".to_string()
-            } else {
-                "https://www.okx.com".to_string()
-            }
-        });
+        let simulated_trading = config.map(|c| c.testnet).unwrap_or(false);
+
+        let base_url = env::var("OKX_BASE_URL")
+            .unwrap_or_else(|_| "https://www.okx.com".to_string());
 
         // Rate Limits: OKX V5 roughly 10-20 req/2s depending on tier.
         // Conservative: 5 req/s.
@@ -69,6 +63,7 @@ impl OkxAdapter {
             secret_key,
             passphrase,
             base_url,
+            simulated_trading,
             client: Client::new(),
             http_limiter,
         })
@@ -105,6 +100,11 @@ impl OkxAdapter {
             .header("OK-ACCESS-PASSPHRASE", &self.passphrase)
             .header("Content-Type", "application/json");
 
+        // OKX uses x-simulated-trading header for demo/testnet mode
+        if self.simulated_trading {
+            request = request.header("x-simulated-trading", "1");
+        }
+
         if !body_str.is_empty() {
             request = request.body(body_str);
         }
@@ -130,14 +130,13 @@ impl OkxAdapter {
         let json: serde_json::Value = serde_json::from_str(&text)
             .map_err(|e| ExchangeError::Api(format!("Parse error: {}", e)))?;
 
-        if let Some(code) = json["code"].as_str() {
-            if code != "0" {
+        if let Some(code) = json["code"].as_str()
+            && code != "0" {
                 return Err(ExchangeError::Api(format!(
                     "OKX API Error {}: {}",
                     code, json["msg"]
                 )));
             }
-        }
 
         Ok(text)
     }

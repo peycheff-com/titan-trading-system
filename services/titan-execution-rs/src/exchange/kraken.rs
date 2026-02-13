@@ -41,8 +41,13 @@ impl KrakenAdapter {
                 )
             })?;
 
-        let base_url =
-            env::var("KRAKEN_BASE_URL").unwrap_or_else(|_| "https://api.kraken.com".to_string());
+        let base_url = env::var("KRAKEN_BASE_URL").unwrap_or_else(|_| {
+            if config.map(|c| c.testnet).unwrap_or(false) {
+                "https://api.demo-futures.kraken.com".to_string()
+            } else {
+                "https://api.kraken.com".to_string()
+            }
+        });
 
         // Kraken limits are tier based. Start conservative.
         // Approx 15 req/s (Counter increases, but basic limit).
@@ -126,8 +131,8 @@ impl KrakenAdapter {
         let json: serde_json::Value = serde_json::from_str(&text)
             .map_err(|e| ExchangeError::Api(format!("Parse error: {}", e)))?;
 
-        if let Some(err_arr) = json["error"].as_array() {
-            if !err_arr.is_empty() {
+        if let Some(err_arr) = json["error"].as_array()
+            && !err_arr.is_empty() {
                 // Return generic API error (or combine errors)
                 let msgs: Vec<String> = err_arr
                     .iter()
@@ -138,7 +143,6 @@ impl KrakenAdapter {
                     msgs.join(", ")
                 )));
             }
-        }
 
         Ok(text)
     }
@@ -280,7 +284,68 @@ impl ExchangeAdapter for KrakenAdapter {
     }
 
     async fn get_positions(&self) -> Result<Vec<Position>, ExchangeError> {
-        // Spot -> empty
-        Ok(Vec::new())
+        // Kraken Spot margin positions via /0/private/OpenPositions
+        let path = "/0/private/OpenPositions";
+        let resp_text = self.send_private_request(path, None).await?;
+
+        let json: serde_json::Value =
+            serde_json::from_str(&resp_text).map_err(|e| ExchangeError::Api(e.to_string()))?;
+        let result = &json["result"];
+
+        let mut positions = Vec::new();
+
+        if let Some(pos_map) = result.as_object() {
+            for (_pos_id, pos_data) in pos_map {
+                let symbol = pos_data["pair"].as_str().unwrap_or("").to_string();
+                let vol_str = pos_data["vol"].as_str().unwrap_or("0");
+                let vol = Decimal::from_str(vol_str).unwrap_or(Decimal::ZERO);
+
+                if vol.is_zero() {
+                    continue;
+                }
+
+                let cost_str = pos_data["cost"].as_str().unwrap_or("0");
+                let cost = Decimal::from_str(cost_str).unwrap_or(Decimal::ZERO);
+                let entry_price = if !vol.is_zero() {
+                    cost / vol
+                } else {
+                    Decimal::ZERO
+                };
+
+                let type_str = pos_data["type"].as_str().unwrap_or("buy");
+                let side = if type_str == "sell" {
+                    Side::Short
+                } else {
+                    Side::Long
+                };
+
+                let net_str = pos_data["net"].as_str().unwrap_or("0");
+                let unrealized_pnl = Decimal::from_str(net_str).unwrap_or(Decimal::ZERO);
+
+                positions.push(Position {
+                    symbol,
+                    side,
+                    size: vol.abs(),
+                    entry_price,
+                    stop_loss: Decimal::ZERO,
+                    take_profits: vec![],
+                    signal_id: "EXCHANGE_FETCHED".to_string(),
+                    opened_at: Utc::now(),
+                    regime_state: None,
+                    phase: None,
+                    metadata: None,
+                    exchange: Some("KRAKEN".to_string()),
+                    position_mode: None,
+                    realized_pnl: Decimal::ZERO,
+                    unrealized_pnl,
+                    fees_paid: Decimal::ZERO,
+                    funding_paid: Decimal::ZERO,
+                    last_mark_price: None,
+                    last_update_ts: Utc::now().timestamp_millis(),
+                });
+            }
+        }
+
+        Ok(positions)
     }
 }

@@ -81,8 +81,8 @@ impl DriftDetector {
                 None
             };
 
-            if let Some(bps) = deviation {
-                if bps > self.spread_threshold_bps {
+            if let Some(bps) = deviation
+                && bps > self.spread_threshold_bps {
                     reports.push(DriftReport {
                         signal_id: intent.signal_id.clone(),
                         symbol: intent.symbol.clone(),
@@ -97,7 +97,6 @@ impl DriftDetector {
                         timestamp: now,
                     });
                 }
-            }
         }
 
         // 3. Class C: Correlation (Placeholder)

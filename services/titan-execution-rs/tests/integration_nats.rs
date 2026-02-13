@@ -45,7 +45,8 @@ async fn test_full_execution_flow() {
         .try_init();
 
     // 1. Core Setup
-    std::env::set_var("HMAC_SECRET", "test-secret-123");
+    // SAFETY: Set before any async runtime spawns threads
+    unsafe { std::env::set_var("HMAC_SECRET", "test-secret-123"); }
     let market_data = Arc::new(MarketDataEngine::new(None));
     let halt = Arc::new(GlobalHalt::new());
     let (persistence, _db_path) = create_test_persistence();
@@ -211,13 +212,12 @@ async fn test_full_execution_flow() {
                     .and_then(|p| p.get("signal_id"))
                     .or_else(|| data.get("signal_id"));
 
-                if let Some(id_val) = signal_check {
-                    if id_val == &signal_id {
+                if let Some(id_val) = signal_check
+                    && id_val == &signal_id {
                         println!("✅ Verified Fill: {:?}", data);
                         fill_received = true;
                         break;
                     }
-                }
             }
             Some(msg) = dlq_sub.next() => {
                 let payload = msg.payload;
@@ -226,11 +226,10 @@ async fn test_full_execution_flow() {
                 let data: Value = serde_json::from_slice(&payload).unwrap();
                 // Check if it's our signal (DLQ payload wrapper might vary)
                 // Titan DLQ structure: { payload: { ... }, error: ... }
-                if let Some(inner) = data.get("payload") {
-                     if inner["signal_id"] == signal_id {
+                if let Some(inner) = data.get("payload")
+                     && inner["signal_id"] == signal_id {
                          panic!("Intent rejected to DLQ: {:?}", data);
                      }
-                }
             }
             _ = &mut timeout => {
                 break;

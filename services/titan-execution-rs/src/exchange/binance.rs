@@ -299,16 +299,14 @@ impl ExchangeAdapter for BinanceAdapter {
 
         for entry in balances {
             if entry.get("asset").and_then(|v| v.as_str()) == Some(asset) {
-                if let Some(available) = entry.get("availableBalance").and_then(|v| v.as_str()) {
-                    if let Ok(value) = Decimal::from_str_exact(available) {
+                if let Some(available) = entry.get("availableBalance").and_then(|v| v.as_str())
+                    && let Ok(value) = Decimal::from_str_exact(available) {
                         return Ok(value);
                     }
-                }
-                if let Some(balance) = entry.get("balance").and_then(|v| v.as_str()) {
-                    if let Ok(value) = Decimal::from_str_exact(balance) {
+                if let Some(balance) = entry.get("balance").and_then(|v| v.as_str())
+                    && let Ok(value) = Decimal::from_str_exact(balance) {
                         return Ok(value);
                     }
-                }
             }
         }
 

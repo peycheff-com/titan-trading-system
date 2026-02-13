@@ -41,8 +41,13 @@ impl CoinbaseAdapter {
                 )
             })?;
 
-        let base_url = env::var("COINBASE_BASE_URL")
-            .unwrap_or_else(|_| "https://api.coinbase.com".to_string());
+        let base_url = env::var("COINBASE_BASE_URL").unwrap_or_else(|_| {
+            if config.map(|c| c.testnet).unwrap_or(false) {
+                "https://api-public.sandbox.exchange.coinbase.com".to_string()
+            } else {
+                "https://api.coinbase.com".to_string()
+            }
+        });
 
         // Coinbase Advanced Trade limits: ~10 requests per second (varies)
         let rate_limit = config.and_then(|c| c.rate_limit).unwrap_or(10) as f64;

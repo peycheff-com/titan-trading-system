@@ -1,7 +1,7 @@
 [package]
 name = "titan-execution-rs"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 authors = ["Titan Team"]
 
 [dependencies]
@@ -22,6 +22,7 @@ actix-cors = "0.7"
 async-trait = "0.1"
 tokio-tungstenite = { version = "0.21", features = ["native-tls"] }
 redb = "1.5.0"
+rmp-serde = "1.1"
 
 reqwest = { version = "0.11", features = ["json", "blocking"] }
 hmac = "0.12.1"
@@ -31,6 +32,7 @@ hex = "0.4.3"
 ed25519-dalek = { version = "2.1", features = ["rand_core"] }
 dydx = "0.3.0"
 base64 = "0.22"
+bs58 = "0.5"
 ethers = { version = "2.0", features = ["ws", "rustls"] }
 url = "2.5.8"
 dashmap = "5.5"

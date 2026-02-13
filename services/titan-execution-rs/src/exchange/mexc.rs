@@ -12,14 +12,13 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 type HmacSha256 = Hmac<Sha256>;
 
-const BASE_URL: &str = "https://contract.mexc.com";
-
 use crate::config::ExchangeConfig;
 
 pub struct MexcAdapter {
     client: Client,
     api_key: String,
     api_secret: String,
+    base_url: String,
 }
 
 pub(crate) fn mexc_side_code(side: Side, reduce_only: bool) -> i32 {
@@ -43,10 +42,14 @@ impl MexcAdapter {
             .or_else(|| env::var("MEXC_SECRET_KEY").ok())
             .ok_or_else(|| ExchangeError::Configuration("MEXC_SECRET_KEY not set".to_string()))?;
 
+        let base_url = env::var("MEXC_BASE_URL")
+            .unwrap_or_else(|_| "https://contract.mexc.com".to_string());
+
         Ok(Self {
             client: Client::new(),
             api_key,
             api_secret,
+            base_url,
         })
     }
 
@@ -85,7 +88,7 @@ impl MexcAdapter {
 
         let signature = self.sign(&timestamp, &body_str)?;
 
-        let url = format!("{}{}", BASE_URL, endpoint);
+        let url = format!("{}{}", self.base_url, endpoint);
         let mut request = self
             .client
             .request(method, &url)
@@ -135,7 +138,7 @@ impl ExchangeAdapter for MexcAdapter {
     async fn init(&self) -> Result<(), ExchangeError> {
         // Test connection
         // /api/v1/contract/ping
-        let url = format!("{}/api/v1/contract/ping", BASE_URL);
+        let url = format!("{}/api/v1/contract/ping", self.base_url);
         let resp = self
             .client
             .get(&url)
@@ -241,8 +244,8 @@ impl ExchangeAdapter for MexcAdapter {
                 .unwrap_or("")
                 .to_uppercase();
 
-            if symbol == asset_upper {
-                if let Some(balance) = entry
+            if symbol == asset_upper
+                && let Some(balance) = entry
                     .get("availableBalance")
                     .and_then(|v| v.as_str())
                     .or_else(|| entry.get("available").and_then(|v| v.as_str()))
@@ -251,7 +254,6 @@ impl ExchangeAdapter for MexcAdapter {
                     return Decimal::from_str_exact(balance)
                         .map_err(|e| ExchangeError::Api(format!("Invalid balance format: {}", e)));
                 }
-            }
         }
 
         Err(ExchangeError::Api(format!(

@@ -166,11 +166,10 @@ impl OrderManager {
         let mut exec_price = params.limit_price.unwrap_or(Decimal::ZERO);
 
         // If market order (price 0), try to get mid price
-        if exec_price.is_zero() {
-            if let Some(ticker) = self.market_data.get_ticker(&params.symbol) {
+        if exec_price.is_zero()
+            && let Some(ticker) = self.market_data.get_ticker(&params.symbol) {
                 exec_price = (ticker.best_bid + ticker.best_ask) / Decimal::from(2);
             }
-        }
 
         let notional = if !exec_price.is_zero() {
             (params.size * exec_price).to_f64().unwrap_or(0.0)

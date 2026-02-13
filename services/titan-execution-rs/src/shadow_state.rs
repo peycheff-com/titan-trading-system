@@ -425,11 +425,10 @@ impl ShadowState {
                     };
 
                     // Save State if NOT complete/removing (if removing, we delete later)
-                    if !is_complete {
-                        if let Err(e) = self.persistence.save_intent(intent) {
+                    if !is_complete
+                        && let Err(e) = self.persistence.save_intent(intent) {
                             error!("Failed to update intent state: {}", e);
                         }
-                    }
 
                     (is_complete, Some(intent.clone()))
                 }

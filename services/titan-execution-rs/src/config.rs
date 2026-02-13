@@ -22,6 +22,12 @@ pub struct Exchanges {
     pub cryptocom: Option<ExchangeConfig>,
     pub dydx: Option<ExchangeConfig>,
     pub uniswap: Option<ExchangeConfig>,
+    pub pancakeswap: Option<ExchangeConfig>,
+    pub sushiswap: Option<ExchangeConfig>,
+    pub curve: Option<ExchangeConfig>,
+    pub jupiter: Option<ExchangeConfig>,
+    pub gmx: Option<ExchangeConfig>,
+    pub hyperliquid: Option<ExchangeConfig>,
     #[serde(flatten)]
     pub others: HashMap<String, ExchangeConfig>,
 }
@@ -119,11 +125,10 @@ impl Settings {
     pub fn validate(&self) -> Result<(), ConfigError> {
         // 1. Validate NATS URL (Execution Config)
         if let Some(exec) = &self.execution {
-            if let Some(nats_url) = &exec.nats_url {
-                if nats_url.trim().is_empty() {
+            if let Some(nats_url) = &exec.nats_url
+                && nats_url.trim().is_empty() {
                     return Err(ConfigError::Message("NATS URL cannot be empty".to_string()));
                 }
-            }
 
             // Validate Risk Guard (GAP-03)
             let risk = &exec.risk_guard;
@@ -151,8 +156,8 @@ impl Settings {
             let validate_exchange = |name: &str,
                                      config: &Option<ExchangeConfig>|
              -> Result<(), ConfigError> {
-                if let Some(c) = config {
-                    if c.enabled {
+                if let Some(c) = config
+                    && c.enabled {
                         if c.get_api_key().is_none() || c.get_api_key().unwrap().trim().is_empty() {
                             return Err(ConfigError::Message(format!(
                                 "Exchange '{}' is enabled but API Key is missing",
@@ -168,7 +173,6 @@ impl Settings {
                             )));
                         }
                     }
-                }
                 Ok(())
             };
 
@@ -190,8 +194,8 @@ impl Settings {
         }
 
         // 3. Validate Routing Config
-        if let Some(exec) = &self.execution {
-            if let Some(routing) = &exec.routing {
+        if let Some(exec) = &self.execution
+            && let Some(routing) = &exec.routing {
                 let validate_weights = |name: &str,
                                         weights: &Option<HashMap<String, f64>>|
                  -> Result<(), ConfigError> {
@@ -219,7 +223,6 @@ impl Settings {
                     validate_weights(source, &rule.weights)?;
                 }
             }
-        }
 
         Ok(())
     }

@@ -46,12 +46,11 @@ impl BybitConnector {
         let msg: BybitWsMessage =
             serde_json::from_str(text).map_err(|e| MarketDataError::Parse(e.to_string()))?;
 
-        if let Some(op) = msg.op {
-            if op == "pong" {
+        if let Some(op) = msg.op
+            && op == "pong" {
                 // debug!("Received pong");
                 return Ok(());
             }
-        }
 
         if let Some(topic) = msg.topic {
             // info!("Bybit Topic: {}", topic);

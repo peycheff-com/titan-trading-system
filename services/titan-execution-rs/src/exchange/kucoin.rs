@@ -45,8 +45,13 @@ impl KucoinAdapter {
             ))?;
 
         // Standard KuCoin API URL
-        let base_url = std::env::var("KUCOIN_BASE_URL")
-            .unwrap_or_else(|_| "https://api.kucoin.com".to_string());
+        let base_url = std::env::var("KUCOIN_BASE_URL").unwrap_or_else(|_| {
+            if config.testnet {
+                "https://api-sandbox-futures.kucoin.com".to_string()
+            } else {
+                "https://api.kucoin.com".to_string()
+            }
+        });
 
         Ok(Self {
             api_key,
@@ -147,15 +152,14 @@ impl KucoinAdapter {
         let json: Value =
             serde_json::from_str(&text).map_err(|e| ExchangeError::Parse(e.to_string()))?;
 
-        if let Some(code) = json.get("code") {
-            if code.as_str() != Some("200000") {
+        if let Some(code) = json.get("code")
+            && code.as_str() != Some("200000") {
                 return Err(ExchangeError::Api(format!(
                     "KuCoin API Error: {} - {}",
                     code,
                     json.get("msg").unwrap_or(&Value::Null)
                 )));
             }
-        }
 
         // KuCoin response usually wrapped in "data"
         if let Some(data) = json.get("data") {
@@ -307,15 +311,14 @@ impl ExchangeAdapter for KucoinAdapter {
         let mut total_balance = Decimal::zero();
 
         for acc in accounts {
-            if let Some(currency) = acc.get("currency").and_then(|c| c.as_str()) {
-                if currency == asset {
+            if let Some(currency) = acc.get("currency").and_then(|c| c.as_str())
+                && currency == asset {
                     // Check type: trade (spot) or main? Usually we want trade/margin available
                     if let Some(available) = acc.get("available").and_then(|a| a.as_str()) {
                         let amount = Decimal::from_str(available).unwrap_or(Decimal::zero());
                         total_balance += amount;
                     }
                 }
-            }
         }
 
         Ok(total_balance)
@@ -326,10 +329,78 @@ impl ExchangeAdapter for KucoinAdapter {
     }
 
     async fn get_positions(&self) -> Result<Vec<Position>, ExchangeError> {
-        // Spot has no positions.
-        // If this adapter supports Futures, we need different endpoints (/api/v1/positions).
-        // Let's assume standard KuCoin Spot for now as base.
-        // Return empty.
-        Ok(Vec::new())
+        // KuCoin Futures positions: GET /api/v1/positions
+        let positions_data: Vec<Value> = self
+            .request(reqwest::Method::GET, "/api/v1/positions", None)
+            .await
+            .unwrap_or_default();
+
+        let mut positions = Vec::new();
+
+        for pos_data in positions_data {
+            let symbol = pos_data
+                .get("symbol")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+
+            let current_qty = pos_data
+                .get("currentQty")
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0);
+
+            if current_qty == 0 {
+                continue;
+            }
+
+            let avg_entry_str = pos_data
+                .get("avgEntryPrice")
+                .and_then(|v| v.as_str())
+                .or_else(|| pos_data.get("avgEntryPrice").and_then(|v| v.as_f64().map(|_| "")).and(None))
+                .unwrap_or("0");
+            let entry_price = Decimal::from_str(avg_entry_str).unwrap_or(Decimal::zero());
+
+            let side = if current_qty > 0 {
+                Side::Long
+            } else {
+                Side::Short
+            };
+
+            let unrealized_pnl = pos_data
+                .get("unrealisedPnl")
+                .and_then(|v| v.as_f64())
+                .and_then(Decimal::from_f64)
+                .unwrap_or(Decimal::zero());
+
+            let realized_pnl = pos_data
+                .get("realisedPnl")
+                .and_then(|v| v.as_f64())
+                .and_then(Decimal::from_f64)
+                .unwrap_or(Decimal::zero());
+
+            positions.push(Position {
+                symbol,
+                side,
+                size: Decimal::from(current_qty.unsigned_abs()),
+                entry_price,
+                stop_loss: Decimal::ZERO,
+                take_profits: vec![],
+                signal_id: "EXCHANGE_FETCHED".to_string(),
+                opened_at: Utc::now(),
+                regime_state: None,
+                phase: None,
+                metadata: None,
+                exchange: Some("KUCOIN".to_string()),
+                position_mode: None,
+                realized_pnl,
+                unrealized_pnl,
+                fees_paid: Decimal::ZERO,
+                funding_paid: Decimal::ZERO,
+                last_mark_price: None,
+                last_update_ts: Utc::now().timestamp_millis(),
+            });
+        }
+
+        Ok(positions)
     }
 }

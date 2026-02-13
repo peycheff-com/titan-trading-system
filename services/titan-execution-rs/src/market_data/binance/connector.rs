@@ -49,11 +49,10 @@ impl BinanceConnector {
             }
         } else {
             // Check if direct message (unlikely for /stream endpoint but possible)
-            if let Ok(msg) = serde_json::from_str::<BinanceWsMessage>(text) {
-                if let Some(trade) = msg.to_model() {
+            if let Ok(msg) = serde_json::from_str::<BinanceWsMessage>(text)
+                && let Some(trade) = msg.to_model() {
                     let _ = tx.send(MarketDataEvent::Trade(trade)).await;
                 }
-            }
         }
         Ok(())
     }

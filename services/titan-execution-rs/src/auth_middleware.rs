@@ -75,13 +75,11 @@ where
                 ));
             }
 
-            if let Some(header) = req.headers().get("x-api-key") {
-                if let Ok(key_str) = header.to_str() {
-                    if key_str == api_key_env {
+            if let Some(header) = req.headers().get("x-api-key")
+                && let Ok(key_str) = header.to_str()
+                    && key_str == api_key_env {
                         return srv.call(req).await;
                     }
-                }
-            }
 
             // Reject
             Err(actix_web::error::ErrorUnauthorized("Invalid API Key"))

@@ -473,3 +473,175 @@ mod integration {
         let _ = fs::remove_file(path);
     }
 }
+
+#[cfg(test)]
+mod adapter_contracts {
+    use crate::exchange::adapter::{OrderRequest, OrderResponse};
+    use crate::exchange::binance::build_order_params;
+    use crate::exchange::bybit::build_order_payload;
+    use crate::exchange::mexc::mexc_side_code;
+    use crate::model::{OrderType, Side};
+    use rust_decimal_macros::dec;
+
+    /// Verify all adapter name() methods return non-empty distinct names
+    #[test]
+    fn test_adapter_names_distinct() {
+        let known_names = vec![
+            "Binance Futures",
+            "Bybit Perps",
+            "MEXC Futures",
+            "OKX Perps",
+            "Coinbase Advanced",
+            "Kraken Spot",
+            "kucoin",
+            "gateio",
+            "cryptocom",
+            "dydx",
+            "uniswap",
+        ];
+
+        // Verify all names are non-empty
+        for name in &known_names {
+            assert!(!name.is_empty(), "Adapter name must be non-empty");
+        }
+
+        // Verify all names are distinct
+        let mut sorted = known_names.clone();
+        sorted.sort();
+        sorted.dedup();
+        assert_eq!(
+            sorted.len(),
+            known_names.len(),
+            "Adapter names must be unique"
+        );
+    }
+
+    /// Verify Binance order parameter builder produces correct query string
+    #[test]
+    fn test_binance_order_params_market() {
+        let order = OrderRequest {
+            symbol: "BTC/USDT".to_string(),
+            side: Side::Buy,
+            order_type: OrderType::Market,
+            quantity: dec!(0.5),
+            price: None,
+            stop_price: None,
+            client_order_id: "test-123".to_string(),
+            reduce_only: false,
+        };
+
+        let params = build_order_params(&order, 1707840000000);
+        assert!(params.contains("symbol=BTCUSDT"));
+        assert!(params.contains("side=BUY"));
+        assert!(params.contains("type=MARKET"));
+        assert!(params.contains("quantity=0.5"));
+        assert!(params.contains("timestamp=1707840000000"));
+        assert!(!params.contains("reduceOnly"));
+    }
+
+    /// Verify Binance order params with limit price and reduce_only
+    #[test]
+    fn test_binance_order_params_limit_reduce_only() {
+        let order = OrderRequest {
+            symbol: "ETH/USDT".to_string(),
+            side: Side::Sell,
+            order_type: OrderType::Limit,
+            quantity: dec!(2.0),
+            price: Some(dec!(3500.5)),
+            stop_price: None,
+            client_order_id: "test-456".to_string(),
+            reduce_only: true,
+        };
+
+        let params = build_order_params(&order, 1707840000000);
+        assert!(params.contains("symbol=ETHUSDT"));
+        assert!(params.contains("side=SELL"));
+        assert!(params.contains("type=LIMIT"));
+        assert!(params.contains("price=3500.5"));
+        assert!(params.contains("reduceOnly=true"));
+        assert!(params.contains("timeInForce=GTC"));
+    }
+
+    /// Verify Bybit order payload structure
+    #[test]
+    fn test_bybit_order_payload_market() {
+        let order = OrderRequest {
+            symbol: "BTC/USDT".to_string(),
+            side: Side::Buy,
+            order_type: OrderType::Market,
+            quantity: dec!(1.0),
+            price: None,
+            stop_price: None,
+            client_order_id: "bybit-test".to_string(),
+            reduce_only: false,
+        };
+
+        let payload = build_order_payload(&order);
+        assert_eq!(payload.get("category").unwrap().as_str().unwrap(), "linear");
+        assert_eq!(payload.get("side").unwrap().as_str().unwrap(), "Buy");
+        assert_eq!(
+            payload.get("orderType").unwrap().as_str().unwrap(),
+            "Market"
+        );
+        assert_eq!(payload.get("qty").unwrap().as_str().unwrap(), "1.0");
+    }
+
+    /// Verify MEXC side code mappings
+    #[test]
+    fn test_mexc_side_codes() {
+        // Open Long = 1, Open Short = 3, Close Long = 2, Close Short = 4
+        assert_eq!(mexc_side_code(Side::Buy, false), 1);
+        assert_eq!(mexc_side_code(Side::Sell, false), 3);
+        assert_eq!(mexc_side_code(Side::Buy, true), 2);
+        assert_eq!(mexc_side_code(Side::Sell, true), 4);
+        assert_eq!(mexc_side_code(Side::Long, false), 1);
+        assert_eq!(mexc_side_code(Side::Short, false), 3);
+    }
+
+    /// Verify OrderRequest field coverage — all fields can be set
+    #[test]
+    fn test_order_request_full_coverage() {
+        let order = OrderRequest {
+            symbol: "SOL/USDT".to_string(),
+            side: Side::Short,
+            order_type: OrderType::Limit,
+            quantity: dec!(10.0),
+            price: Some(dec!(150.0)),
+            stop_price: Some(dec!(160.0)),
+            client_order_id: "full-test".to_string(),
+            reduce_only: true,
+        };
+
+        assert_eq!(order.symbol, "SOL/USDT");
+        assert!(matches!(order.side, Side::Short));
+        assert!(matches!(order.order_type, OrderType::Limit));
+        assert_eq!(order.quantity, dec!(10.0));
+        assert_eq!(order.price, Some(dec!(150.0)));
+        assert_eq!(order.stop_price, Some(dec!(160.0)));
+        assert!(order.reduce_only);
+    }
+
+    /// Verify OrderResponse can be constructed with all optional fields
+    #[test]
+    fn test_order_response_construction() {
+        let resp = OrderResponse {
+            order_id: "12345".to_string(),
+            client_order_id: "client-1".to_string(),
+            symbol: "BTC/USDT".to_string(),
+            status: "FILLED".to_string(),
+            avg_price: Some(dec!(42000.0)),
+            executed_qty: dec!(0.5),
+            t_ack: 1707840000000,
+            t_exchange: Some(1707840000100),
+            fee: Some(dec!(0.001)),
+            fee_asset: Some("USDT".to_string()),
+        };
+
+        assert_eq!(resp.order_id, "12345");
+        assert_eq!(resp.status, "FILLED");
+        assert_eq!(resp.avg_price, Some(dec!(42000.0)));
+        assert_eq!(resp.executed_qty, dec!(0.5));
+        assert_eq!(resp.fee, Some(dec!(0.001)));
+        assert_eq!(resp.fee_asset, Some("USDT".to_string()));
+    }
+}

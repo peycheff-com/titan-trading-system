@@ -14,13 +14,13 @@ use crate::rate_limiter::TokenBucket;
 
 type HmacSha256 = Hmac<Sha256>;
 
-const BASE_URL: &str = "https://api.bybit.com";
 const RECV_WINDOW: &str = "5000";
 
 pub struct BybitAdapter {
     client: Client,
     api_key: String,
     api_secret: String,
+    base_url: String,
     order_limiter: TokenBucket,
     query_limiter: TokenBucket,
 }
@@ -53,10 +53,19 @@ impl BybitAdapter {
             .parse::<f64>()
             .unwrap_or(50.0);
 
+        let base_url = env::var("BYBIT_BASE_URL").unwrap_or_else(|_| {
+            if config.map(|c| c.testnet).unwrap_or(false) {
+                "https://api-testnet.bybit.com".to_string()
+            } else {
+                "https://api.bybit.com".to_string()
+            }
+        });
+
         Ok(Self {
             client: Client::new(),
             api_key,
             api_secret,
+            base_url,
             order_limiter: TokenBucket::new(20, order_rps), // Burst 20, Custom RPS
             query_limiter: TokenBucket::new(50, query_rps), // Burst 50, Higher RPS
         })
@@ -116,9 +125,9 @@ impl BybitAdapter {
         let signature = self.sign(&timestamp, &params_for_sign)?;
 
         let url = if method == Method::GET && !query_string.is_empty() {
-            format!("{}{}?{}", BASE_URL, endpoint_path, query_string)
+            format!("{}{}?{}", self.base_url, endpoint_path, query_string)
         } else {
-            format!("{}{}", BASE_URL, endpoint_path)
+            format!("{}{}", self.base_url, endpoint_path)
         };
         let mut request = self
             .client
@@ -189,11 +198,10 @@ pub(crate) fn build_order_payload(order: &OrderRequest) -> serde_json::Value {
         "reduceOnly": order.reduce_only
     });
 
-    if let Some(price) = order.price {
-        if let Some(obj) = payload.as_object_mut() {
+    if let Some(price) = order.price
+        && let Some(obj) = payload.as_object_mut() {
             obj.insert("price".to_string(), serde_json::json!(price.to_string()));
         }
-    }
 
     payload
 }
@@ -292,7 +300,7 @@ impl ExchangeAdapter for BybitAdapter {
         let query = format!("accountType=UNIFIED&coin={}", asset);
         let signature = self.sign(&timestamp, &query)?;
 
-        let url = format!("{}{}?{}", BASE_URL, "/v5/account/wallet-balance", query);
+        let url = format!("{}{}?{}", self.base_url, "/v5/account/wallet-balance", query);
         let resp = self
             .client
             .get(&url)

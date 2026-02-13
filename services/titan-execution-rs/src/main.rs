@@ -25,6 +25,12 @@ use titan_execution_rs::exchange::mexc::MexcAdapter;
 use titan_execution_rs::exchange::okx::OkxAdapter;
 use titan_execution_rs::exchange::router::ExecutionRouter;
 use titan_execution_rs::exchange::uniswap::UniswapAdapter;
+use titan_execution_rs::exchange::pancakeswap::PancakeSwapAdapter;
+use titan_execution_rs::exchange::sushiswap::SushiSwapAdapter;
+use titan_execution_rs::exchange::curve::CurveAdapter;
+use titan_execution_rs::exchange::jupiter::JupiterAdapter;
+use titan_execution_rs::exchange::gmx::GmxAdapter;
+use titan_execution_rs::exchange::hyperliquid::HyperliquidAdapter;
 use titan_execution_rs::execution_constraints::ConstraintsStore;
 use titan_execution_rs::market_data::engine::MarketDataEngine;
 use titan_execution_rs::nats_engine;
@@ -61,7 +67,8 @@ fn load_secrets_from_files() {
         if let Ok(contents) = fs::read_to_string(&value) {
             let trimmed = contents.trim().to_string();
             if !trimmed.is_empty() {
-                env::set_var(target_key, trimmed);
+                // SAFETY: Called once before #[tokio::main] spawns any threads
+                unsafe { env::set_var(target_key, trimmed); }
             }
         }
     }
@@ -527,6 +534,114 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("🚫 Uniswap disabled or missing in config");
     }
 
+    // 12. PancakeSwap
+    let pancakeswap_config = exchanges.and_then(|e| e.pancakeswap.as_ref());
+    if pancakeswap_config.map(|c| c.enabled).unwrap_or(false) {
+        match PancakeSwapAdapter::new(pancakeswap_config) {
+            Ok(adapter) => {
+                let pancakeswap_adapter = Arc::new(adapter);
+                if (pancakeswap_adapter.init().await).is_ok() {
+                    router.register("pancakeswap", pancakeswap_adapter);
+                } else {
+                    error!("❌ Failed to initialize PancakeSwap adapter");
+                }
+            }
+            Err(e) => error!("❌ Failed to create PancakeSwap adapter: {}", e),
+        }
+    } else {
+        info!("🚫 PancakeSwap disabled or missing in config");
+    }
+
+    // 13. SushiSwap
+    let sushiswap_config = exchanges.and_then(|e| e.sushiswap.as_ref());
+    if sushiswap_config.map(|c| c.enabled).unwrap_or(false) {
+        match SushiSwapAdapter::new(sushiswap_config) {
+            Ok(adapter) => {
+                let sushiswap_adapter = Arc::new(adapter);
+                if (sushiswap_adapter.init().await).is_ok() {
+                    router.register("sushiswap", sushiswap_adapter);
+                } else {
+                    error!("❌ Failed to initialize SushiSwap adapter");
+                }
+            }
+            Err(e) => error!("❌ Failed to create SushiSwap adapter: {}", e),
+        }
+    } else {
+        info!("🚫 SushiSwap disabled or missing in config");
+    }
+
+    // 14. Curve Finance
+    let curve_config = exchanges.and_then(|e| e.curve.as_ref());
+    if curve_config.map(|c| c.enabled).unwrap_or(false) {
+        match CurveAdapter::new(curve_config) {
+            Ok(adapter) => {
+                let curve_adapter = Arc::new(adapter);
+                if (curve_adapter.init().await).is_ok() {
+                    router.register("curve", curve_adapter);
+                } else {
+                    error!("❌ Failed to initialize Curve adapter");
+                }
+            }
+            Err(e) => error!("❌ Failed to create Curve adapter: {}", e),
+        }
+    } else {
+        info!("🚫 Curve disabled or missing in config");
+    }
+
+    // 15. Jupiter (Solana)
+    let jupiter_config = exchanges.and_then(|e| e.jupiter.as_ref());
+    if jupiter_config.map(|c| c.enabled).unwrap_or(false) {
+        match JupiterAdapter::new(jupiter_config) {
+            Ok(adapter) => {
+                let jupiter_adapter = Arc::new(adapter);
+                if (jupiter_adapter.init().await).is_ok() {
+                    router.register("jupiter", jupiter_adapter);
+                } else {
+                    error!("❌ Failed to initialize Jupiter adapter");
+                }
+            }
+            Err(e) => error!("❌ Failed to create Jupiter adapter: {}", e),
+        }
+    } else {
+        info!("🚫 Jupiter disabled or missing in config");
+    }
+
+    // 16. GMX V2 (Arbitrum Perps)
+    let gmx_config = exchanges.and_then(|e| e.gmx.as_ref());
+    if gmx_config.map(|c| c.enabled).unwrap_or(false) {
+        match GmxAdapter::new(gmx_config) {
+            Ok(adapter) => {
+                let gmx_adapter = Arc::new(adapter);
+                if (gmx_adapter.init().await).is_ok() {
+                    router.register("gmx", gmx_adapter);
+                } else {
+                    error!("❌ Failed to initialize GMX adapter");
+                }
+            }
+            Err(e) => error!("❌ Failed to create GMX adapter: {}", e),
+        }
+    } else {
+        info!("🚫 GMX disabled or missing in config");
+    }
+
+    // 17. Hyperliquid (L1 Perps)
+    let hyperliquid_config = exchanges.and_then(|e| e.hyperliquid.as_ref());
+    if hyperliquid_config.map(|c| c.enabled).unwrap_or(false) {
+        match HyperliquidAdapter::new(hyperliquid_config) {
+            Ok(adapter) => {
+                let hl_adapter = Arc::new(adapter);
+                if (hl_adapter.init().await).is_ok() {
+                    router.register("hyperliquid", hl_adapter);
+                } else {
+                    error!("❌ Failed to initialize Hyperliquid adapter");
+                }
+            }
+            Err(e) => error!("❌ Failed to create Hyperliquid adapter: {}", e),
+        }
+    } else {
+        info!("🚫 Hyperliquid disabled or missing in config");
+    }
+
     // --- Start NATS Engine ---
     let nats_handle = nats_engine::start_nats_engine(
         nats_client.clone(),
@@ -575,14 +690,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 }
             });
 
-            if let Ok(payload) = serde_json::to_vec(&snapshot) {
-                if let Err(e) = nats_for_truth
+            if let Ok(payload) = serde_json::to_vec(&snapshot)
+                && let Err(e) = nats_for_truth
                     .publish(subjects::EVT_EXECUTION_TRUTH, payload.into())
                     .await
                 {
                     tracing::error!("Failed to publish truth snapshot: {}", e);
                 }
-            }
         }
     });
 

@@ -38,8 +38,13 @@ impl CryptoComAdapter {
         ))?;
 
         // Crypto.com Exchange API URL
-        let base_url = std::env::var("CRYPTOCOM_BASE_URL")
-            .unwrap_or_else(|_| "https://api.crypto.com/v2".to_string());
+        let base_url = std::env::var("CRYPTOCOM_BASE_URL").unwrap_or_else(|_| {
+            if config.testnet {
+                "https://uat-api.3ona.co/v2".to_string()
+            } else {
+                "https://api.crypto.com/v2".to_string()
+            }
+        });
 
         Ok(Self {
             api_key,
@@ -172,15 +177,14 @@ impl CryptoComAdapter {
             serde_json::from_str(&text).map_err(|e| ExchangeError::Parse(e.to_string()))?;
 
         // Check for "code" in response. 0 is success usually.
-        if let Some(code) = json.get("code").and_then(|c| c.as_i64()) {
-            if code != 0 {
+        if let Some(code) = json.get("code").and_then(|c| c.as_i64())
+            && code != 0 {
                 return Err(ExchangeError::Api(format!(
                     "Crypto.com API Error {}: {}",
                     code,
                     json.get("message").unwrap_or(&Value::Null)
                 )));
             }
-        }
 
         // Result is usually in "result" field
         if let Some(result) = json.get("result") {
@@ -336,14 +340,12 @@ impl ExchangeAdapter for CryptoComAdapter {
         // Response: { accounts: [ { balance, available, currency, ... } ] }
         if let Some(accounts) = response.get("accounts").and_then(|a| a.as_array()) {
             for acc in accounts {
-                if let Some(curr) = acc.get("currency").and_then(|c| c.as_str()) {
-                    if curr == asset {
-                        if let Some(avail) = acc.get("available").and_then(|a| a.as_f64()) {
+                if let Some(curr) = acc.get("currency").and_then(|c| c.as_str())
+                    && curr == asset
+                        && let Some(avail) = acc.get("available").and_then(|a| a.as_f64()) {
                             return Decimal::from_f64(avail)
                                 .ok_or(ExchangeError::Parse("Invalid number".into()));
                         }
-                    }
-                }
             }
         }
 
@@ -355,6 +357,86 @@ impl ExchangeAdapter for CryptoComAdapter {
     }
 
     async fn get_positions(&self) -> Result<Vec<Position>, ExchangeError> {
-        Ok(Vec::new())
+        // Crypto.com: private/get-positions
+        let params = BTreeMap::new();
+        let response: Value = self
+            .send_request("private/get-positions", params)
+            .await
+            .unwrap_or_default();
+
+        let mut positions = Vec::new();
+
+        if let Some(position_list) = response.get("position_list").and_then(|p| p.as_array()) {
+            for pos_data in position_list {
+                let instrument = pos_data
+                    .get("instrument_name")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+
+                let quantity = pos_data
+                    .get("quantity")
+                    .and_then(|v| v.as_f64())
+                    .and_then(Decimal::from_f64)
+                    .unwrap_or(Decimal::zero());
+
+                if quantity.is_zero() {
+                    continue;
+                }
+
+                let _entry_price = pos_data
+                    .get("open_position_pnl")
+                    .and_then(|v| v.as_f64())
+                    .and_then(Decimal::from_f64)
+                    .unwrap_or(Decimal::zero());
+
+                let avg_price = pos_data
+                    .get("average_price")
+                    .and_then(|v| v.as_f64())
+                    .and_then(Decimal::from_f64)
+                    .unwrap_or(Decimal::zero());
+
+                let side_str = pos_data
+                    .get("side")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("BUY");
+
+                let side = if side_str == "SELL" {
+                    crate::model::Side::Short
+                } else {
+                    crate::model::Side::Long
+                };
+
+                let session_pnl = pos_data
+                    .get("session_pnl")
+                    .and_then(|v| v.as_f64())
+                    .and_then(Decimal::from_f64)
+                    .unwrap_or(Decimal::zero());
+
+                positions.push(Position {
+                    symbol: instrument,
+                    side,
+                    size: quantity.abs(),
+                    entry_price: avg_price,
+                    stop_loss: Decimal::ZERO,
+                    take_profits: vec![],
+                    signal_id: "EXCHANGE_FETCHED".to_string(),
+                    opened_at: Utc::now(),
+                    regime_state: None,
+                    phase: None,
+                    metadata: None,
+                    exchange: Some("CRYPTOCOM".to_string()),
+                    position_mode: None,
+                    realized_pnl: Decimal::ZERO,
+                    unrealized_pnl: session_pnl,
+                    fees_paid: Decimal::ZERO,
+                    funding_paid: Decimal::ZERO,
+                    last_mark_price: None,
+                    last_update_ts: Utc::now().timestamp_millis(),
+                });
+            }
+        }
+
+        Ok(positions)
     }
 }

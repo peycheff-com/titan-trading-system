@@ -367,14 +367,13 @@ pub async fn start_nats_engine(
                     state.calculate_exposure()
                 };
 
-                if let Ok(payload) = serde_json::to_vec(&exposure) {
-                    if let Err(e) = client_for_valuation
+                if let Ok(payload) = serde_json::to_vec(&exposure)
+                    && let Err(e) = client_for_valuation
                         .publish("exposure.update", payload.into())
                         .await
                     {
                         error!("Failed to publish exposure update: {}", e);
                     }
-                }
             }
         }
     });
@@ -777,13 +776,11 @@ pub async fn start_nats_engine(
                                             }
 
                                             // 2. Exposure Update
-                                            if let Some(exposure) = pipeline_result.exposure {
-                                                if let Ok(payload) = serde_json::to_vec(&exposure) {
-                                                    if let Err(e) = client_shadow.publish("exposure.update", payload.into()).await {
+                                            if let Some(exposure) = pipeline_result.exposure
+                                                && let Ok(payload) = serde_json::to_vec(&exposure)
+                                                    && let Err(e) = client_shadow.publish("exposure.update", payload.into()).await {
                                                         error!("Failed to publish exposure update: {}", e);
                                                     }
-                                                }
-                                            }
 
                                             // 3. Execution Events
                                             for event in pipeline_result.events {

@@ -37,8 +37,13 @@ impl GateIoAdapter {
         ))?;
 
         // Gate.io API V4 URL
-        let base_url = std::env::var("GATEIO_BASE_URL")
-            .unwrap_or_else(|_| "https://api.gateio.ws".to_string());
+        let base_url = std::env::var("GATEIO_BASE_URL").unwrap_or_else(|_| {
+            if config.testnet {
+                "https://fx-api-testnet.gateio.ws".to_string()
+            } else {
+                "https://api.gateio.ws".to_string()
+            }
+        });
 
         Ok(Self {
             api_key,
@@ -293,13 +298,11 @@ impl ExchangeAdapter for GateIoAdapter {
 
         let mut total = Decimal::zero();
         for acc in accounts {
-            if let Some(curr) = acc.get("currency").and_then(|s| s.as_str()) {
-                if curr == asset {
-                    if let Some(avail) = acc.get("available").and_then(|s| s.as_str()) {
+            if let Some(curr) = acc.get("currency").and_then(|s| s.as_str())
+                && curr == asset
+                    && let Some(avail) = acc.get("available").and_then(|s| s.as_str()) {
                         total += Decimal::from_str(avail).unwrap_or(Decimal::zero());
                     }
-                }
-            }
         }
         Ok(total)
     }
@@ -309,7 +312,77 @@ impl ExchangeAdapter for GateIoAdapter {
     }
 
     async fn get_positions(&self) -> Result<Vec<Position>, ExchangeError> {
-        // Spot has no positions
-        Ok(Vec::new())
+        // Gate.io Futures positions: GET /api/v4/futures/usdt/positions
+        let positions_data: Vec<Value> = self
+            .request(Method::GET, "/api/v4/futures/usdt/positions", None, None)
+            .await
+            .unwrap_or_default();
+
+        let mut positions = Vec::new();
+
+        for pos_data in positions_data {
+            let contract = pos_data
+                .get("contract")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+
+            let size = pos_data
+                .get("size")
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0);
+
+            if size == 0 {
+                continue;
+            }
+
+            let entry_str = pos_data
+                .get("entry_price")
+                .and_then(|v| v.as_str())
+                .unwrap_or("0");
+            let entry_price = Decimal::from_str(entry_str).unwrap_or(Decimal::zero());
+
+            let side = if size > 0 {
+                Side::Long
+            } else {
+                Side::Short
+            };
+
+            let unrealised_pnl_str = pos_data
+                .get("unrealised_pnl")
+                .and_then(|v| v.as_str())
+                .unwrap_or("0");
+            let unrealized_pnl = Decimal::from_str(unrealised_pnl_str).unwrap_or(Decimal::zero());
+
+            let realised_pnl_str = pos_data
+                .get("realised_pnl")
+                .and_then(|v| v.as_str())
+                .unwrap_or("0");
+            let realized_pnl = Decimal::from_str(realised_pnl_str).unwrap_or(Decimal::zero());
+
+            positions.push(Position {
+                symbol: contract,
+                side,
+                size: Decimal::from(size.unsigned_abs()),
+                entry_price,
+                stop_loss: Decimal::ZERO,
+                take_profits: vec![],
+                signal_id: "EXCHANGE_FETCHED".to_string(),
+                opened_at: Utc::now(),
+                regime_state: None,
+                phase: None,
+                metadata: None,
+                exchange: Some("GATEIO".to_string()),
+                position_mode: None,
+                realized_pnl,
+                unrealized_pnl,
+                fees_paid: Decimal::ZERO,
+                funding_paid: Decimal::ZERO,
+                last_mark_price: None,
+                last_update_ts: Utc::now().timestamp_millis(),
+            });
+        }
+
+        Ok(positions)
     }
 }

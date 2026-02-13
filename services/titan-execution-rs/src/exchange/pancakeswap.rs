@@ -12,9 +12,17 @@ use std::str::FromStr;
 use std::sync::Arc;
 use tracing::info;
 
-// JSON ABI for SwapRouter02 exactInputSingle
+// PancakeSwap V3 Adapter — #1 DEX on BNB Chain
+//
+// Uses PancakeSwap SmartRouter (V3) for exact-input swaps.
+// Supports BNB Chain (chain 56) and BSC Testnet (chain 97).
+//
+// Router addresses:
+// - Mainnet BSC:  0x13f4EA83D0bd40E75C8222255bc855a974568Dd4
+// - Testnet BSC:  0x1b81D678ffb9C0263b24A97847620C99d213eB14
+
 abigen!(
-    ISwapRouter,
+    IPancakeRouter,
     r#"[
         {
           "inputs": [
@@ -24,12 +32,11 @@ abigen!(
                 { "internalType": "address", "name": "tokenOut", "type": "address" },
                 { "internalType": "uint24", "name": "fee", "type": "uint24" },
                 { "internalType": "address", "name": "recipient", "type": "address" },
-                { "internalType": "uint256", "name": "deadline", "type": "uint256" },
                 { "internalType": "uint256", "name": "amountIn", "type": "uint256" },
                 { "internalType": "uint256", "name": "amountOutMinimum", "type": "uint256" },
                 { "internalType": "uint160", "name": "sqrtPriceLimitX96", "type": "uint160" }
               ],
-              "internalType": "struct ISwapRouter.ExactInputSingleParams",
+              "internalType": "struct IV3SwapRouter.ExactInputSingleParams",
               "name": "params",
               "type": "tuple"
             }
@@ -43,30 +50,36 @@ abigen!(
 );
 
 #[derive(Clone)]
-pub struct UniswapAdapter {
+pub struct PancakeSwapAdapter {
     client: Arc<SignerMiddleware<Provider<Http>, LocalWallet>>,
     router_address: Address,
     slippage_bps: u64,
 }
 
-impl UniswapAdapter {
+impl PancakeSwapAdapter {
     pub fn new(config: Option<&ExchangeConfig>) -> Result<Self, ExchangeError> {
         let config = config.ok_or(ExchangeError::Configuration(
-            "Missing Uniswap config".into(),
+            "Missing PancakeSwap config".into(),
         ))?;
 
-        // RPC URL
-        let rpc_url = std::env::var("UNISWAP_RPC_URL")
-            .unwrap_or_else(|_| "https://mainnet.infura.io/v3/YOUR_KEY".to_string());
+        // RPC URL — BSC mainnet or testnet
+        let rpc_url = std::env::var("PANCAKESWAP_RPC_URL").unwrap_or_else(|_| {
+            if config.testnet {
+                "https://data-seed-prebsc-1-s1.binance.org:8545".to_string()
+            } else {
+                "https://bsc-dataseed.binance.org".to_string()
+            }
+        });
+
         let provider = Provider::<Http>::try_from(rpc_url)
             .map_err(|e| ExchangeError::Configuration(format!("Invalid RPC URL: {}", e)))?;
 
-        // Private Key
         let private_key = config.get_secret_key().ok_or(ExchangeError::Configuration(
-            "Missing Uniswap Private Key".into(),
+            "Missing PancakeSwap Private Key".into(),
         ))?;
-        // Chain ID: Mainnet=1, Sepolia=11155111
-        let chain_id: u64 = if config.testnet { 11155111 } else { 1 };
+
+        // BSC Mainnet = 56, BSC Testnet = 97
+        let chain_id: u64 = if config.testnet { 97 } else { 56 };
 
         let wallet: LocalWallet = private_key
             .parse::<LocalWallet>()
@@ -75,21 +88,18 @@ impl UniswapAdapter {
 
         let client = Arc::new(SignerMiddleware::new(provider, wallet));
 
-        // Router Address (SwapRouter02)
-        // Mainnet: 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45
-        // Sepolia: 0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E
+        // PancakeSwap V3 SmartRouter
         let default_router = if config.testnet {
-            "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E"
+            "0x1b81D678ffb9C0263b24A97847620C99d213eB14"
         } else {
-            "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45"
+            "0x13f4EA83D0bd40E75C8222255bc855a974568Dd4"
         };
-        let router_addr = std::env::var("UNISWAP_ROUTER_ADDRESS")
+        let router_addr = std::env::var("PANCAKESWAP_ROUTER_ADDRESS")
             .unwrap_or_else(|_| default_router.to_string());
         let router_address = Address::from_str(&router_addr)
             .map_err(|e| ExchangeError::Configuration(format!("Invalid Router Address: {}", e)))?;
 
-        // Slippage protection (configurable via UNISWAP_SLIPPAGE_BPS, default 50 = 0.5%)
-        let slippage_bps = dex_utils::resolve_slippage("UNISWAP");
+        let slippage_bps = dex_utils::resolve_slippage("PANCAKESWAP");
 
         Ok(Self {
             client,
@@ -100,127 +110,99 @@ impl UniswapAdapter {
 }
 
 #[async_trait]
-impl ExchangeAdapter for UniswapAdapter {
+impl ExchangeAdapter for PancakeSwapAdapter {
     async fn init(&self) -> Result<(), ExchangeError> {
         let _block = self
             .client
             .get_block_number()
             .await
-            .map_err(|e| ExchangeError::Network(format!("Failed to connect to RPC: {}", e)))?;
+            .map_err(|e| ExchangeError::Network(format!("Failed to connect to BSC RPC: {}", e)))?;
         Ok(())
     }
 
     async fn place_order(&self, order: OrderRequest) -> Result<OrderResponse, ExchangeError> {
-        // Parse symbol: "WETH/USDC" or "0xAddress-0xAddress"
-        let parts: Vec<&str> = order.symbol.split('/').collect();
-        if parts.len() != 2 && !order.symbol.contains('-') {
-            return Err(ExchangeError::OrderRejected(
-                "Invalid symbol format for Uniswap. Use TOKEN_A/TOKEN_B or ADDRESS-ADDRESS".into(),
-            ));
-        }
-
         let (token_in_str, token_out_str) = if order.symbol.contains('-') {
             let s: Vec<&str> = order.symbol.split('-').collect();
             (s[0], s[1])
         } else {
             match order.symbol.as_str() {
-                "WETH/USDC" => (
-                    "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
-                    "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+                "WBNB/BUSD" | "BNB/BUSD" => (
+                    "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", // WBNB
+                    "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56", // BUSD
                 ),
-                "USDC/WETH" => (
-                    "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-                    "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+                "WBNB/USDT" | "BNB/USDT" => (
+                    "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", // WBNB
+                    "0x55d398326f99059fF775485246999027B3197955", // BSC USDT
                 ),
-                "WETH/USDT" => (
-                    "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
-                    "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+                "CAKE/WBNB" => (
+                    "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82", // CAKE
+                    "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", // WBNB
                 ),
-                "USDT/WETH" => (
-                    "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-                    "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
-                ),
-                "WETH/DAI" => (
-                    "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
-                    "0x6B175474E89094C44Da98b954EedeAC495271d0F",
-                ),
-                "DAI/WETH" => (
-                    "0x6B175474E89094C44Da98b954EedeAC495271d0F",
-                    "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
-                ),
-                "WBTC/WETH" => (
-                    "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
-                    "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+                "WBNB/USDC" | "BNB/USDC" => (
+                    "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", // WBNB
+                    "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", // BSC USDC
                 ),
                 _ => {
                     return Err(ExchangeError::Configuration(
-                        "Unknown symbol. Use ADDRESS-ADDRESS format for custom pairs".into(),
+                        "Unknown symbol — use Address-Address format".into(),
                     ))
                 }
             }
         };
 
         let token_in = Address::from_str(token_in_str)
-            .map_err(|_| ExchangeError::OrderRejected("Invalid Token In address".into()))?;
+            .map_err(|_| ExchangeError::OrderRejected("Invalid Token In".into()))?;
         let token_out = Address::from_str(token_out_str)
-            .map_err(|_| ExchangeError::OrderRejected("Invalid Token Out address".into()))?;
+            .map_err(|_| ExchangeError::OrderRejected("Invalid Token Out".into()))?;
 
-        // Resolve decimals for input token
         let decimals = dex_utils::token_decimals_from_address(token_in_str);
         let amount_in_raw = (order.quantity * Decimal::from(10u64.pow(decimals)))
             .to_u64()
             .unwrap_or(0);
         let amount_in = U256::from(amount_in_raw);
 
-        // ERC-20 Approval: ensure router can spend our tokens
-        // Skip for native ETH wrapping scenarios
-        if token_in_str.to_lowercase() != "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" {
-            dex_utils::ensure_approval(
-                self.client.clone(),
-                token_in,
-                self.router_address,
-                self.client.address(),
-                amount_in,
-            )
-            .await
-            .map_err(|e| ExchangeError::Network(format!("Token approval failed: {}", e)))?;
-        }
+        // ERC-20 approval
+        dex_utils::ensure_approval(
+            self.client.clone(),
+            token_in,
+            self.router_address,
+            self.client.address(),
+            amount_in,
+        )
+        .await
+        .map_err(|e| ExchangeError::Network(format!("Token approval failed: {}", e)))?;
 
-        // Slippage protection: min output = amount_in * (1 - slippage)
-        // This is a rough floor — production systems should pre-quote via Quoter contract
+        // Slippage protection
         let amount_out_minimum = dex_utils::calc_min_output(amount_in, self.slippage_bps);
 
-        info!(
-            "🔄 Uniswap swap: {} {} → {}, slippage {}bps, min_out={}",
-            amount_in, token_in_str, token_out_str, self.slippage_bps, amount_out_minimum
-        );
-
-        let contract = ISwapRouter::new(self.router_address, self.client.clone());
-
-        // Determine fee tier — 3000 (0.3%) default, config override via env
-        let fee_tier: u32 = std::env::var("UNISWAP_FEE_TIER")
+        // Configurable fee tier (PancakeSwap V3: 100, 500, 2500, 10000)
+        let fee_tier: u32 = std::env::var("PANCAKESWAP_FEE_TIER")
             .ok()
             .and_then(|s| s.parse().ok())
-            .unwrap_or(3000);
+            .unwrap_or(2500);
+
+        info!(
+            "🥞 PancakeSwap swap: {} → {}, fee={}bps, slippage={}bps",
+            token_in_str, token_out_str, fee_tier, self.slippage_bps
+        );
+
+        let contract = IPancakeRouter::new(self.router_address, self.client.clone());
 
         let params = ExactInputSingleParams {
             token_in,
             token_out,
-            fee: fee_tier.try_into().unwrap_or(3000),
+            fee: fee_tier.try_into().unwrap_or(2500),
             recipient: self.client.address(),
-            deadline: U256::from(Utc::now().timestamp() + 300), // 5 min
             amount_in,
             amount_out_minimum,
             sqrt_price_limit_x96: U256::zero(),
         };
 
         let tx = contract.exact_input_single(params);
-
-        // EIP-1559 gas estimation — let ethers handle it (it auto-detects EIP-1559)
         let pending_tx = tx
             .send()
             .await
-            .map_err(|e| ExchangeError::Network(format!("Failed to send swap: {}", e)))?;
+            .map_err(|e| ExchangeError::Network(format!("PancakeSwap swap failed: {}", e)))?;
 
         let tx_hash = format!("{:?}", pending_tx.tx_hash());
 
@@ -244,12 +226,12 @@ impl ExchangeAdapter for UniswapAdapter {
         _order_id: &str,
     ) -> Result<OrderResponse, ExchangeError> {
         Err(ExchangeError::NotImplemented(
-            "Cannot cancel Uniswap swap once broadcast".into(),
+            "Cannot cancel PancakeSwap swap once broadcast".into(),
         ))
     }
 
     async fn get_balance(&self, asset: &str) -> Result<Decimal, ExchangeError> {
-        if asset == "ETH" {
+        if asset == "BNB" {
             let bal = self
                 .client
                 .get_balance(self.client.address(), None)
@@ -259,13 +241,13 @@ impl ExchangeAdapter for UniswapAdapter {
                 / Decimal::from(10u64.pow(18)));
         }
 
-        // ERC-20 balance lookup by known token symbol
+        // BEP-20 token balances
         let token_addr = match asset {
-            "USDC" => Some("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"),
-            "USDT" => Some("0xdAC17F958D2ee523a2206206994597C13D831ec7"),
-            "DAI" => Some("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
-            "WETH" => Some("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
-            "WBTC" => Some("0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599"),
+            "BUSD" => Some("0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56"),
+            "USDT" => Some("0x55d398326f99059fF775485246999027B3197955"),
+            "USDC" => Some("0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d"),
+            "CAKE" => Some("0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82"),
+            "WBNB" => Some("0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c"),
             _ => None,
         };
 
@@ -286,7 +268,7 @@ impl ExchangeAdapter for UniswapAdapter {
     }
 
     fn name(&self) -> &str {
-        "uniswap"
+        "PancakeSwap V3"
     }
 
     async fn get_positions(&self) -> Result<Vec<Position>, ExchangeError> {

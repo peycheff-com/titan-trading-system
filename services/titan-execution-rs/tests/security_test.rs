@@ -20,9 +20,14 @@ mod security_tests {
         // 1. Test: Commands without a signature field are rejected
         {
             // Clear any existing secret to ensure validation fails properly
-            std::env::remove_var("HMAC_SECRET");
+            // SAFETY: Single-threaded test
+            unsafe {
+                std::env::remove_var("HMAC_SECRET");
+            }
             // Allow empty secret for this test case (test mode)
-            std::env::set_var("HMAC_ALLOW_EMPTY_SECRET", "true");
+            unsafe {
+                std::env::set_var("HMAC_ALLOW_EMPTY_SECRET", "true");
+            }
 
             // Create validator with no secret configured
             let validator = titan_execution_rs::security::HmacValidator::new();
@@ -46,12 +51,16 @@ mod security_tests {
             );
 
             // Reset for next test
-            std::env::remove_var("HMAC_ALLOW_EMPTY_SECRET");
+            unsafe {
+                std::env::remove_var("HMAC_ALLOW_EMPTY_SECRET");
+            }
         }
 
         // 2. Test: Commands with invalid hex signature are rejected
         {
-            std::env::set_var("HMAC_SECRET", "test-secret-key-12345");
+            unsafe {
+                std::env::set_var("HMAC_SECRET", "test-secret-key-12345");
+            }
             let validator = titan_execution_rs::security::HmacValidator::new();
 
             let bad_hex_payload = json!({
@@ -76,7 +85,9 @@ mod security_tests {
         // 3. Test: Commands with wrong signature (valid hex but wrong HMAC) are rejected
         {
             // Secret is already set from previous block, but let's be explicit
-            std::env::set_var("HMAC_SECRET", "real-secret-key");
+            unsafe {
+                std::env::set_var("HMAC_SECRET", "real-secret-key");
+            }
             let validator = titan_execution_rs::security::HmacValidator::new();
 
             // Valid hex, but completely wrong signature
@@ -103,8 +114,12 @@ mod security_tests {
 
         // 4. Test: Commands with expired timestamp are rejected
         {
-            std::env::set_var("HMAC_SECRET", "test-secret");
-            std::env::set_var("HMAC_TIMESTAMP_TOLERANCE", "60"); // 60 seconds tolerance
+            unsafe {
+                std::env::set_var("HMAC_SECRET", "test-secret");
+            }
+            unsafe {
+                std::env::set_var("HMAC_TIMESTAMP_TOLERANCE", "60");
+            } // 60 seconds tolerance
             let validator = titan_execution_rs::security::HmacValidator::new();
 
             // Timestamp from 10 minutes ago (exceeds 60s tolerance)
@@ -131,7 +146,9 @@ mod security_tests {
 
         // 5. Test: Commands missing required fields are rejected
         {
-            std::env::set_var("HMAC_SECRET", "test-secret");
+            unsafe {
+                std::env::set_var("HMAC_SECRET", "test-secret");
+            }
             let validator = titan_execution_rs::security::HmacValidator::new();
 
             // Missing action
@@ -184,8 +201,10 @@ mod security_tests {
         }
 
         // Cleanup
-        std::env::remove_var("HMAC_SECRET");
-        std::env::remove_var("HMAC_TIMESTAMP_TOLERANCE");
-        std::env::remove_var("HMAC_ALLOW_EMPTY_SECRET");
+        unsafe {
+            std::env::remove_var("HMAC_SECRET");
+            std::env::remove_var("HMAC_TIMESTAMP_TOLERANCE");
+            std::env::remove_var("HMAC_ALLOW_EMPTY_SECRET");
+        }
     }
 }
