@@ -166,6 +166,7 @@ jobs:
 
   deploy-production:
     needs: build-and-push
+    if: ${{ always() && needs.build-and-push.result == 'success' }}
     runs-on: ubuntu-latest
     environment:
       name: production
