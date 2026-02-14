@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use tracing::{info, warn};
 
 /// Global system halt state.
@@ -45,10 +45,10 @@ impl GlobalHalt {
             if let Err(e) = std::fs::write(&self.file_path, reason) {
                 warn!("Failed to persist halt lockfile: {}", e);
             }
-        } else if self.file_path.exists()
-            && let Err(e) = std::fs::remove_file(&self.file_path)
-        {
-            warn!("Failed to remove halt lockfile: {}", e);
+        } else if self.file_path.exists() {
+            if let Err(e) = std::fs::remove_file(&self.file_path) {
+                warn!("Failed to remove halt lockfile: {}", e);
+            }
         }
 
         if prev != active {

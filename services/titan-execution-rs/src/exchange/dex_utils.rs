@@ -2,10 +2,10 @@ use ethers::prelude::*;
 use rust_decimal::prelude::*;
 use std::sync::Arc;
 
-/// Shared EVM DEX utilities — slippage, token approval, gas estimation
-///
-/// Every DEX adapter must call `ensure_approval()` before swapping tokens,
-/// and use `calc_min_output()` for slippage protection.
+// Shared EVM DEX utilities — slippage, token approval, gas estimation
+//
+// Every DEX adapter must call `ensure_approval()` before swapping tokens,
+// and use `calc_min_output()` for slippage protection.
 
 // Standard ERC-20 ABI — approve + allowance
 abigen!(

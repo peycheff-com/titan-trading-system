@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use tracing::{info, warn};
 
 /// Execution Armed State - Physical Interlock
@@ -55,10 +55,10 @@ impl ArmedState {
             if let Err(e) = std::fs::write(&self.file_path, reason) {
                 warn!("Failed to persist armed lockfile: {}", e);
             }
-        } else if self.file_path.exists()
-            && let Err(e) = std::fs::remove_file(&self.file_path)
-        {
-            warn!("Failed to remove armed lockfile: {}", e);
+        } else if self.file_path.exists() {
+            if let Err(e) = std::fs::remove_file(&self.file_path) {
+                warn!("Failed to remove armed lockfile: {}", e);
+            }
         }
 
         if prev != armed {

@@ -244,15 +244,16 @@ impl ExchangeAdapter for MexcAdapter {
                 .unwrap_or("")
                 .to_uppercase();
 
-            if symbol == asset_upper
-                && let Some(balance) = entry
+            if symbol == asset_upper {
+                if let Some(balance) = entry
                     .get("availableBalance")
                     .and_then(|v| v.as_str())
                     .or_else(|| entry.get("available").and_then(|v| v.as_str()))
                     .or_else(|| entry.get("balance").and_then(|v| v.as_str()))
-            {
-                return Decimal::from_str_exact(balance)
-                    .map_err(|e| ExchangeError::Api(format!("Invalid balance format: {}", e)));
+                {
+                    return Decimal::from_str_exact(balance)
+                        .map_err(|e| ExchangeError::Api(format!("Invalid balance format: {}", e)));
+                }
             }
         }
 

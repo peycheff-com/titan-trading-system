@@ -152,15 +152,15 @@ impl KucoinAdapter {
         let json: Value =
             serde_json::from_str(&text).map_err(|e| ExchangeError::Parse(e.to_string()))?;
 
-        if let Some(code) = json.get("code")
-            && code.as_str() != Some("200000")
-        {
+        if let Some(code) = json.get("code") {
+            if code.as_str() != Some("200000") {
             return Err(ExchangeError::Api(format!(
                 "KuCoin API Error: {} - {}",
                 code,
                 json.get("msg").unwrap_or(&Value::Null)
             )));
         }
+    }
 
         // KuCoin response usually wrapped in "data"
         if let Some(data) = json.get("data") {
@@ -312,15 +312,15 @@ impl ExchangeAdapter for KucoinAdapter {
         let mut total_balance = Decimal::zero();
 
         for acc in accounts {
-            if let Some(currency) = acc.get("currency").and_then(|c| c.as_str())
-                && currency == asset
-            {
+            if let Some(currency) = acc.get("currency").and_then(|c| c.as_str()) {
+                if currency == asset {
                 // Check type: trade (spot) or main? Usually we want trade/margin available
                 if let Some(available) = acc.get("available").and_then(|a| a.as_str()) {
                     let amount = Decimal::from_str(available).unwrap_or(Decimal::zero());
                     total_balance += amount;
                 }
             }
+        }
         }
 
         Ok(total_balance)

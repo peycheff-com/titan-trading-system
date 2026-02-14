@@ -12,17 +12,17 @@ use std::str::FromStr;
 use std::sync::Arc;
 use tracing::info;
 
-/// GMX V2 Adapter — #1 Perpetual DEX on Arbitrum
-///
-/// GMX V2 uses an on-chain order book with oracle-based pricing.
-/// Orders are submitted to the ExchangeRouter, which creates them in the
-/// OrderVault. Keepers fill orders when oracle prices confirm.
-///
-/// Addresses (Arbitrum One):
-/// - ExchangeRouter: 0x7C68C7866A64FA2160F78EEaE12217FFbf871fa8
-/// - OrderVault:     0x31eF83a530Fde1B38deDA89C0A6c72a85D4da123
-/// - USDC:           0xaf88d065e77c8cC2239327C5EDb3A432268e5831
-/// - WETH:           0x82aF49447D8a07e3bd95BD0d56f35241523fBab1
+// GMX V2 Adapter — #1 Perpetual DEX on Arbitrum
+//
+// GMX V2 uses an on-chain order book with oracle-based pricing.
+// Orders are submitted to the ExchangeRouter, which creates them in the
+// OrderVault. Keepers fill orders when oracle prices confirm.
+//
+// Addresses (Arbitrum One):
+// - ExchangeRouter: 0x7C68C7866A64FA2160F78EEaE12217FFbf871fa8
+// - OrderVault:     0x31eF83a530Fde1B38deDA89C0A6c72a85D4da123
+// - USDC:           0xaf88d065e77c8cC2239327C5EDb3A432268e5831
+// - WETH:           0x82aF49447D8a07e3bd95BD0d56f35241523fBab1
 
 abigen!(
     IGMXExchangeRouter,

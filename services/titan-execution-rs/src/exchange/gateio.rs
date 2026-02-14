@@ -298,11 +298,12 @@ impl ExchangeAdapter for GateIoAdapter {
 
         let mut total = Decimal::zero();
         for acc in accounts {
-            if let Some(curr) = acc.get("currency").and_then(|s| s.as_str())
-                && curr == asset
-                && let Some(avail) = acc.get("available").and_then(|s| s.as_str())
-            {
-                total += Decimal::from_str(avail).unwrap_or(Decimal::zero());
+            if let Some(curr) = acc.get("currency").and_then(|s| s.as_str()) {
+                if curr == asset {
+                    if let Some(avail) = acc.get("available").and_then(|s| s.as_str()) {
+                        total += Decimal::from_str(avail).unwrap_or(Decimal::zero());
+                    }
+                }
             }
         }
         Ok(total)

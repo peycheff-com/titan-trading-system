@@ -50,10 +50,9 @@ impl MexcConnector {
         // Handle Ping/Pong if implicit?
         // MEXC usually requires {"method":"ping"} sent by us, responses might be specific.
 
-        if let Some(channel) = &msg.channel
-            && channel.starts_with("push.deal")
-            && let Some(data) = &msg.data
-        {
+        if let Some(channel) = &msg.channel {
+            if channel.starts_with("push.deal") {
+                if let Some(data) = &msg.data {
             if let Some(deals) = data.as_array() {
                 // Direct array format: {"data": [...], ...}
                 for deal_val in deals {
@@ -79,6 +78,8 @@ impl MexcConnector {
                 }
             }
         }
+    }
+    }
 
         Ok(())
     }

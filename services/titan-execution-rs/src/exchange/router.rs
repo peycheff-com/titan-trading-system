@@ -57,12 +57,12 @@ impl ExecutionRouter {
             weights: self.routing.weights.clone(),
         };
 
-        if let Some(source) = source
-            && let Some(source_rule) = self.routing.per_source.get(source)
-        {
-            rule.fanout = source_rule.fanout.or(rule.fanout);
-            if source_rule.weights.is_some() {
-                rule.weights = source_rule.weights.clone();
+        if let Some(source) = source {
+            if let Some(source_rule) = self.routing.per_source.get(source) {
+                rule.fanout = source_rule.fanout.or(rule.fanout);
+                if source_rule.weights.is_some() {
+                    rule.weights = source_rule.weights.clone();
+                }
             }
         }
 

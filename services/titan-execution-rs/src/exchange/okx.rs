@@ -130,14 +130,14 @@ impl OkxAdapter {
         let json: serde_json::Value = serde_json::from_str(&text)
             .map_err(|e| ExchangeError::Api(format!("Parse error: {}", e)))?;
 
-        if let Some(code) = json["code"].as_str()
-            && code != "0"
-        {
+        if let Some(code) = json["code"].as_str() {
+            if code != "0" {
             return Err(ExchangeError::Api(format!(
                 "OKX API Error {}: {}",
                 code, json["msg"]
             )));
         }
+    }
 
         Ok(text)
     }

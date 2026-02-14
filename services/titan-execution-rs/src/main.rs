@@ -692,12 +692,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 }
             });
 
-            if let Ok(payload) = serde_json::to_vec(&snapshot)
-                && let Err(e) = nats_for_truth
+            if let Ok(payload) = serde_json::to_vec(&snapshot) {
+                if let Err(e) = nats_for_truth
                     .publish(subjects::EVT_EXECUTION_TRUTH, payload.into())
                     .await
-            {
-                tracing::error!("Failed to publish truth snapshot: {}", e);
+                {
+                    error!("Failed to broadcast truth snapshot: {}", e);
+                }
             }
         }
     });

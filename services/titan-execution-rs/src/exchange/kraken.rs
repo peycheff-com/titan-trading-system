@@ -131,9 +131,8 @@ impl KrakenAdapter {
         let json: serde_json::Value = serde_json::from_str(&text)
             .map_err(|e| ExchangeError::Api(format!("Parse error: {}", e)))?;
 
-        if let Some(err_arr) = json["error"].as_array()
-            && !err_arr.is_empty()
-        {
+        if let Some(err_arr) = json["error"].as_array() {
+            if !err_arr.is_empty() {
             // Return generic API error (or combine errors)
             let msgs: Vec<String> = err_arr
                 .iter()
@@ -144,6 +143,7 @@ impl KrakenAdapter {
                 msgs.join(", ")
             )));
         }
+    }
 
         Ok(text)
     }

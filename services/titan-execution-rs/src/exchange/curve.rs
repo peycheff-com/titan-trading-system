@@ -214,9 +214,8 @@ impl ExchangeAdapter for CurveAdapter {
         let amount_in = U256::from(amount_in_raw);
 
         // ERC-20 approval (skip for native ETH)
-        if token_in != "ETH"
-            && let Some(addr_str) = Self::token_address(token_in)
-        {
+        if token_in != "ETH" {
+            if let Some(addr_str) = Self::token_address(token_in) {
             let addr = Address::from_str(addr_str)
                 .map_err(|e| ExchangeError::Configuration(format!("Bad address: {}", e)))?;
             dex_utils::ensure_approval(
@@ -229,6 +228,7 @@ impl ExchangeAdapter for CurveAdapter {
             .await
             .map_err(|e| ExchangeError::Network(format!("Token approval failed: {}", e)))?;
         }
+    }
 
         let contract = ICurvePool::new(self.pool_address, self.client.clone());
 

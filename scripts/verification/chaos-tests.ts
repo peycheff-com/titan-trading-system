@@ -350,14 +350,14 @@ async function testRedisFailure(): Promise<TestResult> {
  */
 async function testWebSocketDisconnect(): Promise<TestResult> {
     const startTime = Date.now();
-    const WebSocket = (await import("ws")).default;
+    const { default: WebSocket, WebSocketServer } = await import("ws");
     const { createServer } = await import("http");
 
     try {
         // Spin up an ephemeral WS server
         console.log("  📡 Starting ephemeral WS server...");
         const httpServer = createServer();
-        const wss = new WebSocket.Server({ server: httpServer });
+        const wss = new WebSocketServer({ server: httpServer });
 
         await new Promise<void>((resolve) => {
             httpServer.listen(0, () => resolve());
@@ -606,4 +606,3 @@ async function main() {
 }
 
 main().catch(console.error);
-

@@ -177,15 +177,15 @@ impl CryptoComAdapter {
             serde_json::from_str(&text).map_err(|e| ExchangeError::Parse(e.to_string()))?;
 
         // Check for "code" in response. 0 is success usually.
-        if let Some(code) = json.get("code").and_then(|c| c.as_i64())
-            && code != 0
-        {
+        if let Some(code) = json.get("code").and_then(|c| c.as_i64()) {
+            if code != 0 {
             return Err(ExchangeError::Api(format!(
                 "Crypto.com API Error {}: {}",
                 code,
                 json.get("message").unwrap_or(&Value::Null)
             )));
         }
+    }
 
         // Result is usually in "result" field
         if let Some(result) = json.get("result") {
@@ -341,12 +341,13 @@ impl ExchangeAdapter for CryptoComAdapter {
         // Response: { accounts: [ { balance, available, currency, ... } ] }
         if let Some(accounts) = response.get("accounts").and_then(|a| a.as_array()) {
             for acc in accounts {
-                if let Some(curr) = acc.get("currency").and_then(|c| c.as_str())
-                    && curr == asset
-                    && let Some(avail) = acc.get("available").and_then(|a| a.as_f64())
-                {
-                    return Decimal::from_f64(avail)
-                        .ok_or(ExchangeError::Parse("Invalid number".into()));
+                if let Some(curr) = acc.get("currency").and_then(|c| c.as_str()) {
+                    if curr == asset {
+                        if let Some(avail) = acc.get("available").and_then(|a| a.as_f64()) {
+                            return Decimal::from_f64(avail)
+                                .ok_or(ExchangeError::Parse("Invalid number".into()));
+                        }
+                    }
                 }
             }
         }

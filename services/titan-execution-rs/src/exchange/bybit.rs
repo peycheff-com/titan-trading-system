@@ -198,10 +198,10 @@ pub(crate) fn build_order_payload(order: &OrderRequest) -> serde_json::Value {
         "reduceOnly": order.reduce_only
     });
 
-    if let Some(price) = order.price
-        && let Some(obj) = payload.as_object_mut()
-    {
-        obj.insert("price".to_string(), serde_json::json!(price.to_string()));
+    if let Some(price) = order.price {
+        if let Some(obj) = payload.as_object_mut() {
+            obj.insert("price".to_string(), serde_json::json!(price.to_string()));
+        }
     }
 
     payload

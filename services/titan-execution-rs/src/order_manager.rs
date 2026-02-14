@@ -2,8 +2,8 @@ use crate::circuit_breaker::GlobalHalt;
 use crate::impact_calculator::{ImpactCalculator, OrderRouting};
 use crate::market_data::engine::MarketDataEngine;
 use crate::model::{FeeAnalysis, OrderDecision, OrderParams, OrderType, Side};
-use rust_decimal::Decimal;
 use rust_decimal::prelude::*;
+use rust_decimal::Decimal;
 use std::sync::Arc;
 use tracing::{info, warn};
 
@@ -12,7 +12,7 @@ pub const DEFAULT_MAKER_FEE_PCT: &str = "0.02";
 pub const DEFAULT_TAKER_FEE_PCT: &str = "0.05";
 pub const DEFAULT_CHASE_TIMEOUT_MS: u64 = 2000;
 pub const MIN_PROFIT_MARGIN: &str = "0.001"; // 0.1%
-// Taker sniping thresholds
+                                             // Taker sniping thresholds
 pub const IMBALANCE_THRESHOLD_BUY: &str = "0.6";
 pub const IMBALANCE_THRESHOLD_SELL: &str = "-0.6";
 
@@ -166,10 +166,11 @@ impl OrderManager {
         let mut exec_price = params.limit_price.unwrap_or(Decimal::ZERO);
 
         // If market order (price 0), try to get mid price
-        if exec_price.is_zero()
-            && let Some(ticker) = self.market_data.get_ticker(&params.symbol)
-        {
-            exec_price = (ticker.best_bid + ticker.best_ask) / Decimal::from(2);
+        // If market order (price 0), try to get mid price
+        if exec_price.is_zero() {
+            if let Some(ticker) = self.market_data.get_ticker(&params.symbol) {
+                exec_price = (ticker.best_bid + ticker.best_ask) / Decimal::from(2);
+            }
         }
 
         let notional = if !exec_price.is_zero() {
