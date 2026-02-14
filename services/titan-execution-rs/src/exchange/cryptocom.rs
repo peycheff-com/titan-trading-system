@@ -6,8 +6,8 @@ use async_trait::async_trait;
 use chrono::Utc;
 use hex;
 use hmac::{Hmac, Mac};
-use reqwest::Client;
 use reqwest::header::CONTENT_TYPE;
+use reqwest::Client;
 use rust_decimal::prelude::*;
 use serde::Deserialize;
 use serde_json::Value;
@@ -179,13 +179,13 @@ impl CryptoComAdapter {
         // Check for "code" in response. 0 is success usually.
         if let Some(code) = json.get("code").and_then(|c| c.as_i64()) {
             if code != 0 {
-            return Err(ExchangeError::Api(format!(
-                "Crypto.com API Error {}: {}",
-                code,
-                json.get("message").unwrap_or(&Value::Null)
-            )));
+                return Err(ExchangeError::Api(format!(
+                    "Crypto.com API Error {}: {}",
+                    code,
+                    json.get("message").unwrap_or(&Value::Null)
+                )));
+            }
         }
-    }
 
         // Result is usually in "result" field
         if let Some(result) = json.get("result") {

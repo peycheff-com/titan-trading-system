@@ -8,6 +8,8 @@
  * No running infrastructure required.
  */
 
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { SignalProcessor } from '../../src/engine/SignalProcessor';
 import { RiskGuardian } from '../../src/features/Risk/RiskGuardian';
 import { AllocationEngine } from '../../src/features/Allocation/AllocationEngine';
@@ -20,20 +22,20 @@ import { EquityTier, IntentSignal, RiskGuardianConfig } from '../../src/types/in
 
 // ─── Mock NatsClient ──────────────────────────────────────────────────────────
 
-const publishEnvelopeMock = jest.fn().mockResolvedValue(undefined);
-const publishMock = jest.fn().mockResolvedValue(undefined);
-const subscribeMock = jest.fn();
+const publishEnvelopeMock = vi.fn().mockResolvedValue(undefined);
+const publishMock = vi.fn().mockResolvedValue(undefined);
+const subscribeMock = vi.fn();
 
-jest.mock('@titan/shared', () => {
-  const actual = jest.requireActual('@titan/shared');
+vi.mock('@titan/shared', async () => {
+  const actual = await vi.importActual<any>('@titan/shared');
 
   // Must be a real class since Brain's Logger extends SharedLogger
   class MockLogger {
-    info = jest.fn();
-    warn = jest.fn();
-    error = jest.fn();
-    debug = jest.fn();
-    fatal = jest.fn();
+    info = vi.fn();
+    warn = vi.fn();
+    error = vi.fn();
+    debug = vi.fn();
+    fatal = vi.fn();
     static getInstance() {
       return new MockLogger();
     }
@@ -46,7 +48,7 @@ jest.mock('@titan/shared', () => {
     ...actual,
     getNatsClient: () => ({
       isConnected: () => true,
-      connect: jest.fn().mockResolvedValue(undefined),
+      connect: vi.fn().mockResolvedValue(undefined),
       publishEnvelope: publishEnvelopeMock,
       publish: publishMock,
       subscribe: subscribeMock,
@@ -58,11 +60,11 @@ jest.mock('@titan/shared', () => {
 // ─── Mock Redis for BayesianCalibrator ────────────────────────────────────────
 
 const mockRedis = {
-  get: jest.fn().mockResolvedValue(null),
-  set: jest.fn().mockResolvedValue('OK'),
-  hget: jest.fn().mockResolvedValue(null),
-  hset: jest.fn().mockResolvedValue(1),
-  hgetall: jest.fn().mockResolvedValue({}),
+  get: vi.fn().mockResolvedValue(null),
+  set: vi.fn().mockResolvedValue('OK'),
+  hget: vi.fn().mockResolvedValue(null),
+  hset: vi.fn().mockResolvedValue(1),
+  hgetall: vi.fn().mockResolvedValue({}),
 } as any;
 
 // ─── Test Fixtures ────────────────────────────────────────────────────────────
@@ -131,7 +133,7 @@ describe('Golden Path: Signal → Brain → Execution Intent', () => {
   let performanceTracker: PerformanceTracker;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Allocation: $10k equity → Phase 1 (20%) + Phase 2 (80%)
     allocationEngine = new AllocationEngine({

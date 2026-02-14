@@ -7,7 +7,7 @@ use chrono::Utc;
 use ethers::prelude::*;
 use reqwest::Client;
 use rust_decimal::prelude::*;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::time::Duration;
 use tracing::info;
 

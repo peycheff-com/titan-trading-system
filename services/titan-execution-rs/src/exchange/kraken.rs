@@ -1,7 +1,7 @@
 use crate::exchange::adapter::{ExchangeAdapter, ExchangeError, OrderRequest, OrderResponse};
 use crate::model::{Position, Side};
 use async_trait::async_trait;
-use base64::{Engine as _, engine::general_purpose};
+use base64::{engine::general_purpose, Engine as _};
 use chrono::Utc;
 use hmac::{Hmac, Mac};
 use reqwest::Client;
@@ -133,17 +133,17 @@ impl KrakenAdapter {
 
         if let Some(err_arr) = json["error"].as_array() {
             if !err_arr.is_empty() {
-            // Return generic API error (or combine errors)
-            let msgs: Vec<String> = err_arr
-                .iter()
-                .map(|v| v.as_str().unwrap_or("").to_string())
-                .collect();
-            return Err(ExchangeError::Api(format!(
-                "Kraken API Error: {}",
-                msgs.join(", ")
-            )));
+                // Return generic API error (or combine errors)
+                let msgs: Vec<String> = err_arr
+                    .iter()
+                    .map(|v| v.as_str().unwrap_or("").to_string())
+                    .collect();
+                return Err(ExchangeError::Api(format!(
+                    "Kraken API Error: {}",
+                    msgs.join(", ")
+                )));
+            }
         }
-    }
 
         Ok(text)
     }

@@ -48,10 +48,10 @@ impl BybitConnector {
 
         if let Some(op) = &msg.op {
             if op == "pong" {
-            // debug!("Received pong");
-            return Ok(());
+                // debug!("Received pong");
+                return Ok(());
+            }
         }
-    }
 
         if let Some(topic) = msg.topic {
             // info!("Bybit Topic: {}", topic);

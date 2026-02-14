@@ -1,9 +1,9 @@
 use actix_web::{
-    Error,
     dev::{Service, ServiceRequest, ServiceResponse, Transform},
+    Error,
 };
+use futures::future::{ok, Ready};
 use futures::Future;
-use futures::future::{Ready, ok};
 use std::env;
 use std::pin::Pin;
 use std::rc::Rc;

@@ -3,8 +3,8 @@ set -euo pipefail
 set -e
 
 # Configuration
-COMPOSE_FILE="docker-compose.staging.yml"
-SERVICES=("titan-brain-staging" "titan-execution-staging" "titan-console-staging" "titan-nats-staging" "titan-redis-staging" "titan-db-staging" "traefik-staging")
+COMPOSE_FILE="docker-compose.micro.yml"
+SERVICES=("titan-brain" "titan-execution" "titan-scavenger" "titan-hunter" "titan-sentinel" "redis" "postgres" "nats")
 
 echo "🛡️  Starting Staging Deployment..."
 

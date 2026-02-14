@@ -102,8 +102,8 @@ fn test_aggregation_partial_fill() {
         .find(|c| c.execution_order_id == "fill-1")
         .unwrap();
     assert_eq!(child_1.status, "FILLED"); // Or FILLED logic depending on EXACT match of size
-    // In my logic: if fill_size < child.size -> PARTIALLY_FILLED.
-    // Here record_child_order size is 0.4, fill_size is 0.4. So FILLED.
+                                          // In my logic: if fill_size < child.size -> PARTIALLY_FILLED.
+                                          // Here record_child_order size is 0.4, fill_size is 0.4. So FILLED.
 
     // 2. Duplicate Fill (Idempotency)
     let events_dup = state.confirm_execution(

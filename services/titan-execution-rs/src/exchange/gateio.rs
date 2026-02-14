@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use chrono::Utc;
 use hex;
 use hmac::{Hmac, Mac};
-use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderValue};
+use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
 use reqwest::{Client, Method};
 use rust_decimal::prelude::*;
 use serde::Deserialize;

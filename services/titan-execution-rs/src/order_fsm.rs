@@ -183,30 +183,24 @@ mod tests {
         let mut fsm = OrderFsm::new("sig-1".into(), "BTCUSDT".into());
         let t = 1000;
 
-        assert!(
-            fsm.transition(OrderLifecycleState::Validated, t + 1, None)
-                .is_ok()
-        );
-        assert!(
-            fsm.transition(OrderLifecycleState::Accepted, t + 2, None)
-                .is_ok()
-        );
-        assert!(
-            fsm.transition(OrderLifecycleState::Sent, t + 3, None)
-                .is_ok()
-        );
-        assert!(
-            fsm.transition(OrderLifecycleState::Acked, t + 4, None)
-                .is_ok()
-        );
-        assert!(
-            fsm.transition(OrderLifecycleState::Filled, t + 5, None)
-                .is_ok()
-        );
-        assert!(
-            fsm.transition(OrderLifecycleState::Reconciled, t + 6, None)
-                .is_ok()
-        );
+        assert!(fsm
+            .transition(OrderLifecycleState::Validated, t + 1, None)
+            .is_ok());
+        assert!(fsm
+            .transition(OrderLifecycleState::Accepted, t + 2, None)
+            .is_ok());
+        assert!(fsm
+            .transition(OrderLifecycleState::Sent, t + 3, None)
+            .is_ok());
+        assert!(fsm
+            .transition(OrderLifecycleState::Acked, t + 4, None)
+            .is_ok());
+        assert!(fsm
+            .transition(OrderLifecycleState::Filled, t + 5, None)
+            .is_ok());
+        assert!(fsm
+            .transition(OrderLifecycleState::Reconciled, t + 6, None)
+            .is_ok());
 
         assert!(fsm.is_terminal());
         assert_eq!(fsm.transitions.len(), 6);
@@ -215,10 +209,9 @@ mod tests {
     #[test]
     fn test_rejection_from_validated() {
         let mut fsm = OrderFsm::new("sig-2".into(), "ETHUSDT".into());
-        assert!(
-            fsm.transition(OrderLifecycleState::Validated, 100, None)
-                .is_ok()
-        );
+        assert!(fsm
+            .transition(OrderLifecycleState::Validated, 100, None)
+            .is_ok());
         assert!(fsm.reject(200, "risk limit exceeded".into()).is_ok());
         assert!(fsm.is_terminal());
     }
@@ -227,10 +220,9 @@ mod tests {
     fn test_illegal_transition_fails() {
         let mut fsm = OrderFsm::new("sig-3".into(), "BTCUSDT".into());
         // Cannot go directly from Received to Sent
-        assert!(
-            fsm.transition(OrderLifecycleState::Sent, 100, None)
-                .is_err()
-        );
+        assert!(fsm
+            .transition(OrderLifecycleState::Sent, 100, None)
+            .is_err());
         // State should not have changed
         assert_eq!(fsm.state, OrderLifecycleState::Received);
     }
@@ -238,57 +230,49 @@ mod tests {
     #[test]
     fn test_partial_fill_to_filled() {
         let mut fsm = OrderFsm::new("sig-4".into(), "BTCUSDT".into());
-        assert!(
-            fsm.transition(OrderLifecycleState::Validated, 1, None)
-                .is_ok()
-        );
-        assert!(
-            fsm.transition(OrderLifecycleState::Accepted, 2, None)
-                .is_ok()
-        );
+        assert!(fsm
+            .transition(OrderLifecycleState::Validated, 1, None)
+            .is_ok());
+        assert!(fsm
+            .transition(OrderLifecycleState::Accepted, 2, None)
+            .is_ok());
         assert!(fsm.transition(OrderLifecycleState::Sent, 3, None).is_ok());
         assert!(fsm.transition(OrderLifecycleState::Acked, 4, None).is_ok());
-        assert!(
-            fsm.transition(
+        assert!(fsm
+            .transition(
                 OrderLifecycleState::PartialFill,
                 5,
                 Some("50% filled".into())
             )
-            .is_ok()
-        );
-        assert!(
-            fsm.transition(OrderLifecycleState::Filled, 6, Some("100% filled".into()))
-                .is_ok()
-        );
+            .is_ok());
+        assert!(fsm
+            .transition(OrderLifecycleState::Filled, 6, Some("100% filled".into()))
+            .is_ok());
         assert!(fsm.is_terminal());
     }
 
     #[test]
     fn test_terminal_states_cannot_transition() {
         let mut fsm = OrderFsm::new("sig-5".into(), "BTCUSDT".into());
-        assert!(
-            fsm.transition(OrderLifecycleState::Validated, 1, None)
-                .is_ok()
-        );
+        assert!(fsm
+            .transition(OrderLifecycleState::Validated, 1, None)
+            .is_ok());
         assert!(fsm.reject(2, "test".into()).is_ok());
         // Rejected is terminal — cannot transition further
-        assert!(
-            fsm.transition(OrderLifecycleState::Accepted, 3, None)
-                .is_err()
-        );
+        assert!(fsm
+            .transition(OrderLifecycleState::Accepted, 3, None)
+            .is_err());
     }
 
     #[test]
     fn test_latency_calculation() {
         let mut fsm = OrderFsm::new("sig-6".into(), "BTCUSDT".into());
-        assert!(
-            fsm.transition(OrderLifecycleState::Validated, 100, None)
-                .is_ok()
-        );
-        assert!(
-            fsm.transition(OrderLifecycleState::Accepted, 150, None)
-                .is_ok()
-        );
+        assert!(fsm
+            .transition(OrderLifecycleState::Validated, 100, None)
+            .is_ok());
+        assert!(fsm
+            .transition(OrderLifecycleState::Accepted, 150, None)
+            .is_ok());
         assert!(fsm.transition(OrderLifecycleState::Sent, 200, None).is_ok());
         assert_eq!(fsm.total_latency_ms(), Some(100));
     }

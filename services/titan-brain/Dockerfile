@@ -69,6 +69,8 @@ COPY --from=builder /app/packages/shared/node_modules ./packages/shared/node_mod
 
 # Copy built application from builder stage
 COPY --from=builder /app/services/titan-brain/dist ./services/titan-brain/dist
+# Copy schema.sql (not copied by tsc)
+COPY services/titan-brain/src/db/schema.sql ./services/titan-brain/dist/src/db/
 
 # Copy configuration files if they exist
 COPY services/titan-brain/config.schema.json* ./services/titan-brain/

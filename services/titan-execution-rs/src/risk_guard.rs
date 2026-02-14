@@ -282,7 +282,7 @@ impl RiskGuard {
                 if !RiskGuard::is_reduce_only(intent) {
                     warn!(signal_id = %intent.signal_id, "Rejected due to EMERGENCY state");
                     return Err(RiskRejectionReason::PolicyMissing); // Use existing or add new?
-                    // Ideally add RiskRejectionReason::SystemEmergency
+                                                                    // Ideally add RiskRejectionReason::SystemEmergency
                 }
             }
         }
@@ -764,7 +764,7 @@ mod tests {
         {
             let mut s = state.write();
             let close = simple_intent("SOL/USDT", dec!(100.0), dec!(5.0), IntentType::CloseLong); // 50% loss
-            // Entry 10, Limit 5. Loss (5-10)*100 = -500.
+                                                                                                  // Entry 10, Limit 5. Loss (5-10)*100 = -500.
             s.process_intent(close.clone());
             s.confirm_execution(
                 &close.signal_id,

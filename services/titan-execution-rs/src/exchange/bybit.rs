@@ -366,8 +366,8 @@ impl ExchangeAdapter for BybitAdapter {
         self.query_limiter.acquire(1).await;
 
         let _timestamp = chrono::Utc::now().timestamp_millis().to_string(); // Need to use same timestamp?
-        // request() handles timestamp and sign.
-        // We just need endpoint + query.
+                                                                            // request() handles timestamp and sign.
+                                                                            // We just need endpoint + query.
 
         // request() splits endpoint by ?
         let endpoint = "/v5/position/list?category=linear&settleCoin=USDT";

@@ -7,10 +7,10 @@
 //!
 //! Phase 4 implementation - January 2026
 
-use crossbeam_channel::{Receiver, Sender, TrySendError, bounded};
+use crossbeam_channel::{bounded, Receiver, Sender, TrySendError};
 use crossbeam_queue::SegQueue;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::Arc;
 use tracing::{info, warn};
 
 // ============================================================================
@@ -354,7 +354,11 @@ impl LatencyTracker {
     pub fn avg_ns(&self) -> u64 {
         let total = self.total_latency_ns.load(Ordering::Relaxed);
         let samples = self.total_samples.load(Ordering::Relaxed);
-        if samples == 0 { 0 } else { total / samples }
+        if samples == 0 {
+            0
+        } else {
+            total / samples
+        }
     }
 
     /// Get p99 bucket (rough approximation)

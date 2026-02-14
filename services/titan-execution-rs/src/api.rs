@@ -1,7 +1,7 @@
 use crate::risk_guard::RiskGuard;
 use crate::risk_policy::RiskState;
 use crate::shadow_state::ShadowState;
-use actix_web::{HttpResponse, Responder, web};
+use actix_web::{web, HttpResponse, Responder};
 use async_nats::Client as NatsClient;
 use parking_lot::RwLock;
 use serde::Serialize;

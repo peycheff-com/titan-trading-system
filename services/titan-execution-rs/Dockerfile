@@ -1,7 +1,10 @@
 # Builder Stage
-FROM rust:1.85-slim-bookworm as builder
+FROM rust:latest as builder
 
 WORKDIR /usr/src/app
+
+RUN rustc --version
+
 
 # Install build dependencies (OpenSSL, Protobuf for OTel/gRPC)
 RUN apt-get update && apt-get install -y \

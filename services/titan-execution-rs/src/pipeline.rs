@@ -1,6 +1,6 @@
 use parking_lot::RwLock;
-use rust_decimal::Decimal;
 use rust_decimal::prelude::ToPrimitive;
+use rust_decimal::Decimal;
 use std::sync::Arc;
 use tracing::{error, info, warn};
 
@@ -330,13 +330,14 @@ impl ExecutionPipeline {
                         .or(processed_intent.entry_zone.first().cloned())
                     {
                         if target > Decimal::ZERO && fill_price > Decimal::ZERO {
-                        let diff = (fill_price - target).abs();
-                        let slip_ratio = diff / target;
-                        // Convert to BPS (f64)
-                        let slip_bps = (slip_ratio * Decimal::from(10000)).to_f64().unwrap_or(0.0);
-                        metrics::observe_slippage(slip_bps);
+                            let diff = (fill_price - target).abs();
+                            let slip_ratio = diff / target;
+                            // Convert to BPS (f64)
+                            let slip_bps =
+                                (slip_ratio * Decimal::from(10000)).to_f64().unwrap_or(0.0);
+                            metrics::observe_slippage(slip_bps);
+                        }
                     }
-                }
 
                     // 3. Filled Orders
                     metrics::inc_filled_orders();

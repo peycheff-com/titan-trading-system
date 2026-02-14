@@ -41,7 +41,7 @@ services:
   nats:
     image: nats:2.10-alpine
     container_name: titan-nats
-    command: ['-js', '-sd', '/data']
+    command: ['-js', '-sd', '/data', '-m', '8222']
     volumes:
       - nats_data:/data
     ports:
@@ -60,8 +60,8 @@ services:
   # Titan Brain - Orchestration
   titan-brain:
     build:
-      context: ./services/titan-brain
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/titan-brain/Dockerfile
     container_name: titan-brain
     environment:
       NODE_ENV: production
@@ -69,11 +69,17 @@ services:
       NATS_URL: nats://nats:4222
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/titan_brain_micro
-      HMAC_SECRET: ${HMAC_SECRET}
+      HMAC_SECRET: ${HMAC_SECRET:-supersecretkey_staging_only}
+      SAFETY_SECRET: ${SAFETY_SECRET:-safety_dance_staging_only}
       # Posture
       TITAN_POSTURE: micro_capital
       TITAN_MAX_LEVERAGE: '10'
       TITAN_DAILY_LOSS_LIMIT_USD: '20'
+      PORT: '3100'
+      DB_HOST: postgres
+      DB_NAME: titan_brain_micro
+      DB_USER: postgres
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-password}
     depends_on:
       postgres:
         condition: service_healthy
@@ -96,13 +102,13 @@ services:
   # Rust Execution Engine
   titan-execution:
     build:
-      context: ./services/titan-execution-rs
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/titan-execution-rs/Dockerfile
     container_name: titan-execution
     environment:
       RUST_LOG: info
       NATS_URL: nats://nats:4222
-      HMAC_SECRET: ${HMAC_SECRET}
+      HMAC_SECRET: ${HMAC_SECRET:-supersecretkey_staging_only}
       RISK_POLICY_PATH: /app/risk_policy_micro.json
       # Exchange API (set externally)
       BINANCE_API_KEY: ${BINANCE_API_KEY}
@@ -121,14 +127,18 @@ services:
   # Phase 1 - Scavenger (Scalping)
   titan-scavenger:
     build:
-      context: ./services/titan-phase1-scavenger
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/titan-phase1-scavenger/Dockerfile
     container_name: titan-scavenger
     environment:
       NODE_ENV: production
       NATS_URL: nats://nats:4222
       TITAN_PHASE: scavenger
       TITAN_MAX_POSITION_USD: '50'
+      BINANCE_API_KEY: ${BINANCE_API_KEY:-dummy_key_staging}
+      BINANCE_API_SECRET: ${BINANCE_API_SECRET:-dummy_secret_staging}
+      BYBIT_API_KEY: ${BYBIT_API_KEY:-dummy_key_staging}
+      BYBIT_API_SECRET: ${BYBIT_API_SECRET:-dummy_secret_staging}
     depends_on:
       nats:
         condition: service_healthy
@@ -142,14 +152,18 @@ services:
   # Phase 2 - Hunter (Swing)
   titan-hunter:
     build:
-      context: ./services/titan-phase2-hunter
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/titan-phase2-hunter/Dockerfile
     container_name: titan-hunter
     environment:
       NODE_ENV: production
       NATS_URL: nats://nats:4222
       TITAN_PHASE: hunter
       TITAN_MAX_POSITION_USD: '75'
+      # Hunter might need these too? Adding just in case.
+      BINANCE_API_KEY: ${BINANCE_API_KEY:-dummy_key_staging}
+      BINANCE_API_SECRET: ${BINANCE_API_SECRET:-dummy_secret_staging}
+      HMAC_SECRET: ${HMAC_SECRET:-supersecretkey_staging_only}
     depends_on:
       nats:
         condition: service_healthy
@@ -163,14 +177,16 @@ services:
   # Phase 3 - Sentinel (Portfolio)
   titan-sentinel:
     build:
-      context: ./services/titan-phase3-sentinel
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/titan-phase3-sentinel/Dockerfile
+
     container_name: titan-sentinel
     environment:
       NODE_ENV: production
       NATS_URL: nats://nats:4222
       TITAN_PHASE: sentinel
       TITAN_MAX_POSITION_USD: '100'
+      TITAN_HMAC_SECRET: ${HMAC_SECRET:-supersecretkey_staging_only}
     depends_on:
       nats:
         condition: service_healthy

@@ -164,7 +164,7 @@ impl JupiterAdapter {
         let mut signed_tx = Vec::with_capacity(tx_bytes.len());
         signed_tx.push(tx_bytes[0]); // sig count
         signed_tx.extend_from_slice(&signature.to_bytes()); // our signature (first slot)
-        // Copy remaining signatures (if any)
+                                                            // Copy remaining signatures (if any)
         if sig_count > 1 {
             signed_tx.extend_from_slice(&tx_bytes[sig_start + 64..msg_start]);
         }

@@ -391,19 +391,29 @@ export class SentimentCalculator extends EventEmitter {
    * Events closer to resolution have higher weight
    */
   calculateTimeDecay(resolution: Date): number {
-    const now = new Date();
-    const hoursUntilResolution = (resolution.getTime() - now.getTime()) / (1000 * 60 * 60);
+    // Defensive: upstream data (or fuzz/property tests) may contain invalid Dates.
+    // Never allow NaN to propagate into weights/confidence (risk: NaN fan-out).
+    const resolutionMs = resolution instanceof Date ? resolution.getTime() : NaN;
+    if (!Number.isFinite(resolutionMs)) {
+      return 0.1;
+    }
 
-    if (hoursUntilResolution <= 0) {
+    const halfLife = this.config.timeDecayHalfLife;
+    if (!Number.isFinite(halfLife) || halfLife <= 0) {
+      return 0.1;
+    }
+
+    const hoursUntilResolution = (resolutionMs - Date.now()) / (1000 * 60 * 60);
+
+    if (!Number.isFinite(hoursUntilResolution) || hoursUntilResolution <= 0) {
       return 0.1; // Past events have minimal weight
     }
 
     // Exponential decay with configurable half-life
-    const halfLife = this.config.timeDecayHalfLife;
     const decay = Math.pow(0.5, hoursUntilResolution / halfLife);
 
     // Higher decay value = closer event = higher weight
-    return decay + 0.1; // Minimum 0.1 weight
+    return Number.isFinite(decay) ? decay + 0.1 : 0.1; // Minimum 0.1 weight
   }
 
   /**

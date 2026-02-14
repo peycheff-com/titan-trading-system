@@ -53,33 +53,33 @@ impl MexcConnector {
         if let Some(channel) = &msg.channel {
             if channel.starts_with("push.deal") {
                 if let Some(data) = &msg.data {
-            if let Some(deals) = data.as_array() {
-                // Direct array format: {"data": [...], ...}
-                for deal_val in deals {
-                    let deal: MexcDeal = serde_json::from_value(deal_val.clone())
-                        .map_err(|e| MarketDataError::Parse(e.to_string()))?;
+                    if let Some(deals) = data.as_array() {
+                        // Direct array format: {"data": [...], ...}
+                        for deal_val in deals {
+                            let deal: MexcDeal = serde_json::from_value(deal_val.clone())
+                                .map_err(|e| MarketDataError::Parse(e.to_string()))?;
 
-                    let symbol = msg.symbol.clone().unwrap_or("UNKNOWN".to_string());
-                    let _ = tx
-                        .send(MarketDataEvent::Trade(deal.to_model(&symbol)))
-                        .await;
-                }
-            } else if let Some(deal_json) = data.as_object() {
-                // Try single check or "data" field inside data
-                if let Some(inner_data) = deal_json.get("data").and_then(|d| d.as_array()) {
-                    for deal_val in inner_data {
-                        let deal: MexcDeal = serde_json::from_value(deal_val.clone())
-                            .map_err(|e| MarketDataError::Parse(e.to_string()))?;
-                        let symbol = msg.symbol.clone().unwrap_or("UNKNOWN".to_string());
-                        let _ = tx
-                            .send(MarketDataEvent::Trade(deal.to_model(&symbol)))
-                            .await;
+                            let symbol = msg.symbol.clone().unwrap_or("UNKNOWN".to_string());
+                            let _ = tx
+                                .send(MarketDataEvent::Trade(deal.to_model(&symbol)))
+                                .await;
+                        }
+                    } else if let Some(deal_json) = data.as_object() {
+                        // Try single check or "data" field inside data
+                        if let Some(inner_data) = deal_json.get("data").and_then(|d| d.as_array()) {
+                            for deal_val in inner_data {
+                                let deal: MexcDeal = serde_json::from_value(deal_val.clone())
+                                    .map_err(|e| MarketDataError::Parse(e.to_string()))?;
+                                let symbol = msg.symbol.clone().unwrap_or("UNKNOWN".to_string());
+                                let _ = tx
+                                    .send(MarketDataEvent::Trade(deal.to_model(&symbol)))
+                                    .await;
+                            }
+                        }
                     }
                 }
             }
         }
-    }
-    }
 
         Ok(())
     }

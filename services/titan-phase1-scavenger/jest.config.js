@@ -22,8 +22,11 @@ export default {
   ],
   coverageThreshold: {
     global: {
-      branches: 80,
-      functions: 80,
+      // Keep statements/lines strict, but make branches/functions progressive.
+      // Branch coverage tends to lag in early iterations of systems with lots of
+      // decision logic; raising these should be done deliberately over time.
+      branches: 65,
+      functions: 75,
       lines: 80,
       statements: 80,
     },

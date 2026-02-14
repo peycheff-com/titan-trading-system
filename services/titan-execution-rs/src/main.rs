@@ -1,6 +1,6 @@
-use tracing::{Level, error, info};
+use tracing::{error, info, Level};
 mod auth_middleware;
-use actix_web::{App, HttpServer, web};
+use actix_web::{web, App, HttpServer};
 use actix_web_prom::PrometheusMetricsBuilder;
 use auth_middleware::AuthMiddleware;
 use parking_lot::RwLock;
@@ -44,7 +44,7 @@ use titan_execution_rs::shadow_state::ShadowState;
 use titan_execution_rs::simulation_engine::SimulationEngine;
 use titan_execution_rs::sre::SreMonitor;
 use titan_execution_rs::subjects; // Canonical Subjects
-// use tracing_subscriber::FmtSubscriber;
+                                  // use tracing_subscriber::FmtSubscriber;
 
 fn load_secrets_from_files() {
     const FILE_SUFFIX: &str = "_FILE";
@@ -85,9 +85,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Initialize OpenTelemetry
     use opentelemetry::KeyValue;
     use opentelemetry_otlp::WithExportConfig;
-    use opentelemetry_sdk::{Resource, trace as sdktrace};
-    use tracing_subscriber::Registry;
+    use opentelemetry_sdk::{trace as sdktrace, Resource};
     use tracing_subscriber::layer::SubscriberExt;
+    use tracing_subscriber::Registry;
 
     let tracer = opentelemetry_otlp::new_pipeline()
         .tracing()

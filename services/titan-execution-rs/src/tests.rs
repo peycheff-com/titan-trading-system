@@ -225,11 +225,9 @@ mod integration {
             "BYBIT",
         );
         assert!(!close_events.is_empty());
-        assert!(
-            close_events
-                .iter()
-                .any(|event| matches!(event, crate::shadow_state::ExecutionEvent::Closed(_)))
-        );
+        assert!(close_events
+            .iter()
+            .any(|event| matches!(event, crate::shadow_state::ExecutionEvent::Closed(_))));
 
         // 6. Verify Position Closed
         assert!(!state.has_position("ETH/USD"));
@@ -379,11 +377,9 @@ mod integration {
             "USDT".to_string(),
             "BYBIT",
         );
-        assert!(
-            reduce_events
-                .iter()
-                .any(|event| matches!(event, crate::shadow_state::ExecutionEvent::Updated(_)))
-        );
+        assert!(reduce_events
+            .iter()
+            .any(|event| matches!(event, crate::shadow_state::ExecutionEvent::Updated(_))));
 
         let pos = state.get_position("ETH/USD").expect("position exists");
         assert_eq!(pos.size, dec!(1.0));
@@ -436,11 +432,9 @@ mod integration {
             "USDT".to_string(),
             "BYBIT",
         );
-        assert!(
-            flip_events
-                .iter()
-                .any(|event| matches!(event, crate::shadow_state::ExecutionEvent::Closed(_)))
-        );
+        assert!(flip_events
+            .iter()
+            .any(|event| matches!(event, crate::shadow_state::ExecutionEvent::Closed(_))));
 
         let pos = state.get_position("ETH/USD").expect("position exists");
         assert_eq!(pos.size, dec!(2.0));

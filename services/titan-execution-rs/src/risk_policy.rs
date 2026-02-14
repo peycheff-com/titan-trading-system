@@ -1,5 +1,5 @@
-use rust_decimal::Decimal;
 use rust_decimal::dec;
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
