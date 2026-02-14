@@ -6,14 +6,20 @@ WORKDIR /app
 # Copy root package files for workspace resolution
 COPY package.json package-lock.json ./
 COPY apps/titan-console/package.json apps/titan-console/
+COPY packages/shared/package.json packages/shared/
 
-# Install dependencies
-RUN npm ci --workspace=apps/titan-console
+# Install dependencies (full monorepo for workspace linking)
+RUN npm ci
 
-# Copy source code
+# Copy shared package and build it first
+COPY packages/shared packages/shared/
+WORKDIR /app/packages/shared
+RUN npm run build
+
+# Copy console source and build
+WORKDIR /app
 COPY apps/titan-console apps/titan-console/
 
-# Build the application
 WORKDIR /app/apps/titan-console
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
