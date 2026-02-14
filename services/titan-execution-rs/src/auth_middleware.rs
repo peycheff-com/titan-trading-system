@@ -1,9 +1,9 @@
 use actix_web::{
-    dev::{Service, ServiceRequest, ServiceResponse, Transform},
     Error,
+    dev::{Service, ServiceRequest, ServiceResponse, Transform},
 };
-use futures::future::{ok, Ready};
 use futures::Future;
+use futures::future::{Ready, ok};
 use std::env;
 use std::pin::Pin;
 use std::rc::Rc;
@@ -77,9 +77,10 @@ where
 
             if let Some(header) = req.headers().get("x-api-key")
                 && let Ok(key_str) = header.to_str()
-                    && key_str == api_key_env {
-                        return srv.call(req).await;
-                    }
+                && key_str == api_key_env
+            {
+                return srv.call(req).await;
+            }
 
             // Reject
             Err(actix_web::error::ErrorUnauthorized("Invalid API Key"))

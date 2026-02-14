@@ -7,7 +7,7 @@ use chrono::Utc;
 use ethers::prelude::*;
 use reqwest::Client;
 use rust_decimal::prelude::*;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::time::Duration;
 use tracing::info;
 
@@ -89,11 +89,10 @@ impl HyperliquidAdapter {
         let base = symbol.split('/').next().unwrap_or(symbol);
         let base = base.split('-').next().unwrap_or(base);
         match base {
-            "ETH" | "BTC" | "SOL" | "AVAX" | "DOGE" | "MATIC" |
-            "ARB" | "OP" | "LINK" | "UNI" | "AAVE" | "CRV" |
-            "NEAR" | "APT" | "SUI" | "SEI" | "TIA" | "INJ" |
-            "WIF" | "JUP" | "BONK" | "PEPE" | "WLD" | "STRK" |
-            "ONDO" | "DYDX" | "MKR" | "SNX" | "COMP" | "LDO" => {
+            "ETH" | "BTC" | "SOL" | "AVAX" | "DOGE" | "MATIC" | "ARB" | "OP" | "LINK" | "UNI"
+            | "AAVE" | "CRV" | "NEAR" | "APT" | "SUI" | "SEI" | "TIA" | "INJ" | "WIF" | "JUP"
+            | "BONK" | "PEPE" | "WLD" | "STRK" | "ONDO" | "DYDX" | "MKR" | "SNX" | "COMP"
+            | "LDO" => {
                 Ok((base.to_string(), 6)) // All perps settle in USDC (6 decimals)
             }
             _ => Err(ExchangeError::Configuration(format!(
@@ -140,13 +139,13 @@ impl HyperliquidAdapter {
         // Hyperliquid signing requires the action to be msgpack encoded, then hashed
         let action_bytes = rmp_serde::to_vec_named(action)
             .map_err(|e| ExchangeError::Configuration(format!("Msgpack encoding failed: {}", e)))?;
-        
+
         let action_hash = ethers::utils::keccak256(&action_bytes);
 
         // 2. Create "Agent" typed data
         // Domain: name=Exchange, version=1, chainId=1337, verifyingContract=0x0...0
         // Type: Agent(source:string,connectionId:bytes32)
-        
+
         // EIP-712 types definition constructed manually to avoid Eip712 macro dependency issues
         let domain = ethers::types::transaction::eip712::EIP712Domain {
             name: Some("Exchange".to_string()),
@@ -156,8 +155,9 @@ impl HyperliquidAdapter {
             salt: None,
         };
 
-        let types = std::collections::BTreeMap::from([
-            ("Agent".to_string(), vec![
+        let types = std::collections::BTreeMap::from([(
+            "Agent".to_string(),
+            vec![
                 ethers::types::transaction::eip712::Eip712DomainType {
                     name: "source".to_string(),
                     r#type: "string".to_string(),
@@ -166,8 +166,8 @@ impl HyperliquidAdapter {
                     name: "connectionId".to_string(),
                     r#type: "bytes32".to_string(),
                 },
-            ]),
-        ]);
+            ],
+        )]);
 
         let message_val = serde_json::json!({
             "source": "b", // 'b' for browser/API (standard)
@@ -190,7 +190,8 @@ impl HyperliquidAdapter {
         };
 
         // 3. Sign with wallet
-        let wallet: LocalWallet = self.private_key
+        let wallet: LocalWallet = self
+            .private_key
             .parse::<LocalWallet>()
             .map_err(|e| ExchangeError::Configuration(format!("Invalid private key: {}", e)))?
             .with_chain_id(1337u64);
@@ -202,14 +203,14 @@ impl HyperliquidAdapter {
 
         let mut r_bytes = [0u8; 32];
         signature.r.to_big_endian(&mut r_bytes);
-        
+
         let mut s_bytes = [0u8; 32];
         signature.s.to_big_endian(&mut s_bytes);
 
         Ok(json!({
             "r": format!("0x{}", hex::encode(r_bytes)),
             "s": format!("0x{}", hex::encode(s_bytes)),
-            "v": signature.v - 27 
+            "v": signature.v - 27
             // Hyperliquid expects v as u8 (27 or 28 -> 0 or 1? No, usually 27/28)
             // But signature.v from ethers is recovery id + 27 (so 27 or 28).
             // Usually JSON RPC expects v=27/28.
@@ -217,7 +218,7 @@ impl HyperliquidAdapter {
             // Ethers `Signature` struct says `v` is u64 recovery id + 27.
             // Let's assume standard Ethereum signing: 27/28.
             // My previous code had `signature.v - 27`. If HL is standard EIP-712, it might expect 27/28.
-            // I'll stick to `v` (u8) directly if it fits. 
+            // I'll stick to `v` (u8) directly if it fits.
             // Actually, checking standard: HL uses 27/28 in JSON.
             // But ethers signature.v is u64.
             // Let's use `signature.v as u8`.
@@ -259,7 +260,7 @@ impl HyperliquidAdapter {
         // The object to sign is NOT the order_payload directly, but the action wrapper:
         // { "type": "order", "orders": ..., "grouping": "na" }
         // Wait, the "action" IS the order_payload.
-        
+
         let signature = self.sign_action(&order_payload, nonce).await?;
 
         // Final payload to API
@@ -297,7 +298,7 @@ impl HyperliquidAdapter {
             "BTC" => Ok(1),
             "SOL" => Ok(5),
             "ARB" => Ok(18),
-             _ => Ok(0), // Failsafe
+            _ => Ok(0), // Failsafe
         }
     }
 }
@@ -524,14 +525,8 @@ impl ExchangeAdapter for HyperliquidAdapter {
         let mut result = Vec::new();
         for pos in positions {
             let position = pos.get("position").unwrap_or(&pos);
-            let coin = position
-                .get("coin")
-                .and_then(|c| c.as_str())
-                .unwrap_or("?");
-            let size_str = position
-                .get("szi")
-                .and_then(|s| s.as_str())
-                .unwrap_or("0");
+            let coin = position.get("coin").and_then(|c| c.as_str()).unwrap_or("?");
+            let size_str = position.get("szi").and_then(|s| s.as_str()).unwrap_or("0");
             let entry_px = position
                 .get("entryPx")
                 .and_then(|p| p.as_str())

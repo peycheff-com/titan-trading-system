@@ -112,11 +112,10 @@ impl PancakeSwapAdapter {
 #[async_trait]
 impl ExchangeAdapter for PancakeSwapAdapter {
     async fn init(&self) -> Result<(), ExchangeError> {
-        let _block = self
-            .client
-            .get_block_number()
-            .await
-            .map_err(|e| ExchangeError::Network(format!("Failed to connect to BSC RPC: {}", e)))?;
+        let _block =
+            self.client.get_block_number().await.map_err(|e| {
+                ExchangeError::Network(format!("Failed to connect to BSC RPC: {}", e))
+            })?;
         Ok(())
     }
 
@@ -145,7 +144,7 @@ impl ExchangeAdapter for PancakeSwapAdapter {
                 _ => {
                     return Err(ExchangeError::Configuration(
                         "Unknown symbol — use Address-Address format".into(),
-                    ))
+                    ));
                 }
             }
         };

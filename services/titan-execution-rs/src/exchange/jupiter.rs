@@ -263,10 +263,7 @@ impl ExchangeAdapter for JupiterAdapter {
             if parts.len() != 2 {
                 return Err(ExchangeError::OrderRejected("Invalid symbol format".into()));
             }
-            (
-                Self::resolve_mint(parts[0])?,
-                Self::resolve_mint(parts[1])?,
-            )
+            (Self::resolve_mint(parts[0])?, Self::resolve_mint(parts[1])?)
         } else if order.symbol.contains('-') {
             let parts: Vec<&str> = order.symbol.split('-').collect();
             (parts[0].to_string(), parts[1].to_string())
@@ -369,17 +366,15 @@ impl ExchangeAdapter for JupiterAdapter {
 
         info!("✅ Jupiter swap broadcast: {}", tx_signature);
 
-        let output_decimals: u32 =
-            if output_mint == "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
-                || output_mint == "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
-            {
-                6
-            } else {
-                9
-            };
+        let output_decimals: u32 = if output_mint == "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+            || output_mint == "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
+        {
+            6
+        } else {
+            9
+        };
 
-        let executed = Decimal::from_str(out_amount_str)
-            .unwrap_or(Decimal::ZERO)
+        let executed = Decimal::from_str(out_amount_str).unwrap_or(Decimal::ZERO)
             / Decimal::from(10u64.pow(output_decimals));
 
         Ok(OrderResponse {

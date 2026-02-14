@@ -6,8 +6,8 @@ use async_trait::async_trait;
 use chrono::Utc;
 use hex;
 use hmac::{Hmac, Mac};
-use reqwest::header::CONTENT_TYPE;
 use reqwest::Client;
+use reqwest::header::CONTENT_TYPE;
 use rust_decimal::prelude::*;
 use serde::Deserialize;
 use serde_json::Value;
@@ -98,7 +98,7 @@ impl CryptoComAdapter {
                     return Err(ExchangeError::Signing(format!(
                         "Unsupported param type for key {}",
                         k
-                    )))
+                    )));
                 }
             };
             params_string.push_str(k);
@@ -178,13 +178,14 @@ impl CryptoComAdapter {
 
         // Check for "code" in response. 0 is success usually.
         if let Some(code) = json.get("code").and_then(|c| c.as_i64())
-            && code != 0 {
-                return Err(ExchangeError::Api(format!(
-                    "Crypto.com API Error {}: {}",
-                    code,
-                    json.get("message").unwrap_or(&Value::Null)
-                )));
-            }
+            && code != 0
+        {
+            return Err(ExchangeError::Api(format!(
+                "Crypto.com API Error {}: {}",
+                code,
+                json.get("message").unwrap_or(&Value::Null)
+            )));
+        }
 
         // Result is usually in "result" field
         if let Some(result) = json.get("result") {
@@ -342,10 +343,11 @@ impl ExchangeAdapter for CryptoComAdapter {
             for acc in accounts {
                 if let Some(curr) = acc.get("currency").and_then(|c| c.as_str())
                     && curr == asset
-                        && let Some(avail) = acc.get("available").and_then(|a| a.as_f64()) {
-                            return Decimal::from_f64(avail)
-                                .ok_or(ExchangeError::Parse("Invalid number".into()));
-                        }
+                    && let Some(avail) = acc.get("available").and_then(|a| a.as_f64())
+                {
+                    return Decimal::from_f64(avail)
+                        .ok_or(ExchangeError::Parse("Invalid number".into()));
+                }
             }
         }
 

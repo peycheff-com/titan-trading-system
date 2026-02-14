@@ -119,11 +119,11 @@ pub async fn estimate_eip1559_fees<M: Middleware + 'static>(
         .estimate_eip1559_fees(None)
         .await
         .map_err(|e| format!("EIP-1559 fee estimation failed: {}", e))?;
-    
+
     // SOTA Safety: Add 10% buffer to max_fee to prevent "replacement fee too low" or stuck txs
     // during rapid volatility.
     let max_fee_buffered = max_fee * U256::from(110) / U256::from(100);
-    
+
     Ok((max_fee_buffered, priority_fee))
 }
 

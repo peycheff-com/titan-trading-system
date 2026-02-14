@@ -42,8 +42,8 @@ impl MexcAdapter {
             .or_else(|| env::var("MEXC_SECRET_KEY").ok())
             .ok_or_else(|| ExchangeError::Configuration("MEXC_SECRET_KEY not set".to_string()))?;
 
-        let base_url = env::var("MEXC_BASE_URL")
-            .unwrap_or_else(|_| "https://contract.mexc.com".to_string());
+        let base_url =
+            env::var("MEXC_BASE_URL").unwrap_or_else(|_| "https://contract.mexc.com".to_string());
 
         Ok(Self {
             client: Client::new(),
@@ -161,7 +161,7 @@ impl ExchangeAdapter for MexcAdapter {
             _ => {
                 return Err(ExchangeError::Configuration(
                     "Unsupported order type for MEXC".into(),
-                ))
+                ));
             }
         };
 
@@ -250,10 +250,10 @@ impl ExchangeAdapter for MexcAdapter {
                     .and_then(|v| v.as_str())
                     .or_else(|| entry.get("available").and_then(|v| v.as_str()))
                     .or_else(|| entry.get("balance").and_then(|v| v.as_str()))
-                {
-                    return Decimal::from_str_exact(balance)
-                        .map_err(|e| ExchangeError::Api(format!("Invalid balance format: {}", e)));
-                }
+            {
+                return Decimal::from_str_exact(balance)
+                    .map_err(|e| ExchangeError::Api(format!("Invalid balance format: {}", e)));
+            }
         }
 
         Err(ExchangeError::Api(format!(

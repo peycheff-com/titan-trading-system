@@ -1,7 +1,7 @@
 use crate::exchange::adapter::{ExchangeAdapter, ExchangeError, OrderRequest, OrderResponse};
 use crate::model::{Position, Side};
 use async_trait::async_trait;
-use base64::{engine::general_purpose, Engine as _};
+use base64::{Engine as _, engine::general_purpose};
 use chrono::Utc;
 use hmac::{Hmac, Mac};
 use reqwest::{Client, Method};
@@ -50,8 +50,8 @@ impl OkxAdapter {
 
         let simulated_trading = config.map(|c| c.testnet).unwrap_or(false);
 
-        let base_url = env::var("OKX_BASE_URL")
-            .unwrap_or_else(|_| "https://www.okx.com".to_string());
+        let base_url =
+            env::var("OKX_BASE_URL").unwrap_or_else(|_| "https://www.okx.com".to_string());
 
         // Rate Limits: OKX V5 roughly 10-20 req/2s depending on tier.
         // Conservative: 5 req/s.
@@ -131,12 +131,13 @@ impl OkxAdapter {
             .map_err(|e| ExchangeError::Api(format!("Parse error: {}", e)))?;
 
         if let Some(code) = json["code"].as_str()
-            && code != "0" {
-                return Err(ExchangeError::Api(format!(
-                    "OKX API Error {}: {}",
-                    code, json["msg"]
-                )));
-            }
+            && code != "0"
+        {
+            return Err(ExchangeError::Api(format!(
+                "OKX API Error {}: {}",
+                code, json["msg"]
+            )));
+        }
 
         Ok(text)
     }

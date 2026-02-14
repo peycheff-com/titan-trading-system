@@ -32,27 +32,22 @@ pub struct DydxAdapter {
     client: Client,
 }
 
-
 impl DydxAdapter {
     pub fn new(config: Option<&ExchangeConfig>) -> Result<Self, ExchangeError> {
         let config = config.ok_or(ExchangeError::Configuration("Missing dYdX config".into()))?;
 
-        let api_key = config.get_api_key().ok_or(ExchangeError::Configuration(
-            "Missing dYdX API Key".into(),
-        ))?;
+        let api_key = config
+            .get_api_key()
+            .ok_or(ExchangeError::Configuration("Missing dYdX API Key".into()))?;
         let secret_key = config.get_secret_key().ok_or(ExchangeError::Configuration(
             "Missing dYdX Secret Key".into(),
         ))?;
 
         // Passphrase stored in api_key_alt field (reusing config field)
-        let passphrase = config
-            .api_key_alt
-            .clone()
-            .unwrap_or_default();
+        let passphrase = config.api_key_alt.clone().unwrap_or_default();
 
         // dYdX v4 address (cosmos-based) — stored via env var
-        let address = std::env::var("DYDX_ADDRESS")
-            .unwrap_or_default();
+        let address = std::env::var("DYDX_ADDRESS").unwrap_or_default();
 
         let base_url = std::env::var("DYDX_BASE_URL").unwrap_or_else(|_| {
             if config.testnet {
@@ -75,7 +70,13 @@ impl DydxAdapter {
         })
     }
 
-    fn sign(&self, request_path: &str, method: &str, timestamp: &str, body: &str) -> Result<String, ExchangeError> {
+    fn sign(
+        &self,
+        request_path: &str,
+        method: &str,
+        timestamp: &str,
+        body: &str,
+    ) -> Result<String, ExchangeError> {
         // dYdX v4 signature: HMAC-SHA256(secret, timestamp + method + requestPath + body)
         let message = format!("{}{}{}{}", timestamp, method, request_path, body);
 
@@ -177,7 +178,9 @@ impl ExchangeAdapter for DydxAdapter {
             .map_err(|e| ExchangeError::Api(format!("Parse error: {}", e)))?;
 
         if json.get("height").is_none() {
-            return Err(ExchangeError::Api("dYdX indexer health check failed: no height".into()));
+            return Err(ExchangeError::Api(
+                "dYdX indexer health check failed: no height".into(),
+            ));
         }
 
         Ok(())
@@ -201,7 +204,11 @@ impl ExchangeAdapter for DydxAdapter {
         // dYdX v4 uses market ticker format like "BTC-USD"
         let market = order.symbol.replace("/", "-").replace("USDT", "USD");
 
-        let order_type = if order.price.is_some() { "LIMIT" } else { "MARKET" };
+        let order_type = if order.price.is_some() {
+            "LIMIT"
+        } else {
+            "MARKET"
+        };
         let time_in_force = if order.price.is_some() { "GTT" } else { "FOK" };
 
         let mut payload = serde_json::json!({
@@ -219,7 +226,8 @@ impl ExchangeAdapter for DydxAdapter {
             payload["price"] = serde_json::json!(price.to_string());
             // GTT orders need goodTilTime
             let good_til = Utc::now() + chrono::Duration::hours(24);
-            payload["goodTilTime"] = serde_json::json!(good_til.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string());
+            payload["goodTilTime"] =
+                serde_json::json!(good_til.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string());
         }
 
         let body = payload.to_string();
@@ -344,10 +352,7 @@ impl ExchangeAdapter for DydxAdapter {
             .and_then(|p| p.as_object())
         {
             for (market, pos_data) in open_positions {
-                let size_str = pos_data
-                    .get("size")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("0");
+                let size_str = pos_data.get("size").and_then(|v| v.as_str()).unwrap_or("0");
                 let size = Decimal::from_str(size_str).unwrap_or(Decimal::zero());
 
                 if size.is_zero() {
@@ -375,7 +380,8 @@ impl ExchangeAdapter for DydxAdapter {
                     .get("unrealizedPnl")
                     .and_then(|v| v.as_str())
                     .unwrap_or("0");
-                let unrealized_pnl = Decimal::from_str(unrealized_pnl_str).unwrap_or(Decimal::zero());
+                let unrealized_pnl =
+                    Decimal::from_str(unrealized_pnl_str).unwrap_or(Decimal::zero());
 
                 let realized_pnl_str = pos_data
                     .get("realizedPnl")

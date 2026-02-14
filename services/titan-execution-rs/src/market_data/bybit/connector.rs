@@ -47,10 +47,11 @@ impl BybitConnector {
             serde_json::from_str(text).map_err(|e| MarketDataError::Parse(e.to_string()))?;
 
         if let Some(op) = msg.op
-            && op == "pong" {
-                // debug!("Received pong");
-                return Ok(());
-            }
+            && op == "pong"
+        {
+            // debug!("Received pong");
+            return Ok(());
+        }
 
         if let Some(topic) = msg.topic {
             // info!("Bybit Topic: {}", topic);
@@ -160,7 +161,7 @@ impl MarketDataConnector for BybitConnector {
             _ => {
                 return Err(MarketDataError::Subscription(
                     "Unsupported stream type".to_string(),
-                ))
+                ));
             }
         };
 

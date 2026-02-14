@@ -1,7 +1,7 @@
 use once_cell::sync::Lazy;
 use prometheus::{
-    register_histogram, register_int_counter, register_int_counter_vec, register_int_gauge,
-    Histogram, IntCounter, IntCounterVec, IntGauge,
+    Histogram, IntCounter, IntCounterVec, IntGauge, register_histogram, register_int_counter,
+    register_int_counter_vec, register_int_gauge,
 };
 
 // --- Execution Metrics (Phase 2 Remediation) ---
@@ -28,7 +28,9 @@ pub static BULGARIA_METRIC: Lazy<Histogram> = Lazy::new(|| {
     register_histogram!(
         "titan_execution_bulgaria_adverse_selection_bps",
         "Adverse selection (price movement against trade) 1s post-fill",
-        vec![-10.0, -5.0, -2.0, -1.0, 0.0, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0]
+        vec![
+            -10.0, -5.0, -2.0, -1.0, 0.0, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0
+        ]
     )
     .expect("bulgaria_metric histogram")
 });

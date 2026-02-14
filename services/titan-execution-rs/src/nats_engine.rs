@@ -114,7 +114,9 @@ pub async fn start_nats_engine(
                         }
                         "SOFT_HALT" => {
                             // Rust currently treats Soft/Hard same (Halt)
-                            warn!("🟡 System State: SOFT_HALT. Reducing risk (treated as HALT in Phase 2).");
+                            warn!(
+                                "🟡 System State: SOFT_HALT. Reducing risk (treated as HALT in Phase 2)."
+                            );
                             halt_state_clone.set_halt(true, reason);
                         }
                         "HARD_HALT" => {
@@ -371,9 +373,9 @@ pub async fn start_nats_engine(
                     && let Err(e) = client_for_valuation
                         .publish("exposure.update", payload.into())
                         .await
-                    {
-                        error!("Failed to publish exposure update: {}", e);
-                    }
+                {
+                    error!("Failed to publish exposure update: {}", e);
+                }
             }
         }
     });

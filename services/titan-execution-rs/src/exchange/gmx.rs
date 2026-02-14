@@ -118,9 +118,7 @@ pub struct GmxAdapter {
 
 impl GmxAdapter {
     pub fn new(config: Option<&ExchangeConfig>) -> Result<Self, ExchangeError> {
-        let config = config.ok_or(ExchangeError::Configuration(
-            "Missing GMX config".into(),
-        ))?;
+        let config = config.ok_or(ExchangeError::Configuration("Missing GMX config".into()))?;
 
         let rpc_url = std::env::var("GMX_RPC_URL").unwrap_or_else(|_| {
             if config.testnet {
@@ -148,14 +146,12 @@ impl GmxAdapter {
         let client = Arc::new(SignerMiddleware::new(provider, wallet));
 
         let exchange_router = Address::from_str(
-            &std::env::var("GMX_EXCHANGE_ROUTER")
-                .unwrap_or_else(|_| EXCHANGE_ROUTER.to_string()),
+            &std::env::var("GMX_EXCHANGE_ROUTER").unwrap_or_else(|_| EXCHANGE_ROUTER.to_string()),
         )
         .map_err(|e| ExchangeError::Configuration(format!("Invalid Router: {}", e)))?;
 
         let order_vault = Address::from_str(
-            &std::env::var("GMX_ORDER_VAULT")
-                .unwrap_or_else(|_| ORDER_VAULT.to_string()),
+            &std::env::var("GMX_ORDER_VAULT").unwrap_or_else(|_| ORDER_VAULT.to_string()),
         )
         .map_err(|e| ExchangeError::Configuration(format!("Invalid Vault: {}", e)))?;
 
@@ -226,9 +222,9 @@ impl ExchangeAdapter for GmxAdapter {
             .get_gas_price()
             .await
             .map_err(|e| ExchangeError::Network(format!("Gas price fetch failed: {}", e)))?;
-        
+
         let estimated_fee = gas_price * U256::from(2_500_000u64);
-        
+
         // Ensure minimum of 0.001 ETH (safe floor)
         let min_fee = U256::from(1_000_000_000_000_000u64);
         let execution_fee = std::cmp::max(estimated_fee, min_fee);

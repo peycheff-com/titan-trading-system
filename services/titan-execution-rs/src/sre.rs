@@ -38,7 +38,10 @@ impl SreMonitor {
                         let bad_pct = (bad_fills as f64) / (total_count as f64);
                         if bad_pct > 0.05 {
                             // > 5% of fills are > 20bps adverse
-                            warn!("SRE ALERT: 🇧🇬 Bulgaria Metric Spike! {:.2}% fills have >20bps adverse selection", bad_pct * 100.0);
+                            warn!(
+                                "SRE ALERT: 🇧🇬 Bulgaria Metric Spike! {:.2}% fills have >20bps adverse selection",
+                                bad_pct * 100.0
+                            );
                             // Escalate to Cautious if Normal
                             let current = risk_guard.get_policy().current_state;
                             if current == RiskState::Normal {

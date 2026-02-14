@@ -126,9 +126,10 @@ impl Settings {
         // 1. Validate NATS URL (Execution Config)
         if let Some(exec) = &self.execution {
             if let Some(nats_url) = &exec.nats_url
-                && nats_url.trim().is_empty() {
-                    return Err(ConfigError::Message("NATS URL cannot be empty".to_string()));
-                }
+                && nats_url.trim().is_empty()
+            {
+                return Err(ConfigError::Message("NATS URL cannot be empty".to_string()));
+            }
 
             // Validate Risk Guard (GAP-03)
             let risk = &exec.risk_guard;
@@ -157,22 +158,22 @@ impl Settings {
                                      config: &Option<ExchangeConfig>|
              -> Result<(), ConfigError> {
                 if let Some(c) = config
-                    && c.enabled {
-                        if c.get_api_key().is_none() || c.get_api_key().unwrap().trim().is_empty() {
-                            return Err(ConfigError::Message(format!(
-                                "Exchange '{}' is enabled but API Key is missing",
-                                name
-                            )));
-                        }
-                        if c.get_secret_key().is_none()
-                            || c.get_secret_key().unwrap().trim().is_empty()
-                        {
-                            return Err(ConfigError::Message(format!(
-                                "Exchange '{}' is enabled but Secret Key is missing",
-                                name
-                            )));
-                        }
+                    && c.enabled
+                {
+                    if c.get_api_key().is_none() || c.get_api_key().unwrap().trim().is_empty() {
+                        return Err(ConfigError::Message(format!(
+                            "Exchange '{}' is enabled but API Key is missing",
+                            name
+                        )));
                     }
+                    if c.get_secret_key().is_none() || c.get_secret_key().unwrap().trim().is_empty()
+                    {
+                        return Err(ConfigError::Message(format!(
+                            "Exchange '{}' is enabled but Secret Key is missing",
+                            name
+                        )));
+                    }
+                }
                 Ok(())
             };
 
@@ -195,10 +196,10 @@ impl Settings {
 
         // 3. Validate Routing Config
         if let Some(exec) = &self.execution
-            && let Some(routing) = &exec.routing {
-                let validate_weights = |name: &str,
-                                        weights: &Option<HashMap<String, f64>>|
-                 -> Result<(), ConfigError> {
+            && let Some(routing) = &exec.routing
+        {
+            let validate_weights =
+                |name: &str, weights: &Option<HashMap<String, f64>>| -> Result<(), ConfigError> {
                     if let Some(map) = weights {
                         if map.is_empty() {
                             return Err(ConfigError::Message(format!(
@@ -218,11 +219,11 @@ impl Settings {
                     Ok(())
                 };
 
-                validate_weights("default", &routing.weights)?;
-                for (source, rule) in &routing.per_source {
-                    validate_weights(source, &rule.weights)?;
-                }
+            validate_weights("default", &routing.weights)?;
+            for (source, rule) in &routing.per_source {
+                validate_weights(source, &rule.weights)?;
             }
+        }
 
         Ok(())
     }

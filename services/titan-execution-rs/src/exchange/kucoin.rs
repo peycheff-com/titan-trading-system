@@ -3,11 +3,11 @@ use crate::exchange::adapter::{
     ExchangeAdapter, ExchangeError, OrderRequest, OrderResponse, Position, Side,
 };
 use async_trait::async_trait;
-use base64::{engine::general_purpose, Engine as _};
+use base64::{Engine as _, engine::general_purpose};
 use chrono::Utc;
 use hmac::{Hmac, Mac};
-use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
 use reqwest::Client;
+use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderValue};
 use rust_decimal::prelude::*;
 use serde::Deserialize;
 use serde_json::Value;
@@ -153,13 +153,14 @@ impl KucoinAdapter {
             serde_json::from_str(&text).map_err(|e| ExchangeError::Parse(e.to_string()))?;
 
         if let Some(code) = json.get("code")
-            && code.as_str() != Some("200000") {
-                return Err(ExchangeError::Api(format!(
-                    "KuCoin API Error: {} - {}",
-                    code,
-                    json.get("msg").unwrap_or(&Value::Null)
-                )));
-            }
+            && code.as_str() != Some("200000")
+        {
+            return Err(ExchangeError::Api(format!(
+                "KuCoin API Error: {} - {}",
+                code,
+                json.get("msg").unwrap_or(&Value::Null)
+            )));
+        }
 
         // KuCoin response usually wrapped in "data"
         if let Some(data) = json.get("data") {
@@ -312,13 +313,14 @@ impl ExchangeAdapter for KucoinAdapter {
 
         for acc in accounts {
             if let Some(currency) = acc.get("currency").and_then(|c| c.as_str())
-                && currency == asset {
-                    // Check type: trade (spot) or main? Usually we want trade/margin available
-                    if let Some(available) = acc.get("available").and_then(|a| a.as_str()) {
-                        let amount = Decimal::from_str(available).unwrap_or(Decimal::zero());
-                        total_balance += amount;
-                    }
+                && currency == asset
+            {
+                // Check type: trade (spot) or main? Usually we want trade/margin available
+                if let Some(available) = acc.get("available").and_then(|a| a.as_str()) {
+                    let amount = Decimal::from_str(available).unwrap_or(Decimal::zero());
+                    total_balance += amount;
                 }
+            }
         }
 
         Ok(total_balance)
@@ -356,7 +358,12 @@ impl ExchangeAdapter for KucoinAdapter {
             let avg_entry_str = pos_data
                 .get("avgEntryPrice")
                 .and_then(|v| v.as_str())
-                .or_else(|| pos_data.get("avgEntryPrice").and_then(|v| v.as_f64().map(|_| "")).and(None))
+                .or_else(|| {
+                    pos_data
+                        .get("avgEntryPrice")
+                        .and_then(|v| v.as_f64().map(|_| ""))
+                        .and(None)
+                })
                 .unwrap_or("0");
             let entry_price = Decimal::from_str(avg_entry_str).unwrap_or(Decimal::zero());
 

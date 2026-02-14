@@ -199,9 +199,10 @@ pub(crate) fn build_order_payload(order: &OrderRequest) -> serde_json::Value {
     });
 
     if let Some(price) = order.price
-        && let Some(obj) = payload.as_object_mut() {
-            obj.insert("price".to_string(), serde_json::json!(price.to_string()));
-        }
+        && let Some(obj) = payload.as_object_mut()
+    {
+        obj.insert("price".to_string(), serde_json::json!(price.to_string()));
+    }
 
     payload
 }
@@ -300,7 +301,10 @@ impl ExchangeAdapter for BybitAdapter {
         let query = format!("accountType=UNIFIED&coin={}", asset);
         let signature = self.sign(&timestamp, &query)?;
 
-        let url = format!("{}{}?{}", self.base_url, "/v5/account/wallet-balance", query);
+        let url = format!(
+            "{}{}?{}",
+            self.base_url, "/v5/account/wallet-balance", query
+        );
         let resp = self
             .client
             .get(&url)
@@ -362,8 +366,8 @@ impl ExchangeAdapter for BybitAdapter {
         self.query_limiter.acquire(1).await;
 
         let _timestamp = chrono::Utc::now().timestamp_millis().to_string(); // Need to use same timestamp?
-                                                                            // request() handles timestamp and sign.
-                                                                            // We just need endpoint + query.
+        // request() handles timestamp and sign.
+        // We just need endpoint + query.
 
         // request() splits endpoint by ?
         let endpoint = "/v5/position/list?category=linear&settleCoin=USDT";

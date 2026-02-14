@@ -5,8 +5,8 @@ use crate::model::{Intent, IntentStatus, IntentType, Position, Side, TradeRecord
 use crate::persistence::store::PersistenceStore;
 use chrono::Utc;
 
-use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
+use rust_decimal::prelude::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -425,10 +425,9 @@ impl ShadowState {
                     };
 
                     // Save State if NOT complete/removing (if removing, we delete later)
-                    if !is_complete
-                        && let Err(e) = self.persistence.save_intent(intent) {
-                            error!("Failed to update intent state: {}", e);
-                        }
+                    if !is_complete && let Err(e) = self.persistence.save_intent(intent) {
+                        error!("Failed to update intent state: {}", e);
+                    }
 
                     (is_complete, Some(intent.clone()))
                 }

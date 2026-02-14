@@ -82,21 +82,22 @@ impl DriftDetector {
             };
 
             if let Some(bps) = deviation
-                && bps > self.spread_threshold_bps {
-                    reports.push(DriftReport {
-                        signal_id: intent.signal_id.clone(),
-                        symbol: intent.symbol.clone(),
-                        drift_class: DriftClass::ClassASpread,
-                        expected: if intent.direction == 1 {
-                            zone_max
-                        } else {
-                            zone_min
-                        },
-                        actual: entry_price,
-                        deviation_bps: bps,
-                        timestamp: now,
-                    });
-                }
+                && bps > self.spread_threshold_bps
+            {
+                reports.push(DriftReport {
+                    signal_id: intent.signal_id.clone(),
+                    symbol: intent.symbol.clone(),
+                    drift_class: DriftClass::ClassASpread,
+                    expected: if intent.direction == 1 {
+                        zone_max
+                    } else {
+                        zone_min
+                    },
+                    actual: entry_price,
+                    deviation_bps: bps,
+                    timestamp: now,
+                });
+            }
         }
 
         // 3. Class C: Correlation (Placeholder)

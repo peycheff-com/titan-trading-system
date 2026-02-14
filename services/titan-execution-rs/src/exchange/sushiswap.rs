@@ -128,11 +128,10 @@ impl SushiSwapAdapter {
 #[async_trait]
 impl ExchangeAdapter for SushiSwapAdapter {
     async fn init(&self) -> Result<(), ExchangeError> {
-        let _block = self
-            .client
-            .get_block_number()
-            .await
-            .map_err(|e| ExchangeError::Network(format!("SushiSwap RPC connect failed: {}", e)))?;
+        let _block =
+            self.client.get_block_number().await.map_err(|e| {
+                ExchangeError::Network(format!("SushiSwap RPC connect failed: {}", e))
+            })?;
         Ok(())
     }
 
@@ -161,7 +160,7 @@ impl ExchangeAdapter for SushiSwapAdapter {
                 _ => {
                     return Err(ExchangeError::Configuration(
                         "Unknown symbol — use Address-Address format".into(),
-                    ))
+                    ));
                 }
             }
         };

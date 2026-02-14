@@ -61,9 +61,7 @@ pub struct CurveAdapter {
 
 impl CurveAdapter {
     pub fn new(config: Option<&ExchangeConfig>) -> Result<Self, ExchangeError> {
-        let config = config.ok_or(ExchangeError::Configuration(
-            "Missing Curve config".into(),
-        ))?;
+        let config = config.ok_or(ExchangeError::Configuration("Missing Curve config".into()))?;
 
         let rpc_url = std::env::var("CURVE_RPC_URL").unwrap_or_else(|_| {
             if config.testnet {
@@ -98,8 +96,8 @@ impl CurveAdapter {
             _ => "0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7",
         };
 
-        let pool_addr = std::env::var("CURVE_POOL_ADDRESS")
-            .unwrap_or_else(|_| default_pool.to_string());
+        let pool_addr =
+            std::env::var("CURVE_POOL_ADDRESS").unwrap_or_else(|_| default_pool.to_string());
         let pool_address = Address::from_str(&pool_addr)
             .map_err(|e| ExchangeError::Configuration(format!("Invalid Pool Address: {}", e)))?;
 
@@ -217,19 +215,20 @@ impl ExchangeAdapter for CurveAdapter {
 
         // ERC-20 approval (skip for native ETH)
         if token_in != "ETH"
-            && let Some(addr_str) = Self::token_address(token_in) {
-                let addr = Address::from_str(addr_str)
-                    .map_err(|e| ExchangeError::Configuration(format!("Bad address: {}", e)))?;
-                dex_utils::ensure_approval(
-                    self.client.clone(),
-                    addr,
-                    self.pool_address,
-                    self.client.address(),
-                    amount_in,
-                )
-                .await
-                .map_err(|e| ExchangeError::Network(format!("Token approval failed: {}", e)))?;
-            }
+            && let Some(addr_str) = Self::token_address(token_in)
+        {
+            let addr = Address::from_str(addr_str)
+                .map_err(|e| ExchangeError::Configuration(format!("Bad address: {}", e)))?;
+            dex_utils::ensure_approval(
+                self.client.clone(),
+                addr,
+                self.pool_address,
+                self.client.address(),
+                amount_in,
+            )
+            .await
+            .map_err(|e| ExchangeError::Network(format!("Token approval failed: {}", e)))?;
+        }
 
         let contract = ICurvePool::new(self.pool_address, self.client.clone());
 

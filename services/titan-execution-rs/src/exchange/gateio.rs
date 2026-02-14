@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use chrono::Utc;
 use hex;
 use hmac::{Hmac, Mac};
-use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
+use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderValue};
 use reqwest::{Client, Method};
 use rust_decimal::prelude::*;
 use serde::Deserialize;
@@ -300,9 +300,10 @@ impl ExchangeAdapter for GateIoAdapter {
         for acc in accounts {
             if let Some(curr) = acc.get("currency").and_then(|s| s.as_str())
                 && curr == asset
-                    && let Some(avail) = acc.get("available").and_then(|s| s.as_str()) {
-                        total += Decimal::from_str(avail).unwrap_or(Decimal::zero());
-                    }
+                && let Some(avail) = acc.get("available").and_then(|s| s.as_str())
+            {
+                total += Decimal::from_str(avail).unwrap_or(Decimal::zero());
+            }
         }
         Ok(total)
     }
@@ -327,10 +328,7 @@ impl ExchangeAdapter for GateIoAdapter {
                 .unwrap_or("")
                 .to_string();
 
-            let size = pos_data
-                .get("size")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(0);
+            let size = pos_data.get("size").and_then(|v| v.as_i64()).unwrap_or(0);
 
             if size == 0 {
                 continue;
@@ -342,11 +340,7 @@ impl ExchangeAdapter for GateIoAdapter {
                 .unwrap_or("0");
             let entry_price = Decimal::from_str(entry_str).unwrap_or(Decimal::zero());
 
-            let side = if size > 0 {
-                Side::Long
-            } else {
-                Side::Short
-            };
+            let side = if size > 0 { Side::Long } else { Side::Short };
 
             let unrealised_pnl_str = pos_data
                 .get("unrealised_pnl")

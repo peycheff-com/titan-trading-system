@@ -1,6 +1,6 @@
-use tracing::{error, info, Level};
+use tracing::{Level, error, info};
 mod auth_middleware;
-use actix_web::{web, App, HttpServer};
+use actix_web::{App, HttpServer, web};
 use actix_web_prom::PrometheusMetricsBuilder;
 use auth_middleware::AuthMiddleware;
 use parking_lot::RwLock;
@@ -17,20 +17,20 @@ use titan_execution_rs::exchange::binance::BinanceAdapter;
 use titan_execution_rs::exchange::bybit::BybitAdapter;
 use titan_execution_rs::exchange::coinbase::CoinbaseAdapter;
 use titan_execution_rs::exchange::cryptocom::CryptoComAdapter;
+use titan_execution_rs::exchange::curve::CurveAdapter;
 use titan_execution_rs::exchange::dydx::DydxAdapter;
 use titan_execution_rs::exchange::gateio::GateIoAdapter;
+use titan_execution_rs::exchange::gmx::GmxAdapter;
+use titan_execution_rs::exchange::hyperliquid::HyperliquidAdapter;
+use titan_execution_rs::exchange::jupiter::JupiterAdapter;
 use titan_execution_rs::exchange::kraken::KrakenAdapter;
 use titan_execution_rs::exchange::kucoin::KucoinAdapter;
 use titan_execution_rs::exchange::mexc::MexcAdapter;
 use titan_execution_rs::exchange::okx::OkxAdapter;
-use titan_execution_rs::exchange::router::ExecutionRouter;
-use titan_execution_rs::exchange::uniswap::UniswapAdapter;
 use titan_execution_rs::exchange::pancakeswap::PancakeSwapAdapter;
+use titan_execution_rs::exchange::router::ExecutionRouter;
 use titan_execution_rs::exchange::sushiswap::SushiSwapAdapter;
-use titan_execution_rs::exchange::curve::CurveAdapter;
-use titan_execution_rs::exchange::jupiter::JupiterAdapter;
-use titan_execution_rs::exchange::gmx::GmxAdapter;
-use titan_execution_rs::exchange::hyperliquid::HyperliquidAdapter;
+use titan_execution_rs::exchange::uniswap::UniswapAdapter;
 use titan_execution_rs::execution_constraints::ConstraintsStore;
 use titan_execution_rs::market_data::engine::MarketDataEngine;
 use titan_execution_rs::nats_engine;
@@ -44,7 +44,7 @@ use titan_execution_rs::shadow_state::ShadowState;
 use titan_execution_rs::simulation_engine::SimulationEngine;
 use titan_execution_rs::sre::SreMonitor;
 use titan_execution_rs::subjects; // Canonical Subjects
-                                  // use tracing_subscriber::FmtSubscriber;
+// use tracing_subscriber::FmtSubscriber;
 
 fn load_secrets_from_files() {
     const FILE_SUFFIX: &str = "_FILE";
@@ -68,7 +68,9 @@ fn load_secrets_from_files() {
             let trimmed = contents.trim().to_string();
             if !trimmed.is_empty() {
                 // SAFETY: Called once before #[tokio::main] spawns any threads
-                unsafe { env::set_var(target_key, trimmed); }
+                unsafe {
+                    env::set_var(target_key, trimmed);
+                }
             }
         }
     }
@@ -83,9 +85,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Initialize OpenTelemetry
     use opentelemetry::KeyValue;
     use opentelemetry_otlp::WithExportConfig;
-    use opentelemetry_sdk::{trace as sdktrace, Resource};
-    use tracing_subscriber::layer::SubscriberExt;
+    use opentelemetry_sdk::{Resource, trace as sdktrace};
     use tracing_subscriber::Registry;
+    use tracing_subscriber::layer::SubscriberExt;
 
     let tracer = opentelemetry_otlp::new_pipeline()
         .tracing()
@@ -694,9 +696,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 && let Err(e) = nats_for_truth
                     .publish(subjects::EVT_EXECUTION_TRUTH, payload.into())
                     .await
-                {
-                    tracing::error!("Failed to publish truth snapshot: {}", e);
-                }
+            {
+                tracing::error!("Failed to publish truth snapshot: {}", e);
+            }
         }
     });
 

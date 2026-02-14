@@ -153,10 +153,12 @@ fn test_flatten_command_structure() {
     });
 
     assert_eq!(flatten_cmd["action"], "FLATTEN");
-    assert!(flatten_cmd["target_symbols"]
-        .as_array()
-        .unwrap()
-        .contains(&json!("ALL")));
+    assert!(
+        flatten_cmd["target_symbols"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("ALL"))
+    );
 
     println!("✅ FLATTEN command structure valid");
 }

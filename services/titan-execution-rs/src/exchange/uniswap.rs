@@ -83,8 +83,8 @@ impl UniswapAdapter {
         } else {
             "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45"
         };
-        let router_addr = std::env::var("UNISWAP_ROUTER_ADDRESS")
-            .unwrap_or_else(|_| default_router.to_string());
+        let router_addr =
+            std::env::var("UNISWAP_ROUTER_ADDRESS").unwrap_or_else(|_| default_router.to_string());
         let router_address = Address::from_str(&router_addr)
             .map_err(|e| ExchangeError::Configuration(format!("Invalid Router Address: {}", e)))?;
 
@@ -155,7 +155,7 @@ impl ExchangeAdapter for UniswapAdapter {
                 _ => {
                     return Err(ExchangeError::Configuration(
                         "Unknown symbol. Use ADDRESS-ADDRESS format for custom pairs".into(),
-                    ))
+                    ));
                 }
             }
         };
