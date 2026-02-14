@@ -12,6 +12,11 @@ on:
         required: false
         default: false
         type: boolean
+      force_rebuild:
+        description: 'Force full image rebuild (bypasses path gating)'
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: production_deploy
@@ -68,7 +73,7 @@ jobs:
 
   build-and-push:
     needs: [ci-check, readiness-gate]
-    if: ${{ always() && (needs.ci-check.result == 'success' || needs.ci-check.result == 'skipped') && needs.readiness-gate.result == 'success' && needs.readiness-gate.outputs.tier != 'A' }}
+    if: ${{ always() && (needs.ci-check.result == 'success' || needs.ci-check.result == 'skipped') && needs.readiness-gate.result == 'success' && (needs.readiness-gate.outputs.tier != 'A' || inputs.force_rebuild == true) }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
