@@ -97,7 +97,7 @@ Communication is asynchronous and event-driven, but strictly typed.
     - Signature (Security).
     - Risk Limits (Policy).
     - Circuit Breaker State.
-6. **Actuation**: Execution-RS sends HTTP/WS request to Exchange (Bybit).
+6. **Actuation**: Execution-RS sends HTTP/WS request to the target Exchange (17 supported: Binance, Bybit, OKX, Coinbase, Kraken, KuCoin, Gate.io, MEXC, Crypto.com, dYdX, Uniswap, PancakeSwap, SushiSwap, Curve, Jupiter, GMX, Hyperliquid).
 7. **Feedback**: Exchange confirms Fill. Execution-RS publishes `FillEvent`.
 8. **Learning**: Brain records the outcome. AI Quant later analyzes this for optimization.
 

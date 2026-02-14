@@ -30,7 +30,7 @@ The Titan Trading System has completed a full Gate A audit across all 19 modules
 ### Phase 2: Core Trading
 - **M01 (Brain)**: ✅ Orchestrator with fail-fast secrets, circuit breaker, safety sessions.
 - **M02 (Scavenger)**: ✅ Basis/Funding/OI detectors operational.
-- **M05 (Execution)**: ✅ 11 exchange adapters (3,670 LOC), 0 warnings, HMAC-signed commands.
+- **M05 (Execution)**: ✅ 17 exchange adapters (10 CEX + 7 DEX), HMAC-signed commands, stable Rust 2021 edition.
 
 ### Phase 3: Strategy & Intelligence
 - **M03 (Hunter)**: ✅ Global liquidity, risk management, telemetry.
@@ -47,13 +47,13 @@ The Titan Trading System has completed a full Gate A audit across all 19 modules
 - **M14 (Quality)**: ✅ Autonomous audit system.
 - **M15 (Harness)**: ✅ Backtesting engine with metric calculations.
 - **M16 (Monitor)**: ✅ Prometheus + Grafana + Loki + alerting.
-- **M17 (Deploy)**: ✅ CI/CD pipelines, coordinated deployment.
+- **M17 (Deploy)**: ✅ CI/CD pipelines, coordinated deployment, staging pipeline verified (2026-02-14).
 - **M18 (DR)**: ✅ Backup scheduling, recovery procedures.
 
 ## Remaining Improvement Areas
-1. **Testnet Validation**: 8 of 11 exchange adapters have no live testnet evidence. `testnet_validation.rs` exists but requires API keys.
+1. **Testnet Validation**: Exchange adapters have no live testnet evidence. `testnet_validation.rs` exists but requires API keys.
 2. **M12 Auth Maturity**: Auth works but uses plain-text password comparison. Future: bcrypt/argon2 hashing, rate limiting.
-3. **`console.log` Migration**: Several services still use `console.log` instead of the structured `Logger`. Functional but not SOTA for log aggregation.
+3. **Logger Consistency**: `console.log` migration completed — all services use structured `Logger.getInstance()` singleton pattern.
 
 ---
 *Signed,*
