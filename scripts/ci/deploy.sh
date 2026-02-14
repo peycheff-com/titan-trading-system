@@ -81,7 +81,7 @@ log "Verifying artifact provenance..."
 # Ensure npx/node is available. If not, this fails.
 # We verification requires the signature file.
 if [ -f "$NEW_RELEASE/evidence/digests.json.sig" ]; then
-    if npx ts-node "$NEW_RELEASE/scripts/provenance.ts" verify \
+    if npx --yes tsx "$NEW_RELEASE/scripts/provenance.ts" verify \
         "$NEW_RELEASE/evidence/digests.json" \
         "$NEW_RELEASE/evidence/digests.json.sig" \
         "$NEW_RELEASE/scripts/titan_release.pub"; then
