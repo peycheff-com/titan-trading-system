@@ -69,6 +69,7 @@ fi
 
 cp "$TEMP_DEPLOY/compose/docker-compose.prod.yml" "$NEW_RELEASE/docker-compose.prod.yml"
 cp "$TEMP_DEPLOY/evidence/digests.json" "$NEW_RELEASE/evidence/digests.json"
+cp "$TEMP_DEPLOY/evidence/digests.json.sig" "$NEW_RELEASE/evidence/digests.json.sig"
 cp "$TEMP_DEPLOY/scripts/"* "$NEW_RELEASE/scripts/"
 chmod +x "$NEW_RELEASE/scripts/"*.sh
 
