@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TITAN_SUBJECTS } from '../messaging/titan_subjects.js';
 
 export const ExecutionQualityScoreSchema = z.object({
   slippage: z.number().describe('Slippage vs Target Price (0.0 - 1.0)'),
@@ -19,4 +20,4 @@ export const ExecutionQualityEventSchema = z.object({
 
 export type ExecutionQualityEvent = z.infer<typeof ExecutionQualityEventSchema>;
 
-export const TITAN_QUALITY_TOPIC = 'titan.evt.quality.execution';
+export const TITAN_QUALITY_TOPIC = TITAN_SUBJECTS.EVT.QUALITY.EXECUTION;

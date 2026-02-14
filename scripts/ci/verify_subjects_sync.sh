@@ -10,7 +10,6 @@ set -euo pipefail
 #
 # Usage: ./scripts/ci/verify_subjects_sync.sh
 # =============================================================================
-set -euo pipefail
 
 RUST_FILE="services/titan-execution-rs/src/subjects.rs"
 TS_FILE="packages/shared/src/messaging/titan_subjects.ts"
@@ -28,10 +27,10 @@ if [ ! -f "$TS_FILE" ]; then
 fi
 
 # Extract subject strings from Rust (lines like: pub const X: &str = "titan.xxx";)
-RUST_SUBJECTS=$(grep -oP '"titan\.[^"]*"' "$RUST_FILE" | tr -d '"' | sort -u)
+RUST_SUBJECTS=$(grep -o "\"titan\.[^\"]*\"" "$RUST_FILE" | tr -d '"' | sort -u)
 
 # Extract subject strings from TypeScript (both string literals and template prefixes)
-TS_SUBJECTS=$(grep -oP "'titan\.[^']*'" "$TS_FILE" | tr -d "'" | sort -u)
+TS_SUBJECTS=$(grep -o "'titan\.[^']*'" "$TS_FILE" | tr -d "'" | sort -u)
 
 echo ""
 echo "📊 Rust subjects:      $(echo "$RUST_SUBJECTS" | wc -l | tr -d ' ')"

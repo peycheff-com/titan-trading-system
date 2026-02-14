@@ -13,7 +13,7 @@ PATTERNS="titan\.cmd\.|titan\.evt\.|titan\.data\.|titan\.sys\.|titan\.signal\.|T
 
 # Define exclusions (grep arguments)
 # We exclude node_modules, dist, builds, and the canonical definition files
-EXCLUDES="--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist --exclude-dir=build --exclude-dir=coverage --exclude-dir=logs --exclude-dir=.jest-cache --exclude-dir=.next --exclude-dir=.turbo --exclude-dir=target --exclude=titan_subjects.ts --exclude=powerlaw_subjects.ts --exclude=check_subjects.sh --exclude=NatsClient.ts --exclude=package.json --exclude=package-lock.json --exclude=yarn.lock --exclude=*.md --exclude=benchmark_nats_latency.mjs --exclude=*.txt --exclude=*.log --exclude=simulate_execution.js --exclude=subjects.rs --exclude=*.test.ts --exclude=*.spec.ts --exclude=*.test.tsx"
+EXCLUDES="--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist --exclude-dir=build --exclude-dir=coverage --exclude-dir=logs --exclude-dir=.jest-cache --exclude-dir=.next --exclude-dir=.turbo --exclude-dir=target --exclude-dir=__mocks__ --exclude=titan_subjects.ts --exclude=powerlaw_subjects.ts --exclude=check_subjects.sh --exclude=NatsClient.ts --exclude=package.json --exclude=package-lock.json --exclude=yarn.lock --exclude=*.md --exclude=benchmark_nats_latency.mjs --exclude=*.txt --exclude=*.log --exclude=simulate_execution.js --exclude=subjects.rs --exclude=*.test.ts --exclude=*.spec.ts --exclude=*.test.tsx --exclude=SemanticConventions.ts"
 
 # Run grep
 # We search in packages/ and services/

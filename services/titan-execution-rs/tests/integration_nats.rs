@@ -23,6 +23,7 @@ use titan_execution_rs::order_manager::OrderManager;
 use titan_execution_rs::persistence::redb_store::RedbStore;
 use titan_execution_rs::persistence::store::PersistenceStore;
 use titan_execution_rs::persistence::wal::WalManager;
+use titan_execution_rs::subjects;
 use titan_execution_rs::risk_guard::RiskGuard;
 use titan_execution_rs::risk_policy::RiskPolicy;
 use titan_execution_rs::shadow_state::ShadowState;
@@ -141,11 +142,12 @@ async fn test_full_execution_flow() {
     .expect("Failed to start engine");
 
     // 4. Test Subscription (Listen for Fills + DLQ)
+    let fills_sub_subject = format!("{}.binance.main.>", subjects::EVT_EXECUTION_FILL);
     let mut fills_sub = client
-        .subscribe("titan.evt.execution.fill.v1.binance.main.>")
+        .subscribe(fills_sub_subject)
         .await
         .unwrap();
-    let mut dlq_sub = client.subscribe("titan.dlq.execution.core").await.unwrap();
+    let mut dlq_sub = client.subscribe(subjects::DLQ_EXECUTION_CORE).await.unwrap();
 
     // 5. Publish Intent
     let signal_id = format!("test-sig-{}", uuid::Uuid::new_v4());
@@ -179,7 +181,7 @@ async fn test_full_execution_flow() {
     let sig = hex::encode(mac.finalize().into_bytes());
 
     let envelope = serde_json::json!({
-        "type": "titan.cmd.execution.place.v1",
+        "type": subjects::CMD_EXECUTION_PLACE_PREFIX,
         "version": 1,
         "producer": "test-suite",
         "ts": ts,
@@ -190,7 +192,7 @@ async fn test_full_execution_flow() {
     });
 
     let payload = serde_json::to_vec(&envelope).unwrap();
-    let intent_subject = format!("titan.cmd.execution.place.v1.binance.main.{}", symbol_token);
+    let intent_subject = format!("{}.binance.main.{}", subjects::CMD_EXECUTION_PLACE_PREFIX, symbol_token);
     client
         .publish(intent_subject, payload.into())
         .await
@@ -251,7 +253,7 @@ async fn test_full_execution_flow() {
 
     client
         .publish(
-            format!("titan.cmd.execution.place.v1.binance.main.{}", symbol_token),
+            format!("{}.binance.main.{}", subjects::CMD_EXECUTION_PLACE_PREFIX, symbol_token),
             serde_json::to_vec(&invalid_payload).unwrap().into(),
         )
         .await

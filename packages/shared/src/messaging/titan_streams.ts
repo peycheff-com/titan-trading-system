@@ -1,7 +1,9 @@
+import { TITAN_SUBJECTS } from './titan_subjects.js';
+
 export const TITAN_STREAMS = [
   {
     name: 'TITAN_CMD',
-    subjects: ['titan.cmd.>'],
+    subjects: [TITAN_SUBJECTS.CMD.ALL],
     storage: 'file' as const,
     retention: 'workqueue' as const,
     max_age: 7 * 24 * 60 * 60 * 1000 * 1000 * 1000, // 7 Days
@@ -9,7 +11,7 @@ export const TITAN_STREAMS = [
   },
   {
     name: 'TITAN_EVT',
-    subjects: ['titan.evt.>'],
+    subjects: [TITAN_SUBJECTS.EVT.ALL],
     storage: 'file' as const,
     retention: 'limits' as const,
     max_age: 30 * 24 * 60 * 60 * 1000 * 1000 * 1000, // 30 Days
@@ -17,14 +19,14 @@ export const TITAN_STREAMS = [
   },
   {
     name: 'TITAN_DATA',
-    subjects: ['titan.data.>'],
+    subjects: [TITAN_SUBJECTS.DATA.ALL],
     storage: 'memory' as const,
     retention: 'limits' as const,
     max_age: 15 * 60 * 1000 * 1000 * 1000, // 15 Min
   },
   {
     name: 'TITAN_SIGNAL',
-    subjects: ['titan.signal.>'],
+    subjects: [TITAN_SUBJECTS.SIGNAL.ALL],
     storage: 'file' as const,
     retention: 'limits' as const,
     max_age: 24 * 60 * 60 * 1000 * 1000 * 1000, // 1 Day
@@ -32,7 +34,7 @@ export const TITAN_STREAMS = [
   },
   {
     name: 'TITAN_DLQ',
-    subjects: ['titan.dlq.>'],
+    subjects: [TITAN_SUBJECTS.DLQ.ALL],
     storage: 'file' as const,
     retention: 'limits' as const,
     max_age: 30 * 24 * 60 * 60 * 1000 * 1000 * 1000, // 30 Days

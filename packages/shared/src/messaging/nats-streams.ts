@@ -6,6 +6,7 @@
  *
  * These are configuration templates - actual stream/KV creation uses NATS client APIs.
  */
+import { TITAN_SUBJECTS } from './titan_subjects.js';
 
 /**
  * NATS JetStream retention policies
@@ -88,7 +89,7 @@ export const TITAN_STREAMS = {
    */
   VENUE_STATUS: {
     name: 'TITAN_VENUE_STATUS',
-    subjects: ['titan.data.venues.status.v1'],
+    subjects: [TITAN_SUBJECTS.DATA.VENUES.STATUS],
     retention: JsRetentionPolicy.Limits,
     storage: JsStorageType.Memory,
     max_msgs: 1000,
@@ -104,7 +105,7 @@ export const TITAN_STREAMS = {
    */
   MARKET_TRADES: {
     name: 'TITAN_MARKET_TRADES',
-    subjects: ['titan.data.venues.trades.v1.>'],
+    subjects: [TITAN_SUBJECTS.DATA.VENUES.TRADES_ALL],
     retention: JsRetentionPolicy.Limits,
     storage: JsStorageType.File,
     max_msgs: 10_000_000,
@@ -121,7 +122,7 @@ export const TITAN_STREAMS = {
    */
   ORDERBOOKS: {
     name: 'TITAN_ORDERBOOKS',
-    subjects: ['titan.data.venues.orderbooks.v1.>'],
+    subjects: [TITAN_SUBJECTS.DATA.VENUES.ORDERBOOKS_ALL],
     retention: JsRetentionPolicy.Limits,
     storage: JsStorageType.File,
     max_msgs: 1_000_000,
@@ -139,10 +140,10 @@ export const TITAN_STREAMS = {
   EXECUTION_EVENTS: {
     name: 'TITAN_EXECUTION_EVENTS',
     subjects: [
-      'titan.evt.execution.fill.v1',
-      'titan.evt.execution.shadow_fill.v1',
-      'titan.evt.execution.report.v1',
-      'titan.evt.execution.reject.v1',
+      TITAN_SUBJECTS.EVT.EXECUTION.FILL,
+      TITAN_SUBJECTS.EVT.EXECUTION.SHADOW_FILL,
+      TITAN_SUBJECTS.EVT.EXECUTION.REPORT,
+      TITAN_SUBJECTS.EVT.EXECUTION.REJECT,
     ],
     retention: JsRetentionPolicy.Limits,
     storage: JsStorageType.File,
@@ -215,7 +216,7 @@ export const TITAN_CONSUMERS = {
    */
   EXECUTION_CORE: {
     durable_name: 'EXECUTION_CORE',
-    filter_subject: 'titan.cmd.execution.>',
+    filter_subject: TITAN_SUBJECTS.CMD.EXECUTION.ALL,
     ack_policy: 'explicit',
     deliver_policy: 'all',
     max_deliver: 5,
@@ -234,7 +235,7 @@ export const TITAN_CONSUMERS = {
    */
   BRAIN_VENUE_STATUS: {
     durable_name: 'brain-venue-status',
-    filter_subject: 'titan.data.venues.status.v1',
+    filter_subject: TITAN_SUBJECTS.DATA.VENUES.STATUS,
     ack_policy: 'explicit',
     deliver_policy: 'last',
     max_deliver: 5,
@@ -247,7 +248,7 @@ export const TITAN_CONSUMERS = {
    */
   ANALYTICS_TRADES: {
     durable_name: 'analytics-trades',
-    filter_subject: 'titan.data.venues.trades.v1.>',
+    filter_subject: TITAN_SUBJECTS.DATA.VENUES.TRADES_ALL,
     ack_policy: 'explicit',
     deliver_policy: 'new',
     max_deliver: 3,
@@ -260,7 +261,7 @@ export const TITAN_CONSUMERS = {
    */
   DLQ_MONITOR: {
     durable_name: 'dlq-monitor',
-    filter_subject: 'titan.dlq.>',
+    filter_subject: TITAN_SUBJECTS.DLQ.ALL,
     ack_policy: 'explicit',
     deliver_policy: 'new',
     max_deliver: 1,
@@ -276,13 +277,13 @@ export const TITAN_CONSUMERS = {
  * Helper to get stream config by subject pattern
  */
 export function getStreamForSubject(subject: string): keyof typeof TITAN_STREAMS | undefined {
-  if (subject.startsWith('titan.data.venues.status')) {
+  if (subject.startsWith(TITAN_SUBJECTS.DATA.VENUES.STATUS)) {
     return 'VENUE_STATUS';
   }
-  if (subject.startsWith('titan.data.venues.trades')) {
+  if (subject.startsWith(TITAN_SUBJECTS.DATA.VENUES.TRADES_PREFIX)) {
     return 'MARKET_TRADES';
   }
-  if (subject.startsWith('titan.evt.execution') || subject.startsWith('titan.evt.exec')) {
+  if (subject.startsWith(TITAN_SUBJECTS.EVT.EXECUTION.PREFIX)) {
     return 'EXECUTION_EVENTS';
   }
   return undefined;

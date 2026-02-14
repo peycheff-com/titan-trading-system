@@ -4,7 +4,7 @@ import { Order, OrderResult } from '../types/orders.js';
 import { NatsConnection, Msg, JSONCodec } from 'nats';
 import { createHmac, randomUUID } from 'crypto';
 import { EventEmitter } from 'events';
-import { Logger } from '@titan/shared';
+import { Logger, TITAN_SUBJECTS } from '@titan/shared';
 
 const logger = Logger.getInstance('sentinel:TitanExecutionGateway');
 
@@ -92,10 +92,10 @@ export class TitanExecutionGateway extends EventEmitter implements IExchangeGate
     // Envelope
     const envelope = {
       id: randomUUID(),
-      type: "titan.cmd.execution.v1",
+      type: `${TITAN_SUBJECTS.LEGACY.SENTINEL_EXECUTION_CMD}.v1`,
       specversion: "1.0",
       source: "sentinel",
-      subject: `titan.cmd.execution`,
+      subject: TITAN_SUBJECTS.LEGACY.SENTINEL_EXECUTION_CMD,
       time: new Date().toISOString(),
       correlation_id: signalId,
       payload: payload,
@@ -103,7 +103,7 @@ export class TitanExecutionGateway extends EventEmitter implements IExchangeGate
     };
 
     // Publish to NATS
-    const subj = `titan.cmd.execution`;
+    const subj = TITAN_SUBJECTS.LEGACY.SENTINEL_EXECUTION_CMD;
     this.nats.publish(subj, this.jc.encode(envelope));
 
     // Return pending result (NATS is async fire-and-forget usually, unless we wait for evt)

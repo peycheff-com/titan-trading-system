@@ -25,6 +25,7 @@ export const TITAN_SUBJECTS = {
   // ===========================================================================
   SIGNAL: {
     SUBMIT: 'titan.signal.submit.v1',
+    ALL: 'titan.signal.>',
   },
   // ===========================================================================
   // 1. COMMANDS (titan.cmd.*)
@@ -44,9 +45,9 @@ export const TITAN_SUBJECTS = {
        * Pattern for subscription
        */
       PREFIX: 'titan.cmd.execution.place.v1',
-      ALL: 'titan.cmd.execution.place.v1.>',
+      ALL: 'titan.cmd.execution.>',
     },
-    ALL: 'titan.cmd.execution.place.v1.>',
+    ALL: 'titan.cmd.>',
 
     RISK: {
       /**
@@ -66,6 +67,7 @@ export const TITAN_SUBJECTS = {
        * Topic: titan.cmd.risk.policy.v1
        */
       POLICY: 'titan.cmd.risk.policy.v1',
+      ALL: 'titan.cmd.risk.>',
     },
 
     CONFIG: {
@@ -132,6 +134,7 @@ export const TITAN_SUBJECTS = {
   // ===========================================================================
 
   EVT: {
+    ALL: 'titan.evt.>',
     ANALYSIS: {
       /**
        * Trade Completion Analysis
@@ -156,6 +159,7 @@ export const TITAN_SUBJECTS = {
        * Fill events
        * Topic: titan.evt.execution.fill.v1.{venue}.{account}.{symbol}
        */
+      PREFIX: 'titan.evt.execution',
       FILL: 'titan.evt.execution.fill.v1',
       /**
        * Shadow Fill events
@@ -271,6 +275,7 @@ export const TITAN_SUBJECTS = {
   // ===========================================================================
 
   DATA: {
+    ALL: 'titan.data.>',
     POWERLAW: {
       /**
        * Power Law Metrics
@@ -350,8 +355,10 @@ export const TITAN_SUBJECTS = {
     RPC: {
       GET_POSITIONS: (venue: string) => `titan.rpc.execution.get_positions.v1.${venue}`,
       GET_POSITIONS_PREFIX: 'titan.rpc.execution.get_positions.v1',
+      GET_POSITIONS_ALL: 'titan.rpc.execution.get_positions.v1.>',
       GET_BALANCES: (venue: string) => `titan.rpc.execution.get_balances.v1.${venue}`,
       GET_BALANCES_PREFIX: 'titan.rpc.execution.get_balances.v1',
+      GET_BALANCES_ALL: 'titan.rpc.execution.get_balances.v1.>',
       POLICY_HASH: 'titan.req.exec.policy_hash.v1',
     },
   },
@@ -387,9 +394,13 @@ export const TITAN_SUBJECTS = {
 
     /** @deprecated Use TITAN_SUBJECTS.DATA.EXECUTION.CONSTRAINTS */
     SIGNAL_EXECUTION_CONSTRAINTS_V1: 'titan.signal.execution.constraints.v1',
+    SIGNAL_EXECUTION_CONSTRAINTS_WILDCARD: 'titan.signal.execution.constraints.v1.>',
 
     /** @deprecated Use TITAN_SUBJECTS.DATA.POWERLAW.ALL */
     SCAVENGER_METRICS_WILDCARD: 'powerlaw.metrics.>',
+
+    /** @deprecated Legacy Sentinel Command */
+    SENTINEL_EXECUTION_CMD: 'titan.cmd.execution',
 
     /** @deprecated Legacy DLQ subject */
     DLQ_EXECUTION_V0: 'titan.execution.dlq',

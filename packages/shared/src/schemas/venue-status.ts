@@ -6,6 +6,7 @@
  */
 import { z } from 'zod';
 import { VenueId, VenueRecommendedAction, VenueWsState } from '../types/venues.js';
+import { TITAN_SUBJECTS } from '../messaging/titan_subjects.js';
 
 /**
  * VenueStatusV1 Zod Schema
@@ -118,4 +119,4 @@ export function deriveRecommendedAction(
 /**
  * NATS Subject for venue status events
  */
-export const VENUE_STATUS_SUBJECT = 'titan.data.venues.status.v1';
+export const VENUE_STATUS_SUBJECT = TITAN_SUBJECTS.DATA.VENUES.STATUS;
