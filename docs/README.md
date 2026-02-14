@@ -86,8 +86,6 @@ For deeper implementation details, see local READMEs:
 - [**RFCs**](rfcs/004_execution_hot_standby.md) — Request for Comments.
 - [**Connectivity Demo**](connectivity/local-demo.md) — Connection verification.
 - [**Phases**](organism/phases.md) — Strategy phase breakdown.
-- [**Scavenger Console**](architecture/scavenger-console.md) — Phase 1 UI Architecture.
-- [**Data Audit**](audit/2026-01-data-layer.md) — Historical data layer audit.
 
 ## 🚀 Launch & CI
 
@@ -96,10 +94,8 @@ For deeper implementation details, see local READMEs:
 
 ## 🔗 Connectivity & Topology
 
-- [**Reality Snapshot**](connectivity/reality-snapshot.md) — System state view.
 - [**Schemas**](connectivity/schemas.md) — Data structure definitions.
 - [**NATS Topology**](connectivity/nats-topology.md) — Event bus graph.
-- [**Rollout Plan**](connectivity/rollout.md) — Phased deployment.
 
 ---
 
