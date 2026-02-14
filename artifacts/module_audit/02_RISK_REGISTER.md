@@ -1,6 +1,6 @@
 # Risk Register
 
-> **Audit Cycle**: 2026-02-12
+> **Audit Cycle**: 2026-02-14
 > Trading-specific risks with financial impact.
 
 | ID | Risk | Module(s) | Likelihood | Impact | Mitigation | Status |
@@ -19,4 +19,5 @@
 | R-12 | Signal cache (Redis) failure | M09, M01 | Medium | Medium (duplicate signals) | Graceful degradation, signal dedup fallback | Open |
 | R-13 | Clock drift across services | M05, M01 | Low | Medium (HMAC rejection) | NTP sync, 5min timestamp tolerance | Open |
 | R-14 | NATS ACL misconfiguration | M06 | Low | High (unauthorized pub/sub) | ACL matrix audit, CI verification script, nats.conf verified | Mitigated |
-| R-15 | Deployment mismatch (Brain/Execution version) | M17 | Medium | High (contract mismatch) | Coordinated deployment, schema validation | Open |
+| R-15 | Deployment mismatch (Brain/Execution version) | M17 | Low | High (contract mismatch) | Coordinated deployment via `deploy_staging.sh` and `deploy_prod.sh`, schema validation, staging pipeline verified 2026-02-14 | Mitigated |
+| R-16 | Staging dummy credentials leak to production | M17 | Low | Critical (fund theft) | Staging defaults use `:-` syntax (only applied if unset), `validate_prod_env.sh` rejects known dev defaults, prod compose requires `:?` for secrets | Mitigated |

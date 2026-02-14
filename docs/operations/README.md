@@ -45,7 +45,10 @@ We prioritize **boring, reliable** operations over fancy tooling.
 
 ```bash
 # Deploy Production
-./scripts/deploy_prod.sh
+./scripts/ops/deploy_prod.sh
+
+# Deploy Staging (Micro-Capital)
+./scripts/ops/deploy_staging.sh
 
 # Emergency Halt (Local)
 npm run start:prod -- --halt

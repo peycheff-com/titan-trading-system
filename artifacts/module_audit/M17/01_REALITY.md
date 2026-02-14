@@ -22,6 +22,37 @@
 | Health checks on all services | All 7 services in prod compose have healthchecks (Brain, NATS, Execution, Strategies, Sentinel, Scavenger, Hunter) | ✅ Implemented |
 | Config validation in CI | `preflight` job runs `config_validate.sh` | ✅ Implemented |
 
+## Staging Deployment (Micro-Capital)
+
+> Added: 2026-02-14 — First successful staging deployment
+
+### Build Status
+- [x] `deploy_staging.sh` builds and deploys all 5 service images via `docker-compose.micro.yml`
+- [x] All services start successfully with health checks passing
+- [x] Rust execution engine compiles on `rust:latest` (1.93.1) — upgraded from `rust:1.85-slim-bookworm` to satisfy `time` crate MSRV
+
+### Env Vars Required for Staging
+| Variable | Service(s) | Default |
+|----------|-----------|---------|
+| `HMAC_SECRET` | Brain, Execution, Hunter | `supersecretkey_staging_only` |
+| `SAFETY_SECRET` | Brain | `safety_dance_staging_only` |
+| `TITAN_HMAC_SECRET` | Sentinel | Uses `HMAC_SECRET` default |
+| `BINANCE_API_KEY/SECRET` | Execution, Scavenger, Hunter | `dummy_key_staging` |
+| `BYBIT_API_KEY/SECRET` | Scavenger | `dummy_key_staging` |
+| `PORT` | Brain | `3100` |
+| `DB_HOST/NAME/USER/PASSWORD` | Brain | Derived from postgres service |
+
+### Issues Resolved During First Staging Deploy (2026-02-14)
+1. Build context paths corrected to `.` with explicit `dockerfile:` paths
+2. `titan-phase2-hunter` missing `uuid` and `zod` dependencies — added to `package.json`
+3. `titan-execution-rs` MSRV mismatch — upgraded Docker base image to `rust:latest`
+4. NATS health check required `-m 8222` monitoring port
+5. `titan-brain` missing `PORT`, `DB_*`, `HMAC_SECRET`, `SAFETY_SECRET` env vars
+6. `titan-brain` Dockerfile missing `schema.sql` copy to `dist/`
+7. `titan-execution` missing `HMAC_SECRET` default
+8. `titan-scavenger` missing `BINANCE_*` and `BYBIT_*` credentials
+9. `titan-sentinel` missing `TITAN_HMAC_SECRET`
+
 ## Key Observations
 1. **NATS passwords in prod**: ✅ FIXED — `docker-compose.prod.yml` now uses `nats.conf.template` with `envsubst` to inject `$NATS_*_PASSWORD` env vars at startup. Dev `nats.conf` is never mounted in prod.
 2. **Deploy is stop-migrate-start, not blue/green** — Accepted trade-off with documented rollback in `deploy_prod.sh` header.
@@ -31,3 +62,4 @@
 6. **POSTGRES_PASSWORD fail-fast** — Uses `:?` syntax to abort compose if unset
 7. **Grafana password env-ified** — No longer hardcoded `admin` default
 8. **Idempotent DB migrations** — `run_migrations.sh` tracks via `_titan_migrations` table with SHA256 drift detection
+9. **Staging deploy requires lockfile sync** — `npm ci` in Docker fails if `package-lock.json` is out of sync with `package.json`. Always run `npm install` locally before pushing dependency changes.

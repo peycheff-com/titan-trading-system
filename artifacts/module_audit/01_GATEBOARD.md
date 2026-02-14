@@ -1,7 +1,7 @@
 # Master Gateboard
 
-> **Audit Cycle**: 2026-02-12
-> **Last Updated**: 2026-02-12T19:58:00+02:00
+> **Audit Cycle**: 2026-02-14
+> **Last Updated**: 2026-02-14T18:04:00+02:00
 
 ## Module Status
 
@@ -24,7 +24,7 @@
 | M14 | Quality OS | **Gate A** | A | F0 | — | [Audit](modules/M14/) | agent | 2026-02-12 |
 | M15 | Backtesting Harness | **Gate A** | A | F0 | — | [Audit](modules/M15/) | agent | 2026-02-12 |
 | M16 | Monitoring Stack | **Gate A** | A | F0 | — | [Audit](modules/M16/) | agent | 2026-02-12 |
-| M17 | Deployment & Infrastructure | **Gate A** | A | F0 | — | [Audit](M17/) | agent | 2026-02-12 |
+| M17 | Deployment & Infrastructure | **Gate A** | A | F0 | — | [Audit](M17/) | agent | 2026-02-14 |
 | M18 | Disaster Recovery | **Gate A** | A | F0 | — | [Audit](modules/M18/) | agent | 2026-02-12 |
 
 ## Gate Tiers

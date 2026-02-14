@@ -1,7 +1,7 @@
 # Titan — Merged Reality Snapshots
 
 > Consolidated from all `01_REALITY.md` files across M01–M18, M08P, and m04-sentinel.
-> Generated: 2026-02-11 | Last Updated: 2026-02-12T20:46+02:00
+> Generated: 2026-02-11 | Last Updated: 2026-02-14T18:04+02:00
 
 ---
 
@@ -602,6 +602,13 @@ Titan Phase 3 (Sentinel) is a functioning Basis Arbitrage bot. The core logic fo
 6. **POSTGRES_PASSWORD fail-fast** — Uses `:?` syntax to abort compose if unset
 7. **Grafana password env-ified** — No longer hardcoded `admin` default
 8. **Idempotent DB migrations** — `run_migrations.sh` tracks via `_titan_migrations` table with SHA256 drift detection
+9. **Staging deploy requires lockfile sync** — `npm ci` in Docker fails if `package-lock.json` is out of sync with `package.json`. Always run `npm install` locally before pushing dependency changes.
+
+### Staging Deployment (2026-02-14)
+- **Script**: `scripts/ops/deploy_staging.sh` → uses `docker-compose.micro.yml`
+- **Services**: postgres, redis, nats, titan-brain, titan-execution, titan-scavenger, titan-hunter, titan-sentinel
+- **Rust base image**: `rust:latest` (1.93.1) — upgraded from `rust:1.85-slim-bookworm` for MSRV compliance
+- **9 issues resolved** during first deploy: build contexts, missing deps (`uuid`, `zod`), MSRV, NATS monitoring port, missing env vars (`PORT`, `DB_*`, `HMAC_SECRET`, `SAFETY_SECRET`, `BINANCE_*`, `BYBIT_*`, `TITAN_HMAC_SECRET`), `schema.sql` copy
 
 ---
 
