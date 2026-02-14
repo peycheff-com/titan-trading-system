@@ -206,7 +206,7 @@ impl ExchangeAdapter for UniswapAdapter {
         let params = ExactInputSingleParams {
             token_in,
             token_out,
-            fee: fee_tier.try_into().unwrap_or(3000),
+            fee: fee_tier,
             recipient: self.client.address(),
             deadline: U256::from(Utc::now().timestamp() + 300), // 5 min
             amount_in,

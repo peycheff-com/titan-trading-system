@@ -190,7 +190,7 @@ impl ExchangeAdapter for PancakeSwapAdapter {
         let params = ExactInputSingleParams {
             token_in,
             token_out,
-            fee: fee_tier.try_into().unwrap_or(2500),
+            fee: fee_tier,
             recipient: self.client.address(),
             amount_in,
             amount_out_minimum,
