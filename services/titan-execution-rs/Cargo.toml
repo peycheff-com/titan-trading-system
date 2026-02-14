@@ -47,7 +47,7 @@ crossbeam-channel = "0.5" # Lock-free MPMC channels
 crossbeam-queue = "0.3"   # Lock-free queues
 
 # Observability (Jan 2026 Audit)
-opentelemetry = { version = "0.21", features = ["metrics"] }
+opentelemetry = { version = "0.31", features = ["metrics"] }
 opentelemetry_sdk = { version = "0.21", features = ["rt-tokio"] }
 opentelemetry-otlp = { version = "0.14", features = ["grpc-tonic"] }
 tracing-opentelemetry = "0.22"
