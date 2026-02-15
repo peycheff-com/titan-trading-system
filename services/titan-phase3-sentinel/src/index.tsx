@@ -39,7 +39,12 @@ async function main() {
   let natsConnected = false;
 
   try {
-    nats = await getNatsClient();
+    nats = getNatsClient();
+    await nats.connect({
+      servers: [process.env.NATS_URL || 'nats://localhost:4222'],
+      user: process.env.NATS_USER,
+      pass: process.env.NATS_PASS,
+    });
     natsConnected = true;
     logger.info('✅ Connected to NATS (Execution & Regime)');
   } catch (err) {
@@ -54,11 +59,18 @@ async function main() {
       process.exit(1);
   }
 
+  // Get the raw NatsConnection for components that need it (gateway, subscriptions)
+  const rawNc = nats.getConnection();
+  if (!rawNc) {
+    logger.error('❌ NATS connection established but raw connection unavailable.');
+    process.exit(1);
+  }
+
   // Replace legacy gateways with TitanExecutionGateway
-  const binanceGateway = new TitanExecutionGateway('binance', nats, hmacSecret);
+  const binanceGateway = new TitanExecutionGateway('binance', rawNc, hmacSecret);
   await binanceGateway.initialize();
 
-  const bybitGateway = new TitanExecutionGateway('bybit', nats, hmacSecret);
+  const bybitGateway = new TitanExecutionGateway('bybit', rawNc, hmacSecret);
   await bybitGateway.initialize();
 
   const gateways: IExchangeGateway[] = [binanceGateway, bybitGateway];
@@ -70,7 +82,7 @@ async function main() {
   // Re-implementing subscriptions using async iterator pattern
   (async () => {
       try {
-        const regimeSub = nats.subscribe(TITAN_SUBJECTS.EVT.BRAIN.REGIME);
+        const regimeSub = rawNc.subscribe(TITAN_SUBJECTS.EVT.BRAIN.REGIME);
         const jc = JSONCodec();
         for await (const m of regimeSub) {
             try {
@@ -87,7 +99,7 @@ async function main() {
 
   (async () => {
       try {
-        const budgetSub = nats.subscribe(TITAN_SUBJECTS.EVT.BUDGET.UPDATE);
+        const budgetSub = rawNc.subscribe(TITAN_SUBJECTS.EVT.BUDGET.UPDATE);
         const jc = JSONCodec();
         for await (const m of budgetSub) {
             try {

@@ -152,7 +152,7 @@ services:
     networks:
       - titan-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -170,7 +170,7 @@ services:
     networks:
       - titan-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -183,12 +183,14 @@ services:
       - NATS_URL=nats://nats:4222
       - NATS_USER=sentinel
       - NATS_PASS=${NATS_SENTINEL_PASSWORD}
+      - HEADLESS=true
+      - TITAN_HMAC_SECRET=${HMAC_SECRET}
     depends_on:
       - nats
     networks:
       - titan-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8084/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -201,6 +203,7 @@ services:
       - NATS_URL=nats://nats:4222
       - NATS_USER=quant
       - NATS_PASS=${NATS_QUANT_PASSWORD}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
     depends_on:
       - nats
     networks:

@@ -508,6 +508,14 @@ export class NatsClient extends EventEmitter {
     }
   }
 
+  /**
+   * Get the underlying raw NatsConnection for components that need direct access.
+   * Prefer using the NatsClient wrapper methods when possible.
+   */
+  public getConnection(): NatsConnection | null {
+    return this.nc;
+  }
+
   public isConnected(): boolean {
     return this.nc !== null && !this.nc.isClosed();
   }
