@@ -153,9 +153,16 @@ log "Switching symlink and applying update..."
 # Update symlink
 ln -sfn "$NEW_RELEASE" "$TITAN_ROOT/current"
 
-# Start New Release (Recreates containers with new config only if changed)
+# Stop any orphan containers with hardcoded names from a previous project
+for ctr in traefik nats postgres redis titan-execution titan-brain; do
+    if docker ps -a --format '{{.Names}}' | grep -qx "$ctr"; then
+        log "Removing orphan container: $ctr"
+        docker rm -f "$ctr" || true
+    fi
+done
+
 log "Applying new configuration (Rolling Update)..."
-if docker compose --env-file .env.prod -f docker-compose.prod.yml -f compose.override.digest.yml up -d --remove-orphans; then
+if docker compose --env-file .env.prod -f docker-compose.prod.yml -f compose.override.digest.yml up -d --force-recreate --remove-orphans; then
     log "Containers updated."
 else
     error "Failed to update containers! Initiating Rollback..."

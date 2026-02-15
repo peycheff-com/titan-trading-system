@@ -49,10 +49,10 @@ COMPOSE_FILE="docker-compose.prod.yml"
 OVERRIDE_FILE="compose.override.digest.yml"
 
 if [ -f "$OVERRIDE_FILE" ]; then
-    docker compose -f "$COMPOSE_FILE" -f "$OVERRIDE_FILE" up -d --remove-orphans
+    docker compose --env-file .env.prod -f "$COMPOSE_FILE" -f "$OVERRIDE_FILE" up -d --force-recreate --remove-orphans
 else
     log "WARN: No override file found in previous release. Using base compose."
-    docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
+    docker compose --env-file .env.prod -f "$COMPOSE_FILE" up -d --force-recreate --remove-orphans
 fi
 
 # 4. Verification

@@ -8,7 +8,7 @@ on:
         default: '1.89.0'
     outputs:
       status:
-        description: "Status of the Rust services job"
+        description: 'Status of the Rust services job'
         value: ${{ jobs.rust-services.result }}
 
 jobs:
@@ -39,4 +39,4 @@ jobs:
         run: ./scripts/ci/rust.sh all
 
       - name: Verify Docker Build
-        run: docker build -t titan-execution-rs:${{ github.sha }} services/titan-execution-rs
+        run: docker build -t titan-execution-rs:${{ github.sha }} -f services/titan-execution-rs/Dockerfile .

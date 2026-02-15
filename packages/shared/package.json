@@ -20,7 +20,7 @@
   "scripts": {
     "build": "tsc && tsc -p tsconfig.browser.json",
     "build:all": "npm run build",
-    "test": "jest --forceExit --detectOpenHandles",
+    "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:integration": "vitest run --dir tests/integration",
