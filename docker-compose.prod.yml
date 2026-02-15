@@ -126,7 +126,7 @@ services:
 
   # --- STRATEGIES ---
   titan-scavenger:
-    image: ghcr.io/peycheff-com/titan-scavenger:${TITAN_TAG:-latest}
+    image: ghcr.io/peycheff-com/titan-phase1-scavenger:${TITAN_TAG:-latest}
     restart: always
     env_file: .env.prod
     depends_on:
@@ -140,7 +140,7 @@ services:
       retries: 3
 
   titan-hunter:
-    image: ghcr.io/peycheff-com/titan-hunter:${TITAN_TAG:-latest}
+    image: ghcr.io/peycheff-com/titan-phase2-hunter:${TITAN_TAG:-latest}
     restart: always
     env_file: .env.prod
     depends_on:
@@ -154,7 +154,7 @@ services:
       retries: 3
 
   titan-sentinel:
-    image: ghcr.io/peycheff-com/titan-sentinel:${TITAN_TAG:-latest}
+    image: ghcr.io/peycheff-com/titan-phase3-sentinel:${TITAN_TAG:-latest}
     restart: always
     env_file: .env.prod
     depends_on:
