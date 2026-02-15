@@ -41,6 +41,7 @@ WORKDIR /app/services/titan-phase3-sentinel
 
 ENV NODE_ENV=production
 ENV PORT=8084
+ENV HEADLESS=true
 
 EXPOSE 8084
 
