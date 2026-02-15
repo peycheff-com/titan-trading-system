@@ -120,6 +120,7 @@ services:
       - DB_NAME=${TITAN_DB_NAME}
       - DB_USER=${TITAN_DB_USER}
       - DB_PASSWORD=${TITAN_DB_PASSWORD}
+      - SAFETY_SECRET=${SAFETY_SECRET}
     depends_on:
       postgres:
         condition: service_healthy
@@ -165,6 +166,7 @@ services:
       - NATS_URL=nats://nats:4222
       - NATS_USER=hunter
       - NATS_PASS=${NATS_HUNTER_PASSWORD}
+      - HEADLESS_MODE=true
     depends_on:
       - nats
     networks:
