@@ -21,7 +21,7 @@ export class BacktestEngine extends EventEmitter {
   private bybitMock: MockBybitPerpsClient;
   private configMock: MockConfigManager;
   private signalMock: MockSignalClient;
-  private engine: any; // TitanTrap instance — concrete type mismatch by design
+  private engine: unknown; // TitanTrap instance — concrete type mismatch by design
 
   constructor(config: SimulationConfig) {
     super();
@@ -91,7 +91,7 @@ export class BacktestEngine extends EventEmitter {
     logger.info(`Starting simulation with ${data.candles.length} candles...`);
 
     // Start Engine
-    await this.engine.start();
+    await (this.engine as any).start();
 
     const startTime = Date.now();
     const equityCurve: { timestamp: number; equity: number }[] = [];
@@ -136,7 +136,7 @@ export class BacktestEngine extends EventEmitter {
     }
 
     // Stop Engine
-    this.engine.stop();
+    (this.engine as any).stop();
     const duration = Date.now() - startTime;
 
     // 5. Calculate Results
