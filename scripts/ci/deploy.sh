@@ -59,6 +59,9 @@ mkdir -p "$NEW_RELEASE/evidence"
 mkdir -p "$NEW_RELEASE/scripts"
 mkdir -p "$NEW_RELEASE/compose"
 
+# Symlink shared config (nats.conf, etc.) from operator-managed location
+ln -sfn "$TITAN_ROOT/compose/config" "$NEW_RELEASE/config"
+
 # Copy Artifacts from Temp Location (Assume CI copied to known location or we are in it)
 # CI actually copies to /opt/titan/tmp_deploy_$SHA
 TEMP_DEPLOY="$TITAN_ROOT/tmp_deploy_$SHA"
