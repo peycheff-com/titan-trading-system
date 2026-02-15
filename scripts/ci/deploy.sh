@@ -166,7 +166,7 @@ if docker compose --env-file .env.prod -f docker-compose.prod.yml -f compose.ove
     log "Containers updated."
 else
     error "Failed to update containers! Initiating Rollback..."
-    "$SCRIPTS_DIR/rollback.sh"
+    "$NEW_RELEASE/scripts/rollback.sh"
     exit 1
 fi
 
@@ -177,7 +177,7 @@ if "$NEW_RELEASE/scripts/verify.sh"; then
     log "Verification PASSED."
 else
     error "Verification FAILED! Initiating Rollback..."
-    "$SCRIPTS_DIR/rollback.sh"
+    "$NEW_RELEASE/scripts/rollback.sh"
     exit 1
 fi
 
