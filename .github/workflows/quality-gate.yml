@@ -78,7 +78,9 @@ jobs:
 
       - name: Execute Quality Plan
         working-directory: packages/quality-os
-        run: npx tsx src/cli.ts run
+        run: |
+          npm run build
+          npx tsx src/cli.ts run
 
       - name: Upload Evidence Packs
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.3.1
