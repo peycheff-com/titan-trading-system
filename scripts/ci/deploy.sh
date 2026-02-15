@@ -177,6 +177,14 @@ if "$NEW_RELEASE/scripts/verify.sh"; then
     log "Verification PASSED."
 else
     error "Verification FAILED! Initiating Rollback..."
+    log "--- DEBUG: Dumping logs of restarting containers ---"
+    docker ps --format '{{.Names}}' | while read ctr; do
+        if ! docker ps -f "name=$ctr" --format '{{.Status}}' | grep -q "Up"; then
+             log "Logs for $ctr:"
+             docker logs --tail 50 "$ctr" 2>&1 | tee -a "$LOGS_DIR/deploy.log"
+        fi
+    done
+    log "--- End DEBUG ---"
     "$NEW_RELEASE/scripts/rollback.sh"
     exit 1
 fi
