@@ -21,7 +21,6 @@ export class BacktestEngine extends EventEmitter {
   private bybitMock: MockBybitPerpsClient;
   private configMock: MockConfigManager;
   private signalMock: MockSignalClient;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private engine: any; // TitanTrap instance — concrete type mismatch by design
 
   constructor(config: SimulationConfig) {

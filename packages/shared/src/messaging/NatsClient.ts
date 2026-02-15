@@ -404,10 +404,12 @@ export class NatsClient extends EventEmitter {
       return {
         unsubscribe: () => {
           drainHandle.drain().catch((e) => console.error('Durable unsubscribe error:', e));
+          // eslint-disable-next-line functional/immutable-data
           this.durableSubscriptions.delete(durableName);
         },
         closed: Promise.resolve(undefined),
         drain: () => {
+          // eslint-disable-next-line functional/immutable-data
           this.durableSubscriptions.delete(durableName);
           return drainHandle.drain();
         },
@@ -453,6 +455,7 @@ export class NatsClient extends EventEmitter {
           console.warn(`Failed to drain durable subscription '${name}':`, err);
         }
       }
+      // eslint-disable-next-line functional/immutable-data
       this.durableSubscriptions.clear();
 
       await this.nc.drain();
