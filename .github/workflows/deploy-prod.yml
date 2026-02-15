@@ -250,11 +250,17 @@ jobs:
 
       - name: Execute Atomic Deploy
         uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           host: ${{ secrets.PROD_SSH_HOST }}
           username: ${{ secrets.PROD_SSH_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
+          envs: GHCR_TOKEN
           script: |
+            # Login to GHCR for private image pulls
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u github --password-stdin
+
             # Set Deployment Context
             export TITAN_SHA="${{ github.sha }}"
             export TITAN_REGISTRY="${{ env.TITAN_REGISTRY }}"
