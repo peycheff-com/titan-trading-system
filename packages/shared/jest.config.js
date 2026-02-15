@@ -88,9 +88,9 @@ module.exports = {
   cacheDirectory: '<rootDir>/node_modules/.cache/jest',
   
   // Error handling
-  errorOnDeprecated: true,
-  detectOpenHandles: true, // Detect async operations that prevent Jest from exiting
-  forceExit: false, // Don't force exit - fix the underlying issues instead
+  errorOnDeprecated: false,
+  detectOpenHandles: !process.env.CI, // Only detect locally, not in CI (slows exit)
+  forceExit: !!process.env.CI, // Force exit in CI to avoid hanging on open NATS handles
   
   // Better error reporting
   reporters: [

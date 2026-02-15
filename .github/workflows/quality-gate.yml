@@ -66,9 +66,7 @@ jobs:
           node-version: ${{ inputs.node-version }}
           npm-version: ${{ inputs.npm-version }}
 
-      - name: Install Quality OS dependencies
-        working-directory: packages/quality-os
-        run: npm ci
+      # Root npm ci (in setup) already installs all workspace deps
 
       - name: Download Plan
         uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.1.1
