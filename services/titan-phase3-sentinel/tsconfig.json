@@ -15,8 +15,7 @@
       "@portfolio/*": ["src/portfolio/*"],
       "@exchanges/*": ["src/exchanges/*"],
       "@console/*": ["src/console/*"]
-    },
-    "jsx": "react-jsx"
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "tests"]

@@ -76,6 +76,9 @@ jobs:
           name: quality-plan-${{ github.run_id }}
           path: packages/quality-os/artifacts/quality_os/plans/
 
+      - name: Build Monorepo (for SOTA checks)
+        run: npm run build
+
       - name: Execute Quality Plan
         working-directory: packages/quality-os
         run: |
