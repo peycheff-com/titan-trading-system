@@ -32,7 +32,7 @@ services:
       - /bin/sh
       - -c
       - |
-        apk add --no-cache gettext > /dev/null 2>&1 && envsubst '$NATS_SYS_PASSWORD $NATS_BRAIN_PASSWORD $NATS_EXECUTION_PASSWORD $NATS_SCAVENGER_PASSWORD $NATS_HUNTER_PASSWORD $NATS_SENTINEL_PASSWORD $NATS_POWERLAW_PASSWORD $NATS_QUANT_PASSWORD $NATS_CONSOLE_PASSWORD' < /config/nats.conf > /tmp/nats-resolved.conf && exec nats-server -c /tmp/nats-resolved.conf
+        apk add --no-cache gettext > /dev/null 2>&1 && envsubst '$$NATS_SYS_PASSWORD $$NATS_BRAIN_PASSWORD $$NATS_EXECUTION_PASSWORD $$NATS_SCAVENGER_PASSWORD $$NATS_HUNTER_PASSWORD $$NATS_SENTINEL_PASSWORD $$NATS_POWERLAW_PASSWORD $$NATS_QUANT_PASSWORD $$NATS_CONSOLE_PASSWORD' < /config/nats.conf > /tmp/nats-resolved.conf && exec nats-server -c /tmp/nats-resolved.conf
     volumes:
       - "./config/nats.conf:/config/nats.conf:ro"
       - "./data/nats:/data"
@@ -84,6 +84,10 @@ services:
     container_name: titan-execution
     restart: always
     env_file: .env.prod
+    environment:
+      - NATS_URL=nats://nats:4222
+      - NATS_USER=execution
+      - NATS_PASS=${NATS_EXECUTION_PASSWORD}
     depends_on:
       nats:
         condition: service_started
@@ -107,6 +111,15 @@ services:
     container_name: titan-brain
     restart: always
     env_file: .env.prod
+    environment:
+      - PORT=3100
+      - NATS_URL=nats://nats:4222
+      - NATS_USER=brain
+      - NATS_PASS=${NATS_BRAIN_PASSWORD}
+      - DB_HOST=${TITAN_DB_HOST}
+      - DB_NAME=${TITAN_DB_NAME}
+      - DB_USER=${TITAN_DB_USER}
+      - DB_PASSWORD=${TITAN_DB_PASSWORD}
     depends_on:
       postgres:
         condition: service_healthy
@@ -130,6 +143,10 @@ services:
     image: ghcr.io/peycheff-com/titan-trading-system/titan-phase1-scavenger:${TITAN_TAG:-latest}
     restart: always
     env_file: .env.prod
+    environment:
+      - NATS_URL=nats://nats:4222
+      - NATS_USER=scavenger
+      - NATS_PASS=${NATS_SCAVENGER_PASSWORD}
     depends_on:
       - nats
     networks:
@@ -144,6 +161,10 @@ services:
     image: ghcr.io/peycheff-com/titan-trading-system/titan-phase2-hunter:${TITAN_TAG:-latest}
     restart: always
     env_file: .env.prod
+    environment:
+      - NATS_URL=nats://nats:4222
+      - NATS_USER=hunter
+      - NATS_PASS=${NATS_HUNTER_PASSWORD}
     depends_on:
       - nats
     networks:
@@ -158,6 +179,10 @@ services:
     image: ghcr.io/peycheff-com/titan-trading-system/titan-phase3-sentinel:${TITAN_TAG:-latest}
     restart: always
     env_file: .env.prod
+    environment:
+      - NATS_URL=nats://nats:4222
+      - NATS_USER=sentinel
+      - NATS_PASS=${NATS_SENTINEL_PASSWORD}
     depends_on:
       - nats
     networks:
@@ -172,6 +197,10 @@ services:
     image: ghcr.io/peycheff-com/titan-trading-system/titan-ai-quant:${TITAN_TAG:-latest}
     restart: always
     env_file: .env.prod
+    environment:
+      - NATS_URL=nats://nats:4222
+      - NATS_USER=quant
+      - NATS_PASS=${NATS_QUANT_PASSWORD}
     depends_on:
       - nats
     networks:
