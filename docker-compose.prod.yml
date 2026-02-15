@@ -27,11 +27,12 @@ services:
     ports:
       - "4222:4222" # Internal only via firewall, but exposed for monitoring if needed
       - "8222:8222" # Monitoring
+    env_file: .env.prod
     entrypoint:
       - /bin/sh
       - -c
       - |
-        envsubst < /config/nats.conf > /tmp/nats-resolved.conf && exec nats-server -c /tmp/nats-resolved.conf
+        apk add --no-cache gettext > /dev/null 2>&1 && envsubst < /config/nats.conf > /tmp/nats-resolved.conf && exec nats-server -c /tmp/nats-resolved.conf
     volumes:
       - "./config/nats.conf:/config/nats.conf:ro"
       - "./data/nats:/data"
