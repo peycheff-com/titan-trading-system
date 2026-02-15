@@ -46,7 +46,7 @@
     "@types/jest": "^29.5.0",
     "@types/node": "^20.10.0",
     "@types/ws": "^8.5.0",
-    "eslint": "^9.39.2",
+    "eslint": "^10.0.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-functional": "^9.0.2",
     "eslint-plugin-prettier": "^5.5.5",
