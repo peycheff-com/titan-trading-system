@@ -79,7 +79,7 @@ services:
 
   # --- CORE SERVICES ---
   titan-execution:
-    image: ghcr.io/peycheff-com/titan-execution-rs:${TITAN_TAG:-latest}
+    image: ghcr.io/peycheff-com/titan-trading-system/titan-execution-rs:${TITAN_TAG:-latest}
     container_name: titan-execution
     restart: always
     env_file: .env.prod
@@ -102,7 +102,7 @@ services:
           memory: 512M
 
   titan-brain:
-    image: ghcr.io/peycheff-com/titan-brain:${TITAN_TAG:-latest}
+    image: ghcr.io/peycheff-com/titan-trading-system/titan-brain:${TITAN_TAG:-latest}
     container_name: titan-brain
     restart: always
     env_file: .env.prod
@@ -126,7 +126,7 @@ services:
 
   # --- STRATEGIES ---
   titan-scavenger:
-    image: ghcr.io/peycheff-com/titan-phase1-scavenger:${TITAN_TAG:-latest}
+    image: ghcr.io/peycheff-com/titan-trading-system/titan-phase1-scavenger:${TITAN_TAG:-latest}
     restart: always
     env_file: .env.prod
     depends_on:
@@ -140,7 +140,7 @@ services:
       retries: 3
 
   titan-hunter:
-    image: ghcr.io/peycheff-com/titan-phase2-hunter:${TITAN_TAG:-latest}
+    image: ghcr.io/peycheff-com/titan-trading-system/titan-phase2-hunter:${TITAN_TAG:-latest}
     restart: always
     env_file: .env.prod
     depends_on:
@@ -154,7 +154,7 @@ services:
       retries: 3
 
   titan-sentinel:
-    image: ghcr.io/peycheff-com/titan-phase3-sentinel:${TITAN_TAG:-latest}
+    image: ghcr.io/peycheff-com/titan-trading-system/titan-phase3-sentinel:${TITAN_TAG:-latest}
     restart: always
     env_file: .env.prod
     depends_on:
@@ -168,7 +168,7 @@ services:
       retries: 3
 
   titan-ai-quant:
-    image: ghcr.io/peycheff-com/titan-ai-quant:${TITAN_TAG:-latest}
+    image: ghcr.io/peycheff-com/titan-trading-system/titan-ai-quant:${TITAN_TAG:-latest}
     restart: always
     env_file: .env.prod
     depends_on:
@@ -183,7 +183,7 @@ services:
 
   # --- UI ---
   titan-console:
-    image: ghcr.io/peycheff-com/titan-console:${TITAN_TAG:-latest}
+    image: ghcr.io/peycheff-com/titan-trading-system/titan-console:${TITAN_TAG:-latest}
     restart: always
     labels:
       - "traefik.enable=true"
