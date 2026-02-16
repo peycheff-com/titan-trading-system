@@ -19,7 +19,7 @@
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@titan/shared": "*",
-    "better-sqlite3": "^9.2.2",
+    "better-sqlite3": "^12.6.2",
     "eventemitter3": "^5.0.1",
     "node-schedule": "^2.1.1",
     "typescript": "^5.3.3",
