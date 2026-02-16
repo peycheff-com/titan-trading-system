@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@titan/shared": "^1.0.0",
-    "dotenv": "^16.4.7",
+    "dotenv": "^17.3.1",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
